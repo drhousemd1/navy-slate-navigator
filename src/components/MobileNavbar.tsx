@@ -19,27 +19,27 @@ const navItems: NavItem[] = [
   {
     name: 'Rules',
     path: '/rules',
-    icon: <BookOpenCheck className="w-6 h-6" />,
+    icon: <BookOpenCheck className="w-5 h-5" />,
   },
   {
     name: 'Tasks',
     path: '/tasks',
-    icon: <CheckSquare className="w-6 h-6" />,
+    icon: <CheckSquare className="w-5 h-5" />,
   },
   {
     name: 'Rewards',
     path: '/rewards',
-    icon: <Gift className="w-6 h-6" />,
+    icon: <Gift className="w-5 h-5" />,
   },
   {
     name: 'Punishments',
     path: '/punishments',
-    icon: <Medal className="w-6 h-6" />,
+    icon: <Medal className="w-5 h-5" />,
   },
   {
     name: 'Throne Room',
     path: '/throne-room',
-    icon: <Crown className="w-6 h-6" />,
+    icon: <Crown className="w-5 h-5" />,
   },
 ];
 
@@ -49,7 +49,7 @@ const MobileNavbar: React.FC = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg">
-      <div className="flex justify-between items-center h-16 px-2">
+      <div className="grid grid-cols-5 h-16">
         {navItems.map((item) => {
           const isActive = currentPath === item.path;
           
@@ -57,19 +57,21 @@ const MobileNavbar: React.FC = () => {
             <Link
               key={item.name}
               to={item.path}
-              className={`nav-item flex flex-col items-center justify-center ${
-                isActive ? 'active flex-1' : 'w-10'
-              } transition-all duration-200`}
+              className={`flex items-center justify-center ${
+                isActive ? 'text-nav-active' : 'text-nav-inactive'
+              }`}
             >
-              <div className="flex items-center justify-center">
-                {item.icon}
+              <div className="flex flex-col items-center">
+                <div className="flex items-center justify-center">
+                  {item.icon}
+                </div>
+                
+                {isActive && (
+                  <span className="text-xs mt-1 whitespace-nowrap">
+                    {item.name}
+                  </span>
+                )}
               </div>
-              
-              {isActive && (
-                <span className="text-xs mt-1 whitespace-nowrap overflow-hidden text-ellipsis">
-                  {item.name}
-                </span>
-              )}
             </Link>
           );
         })}
