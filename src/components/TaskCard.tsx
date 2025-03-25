@@ -59,10 +59,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
       circles.push(
         <div 
           key={i}
-          className={`w-4 h-4 rounded-full border ${i < frequency_count ? 'border-transparent' : 'bg-transparent border-light-navy'}`}
+          className={`w-4 h-4 rounded-full border ${i < frequency_count ? 'border-transparent' : 'bg-transparent'}`}
           style={{
             backgroundColor: i < frequency_count ? calendar_color : 'transparent',
-            borderColor: i < frequency_count ? 'transparent' : 'rgba(142, 145, 150, 0.5)'
+            borderColor: i < frequency_count ? 'transparent' : calendar_color || 'rgba(142, 145, 150, 0.5)'
           }}
         />
       );
