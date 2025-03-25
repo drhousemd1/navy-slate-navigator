@@ -12,15 +12,28 @@ export function useIsMobile() {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
     
-    // Check immediately on mount
-    checkIfMobile()
+    // Set initial value
+    if (typeof window !== 'undefined') {
+      checkIfMobile()
+    }
     
-    // Add resize event listener
-    window.addEventListener('resize', checkIfMobile)
+    // Add resize event listener with throttling
+    let timeoutId: NodeJS.Timeout | null = null
+    const handleResize = () => {
+      if (timeoutId === null) {
+        timeoutId = setTimeout(() => {
+          timeoutId = null
+          checkIfMobile()
+        }, 100)
+      }
+    }
+    
+    window.addEventListener('resize', handleResize)
     
     // Cleanup
     return () => {
-      window.removeEventListener('resize', checkIfMobile)
+      window.removeEventListener('resize', handleResize)
+      if (timeoutId) clearTimeout(timeoutId)
     }
   }, [])
 
