@@ -21,6 +21,9 @@ interface TaskCardProps {
   frequency_count?: number;
   icon_url?: string;
   priority?: 'low' | 'medium' | 'high';
+  highlight_effect?: boolean;
+  title_color?: string;
+  subtext_color?: string;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -38,7 +41,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
   frequency,
   frequency_count = 0,
   icon_url,
-  priority = 'medium'
+  priority = 'medium',
+  highlight_effect = false,
+  title_color = '#FFFFFF',
+  subtext_color = '#8E9196'
 }) => {
   const generateTrackerCircles = () => {
     const circles = [];
@@ -131,11 +137,28 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </div>
           </div>
           
-          <div className="flex-1">
-            <h3 className="text-xl font-semibold text-white">
+          <div className="flex-1 relative">
+            {highlight_effect && (
+              <div 
+                className="absolute -left-2 -top-2 -right-2 z-0 rounded-md py-6" 
+                style={{ 
+                  backgroundColor: '#FFD700',
+                  paddingLeft: '0.5rem',
+                  paddingRight: '0.5rem',
+                  borderRadius: '4px',
+                }}
+              />
+            )}
+            <h3 
+              className="text-xl font-semibold relative z-10"
+              style={{ color: title_color }}
+            >
               {title}
             </h3>
-            <div className="mt-1 text-sm text-light-navy">
+            <div 
+              className="mt-1 text-sm relative z-10" 
+              style={{ color: subtext_color }}
+            >
               {description}
             </div>
           </div>
