@@ -711,9 +711,9 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
             <DialogFooter className="pt-4">
               <Button 
                 type="button" 
-                variant="outline" 
+                variant="destructive" 
                 onClick={onClose}
-                className="border-light-navy text-white hover:bg-light-navy"
+                className="border-light-navy text-white hover:bg-destructive/80"
               >
                 Cancel
               </Button>
