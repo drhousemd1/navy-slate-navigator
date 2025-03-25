@@ -9,24 +9,15 @@ interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-const getButtonText = (pathname: string): string | null => {
-  switch (pathname) {
-    case '/rules':
-      return 'Add New Rule';
-    case '/tasks':
-      return 'Add New Task';
-    case '/rewards':
-      return 'Add New Reward';
-    case '/punishments':
-      return 'Add New Punishment';
-    default:
-      return null;
-  }
-};
-
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const location = useLocation();
-  const buttonText = getButtonText(location.pathname);
+
+  // Only show "Add" button for specific routes
+  const shouldShowAddButton = 
+    location.pathname === '/tasks' || 
+    location.pathname === '/rules' || 
+    location.pathname === '/rewards' || 
+    location.pathname === '/punishments';
 
   return (
     <div className="flex flex-col min-h-screen bg-dark-navy">
@@ -34,12 +25,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {children}
       </main>
       
-      {buttonText && (
+      {shouldShowAddButton && (
         <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-10">
           <Button 
             className="bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6"
           >
-            <Plus className="w-5 h-5 mr-2" /> {buttonText}
+            <Plus className="w-5 h-5 mr-2" /> Add New Item
           </Button>
         </div>
       )}
