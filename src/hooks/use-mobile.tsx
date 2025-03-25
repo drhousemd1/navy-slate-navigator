@@ -16,7 +16,7 @@ export function useIsMobile() {
     // Check immediately on mount
     checkIfMobile()
     
-    // Check on resize with immediate callback first
+    // Check on resize
     window.addEventListener('resize', checkIfMobile)
     
     // Cleanup

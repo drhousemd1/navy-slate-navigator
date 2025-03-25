@@ -285,7 +285,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-navy border-light-navy text-white overflow-y-auto">
+      <DialogContent className="bg-navy border-light-navy text-white">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white">
             {taskData ? 'Edit Task' : 'Create New Task'}

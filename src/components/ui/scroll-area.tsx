@@ -1,24 +1,38 @@
+
 import * as React from "react"
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
-  <ScrollAreaPrimitive.Root
-    ref={ref}
-    className={cn("relative overflow-hidden", className)}
-    {...props}
-  >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
-      {children}
-    </ScrollAreaPrimitive.Viewport>
-    <ScrollBar />
-    <ScrollAreaPrimitive.Corner />
-  </ScrollAreaPrimitive.Root>
-))
+  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
+    orientation?: "horizontal" | "vertical" | "both"
+  }
+>(({ className, children, orientation = "vertical", ...props }, ref) => {
+  const isMobile = useIsMobile()
+  
+  return (
+    <ScrollAreaPrimitive.Root
+      ref={ref}
+      className={cn("relative overflow-hidden", className)}
+      {...props}
+    >
+      <ScrollAreaPrimitive.Viewport 
+        className={cn(
+          "h-full w-full rounded-[inherit]",
+          isMobile && "max-w-[calc(100vw-50px)]" // Ensure content stays within viewport on mobile
+        )}
+      >
+        {children}
+      </ScrollAreaPrimitive.Viewport>
+      {orientation === "vertical" || orientation === "both" ? <ScrollBar orientation="vertical" /> : null}
+      {orientation === "horizontal" || orientation === "both" ? <ScrollBar orientation="horizontal" /> : null}
+      <ScrollAreaPrimitive.Corner />
+    </ScrollAreaPrimitive.Root>
+  )
+})
 ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
 
 const ScrollBar = React.forwardRef<
