@@ -29,6 +29,16 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
 }) => {
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    console.log("Mouse down event triggered in BackgroundImageSelector");
+    onMouseDown(e);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    console.log("Touch start event triggered in BackgroundImageSelector");
+    onTouchStart(e);
+  };
+
   return (
     <div className="space-y-4">
       <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
@@ -53,8 +63,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
               {/* Interactive overlay with improved pointer events handling */}
               <div 
                 className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors duration-200"
-                onMouseDown={onMouseDown}
-                onTouchStart={onTouchStart}
+                onMouseDown={handleMouseDown}
+                onTouchStart={handleTouchStart}
                 style={{ 
                   cursor: 'crosshair',
                   pointerEvents: 'auto', 
