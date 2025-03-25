@@ -18,7 +18,7 @@ export function useIsMobile() {
     // Check on mount
     checkIfMobile()
 
-    // Set up event listener for resize with throttling for better performance
+    // Set up event listener for resize with debouncing for better performance
     let resizeTimeout: number | undefined;
     
     const handleResize = () => {
@@ -28,7 +28,7 @@ export function useIsMobile() {
       
       resizeTimeout = window.setTimeout(() => {
         checkIfMobile();
-      }, 100);
+      }, 50); // Shorter timeout for more responsive updates
     };
     
     window.addEventListener('resize', handleResize)
