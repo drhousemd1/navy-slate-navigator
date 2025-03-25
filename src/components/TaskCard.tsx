@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -36,10 +35,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
   frequency_count = 0,
   icon_url
 }) => {
-  // Generate circles for calendar tracker
   const generateTrackerCircles = () => {
     const circles = [];
-    const total = frequency === 'daily' ? 7 : 4; // 7 days or 4 weeks
+    const total = frequency === 'daily' ? 7 : 4;
     
     for (let i = 0; i < total; i++) {
       circles.push(
@@ -68,7 +66,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
       )}
 
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
-        {/* Top section - Points and Edit button */}
         <div className="flex justify-end mb-3">
           <div className="flex items-center">
             <Badge 
@@ -90,9 +87,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
         </div>
         
-        {/* Middle section - Icon, Title, and Description */}
         <div className="flex items-start mb-auto">
-          {/* Icon with background shape on the left */}
           <div className="mr-4 flex-shrink-0">
             <div className="w-10 h-10 rounded-full bg-light-navy/30 flex items-center justify-center">
               {icon_url ? (
@@ -103,7 +98,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </div>
           </div>
           
-          {/* Title and description stacked vertically */}
           <div className="flex-1">
             <h3 className={`text-xl font-semibold ${completed ? 'text-gray-400 line-through' : 'text-white'}`}>
               {title}
@@ -114,9 +108,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
         </div>
         
-        {/* Bottom section - Calendar tracker on left, Complete button on right */}
         <div className="flex items-center justify-between mt-4">
-          {/* Calendar tracker on the bottom left */}
           {frequency && (
             <div className="flex space-x-1 items-center">
               <Calendar className="h-4 w-4 text-light-navy mr-1" />
@@ -126,12 +118,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </div>
           )}
           
-          {/* Mark complete button */}
           {onToggleCompletion && (
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
-              className={`${completed ? 'bg-green-600/20 border-green-600/30 text-green-500' : 'bg-navy border-light-navy text-light-navy'}`}
+              className={`${completed ? 'bg-green-600 text-white' : 'bg-green-500 text-white'}`}
               onClick={() => onToggleCompletion(!completed)}
             >
               {completed ? (
