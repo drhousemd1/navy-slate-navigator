@@ -18,11 +18,28 @@ export function useIsMobile() {
     // Check on mount
     checkIfMobile()
 
-    // Set up event listener for resize
-    window.addEventListener('resize', checkIfMobile)
+    // Set up event listener for resize with throttling for better performance
+    let resizeTimeout: number | undefined;
+    
+    const handleResize = () => {
+      if (resizeTimeout) {
+        window.clearTimeout(resizeTimeout);
+      }
+      
+      resizeTimeout = window.setTimeout(() => {
+        checkIfMobile();
+      }, 100);
+    };
+    
+    window.addEventListener('resize', handleResize)
     
     // Cleanup
-    return () => window.removeEventListener('resize', checkIfMobile)
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimeout) {
+        window.clearTimeout(resizeTimeout);
+      }
+    }
   }, [])
 
   return isMobile
