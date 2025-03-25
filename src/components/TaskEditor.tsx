@@ -13,6 +13,7 @@ import { Plus, Minus, Upload, CheckSquare, Save, Flag, CircleAlert, CircleCheck,
 import { toast } from '@/hooks/use-toast';
 import { saveTask, Task } from '@/lib/taskUtils';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +60,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
   
   const form = useForm<TaskFormValues>({
     defaultValues: {
@@ -283,7 +285,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-navy border-light-navy text-white max-w-4xl h-[90vh] overflow-y-auto">
+      <DialogContent className={`bg-navy border-light-navy text-white ${isMobile ? 'w-[95%] h-[95vh] max-w-full p-4' : 'max-w-4xl h-[90vh] p-6'} overflow-y-auto overflow-x-hidden`}>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white">
             {taskData ? 'Edit Task' : 'Create New Task'}
@@ -729,8 +731,8 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
             />
             
             <DialogFooter className="pt-4">
-              <div className="w-full flex items-center gap-4 justify-between">
-                <div className="flex items-center gap-2">
+              <div className={`w-full flex items-center ${isMobile ? 'flex-col space-y-3' : 'flex-row justify-between gap-4'}`}>
+                <div className={`flex items-center ${isMobile ? 'w-full justify-between' : 'gap-2'}`}>
                   {taskData?.id && onDelete && (
                     <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                       <AlertDialogTrigger asChild>
@@ -740,7 +742,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                           className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
                         >
                           <Trash2 className="h-4 w-4" />
-                          Delete Task
+                          Delete
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent className="bg-navy border-light-navy text-white">
@@ -771,9 +773,10 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                     Cancel
                   </Button>
                 </div>
+                
                 <Button 
                   type="submit" 
-                  className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
+                  className={`bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2 ${isMobile ? 'w-full' : ''}`}
                   disabled={loading}
                 >
                   {loading ? 'Saving...' : (
@@ -793,3 +796,4 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
 };
 
 export default TaskEditor;
+
