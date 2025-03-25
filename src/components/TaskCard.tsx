@@ -161,7 +161,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
       </div>
       
       {completed && (
-        <div className="absolute inset-0 z-20 bg-white/10 rounded pointer-events-none" />
+        <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
       )}
     </Card>
   );
