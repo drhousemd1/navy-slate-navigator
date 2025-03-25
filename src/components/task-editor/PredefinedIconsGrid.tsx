@@ -7,6 +7,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
+// Define a subset of common icons to show by default when no search is active
+const COMMON_ICONS = [
+  'Calendar', 'CheckSquare', 'Heart', 'Star', 'Trophy', 
+  'Target', 'Activity', 'Bell', 'BookOpen', 'Coffee', 
+  'Dumbbell', 'Music', 'Home', 'User', 'Settings',
+  'Mail', 'MessageSquare', 'Send', 'Gift', 'Zap',
+  'Sun', 'Moon', 'Smile', 'Map', 'ShoppingCart'
+];
+
 interface PredefinedIconsGridProps {
   selectedIconName: string | null;
   iconColor: string;
@@ -20,12 +29,15 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
 }) => {
   const [isPresetsDialogOpen, setIsPresetsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredIcons, setFilteredIcons] = useState(predefinedIcons);
+  const [filteredIcons, setFilteredIcons] = useState<typeof predefinedIcons>([]);
 
   // Filter icons based on search query
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setFilteredIcons(predefinedIcons);
+      // When no search query, show common icons
+      const commonIconsSet = new Set(COMMON_ICONS);
+      const defaultIcons = predefinedIcons.filter(icon => commonIconsSet.has(icon.name));
+      setFilteredIcons(defaultIcons);
     } else {
       const query = searchQuery.toLowerCase();
       const filtered = predefinedIcons.filter(icon => 
