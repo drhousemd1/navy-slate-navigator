@@ -142,7 +142,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               <div 
                 className="absolute -left-2 -top-2 -right-2 z-0 rounded-md py-6" 
                 style={{ 
-                  backgroundColor: '#FFD700',
+                  backgroundColor: 'rgba(255, 215, 0, 0.4)',
                   paddingLeft: '0.5rem',
                   paddingRight: '0.5rem',
                   borderRadius: '4px',

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -53,6 +54,8 @@ export const fetchTasks = async (): Promise<Task[]> => {
 
 export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
   try {
+    console.log('Saving task with highlight effect:', task.highlight_effect);
+    
     if (task.id) {
       // Update existing task
       const { data, error } = await supabase

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -137,6 +138,9 @@ const Tasks: React.FC = () => {
                 frequency_count={task.frequency_count}
                 icon_url={task.icon_url}
                 priority={task.priority}
+                highlight_effect={task.highlight_effect}
+                title_color={task.title_color}
+                subtext_color={task.subtext_color}
                 onEdit={() => handleEditTask(task)}
                 onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
               />
