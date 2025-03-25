@@ -118,8 +118,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
           )}
         </div>
         
-        <div className="flex items-start mb-auto">
-          <div className="mr-4 flex-shrink-0">
+        <div className="flex items-start mb-auto relative">
+          <div className="mr-4 flex-shrink-0 z-10">
             <div className="w-10 h-10 rounded-full bg-light-navy/30 flex items-center justify-center">
               {icon_url ? (
                 <img src={icon_url} alt="Task icon" className="w-6 h-6" />
@@ -129,19 +129,18 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </div>
           </div>
           
-          <div className="flex-1">
+          <div className="flex-1 z-10">
             <h3 className={`text-xl font-semibold ${completed ? 'text-gray-400' : 'text-white'}`}>
               {title}
             </h3>
-            <div className="relative">
-              <div className="mt-1 text-sm text-light-navy">
-                {description}
-              </div>
-              {completed && (
-                <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] rounded"></div>
-              )}
+            <div className="mt-1 text-sm text-light-navy">
+              {description}
             </div>
           </div>
+          
+          {completed && (
+            <div className="absolute inset-0 bg-white/30 backdrop-blur-sm rounded z-0"></div>
+          )}
         </div>
         
         <div className="flex items-center justify-between mt-4">
