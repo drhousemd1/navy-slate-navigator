@@ -68,42 +68,47 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
       <div className="relative z-10 flex flex-col p-4 md:p-6">
         <div className="flex items-start">
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
+          {/* Icon with background shape on the far left */}
+          <div className="mr-4 flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-light-navy/30 flex items-center justify-center">
               {icon_url ? (
                 <img src={icon_url} alt="Task icon" className="w-6 h-6" />
               ) : (
                 <Calendar className="w-6 h-6 text-nav-active" />
               )}
-              
-              <h3 className={`text-xl font-semibold ${completed ? 'text-gray-400 line-through' : 'text-white'}`}>
-                {title}
-              </h3>
-              
-              <div className="flex items-center ml-auto">
-                <div className="flex items-center mr-3">
-                  <Star className="h-5 w-5 text-nav-active" />
-                  <span className="text-nav-active font-bold ml-1">{points}</span>
-                </div>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onEdit}
-                  className="text-light-navy hover:text-white hover:bg-light-navy"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-              </div>
             </div>
-            
-            <p className={`mt-2 text-sm ${completed ? 'text-gray-500 line-through' : 'text-light-navy'}`}>
+          </div>
+          
+          {/* Title and description stacked vertically */}
+          <div className="flex-1">
+            <h3 className={`text-xl font-semibold ${completed ? 'text-gray-400 line-through' : 'text-white'}`}>
+              {title}
+            </h3>
+            <p className={`mt-1 text-sm ${completed ? 'text-gray-500 line-through' : 'text-light-navy'}`}>
               {description}
             </p>
+          </div>
+          
+          {/* Points and Edit button */}
+          <div className="flex items-center">
+            <div className="flex items-center mr-3">
+              <Star className="h-5 w-5 text-nav-active" />
+              <span className="text-nav-active font-bold ml-1">{points}</span>
+            </div>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onEdit}
+              className="text-light-navy hover:text-white hover:bg-light-navy"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
           </div>
         </div>
         
         <div className="flex items-center justify-between mt-4">
+          {/* Calendar tracker on the bottom left */}
           {frequency && (
             <div className="flex space-x-1 items-center">
               <Calendar className="h-4 w-4 text-light-navy mr-1" />
@@ -113,6 +118,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </div>
           )}
           
+          {/* Mark complete button */}
           {onToggleCompletion && (
             <Button
               variant="outline"
