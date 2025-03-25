@@ -17,6 +17,7 @@ interface RecentIcon {
   name: string;
   isCustom: boolean;
   url?: string;
+  // Removed color property - we don't want to store the color with recent icons
 }
 
 // Helper function to manage recently used icons
@@ -56,6 +57,9 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
   const [isPresetsDialogOpen, setIsPresetsDialogOpen] = useState(false);
   const [isCustomDialogOpen, setIsCustomDialogOpen] = useState(false);
   const [recentIcons, setRecentIcons] = useState<RecentIcon[]>([]);
+
+  // Fixed default color for the recently used icons section
+  const RECENT_ICONS_DEFAULT_COLOR = '#ff6b6b'; // Consistent color for recently used icons
 
   // Load recently used icons on component mount
   useEffect(() => {
@@ -101,7 +105,7 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
       onSelectIcon(recentIcon.name);
     }
     
-    // Move this icon to the front of recent icons
+    // Move this icon to the front of recent icons without changing other properties
     const updatedRecentIcons = updateRecentIcons(recentIcon);
     setRecentIcons(updatedRecentIcons);
   };
@@ -118,7 +122,8 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
       );
     } else {
       const IconComponent = predefinedIcons.find(i => i.name === iconData.name)?.icon;
-      return IconComponent ? <IconComponent className="h-6 w-6" style={{ color: iconColor }} /> : null;
+      // Use the fixed color for recently used icons instead of the task's icon color
+      return IconComponent ? <IconComponent className="h-6 w-6" style={{ color: RECENT_ICONS_DEFAULT_COLOR }} /> : null;
     }
   };
 
