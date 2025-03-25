@@ -49,21 +49,30 @@ const MobileNavbar: React.FC = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg">
-      <div className="flex justify-around items-center h-16">
-        {navItems.map((item) => (
-          <Link
-            key={item.name}
-            to={item.path}
-            className={`nav-item flex flex-col items-center justify-center w-full py-1 ${
-              currentPath === item.path ? 'active' : ''
-            }`}
-          >
-            <div className="flex items-center justify-center mb-1">
-              {item.icon}
-            </div>
-            <span className="text-xs">{item.name}</span>
-          </Link>
-        ))}
+      <div className="flex justify-between items-center h-16 px-2">
+        {navItems.map((item) => {
+          const isActive = currentPath === item.path;
+          
+          return (
+            <Link
+              key={item.name}
+              to={item.path}
+              className={`nav-item flex flex-col items-center justify-center ${
+                isActive ? 'active flex-1' : 'w-10'
+              } transition-all duration-200`}
+            >
+              <div className="flex items-center justify-center">
+                {item.icon}
+              </div>
+              
+              {isActive && (
+                <span className="text-xs mt-1 whitespace-nowrap overflow-hidden text-ellipsis">
+                  {item.name}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </div>
       
       {/* Add a safe area inset for iOS devices */}
