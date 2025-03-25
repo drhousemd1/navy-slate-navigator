@@ -102,16 +102,16 @@ const TaskCard: React.FC<TaskCardProps> = ({
               <Button
                 variant="default"
                 size="sm"
-                className={`${completed ? 'bg-green-600 text-white' : 'bg-green-500 text-white'}`}
+                className={`${completed ? 'bg-green-600 text-white' : 'bg-green-500 text-white'} px-2 py-0 h-7`}
                 onClick={() => onToggleCompletion(!completed)}
               >
                 {completed ? (
                   <span className="flex items-center gap-1">
-                    <Check className="h-4 w-4" />
-                    Completed
+                    <Check className="h-3 w-3" />
+                    <span className="text-xs">Completed</span>
                   </span>
                 ) : (
-                  'Complete'
+                  <span className="text-xs">Complete</span>
                 )}
               </Button>
             </div>
