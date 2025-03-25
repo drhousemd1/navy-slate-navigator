@@ -5,7 +5,7 @@ import {
   BookOpenCheck, 
   CheckSquare, 
   Gift, 
-  Medal, 
+  Skull, 
   Crown
 } from 'lucide-react';
 
@@ -34,7 +34,7 @@ const navItems: NavItem[] = [
   {
     name: 'Punishments',
     path: '/punishments',
-    icon: <Medal className="w-5 h-5" />,
+    icon: <Skull className="w-5 h-5" />,
   },
   {
     name: 'Throne Room',
