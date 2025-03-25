@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -160,7 +161,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
       </div>
       
       {completed && (
-        <div className="absolute inset-0 z-20 bg-white/30 backdrop-blur-sm rounded pointer-events-none" />
+        <div className="absolute inset-0 z-20 bg-white/20 backdrop-blur-sm rounded pointer-events-none" />
       )}
     </Card>
   );
