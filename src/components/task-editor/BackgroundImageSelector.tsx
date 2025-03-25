@@ -36,9 +36,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
           <div className="space-y-4">
             <div 
               ref={imageContainerRef}
-              className="relative w-full h-48 rounded-lg overflow-hidden cursor-crosshair"
-              onMouseDown={onMouseDown}
-              onTouchStart={onTouchStart}
+              className="relative w-full h-48 rounded-lg overflow-hidden"
               role="button"
               tabIndex={0}
               aria-label="Drag to adjust focal point"
@@ -54,18 +52,25 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
               />
               <div 
                 className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors duration-200"
+                onMouseDown={onMouseDown}
+                onTouchStart={onTouchStart}
+                style={{ 
+                  cursor: 'crosshair',
+                  pointerEvents: 'all',
+                  zIndex: 10
+                }}
               >
                 <div 
-                  className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg z-10 animate-pulse"
+                  className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg pointer-events-none"
                   style={{ 
                     left: `${position.x}%`, 
                     top: `${position.y}%`,
-                    cursor: 'grab',
-                    animation: isDragging ? 'none' : '',
-                    boxShadow: isDragging ? '0 0 0 4px rgba(126, 105, 171, 0.5)' : ''
+                    animation: isDragging ? 'none' : 'pulse 2s infinite',
+                    boxShadow: isDragging ? '0 0 0 4px rgba(126, 105, 171, 0.5)' : '',
+                    zIndex: 20
                   }}
                 />
-                <span className="text-sm text-white bg-black/70 px-3 py-2 rounded-full shadow-md">
+                <span className="text-sm text-white bg-black/70 px-3 py-2 rounded-full shadow-md pointer-events-none">
                   Click and drag to adjust focal point
                 </span>
               </div>
