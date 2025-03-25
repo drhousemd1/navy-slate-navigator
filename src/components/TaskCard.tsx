@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, Check, CheckSquare, Circle } from 'lucide-react';
+import { Calendar, CheckSquare, Circle } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -31,13 +31,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
             +{points}
           </Badge>
           
-          {/* Complete button */}
+          {/* Complete button - removed check icon and adjusted padding */}
           <Button 
             variant="outline" 
-            className={`rounded-full ${completed ? 'bg-nav-active text-white border-nav-active' : 'bg-transparent border-light-navy text-nav-inactive'}`}
+            className={`rounded-full px-3 py-0.5 h-auto ${completed ? 'bg-nav-active text-white border-nav-active' : 'bg-transparent border-light-navy text-nav-inactive'}`}
             size="sm"
           >
-            <Check className="w-4 h-4 mr-1" />
             Complete
           </Button>
         </div>
