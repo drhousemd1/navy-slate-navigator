@@ -1,9 +1,14 @@
-import React, { useState, CSSProperties } from 'react';
+
+import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Edit, Check, Calendar, Plus, Minus } from 'lucide-react';
-import { Badge } from './ui/badge';
-import { CheckSquare, BookOpen, Coffee, Dumbbell, Star, Heart, Trophy, Target } from 'lucide-react';
+import { Edit } from 'lucide-react';
+import PriorityBadge from './task/PriorityBadge';
+import PointsBadge from './task/PointsBadge';
+import CompletionButton from './task/CompletionButton';
+import TaskIcon from './task/TaskIcon';
+import FrequencyTracker from './task/FrequencyTracker';
+import HighlightedText from './task/HighlightedText';
 
 interface TaskCardProps {
   title: string;
@@ -40,7 +45,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
   focalPointY = 50,
   onEdit,
   onToggleCompletion,
-  onDelete,
   frequency,
   frequency_count = 0,
   icon_url,
@@ -52,78 +56,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
   calendar_color = '#7E69AB',
   icon_color = '#9b87f5'
 }) => {
-  const generateTrackerCircles = () => {
-    const circles = [];
-    const total = frequency === 'daily' ? 7 : 4;
-    
-    for (let i = 0; i < total; i++) {
-      circles.push(
-        <div 
-          key={i}
-          className={`w-4 h-4 rounded-full border ${i < frequency_count ? 'border-transparent' : 'bg-transparent'}`}
-          style={{
-            backgroundColor: i < frequency_count ? calendar_color : 'transparent',
-            borderColor: i < frequency_count ? 'transparent' : calendar_color || 'rgba(142, 145, 150, 0.5)'
-          }}
-        />
-      );
-    }
-    
-    return circles;
-  };
-
-  const getPriorityColor = () => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-500';
-      case 'low':
-        return 'bg-green-500';
-      case 'medium':
-      default:
-        return 'bg-yellow-500';
-    }
-  };
-
-  const renderIcon = () => {
-    if (icon_url) {
-      return <img src={icon_url} alt="Task icon" className="w-6 h-6" />;
-    }
-    
-    if (icon_name) {
-      switch (icon_name) {
-        case 'CheckSquare':
-          return <CheckSquare className="w-6 h-6" style={{ color: icon_color }} />;
-        case 'BookOpen':
-          return <BookOpen className="w-6 h-6" style={{ color: icon_color }} />;
-        case 'Coffee':
-          return <Coffee className="w-6 h-6" style={{ color: icon_color }} />;
-        case 'Dumbbell':
-          return <Dumbbell className="w-6 h-6" style={{ color: icon_color }} />;
-        case 'Star':
-          return <Star className="w-6 h-6" style={{ color: icon_color }} />;
-        case 'Heart':
-          return <Heart className="w-6 h-6" style={{ color: icon_color }} />;
-        case 'Trophy':
-          return <Trophy className="w-6 h-6" style={{ color: icon_color }} />;
-        case 'Target':
-          return <Target className="w-6 h-6" style={{ color: icon_color }} />;
-        default:
-          return <Calendar className="w-6 h-6" style={{ color: icon_color }} />;
-      }
-    }
-    
-    return <Calendar className="w-6 h-6" style={{ color: icon_color }} />;
-  };
-
-  const highlighterStyle: CSSProperties = {
-    backgroundColor: 'rgba(255, 215, 0, 0.4)',
-    padding: '2px 4px',
-    borderRadius: '3px',
-    display: 'inline',
-    boxDecorationBreak: 'clone' as 'clone',
-    WebkitBoxDecorationBreak: 'clone' as 'clone'
-  };
-
   return (
     <Card className={`relative overflow-hidden border-light-navy ${!backgroundImage ? 'bg-navy' : ''}`}>
       {backgroundImage && (
@@ -140,38 +72,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">
-          <Badge 
-            className={`${getPriorityColor()} text-white font-bold capitalize px-3 py-1`}
-            variant="default"
-          >
-            {priority}
-          </Badge>
+          <PriorityBadge priority={priority} />
           
           {onToggleCompletion && (
             <div className="flex items-center gap-2">
-              <Badge 
-                className="bg-nav-active text-white font-bold flex items-center gap-1"
-                variant="default"
-              >
-                {points > 0 ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-                {Math.abs(points)}
-              </Badge>
-              
-              <Button
-                variant="default"
-                size="sm"
-                className={`${completed ? 'bg-green-600 text-white' : 'bg-green-500 text-white'} px-2 py-0 h-7`}
-                onClick={() => onToggleCompletion(!completed)}
-              >
-                {completed ? (
-                  <span className="flex items-center gap-1">
-                    <Check className="h-3 w-3" />
-                    <span className="text-xs">Completed</span>
-                  </span>
-                ) : (
-                  <span className="text-xs">Complete</span>
-                )}
-              </Button>
+              <PointsBadge points={points} />
+              <CompletionButton 
+                completed={completed} 
+                onToggleCompletion={onToggleCompletion} 
+              />
             </div>
           )}
         </div>
@@ -179,50 +88,40 @@ const TaskCard: React.FC<TaskCardProps> = ({
         <div className="flex items-start mb-auto">
           <div className="mr-4 flex-shrink-0">
             <div className="w-10 h-10 rounded-full bg-light-navy/30 flex items-center justify-center">
-              {renderIcon()}
+              <TaskIcon 
+                icon_url={icon_url} 
+                icon_name={icon_name} 
+                icon_color={icon_color} 
+              />
             </div>
           </div>
           
           <div className="flex-1 flex flex-col">
             <h3 className="text-xl font-semibold">
-              {highlight_effect ? (
-                <span style={{
-                  ...highlighterStyle,
-                  color: title_color
-                }}>
-                  {title}
-                </span>
-              ) : (
-                <span style={{ color: title_color }}>{title}</span>
-              )}
+              <HighlightedText 
+                text={title} 
+                highlight={highlight_effect || false} 
+                color={title_color} 
+              />
             </h3>
             
             <div className="text-sm mt-1">
-              {highlight_effect ? (
-                <span style={{
-                  ...highlighterStyle,
-                  color: subtext_color
-                }}>
-                  {description}
-                </span>
-              ) : (
-                <span style={{ color: subtext_color }}>{description}</span>
-              )}
+              <HighlightedText 
+                text={description} 
+                highlight={highlight_effect || false} 
+                color={subtext_color} 
+              />
             </div>
           </div>
         </div>
         
         <div className="flex items-center justify-between mt-4">
           {frequency && (
-            <div className="flex space-x-1 items-center">
-              <Calendar 
-                className="h-4 w-4 mr-1" 
-                style={{ color: calendar_color }}
-              />
-              <div className="flex space-x-1">
-                {generateTrackerCircles()}
-              </div>
-            </div>
+            <FrequencyTracker 
+              frequency={frequency} 
+              frequency_count={frequency_count} 
+              calendar_color={calendar_color} 
+            />
           )}
           
           <div className="flex space-x-2 ml-auto">
