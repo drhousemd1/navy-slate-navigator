@@ -718,7 +718,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                 <FormItem className="flex flex-row items-center justify-between">
                   <div className="space-y-0.5">
                     <FormLabel className="text-white">Highlight Effect</FormLabel>
-                    <p className="text-sm text-light-navy">Apply a yellow highlight behind title and description</p>
+                    <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
                   </div>
                   <FormControl>
                     <Switch
