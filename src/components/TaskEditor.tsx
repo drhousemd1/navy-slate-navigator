@@ -209,6 +209,18 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
     form.setValue('points', currentPoints - 1);
   };
 
+  const incrementFrequencyCount = () => {
+    const currentCount = form.getValues('frequency_count');
+    form.setValue('frequency_count', currentCount + 1);
+  };
+
+  const decrementFrequencyCount = () => {
+    const currentCount = form.getValues('frequency_count');
+    if (currentCount > 1) {
+      form.setValue('frequency_count', currentCount - 1);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-navy border-light-navy text-white max-w-4xl h-[90vh] overflow-y-auto">
@@ -379,17 +391,37 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-white">Times per period</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        className="bg-dark-navy border-light-navy text-white"
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value === '' ? undefined : parseInt(e.target.value);
-                          field.onChange(value);
-                        }}
-                      />
-                    </FormControl>
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        size="icon" 
+                        onClick={decrementFrequencyCount}
+                        className="border-light-navy bg-light-navy text-white hover:bg-navy"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          className="w-20 text-center bg-dark-navy border-light-navy text-white"
+                          {...field}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? undefined : parseInt(e.target.value);
+                            field.onChange(value);
+                          }}
+                        />
+                      </FormControl>
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        size="icon" 
+                        onClick={incrementFrequencyCount}
+                        className="border-light-navy bg-light-navy text-white hover:bg-navy"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </FormItem>
                 )}
               />
