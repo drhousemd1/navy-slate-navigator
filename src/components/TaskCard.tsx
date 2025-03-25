@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Edit, Check, Calendar, Plus, Minus } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { CheckSquare, BookOpen, Coffee, Dumbbell, Star, Heart, Trophy, Target } from 'lucide-react';
 
 interface TaskCardProps {
   title: string;
@@ -42,6 +42,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   frequency,
   frequency_count = 0,
   icon_url,
+  icon_name,
   priority = 'medium',
   highlight_effect = false,
   title_color = '#FFFFFF',
@@ -73,6 +74,37 @@ const TaskCard: React.FC<TaskCardProps> = ({
       default:
         return 'bg-yellow-500';
     }
+  };
+
+  const renderIcon = () => {
+    if (icon_url) {
+      return <img src={icon_url} alt="Task icon" className="w-6 h-6" />;
+    }
+    
+    if (icon_name) {
+      switch (icon_name) {
+        case 'CheckSquare':
+          return <CheckSquare className="w-6 h-6 text-nav-active" />;
+        case 'BookOpen':
+          return <BookOpen className="w-6 h-6 text-nav-active" />;
+        case 'Coffee':
+          return <Coffee className="w-6 h-6 text-nav-active" />;
+        case 'Dumbbell':
+          return <Dumbbell className="w-6 h-6 text-nav-active" />;
+        case 'Star':
+          return <Star className="w-6 h-6 text-nav-active" />;
+        case 'Heart':
+          return <Heart className="w-6 h-6 text-nav-active" />;
+        case 'Trophy':
+          return <Trophy className="w-6 h-6 text-nav-active" />;
+        case 'Target':
+          return <Target className="w-6 h-6 text-nav-active" />;
+        default:
+          return <Calendar className="w-6 h-6 text-nav-active" />;
+      }
+    }
+    
+    return <Calendar className="w-6 h-6 text-nav-active" />;
   };
 
   return (
@@ -130,11 +162,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         <div className="flex items-start mb-auto">
           <div className="mr-4 flex-shrink-0">
             <div className="w-10 h-10 rounded-full bg-light-navy/30 flex items-center justify-center">
-              {icon_url ? (
-                <img src={icon_url} alt="Task icon" className="w-6 h-6" />
-              ) : (
-                <Calendar className="w-6 h-6 text-nav-active" />
-              )}
+              {renderIcon()}
             </div>
           </div>
           
