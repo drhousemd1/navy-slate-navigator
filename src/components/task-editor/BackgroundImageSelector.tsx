@@ -60,28 +60,30 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                   objectPosition: `${position.x}% ${position.y}%`
                 }}
               />
-              {/* Interactive overlay with improved pointer events handling */}
+              {/* Interactive overlay directly handling mouse and touch events */}
               <div 
                 className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors duration-200"
                 onMouseDown={handleMouseDown}
                 onTouchStart={handleTouchStart}
                 style={{ 
                   cursor: 'crosshair',
+                  position: 'absolute',
                   pointerEvents: 'auto', 
                   touchAction: 'none',
                   zIndex: 10,
-                  border: '2px solid red' // Temporary red border for debugging
+                  border: '2px solid red' // Keeping the debugging border as requested
                 }}
               >
-                {/* Focal point indicator */}
+                {/* Focal point indicator with pointer-events: none */}
                 <div 
-                  className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg pointer-events-none"
+                  className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg"
                   style={{ 
                     left: `${position.x}%`, 
                     top: `${position.y}%`,
                     animation: isDragging ? 'none' : 'pulse 2s infinite',
                     boxShadow: isDragging ? '0 0 0 4px rgba(126, 105, 171, 0.5)' : '',
-                    zIndex: 20
+                    zIndex: 20,
+                    pointerEvents: 'none' // Ensuring the marker doesn't block input
                   }}
                 />
                 <span className="text-sm text-white bg-black/70 px-3 py-2 rounded-full shadow-md pointer-events-none">

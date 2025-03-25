@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -108,6 +107,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     form.setValue('focal_point_y', Math.round(y));
     
     const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDragging) return;
+      
       console.log("Dragging", { 
         clientX: moveEvent.clientX, 
         clientY: moveEvent.clientY,
@@ -154,6 +155,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     form.setValue('focal_point_y', Math.round(y));
     
     const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (!isDragging) return;
+      
       console.log("Touch Dragging", { 
         isDragging: true,
         touchesLength: moveEvent.touches.length
