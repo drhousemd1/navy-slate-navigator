@@ -137,6 +137,7 @@ const Tasks: React.FC = () => {
                 frequency={task.frequency}
                 frequency_count={task.frequency_count}
                 icon_url={task.icon_url}
+                icon_name={task.icon_name}
                 priority={task.priority}
                 highlight_effect={task.highlight_effect}
                 title_color={task.title_color}

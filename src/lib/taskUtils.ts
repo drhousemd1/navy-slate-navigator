@@ -15,6 +15,7 @@ export interface Task {
   frequency?: 'daily' | 'weekly';
   frequency_count?: number;
   icon_url?: string;
+  icon_name?: string;
   priority?: 'low' | 'medium' | 'high';
   completion_count?: number;
   max_completions?: number;
@@ -55,6 +56,7 @@ export const fetchTasks = async (): Promise<Task[]> => {
 export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
   try {
     console.log('Saving task with highlight effect:', task.highlight_effect);
+    console.log('Saving task with icon name:', task.icon_name);
     
     if (task.id) {
       // Update existing task
@@ -70,6 +72,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           background_image_url: task.background_image_url,
           background_opacity: task.background_opacity,
           icon_url: task.icon_url,
+          icon_name: task.icon_name,
           title_color: task.title_color,
           subtext_color: task.subtext_color,
           calendar_color: task.calendar_color,
@@ -99,6 +102,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           background_image_url: task.background_image_url,
           background_opacity: task.background_opacity,
           icon_url: task.icon_url,
+          icon_name: task.icon_name,
           title_color: task.title_color,
           subtext_color: task.subtext_color,
           calendar_color: task.calendar_color,

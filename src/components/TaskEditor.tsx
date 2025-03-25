@@ -9,7 +9,10 @@ import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
 import { Form, FormField, FormItem, FormLabel, FormControl } from './ui/form';
 import { useForm } from 'react-hook-form';
-import { Plus, Minus, Upload, CheckSquare, Save, Flag, CircleAlert, CircleCheck, Trash2 } from 'lucide-react';
+import { 
+  Plus, Minus, Upload, Save, Flag, CircleAlert, CircleCheck, Trash2,
+  CheckSquare, BookOpen, Coffee, Dumbbell, Star, Heart, Trophy, Target
+} from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { saveTask, Task } from '@/lib/taskUtils';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -43,6 +46,7 @@ interface TaskFormValues {
   background_image_url?: string;
   background_opacity: number;
   icon_url?: string;
+  icon_name?: string;
   title_color: string;
   subtext_color: string;
   calendar_color: string;
@@ -52,9 +56,21 @@ interface TaskFormValues {
   priority: 'low' | 'medium' | 'high';
 }
 
+const predefinedIcons = [
+  { name: 'CheckSquare', icon: CheckSquare },
+  { name: 'BookOpen', icon: BookOpen },
+  { name: 'Coffee', icon: Coffee },
+  { name: 'Dumbbell', icon: Dumbbell },
+  { name: 'Star', icon: Star },
+  { name: 'Heart', icon: Heart },
+  { name: 'Trophy', icon: Trophy },
+  { name: 'Target', icon: Target },
+];
+
 const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSave, onDelete }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 50, y: 50 });
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -100,6 +116,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
       
       setImagePreview(null);
       setIconPreview(null);
+      setSelectedIconName(null);
       setPosition({ x: 50, y: 50 });
       
       if (taskData) {
@@ -119,10 +136,12 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
           focal_point_x: taskData.focal_point_x || 50,
           focal_point_y: taskData.focal_point_y || 50,
           priority: taskData.priority || 'medium',
+          icon_name: taskData.icon_name,
         });
         
         setImagePreview(taskData.background_image_url || null);
         setIconPreview(taskData.icon_url || null);
+        setSelectedIconName(taskData.icon_name || null);
         setPosition({
           x: taskData.focal_point_x || 50,
           y: taskData.focal_point_y || 50
@@ -225,19 +244,36 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
       reader.onloadend = () => {
         const base64String = reader.result as string;
         setIconPreview(base64String);
+        setSelectedIconName(null);
         form.setValue('icon_url', base64String);
+        form.setValue('icon_name', undefined);
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleIconSelect = (iconName: string) => {
+    setSelectedIconName(iconName);
+    setIconPreview(null);
+    form.setValue('icon_name', iconName);
+    form.setValue('icon_url', undefined);
+    
+    toast({
+      title: "Icon selected",
+      description: `${iconName} icon selected`,
+    });
+  };
+
   const handleSubmit = async (values: TaskFormValues) => {
     setLoading(true);
     console.log("Submitting task with values:", values);
+    console.log("Selected icon:", selectedIconName);
+    
     try {
       const taskToSave: Partial<Task> = {
         ...values,
         id: taskData?.id,
+        icon_name: selectedIconName || undefined,
       };
       
       await onSave(taskToSave);
@@ -281,6 +317,12 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
       setIsDeleteDialogOpen(false);
       onClose();
     }
+  };
+
+  const renderIcon = (iconName: string) => {
+    const IconComponent = predefinedIcons.find(i => i.name === iconName)?.icon;
+    if (!IconComponent) return null;
+    return <IconComponent className="h-6 w-6 text-white" />;
   };
 
   return (
@@ -597,7 +639,26 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                         variant="secondary" 
                         onClick={() => {
                           setIconPreview(null);
+                          setSelectedIconName(null);
                           form.setValue('icon_url', undefined);
+                          form.setValue('icon_name', undefined);
+                        }}
+                        className="bg-dark-navy text-white hover:bg-light-navy"
+                      >
+                        Remove Icon
+                      </Button>
+                    </div>
+                  ) : selectedIconName ? (
+                    <div className="space-y-4">
+                      <div className="w-16 h-16 mx-auto bg-dark-navy rounded-lg flex items-center justify-center">
+                        {renderIcon(selectedIconName)}
+                      </div>
+                      <Button 
+                        type="button"
+                        variant="secondary" 
+                        onClick={() => {
+                          setSelectedIconName(null);
+                          form.setValue('icon_name', undefined);
                         }}
                         className="bg-dark-navy text-white hover:bg-light-navy"
                       >
@@ -621,20 +682,18 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                 <div className="border-2 border-light-navy rounded-lg p-4">
                   <p className="text-white mb-2">Predefined Icons</p>
                   <div className="grid grid-cols-4 gap-2">
-                    {Array.from({ length: 8 }).map((_, index) => (
-                      <div 
-                        key={index} 
-                        className="w-10 h-10 rounded-md bg-light-navy flex items-center justify-center cursor-pointer hover:bg-navy"
-                        onClick={() => {
-                          toast({
-                            title: "Icon selected",
-                            description: `Predefined icon ${index + 1} selected`,
-                          });
-                        }}
-                      >
-                        <CheckSquare className="h-6 w-6 text-white" />
-                      </div>
-                    ))}
+                    {predefinedIcons.map((iconObj, index) => {
+                      const { name, icon: IconComponent } = iconObj;
+                      return (
+                        <div 
+                          key={index} 
+                          className={`w-10 h-10 rounded-md ${selectedIconName === name ? 'bg-nav-active' : 'bg-light-navy'} flex items-center justify-center cursor-pointer hover:bg-navy transition-colors`}
+                          onClick={() => handleIconSelect(name)}
+                        >
+                          <IconComponent className="h-6 w-6 text-white" />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
