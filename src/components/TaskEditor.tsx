@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Input } from './ui/input';
@@ -473,7 +474,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                   <div className="space-y-4">
                     <div 
                       ref={imageContainerRef}
-                      className="relative w-full h-48 rounded-lg overflow-hidden cursor-move"
+                      className="relative w-full h-48 rounded-lg overflow-hidden cursor-crosshair"
                       onMouseDown={handleMouseDown}
                       onTouchStart={handleTouchStart}
                       role="button"
@@ -490,19 +491,20 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                         }}
                       />
                       <div 
-                        className={`absolute inset-0 flex items-center justify-center ${isDragging ? 'bg-black/30' : 'hover:bg-black/20'} transition-colors duration-200`}
+                        className={`absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors duration-200`}
                       >
                         <div 
-                          className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg"
+                          className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg z-10 animate-pulse"
                           style={{ 
                             left: `${position.x}%`, 
                             top: `${position.y}%`,
                             cursor: 'grab',
-                            opacity: isDragging ? 1 : 0.8
+                            animation: isDragging ? 'none' : '',
+                            boxShadow: isDragging ? '0 0 0 4px rgba(126, 105, 171, 0.5)' : ''
                           }}
                         />
-                        <span className="text-sm text-white bg-black/50 px-2 py-1 rounded pointer-events-none">
-                          Drag to adjust focal point
+                        <span className="text-sm text-white bg-black/70 px-3 py-2 rounded-full shadow-md">
+                          Click and drag to adjust focal point
                         </span>
                       </div>
                     </div>

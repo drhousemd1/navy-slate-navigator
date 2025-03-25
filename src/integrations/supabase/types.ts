@@ -25,6 +25,7 @@ export type Database = {
           icon_url: string | null
           id: string
           points: number
+          priority: string
           subtext_color: string
           title: string
           title_color: string
@@ -45,6 +46,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           points?: number
+          priority?: string
           subtext_color?: string
           title: string
           title_color?: string
@@ -65,6 +67,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           points?: number
+          priority?: string
           subtext_color?: string
           title?: string
           title_color?: string

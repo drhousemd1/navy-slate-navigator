@@ -54,6 +54,11 @@ const Tasks: React.FC = () => {
       }
     } catch (err) {
       console.error('Error saving task:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to save task. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -73,6 +78,11 @@ const Tasks: React.FC = () => {
       }
     } catch (err) {
       console.error('Error toggling task completion:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to update task. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
