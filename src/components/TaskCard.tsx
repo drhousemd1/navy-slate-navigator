@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, CheckSquare, Circle } from 'lucide-react';
+import { Calendar, CheckSquare, Circle, Edit } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -10,6 +10,7 @@ interface TaskCardProps {
   description: string;
   points: number;
   completed?: boolean;
+  onEdit?: () => void;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -17,12 +18,13 @@ const TaskCard: React.FC<TaskCardProps> = ({
   description,
   points,
   completed = false,
+  onEdit,
 }) => {
   // Array of day numbers to display in the tracking section
   const days = Array.from({ length: 10 }, (_, i) => i + 15);
 
   return (
-    <Card className="bg-navy border border-light-navy mb-4 overflow-hidden">
+    <Card className="bg-navy border border-light-navy mb-4 overflow-hidden relative">
       <div className="p-4">
         {/* Top row with complete button and points */}
         <div className="flex justify-end items-center mb-4 gap-2">
@@ -63,6 +65,18 @@ const TaskCard: React.FC<TaskCardProps> = ({
           ))}
         </div>
       </div>
+      
+      {/* Edit button in the bottom right corner */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-navy/50 hover:bg-navy/80 text-nav-inactive"
+        onClick={onEdit}
+      >
+        <Edit className="h-4 w-4" />
+        <span className="sr-only">Edit task</span>
+      </Button>
     </Card>
   );
 };
