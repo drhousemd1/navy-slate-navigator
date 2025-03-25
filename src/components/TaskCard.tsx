@@ -93,8 +93,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {/* Points bubble and Edit button */}
           <div className="flex items-center">
             <Badge 
-              className="mr-3 bg-nav-active/20 text-nav-active border-nav-active/30 font-bold" 
-              variant="outline"
+              className="mr-3 bg-nav-active text-white font-bold" 
+              variant="default"
             >
               {points} pts
             </Badge>
