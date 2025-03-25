@@ -157,11 +157,11 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     
     const handleTouchEnd = () => {
       setIsDragging(false);
-      document.removeEventListener('touchmove', handleTouchMove, { passive: false });
+      document.removeEventListener('touchmove', handleTouchMove, { passive: false } as AddEventListenerOptions);
       document.removeEventListener('touchend', handleTouchEnd);
     };
     
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false } as AddEventListenerOptions);
     document.addEventListener('touchend', handleTouchEnd);
   };
 
