@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { predefinedIcons } from './IconSelector';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -12,6 +12,42 @@ interface PredefinedIconsGridProps {
   onSelectIcon: (iconName: string) => void;
 }
 
+// Type for storing recently used icons
+interface RecentIcon {
+  name: string;
+  isCustom: boolean;
+  url?: string;
+}
+
+// Helper function to manage recently used icons
+const updateRecentIcons = (iconToAdd: RecentIcon): RecentIcon[] => {
+  // Get current recent icons from localStorage
+  const recentIconsString = localStorage.getItem('recentIcons');
+  let recentIcons: RecentIcon[] = recentIconsString ? JSON.parse(recentIconsString) : [];
+  
+  // Check if icon already exists in the list
+  const existingIndex = recentIcons.findIndex(icon => 
+    (icon.isCustom && iconToAdd.isCustom && icon.url === iconToAdd.url) || 
+    (!icon.isCustom && !iconToAdd.isCustom && icon.name === iconToAdd.name)
+  );
+  
+  // If icon exists, remove it (to move it to the front)
+  if (existingIndex > -1) {
+    recentIcons.splice(existingIndex, 1);
+  }
+  
+  // Add icon to the front of the list
+  recentIcons.unshift(iconToAdd);
+  
+  // Limit to 5 recent icons
+  recentIcons = recentIcons.slice(0, 5);
+  
+  // Save to localStorage
+  localStorage.setItem('recentIcons', JSON.stringify(recentIcons));
+  
+  return recentIcons;
+};
+
 const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({ 
   selectedIconName, 
   iconColor, 
@@ -19,9 +55,26 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
 }) => {
   const [isPresetsDialogOpen, setIsPresetsDialogOpen] = useState(false);
   const [isCustomDialogOpen, setIsCustomDialogOpen] = useState(false);
+  const [recentIcons, setRecentIcons] = useState<RecentIcon[]>([]);
+
+  // Load recently used icons on component mount
+  useEffect(() => {
+    const recentIconsString = localStorage.getItem('recentIcons');
+    if (recentIconsString) {
+      setRecentIcons(JSON.parse(recentIconsString));
+    }
+  }, []);
 
   const handleIconSelect = (iconName: string) => {
     onSelectIcon(iconName);
+    
+    // Update recently used icons
+    const updatedRecentIcons = updateRecentIcons({
+      name: iconName,
+      isCustom: false
+    });
+    setRecentIcons(updatedRecentIcons);
+    
     setIsPresetsDialogOpen(false);
   };
 
@@ -29,7 +82,44 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
     // We pass the URL as the "iconName" to IconSelector, but TaskEditorForm will
     // handle this by setting icon_url and clearing icon_name
     onSelectIcon(`custom:${iconUrl}`);
+    
+    // Update recently used icons
+    const updatedRecentIcons = updateRecentIcons({
+      name: 'custom',
+      isCustom: true,
+      url: iconUrl
+    });
+    setRecentIcons(updatedRecentIcons);
+    
     setIsCustomDialogOpen(false);
+  };
+
+  const handleRecentIconSelect = (recentIcon: RecentIcon) => {
+    if (recentIcon.isCustom && recentIcon.url) {
+      onSelectIcon(`custom:${recentIcon.url}`);
+    } else {
+      onSelectIcon(recentIcon.name);
+    }
+    
+    // Move this icon to the front of recent icons
+    const updatedRecentIcons = updateRecentIcons(recentIcon);
+    setRecentIcons(updatedRecentIcons);
+  };
+
+  // Helper function to render an icon based on its type
+  const renderIconComponent = (iconData: RecentIcon) => {
+    if (iconData.isCustom && iconData.url) {
+      return (
+        <img 
+          src={iconData.url} 
+          alt="Custom Icon" 
+          className="h-6 w-6 object-contain"
+        />
+      );
+    } else {
+      const IconComponent = predefinedIcons.find(i => i.name === iconData.name)?.icon;
+      return IconComponent ? <IconComponent className="h-6 w-6" style={{ color: iconColor }} /> : null;
+    }
   };
 
   return (
@@ -55,12 +145,26 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
       <div className="mt-2">
         <p className="text-white text-sm font-medium mb-2">Recently Used Icons</p>
         <div className="grid grid-cols-5 gap-2">
-          {[...Array(5)].map((_, index) => (
-            <div 
-              key={index} 
-              className="w-full aspect-square rounded-md bg-dark-navy flex items-center justify-center"
-            />
-          ))}
+          {recentIcons.length > 0 ? (
+            recentIcons.map((iconData, index) => (
+              <div 
+                key={index} 
+                className="w-full aspect-square rounded-md bg-dark-navy flex items-center justify-center cursor-pointer hover:bg-navy transition-colors"
+                onClick={() => handleRecentIconSelect(iconData)}
+                title={iconData.isCustom ? "Custom icon" : iconData.name}
+              >
+                {renderIconComponent(iconData)}
+              </div>
+            ))
+          ) : (
+            // Empty placeholders when no recent icons
+            [...Array(5)].map((_, index) => (
+              <div 
+                key={index} 
+                className="w-full aspect-square rounded-md bg-dark-navy flex items-center justify-center"
+              />
+            ))
+          )}
         </div>
       </div>
 
