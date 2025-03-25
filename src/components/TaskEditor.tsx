@@ -9,9 +9,10 @@ import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
 import { Form, FormField, FormItem, FormLabel, FormControl } from './ui/form';
 import { useForm } from 'react-hook-form';
-import { Plus, Minus, Upload, CheckSquare, Save } from 'lucide-react';
+import { Plus, Minus, Upload, CheckSquare, Save, Flag, CircleAlert, CircleCheck } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { saveTask, Task } from '@/lib/taskUtils';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 interface TaskEditorProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ interface TaskFormValues {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
+  priority: 'low' | 'medium' | 'high';
 }
 
 const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSave }) => {
@@ -59,6 +61,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
       highlight_effect: false,
       focal_point_x: 50,
       focal_point_y: 50,
+      priority: 'medium',
     },
   });
 
@@ -78,6 +81,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
         highlight_effect: false,
         focal_point_x: 50,
         focal_point_y: 50,
+        priority: 'medium',
       });
       
       setImagePreview(null);
@@ -100,6 +104,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
           highlight_effect: taskData.highlight_effect || false,
           focal_point_x: taskData.focal_point_x || 50,
           focal_point_y: taskData.focal_point_y || 50,
+          priority: taskData.priority || 'medium',
         });
         
         setImagePreview(taskData.background_image_url || null);
@@ -251,43 +256,96 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
               )}
             />
             
-            <FormField
-              control={form.control}
-              name="points"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white">Points</FormLabel>
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      type="button"
-                      variant="outline" 
-                      size="icon" 
-                      onClick={decrementPoints}
-                      className="border-light-navy bg-light-navy text-white hover:bg-navy"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-white">Priority</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        className="w-20 text-center bg-dark-navy border-light-navy text-white"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                      />
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex flex-col space-y-1"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem 
+                            value="high" 
+                            id="high" 
+                            className="text-red-500 border-red-500" 
+                          />
+                          <Label htmlFor="high" className="flex items-center gap-2 text-white">
+                            <CircleAlert className="h-4 w-4 text-red-500" />
+                            High Priority
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem 
+                            value="medium" 
+                            id="medium" 
+                            className="text-yellow-500 border-yellow-500" 
+                          />
+                          <Label htmlFor="medium" className="flex items-center gap-2 text-white">
+                            <Flag className="h-4 w-4 text-yellow-500" />
+                            Medium Priority
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem 
+                            value="low" 
+                            id="low" 
+                            className="text-green-500 border-green-500" 
+                          />
+                          <Label htmlFor="low" className="flex items-center gap-2 text-white">
+                            <CircleCheck className="h-4 w-4 text-green-500" />
+                            Low Priority
+                          </Label>
+                        </div>
+                      </RadioGroup>
                     </FormControl>
-                    <Button 
-                      type="button"
-                      variant="outline" 
-                      size="icon" 
-                      onClick={incrementPoints}
-                      className="border-light-navy bg-light-navy text-white hover:bg-navy"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </FormItem>
-              )}
-            />
+                  </FormItem>
+                )}
+              />
+            
+              <FormField
+                control={form.control}
+                name="points"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Points</FormLabel>
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        size="icon" 
+                        onClick={decrementPoints}
+                        className="border-light-navy bg-light-navy text-white hover:bg-navy"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          className="w-20 text-center bg-dark-navy border-light-navy text-white"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        />
+                      </FormControl>
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        size="icon" 
+                        onClick={incrementPoints}
+                        className="border-light-navy bg-light-navy text-white hover:bg-navy"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Edit, Check, Calendar, Plus, Minus } from 'lucide-react';
+import { Edit, Check, Calendar, Plus, Minus, Flag, CircleAlert, CircleCheck } from 'lucide-react';
 import { Badge } from './ui/badge';
 
 interface TaskCardProps {
@@ -19,6 +19,7 @@ interface TaskCardProps {
   frequency?: 'daily' | 'weekly';
   frequency_count?: number;
   icon_url?: string;
+  priority?: 'low' | 'medium' | 'high';
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -34,7 +35,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onToggleCompletion,
   frequency,
   frequency_count = 0,
-  icon_url
+  icon_url,
+  priority = 'medium'
 }) => {
   const generateTrackerCircles = () => {
     const circles = [];
@@ -52,6 +54,30 @@ const TaskCard: React.FC<TaskCardProps> = ({
     return circles;
   };
 
+  const getPriorityIcon = () => {
+    switch (priority) {
+      case 'high':
+        return <CircleAlert className="h-4 w-4" />;
+      case 'low':
+        return <CircleCheck className="h-4 w-4" />;
+      case 'medium':
+      default:
+        return <Flag className="h-4 w-4" />;
+    }
+  };
+
+  const getPriorityColor = () => {
+    switch (priority) {
+      case 'high':
+        return 'bg-red-500';
+      case 'low':
+        return 'bg-green-500';
+      case 'medium':
+      default:
+        return 'bg-yellow-500';
+    }
+  };
+
   return (
     <Card className={`relative overflow-hidden border-light-navy ${!backgroundImage ? 'bg-navy' : ''}`}>
       {backgroundImage && (
@@ -67,7 +93,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
       )}
 
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
-        <div className="flex justify-end items-center mb-3">
+        <div className="flex justify-between items-start mb-3">
+          <Badge 
+            className={`${getPriorityColor()} text-white font-bold flex items-center gap-1 capitalize`}
+            variant="default"
+          >
+            {getPriorityIcon()}
+            {priority}
+          </Badge>
+          
           {onToggleCompletion && (
             <div className="flex items-center gap-2">
               <Badge 

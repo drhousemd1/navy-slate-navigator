@@ -98,6 +98,7 @@ const Tasks: React.FC = () => {
                 frequency={task.frequency}
                 frequency_count={task.frequency_count}
                 icon_url={task.icon_url}
+                priority={task.priority}
                 onEdit={() => handleEditTask(task)}
                 onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
               />
