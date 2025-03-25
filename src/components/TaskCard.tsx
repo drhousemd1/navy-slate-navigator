@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, CSSProperties } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Edit, Check, Calendar, Plus, Minus } from 'lucide-react';
@@ -116,13 +115,13 @@ const TaskCard: React.FC<TaskCardProps> = ({
     return <Calendar className="w-6 h-6" style={{ color: icon_color }} />;
   };
 
-  const highlighterStyle = {
+  const highlighterStyle: CSSProperties = {
     backgroundColor: 'rgba(255, 215, 0, 0.4)',
     padding: '2px 4px',
     borderRadius: '3px',
     display: 'inline',
-    boxDecorationBreak: 'clone',
-    WebkitBoxDecorationBreak: 'clone'
+    boxDecorationBreak: 'clone' as 'clone',
+    WebkitBoxDecorationBreak: 'clone' as 'clone'
   };
 
   return (
