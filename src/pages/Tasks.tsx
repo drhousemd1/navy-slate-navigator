@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -140,7 +139,6 @@ const Tasks: React.FC = () => {
                 priority={task.priority}
                 onEdit={() => handleEditTask(task)}
                 onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
-                onDelete={() => handleDeleteTask(task.id)}
               />
             ))}
           </div>
@@ -154,6 +152,7 @@ const Tasks: React.FC = () => {
           }}
           taskData={currentTask || undefined}
           onSave={handleSaveTask}
+          onDelete={handleDeleteTask}
         />
       </div>
     </AppLayout>

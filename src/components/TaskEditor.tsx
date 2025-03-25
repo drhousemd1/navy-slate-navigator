@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Input } from './ui/input';
@@ -10,16 +9,28 @@ import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
 import { Form, FormField, FormItem, FormLabel, FormControl } from './ui/form';
 import { useForm } from 'react-hook-form';
-import { Plus, Minus, Upload, CheckSquare, Save, Flag, CircleAlert, CircleCheck } from 'lucide-react';
+import { Plus, Minus, Upload, CheckSquare, Save, Flag, CircleAlert, CircleCheck, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { saveTask, Task } from '@/lib/taskUtils';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface TaskEditorProps {
   isOpen: boolean;
   onClose: () => void;
   taskData?: Partial<Task>;
   onSave: (taskData: any) => void;
+  onDelete?: (taskId: string) => void;
 }
 
 interface TaskFormValues {
@@ -40,13 +51,14 @@ interface TaskFormValues {
   priority: 'low' | 'medium' | 'high';
 }
 
-const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSave }) => {
+const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSave, onDelete }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 50, y: 50 });
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const form = useForm<TaskFormValues>({
     defaultValues: {
@@ -258,6 +270,14 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
     const currentCount = form.getValues('frequency_count');
     if (currentCount > 1) {
       form.setValue('frequency_count', currentCount - 1);
+    }
+  };
+
+  const handleDelete = () => {
+    if (taskData?.id && onDelete) {
+      onDelete(taskData.id);
+      setIsDeleteDialogOpen(false);
+      onClose();
     }
   };
 
@@ -708,15 +728,48 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
               )}
             />
             
-            <DialogFooter className="pt-4">
-              <Button 
-                type="button" 
-                variant="destructive" 
-                onClick={onClose}
-                className="border-light-navy text-white hover:bg-destructive/80"
-              >
-                Cancel
-              </Button>
+            <DialogFooter className="pt-4 flex justify-between">
+              <div className="flex gap-2">
+                {taskData?.id && onDelete && (
+                  <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        type="button" 
+                        variant="destructive" 
+                        className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Task
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-navy border-light-navy text-white">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-white text-xl">Delete Task</AlertDialogTitle>
+                        <AlertDialogDescription className="text-white text-sm">
+                          Are you sure you want to delete this task? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-transparent border-light-navy text-white hover:bg-light-navy">Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDelete} 
+                          className="bg-red-700 text-white hover:bg-red-600"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  onClick={onClose}
+                  className="bg-red-700 border-light-navy text-white hover:bg-red-600"
+                >
+                  Cancel
+                </Button>
+              </div>
               <Button 
                 type="submit" 
                 className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
