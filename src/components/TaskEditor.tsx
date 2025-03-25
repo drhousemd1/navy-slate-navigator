@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Input } from './ui/input';
@@ -48,42 +47,70 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
   
   const form = useForm<TaskFormValues>({
     defaultValues: {
-      title: taskData?.title || '',
-      description: taskData?.description || '',
-      points: taskData?.points || 5,
-      frequency: (taskData?.frequency as 'daily' | 'weekly') || 'daily',
-      frequency_count: taskData?.frequency_count || 1,
-      background_opacity: taskData?.background_opacity || 100,
-      title_color: taskData?.title_color || '#FFFFFF',
-      subtext_color: taskData?.subtext_color || '#8E9196',
-      calendar_color: taskData?.calendar_color || '#7E69AB',
-      highlight_effect: taskData?.highlight_effect || false,
-      focal_point_x: taskData?.focal_point_x || 50,
-      focal_point_y: taskData?.focal_point_y || 50,
+      title: '',
+      description: '',
+      points: 5,
+      frequency: 'daily',
+      frequency_count: 1,
+      background_opacity: 100,
+      title_color: '#FFFFFF',
+      subtext_color: '#8E9196',
+      calendar_color: '#7E69AB',
+      highlight_effect: false,
+      focal_point_x: 50,
+      focal_point_y: 50,
     },
   });
 
-  // Initialize preview states based on taskData
   useEffect(() => {
-    if (taskData?.background_image_url) {
-      setImagePreview(taskData.background_image_url);
+    if (isOpen) {
+      if (taskData) {
+        form.reset({
+          title: taskData.title || '',
+          description: taskData.description || '',
+          points: taskData.points || 5,
+          frequency: (taskData.frequency as 'daily' | 'weekly') || 'daily',
+          frequency_count: taskData.frequency_count || 1,
+          background_image_url: taskData.background_image_url,
+          background_opacity: taskData.background_opacity || 100,
+          title_color: taskData.title_color || '#FFFFFF',
+          subtext_color: taskData.subtext_color || '#8E9196',
+          calendar_color: taskData.calendar_color || '#7E69AB',
+          highlight_effect: taskData.highlight_effect || false,
+          focal_point_x: taskData.focal_point_x || 50,
+          focal_point_y: taskData.focal_point_y || 50,
+        });
+        
+        setImagePreview(taskData.background_image_url || null);
+        setIconPreview(taskData.icon_url || null);
+        setPosition({
+          x: taskData.focal_point_x || 50,
+          y: taskData.focal_point_y || 50
+        });
+      } else {
+        form.reset({
+          title: '',
+          description: '',
+          points: 5,
+          frequency: 'daily',
+          frequency_count: 1,
+          background_image_url: undefined,
+          background_opacity: 100,
+          title_color: '#FFFFFF',
+          subtext_color: '#8E9196',
+          calendar_color: '#7E69AB',
+          highlight_effect: false,
+          focal_point_x: 50,
+          focal_point_y: 50,
+        });
+        
+        setImagePreview(null);
+        setIconPreview(null);
+        setPosition({ x: 50, y: 50 });
+      }
     }
-    
-    if (taskData?.icon_url) {
-      setIconPreview(taskData.icon_url);
-    }
-    
-    if (taskData?.focal_point_x && taskData?.focal_point_y) {
-      setPosition({
-        x: taskData.focal_point_x,
-        y: taskData.focal_point_y
-      });
-      form.setValue('focal_point_x', taskData.focal_point_x);
-      form.setValue('focal_point_y', taskData.focal_point_y);
-    }
-  }, [taskData, form]);
+  }, [isOpen, taskData, form]);
 
-  // Image drag functionality
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!imageContainerRef.current) return;
     
@@ -112,7 +139,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
       document.removeEventListener('mouseup', handleMouseUp);
     };
     
-    // Update position on initial click
     updateImagePosition(e.clientX, e.clientY);
     
     document.addEventListener('mousemove', handleMouseMove);
@@ -122,8 +148,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // For this implementation, we're using a base64 encoded string
-      // In a production app, you would upload this to Supabase Storage
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
@@ -155,16 +179,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
         id: taskData?.id,
       };
       
-      const savedTask = await saveTask(taskToSave);
-      
-      if (savedTask) {
-        toast({
-          title: "Success",
-          description: `Task ${taskData?.id ? 'updated' : 'created'} successfully!`,
-        });
-        onSave(savedTask);
-        onClose();
-      }
+      await onSave(taskToSave);
     } catch (error) {
       console.error('Error saving task:', error);
       toast({
@@ -193,12 +208,13 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-navy border-light-navy text-white max-w-4xl h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-white">Edit Task</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-white">
+            {taskData ? 'Edit Task' : 'Create New Task'}
+          </DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            {/* Title Input */}
             <FormField
               control={form.control}
               name="title"
@@ -216,7 +232,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
               )}
             />
             
-            {/* Description Input */}
             <FormField
               control={form.control}
               name="description"
@@ -234,7 +249,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
               )}
             />
             
-            {/* Points Selector */}
             <FormField
               control={form.control}
               name="points"
@@ -273,7 +287,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
               )}
             />
             
-            {/* Usage Frequency Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -318,7 +331,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
               />
             </div>
             
-            {/* Background Image Uploader */}
             <div className="space-y-4">
               <Label className="text-white text-lg">Background Image</Label>
               <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
@@ -380,7 +392,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                 )}
               </div>
               
-              {/* Opacity Slider */}
               {imagePreview && (
                 <FormField
                   control={form.control}
@@ -404,7 +415,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
               )}
             </div>
             
-            {/* Icon Image Uploader */}
             <div className="space-y-4">
               <Label className="text-white text-lg">Task Icon</Label>
               <div className="grid grid-cols-2 gap-4">
@@ -447,14 +457,11 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                 <div className="border-2 border-light-navy rounded-lg p-4">
                   <p className="text-white mb-2">Predefined Icons</p>
                   <div className="grid grid-cols-4 gap-2">
-                    {/* Placeholder for predefined icons */}
                     {Array.from({ length: 8 }).map((_, index) => (
                       <div 
                         key={index} 
                         className="w-10 h-10 rounded-md bg-light-navy flex items-center justify-center cursor-pointer hover:bg-navy"
                         onClick={() => {
-                          // In a real implementation, this would set a predefined icon URL
-                          // For now we'll just show that it's clickable
                           toast({
                             title: "Icon selected",
                             description: `Predefined icon ${index + 1} selected`,
@@ -469,7 +476,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
               </div>
             </div>
             
-            {/* Color Pickers */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
@@ -541,7 +547,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
               />
             </div>
             
-            {/* Highlighter Effect Toggle */}
             <FormField
               control={form.control}
               name="highlight_effect"

@@ -47,6 +47,7 @@ const Tasks: React.FC = () => {
           title: 'Success',
           description: `Task ${currentTask ? 'updated' : 'created'} successfully!`,
         });
+        setIsEditorOpen(false);
       }
     } catch (err) {
       console.error('Error saving task:', err);
