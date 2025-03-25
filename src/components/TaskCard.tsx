@@ -130,12 +130,17 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
           
           <div className="flex-1">
-            <h3 className={`text-xl font-semibold ${completed ? 'text-gray-400 line-through' : 'text-white'}`}>
+            <h3 className={`text-xl font-semibold ${completed ? 'text-gray-400' : 'text-white'}`}>
               {title}
             </h3>
-            <p className={`mt-1 text-sm ${completed ? 'text-gray-500 line-through' : 'text-light-navy'}`}>
-              {description}
-            </p>
+            <div className="relative">
+              <div className="mt-1 text-sm text-light-navy">
+                {description}
+              </div>
+              {completed && (
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] rounded"></div>
+              )}
+            </div>
           </div>
         </div>
         
