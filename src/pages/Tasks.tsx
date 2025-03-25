@@ -99,6 +99,8 @@ const Tasks: React.FC = () => {
                 frequency_count={task.frequency_count}
                 icon_url={task.icon_url}
                 priority={task.priority}
+                completionCount={task.completion_count || 0}
+                maxCompletions={task.max_completions || 1}
                 onEdit={() => handleEditTask(task)}
                 onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
               />
