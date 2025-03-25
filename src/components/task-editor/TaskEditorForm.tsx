@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,45 @@ import BackgroundImageSelector from './BackgroundImageSelector';
 import IconSelector from './IconSelector';
 import PredefinedIconsGrid from './PredefinedIconsGrid';
 import DeleteTaskDialog from './DeleteTaskDialog';
+
+// Maximum number of recent icons to store
+const MAX_RECENT_ICONS = 4;
+
+// Key for storing recent icons in localStorage
+const RECENT_ICONS_KEY = 'recentTaskIcons';
+
+// Helper function to get recent icons from localStorage
+const getRecentIcons = (): string[] => {
+  try {
+    const storedIcons = localStorage.getItem(RECENT_ICONS_KEY);
+    return storedIcons ? JSON.parse(storedIcons) : [];
+  } catch (error) {
+    console.error('Error retrieving recent icons:', error);
+    return [];
+  }
+};
+
+// Helper function to update recent icons in localStorage
+const updateRecentIcons = (iconName: string): string[] => {
+  try {
+    // Get current icons
+    const currentIcons = getRecentIcons();
+    
+    // Remove the selected icon if it already exists in the list
+    const filteredIcons = currentIcons.filter(name => name !== iconName);
+    
+    // Add the selected icon to the front of the list
+    const updatedIcons = [iconName, ...filteredIcons].slice(0, MAX_RECENT_ICONS);
+    
+    // Save to localStorage
+    localStorage.setItem(RECENT_ICONS_KEY, JSON.stringify(updatedIcons));
+    
+    return updatedIcons;
+  } catch (error) {
+    console.error('Error updating recent icons:', error);
+    return [];
+  }
+};
 
 interface TaskFormValues {
   title: string;
@@ -54,6 +93,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
+  const [recentIcons, setRecentIcons] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 50, y: 50 });
   const [loading, setLoading] = useState(false);
@@ -80,6 +120,11 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       icon_name: taskData?.icon_name,
     },
   });
+
+  // Load recent icons on component mount
+  useEffect(() => {
+    setRecentIcons(getRecentIcons());
+  }, []);
 
   // Set initial values
   React.useEffect(() => {
@@ -207,6 +252,10 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     setIconPreview(null);
     form.setValue('icon_name', iconName);
     form.setValue('icon_url', undefined);
+    
+    // Update recent icons
+    const updatedRecentIcons = updateRecentIcons(iconName);
+    setRecentIcons(updatedRecentIcons);
     
     toast({
       title: "Icon selected",
@@ -369,6 +418,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               selectedIconName={selectedIconName}
               iconColor={form.watch('icon_color')}
               onSelectIcon={handleIconSelect}
+              recentIcons={recentIcons}
             />
           </div>
         </div>
