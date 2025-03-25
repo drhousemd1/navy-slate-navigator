@@ -18,7 +18,8 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
     borderRadius: '4px',
     display: 'inline-block',
     boxDecorationBreak: 'clone' as 'clone',
-    WebkitBoxDecorationBreak: 'clone' as 'clone'
+    WebkitBoxDecorationBreak: 'clone' as 'clone',
+    width: 'auto'
   };
 
   if (highlight) {
