@@ -384,7 +384,10 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                         type="number"
                         className="bg-dark-navy border-light-navy text-white"
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? undefined : parseInt(e.target.value);
+                          field.onChange(value);
+                        }}
                       />
                     </FormControl>
                   </FormItem>
