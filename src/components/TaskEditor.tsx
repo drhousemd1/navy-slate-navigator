@@ -50,6 +50,7 @@ interface TaskFormValues {
   title_color: string;
   subtext_color: string;
   calendar_color: string;
+  icon_color: string;
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
@@ -89,6 +90,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
       title_color: '#FFFFFF',
       subtext_color: '#8E9196',
       calendar_color: '#7E69AB',
+      icon_color: '#9b87f5',
       highlight_effect: false,
       focal_point_x: 50,
       focal_point_y: 50,
@@ -108,6 +110,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
         title_color: '#FFFFFF',
         subtext_color: '#8E9196',
         calendar_color: '#7E69AB',
+        icon_color: '#9b87f5',
         highlight_effect: false,
         focal_point_x: 50,
         focal_point_y: 50,
@@ -132,6 +135,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
           title_color: taskData.title_color || '#FFFFFF',
           subtext_color: taskData.subtext_color || '#8E9196',
           calendar_color: taskData.calendar_color || '#7E69AB',
+          icon_color: taskData.icon_color || '#9b87f5',
           highlight_effect: taskData.highlight_effect || false,
           focal_point_x: taskData.focal_point_x || 50,
           focal_point_y: taskData.focal_point_y || 50,
@@ -322,7 +326,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
   const renderIcon = (iconName: string) => {
     const IconComponent = predefinedIcons.find(i => i.name === iconName)?.icon;
     if (!IconComponent) return null;
-    return <IconComponent className="h-6 w-6 text-white" />;
+    return <IconComponent className="h-6 w-6" style={{ color: form.watch('icon_color') }} />;
   };
 
   return (
@@ -690,7 +694,10 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                           className={`w-10 h-10 rounded-md ${selectedIconName === name ? 'bg-nav-active' : 'bg-light-navy'} flex items-center justify-center cursor-pointer hover:bg-navy transition-colors`}
                           onClick={() => handleIconSelect(name)}
                         >
-                          <IconComponent className="h-6 w-6 text-white" />
+                          <IconComponent 
+                            className="h-6 w-6 text-white" 
+                            style={{ color: form.watch('icon_color') }}
+                          />
                         </div>
                       );
                     })}
@@ -699,7 +706,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <FormField
                 control={form.control}
                 name="title_color"
@@ -752,6 +759,29 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-white">Calendar Color</FormLabel>
+                    <div className="flex items-center space-x-2">
+                      <div 
+                        className="w-6 h-6 rounded-full border border-white" 
+                        style={{ backgroundColor: field.value }}
+                      />
+                      <FormControl>
+                        <Input
+                          type="color"
+                          className="w-full h-10 bg-dark-navy border-light-navy"
+                          {...field}
+                        />
+                      </FormControl>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="icon_color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Icon Color</FormLabel>
                     <div className="flex items-center space-x-2">
                       <div 
                         className="w-6 h-6 rounded-full border border-white" 

@@ -27,6 +27,7 @@ interface TaskCardProps {
   title_color?: string;
   subtext_color?: string;
   calendar_color?: string;
+  icon_color?: string;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -49,7 +50,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   highlight_effect = false,
   title_color = '#FFFFFF',
   subtext_color = '#8E9196',
-  calendar_color = '#7E69AB'
+  calendar_color = '#7E69AB',
+  icon_color = '#9b87f5'
 }) => {
   const generateTrackerCircles = () => {
     const circles = [];
@@ -91,27 +93,27 @@ const TaskCard: React.FC<TaskCardProps> = ({
     if (icon_name) {
       switch (icon_name) {
         case 'CheckSquare':
-          return <CheckSquare className="w-6 h-6 text-nav-active" />;
+          return <CheckSquare className="w-6 h-6" style={{ color: icon_color }} />;
         case 'BookOpen':
-          return <BookOpen className="w-6 h-6 text-nav-active" />;
+          return <BookOpen className="w-6 h-6" style={{ color: icon_color }} />;
         case 'Coffee':
-          return <Coffee className="w-6 h-6 text-nav-active" />;
+          return <Coffee className="w-6 h-6" style={{ color: icon_color }} />;
         case 'Dumbbell':
-          return <Dumbbell className="w-6 h-6 text-nav-active" />;
+          return <Dumbbell className="w-6 h-6" style={{ color: icon_color }} />;
         case 'Star':
-          return <Star className="w-6 h-6 text-nav-active" />;
+          return <Star className="w-6 h-6" style={{ color: icon_color }} />;
         case 'Heart':
-          return <Heart className="w-6 h-6 text-nav-active" />;
+          return <Heart className="w-6 h-6" style={{ color: icon_color }} />;
         case 'Trophy':
-          return <Trophy className="w-6 h-6 text-nav-active" />;
+          return <Trophy className="w-6 h-6" style={{ color: icon_color }} />;
         case 'Target':
-          return <Target className="w-6 h-6 text-nav-active" />;
+          return <Target className="w-6 h-6" style={{ color: icon_color }} />;
         default:
-          return <Calendar className="w-6 h-6 text-nav-active" />;
+          return <Calendar className="w-6 h-6" style={{ color: icon_color }} />;
       }
     }
     
-    return <Calendar className="w-6 h-6 text-nav-active" />;
+    return <Calendar className="w-6 h-6" style={{ color: icon_color }} />;
   };
 
   return (

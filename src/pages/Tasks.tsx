@@ -143,6 +143,7 @@ const Tasks: React.FC = () => {
                 title_color={task.title_color}
                 subtext_color={task.subtext_color}
                 calendar_color={task.calendar_color}
+                icon_color={task.icon_color}
                 onEdit={() => handleEditTask(task)}
                 onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
               />

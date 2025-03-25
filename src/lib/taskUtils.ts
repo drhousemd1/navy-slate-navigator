@@ -23,6 +23,7 @@ export interface Task {
   subtext_color?: string;
   calendar_color?: string;
   highlight_effect?: boolean;
+  icon_color?: string;
 }
 
 export const fetchTasks = async (): Promise<Task[]> => {
@@ -57,6 +58,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
   try {
     console.log('Saving task with highlight effect:', task.highlight_effect);
     console.log('Saving task with icon name:', task.icon_name);
+    console.log('Saving task with icon color:', task.icon_color);
     
     if (task.id) {
       // Update existing task
@@ -80,6 +82,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           focal_point_x: task.focal_point_x,
           focal_point_y: task.focal_point_y,
           priority: task.priority,
+          icon_color: task.icon_color,
           updated_at: new Date().toISOString(),
         })
         .eq('id', task.id)
@@ -110,6 +113,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           focal_point_x: task.focal_point_x,
           focal_point_y: task.focal_point_y,
           priority: task.priority,
+          icon_color: task.icon_color,
         })
         .select()
         .single();
