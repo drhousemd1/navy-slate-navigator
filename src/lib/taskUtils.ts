@@ -75,8 +75,6 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           focal_point_x: task.focal_point_x,
           focal_point_y: task.focal_point_y,
           priority: task.priority,
-          max_completions: task.max_completions,
-          completion_count: task.completion_count,
           updated_at: new Date().toISOString(),
         })
         .eq('id', task.id)
@@ -106,8 +104,6 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           focal_point_x: task.focal_point_x,
           focal_point_y: task.focal_point_y,
           priority: task.priority,
-          max_completions: task.max_completions || 1,
-          completion_count: 0,
         })
         .select()
         .single();
@@ -139,24 +135,11 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     
     const task = taskData as Task;
     
-    // If already at max completions, don't allow more completions
-    if (completed && task.completion_count >= (task.max_completions || 1)) {
-      toast({
-        title: 'Task limit reached',
-        description: `You've reached the maximum completions for this task.`,
-        variant: 'default',
-      });
-      return false;
-    }
-    
     // Update task with new completion info
-    const updatedCompletionCount = completed ? (task.completion_count || 0) + 1 : task.completion_count;
-    
     const { error } = await supabase
       .from('tasks')
       .update({ 
-        completed,
-        completion_count: updatedCompletionCount
+        completed
       })
       .eq('id', id);
     
@@ -180,7 +163,6 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly'): Promi
     const { error } = await supabase
       .from('tasks')
       .update({ 
-        completion_count: 0,
         completed: false 
       })
       .eq('frequency', frequency);

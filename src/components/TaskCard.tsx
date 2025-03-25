@@ -20,8 +20,6 @@ interface TaskCardProps {
   frequency_count?: number;
   icon_url?: string;
   priority?: 'low' | 'medium' | 'high';
-  completion_count?: number;
-  max_completions?: number;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -38,9 +36,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   frequency,
   frequency_count = 0,
   icon_url,
-  priority = 'medium',
-  completion_count = 0,
-  max_completions = 1
+  priority = 'medium'
 }) => {
   const generateTrackerCircles = () => {
     const circles = [];
@@ -70,8 +66,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
-  const isMaxedOut = completion_count >= max_completions;
-
   return (
     <Card className={`relative overflow-hidden border-light-navy ${!backgroundImage ? 'bg-navy' : ''}`}>
       {backgroundImage && (
@@ -86,16 +80,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         />
       )}
 
-      {/* Opaque overlay when task is maxed out */}
-      {isMaxedOut && (
-        <div className="absolute inset-0 bg-navy/70 z-10 flex items-center justify-center">
-          <div className="bg-light-navy/30 px-3 py-1 rounded-md text-white text-sm">
-            Limit reached for {frequency === 'daily' ? 'today' : 'this week'}
-          </div>
-        </div>
-      )}
-
-      <div className={`relative ${isMaxedOut ? 'z-5' : 'z-10'} flex flex-col p-4 md:p-6 h-full`}>
+      <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">
           <Badge 
             className={`${getPriorityColor()} text-white font-bold capitalize px-3 py-1`}
@@ -119,7 +104,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 size="sm"
                 className={`${completed ? 'bg-green-600 text-white' : 'bg-green-500 text-white'} px-2 py-0 h-7`}
                 onClick={() => onToggleCompletion(!completed)}
-                disabled={isMaxedOut}
               >
                 {completed ? (
                   <span className="flex items-center gap-1">
