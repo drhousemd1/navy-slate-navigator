@@ -59,7 +59,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                   cursor: 'crosshair',
                   pointerEvents: 'auto', 
                   touchAction: 'none',
-                  zIndex: 10
+                  zIndex: 10,
+                  border: '2px solid red' // Temporary red border for debugging
                 }}
               >
                 {/* Focal point indicator */}
