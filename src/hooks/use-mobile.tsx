@@ -7,15 +7,15 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState(false)
 
   React.useEffect(() => {
-    // Initial check
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    
     // Function to check if the screen is mobile width
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
     
-    // Check on resize
+    // Check immediately on mount
+    checkIfMobile()
+    
+    // Add resize event listener
     window.addEventListener('resize', checkIfMobile)
     
     // Cleanup
