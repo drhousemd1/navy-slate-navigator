@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -119,8 +120,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
     backgroundColor: 'rgba(255, 215, 0, 0.4)',
     padding: '2px 4px',
     borderRadius: '3px',
-    display: 'inline-block',
-    width: '100%'
+    display: 'inline',
+    boxDecorationBreak: 'clone',
+    WebkitBoxDecorationBreak: 'clone'
   };
 
   return (
