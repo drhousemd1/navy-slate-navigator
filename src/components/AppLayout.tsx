@@ -30,7 +30,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   return (
     <div className="flex flex-col min-h-screen bg-dark-navy">
-      <main className="flex-1 pb-24 animate-fade-in">
+      <main className="flex-1 animate-fade-in">
         {children}
       </main>
       
