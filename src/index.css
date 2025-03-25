@@ -43,6 +43,8 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    --neon-glow: #00FFF7;
   }
 
   .dark {
@@ -115,5 +117,15 @@
   
   .nav-item:hover:not(.active) {
     @apply text-white opacity-80;
+  }
+  
+  /* Neon effect for active navigation items */
+  .neon-text {
+    color: var(--neon-glow);
+    text-shadow: 0 0 5px var(--neon-glow), 0 0 10px var(--neon-glow);
+  }
+  
+  .neon-icon {
+    filter: drop-shadow(0 0 2px var(--neon-glow));
   }
 }

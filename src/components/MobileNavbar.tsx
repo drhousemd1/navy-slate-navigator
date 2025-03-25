@@ -57,19 +57,19 @@ const MobileNavbar: React.FC = () => {
             <Link
               key={item.name}
               to={item.path}
-              className={`flex flex-col items-center justify-center h-full ${
-                isActive ? 'text-nav-active' : 'text-nav-inactive'
+              className={`flex flex-col items-center justify-center h-full transition-colors duration-200 ${
+                isActive ? 'text-[#00FFF7]' : 'text-nav-inactive'
               }`}
             >
               {/* Icon always positioned at the same height */}
-              <div className="flex items-center justify-center h-5">
+              <div className={`flex items-center justify-center h-5 ${isActive ? 'neon-icon' : ''}`}>
                 {item.icon}
               </div>
               
               {/* Reserve space for label with consistent height */}
               <div className="h-5 mt-1 overflow-hidden">
                 {isActive && (
-                  <span className="text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block">
+                  <span className="text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block neon-text">
                     {item.name}
                   </span>
                 )}
