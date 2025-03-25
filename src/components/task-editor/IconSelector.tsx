@@ -16,7 +16,7 @@ import {
   ChevronUp, Circle, Compass, Crosshair, FileMinus, FilePlus, FileText, Film,
   Filter, Hexagon, Key, Lock, MapPin, Maximize, Minimize, MoreHorizontal,
   MoreVertical, Move, Navigation, Paperclip, PieChart, Play, Power, Radio,
-  SkipBack, SkipForward, Square, Thermometer, Tool, Unlock, Users, Watch, Wind
+  SkipBack, SkipForward, Square, Thermometer, Unlock, Users, Watch, Wind
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from '@/hooks/use-toast';
