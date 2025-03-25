@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -15,6 +16,12 @@ export interface Task {
   frequency_count?: number;
   icon_url?: string;
   priority?: 'low' | 'medium' | 'high';
+  completion_count?: number;
+  max_completions?: number;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  highlight_effect?: boolean;
 }
 
 export const fetchTasks = async (): Promise<Task[]> => {
@@ -67,6 +74,9 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           highlight_effect: task.highlight_effect,
           focal_point_x: task.focal_point_x,
           focal_point_y: task.focal_point_y,
+          priority: task.priority,
+          max_completions: task.max_completions,
+          completion_count: task.completion_count,
           updated_at: new Date().toISOString(),
         })
         .eq('id', task.id)
@@ -95,6 +105,9 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           highlight_effect: task.highlight_effect,
           focal_point_x: task.focal_point_x,
           focal_point_y: task.focal_point_y,
+          priority: task.priority,
+          max_completions: task.max_completions || 1,
+          completion_count: 0,
         })
         .select()
         .single();
@@ -115,18 +128,70 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
 
 export const updateTaskCompletion = async (id: string, completed: boolean): Promise<boolean> => {
   try {
+    // First get the current task
+    const { data: taskData, error: taskError } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (taskError) throw taskError;
+    
+    const task = taskData as Task;
+    
+    // If already at max completions, don't allow more completions
+    if (completed && task.completion_count >= (task.max_completions || 1)) {
+      toast({
+        title: 'Task limit reached',
+        description: `You've reached the maximum completions for this task.`,
+        variant: 'default',
+      });
+      return false;
+    }
+    
+    // Update task with new completion info
+    const updatedCompletionCount = completed ? (task.completion_count || 0) + 1 : task.completion_count;
+    
     const { error } = await supabase
       .from('tasks')
-      .update({ completed })
+      .update({ 
+        completed,
+        completion_count: updatedCompletionCount
+      })
       .eq('id', id);
     
     if (error) throw error;
+    
     return true;
   } catch (err: any) {
     console.error('Error updating task completion:', err);
     toast({
       title: 'Error updating task',
       description: err.message || 'Could not update task completion status',
+      variant: 'destructive',
+    });
+    return false;
+  }
+};
+
+// Add function to reset completion counts (to be called at midnight or week start)
+export const resetTaskCompletions = async (frequency: 'daily' | 'weekly'): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ 
+        completion_count: 0,
+        completed: false 
+      })
+      .eq('frequency', frequency);
+    
+    if (error) throw error;
+    return true;
+  } catch (err: any) {
+    console.error('Error resetting task completions:', err);
+    toast({
+      title: 'Error resetting tasks',
+      description: err.message || 'Could not reset task completion status',
       variant: 'destructive',
     });
     return false;
