@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -178,8 +177,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 </AlertDialogTrigger>
                 <AlertDialogContent className="bg-navy border-light-navy text-white">
                   <AlertDialogHeader>
-                    <AlertDialogTitle className="text-white">Delete Task</AlertDialogTitle>
-                    <AlertDialogDescription className="text-light-navy">
+                    <AlertDialogTitle className="text-white text-xl">Delete Task</AlertDialogTitle>
+                    <AlertDialogDescription className="text-white text-sm">
                       Are you sure you want to delete this task? This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
