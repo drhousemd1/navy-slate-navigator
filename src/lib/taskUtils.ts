@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -16,12 +15,6 @@ export interface Task {
   frequency_count?: number;
   icon_url?: string;
   priority?: 'low' | 'medium' | 'high';
-  completion_count?: number;
-  max_completions?: number;
-  title_color?: string;
-  subtext_color?: string;
-  calendar_color?: string;
-  highlight_effect?: boolean;
 }
 
 export const fetchTasks = async (): Promise<Task[]> => {
@@ -74,9 +67,6 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           highlight_effect: task.highlight_effect,
           focal_point_x: task.focal_point_x,
           focal_point_y: task.focal_point_y,
-          priority: task.priority,
-          completion_count: task.completion_count || 0,
-          max_completions: task.max_completions || 1,
           updated_at: new Date().toISOString(),
         })
         .eq('id', task.id)
@@ -105,9 +95,6 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           highlight_effect: task.highlight_effect,
           focal_point_x: task.focal_point_x,
           focal_point_y: task.focal_point_y,
-          priority: task.priority,
-          completion_count: task.completion_count || 0,
-          max_completions: task.max_completions || 1,
         })
         .select()
         .single();
@@ -128,35 +115,9 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
 
 export const updateTaskCompletion = async (id: string, completed: boolean): Promise<boolean> => {
   try {
-    // First, get the current task data
-    const { data: taskData, error: fetchError } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (fetchError) throw fetchError;
-    
-    const task = taskData as Task;
-    let completionCount = task.completion_count || 0;
-    const maxCompletions = task.max_completions || 1;
-    
-    // If completing task and not already at max completions
-    if (completed && completionCount < maxCompletions) {
-      completionCount += 1;
-    } 
-    // If uncompleting task and has completions
-    else if (!completed && completionCount > 0) {
-      completionCount -= 1;
-    }
-    
-    // Update the task with new completion state and count
     const { error } = await supabase
       .from('tasks')
-      .update({ 
-        completed, 
-        completion_count: completionCount
-      })
+      .update({ completed })
       .eq('id', id);
     
     if (error) throw error;
