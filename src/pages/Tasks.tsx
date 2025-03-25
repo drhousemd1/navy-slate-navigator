@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -65,7 +66,7 @@ const Tasks: React.FC = () => {
   };
 
   return (
-    <AppLayout>
+    <AppLayout onAddNewItem={handleNewTask}>
       <div className="p-4 pt-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold text-white">My Tasks</h1>
