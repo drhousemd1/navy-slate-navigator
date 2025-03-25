@@ -138,28 +138,34 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
           
           <div className="flex-1 relative">
-            {highlight_effect && (
-              <div 
-                className="absolute -left-2 -top-2 -right-2 z-0 rounded-md py-6" 
-                style={{ 
-                  backgroundColor: 'rgba(255, 215, 0, 0.4)',
-                  paddingLeft: '0.5rem',
-                  paddingRight: '0.5rem',
-                  borderRadius: '4px',
-                }}
-              />
-            )}
-            <h3 
-              className="text-xl font-semibold relative z-10"
-              style={{ color: title_color }}
-            >
-              {title}
-            </h3>
-            <div 
-              className="mt-1 text-sm relative z-10" 
-              style={{ color: subtext_color }}
-            >
-              {description}
+            <div className="relative">
+              {highlight_effect && (
+                <div 
+                  className="absolute z-0 rounded-md" 
+                  style={{ 
+                    backgroundColor: 'rgba(255, 215, 0, 0.4)',
+                    top: '-6px',
+                    left: '-6px',
+                    right: '-6px',
+                    bottom: '-6px',
+                    borderRadius: '6px',
+                  }}
+                />
+              )}
+              <div className="relative z-10">
+                <h3 
+                  className="text-xl font-semibold"
+                  style={{ color: title_color }}
+                >
+                  {title}
+                </h3>
+                <div 
+                  className="mt-1 text-sm" 
+                  style={{ color: subtext_color }}
+                >
+                  {description}
+                </div>
+              </div>
             </div>
           </div>
         </div>
