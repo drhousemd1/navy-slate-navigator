@@ -59,7 +59,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const handleEdit = () => {
-    console.log("Edit button clicked"); // Debug log
+    console.log("Edit button clicked in TaskCard for task:", task.id); // Enhanced debug log
     if (onEdit) {
       onEdit();
     }
@@ -163,6 +163,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           size="icon" 
           className="absolute bottom-2 right-12 h-8 w-8 p-1.5 bg-navy hover:bg-light-navy text-nav-inactive rounded-full"
           onClick={() => setDeleteDialogOpen(true)}
+          type="button"
         >
           <Trash2 className="w-full h-full" />
         </Button>

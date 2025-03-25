@@ -76,7 +76,7 @@ const Tasks: React.FC = () => {
   };
 
   const handleEditTask = (taskId: string) => {
-    console.log("Editing task with ID:", taskId); // Debug log
+    console.log("Editing task with ID in Tasks.tsx:", taskId); // Enhanced debug log
     setEditingTaskId(taskId);
   };
 
@@ -90,6 +90,9 @@ const Tasks: React.FC = () => {
       description: "Your changes have been saved successfully.",
       variant: "default",
     });
+    
+    // Close editor after saving
+    setEditingTaskId(null);
   };
 
   const handleAddTask = () => {
@@ -139,7 +142,7 @@ const Tasks: React.FC = () => {
           </div>
         )}
         
-        {/* Task editor */}
+        {/* Task editor - making sure it always shows when a task is being edited */}
         {taskBeingEdited && (
           <TaskEditor
             task={taskBeingEdited}
