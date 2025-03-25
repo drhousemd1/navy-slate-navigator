@@ -14,9 +14,9 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
 }) => {
   const highlighterStyle: CSSProperties = {
     backgroundColor: 'rgba(245, 245, 209, 0.7)', // #F5F5D1 with 0.7 opacity
-    padding: '4px 8px',
+    padding: '2px 6px',
     borderRadius: '6px',
-    display: 'inline-block',
+    display: 'inline',
     boxDecorationBreak: 'clone' as 'clone',
     WebkitBoxDecorationBreak: 'clone' as 'clone'
   };
