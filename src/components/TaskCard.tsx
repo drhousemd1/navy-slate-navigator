@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Edit, Check, Calendar, Plus, Minus, Flag, CircleAlert, CircleCheck } from 'lucide-react';
+import { Edit, Check, Calendar, Plus, Minus } from 'lucide-react';
 import { Badge } from './ui/badge';
 
 interface TaskCardProps {
@@ -54,18 +54,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
     return circles;
   };
 
-  const getPriorityIcon = () => {
-    switch (priority) {
-      case 'high':
-        return <CircleAlert className="h-4 w-4" />;
-      case 'low':
-        return <CircleCheck className="h-4 w-4" />;
-      case 'medium':
-      default:
-        return <Flag className="h-4 w-4" />;
-    }
-  };
-
   const getPriorityColor = () => {
     switch (priority) {
       case 'high':
@@ -95,10 +83,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">
           <Badge 
-            className={`${getPriorityColor()} text-white font-bold flex items-center gap-1 capitalize`}
+            className={`${getPriorityColor()} text-white font-bold capitalize px-3 py-1`}
             variant="default"
           >
-            {getPriorityIcon()}
             {priority}
           </Badge>
           

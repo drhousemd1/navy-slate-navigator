@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -7,18 +6,15 @@ export interface Task {
   title: string;
   description: string;
   points: number;
-  frequency?: 'daily' | 'weekly';
-  frequency_count?: number;
+  completed: boolean;
   background_image_url?: string;
   background_opacity?: number;
-  icon_url?: string;
-  title_color?: string;
-  subtext_color?: string;
-  calendar_color?: string;
-  highlight_effect?: boolean;
   focal_point_x?: number;
   focal_point_y?: number;
-  completed?: boolean;
+  frequency?: 'daily' | 'weekly';
+  frequency_count?: number;
+  icon_url?: string;
+  priority?: 'low' | 'medium' | 'high';
 }
 
 export const fetchTasks = async (): Promise<Task[]> => {
@@ -59,6 +55,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           title: task.title,
           description: task.description,
           points: task.points,
+          completed: task.completed,
           frequency: task.frequency,
           frequency_count: task.frequency_count,
           background_image_url: task.background_image_url,
@@ -86,6 +83,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           title: task.title,
           description: task.description,
           points: task.points,
+          completed: task.completed,
           frequency: task.frequency,
           frequency_count: task.frequency_count,
           background_image_url: task.background_image_url,
