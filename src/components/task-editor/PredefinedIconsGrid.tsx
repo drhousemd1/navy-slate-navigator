@@ -10,14 +10,12 @@ interface PredefinedIconsGridProps {
   selectedIconName: string | null;
   iconColor: string;
   onSelectIcon: (iconName: string) => void;
-  onSelectCustomIcon?: (iconUrl: string) => void;
 }
 
 const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({ 
   selectedIconName, 
   iconColor, 
-  onSelectIcon,
-  onSelectCustomIcon
+  onSelectIcon
 }) => {
   const [isPresetsDialogOpen, setIsPresetsDialogOpen] = useState(false);
   const [isCustomDialogOpen, setIsCustomDialogOpen] = useState(false);
@@ -28,9 +26,10 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
   };
 
   const handleCustomIconSelect = (iconUrl: string) => {
-    if (onSelectCustomIcon) {
-      onSelectCustomIcon(iconUrl);
-    }
+    // We pass the URL as the "iconName" to IconSelector, but TaskEditorForm will
+    // handle this by setting icon_url and clearing icon_name
+    onSelectIcon(`custom:${iconUrl}`);
+    setIsCustomDialogOpen(false);
   };
 
   return (

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -81,7 +80,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     },
   });
 
-  // Set initial values
   React.useEffect(() => {
     setImagePreview(taskData?.background_image_url || null);
     setIconPreview(taskData?.icon_url || null);
@@ -203,15 +201,28 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   };
 
   const handleIconSelect = (iconName: string) => {
-    setSelectedIconName(iconName);
-    setIconPreview(null);
-    form.setValue('icon_name', iconName);
-    form.setValue('icon_url', undefined);
-    
-    toast({
-      title: "Icon selected",
-      description: `${iconName} icon selected`,
-    });
+    if (iconName.startsWith('custom:')) {
+      const iconUrl = iconName.substring(7);
+      setIconPreview(iconUrl);
+      setSelectedIconName(null);
+      form.setValue('icon_url', iconUrl);
+      form.setValue('icon_name', undefined);
+      
+      toast({
+        title: "Custom icon selected",
+        description: "Custom icon has been applied to the task",
+      });
+    } else {
+      setSelectedIconName(iconName);
+      setIconPreview(null);
+      form.setValue('icon_name', iconName);
+      form.setValue('icon_url', undefined);
+      
+      toast({
+        title: "Icon selected",
+        description: `${iconName} icon selected`,
+      });
+    }
   };
 
   const handleSubmit = async (values: TaskFormValues) => {

@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -16,6 +18,7 @@ interface CustomIcon {
   id: string;
   url: string;
   created_at: string;
+  name: string;
 }
 
 const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
@@ -26,6 +29,7 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
 }) => {
   const [customIcons, setCustomIcons] = useState<CustomIcon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -36,9 +40,25 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
   const fetchCustomIcons = async () => {
     try {
       setIsLoading(true);
-      // This is a placeholder - in a real implementation, we would fetch from Supabase storage
-      // For now, we'll simulate with an empty array
-      const icons: CustomIcon[] = [];
+      
+      const { data, error } = await supabase
+        .storage
+        .from('custom-icons')
+        .list();
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Filter out folders and transform the data
+      const icons = data
+        .filter(file => !file.name.endsWith('/'))
+        .map(file => ({
+          id: file.id,
+          name: file.name,
+          url: `${supabase.storage.from('custom-icons').getPublicUrl(file.name).data.publicUrl}`,
+          created_at: file.created_at
+        }));
       
       setCustomIcons(icons);
     } catch (error) {
@@ -58,6 +78,54 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
     onClose();
   };
 
+  const handleUploadIcon = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      return;
+    }
+    
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    
+    setIsUploading(true);
+    
+    try {
+      // Upload the file to Supabase Storage
+      const { error: uploadError } = await supabase
+        .storage
+        .from('custom-icons')
+        .upload(fileName, file);
+        
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      // Get the public URL
+      const { data } = supabase
+        .storage
+        .from('custom-icons')
+        .getPublicUrl(fileName);
+        
+      toast({
+        title: 'Icon uploaded',
+        description: 'Custom icon has been uploaded successfully',
+      });
+      
+      // Refresh the list of icons
+      fetchCustomIcons();
+      
+    } catch (error) {
+      console.error('Error uploading icon:', error);
+      toast({
+        title: 'Upload failed',
+        description: 'Failed to upload custom icon',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-navy border-light-navy text-white max-w-md max-h-[80vh]">
@@ -66,6 +134,25 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
             Custom Icons
           </DialogTitle>
         </DialogHeader>
+        
+        <div className="mb-4">
+          <Button 
+            className="w-full bg-light-navy hover:bg-navy text-white flex items-center justify-center gap-2"
+            onClick={() => document.getElementById('icon-upload-input')?.click()}
+            disabled={isUploading}
+          >
+            <Upload className="h-4 w-4" />
+            {isUploading ? 'Uploading...' : 'Upload New Icon'}
+          </Button>
+          <input
+            id="icon-upload-input"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleUploadIcon}
+            disabled={isUploading}
+          />
+        </div>
         
         <ScrollArea className="h-[60vh] pr-4">
           {isLoading ? (
@@ -83,7 +170,7 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
                   key={icon.id}
                   className="aspect-square rounded-md bg-light-navy flex items-center justify-center cursor-pointer hover:bg-navy transition-colors p-2"
                   onClick={() => handleSelectIcon(icon.url)}
-                  title="Custom Icon"
+                  title={icon.name}
                 >
                   <img
                     src={icon.url}
