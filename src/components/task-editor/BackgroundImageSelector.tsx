@@ -50,16 +50,18 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                   objectPosition: `${position.x}% ${position.y}%`
                 }}
               />
+              {/* This is the overlay that captures mouse/touch events */}
               <div 
                 className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors duration-200"
                 onMouseDown={onMouseDown}
                 onTouchStart={onTouchStart}
                 style={{ 
                   cursor: 'crosshair',
-                  pointerEvents: 'all',
+                  pointerEvents: 'auto',
                   zIndex: 10
                 }}
               >
+                {/* Focal point indicator */}
                 <div 
                   className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg pointer-events-none"
                   style={{ 

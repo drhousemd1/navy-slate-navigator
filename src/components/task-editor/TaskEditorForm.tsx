@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -129,7 +129,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!imageContainerRef.current || e.touches.length === 0) return;
     
-    e.preventDefault();
     setIsDragging(true);
     
     const touch = e.touches[0];
@@ -144,6 +143,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     const handleTouchMove = (moveEvent: TouchEvent) => {
       if (!imageContainerRef.current || moveEvent.touches.length === 0) return;
       
+      moveEvent.preventDefault();
+      
       const touch = moveEvent.touches[0];
       const rect = imageContainerRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
@@ -156,11 +157,11 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     
     const handleTouchEnd = () => {
       setIsDragging(false);
-      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchmove', handleTouchMove, { passive: false });
       document.removeEventListener('touchend', handleTouchEnd);
     };
     
-    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd);
   };
 
