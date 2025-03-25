@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -14,26 +15,29 @@ import Rewards from "./pages/Rewards";
 import Punishments from "./pages/Punishments";
 import ThroneRoom from "./pages/ThroneRoom";
 
-const queryClient = new QueryClient();
+const App = () => {
+  // Create a client
+  const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/rules" element={<Rules />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/rewards" element={<Rewards />} />
-          <Route path="/punishments" element={<Punishments />} />
-          <Route path="/throne-room" element={<ThroneRoom />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/rules" element={<Rules />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/rewards" element={<Rewards />} />
+            <Route path="/punishments" element={<Punishments />} />
+            <Route path="/throne-room" element={<ThroneRoom />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

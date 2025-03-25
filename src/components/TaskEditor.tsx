@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Input } from './ui/input';
@@ -10,7 +9,7 @@ import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
 import { Form, FormField, FormItem, FormLabel, FormControl } from './ui/form';
 import { useForm } from 'react-hook-form';
-import { Plus, Minus, Upload } from 'lucide-react';
+import { Plus, Minus, Upload, CheckSquare } from 'lucide-react';
 
 interface TaskEditorProps {
   isOpen: boolean;
@@ -463,3 +462,4 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
 };
 
 export default TaskEditor;
+
