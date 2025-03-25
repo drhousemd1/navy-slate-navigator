@@ -241,8 +241,13 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
     }
   };
 
-  const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement> | Event) => {
+    let file: File | undefined;
+    
+    if ('target' in e && e.target instanceof HTMLInputElement && e.target.files) {
+      file = e.target.files[0];
+    }
+    
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -646,7 +651,22 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                             const input = document.createElement('input');
                             input.type = 'file';
                             input.accept = 'image/*';
-                            input.onchange = (e) => handleIconUpload(e as React.ChangeEvent<HTMLInputElement>);
+                            input.onchange = (e) => {
+                              if (e.target instanceof HTMLInputElement && e.target.files) {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    const base64String = reader.result as string;
+                                    setIconPreview(base64String);
+                                    setSelectedIconName(null);
+                                    form.setValue('icon_url', base64String);
+                                    form.setValue('icon_name', undefined);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }
+                            };
                             input.click();
                           }}
                           className="bg-light-navy text-white hover:bg-navy flex items-center justify-center gap-2"
@@ -682,7 +702,22 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                             const input = document.createElement('input');
                             input.type = 'file';
                             input.accept = 'image/*';
-                            input.onchange = (e) => handleIconUpload(e as React.ChangeEvent<HTMLInputElement>);
+                            input.onchange = (e) => {
+                              if (e.target instanceof HTMLInputElement && e.target.files) {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    const base64String = reader.result as string;
+                                    setIconPreview(base64String);
+                                    setSelectedIconName(null);
+                                    form.setValue('icon_url', base64String);
+                                    form.setValue('icon_name', undefined);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }
+                            };
                             input.click();
                           }}
                           className="bg-light-navy text-white hover:bg-navy flex items-center justify-center gap-2"
@@ -916,3 +951,4 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
 };
 
 export default TaskEditor;
+
