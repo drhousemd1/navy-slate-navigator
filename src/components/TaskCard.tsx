@@ -1,16 +1,16 @@
 
 import React from 'react';
-import { Calendar, CheckSquare, Circle, Edit } from 'lucide-react';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { Button } from './ui/button';
+import { Edit, Check } from 'lucide-react';
 
 interface TaskCardProps {
   title: string;
   description: string;
   points: number;
   completed?: boolean;
-  onEdit?: () => void;
+  onEdit: () => void;
+  onToggleCompletion?: (completed: boolean) => void;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -19,64 +19,54 @@ const TaskCard: React.FC<TaskCardProps> = ({
   points,
   completed = false,
   onEdit,
+  onToggleCompletion
 }) => {
-  // Array of day numbers to display in the tracking section
-  const days = Array.from({ length: 10 }, (_, i) => i + 15);
-
   return (
-    <Card className="bg-navy border border-light-navy mb-4 overflow-hidden relative">
-      <div className="p-4">
-        {/* Top row with complete button and points */}
-        <div className="flex justify-end items-center mb-4 gap-2">
-          {/* Points badge */}
-          <Badge className="bg-nav-active hover:bg-nav-active text-white font-medium">
-            +{points}
-          </Badge>
-          
-          {/* Complete button - removed check icon and adjusted padding */}
-          <Button 
-            variant="outline" 
-            className={`rounded-full px-3 py-0.5 h-auto ${completed ? 'bg-nav-active text-white border-nav-active' : 'bg-transparent border-light-navy text-nav-inactive'}`}
-            size="sm"
+    <Card className="bg-navy border-light-navy overflow-hidden">
+      <div className="flex items-start p-4 md:p-6">
+        <div className="flex-1">
+          <div className="flex items-center gap-4">
+            <h3 className={`text-xl font-semibold ${completed ? 'text-gray-400 line-through' : 'text-white'}`}>
+              {title}
+            </h3>
+            {onToggleCompletion && (
+              <Button
+                variant="outline"
+                size="sm"
+                className={`ml-auto ${completed ? 'bg-green-600/20 border-green-600/30 text-green-500' : 'bg-navy border-light-navy text-light-navy'}`}
+                onClick={() => onToggleCompletion(!completed)}
+              >
+                {completed ? (
+                  <span className="flex items-center gap-1">
+                    <Check className="h-4 w-4" />
+                    Completed
+                  </span>
+                ) : (
+                  'Mark Complete'
+                )}
+              </Button>
+            )}
+          </div>
+          <p className={`mt-2 text-sm ${completed ? 'text-gray-500 line-through' : 'text-light-navy'}`}>
+            {description}
+          </p>
+        </div>
+        
+        <div className="flex flex-col items-end gap-2 ml-4">
+          <div className="flex items-center">
+            <span className="text-nav-active font-bold">{points}</span>
+            <span className="text-light-navy text-sm ml-1">pts</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onEdit}
+            className="text-light-navy hover:text-white hover:bg-light-navy"
           >
-            Complete
+            <Edit className="h-4 w-4" />
           </Button>
         </div>
-        
-        {/* Task info row */}
-        <div className="flex items-start mb-3">
-          <div className="bg-nav-active/15 p-2 rounded-lg mr-3">
-            <CheckSquare className="w-6 h-6 text-nav-active" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-white text-lg">{title}</h3>
-            <p className="text-nav-inactive text-sm">{description}</p>
-          </div>
-        </div>
-        
-        {/* Date tracking section */}
-        <div className="flex items-center space-x-1 mt-3">
-          <Calendar className="w-4 h-4 text-nav-inactive mr-1" />
-          {days.map((day) => (
-            <div key={day} className="flex flex-col items-center">
-              <span className="text-xs text-nav-inactive mb-1">{day}</span>
-              <Circle className="w-4 h-4 text-light-navy" />
-            </div>
-          ))}
-        </div>
       </div>
-      
-      {/* Edit button in the bottom right corner */}
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-navy/50 hover:bg-navy/80 text-nav-inactive"
-        onClick={onEdit}
-      >
-        <Edit className="h-4 w-4" />
-        <span className="sr-only">Edit task</span>
-      </Button>
     </Card>
   );
 };
