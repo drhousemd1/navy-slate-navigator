@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   CheckSquare, BookOpen, Coffee, Dumbbell, Star, Heart, Trophy, Target, 
@@ -15,21 +16,12 @@ import {
   ChevronUp, Circle, Compass, Crosshair, FileMinus, FilePlus, FileText, Film,
   Filter, Hexagon, Key, Lock, MapPin, Maximize, Minimize, MoreHorizontal,
   MoreVertical, Move, Navigation, Paperclip, PieChart, Play, Power, Radio,
-  SkipBack, SkipForward, Square, Thermometer, Unlock, Users, Watch, Wind, Skull
+  SkipBack, SkipForward, Square, Thermometer, Unlock, Users, Watch, Wind
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from '@/hooks/use-toast';
-import * as allLucideIcons from 'lucide-react';
-import { LucideIcon } from 'lucide-react';
 
-// Define a type for our icon objects
-export type IconObject = {
-  name: string;
-  icon: LucideIcon;
-};
-
-// Define commonly used preset icons that will be shown by default
-export const predefinedIcons: IconObject[] = [
+export const predefinedIcons = [
   { name: 'CheckSquare', icon: CheckSquare },
   { name: 'BookOpen', icon: BookOpen },
   { name: 'Coffee', icon: Coffee },
@@ -87,14 +79,6 @@ export const predefinedIcons: IconObject[] = [
   { name: 'AlertTriangle', icon: AlertTriangle },
   { name: 'BellRing', icon: BellRing }
 ];
-
-// Export all available Lucide icons for search
-export const allIconsList: IconObject[] = Object.entries(allLucideIcons)
-  .filter(([name, icon]) => typeof icon === 'function' && name !== 'createLucideIcon')
-  .map(([name, icon]) => ({ 
-    name, 
-    icon: icon as LucideIcon 
-  }));
 
 interface IconSelectorProps {
   selectedIconName: string | null;
