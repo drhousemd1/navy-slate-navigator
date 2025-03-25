@@ -1,61 +1,38 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { predefinedIcons } from './IconSelector';
-import { Button } from "@/components/ui/button";
-import { Search } from 'lucide-react';
-import IconBrowserModal from './IconBrowserModal';
-import RecentIcons from './RecentIcons';
 
 interface PredefinedIconsGridProps {
   selectedIconName: string | null;
   iconColor: string;
   onSelectIcon: (iconName: string) => void;
-  recentIcons?: string[];
 }
 
 const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({ 
   selectedIconName, 
   iconColor, 
-  onSelectIcon,
-  recentIcons = []
+  onSelectIcon 
 }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleOpenModal = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
-
   return (
     <div className="border-2 border-light-navy rounded-lg p-4">
-      <p className="text-white mb-3">Presets</p>
-      
-      <Button 
-        type="button"
-        variant="secondary" 
-        onClick={handleOpenModal}
-        className="w-full bg-light-navy text-white hover:bg-navy flex items-center justify-center gap-2"
-      >
-        <Search className="h-4 w-4" />
-        Browse Icons
-      </Button>
-      
-      <IconBrowserModal 
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSelectIcon={onSelectIcon}
-        iconColor={iconColor}
-      />
-      
-      <RecentIcons 
-        recentIcons={recentIcons}
-        iconColor={iconColor}
-        onSelectIcon={onSelectIcon}
-        icons={predefinedIcons}
-      />
+      <p className="text-white mb-2">Predefined Icons</p>
+      <div className="grid grid-cols-4 gap-2">
+        {predefinedIcons.map((iconObj, index) => {
+          const { name, icon: IconComponent } = iconObj;
+          return (
+            <div 
+              key={index} 
+              className={`w-10 h-10 rounded-md ${selectedIconName === name ? 'bg-nav-active' : 'bg-light-navy'} flex items-center justify-center cursor-pointer hover:bg-navy transition-colors`}
+              onClick={() => onSelectIcon(name)}
+            >
+              <IconComponent 
+                className="h-6 w-6 text-white" 
+                style={{ color: iconColor }}
+              />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
