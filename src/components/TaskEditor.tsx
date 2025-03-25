@@ -638,36 +638,70 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                           className="w-full h-full object-contain"
                         />
                       </div>
-                      <Button 
-                        type="button"
-                        variant="secondary" 
-                        onClick={() => {
-                          setIconPreview(null);
-                          setSelectedIconName(null);
-                          form.setValue('icon_url', undefined);
-                          form.setValue('icon_name', undefined);
-                        }}
-                        className="bg-dark-navy text-white hover:bg-light-navy"
-                      >
-                        Remove Icon
-                      </Button>
+                      <div className="flex flex-col space-y-2">
+                        <Button 
+                          type="button"
+                          variant="secondary" 
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = (e) => handleIconUpload(e as React.ChangeEvent<HTMLInputElement>);
+                            input.click();
+                          }}
+                          className="bg-light-navy text-white hover:bg-navy flex items-center justify-center gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload Icon
+                        </Button>
+                        <Button 
+                          type="button"
+                          variant="secondary" 
+                          onClick={() => {
+                            setIconPreview(null);
+                            setSelectedIconName(null);
+                            form.setValue('icon_url', undefined);
+                            form.setValue('icon_name', undefined);
+                          }}
+                          className="bg-dark-navy text-white hover:bg-light-navy"
+                        >
+                          Remove Icon
+                        </Button>
+                      </div>
                     </div>
                   ) : selectedIconName ? (
                     <div className="space-y-4">
                       <div className="w-16 h-16 mx-auto bg-dark-navy rounded-lg flex items-center justify-center">
                         {renderIcon(selectedIconName)}
                       </div>
-                      <Button 
-                        type="button"
-                        variant="secondary" 
-                        onClick={() => {
-                          setSelectedIconName(null);
-                          form.setValue('icon_name', undefined);
-                        }}
-                        className="bg-dark-navy text-white hover:bg-light-navy"
-                      >
-                        Remove Icon
-                      </Button>
+                      <div className="flex flex-col space-y-2">
+                        <Button 
+                          type="button"
+                          variant="secondary" 
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = (e) => handleIconUpload(e as React.ChangeEvent<HTMLInputElement>);
+                            input.click();
+                          }}
+                          className="bg-light-navy text-white hover:bg-navy flex items-center justify-center gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload Icon
+                        </Button>
+                        <Button 
+                          type="button"
+                          variant="secondary" 
+                          onClick={() => {
+                            setSelectedIconName(null);
+                            form.setValue('icon_name', undefined);
+                          }}
+                          className="bg-dark-navy text-white hover:bg-light-navy"
+                        >
+                          Remove Icon
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="relative h-32">
