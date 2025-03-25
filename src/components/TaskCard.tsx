@@ -137,11 +137,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </div>
           </div>
           
-          <div className="flex-1 relative">
-            <div className="relative">
+          <div className="flex-1">
+            <div className="inline-block relative">
               {highlight_effect && (
                 <div 
-                  className="absolute z-0 rounded-md" 
+                  className="absolute inset-0 z-0"
                   style={{ 
                     backgroundColor: 'rgba(255, 215, 0, 0.4)',
                     top: '-6px',
@@ -152,7 +152,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   }}
                 />
               )}
-              <div className="relative z-10">
+              <div className="relative z-10 px-1 py-1">
                 <h3 
                   className="text-xl font-semibold"
                   style={{ color: title_color }}
