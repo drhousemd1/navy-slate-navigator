@@ -41,7 +41,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 50, y: 50 }); // Default center position (50%)
+  const [position, setPosition] = useState({ x: 50, y: 50 });
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   
@@ -64,7 +64,28 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
 
   useEffect(() => {
     if (isOpen) {
+      form.reset({
+        title: '',
+        description: '',
+        points: 5,
+        frequency: 'daily',
+        frequency_count: 1,
+        background_image_url: undefined,
+        background_opacity: 100,
+        title_color: '#FFFFFF',
+        subtext_color: '#8E9196',
+        calendar_color: '#7E69AB',
+        highlight_effect: false,
+        focal_point_x: 50,
+        focal_point_y: 50,
+      });
+      
+      setImagePreview(null);
+      setIconPreview(null);
+      setPosition({ x: 50, y: 50 });
+      
       if (taskData) {
+        console.log("Loading existing task data:", taskData);
         form.reset({
           title: taskData.title || '',
           description: taskData.description || '',
@@ -87,26 +108,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
           x: taskData.focal_point_x || 50,
           y: taskData.focal_point_y || 50
         });
-      } else {
-        form.reset({
-          title: '',
-          description: '',
-          points: 5,
-          frequency: 'daily',
-          frequency_count: 1,
-          background_image_url: undefined,
-          background_opacity: 100,
-          title_color: '#FFFFFF',
-          subtext_color: '#8E9196',
-          calendar_color: '#7E69AB',
-          highlight_effect: false,
-          focal_point_x: 50,
-          focal_point_y: 50,
-        });
-        
-        setImagePreview(null);
-        setIconPreview(null);
-        setPosition({ x: 50, y: 50 });
       }
     }
   }, [isOpen, taskData, form]);
@@ -173,6 +174,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
 
   const handleSubmit = async (values: TaskFormValues) => {
     setLoading(true);
+    console.log("Submitting task with values:", values);
     try {
       const taskToSave: Partial<Task> = {
         ...values,
@@ -338,7 +340,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                   <div className="space-y-4">
                     <div 
                       ref={imageContainerRef}
-                      className="relative w-full h-48 bg-dark-navy rounded-lg overflow-hidden cursor-move"
+                      className="relative w-full h-48 rounded-lg overflow-hidden cursor-move"
                       onMouseDown={handleMouseDown}
                     >
                       <img 
@@ -351,7 +353,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                         }}
                       />
                       <div 
-                        className={`absolute inset-0 flex items-center justify-center ${isDragging ? 'bg-black/30' : 'hover:bg-black/20'} transition-colors`}
+                        className={`absolute inset-0 flex items-center justify-center ${isDragging ? 'bg-black/30' : ''} transition-colors`}
                       >
                         <div 
                           className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2"

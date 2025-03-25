@@ -9,6 +9,10 @@ interface TaskCardProps {
   description: string;
   points: number;
   completed?: boolean;
+  backgroundImage?: string;
+  backgroundOpacity?: number;
+  focalPointX?: number;
+  focalPointY?: number;
   onEdit: () => void;
   onToggleCompletion?: (completed: boolean) => void;
 }
@@ -18,12 +22,28 @@ const TaskCard: React.FC<TaskCardProps> = ({
   description,
   points,
   completed = false,
+  backgroundImage,
+  backgroundOpacity = 100,
+  focalPointX = 50,
+  focalPointY = 50,
   onEdit,
   onToggleCompletion
 }) => {
   return (
-    <Card className="bg-navy border-light-navy overflow-hidden">
-      <div className="flex items-start p-4 md:p-6">
+    <Card className={`relative overflow-hidden border-light-navy ${!backgroundImage ? 'bg-navy' : ''}`}>
+      {backgroundImage && (
+        <div 
+          className="absolute inset-0 w-full h-full z-0"
+          style={{
+            backgroundImage: `url(${backgroundImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: backgroundOpacity / 100,
+          }}
+        />
+      )}
+
+      <div className="relative z-10 flex items-start p-4 md:p-6">
         <div className="flex-1">
           <div className="flex items-center gap-4">
             <h3 className={`text-xl font-semibold ${completed ? 'text-gray-400 line-through' : 'text-white'}`}>

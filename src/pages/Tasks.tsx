@@ -28,17 +28,20 @@ const Tasks: React.FC = () => {
   }, [error]);
 
   const handleNewTask = () => {
+    console.log("Creating new task");
     setCurrentTask(null);
     setIsEditorOpen(true);
   };
 
   const handleEditTask = (task: Task) => {
+    console.log("Editing task:", task);
     setCurrentTask(task);
     setIsEditorOpen(true);
   };
 
   const handleSaveTask = async (taskData: Task) => {
     try {
+      console.log("Saving task:", taskData);
       const savedTask = await saveTask(taskData);
       
       if (savedTask) {
@@ -88,6 +91,10 @@ const Tasks: React.FC = () => {
                 description={task.description}
                 points={task.points}
                 completed={task.completed}
+                backgroundImage={task.background_image_url}
+                backgroundOpacity={task.background_opacity}
+                focalPointX={task.focal_point_x}
+                focalPointY={task.focal_point_y}
                 onEdit={() => handleEditTask(task)}
                 onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
               />
