@@ -97,7 +97,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
           
           <div className="flex-1 flex flex-col">
-            <h3 className="text-xl font-semibold">
+            <h3 className="text-xl font-semibold inline-block">
               <HighlightedText 
                 text={title} 
                 highlight={highlight_effect || false} 
@@ -105,7 +105,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               />
             </h3>
             
-            <div className="text-sm mt-1">
+            <div className="text-sm mt-1 inline-block">
               <HighlightedText 
                 text={description} 
                 highlight={highlight_effect || false} 

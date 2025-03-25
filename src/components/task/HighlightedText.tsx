@@ -13,18 +13,20 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
   color 
 }) => {
   const highlighterStyle: CSSProperties = {
-    backgroundColor: 'rgba(245, 245, 209, 0.7)', // #F5F5D1 with 0.7 opacity
+    backgroundColor: 'rgba(245, 245, 209, 0.7)',
     padding: '1px 4px',
     borderRadius: '4px',
-    display: 'inline-block',
+    display: 'inline',
     boxDecorationBreak: 'clone' as 'clone',
     WebkitBoxDecorationBreak: 'clone' as 'clone',
-    width: 'auto'
+    width: 'fit-content',
+    maxWidth: 'fit-content',
+    lineHeight: '1.6'
   };
 
   if (highlight) {
     return (
-      <span style={{
+      <span className="highlighter" style={{
         ...highlighterStyle,
         color
       }}>
