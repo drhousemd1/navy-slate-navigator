@@ -206,9 +206,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
 
   const decrementPoints = () => {
     const currentPoints = form.getValues('points');
-    if (currentPoints > 1) {
-      form.setValue('points', currentPoints - 1);
-    }
+    form.setValue('points', currentPoints - 1);
   };
 
   return (
@@ -329,7 +327,10 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                           type="number"
                           className="w-20 text-center bg-dark-navy border-light-navy text-white"
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? undefined : parseInt(e.target.value);
+                            field.onChange(value);
+                          }}
                         />
                       </FormControl>
                       <Button 
