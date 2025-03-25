@@ -20,6 +20,7 @@ interface TaskCardProps {
   frequency?: 'daily' | 'weekly';
   frequency_count?: number;
   icon_url?: string;
+  icon_name?: string;
   priority?: 'low' | 'medium' | 'high';
   highlight_effect?: boolean;
   title_color?: string;
