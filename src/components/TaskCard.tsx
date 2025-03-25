@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -97,49 +96,30 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
       <div className={`relative ${isMaxedOut ? 'z-5' : 'z-10'} flex flex-col p-4 md:p-6 h-full`}>
         <div className="flex justify-between items-start mb-3">
-          <div className="flex items-center gap-2">
-            <Badge 
-              className={`${getPriorityColor()} text-white font-bold capitalize px-3 py-1`}
-              variant="default"
-            >
-              {priority}
-            </Badge>
-            
-            <Badge 
-              className="bg-gray-700 text-white font-bold px-3 py-1"
-              variant="default"
-            >
-              {completion_count}/{max_completions}
-            </Badge>
-          </div>
+          <Badge 
+            className={`${getPriorityColor()} text-white font-bold capitalize px-3 py-1`}
+            variant="default"
+          >
+            {priority}
+          </Badge>
           
           {onToggleCompletion && (
-            <div className="flex items-center gap-2">
-              <Badge 
-                className="bg-nav-active text-white font-bold flex items-center gap-1"
-                variant="default"
-              >
-                {points > 0 ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-                {Math.abs(points)}
-              </Badge>
-              
-              <Button
-                variant="default"
-                size="sm"
-                className={`${completed ? 'bg-green-600 text-white' : 'bg-green-500 text-white'} px-2 py-0 h-7`}
-                onClick={() => onToggleCompletion(!completed)}
-                disabled={isMaxedOut}
-              >
-                {completed ? (
-                  <span className="flex items-center gap-1">
-                    <Check className="h-3 w-3" />
-                    <span className="text-xs">Completed</span>
-                  </span>
-                ) : (
-                  <span className="text-xs">Complete</span>
-                )}
-              </Button>
-            </div>
+            <Button
+              variant="default"
+              size="sm"
+              className={`${completed ? 'bg-green-600 text-white' : 'bg-green-500 text-white'} px-2 py-0 h-7`}
+              onClick={() => onToggleCompletion(!completed)}
+              disabled={isMaxedOut}
+            >
+              {completed ? (
+                <span className="flex items-center gap-1">
+                  <Check className="h-3 w-3" />
+                  <span className="text-xs">Completed</span>
+                </span>
+              ) : (
+                <span className="text-xs">Complete</span>
+              )}
+            </Button>
           )}
         </div>
         
