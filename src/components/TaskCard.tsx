@@ -25,6 +25,7 @@ interface TaskCardProps {
   highlight_effect?: boolean;
   title_color?: string;
   subtext_color?: string;
+  calendar_color?: string;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -46,7 +47,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   priority = 'medium',
   highlight_effect = false,
   title_color = '#FFFFFF',
-  subtext_color = '#8E9196'
+  subtext_color = '#8E9196',
+  calendar_color = '#7E69AB'
 }) => {
   const generateTrackerCircles = () => {
     const circles = [];
@@ -56,7 +58,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
       circles.push(
         <div 
           key={i}
-          className={`w-4 h-4 rounded-full border ${i < frequency_count ? 'bg-nav-active border-nav-active' : 'bg-transparent border-light-navy'}`}
+          className={`w-4 h-4 rounded-full border ${i < frequency_count ? 'border-transparent' : 'bg-transparent border-light-navy'}`}
+          style={{
+            backgroundColor: i < frequency_count ? calendar_color : 'transparent',
+            borderColor: i < frequency_count ? 'transparent' : 'rgba(142, 145, 150, 0.5)'
+          }}
         />
       );
     }
