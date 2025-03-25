@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -116,6 +115,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
     return <Calendar className="w-6 h-6" style={{ color: icon_color }} />;
   };
 
+  const highlighterStyle = {
+    backgroundColor: 'rgba(255, 215, 0, 0.4)',
+    padding: '2px 4px',
+    borderRadius: '3px',
+    display: 'inline-block',
+    width: '100%'
+  };
+
   return (
     <Card className={`relative overflow-hidden border-light-navy ${!backgroundImage ? 'bg-navy' : ''}`}>
       {backgroundImage && (
@@ -178,20 +185,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
           <div className="flex-1 flex flex-col">
             <h3 className="text-xl font-semibold">
               {highlight_effect ? (
-                <span className="relative inline">
-                  <span 
-                    className="absolute"
-                    style={{
-                      backgroundColor: 'rgba(255, 215, 0, 0.4)',
-                      top: 0,
-                      left: 0,
-                      height: '100%',
-                      width: '100%',
-                      zIndex: -1,
-                      borderRadius: '3px',
-                    }}
-                  />
-                  <span style={{ color: title_color, position: 'relative', padding: '0 3px' }}>{title}</span>
+                <span style={{
+                  ...highlighterStyle,
+                  color: title_color
+                }}>
+                  {title}
                 </span>
               ) : (
                 <span style={{ color: title_color }}>{title}</span>
@@ -200,20 +198,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
             
             <div className="text-sm mt-1">
               {highlight_effect ? (
-                <span className="relative inline">
-                  <span 
-                    className="absolute" 
-                    style={{
-                      backgroundColor: 'rgba(255, 215, 0, 0.4)',
-                      top: 0,
-                      left: 0,
-                      height: '100%',
-                      width: '100%',
-                      zIndex: -1,
-                      borderRadius: '3px',
-                    }}
-                  />
-                  <span style={{ color: subtext_color, position: 'relative', padding: '0 3px' }}>{description}</span>
+                <span style={{
+                  ...highlighterStyle,
+                  color: subtext_color
+                }}>
+                  {description}
                 </span>
               ) : (
                 <span style={{ color: subtext_color }}>{description}</span>
