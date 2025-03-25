@@ -132,7 +132,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
             variant="ghost"
             size="icon"
             onClick={onEdit}
-            className="text-light-navy hover:text-white hover:bg-light-navy"
+            className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
           >
             <Edit className="h-4 w-4" />
           </Button>
