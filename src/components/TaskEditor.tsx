@@ -73,7 +73,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
         points: 5,
         frequency: 'daily',
         frequency_count: 1,
-        background_image_url: undefined,
         background_opacity: 100,
         title_color: '#FFFFFF',
         subtext_color: '#8E9196',
@@ -123,20 +122,24 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
     e.preventDefault();
     setIsDragging(true);
     
-    const updateImagePosition = (clientX: number, clientY: number) => {
+    const rect = imageContainerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    
+    setPosition({ x, y });
+    form.setValue('focal_point_x', Math.round(x));
+    form.setValue('focal_point_y', Math.round(y));
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
       if (!imageContainerRef.current) return;
       
       const rect = imageContainerRef.current.getBoundingClientRect();
-      const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-      const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+      const x = Math.max(0, Math.min(100, ((moveEvent.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((moveEvent.clientY - rect.top) / rect.height) * 100));
       
       setPosition({ x, y });
       form.setValue('focal_point_x', Math.round(x));
       form.setValue('focal_point_y', Math.round(y));
-    };
-    
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      updateImagePosition(moveEvent.clientX, moveEvent.clientY);
     };
     
     const handleMouseUp = () => {
@@ -145,10 +148,46 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
       document.removeEventListener('mouseup', handleMouseUp);
     };
     
-    updateImagePosition(e.clientX, e.clientY);
-    
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!imageContainerRef.current || e.touches.length === 0) return;
+    
+    e.preventDefault();
+    setIsDragging(true);
+    
+    const touch = e.touches[0];
+    const rect = imageContainerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
+    
+    setPosition({ x, y });
+    form.setValue('focal_point_x', Math.round(x));
+    form.setValue('focal_point_y', Math.round(y));
+    
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (!imageContainerRef.current || moveEvent.touches.length === 0) return;
+      
+      const touch = moveEvent.touches[0];
+      const rect = imageContainerRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
+      
+      setPosition({ x, y });
+      form.setValue('focal_point_x', Math.round(x));
+      form.setValue('focal_point_y', Math.round(y));
+    };
+    
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+    
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -436,6 +475,10 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                       ref={imageContainerRef}
                       className="relative w-full h-48 rounded-lg overflow-hidden cursor-move"
                       onMouseDown={handleMouseDown}
+                      onTouchStart={handleTouchStart}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Drag to adjust focal point"
                     >
                       <img 
                         src={imagePreview} 
@@ -447,17 +490,18 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
                         }}
                       />
                       <div 
-                        className={`absolute inset-0 flex items-center justify-center ${isDragging ? 'bg-black/30' : ''} transition-colors`}
+                        className={`absolute inset-0 flex items-center justify-center ${isDragging ? 'bg-black/30' : 'hover:bg-black/20'} transition-colors duration-200`}
                       >
                         <div 
-                          className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2"
+                          className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg"
                           style={{ 
                             left: `${position.x}%`, 
                             top: `${position.y}%`,
-                            cursor: 'grab'
+                            cursor: 'grab',
+                            opacity: isDragging ? 1 : 0.8
                           }}
                         />
-                        <span className="text-sm text-white bg-black/50 px-2 py-1 rounded">
+                        <span className="text-sm text-white bg-black/50 px-2 py-1 rounded pointer-events-none">
                           Drag to adjust focal point
                         </span>
                       </div>
