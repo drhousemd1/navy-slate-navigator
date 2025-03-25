@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -222,7 +223,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
         <div className="flex items-center justify-between mt-4">
           {frequency && (
             <div className="flex space-x-1 items-center">
-              <Calendar className="h-4 w-4 text-light-navy mr-1" />
+              <Calendar 
+                className="h-4 w-4 mr-1" 
+                style={{ color: calendar_color }}
+              />
               <div className="flex space-x-1">
                 {generateTrackerCircles()}
               </div>
