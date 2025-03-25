@@ -67,30 +67,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
         />
       )}
 
-      <div className="relative z-10 flex flex-col p-4 md:p-6">
-        <div className="flex items-start">
-          {/* Icon with background shape on the far left */}
-          <div className="mr-4 flex-shrink-0">
-            <div className="w-10 h-10 rounded-full bg-light-navy/30 flex items-center justify-center">
-              {icon_url ? (
-                <img src={icon_url} alt="Task icon" className="w-6 h-6" />
-              ) : (
-                <Calendar className="w-6 h-6 text-nav-active" />
-              )}
-            </div>
-          </div>
-          
-          {/* Title and description stacked vertically */}
-          <div className="flex-1">
-            <h3 className={`text-xl font-semibold ${completed ? 'text-gray-400 line-through' : 'text-white'}`}>
-              {title}
-            </h3>
-            <p className={`mt-1 text-sm ${completed ? 'text-gray-500 line-through' : 'text-light-navy'}`}>
-              {description}
-            </p>
-          </div>
-          
-          {/* Points bubble and Edit button */}
+      <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
+        {/* Top section - Points and Edit button */}
+        <div className="flex justify-end mb-3">
           <div className="flex items-center">
             <Badge 
               className="mr-3 bg-nav-active text-white font-bold flex items-center gap-1"
@@ -111,6 +90,31 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
         </div>
         
+        {/* Middle section - Icon, Title, and Description */}
+        <div className="flex items-start mb-auto">
+          {/* Icon with background shape on the left */}
+          <div className="mr-4 flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-light-navy/30 flex items-center justify-center">
+              {icon_url ? (
+                <img src={icon_url} alt="Task icon" className="w-6 h-6" />
+              ) : (
+                <Calendar className="w-6 h-6 text-nav-active" />
+              )}
+            </div>
+          </div>
+          
+          {/* Title and description stacked vertically */}
+          <div className="flex-1">
+            <h3 className={`text-xl font-semibold ${completed ? 'text-gray-400 line-through' : 'text-white'}`}>
+              {title}
+            </h3>
+            <p className={`mt-1 text-sm ${completed ? 'text-gray-500 line-through' : 'text-light-navy'}`}>
+              {description}
+            </p>
+          </div>
+        </div>
+        
+        {/* Bottom section - Calendar tracker on left, Complete button on right */}
         <div className="flex items-center justify-between mt-4">
           {/* Calendar tracker on the bottom left */}
           {frequency && (
