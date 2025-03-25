@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Calendar, CheckSquare, Circle, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Check, CheckSquare, Circle, Edit, Trash2 } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -15,20 +15,36 @@ import {
   AlertDialogTitle,
 } from './ui/alert-dialog';
 
-interface TaskCardProps {
+interface Task {
+  id: string;
   title: string;
   description: string;
   points: number;
-  completed?: boolean;
+  completed: boolean;
+  frequency?: {
+    type: 'daily' | 'weekly';
+    count: number;
+  };
+  backgroundColor?: string;
+  backgroundImage?: string;
+  backgroundOpacity?: number;
+  icon?: string;
+  titleColor?: string;
+  subtextColor?: string;
+  calendarColor?: string;
+  highlighterEffect?: boolean;
+}
+
+interface TaskCardProps {
+  task: Task;
   onDelete?: () => void;
+  onEdit?: () => void;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
-  title,
-  description,
-  points,
-  completed = false,
+  task,
   onDelete,
+  onEdit,
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
@@ -42,21 +58,53 @@ const TaskCard: React.FC<TaskCardProps> = ({
     setDeleteDialogOpen(false);
   };
 
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit();
+    }
+  };
+
+  // Default style values if not set
+  const titleColor = task.titleColor || '#FFFFFF';
+  const subtextColor = task.subtextColor || '#9CA3AF';
+  const calendarColor = task.calendarColor || '#4B5563';
+  const backgroundColor = task.backgroundColor || '#1A1F2C';
+
   return (
     <>
-      <Card className="bg-navy border border-light-navy mb-4 overflow-hidden relative">
-        <div className="p-4">
+      <Card 
+        className="mb-4 overflow-hidden relative" 
+        style={{ 
+          backgroundColor: backgroundColor,
+          backgroundImage: task.backgroundImage ? `url(${task.backgroundImage})` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          border: '1px solid #2D3748'
+        }}
+      >
+        {/* Semi-transparent overlay for background images */}
+        {task.backgroundImage && (
+          <div 
+            className="absolute inset-0 z-0" 
+            style={{ 
+              backgroundColor: backgroundColor,
+              opacity: task.backgroundOpacity || 1
+            }}
+          />
+        )}
+        
+        <div className="p-4 relative z-10">
           {/* Top row with complete button and points */}
           <div className="flex justify-end items-center mb-4 gap-2">
             {/* Points badge */}
             <Badge className="bg-nav-active hover:bg-nav-active text-white font-medium">
-              +{points}
+              +{task.points}
             </Badge>
             
-            {/* Complete button - removed check icon and adjusted padding */}
+            {/* Complete button */}
             <Button 
               variant="outline" 
-              className={`rounded-full px-3 py-0.5 h-auto ${completed ? 'bg-nav-active text-white border-nav-active' : 'bg-transparent border-light-navy text-nav-inactive'}`}
+              className={`rounded-full px-3 py-0.5 h-auto ${task.completed ? 'bg-nav-active text-white border-nav-active' : 'bg-transparent border-light-navy text-nav-inactive'}`}
               size="sm"
             >
               Complete
@@ -66,21 +114,43 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {/* Task info row */}
           <div className="flex items-start mb-3">
             <div className="bg-nav-active/15 p-2 rounded-lg mr-3">
-              <CheckSquare className="w-6 h-6 text-nav-active" />
+              {task.icon ? (
+                <img src={task.icon} alt="Task icon" className="w-6 h-6" />
+              ) : (
+                <CheckSquare className="w-6 h-6 text-nav-active" />
+              )}
             </div>
             <div>
-              <h3 className="font-semibold text-white text-lg">{title}</h3>
-              <p className="text-nav-inactive text-sm">{description}</p>
+              <h3 
+                className={`font-semibold text-lg ${task.highlighterEffect ? 'px-1 py-0.5' : ''}`}
+                style={{ 
+                  color: titleColor,
+                  backgroundColor: task.highlighterEffect ? 'rgba(255, 255, 0, 0.3)' : 'transparent',
+                  display: 'inline-block'
+                }}
+              >
+                {task.title}
+              </h3>
+              <p 
+                className={`text-sm ${task.highlighterEffect ? 'px-1 py-0.5' : ''}`}
+                style={{ 
+                  color: subtextColor,
+                  backgroundColor: task.highlighterEffect ? 'rgba(255, 255, 0, 0.2)' : 'transparent',
+                  display: 'inline-block'
+                }}
+              >
+                {task.description}
+              </p>
             </div>
           </div>
           
           {/* Date tracking section */}
           <div className="flex items-center space-x-1 mt-3">
-            <Calendar className="w-4 h-4 text-nav-inactive mr-1" />
+            <Calendar className="w-4 h-4 mr-1" style={{ color: calendarColor }} />
             {days.map((day) => (
               <div key={day} className="flex flex-col items-center">
-                <span className="text-xs text-nav-inactive mb-1">{day}</span>
-                <Circle className="w-4 h-4 text-light-navy" />
+                <span className="text-xs mb-1" style={{ color: calendarColor }}>{day}</span>
+                <Circle className="w-4 h-4" style={{ color: calendarColor }} />
               </div>
             ))}
           </div>
@@ -101,6 +171,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           variant="ghost" 
           size="icon" 
           className="absolute bottom-2 right-2 h-8 w-8 p-1.5 bg-navy hover:bg-light-navy text-nav-inactive rounded-full"
+          onClick={handleEdit}
         >
           <Edit className="w-full h-full" />
         </Button>
