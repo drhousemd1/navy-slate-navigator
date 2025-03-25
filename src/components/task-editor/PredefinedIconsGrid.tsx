@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { predefinedIcons } from './IconSelector';
+import { predefinedIcons, allIconsList } from './IconSelector';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,10 +25,12 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
   // Filter icons based on search query
   useEffect(() => {
     if (!searchQuery.trim()) {
+      // When search is empty, show default predefined icons
       setFilteredIcons(predefinedIcons);
     } else {
+      // When searching, look through the entire icon library
       const query = searchQuery.toLowerCase();
-      const filtered = predefinedIcons.filter(icon => 
+      const filtered = allIconsList.filter(icon => 
         icon.name.toLowerCase().includes(query)
       );
       setFilteredIcons(filtered);

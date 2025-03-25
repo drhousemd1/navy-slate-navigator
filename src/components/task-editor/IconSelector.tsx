@@ -16,11 +16,13 @@ import {
   ChevronUp, Circle, Compass, Crosshair, FileMinus, FilePlus, FileText, Film,
   Filter, Hexagon, Key, Lock, MapPin, Maximize, Minimize, MoreHorizontal,
   MoreVertical, Move, Navigation, Paperclip, PieChart, Play, Power, Radio,
-  SkipBack, SkipForward, Square, Thermometer, Unlock, Users, Watch, Wind
+  SkipBack, SkipForward, Square, Thermometer, Unlock, Users, Watch, Wind, Skull
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from '@/hooks/use-toast';
+import * as allLucideIcons from 'lucide-react';
 
+// Define commonly used preset icons that will be shown by default
 export const predefinedIcons = [
   { name: 'CheckSquare', icon: CheckSquare },
   { name: 'BookOpen', icon: BookOpen },
@@ -79,6 +81,11 @@ export const predefinedIcons = [
   { name: 'AlertTriangle', icon: AlertTriangle },
   { name: 'BellRing', icon: BellRing }
 ];
+
+// Export all available Lucide icons for search
+export const allIconsList = Object.entries(allLucideIcons)
+  .filter(([name, icon]) => typeof icon === 'function' && name !== 'createLucideIcon')
+  .map(([name, icon]) => ({ name, icon: icon as React.FC<any> }));
 
 interface IconSelectorProps {
   selectedIconName: string | null;
