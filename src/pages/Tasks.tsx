@@ -95,6 +95,9 @@ const Tasks: React.FC = () => {
                 backgroundOpacity={task.background_opacity}
                 focalPointX={task.focal_point_x}
                 focalPointY={task.focal_point_y}
+                frequency={task.frequency}
+                frequency_count={task.frequency_count}
+                icon_url={task.icon_url}
                 onEdit={() => handleEditTask(task)}
                 onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
               />
