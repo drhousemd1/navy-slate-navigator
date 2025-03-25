@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { predefinedIcons, allIconsList } from './IconSelector';
+import { predefinedIcons, allIconsList, IconObject } from './IconSelector';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,7 +20,7 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
 }) => {
   const [isPresetsDialogOpen, setIsPresetsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredIcons, setFilteredIcons] = useState(predefinedIcons);
+  const [filteredIcons, setFilteredIcons] = useState<IconObject[]>(predefinedIcons);
 
   // Filter icons based on search query
   useEffect(() => {

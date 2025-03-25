@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   CheckSquare, BookOpen, Coffee, Dumbbell, Star, Heart, Trophy, Target, 
@@ -21,9 +20,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from '@/hooks/use-toast';
 import * as allLucideIcons from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
+
+// Define a type for our icon objects
+export type IconObject = {
+  name: string;
+  icon: LucideIcon;
+};
 
 // Define commonly used preset icons that will be shown by default
-export const predefinedIcons = [
+export const predefinedIcons: IconObject[] = [
   { name: 'CheckSquare', icon: CheckSquare },
   { name: 'BookOpen', icon: BookOpen },
   { name: 'Coffee', icon: Coffee },
@@ -83,9 +89,12 @@ export const predefinedIcons = [
 ];
 
 // Export all available Lucide icons for search
-export const allIconsList = Object.entries(allLucideIcons)
+export const allIconsList: IconObject[] = Object.entries(allLucideIcons)
   .filter(([name, icon]) => typeof icon === 'function' && name !== 'createLucideIcon')
-  .map(([name, icon]) => ({ name, icon: icon as React.FC<any> }));
+  .map(([name, icon]) => ({ 
+    name, 
+    icon: icon as LucideIcon 
+  }));
 
 interface IconSelectorProps {
   selectedIconName: string | null;
