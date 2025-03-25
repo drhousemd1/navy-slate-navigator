@@ -138,42 +138,48 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
           
           <div className="flex-1 flex flex-col">
-            <h3 className="text-xl font-semibold relative">
-              {highlight_effect && (
-                <span 
-                  className="absolute"
-                  style={{
-                    backgroundColor: 'rgba(255, 215, 0, 0.4)',
-                    top: 0,
-                    left: 0,
-                    height: '100%',
-                    width: '100%',
-                    zIndex: -1,
-                    borderRadius: '3px',
-                    padding: '0 2px',
-                  }}
-                />
+            <h3 className="text-xl font-semibold">
+              {highlight_effect ? (
+                <span className="relative inline">
+                  <span 
+                    className="absolute"
+                    style={{
+                      backgroundColor: 'rgba(255, 215, 0, 0.4)',
+                      top: 0,
+                      left: 0,
+                      height: '100%',
+                      width: '100%',
+                      zIndex: -1,
+                      borderRadius: '3px',
+                    }}
+                  />
+                  <span style={{ color: title_color, position: 'relative', padding: '0 3px' }}>{title}</span>
+                </span>
+              ) : (
+                <span style={{ color: title_color }}>{title}</span>
               )}
-              <span style={{ color: title_color, position: 'relative' }}>{title}</span>
             </h3>
             
-            <div className="text-sm mt-1 relative inline-block">
-              {highlight_effect && (
-                <span 
-                  className="absolute" 
-                  style={{
-                    backgroundColor: 'rgba(255, 215, 0, 0.4)',
-                    top: 0,
-                    left: 0,
-                    height: '100%',
-                    width: '100%',
-                    zIndex: -1,
-                    borderRadius: '3px',
-                    padding: '0 2px',
-                  }}
-                />
+            <div className="text-sm mt-1">
+              {highlight_effect ? (
+                <span className="relative inline">
+                  <span 
+                    className="absolute" 
+                    style={{
+                      backgroundColor: 'rgba(255, 215, 0, 0.4)',
+                      top: 0,
+                      left: 0,
+                      height: '100%',
+                      width: '100%',
+                      zIndex: -1,
+                      borderRadius: '3px',
+                    }}
+                  />
+                  <span style={{ color: subtext_color, position: 'relative', padding: '0 3px' }}>{description}</span>
+                </span>
+              ) : (
+                <span style={{ color: subtext_color }}>{description}</span>
               )}
-              <span style={{ color: subtext_color, position: 'relative' }}>{description}</span>
             </div>
           </div>
         </div>
