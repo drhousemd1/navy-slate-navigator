@@ -9,7 +9,7 @@ const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority }) => {
   const getPriorityColor = () => {
     switch (priority) {
       case 'high':
-        return '#ff4466'; // Neon reddish-pink
+        return '#00FFF7'; // Neon cyan (matching nav-active color)
       case 'medium':
         return '#ff9934'; // Neon orange
       case 'low':
