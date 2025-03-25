@@ -728,60 +728,62 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
               )}
             />
             
-            <DialogFooter className="pt-4 flex justify-between">
-              <div className="flex gap-2">
-                {taskData?.id && onDelete && (
-                  <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        type="button" 
-                        variant="destructive" 
-                        className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete Task
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-navy border-light-navy text-white">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-white text-xl">Delete Task</AlertDialogTitle>
-                        <AlertDialogDescription className="text-white text-sm">
-                          Are you sure you want to delete this task? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-transparent border-light-navy text-white hover:bg-light-navy">Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={handleDelete} 
-                          className="bg-red-700 text-white hover:bg-red-600"
+            <DialogFooter className="pt-4">
+              <div className="w-full flex items-center gap-4 justify-between">
+                <div className="flex items-center gap-2">
+                  {taskData?.id && onDelete && (
+                    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          type="button" 
+                          variant="destructive" 
+                          className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
                         >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
+                          <Trash2 className="h-4 w-4" />
+                          Delete Task
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-navy border-light-navy text-white">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-white text-xl">Delete Task</AlertDialogTitle>
+                          <AlertDialogDescription className="text-white text-sm">
+                            Are you sure you want to delete this task? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="bg-transparent border-light-navy text-white hover:bg-light-navy">Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={handleDelete} 
+                            className="bg-red-700 text-white hover:bg-red-600"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                  <Button 
+                    type="button" 
+                    variant="destructive" 
+                    onClick={onClose}
+                    className="bg-red-700 border-light-navy text-white hover:bg-red-600"
+                  >
+                    Cancel
+                  </Button>
+                </div>
                 <Button 
-                  type="button" 
-                  variant="destructive" 
-                  onClick={onClose}
-                  className="bg-red-700 border-light-navy text-white hover:bg-red-600"
+                  type="submit" 
+                  className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
+                  disabled={loading}
                 >
-                  Cancel
+                  {loading ? 'Saving...' : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save Changes
+                    </>
+                  )}
                 </Button>
               </div>
-              <Button 
-                type="submit" 
-                className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
-                disabled={loading}
-              >
-                {loading ? 'Saving...' : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
             </DialogFooter>
           </form>
         </Form>
