@@ -140,7 +140,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   Completed
                 </span>
               ) : (
-                'Mark Complete'
+                'Complete'
               )}
             </Button>
           )}
