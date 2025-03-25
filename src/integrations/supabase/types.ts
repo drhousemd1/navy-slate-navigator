@@ -22,6 +22,7 @@ export type Database = {
           frequency: string
           frequency_count: number
           highlight_effect: boolean
+          icon_color: string
           icon_name: string | null
           icon_url: string | null
           id: string
@@ -44,6 +45,7 @@ export type Database = {
           frequency?: string
           frequency_count?: number
           highlight_effect?: boolean
+          icon_color?: string
           icon_name?: string | null
           icon_url?: string | null
           id?: string
@@ -66,6 +68,7 @@ export type Database = {
           frequency?: string
           frequency_count?: number
           highlight_effect?: boolean
+          icon_color?: string
           icon_name?: string | null
           icon_url?: string | null
           id?: string
