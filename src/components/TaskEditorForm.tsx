@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Task } from '@/lib/taskUtils';
-import NumberField from './NumberField';
-import ColorPickerField from './ColorPickerField';
-import PrioritySelector from './PrioritySelector';
-import FrequencySelector from './FrequencySelector';
-import BackgroundImageSelector from './BackgroundImageSelector';
-import IconSelector from './IconSelector';
-import PredefinedIconsGrid from './PredefinedIconsGrid';
-import DeleteTaskDialog from './DeleteTaskDialog';
+import NumberField from './task-editor/NumberField';
+import ColorPickerField from './task-editor/ColorPickerField';
+import PrioritySelector from './task-editor/PrioritySelector';
+import FrequencySelector from './task-editor/FrequencySelector';
+import BackgroundImageSelector from './task-editor/BackgroundImageSelector';
+import IconSelector from './task-editor/IconSelector';
+import PredefinedIconsGrid from './task-editor/PredefinedIconsGrid';
+import DeleteTaskDialog from './task-editor/DeleteTaskDialog';
 
 interface TaskFormValues {
   title: string;
@@ -105,7 +105,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     form.setValue('focal_point_y', Math.round(y));
     
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      console.log("Dragging"); // Added console log to debug dragging
+      console.log("Dragging");
       
       if (!imageContainerRef.current) return;
       
@@ -143,7 +143,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     form.setValue('focal_point_y', Math.round(y));
     
     const handleTouchMove = (moveEvent: TouchEvent) => {
-      console.log("Touch Dragging"); // Added console log for touch dragging
+      console.log("Touch Dragging");
       if (!imageContainerRef.current || moveEvent.touches.length === 0) return;
       
       moveEvent.preventDefault();
