@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -151,6 +150,27 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     toast({
       title: 'Error updating task',
       description: err.message || 'Could not update task completion status',
+      variant: 'destructive',
+    });
+    return false;
+  }
+};
+
+export const deleteTask = async (id: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    return true;
+  } catch (err: any) {
+    console.error('Error deleting task:', err);
+    toast({
+      title: 'Error deleting task',
+      description: err.message || 'Could not delete task',
       variant: 'destructive',
     });
     return false;

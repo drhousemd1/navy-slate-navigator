@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
 import TaskCard from '../components/TaskCard';
 import TaskEditor from '../components/TaskEditor';
-import { fetchTasks, Task, saveTask, updateTaskCompletion } from '../lib/taskUtils';
+import { fetchTasks, Task, saveTask, updateTaskCompletion, deleteTask } from '../lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 
 const Tasks: React.FC = () => {
@@ -57,6 +57,28 @@ const Tasks: React.FC = () => {
       toast({
         title: 'Error',
         description: 'Failed to save task. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      console.log("Deleting task:", taskId);
+      const success = await deleteTask(taskId);
+      
+      if (success) {
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        toast({
+          title: 'Success',
+          description: 'Task deleted successfully!',
+        });
+      }
+    } catch (err) {
+      console.error('Error deleting task:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete task. Please try again.',
         variant: 'destructive',
       });
     }
@@ -118,6 +140,7 @@ const Tasks: React.FC = () => {
                 priority={task.priority}
                 onEdit={() => handleEditTask(task)}
                 onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
+                onDelete={() => handleDeleteTask(task.id)}
               />
             ))}
           </div>

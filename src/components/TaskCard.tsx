@@ -1,9 +1,20 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Edit, Check, Calendar, Plus, Minus } from 'lucide-react';
+import { Edit, Check, Calendar, Plus, Minus, Trash2 } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface TaskCardProps {
   title: string;
@@ -16,6 +27,7 @@ interface TaskCardProps {
   focalPointY?: number;
   onEdit: () => void;
   onToggleCompletion?: (completed: boolean) => void;
+  onDelete?: () => void;
   frequency?: 'daily' | 'weekly';
   frequency_count?: number;
   icon_url?: string;
@@ -33,11 +45,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
   focalPointY = 50,
   onEdit,
   onToggleCompletion,
+  onDelete,
   frequency,
   frequency_count = 0,
   icon_url,
   priority = 'medium'
 }) => {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
   const generateTrackerCircles = () => {
     const circles = [];
     const total = frequency === 'daily' ? 7 : 4;
@@ -149,14 +164,47 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </div>
           )}
           
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onEdit}
-            className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
+          <div className="flex space-x-2">
+            {onDelete && (
+              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-red-700/80 text-white hover:bg-red-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-navy border-light-navy text-white">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-white">Delete Task</AlertDialogTitle>
+                    <AlertDialogDescription className="text-light-navy">
+                      Are you sure you want to delete this task? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="bg-transparent border-light-navy text-white hover:bg-light-navy">Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={onDelete} 
+                      className="bg-red-700 text-white hover:bg-red-600"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onEdit}
+              className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
       
