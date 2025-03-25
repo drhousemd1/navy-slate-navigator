@@ -24,8 +24,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   return (
     <Card className="bg-navy border border-light-navy mb-4 overflow-hidden">
       <div className="p-4">
-        {/* Top row with points and complete button */}
-        <div className="flex justify-between items-start mb-4">
+        {/* Top row with complete button and points */}
+        <div className="flex justify-end items-center mb-4 gap-2">
           {/* Points badge */}
           <Badge className="bg-nav-active hover:bg-nav-active text-white font-medium">
             +{points}
