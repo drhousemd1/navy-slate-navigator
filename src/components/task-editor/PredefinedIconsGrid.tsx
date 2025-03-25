@@ -4,23 +4,33 @@ import { predefinedIcons } from './IconSelector';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import CustomIconsModal from './CustomIconsModal';
 
 interface PredefinedIconsGridProps {
   selectedIconName: string | null;
   iconColor: string;
   onSelectIcon: (iconName: string) => void;
+  onSelectCustomIcon?: (iconUrl: string) => void;
 }
 
 const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({ 
   selectedIconName, 
   iconColor, 
-  onSelectIcon 
+  onSelectIcon,
+  onSelectCustomIcon
 }) => {
   const [isPresetsDialogOpen, setIsPresetsDialogOpen] = useState(false);
+  const [isCustomDialogOpen, setIsCustomDialogOpen] = useState(false);
 
   const handleIconSelect = (iconName: string) => {
     onSelectIcon(iconName);
     setIsPresetsDialogOpen(false);
+  };
+
+  const handleCustomIconSelect = (iconUrl: string) => {
+    if (onSelectCustomIcon) {
+      onSelectCustomIcon(iconUrl);
+    }
   };
 
   return (
@@ -37,6 +47,7 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
         <Button 
           type="button"
           className="w-full bg-light-navy hover:bg-navy text-white"
+          onClick={() => setIsCustomDialogOpen(true)}
         >
           Browse Custom
         </Button>
@@ -88,6 +99,14 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Custom Icons Modal */}
+      <CustomIconsModal 
+        isOpen={isCustomDialogOpen}
+        onClose={() => setIsCustomDialogOpen(false)}
+        onSelectIcon={handleCustomIconSelect}
+        iconColor={iconColor}
+      />
     </div>
   );
 };
