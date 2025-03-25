@@ -83,6 +83,12 @@ const Tasks: React.FC = () => {
     setTasks(tasks.map(task => 
       task.id === updatedTask.id ? updatedTask : task
     ));
+    
+    toast({
+      title: "Task updated",
+      description: "Your changes have been saved successfully.",
+      variant: "default",
+    });
   };
 
   const handleAddTask = () => {
