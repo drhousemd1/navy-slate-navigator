@@ -138,33 +138,49 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
           
           <div className="flex-1">
-            <div className="inline-block relative">
+            {/* Title with its own highlight effect */}
+            <div className="inline-block relative mb-1">
               {highlight_effect && (
                 <div 
-                  className="absolute inset-0 z-0"
+                  className="absolute z-0"
                   style={{ 
                     backgroundColor: 'rgba(255, 215, 0, 0.4)',
-                    top: '-6px',
-                    left: '-6px',
-                    right: '-6px',
-                    bottom: '-6px',
-                    borderRadius: '6px',
+                    top: '-3px',
+                    left: '-3px',
+                    right: '-3px',
+                    bottom: '-3px',
+                    borderRadius: '4px',
                   }}
                 />
               )}
-              <div className="relative z-10 px-1 py-1">
-                <h3 
-                  className="text-xl font-semibold"
-                  style={{ color: title_color }}
-                >
-                  {title}
-                </h3>
+              <h3 
+                className="relative z-10 text-xl font-semibold px-1"
+                style={{ color: title_color }}
+              >
+                {title}
+              </h3>
+            </div>
+            
+            {/* Description with its own separate highlight effect */}
+            <div className="inline-block relative mt-1">
+              {highlight_effect && (
                 <div 
-                  className="mt-1 text-sm" 
-                  style={{ color: subtext_color }}
-                >
-                  {description}
-                </div>
+                  className="absolute z-0"
+                  style={{ 
+                    backgroundColor: 'rgba(255, 215, 0, 0.4)',
+                    top: '-3px',
+                    left: '-3px',
+                    right: '-3px',
+                    bottom: '-3px',
+                    borderRadius: '4px',
+                  }}
+                />
+              )}
+              <div 
+                className="relative z-10 text-sm px-1" 
+                style={{ color: subtext_color }}
+              >
+                {description}
               </div>
             </div>
           </div>
