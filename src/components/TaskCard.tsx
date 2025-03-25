@@ -67,33 +67,33 @@ const TaskCard: React.FC<TaskCardProps> = ({
       )}
 
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
-        <div className="flex justify-between mb-3">
-          <div className="flex items-center">
-            <Badge 
-              className="bg-nav-active text-white font-bold flex items-center gap-1"
-              variant="default"
-            >
-              {points > 0 ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-              {Math.abs(points)}
-            </Badge>
-          </div>
-          
+        <div className="flex justify-end items-center mb-3">
           {onToggleCompletion && (
-            <Button
-              variant="default"
-              size="sm"
-              className={`${completed ? 'bg-green-600 text-white' : 'bg-green-500 text-white'}`}
-              onClick={() => onToggleCompletion(!completed)}
-            >
-              {completed ? (
-                <span className="flex items-center gap-1">
-                  <Check className="h-4 w-4" />
-                  Completed
-                </span>
-              ) : (
-                'Complete'
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Badge 
+                className="bg-nav-active text-white font-bold flex items-center gap-1"
+                variant="default"
+              >
+                {points > 0 ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                {Math.abs(points)}
+              </Badge>
+              
+              <Button
+                variant="default"
+                size="sm"
+                className={`${completed ? 'bg-green-600 text-white' : 'bg-green-500 text-white'}`}
+                onClick={() => onToggleCompletion(!completed)}
+              >
+                {completed ? (
+                  <span className="flex items-center gap-1">
+                    <Check className="h-4 w-4" />
+                    Completed
+                  </span>
+                ) : (
+                  'Complete'
+                )}
+              </Button>
+            </div>
           )}
         </div>
         
