@@ -76,6 +76,7 @@ const Tasks: React.FC = () => {
   };
 
   const handleEditTask = (taskId: string) => {
+    console.log("Editing task with ID:", taskId); // Debug log
     setEditingTaskId(taskId);
   };
 
@@ -106,6 +107,9 @@ const Tasks: React.FC = () => {
 
   // Find the task being edited (if any)
   const taskBeingEdited = tasks.find(task => task.id === editingTaskId);
+
+  console.log("Current editing task ID:", editingTaskId); // Debug log
+  console.log("Task being edited:", taskBeingEdited); // Debug log
 
   return (
     <AppLayout>

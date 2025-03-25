@@ -59,6 +59,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const handleEdit = () => {
+    console.log("Edit button clicked"); // Debug log
     if (onEdit) {
       onEdit();
     }
@@ -172,6 +173,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           size="icon" 
           className="absolute bottom-2 right-2 h-8 w-8 p-1.5 bg-navy hover:bg-light-navy text-nav-inactive rounded-full"
           onClick={handleEdit}
+          type="button"
         >
           <Edit className="w-full h-full" />
         </Button>
