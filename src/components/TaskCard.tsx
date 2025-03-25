@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Edit, Check, Calendar } from 'lucide-react';
+import { Edit, Check, Calendar, Plus, Minus } from 'lucide-react';
 import { Badge } from './ui/badge';
 
 interface TaskCardProps {
@@ -93,10 +93,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {/* Points bubble and Edit button */}
           <div className="flex items-center">
             <Badge 
-              className="mr-3 bg-nav-active text-white font-bold" 
+              className="mr-3 bg-nav-active text-white font-bold flex items-center gap-1"
               variant="default"
             >
-              {points} pts
+              {points > 0 ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+              {Math.abs(points)}
             </Badge>
             
             <Button
