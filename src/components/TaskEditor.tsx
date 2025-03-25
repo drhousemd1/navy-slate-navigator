@@ -731,52 +731,49 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
             />
             
             <DialogFooter className="pt-4">
-              <div className={`w-full flex items-center ${isMobile ? 'flex-col space-y-3' : 'flex-row justify-between gap-4'}`}>
-                <div className={`flex items-center ${isMobile ? 'w-full justify-between' : 'gap-2'}`}>
-                  {taskData?.id && onDelete && (
-                    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                      <AlertDialogTrigger asChild>
-                        <Button 
-                          type="button" 
-                          variant="destructive" 
-                          className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
+              <div className="w-full flex items-center justify-end gap-3">
+                {taskData?.id && onDelete && (
+                  <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        type="button" 
+                        variant="destructive" 
+                        className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-navy border-light-navy text-white">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-white text-xl">Delete Task</AlertDialogTitle>
+                        <AlertDialogDescription className="text-white text-sm">
+                          Are you sure you want to delete this task? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-transparent border-light-navy text-white hover:bg-light-navy">Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDelete} 
+                          className="bg-red-700 text-white hover:bg-red-600"
                         >
-                          <Trash2 className="h-4 w-4" />
                           Delete
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-navy border-light-navy text-white">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="text-white text-xl">Delete Task</AlertDialogTitle>
-                          <AlertDialogDescription className="text-white text-sm">
-                            Are you sure you want to delete this task? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel className="bg-transparent border-light-navy text-white hover:bg-light-navy">Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={handleDelete} 
-                            className="bg-red-700 text-white hover:bg-red-600"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                  <Button 
-                    type="button" 
-                    variant="destructive" 
-                    onClick={onClose}
-                    className="bg-red-700 border-light-navy text-white hover:bg-red-600"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-                
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  onClick={onClose}
+                  className="bg-red-700 border-light-navy text-white hover:bg-red-600"
+                >
+                  Cancel
+                </Button>
                 <Button 
                   type="submit" 
-                  className={`bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2 ${isMobile ? 'w-full' : ''}`}
+                  className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
                   disabled={loading}
                 >
                   {loading ? 'Saving...' : (
@@ -796,4 +793,3 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ isOpen, onClose, taskData, onSa
 };
 
 export default TaskEditor;
-
