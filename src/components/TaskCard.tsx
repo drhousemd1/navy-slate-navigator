@@ -87,7 +87,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
         
         <div className="flex items-start mb-auto">
           <div className="mr-4 flex-shrink-0">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 240, 255, 0.15)', opacity: 0.8 }}>
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center" 
+              style={{ 
+                backgroundColor: 'rgba(0, 240, 255, 0.15)', 
+                opacity: 0.8,
+                boxShadow: '0 0 8px rgba(0, 240, 255, 0.4)' 
+              }}
+            >
               <TaskIcon 
                 icon_url={icon_url} 
                 icon_name={icon_name} 
