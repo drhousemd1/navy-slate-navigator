@@ -2,7 +2,8 @@
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Edit, Check, Calendar, Star } from 'lucide-react';
+import { Edit, Check, Calendar } from 'lucide-react';
+import { Badge } from './ui/badge';
 
 interface TaskCardProps {
   title: string;
@@ -89,12 +90,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </p>
           </div>
           
-          {/* Points and Edit button */}
+          {/* Points bubble and Edit button */}
           <div className="flex items-center">
-            <div className="flex items-center mr-3">
-              <Star className="h-5 w-5 text-nav-active" />
-              <span className="text-nav-active font-bold ml-1">{points}</span>
-            </div>
+            <Badge 
+              className="mr-3 bg-nav-active/20 text-nav-active border-nav-active/30 font-bold" 
+              variant="outline"
+            >
+              {points} pts
+            </Badge>
             
             <Button
               variant="ghost"
