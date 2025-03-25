@@ -4,17 +4,15 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean>(false)
+  const [isMobile, setIsMobile] = React.useState(
+    typeof window !== "undefined" ? window.innerWidth < MOBILE_BREAKPOINT : false
+  )
 
   React.useEffect(() => {
     // Function to check if the screen is mobile width
     const checkIfMobile = () => {
-      const width = window.innerWidth
-      setIsMobile(width < MOBILE_BREAKPOINT)
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
-
-    // Check immediately on mount
-    checkIfMobile()
     
     // Check on resize
     window.addEventListener('resize', checkIfMobile)
