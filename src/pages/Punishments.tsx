@@ -2,7 +2,7 @@
 import React from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
-import { Alarm, Skull, Bomb, Zap } from 'lucide-react';
+import { Clock, Skull, Bomb, Zap } from 'lucide-react';
 
 const Punishments: React.FC = () => {
   const samplePunishments = [
@@ -18,7 +18,7 @@ const Punishments: React.FC = () => {
       title: 'Late to Meeting',
       description: 'Being late to a scheduled meeting or appointment',
       points: 10,
-      icon: <Alarm className="h-5 w-5 text-white" />
+      icon: <Clock className="h-5 w-5 text-white" />
     },
     {
       id: '3',
