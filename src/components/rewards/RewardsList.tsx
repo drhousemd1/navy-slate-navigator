@@ -29,8 +29,8 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
     );
   }
 
-  // The rewards array is already sorted by created_at in the API call
-  // No additional sorting needed here
+  // We don't need to sort here since the rewards are already sorted by created_at
+  // in the fetchRewards query in RewardsContext.tsx
   return (
     <div className="space-y-4">
       {rewards.map((reward, index) => (
@@ -45,7 +45,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           onBuy={() => handleBuy(index)}
           onUse={() => handleUse(index)}
           onEdit={() => onEdit(index)}
-          backgroundImage={reward.background_image_url}
+          backgroundImage={reward.background_image_url || undefined}
           backgroundOpacity={reward.background_opacity}
           focalPointX={reward.focal_point_x}
           focalPointY={reward.focal_point_y}

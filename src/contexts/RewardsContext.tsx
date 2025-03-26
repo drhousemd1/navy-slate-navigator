@@ -50,7 +50,7 @@ type RewardItem = {
   supply: number;
   iconName: string;
   icon_color?: string;
-  background_image_url?: string;
+  background_image_url?: string | null;
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
@@ -257,6 +257,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           .from('rewards')
           .update({ 
             supply: updatedSupply,
+            // Keep the same created_at timestamp to maintain position
             updated_at: reward.created_at 
           })
           .eq('id', reward.id);
@@ -309,6 +310,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           .from('rewards')
           .update({ 
             supply: updatedSupply,
+            // Keep the same created_at timestamp to maintain position
             updated_at: reward.created_at
           })
           .eq('id', reward.id);

@@ -13,7 +13,7 @@ interface RewardFormValues {
   title: string;
   description: string;
   cost: number;
-  background_image_url?: string;
+  background_image_url?: string | null;
   background_opacity: number;
   icon_url?: string;
   icon_name?: string;
@@ -52,7 +52,7 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       title: rewardData?.title || '',
       description: rewardData?.description || '',
       cost: rewardData?.cost || 10,
-      background_image_url: rewardData?.background_image_url,
+      background_image_url: rewardData?.background_image_url || null,
       background_opacity: rewardData?.background_opacity || 100,
       title_color: rewardData?.title_color || '#FFFFFF',
       subtext_color: rewardData?.subtext_color || '#8E9196',
@@ -213,7 +213,7 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           }}
           onRemoveImage={() => {
             setImagePreview(null);
-            form.setValue('background_image_url', undefined);
+            form.setValue('background_image_url', null);
           }}
           onImageUpload={handleImageUpload}
           setValue={form.setValue}

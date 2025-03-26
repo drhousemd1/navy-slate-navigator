@@ -21,8 +21,8 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
   onImageUpload, 
   setValue 
 }) => {
+  // We need to explicitly set background_image_url to null to ensure it's removed from the database
   const handleRemoveImage = () => {
-    // Set the background_image_url to null explicitly to ensure the image is removed
     setValue('background_image_url', null);
     onRemoveImage();
   };
