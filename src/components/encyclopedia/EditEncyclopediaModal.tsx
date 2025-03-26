@@ -14,6 +14,7 @@ import { EncyclopediaEntry } from '@/types/encyclopedia';
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface EditEncyclopediaModalProps {
   isOpen: boolean;
@@ -64,7 +65,6 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (entry) {
-        // Editing existing entry
         form.reset({
           id: entry.id,
           title: entry.title,
@@ -86,7 +86,6 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
         setImagePreview(entry.image_url || null);
         setPosition({ x: entry.focal_point_x || 50, y: entry.focal_point_y || 50 });
       } else {
-        // Creating new entry
         form.reset({
           id: '',
           title: '',
@@ -219,6 +218,14 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
     };
   }, [isDragging]);
   
+  const currentTextFormatting = form.watch('popup_text_formatting') || {};
+  
+  const textPreviewStyle: React.CSSProperties = {
+    fontWeight: currentTextFormatting.isBold ? 'bold' : 'normal',
+    textDecoration: currentTextFormatting.isUnderlined ? 'underline' : 'none',
+    fontSize: currentTextFormatting.fontSize || '1rem'
+  };
+  
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -269,25 +276,41 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                 <FormLabel className="text-white">Pop-up Text</FormLabel>
                 
                 <div className="bg-dark-navy border border-light-navy rounded-md p-2 mb-2 flex flex-wrap gap-2">
-                  <ToggleGroup type="multiple" className="justify-start">
-                    <ToggleGroupItem 
-                      value="bold" 
-                      aria-label="Toggle bold"
-                      className={form.watch('popup_text_formatting.isBold') ? "bg-nav-active" : ""}
-                      onClick={handleToggleBold}
-                    >
-                      <Bold className="h-4 w-4" />
-                    </ToggleGroupItem>
-                    
-                    <ToggleGroupItem 
-                      value="underline" 
-                      aria-label="Toggle underline"
-                      className={form.watch('popup_text_formatting.isUnderlined') ? "bg-nav-active" : ""}
-                      onClick={handleToggleUnderline}
-                    >
-                      <Underline className="h-4 w-4" />
-                    </ToggleGroupItem>
-                  </ToggleGroup>
+                  <TooltipProvider>
+                    <ToggleGroup type="multiple" className="justify-start">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <ToggleGroupItem 
+                            value="bold" 
+                            aria-label="Toggle bold"
+                            className={form.watch('popup_text_formatting.isBold') ? "bg-nav-active" : ""}
+                            onClick={handleToggleBold}
+                          >
+                            <Bold className="h-4 w-4" />
+                          </ToggleGroupItem>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Bold</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <ToggleGroupItem 
+                            value="underline" 
+                            aria-label="Toggle underline"
+                            className={form.watch('popup_text_formatting.isUnderlined') ? "bg-nav-active" : ""}
+                            onClick={handleToggleUnderline}
+                          >
+                            <Underline className="h-4 w-4" />
+                          </ToggleGroupItem>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Underline</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </ToggleGroup>
+                  </TooltipProvider>
                   
                   <Select
                     value={form.watch('popup_text_formatting.fontSize') || '1rem'}
@@ -311,12 +334,25 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Enter text to show in full-screen pop-up" 
-                          className="bg-dark-navy border-light-navy text-white"
-                          rows={6}
-                          {...field} 
-                        />
+                        <div className="relative">
+                          <Textarea 
+                            placeholder="Enter text to show in full-screen pop-up" 
+                            className="bg-dark-navy border-light-navy text-white"
+                            rows={6}
+                            {...field} 
+                          />
+                          <div 
+                            className="absolute top-2 right-2 bottom-2 left-2 overflow-auto pointer-events-none"
+                            style={textPreviewStyle}
+                            aria-hidden="true"
+                          >
+                            {field.value ? (
+                              <div className="opacity-0">
+                                {field.value}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
                       </FormControl>
                       <FormDescription className="text-light-navy">
                         Text will appear with the formatting options selected above
