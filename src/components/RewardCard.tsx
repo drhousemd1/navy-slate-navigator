@@ -1,82 +1,39 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Edit, Calendar, Box, Ticket } from 'lucide-react';
 import TaskIcon from './task/TaskIcon';
 import PointsBadge from './task/PointsBadge';
-import { Badge } from './ui/badge';
-import { Reward, buyReward } from '@/lib/rewardsUtils';
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from '@tanstack/react-query';
 
 interface RewardCardProps {
-  reward: Reward;
-  userSupply: number;
-  userPoints: number;
-  onRewardUpdated?: () => void;
+  title: string;
+  description: string;
+  cost: number;
+  supply: number;
+  iconName?: string;
+  iconColor?: string;
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({
-  reward,
-  userSupply = 0,
-  userPoints = 0,
-  onRewardUpdated
+  title,
+  description,
+  cost,
+  supply,
+  iconName = 'Gift',
+  iconColor = '#9b87f5'
 }) => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  const handleBuy = async () => {
-    if (isLoading) return;
-    
-    if (userPoints < reward.cost) {
-      toast({
-        title: "Not enough points",
-        description: `You need ${reward.cost} points to buy this reward`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      const success = await buyReward(reward);
-      
-      if (success) {
-        // Invalidate queries to refresh the data
-        queryClient.invalidateQueries({queryKey: ['userProfile']});
-        queryClient.invalidateQueries({queryKey: ['userRewards']});
-        
-        if (onRewardUpdated) {
-          onRewardUpdated();
-        }
-      }
-    } catch (error) {
-      console.error("Error buying reward:", error);
-      toast({
-        title: "Error",
-        description: "Failed to purchase reward",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">
-          {/* Supply indicator */}
+          {/* Supply indicator - updated to match the points badge size */}
           <div className="flex items-center gap-2">
-            <Badge className="bg-blue-500 text-white font-bold flex items-center gap-1">
+            <div className="bg-blue-500 text-white font-bold rounded-full flex items-center gap-1 px-2 py-0.5">
               <Box className="h-3 w-3" />
-              <span>{userSupply}</span>
-            </Badge>
+              <span>{supply}</span>
+            </div>
             
-            {userSupply > 0 && (
+            {supply > 0 && (
               <Button 
                 variant="outline" 
                 size="sm"
@@ -88,17 +45,15 @@ const RewardCard: React.FC<RewardCardProps> = ({
             )}
           </div>
           
-          {/* Cost indicator */}
+          {/* Cost indicator - now using PointsBadge component directly */}
           <div className="flex items-center gap-2">
-            <PointsBadge points={-reward.cost} />
+            <PointsBadge points={-cost} />
             <Button
               variant="default"
               size="sm"
               className="bg-nav-active text-white hover:bg-nav-active/90 h-7"
-              onClick={handleBuy}
-              disabled={isLoading || userPoints < reward.cost}
             >
-              {isLoading ? "Processing..." : "Buy"}
+              Buy
             </Button>
           </div>
         </div>
@@ -107,19 +62,19 @@ const RewardCard: React.FC<RewardCardProps> = ({
           <div className="mr-4 flex-shrink-0">
             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00f0ff' }}>
               <TaskIcon 
-                icon_name={reward.icon_name || 'Gift'} 
-                icon_color={reward.icon_color || '#9b87f5'} 
+                icon_name={iconName} 
+                icon_color={iconColor} 
               />
             </div>
           </div>
           
           <div className="flex-1 flex flex-col">
             <h3 className="text-xl font-semibold text-white">
-              {reward.title}
+              {title}
             </h3>
             
             <div className="text-sm mt-1 text-[#8E9196]">
-              {reward.description}
+              {description}
             </div>
           </div>
         </div>

@@ -9,60 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      profiles: {
-        Row: {
-          created_at: string
-          id: string
-          points: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id: string
-          points?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          points?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      rewards: {
-        Row: {
-          cost: number
-          created_at: string
-          description: string | null
-          icon_color: string | null
-          icon_name: string | null
-          id: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          cost?: number
-          created_at?: string
-          description?: string | null
-          icon_color?: string | null
-          icon_name?: string | null
-          id?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          cost?: number
-          created_at?: string
-          description?: string | null
-          icon_color?: string | null
-          icon_name?: string | null
-          id?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       tasks: {
         Row: {
           background_image_url: string | null
@@ -134,48 +80,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      user_rewards: {
-        Row: {
-          created_at: string
-          id: string
-          reward_id: string
-          supply: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          reward_id: string
-          supply?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          reward_id?: string
-          supply?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_rewards_reward_id_fkey"
-            columns: ["reward_id"]
-            isOneToOne: false
-            referencedRelation: "rewards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_rewards_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
