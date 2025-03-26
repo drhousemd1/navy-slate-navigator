@@ -38,6 +38,21 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const previewRef = React.useRef<HTMLDivElement | null>(null);
     const containerRef = React.useRef<HTMLDivElement | null>(null);
 
+    // Set the ref to our local ref or the forwarded ref
+    const setRefs = React.useCallback(
+      (element: HTMLTextAreaElement | null) => {
+        // Set local ref
+        textareaRef.current = element;
+        // Forward ref if provided
+        if (typeof ref === 'function') {
+          ref(element);
+        } else if (ref) {
+          ref.current = element;
+        }
+      },
+      [ref]
+    );
+
     // Synchronize scroll position between preview and textarea
     const syncScroll = React.useCallback((e: React.UIEvent<HTMLTextAreaElement>) => {
       if (previewRef.current) {
@@ -55,21 +70,6 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         }
       }
     }, [onFormatSelection]);
-
-    // Set the ref to our local ref or the forwarded ref
-    const setRefs = React.useCallback(
-      (element: HTMLTextAreaElement | null) => {
-        // Set local ref
-        textareaRef.current = element;
-        // Forward ref if provided
-        if (typeof ref === 'function') {
-          ref(element);
-        } else if (ref) {
-          ref.current = element;
-        }
-      },
-      [ref]
-    );
 
     // Generate formatted HTML preview with section-specific formatting
     const generateFormattedHTML = React.useCallback(() => {
@@ -131,19 +131,26 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         fontSize: textFormatting?.fontSize || '1rem',
       };
 
-      // Common styles for both textarea and preview
-      const commonStyles: React.CSSProperties = {
+      // Define exactly the same styles for both elements to ensure perfect alignment
+      const sharedStyles: React.CSSProperties = {
         position: 'absolute',
-        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         width: '100%',
         height: '100%',
         padding: '0.5rem 0.75rem',
+        margin: 0,
+        border: 'none',
         lineHeight: '1.5',
         fontFamily: 'inherit',
-        overflowY: 'auto',
+        fontSize: 'inherit',
         whiteSpace: 'pre-wrap',
-        overflowWrap: 'break-word',
         wordBreak: 'break-word',
+        overflowWrap: 'break-word',
+        overflowY: 'auto',
+        boxSizing: 'border-box'
       };
 
       return (
@@ -157,13 +164,13 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {/* The textarea for editing - exact same dimensions and position as preview */}
           <textarea
             ref={setRefs}
-            className="absolute inset-0 w-full h-full resize-none outline-none selection:bg-blue-500/30"
+            className="resize-none outline-none selection:bg-blue-500/30"
             style={{
-              ...commonStyles,
+              ...sharedStyles,
               caretColor: 'white',
               color: 'transparent',
               backgroundColor: 'transparent',
-              zIndex: 2,
+              zIndex: 2
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
@@ -174,10 +181,10 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           <div 
             ref={previewRef}
             style={{
-              ...commonStyles,
+              ...sharedStyles,
               ...textStyle,
               pointerEvents: 'none',
-              zIndex: 1,
+              zIndex: 1
             }} 
             className="text-white"
             dangerouslySetInnerHTML={{ 
