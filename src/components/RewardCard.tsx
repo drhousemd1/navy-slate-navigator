@@ -144,20 +144,24 @@ const RewardCard: React.FC<RewardCardProps> = ({
             </div>
           </div>
           
-          <div className="flex-1 flex flex-col">
+          <div className="flex flex-col">
             {highlight_effect ? (
-              <>
-                <HighlightedText 
-                  text={title}
-                  highlight={true}
-                  color={title_color}
-                />
-                <HighlightedText
-                  text={description}
-                  highlight={true}
-                  color={subtext_color}
-                />
-              </>
+              <div className="inline-flex flex-col items-start">
+                <div className="inline-block max-w-fit">
+                  <HighlightedText 
+                    text={title}
+                    highlight={true}
+                    color={title_color}
+                  />
+                </div>
+                <div className="inline-block max-w-fit mt-1">
+                  <HighlightedText
+                    text={description}
+                    highlight={true}
+                    color={subtext_color}
+                  />
+                </div>
+              </div>
             ) : (
               <>
                 <h3 className="text-xl font-semibold" style={{ color: title_color }}>
