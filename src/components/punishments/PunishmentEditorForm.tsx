@@ -7,6 +7,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { Save } from 'lucide-react';
 import NumberField from '../task-editor/NumberField';
@@ -15,12 +16,17 @@ import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeletePunishmentDialog from './DeletePunishmentDialog';
 import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
+import PunishmentColorSettings from './PunishmentColorSettings';
 
 const punishmentFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   points: z.number().min(0, "Points must be 0 or greater"),
   icon_color: z.string().optional(),
+  title_color: z.string().default('#FFFFFF'),
+  subtext_color: z.string().default('#8E9196'),
+  calendar_color: z.string().default('#7E69AB'),
+  highlight_effect: z.boolean().default(false),
   background_opacity: z.number().min(0).max(100).default(50),
   focal_point_x: z.number().min(0).max(100).default(50),
   focal_point_y: z.number().min(0).max(100).default(50),
@@ -54,6 +60,10 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
       description: punishmentData?.description || '',
       points: punishmentData?.points || 5,
       icon_color: punishmentData?.icon_color || '#ea384c',
+      title_color: punishmentData?.title_color || '#FFFFFF',
+      subtext_color: punishmentData?.subtext_color || '#8E9196',
+      calendar_color: punishmentData?.calendar_color || '#7E69AB',
+      highlight_effect: punishmentData?.highlight_effect || false,
       background_opacity: punishmentData?.background_opacity || 50,
       focal_point_x: punishmentData?.focal_point_x || 50,
       focal_point_y: punishmentData?.focal_point_y || 50,
@@ -67,6 +77,10 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
         description: punishmentData.description || '',
         points: punishmentData.points || 5,
         icon_color: punishmentData.icon_color || '#ea384c',
+        title_color: punishmentData.title_color || '#FFFFFF',
+        subtext_color: punishmentData.subtext_color || '#8E9196',
+        calendar_color: punishmentData.calendar_color || '#7E69AB',
+        highlight_effect: punishmentData.highlight_effect || false,
         background_opacity: punishmentData.background_opacity || 50,
         focal_point_x: punishmentData.focal_point_x || 50,
         focal_point_y: punishmentData.focal_point_y || 50,
@@ -249,11 +263,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
           </div>
         </div>
 
-        <ColorPickerField 
-          control={form.control} 
-          name="icon_color" 
-          label="Icon Color" 
-        />
+        <PunishmentColorSettings control={form.control} />
         
         <div className="pt-4 w-full flex items-center justify-end gap-3">
           {punishmentData?.id && onDelete && (
