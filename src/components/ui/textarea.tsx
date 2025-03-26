@@ -27,7 +27,6 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     // Create a reference for syncing scroll position
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
     const previewRef = React.useRef<HTMLDivElement | null>(null);
-    const containerRef = React.useRef<HTMLDivElement | null>(null);
     
     // Handle scroll synchronization between preview and textarea
     const syncScroll = React.useCallback((e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -48,31 +47,6 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         }
       }
     }, [onFormatSelection]);
-
-    // Handle click in the textarea container to position cursor correctly
-    const handleClick = React.useCallback((e: React.MouseEvent) => {
-      if (textareaRef.current && containerRef.current) {
-        // Get the exact coordinates within the container
-        const rect = containerRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        // Focus the textarea first
-        textareaRef.current.focus();
-        
-        // Create and dispatch a mousedown event to position the cursor
-        const mouseEvent = new MouseEvent('mousedown', {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          clientX: e.clientX,
-          clientY: e.clientY
-        });
-        
-        // Dispatch the event directly on the textarea
-        textareaRef.current.dispatchEvent(mouseEvent);
-      }
-    }, []);
 
     // Set the ref to our local ref or the forwarded ref
     const setRefs = React.useCallback(
@@ -151,43 +125,33 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
       return (
         <div 
-          ref={containerRef}
           className={cn(
             "flex min-h-[500px] w-full rounded-md border border-input bg-background text-sm relative",
             className
           )}
-          onClick={handleClick}
         >
-          {/* Invisible textarea that captures input and selection */}
+          {/* Textarea that captures input and selection - made the same size exactly as the preview */}
           <textarea
             ref={setRefs}
-            className="w-full h-full min-h-[500px] px-3 py-2 bg-transparent resize-none outline-none selection:bg-blue-500/30"
+            className="absolute inset-0 w-full h-full px-3 py-2 resize-none outline-none selection:bg-blue-500/30"
             style={{
-              color: 'transparent',
               caretColor: 'white',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
               zIndex: 2,
-              padding: '0.5rem 0.75rem'
+              backgroundColor: 'transparent',
+              color: 'transparent',
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
             {...props}
           />
           
-          {/* Formatted preview layer */}
+          {/* Formatted preview layer - positioned exactly in the same place */}
           <div 
             ref={previewRef}
             style={{
               ...textStyle,
               position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              inset: 0,
               pointerEvents: 'none',
               whiteSpace: 'pre-wrap',
               overflowWrap: 'break-word',

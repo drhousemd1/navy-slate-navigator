@@ -347,7 +347,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                       <FormControl>
                         <Textarea 
                           placeholder="Enter text to show in full-screen pop-up" 
-                          className="bg-dark-navy border-light-navy text-white h-[500px]"
+                          className="bg-dark-navy border-light-navy text-white"
                           formattedPreview={true}
                           textFormatting={currentTextFormatting}
                           onFormatSelection={handleTextSelection}
