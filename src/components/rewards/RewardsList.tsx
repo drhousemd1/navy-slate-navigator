@@ -2,16 +2,19 @@
 import React from 'react';
 import RewardCard from '../RewardCard';
 import { useRewards } from '../../contexts/RewardsContext';
+import { Button } from '../ui/button';
+import { Plus } from 'lucide-react';
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
+  onAddNewItem: () => void;
 }
 
-const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
+const RewardsList: React.FC<RewardsListProps> = ({ onEdit, onAddNewItem }) => {
   const { rewards, handleBuy, handleUse, getRewardUsage, getFrequencyCount } = useRewards();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-12">
       {rewards.map((reward, index) => (
         <RewardCard
           key={index}
@@ -36,6 +39,15 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           frequencyCount={getFrequencyCount(index)}
         />
       ))}
+      
+      <div className="flex justify-center mt-6">
+        <Button 
+          className="bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6"
+          onClick={onAddNewItem}
+        >
+          <Plus className="w-5 h-5 mr-2" /> Add New Item
+        </Button>
+      </div>
     </div>
   );
 };
