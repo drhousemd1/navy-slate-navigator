@@ -33,6 +33,13 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     }
   }, [initialPosition]);
 
+  // Initialize opacity to 100 by default
+  useEffect(() => {
+    if (imagePreview && control._formValues.background_opacity === undefined) {
+      setValue('background_opacity', 100);
+    }
+  }, [imagePreview, control._formValues.background_opacity, setValue]);
+
   const updatePosition = (clientX: number, clientY: number) => {
     if (!imageContainerRef.current) return;
     const rect = imageContainerRef.current.getBoundingClientRect();
@@ -99,7 +106,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                 alt="Background preview" 
                 className="w-full h-full object-cover"
                 style={{ 
-                  opacity: control._formValues.background_opacity / 100,
+                  opacity: (control._formValues.background_opacity || 100) / 100,
                   objectPosition: `${position.x}% ${position.y}%`
                 }}
               />

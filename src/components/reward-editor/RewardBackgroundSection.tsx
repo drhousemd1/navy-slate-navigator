@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import { FormLabel } from "@/components/ui/form";
 import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
@@ -21,6 +21,13 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
   onImageUpload, 
   setValue 
 }) => {
+  // Ensure the background_opacity is properly initialized to 100 when an image is added
+  useEffect(() => {
+    if (imagePreview && control._formValues.background_opacity === undefined) {
+      setValue('background_opacity', 100);
+    }
+  }, [imagePreview, control._formValues.background_opacity, setValue]);
+
   // We need to explicitly set background_image_url to null to ensure it's removed from the database
   const handleRemoveImage = () => {
     setValue('background_image_url', null);
