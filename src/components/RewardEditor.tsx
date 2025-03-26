@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import RewardEditorForm from './reward-editor/RewardEditorForm';
+import { RewardEditorForm } from './reward-editor/RewardEditorForm';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 
