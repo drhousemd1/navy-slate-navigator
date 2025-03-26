@@ -20,7 +20,13 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
   onDelete 
 }) => {
   const handleSave = async (formData: any) => {
-    await onSave(formData);
+    // Ensure last_completed_date is passed through
+    const dataToSave = {
+      ...formData,
+      last_completed_date: taskData?.last_completed_date
+    };
+    
+    await onSave(dataToSave);
     onClose();
   };
 
