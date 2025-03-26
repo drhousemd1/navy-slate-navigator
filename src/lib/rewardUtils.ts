@@ -12,7 +12,7 @@ export interface Reward {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  icon_url?: string;
+  // Remove icon_url from interface
   icon_name?: string;
   title_color?: string;
   subtext_color?: string;
@@ -76,7 +76,8 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       // 3. Remove any timestamps from the data we're sending
       
       // Create a clean copy of the reward data without any timestamp fields
-      const { created_at, updated_at, ...cleanRewardData } = reward;
+      // Also remove icon_url field if it exists
+      const { created_at, updated_at, icon_url, ...cleanRewardData } = reward;
       
       console.log('[saveReward] Updating reward with clean data (no timestamps):', 
         { id: existingId, ...cleanRewardData });
@@ -92,11 +93,12 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       console.log('[saveReward] Reward updated successfully, returned data:', data[0]);
       return data[0] as Reward;
     } else {
-      // Create new reward - no changes needed here
-      console.log('[saveReward] Creating new reward:', reward);
+      // Create new reward - ensure no icon_url is sent
+      const { icon_url, ...cleanRewardData } = reward;
+      console.log('[saveReward] Creating new reward:', cleanRewardData);
       const { data, error } = await supabase
         .from('rewards')
-        .insert(reward)
+        .insert(cleanRewardData)
         .select();
       
       if (error) throw error;

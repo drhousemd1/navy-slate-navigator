@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -20,7 +19,6 @@ const rewardFormSchema = z.object({
   background_opacity: z.number().min(0).max(1).optional(),
   focal_point_x: z.number().optional(),
   focal_point_y: z.number().optional(),
-  icon_url: z.string().nullable().optional(),
   title_color: z.string().optional(),
   subtext_color: z.string().optional(),
   calendar_color: z.string().optional(),
@@ -63,7 +61,6 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       background_opacity: rewardData?.background_opacity ? rewardData.background_opacity / 100 : 1,
       focal_point_x: rewardData?.focal_point_x ? rewardData.focal_point_x / 100 : 0.5,
       focal_point_y: rewardData?.focal_point_y ? rewardData.focal_point_y / 100 : 0.5,
-      icon_url: rewardData?.icon_url || null,
       title_color: rewardData?.title_color || '#FFFFFF',
       subtext_color: rewardData?.subtext_color || '#CCCCCC',
       calendar_color: rewardData?.calendar_color || '#3B82F6',
@@ -86,7 +83,6 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         background_opacity: rewardData.background_opacity ? rewardData.background_opacity / 100 : 1,
         focal_point_x: rewardData.focal_point_x ? rewardData.focal_point_x / 100 : 0.5,
         focal_point_y: rewardData.focal_point_y ? rewardData.focal_point_y / 100 : 0.5,
-        icon_url: rewardData.icon_url || null,
         title_color: rewardData.title_color || '#FFFFFF',
         subtext_color: rewardData.subtext_color || '#CCCCCC',
         calendar_color: rewardData.calendar_color || '#3B82F6',
@@ -97,11 +93,6 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       // Set image preview if exists
       if (rewardData.background_image_url) {
         setImagePreview(rewardData.background_image_url);
-      }
-      
-      // Set icon preview if exists
-      if (rewardData.icon_url) {
-        setIconPreview(rewardData.icon_url);
       }
       
       // Set selected icon name if exists
@@ -183,14 +174,12 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   };
 
   const handleUploadIcon = () => {
-    // This would be implemented if custom icon uploads are supported
     console.log("Upload custom icon");
   };
 
   const handleRemoveIcon = () => {
     setSelectedIconName(null);
     setIconPreview(null);
-    form.setValue('icon_url', null);
   };
 
   return (
