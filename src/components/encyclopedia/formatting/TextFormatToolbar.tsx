@@ -24,6 +24,8 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
   onToggleUnderline,
   onFontSizeChange
 }) => {
+  const isTextSelected = selectedTextRange !== null;
+
   return (
     <div className="bg-dark-navy border border-light-navy rounded-md p-2 mb-2 flex flex-wrap gap-2">
       <TooltipProvider>
@@ -33,18 +35,15 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
               <ToggleGroupItem 
                 value="bold" 
                 aria-label="Toggle bold"
-                className={selectedTextRange ? "bg-blue-600" : 
+                className={isTextSelected ? "bg-blue-600" : 
                   (currentFormatting.isBold ? "bg-nav-active" : "")}
-                onClick={(e) => {
-                  e.preventDefault(); // Prevent default to avoid losing focus
-                  onToggleBold();
-                }}
+                onClick={onToggleBold}
               >
                 <Bold className="h-4 w-4" />
               </ToggleGroupItem>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{selectedTextRange ? "Apply bold to selection" : "Toggle bold for all text"}</p>
+              <p>{isTextSelected ? "Apply bold to selection" : "Toggle bold for all text"}</p>
             </TooltipContent>
           </Tooltip>
           
@@ -53,18 +52,15 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
               <ToggleGroupItem 
                 value="underline" 
                 aria-label="Toggle underline"
-                className={selectedTextRange ? "bg-blue-600" : 
+                className={isTextSelected ? "bg-blue-600" : 
                   (currentFormatting.isUnderlined ? "bg-nav-active" : "")}
-                onClick={(e) => {
-                  e.preventDefault(); // Prevent default to avoid losing focus
-                  onToggleUnderline();
-                }}
+                onClick={onToggleUnderline}
               >
                 <Underline className="h-4 w-4" />
               </ToggleGroupItem>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{selectedTextRange ? "Apply underline to selection" : "Toggle underline for all text"}</p>
+              <p>{isTextSelected ? "Apply underline to selection" : "Toggle underline for all text"}</p>
             </TooltipContent>
           </Tooltip>
         </ToggleGroup>
@@ -72,9 +68,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
       
       <Select
         value={currentFormatting.fontSize || '1rem'}
-        onValueChange={(value) => {
-          onFontSizeChange(value);
-        }}
+        onValueChange={onFontSizeChange}
       >
         <SelectTrigger className="w-32 bg-dark-navy border-light-navy text-white">
           <SelectValue placeholder="Font size" />
@@ -87,7 +81,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
         </SelectContent>
       </Select>
       
-      {selectedTextRange && (
+      {isTextSelected && (
         <div className="ml-2 px-2 py-1 bg-blue-600/20 rounded text-sm text-white">
           Text selected: Apply formatting to selection
         </div>

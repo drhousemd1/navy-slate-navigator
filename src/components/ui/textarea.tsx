@@ -161,11 +161,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     };
     
-    // Apply base styling to the text based on global formatting settings
+    // Do NOT apply base styling to the text based on global formatting settings
+    // We only want local formatting to apply to selected text
     const baseStyle: React.CSSProperties = {
-      fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
-      textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
-      fontSize: textFormatting?.fontSize || 'inherit',
       lineHeight: '1.5',
       minHeight: '200px'
     };
@@ -192,11 +190,70 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           data-placeholder={props.placeholder}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          dangerouslySetInnerHTML={renderFormattedContent(props.value as string, formattedSections)}
         />
       </div>
     );
   }
 )
+
+const renderFormattedContent = (
+  content: string = '', 
+  formattedSections: Array<{
+    start: number;
+    end: number;
+    formatting: {
+      isBold?: boolean;
+      isUnderlined?: boolean;
+      fontSize?: string;
+    }
+  }> = []
+) => {
+  if (!content) return { __html: '' };
+  if (!formattedSections || formattedSections.length === 0) return { __html: content };
+
+  // Create segments with formatting
+  let result = '';
+  let lastIndex = 0;
+
+  // Sort sections by start position
+  const sortedSections = [...formattedSections].sort((a, b) => a.start - b.start);
+  
+  for (const section of sortedSections) {
+    // Add unformatted text before this formatted section
+    if (section.start > lastIndex) {
+      result += content.substring(lastIndex, section.start);
+    }
+    
+    // Skip invalid sections
+    if (section.end <= section.start || section.start >= content.length) continue;
+    
+    // Get the formatted text
+    const formattedText = content.substring(section.start, Math.min(section.end, content.length));
+    
+    // Apply formatting
+    let formattedHTML = formattedText;
+    if (section.formatting.isBold) {
+      formattedHTML = `<strong>${formattedHTML}</strong>`;
+    }
+    if (section.formatting.isUnderlined) {
+      formattedHTML = `<u>${formattedHTML}</u>`;
+    }
+    if (section.formatting.fontSize) {
+      formattedHTML = `<span style="font-size:${section.formatting.fontSize}">${formattedHTML}</span>`;
+    }
+    
+    result += formattedHTML;
+    lastIndex = section.end;
+  }
+  
+  // Add any remaining unformatted text
+  if (lastIndex < content.length) {
+    result += content.substring(lastIndex);
+  }
+  
+  return { __html: result };
+};
 
 Textarea.displayName = "Textarea"
 
