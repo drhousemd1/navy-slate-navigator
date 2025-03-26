@@ -253,13 +253,10 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         // Update the reward in Supabase
         const updatedSupply = reward.supply + 1;
         
+        // CRITICAL: DO NOT change updated_at when updating supply
         const { error } = await supabase
           .from('rewards')
-          .update({ 
-            supply: updatedSupply,
-            // Do not update the updated_at timestamp to preserve sorting
-            updated_at: reward.created_at 
-          })
+          .update({ supply: updatedSupply })
           .eq('id', reward.id);
         
         if (error) {
@@ -306,13 +303,10 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         // Update the reward in Supabase
         const updatedSupply = reward.supply - 1;
         
+        // CRITICAL: DO NOT change updated_at when updating supply
         const { error: updateError } = await supabase
           .from('rewards')
-          .update({ 
-            supply: updatedSupply,
-            // Do not update the updated_at timestamp to preserve sorting
-            updated_at: reward.created_at
-          })
+          .update({ supply: updatedSupply })
           .eq('id', reward.id);
         
         if (updateError) {
@@ -408,13 +402,11 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         const existingReward = rewards[index];
         console.log("Updating existing reward with ID:", existingReward.id);
         
-        // Only update needed fields, preserve created_at and do NOT update updated_at at all
-        // This is critical to maintain the order in the list
+        // CRITICAL: Do NOT include updated_at in the update operation at all
+        // This ensures the timestamp remains unchanged and preserves the sorting order
         const { data, error } = await supabase
           .from('rewards')
-          .update({
-            ...dataToSave,
-          })
+          .update(dataToSave)
           .eq('id', existingReward.id)
           .select();
         
