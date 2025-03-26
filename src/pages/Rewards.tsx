@@ -6,6 +6,7 @@ import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import RewardsList from '../components/rewards/RewardsList';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 
 interface RewardsContentProps {
   isEditorOpen: boolean;
@@ -47,14 +48,28 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     console.log("Saving reward with data:", rewardData, "at index:", currentRewardIndex);
     try {
       await handleSaveReward(rewardData, currentRewardIndex);
+      
       // Force refresh of rewards data after saving
       await queryClient.invalidateQueries({ queryKey: ['rewards'] });
       await refetchRewards();
+      
+      toast({
+        title: "Success",
+        description: `Reward ${currentRewardIndex !== null ? 'updated' : 'created'} successfully`,
+      });
+      
       closeEditor();
     } catch (error) {
       console.error("Failed to save reward:", error);
-      // Editor stays open if save failed
-      throw error; // Re-throw to allow RewardEditor to show error message
+      
+      toast({
+        title: "Error",
+        description: "Failed to save reward. Please try again.",
+        variant: "destructive",
+      });
+      
+      // Re-throw to allow RewardEditor to show error message
+      throw error;
     }
   };
 
@@ -64,12 +79,26 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
       console.log("Deleting reward at index:", index);
       try {
         await handleDeleteReward(index);
+        
+        toast({
+          title: "Success", 
+          description: "Reward deleted successfully",
+        });
+        
         closeEditor();
+        
         // Force refresh of rewards data after deleting
         await queryClient.invalidateQueries({ queryKey: ['rewards'] });
         await refetchRewards();
       } catch (error) {
         console.error("Failed to delete reward:", error);
+        
+        toast({
+          title: "Error",
+          description: "Failed to delete reward. Please try again.",
+          variant: "destructive",
+        });
+        
         throw error;
       }
     }

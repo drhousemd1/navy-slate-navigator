@@ -26,12 +26,15 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
     console.log("RewardEditor handling save with form data:", formData);
     try {
       await onSave(formData);
+      
       // Force a rewards data refresh after saving
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      
       toast({
         title: "Success",
         description: "Reward saved successfully",
       });
+      
       onClose();
     } catch (error) {
       console.error("Error in RewardEditor save handler:", error);
