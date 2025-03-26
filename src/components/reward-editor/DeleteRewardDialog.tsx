@@ -2,14 +2,12 @@
 import React from 'react';
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 interface DeleteRewardDialogProps {
   isOpen: boolean;
@@ -26,26 +24,33 @@ const DeleteRewardDialog: React.FC<DeleteRewardDialogProps> = ({
 }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="bg-navy border-light-navy text-white">
-        <AlertDialogHeader className="mb-4">
-          <AlertDialogTitle className="text-white text-xl">Delete Reward</AlertDialogTitle>
-          <AlertDialogDescription className="text-white text-sm">
-            {rewardName ? 
-              `Are you sure you want to delete "${rewardName}"? This action cannot be undone.` : 
-              "Are you sure you want to delete this reward? This action cannot be undone."}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        
-        <div className="flex justify-center items-center w-full mt-4 mb-2 gap-4">
-          <AlertDialogCancel className="bg-transparent border border-light-navy text-white hover:bg-light-navy w-24 h-10">
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={onConfirm} 
-            className="bg-red-700 text-white hover:bg-red-600 w-24 h-10"
-          >
-            Delete
-          </AlertDialogAction>
+      <AlertDialogContent className="bg-navy border-light-navy text-white max-w-md">
+        <div className="flex flex-col items-center text-center px-4 py-6">
+          <AlertDialogHeader className="mb-6">
+            <AlertDialogTitle className="text-white text-2xl font-bold">
+              Delete Reward
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white mt-4">
+              {rewardName ? 
+                `Are you sure you want to delete "${rewardName}"? This action cannot be undone.` : 
+                "Are you sure you want to delete this reward? This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="flex justify-center gap-6 w-full mt-2">
+            <Button
+              onClick={() => onOpenChange(false)}
+              className="bg-transparent border border-slate-700 text-white hover:bg-slate-800 w-36 h-12 rounded-md"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={onConfirm} 
+              className="bg-red-700 text-white hover:bg-red-600 w-36 h-12 rounded-md"
+            >
+              Delete
+            </Button>
+          </div>
         </div>
       </AlertDialogContent>
     </AlertDialog>
