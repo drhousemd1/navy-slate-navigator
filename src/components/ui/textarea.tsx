@@ -36,7 +36,6 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ) => {
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
     const previewRef = React.useRef<HTMLDivElement | null>(null);
-    const containerRef = React.useRef<HTMLDivElement | null>(null);
 
     // Set the ref to our local ref or the forwarded ref
     const setRefs = React.useCallback(
@@ -76,89 +75,97 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       const text = props.value?.toString() || '';
       if (!text) return null;
 
-      // If no formatted sections, just render the text
-      if (!formattedSections || formattedSections.length === 0) {
-        return text.split('\n').map((line, i) => (
-          <div key={i} className="whitespace-pre-wrap">{line || '\u00A0'}</div>
-        ));
-      }
-
-      // Sort sections by start position to process from beginning to end
-      const sortedSections = [...formattedSections].sort((a, b) => a.start - b.start);
-      
-      // Convert text to paragraphs with formatted sections
+      // Convert text to an array of lines
       const lines = text.split('\n');
-      let charCounter = 0;
       
+      // Process each line separately
       return lines.map((line, lineIndex) => {
-        const lineStart = charCounter;
-        const lineLength = line.length;
-        const lineEnd = lineStart + lineLength;
-        charCounter += lineLength + 1; // +1 for the newline character
-        
-        // Find sections that overlap with this line
-        const relevantSections = sortedSections.filter(
-          section => section.start < lineEnd && section.end > lineStart
-        );
-        
-        if (relevantSections.length === 0) {
-          // No formatting for this line
-          return <div key={lineIndex} className="whitespace-pre-wrap">{line || '\u00A0'}</div>;
+        // For empty lines, return a non-breaking space to maintain height
+        if (!line) {
+          return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">&nbsp;</div>;
         }
         
-        // Build segments with relevant formatting
-        const segments: React.ReactNode[] = [];
-        let lastPos = 0;
+        // If no formatted sections, just return the line
+        if (!formattedSections || formattedSections.length === 0) {
+          return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">{line}</div>;
+        }
         
-        relevantSections.forEach((section) => {
-          const sectionStart = Math.max(0, section.start - lineStart);
-          const sectionEnd = Math.min(lineLength, section.end - lineStart);
+        // Calculate character position
+        let charPosition = 0;
+        for (let i = 0; i < lineIndex; i++) {
+          charPosition += lines[i].length + 1; // +1 for newline
+        }
+        
+        // Find sections applicable to this line
+        const lineSections = formattedSections.filter(section => {
+          const sectionStart = section.start;
+          const sectionEnd = section.end;
+          const lineStart = charPosition;
+          const lineEnd = lineStart + line.length;
           
-          if (sectionStart > lastPos) {
-            // Add unformatted text before this section
+          return sectionStart < lineEnd && sectionEnd > lineStart;
+        });
+        
+        // If no sections apply to this line
+        if (lineSections.length === 0) {
+          return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">{line}</div>;
+        }
+        
+        // Break line into segments based on formatting
+        const segments: React.ReactNode[] = [];
+        let currentPos = 0;
+        
+        // Sort sections by start position
+        const sortedSections = [...lineSections].sort((a, b) => 
+          (a.start - charPosition) - (b.start - charPosition)
+        );
+        
+        // Create formatted segments
+        sortedSections.forEach((section, i) => {
+          const relativeStart = Math.max(0, section.start - charPosition);
+          const relativeEnd = Math.min(line.length, section.end - charPosition);
+          
+          // Add unformatted text before this section if needed
+          if (relativeStart > currentPos) {
             segments.push(
-              <span key={`text-${lastPos}`}>
-                {line.substring(lastPos, sectionStart)}
+              <span key={`plain-${i}`}>
+                {line.substring(currentPos, relativeStart)}
               </span>
             );
           }
           
-          if (sectionStart < sectionEnd) {
-            // Add formatted section
+          // Add the formatted section
+          if (relativeStart < relativeEnd) {
             segments.push(
               <span 
-                key={`fmt-${sectionStart}`}
-                className="formatted-section"
+                key={`fmt-${i}`}
                 style={{
                   fontWeight: section.formatting.isBold ? 'bold' : 'inherit',
                   textDecoration: section.formatting.isUnderlined ? 'underline' : 'inherit',
                   fontSize: section.formatting.fontSize || 'inherit',
                   backgroundColor: 'rgba(66, 153, 225, 0.15)',
-                  padding: '0px 1px',
-                  borderRadius: '2px',
                   borderBottom: '1px solid rgba(66, 153, 225, 0.4)'
                 }}
               >
-                {line.substring(sectionStart, sectionEnd)}
+                {line.substring(relativeStart, relativeEnd)}
               </span>
             );
           }
           
-          lastPos = Math.max(lastPos, sectionEnd);
+          // Update current position
+          currentPos = Math.max(currentPos, relativeEnd);
         });
         
         // Add any remaining unformatted text
-        if (lastPos < lineLength) {
+        if (currentPos < line.length) {
           segments.push(
-            <span key={`text-end-${lastPos}`}>
-              {line.substring(lastPos)}
-            </span>
+            <span key="remaining">{line.substring(currentPos)}</span>
           );
         }
         
         return (
-          <div key={lineIndex} className="whitespace-pre-wrap">
-            {segments.length > 0 ? segments : '\u00A0'}
+          <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">
+            {segments}
           </div>
         );
       });
@@ -176,7 +183,6 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
       return (
         <div 
-          ref={containerRef}
           className={cn(
             "relative min-h-[500px] w-full rounded-md border border-input bg-transparent text-sm",
             className
