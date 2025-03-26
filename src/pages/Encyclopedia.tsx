@@ -9,8 +9,10 @@ import { PlusCircle } from 'lucide-react';
 
 // This would be replaced with a real environment check or auth check in a production app
 const isAdminMode = () => {
-  // For demo purposes, this could be controlled by a localStorage setting, environment variable, or auth state
-  return true; // Set to true for now to show the edit functionality
+  // For production/deployed app, default to false
+  // This ensures users won't see the "Add Entry" button
+  // Set to true only for development/editing in Lovable
+  return false; // Default to false for regular users
 };
 
 const Encyclopedia: React.FC = () => {
