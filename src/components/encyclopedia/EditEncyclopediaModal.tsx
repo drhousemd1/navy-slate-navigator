@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import { Switch } from "@/components/ui/switch";
 import { EncyclopediaEntry } from '@/types/encyclopedia';
+import { Slider } from "@/components/ui/slider";
 
 interface EditEncyclopediaModalProps {
   isOpen: boolean;
@@ -46,6 +47,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       focal_point_x: entry?.focal_point_x || 50,
       focal_point_y: entry?.focal_point_y || 50,
       opacity: entry?.opacity || 100,
+      popup_opacity: entry?.popup_opacity || entry?.opacity || 100,
       title_color: entry?.title_color || '#FFFFFF',
       subtext_color: entry?.subtext_color || '#D1D5DB',
       highlight_effect: entry?.highlight_effect || false,
@@ -64,6 +66,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
           focal_point_x: entry.focal_point_x || 50,
           focal_point_y: entry.focal_point_y || 50,
           opacity: entry.opacity || 100,
+          popup_opacity: entry.popup_opacity || entry.opacity || 100,
           title_color: entry.title_color || '#FFFFFF',
           subtext_color: entry.subtext_color || '#D1D5DB',
           highlight_effect: entry.highlight_effect || false,
@@ -79,6 +82,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
           focal_point_x: 50,
           focal_point_y: 50,
           opacity: 100,
+          popup_opacity: 100,
           title_color: '#FFFFFF',
           subtext_color: '#D1D5DB',
           highlight_effect: false,
@@ -234,6 +238,48 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                   setValue={form.setValue}
                 />
               </div>
+              
+              {imagePreview && (
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="opacity"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-white">Tile Image Opacity ({field.value}%)</FormLabel>
+                        <FormControl>
+                          <Slider
+                            value={[field.value]}
+                            min={0}
+                            max={100}
+                            step={1}
+                            onValueChange={(values) => field.onChange(values[0])}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="popup_opacity"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-white">Popup Image Opacity ({field.value}%)</FormLabel>
+                        <FormControl>
+                          <Slider
+                            value={[field.value]}
+                            min={0}
+                            max={100}
+                            step={1}
+                            onValueChange={(values) => field.onChange(values[0])}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
               
               <DialogFooter className="pt-4 space-x-2">
                 {entry && onDelete && (

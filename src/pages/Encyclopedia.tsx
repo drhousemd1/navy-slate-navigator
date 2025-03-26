@@ -1,3 +1,4 @@
+
 import React from 'react';
 import AppLayout from '../components/AppLayout';
 import EncyclopediaTile from '../components/encyclopedia/EncyclopediaTile';
@@ -84,6 +85,7 @@ const Encyclopedia: React.FC = () => {
                   focalPointX={entry.focal_point_x}
                   focalPointY={entry.focal_point_y}
                   opacity={entry.opacity}
+                  popupOpacity={entry.popup_opacity}
                   titleColor={entry.title_color}
                   subtextColor={entry.subtext_color}
                   highlightEffect={entry.highlight_effect}

@@ -8,6 +8,7 @@ export interface EncyclopediaEntry {
   focal_point_x: number;
   focal_point_y: number;
   opacity: number;
+  popup_opacity?: number; // New field for popup view opacity
   title_color: string;
   subtext_color: string;
   highlight_effect: boolean;

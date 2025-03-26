@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,6 +42,7 @@ export const useEncyclopedia = () => {
         focal_point_x: entry.focal_point_x,
         focal_point_y: entry.focal_point_y,
         opacity: entry.opacity,
+        popup_opacity: entry.popup_opacity || entry.opacity, // Use tile opacity as default if popup opacity not set
         title_color: entry.title_color,
         subtext_color: entry.subtext_color,
         highlight_effect: entry.highlight_effect

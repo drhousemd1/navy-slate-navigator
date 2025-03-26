@@ -15,6 +15,7 @@ interface EncyclopediaTileProps {
   focalPointX?: number;
   focalPointY?: number;
   opacity?: number;
+  popupOpacity?: number;
   titleColor?: string;
   subtextColor?: string;
   highlightEffect?: boolean;
@@ -30,6 +31,7 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
   focalPointX = 50,
   focalPointY = 50,
   opacity = 100,
+  popupOpacity,
   titleColor = '#FFFFFF',
   subtextColor = '#D1D5DB',
   highlightEffect = false
@@ -108,7 +110,7 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
           imageUrl={imageUrl}
           focalPointX={focalPointX}
           focalPointY={focalPointY}
-          opacity={opacity}
+          opacity={popupOpacity || opacity}
           titleColor={titleColor}
           highlightEffect={highlightEffect}
         />
