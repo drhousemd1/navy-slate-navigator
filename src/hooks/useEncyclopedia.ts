@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,16 +35,7 @@ export const useEncyclopedia = () => {
         throw error;
       }
       
-      // Initialize formatted sections for each entry if it has them
-      const processedEntries = data.map(entry => {
-        // Handle database entries that might not have formatted_sections yet
-        return {
-          ...entry,
-          formatted_sections: (entry as any).formatted_sections || []
-        };
-      });
-      
-      return processedEntries as EncyclopediaEntry[];
+      return data as EncyclopediaEntry[];
     }
   });
 
@@ -51,7 +43,6 @@ export const useEncyclopedia = () => {
   const saveEntryMutation = useMutation({
     mutationFn: async (entry: EncyclopediaEntry) => {
       // Create a prepared entry object that matches the database schema
-      // We need to make sure we're only including fields that exist in the database
       const preparedEntry = {
         id: entry.id,
         title: entry.title,

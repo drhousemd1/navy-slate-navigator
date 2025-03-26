@@ -92,6 +92,7 @@ const Encyclopedia: React.FC = () => {
                   subtextColor={entry.subtext_color}
                   highlightEffect={entry.highlight_effect}
                   popupTextFormatting={entry.popup_text_formatting}
+                  formattedSections={entry.formatted_sections}
                 />
               ))}
             </div>

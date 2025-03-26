@@ -15,6 +15,7 @@ export interface EncyclopediaEntry {
   popup_text_formatting?: {
     isBold?: boolean;
     isUnderlined?: boolean;
+    isItalic?: boolean;
     fontSize?: string;
   };
   formatted_sections?: Array<{
@@ -23,6 +24,7 @@ export interface EncyclopediaEntry {
     formatting: {
       isBold?: boolean;
       isUnderlined?: boolean;
+      isItalic?: boolean;
       fontSize?: string;
     }
   }>;

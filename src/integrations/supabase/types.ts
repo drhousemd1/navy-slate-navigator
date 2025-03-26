@@ -14,11 +14,13 @@ export type Database = {
           created_at: string | null
           focal_point_x: number | null
           focal_point_y: number | null
+          formatted_sections: Json | null
           highlight_effect: boolean | null
           id: string
           image_url: string | null
           opacity: number | null
           popup_text: string | null
+          popup_text_formatting: Json | null
           subtext: string
           subtext_color: string | null
           title: string
@@ -29,11 +31,13 @@ export type Database = {
           created_at?: string | null
           focal_point_x?: number | null
           focal_point_y?: number | null
+          formatted_sections?: Json | null
           highlight_effect?: boolean | null
           id?: string
           image_url?: string | null
           opacity?: number | null
           popup_text?: string | null
+          popup_text_formatting?: Json | null
           subtext: string
           subtext_color?: string | null
           title: string
@@ -44,11 +48,13 @@ export type Database = {
           created_at?: string | null
           focal_point_x?: number | null
           focal_point_y?: number | null
+          formatted_sections?: Json | null
           highlight_effect?: boolean | null
           id?: string
           image_url?: string | null
           opacity?: number | null
           popup_text?: string | null
+          popup_text_formatting?: Json | null
           subtext?: string
           subtext_color?: string | null
           title?: string
