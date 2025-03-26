@@ -197,32 +197,30 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           className
         )}
       >
-        {/* Invisible textarea for editing - functional but not visible */}
+        {/* Invisible textarea for editing but with a visible caret */}
         <textarea
           ref={setRefs}
-          className="absolute inset-0 w-full h-full resize-none px-3 py-2 bg-transparent text-transparent caret-white focus:outline-none"
+          className="absolute inset-0 w-full h-full resize-none px-3 py-2 bg-transparent opacity-0 text-white focus:outline-none z-10"
           style={{ 
-            caretColor: 'white',
-            zIndex: 2, // Ensure it's on top for input functionality
-            color: 'transparent', // Make text invisible
-            WebkitTextFillColor: 'transparent' // Ensure text is truly invisible
+            caretColor: 'white', 
           }}
           onScroll={syncScroll}
           onSelect={handleSelect}
           {...props}
         />
         
-        {/* Formatted preview layer */}
+        {/* Formatted preview layer - we don't use pointer-events-none to allow text selection */}
         <div 
           ref={previewRef}
-          className="absolute inset-0 w-full h-full px-3 py-2 overflow-auto pointer-events-none"
+          className="absolute inset-0 w-full h-full px-3 py-2 overflow-auto z-0"
           style={{
+            fontFamily: 'inherit',
             fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
             textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
             fontSize: textFormatting?.fontSize || '1rem',
             lineHeight: '1.5',
             color: 'white',
-            zIndex: 1 // Below the textarea for input purposes
+            userSelect: 'none'
           }}
         >
           {renderFormattedContent()}
