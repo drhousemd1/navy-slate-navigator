@@ -19,6 +19,11 @@ interface EncyclopediaTileProps {
   titleColor?: string;
   subtextColor?: string;
   highlightEffect?: boolean;
+  popupTextFormatting?: {
+    isBold?: boolean;
+    isUnderlined?: boolean;
+    fontSize?: string;
+  };
 }
 
 const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({ 
@@ -34,7 +39,8 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
   popupOpacity,
   titleColor = '#FFFFFF',
   subtextColor = '#D1D5DB',
-  highlightEffect = false
+  highlightEffect = false,
+  popupTextFormatting
 }) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   
@@ -113,6 +119,7 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
           opacity={popupOpacity || opacity}
           titleColor={titleColor}
           highlightEffect={highlightEffect}
+          textFormatting={popupTextFormatting}
         />
       )}
     </>

@@ -3,7 +3,6 @@ import React from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import HighlightedText from '../task/HighlightedText';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface EncyclopediaPopupViewProps {
   isOpen: boolean;

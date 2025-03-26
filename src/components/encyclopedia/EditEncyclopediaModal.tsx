@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -341,17 +342,16 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                             rows={6}
                             {...field} 
                           />
-                          <div 
-                            className="absolute top-2 right-2 bottom-2 left-2 overflow-auto pointer-events-none"
-                            style={textPreviewStyle}
-                            aria-hidden="true"
-                          >
-                            {field.value ? (
-                              <div className="opacity-0">
-                                {field.value}
-                              </div>
-                            ) : null}
-                          </div>
+                          {field.value && (
+                            <div 
+                              className="absolute top-2 right-2 bottom-2 left-2 overflow-auto pointer-events-none text-white"
+                              style={textPreviewStyle}
+                            >
+                              {field.value.split('\n').map((paragraph, i) => (
+                                <p key={i} className="mb-1">{paragraph}</p>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </FormControl>
                       <FormDescription className="text-light-navy">
