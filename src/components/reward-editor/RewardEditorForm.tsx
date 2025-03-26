@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -237,7 +236,7 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Reward Icon</FormLabel>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center h-full">
               <IconSelector
                 selectedIconName={selectedIconName}
