@@ -113,11 +113,12 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
           </div>
           
           {/* Description directly below title */}
-          <p 
-            className="text-sm"
-            style={{ color: subtextColor }}
-          >
-            {subtext}
+          <p className="text-sm">
+            <HighlightedText
+              text={subtext}
+              highlight={highlightEffect}
+              color={subtextColor}
+            />
           </p>
         </div>
       </div>
