@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import EncyclopediaTile from '../components/encyclopedia/EncyclopediaTile';
 import EditEncyclopediaModal, { EncyclopediaEntry } from '../components/encyclopedia/EditEncyclopediaModal';
+import { useToast } from '@/hooks/use-toast';
 
 // This would be replaced with a real environment check or auth check in a production app
 const isAdminMode = () => {
@@ -34,6 +35,7 @@ const Encyclopedia: React.FC = () => {
   const [entries, setEntries] = useState<EncyclopediaEntry[]>(initialEntries);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentEntry, setCurrentEntry] = useState<EncyclopediaEntry | undefined>(undefined);
+  const { toast } = useToast();
 
   const handleEditTile = (id: string) => {
     const entryToEdit = entries.find(entry => entry.id === id);
@@ -47,6 +49,14 @@ const Encyclopedia: React.FC = () => {
     setEntries(entries.map(entry => 
       entry.id === updatedEntry.id ? updatedEntry : entry
     ));
+  };
+
+  const handleDeleteEntry = (id: string) => {
+    setEntries(entries.filter(entry => entry.id !== id));
+    toast({
+      title: "Entry Deleted",
+      description: "The encyclopedia entry has been removed."
+    });
   };
 
   const closeModal = () => {
@@ -86,6 +96,7 @@ const Encyclopedia: React.FC = () => {
         isOpen={isEditModalOpen}
         onClose={closeModal}
         onSave={handleSaveEntry}
+        onDelete={handleDeleteEntry}
         entry={currentEntry}
       />
     </AppLayout>

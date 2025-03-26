@@ -8,11 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 import { useToast } from "@/hooks/use-toast";
+import { Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface EditEncyclopediaModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: EncyclopediaEntry) => void;
+  onDelete?: (id: string) => void;
   entry?: EncyclopediaEntry;
 }
 
@@ -29,11 +32,13 @@ export interface EncyclopediaEntry {
 const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({ 
   isOpen, 
   onClose, 
-  onSave, 
+  onSave,
+  onDelete, 
   entry 
 }) => {
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(entry?.image_url || null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const form = useForm<EncyclopediaEntry>({
     defaultValues: {
@@ -89,77 +94,124 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
     });
     onClose();
   };
+
+  const handleDelete = () => {
+    if (entry && onDelete) {
+      onDelete(entry.id);
+      toast({
+        title: "Deleted",
+        description: "Encyclopedia entry has been deleted.",
+      });
+      setIsDeleteDialogOpen(false);
+      onClose();
+    }
+  };
   
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-navy border border-light-navy text-white">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Edit Encyclopedia Entry</DialogTitle>
-        </DialogHeader>
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white">Title</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Enter title" 
-                      className="bg-dark-navy border-light-navy text-white"
-                      {...field} 
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="subtext"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white">Description</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Enter description" 
-                      className="bg-dark-navy border-light-navy text-white"
-                      {...field} 
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <div className="space-y-2">
-              <FormLabel className="text-white">Background Image</FormLabel>
-              <BackgroundImageSelector
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="bg-navy border border-light-navy text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Edit Encyclopedia Entry</DialogTitle>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
                 control={form.control}
-                imagePreview={imagePreview}
-                initialPosition={{
-                  x: form.getValues('focal_point_x'), 
-                  y: form.getValues('focal_point_y')
-                }}
-                onRemoveImage={handleRemoveImage}
-                onImageUpload={handleImageUpload}
-                setValue={form.setValue}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Title</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter title" 
+                        className="bg-dark-navy border-light-navy text-white"
+                        {...field} 
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-            </div>
-            
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={onClose} className="border-light-navy text-white hover:bg-light-navy">
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-nav-active text-white hover:bg-nav-active/80">
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              
+              <FormField
+                control={form.control}
+                name="subtext"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Enter description" 
+                        className="bg-dark-navy border-light-navy text-white"
+                        {...field} 
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <div className="space-y-2">
+                <FormLabel className="text-white">Background Image</FormLabel>
+                <BackgroundImageSelector
+                  control={form.control}
+                  imagePreview={imagePreview}
+                  initialPosition={{
+                    x: form.getValues('focal_point_x'), 
+                    y: form.getValues('focal_point_y')
+                  }}
+                  onRemoveImage={handleRemoveImage}
+                  onImageUpload={handleImageUpload}
+                  setValue={form.setValue}
+                />
+              </div>
+              
+              <DialogFooter className="pt-4 space-x-2">
+                {onDelete && (
+                  <Button 
+                    type="button" 
+                    variant="destructive" 
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    className="mr-auto bg-red-700 hover:bg-red-800"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                )}
+                <Button type="button" variant="outline" onClick={onClose} className="border-light-navy text-white hover:bg-light-navy">
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-nav-active text-white hover:bg-nav-active/80">
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="bg-navy border border-light-navy text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this encyclopedia entry.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-light-navy text-white hover:bg-light-navy">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-red-700 hover:bg-red-800 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
