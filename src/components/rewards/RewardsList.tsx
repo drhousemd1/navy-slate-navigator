@@ -21,7 +21,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
 
   // Log rewards for debugging
   console.log("Rendering RewardsList with rewards:", 
-    rewards.map(r => ({ id: r.id, title: r.title, created_at: r.created_at }))
+    rewards.map((r, i) => ({ index: i, id: r.id, title: r.title, created_at: r.created_at }))
   );
 
   return (

@@ -45,7 +45,15 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   const handleSave = async (rewardData: any) => {
     console.log("Saving reward with data:", rewardData, "at index:", currentRewardIndex);
     try {
+      // Log the order of rewards before saving
+      console.log("Rewards order BEFORE saving:", 
+        rewards.map((r, i) => `${i}: ${r.title} (${r.id})`));
+      
       await handleSaveReward(rewardData, currentRewardIndex);
+      
+      // Log the order of rewards after saving to verify it hasn't changed
+      console.log("Rewards order AFTER saving:", 
+        rewards.map((r, i) => `${i}: ${r.title} (${r.id})`));
       
       toast({
         title: "Success",

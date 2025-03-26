@@ -25,7 +25,8 @@ export interface Reward {
 
 export const fetchRewards = async (): Promise<Reward[]> => {
   try {
-    // Explicitly sort by created_at to maintain consistent order
+    // Always explicitly sort by created_at to maintain consistent order
+    // This ensures the initial fetch has a stable order
     const { data, error } = await supabase
       .from('rewards')
       .select('*')
