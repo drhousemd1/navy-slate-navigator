@@ -14,15 +14,16 @@ export interface TextareaProps
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, formattedPreview, textFormatting, ...props }, ref) => {
+    // Create a reference for syncing scroll position
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
-    const [formattedContent, setFormattedContent] = React.useState<string>('');
-
-    React.useEffect(() => {
-      if (formattedPreview && props.value) {
-        // Create formatted content from the textarea value
-        setFormattedContent(props.value.toString());
+    const previewRef = React.useRef<HTMLDivElement | null>(null);
+    
+    // Handle scroll synchronization between preview and textarea
+    const syncScroll = React.useCallback((e: React.UIEvent<HTMLTextAreaElement>) => {
+      if (previewRef.current) {
+        previewRef.current.scrollTop = e.currentTarget.scrollTop;
       }
-    }, [formattedPreview, props.value]);
+    }, []);
 
     // Set the ref to our local ref or the forwarded ref
     const setRefs = React.useCallback(
@@ -44,23 +45,33 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
         textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
         fontSize: textFormatting?.fontSize || '1rem',
-        color: 'inherit'
       };
 
       return (
         <div className={cn(
-          "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm relative",
+          "flex min-h-[80px] w-full rounded-md border border-input bg-background text-sm relative",
           className
         )}>
-          <div 
-            style={textStyle} 
-            className="w-full h-full min-h-[80px] outline-none"
-            dangerouslySetInnerHTML={{ __html: formattedContent.replace(/\n/g, '<br/>') }} 
-          />
+          {/* Visible textarea where user types */}
           <textarea
             ref={setRefs}
-            className="absolute top-0 left-0 w-full h-full opacity-0 cursor-text px-3 py-2"
+            className="w-full h-full min-h-[80px] px-3 py-2 bg-transparent resize-none outline-none text-transparent caret-white selection:bg-blue-500/30"
+            style={{
+              ...textStyle,
+              WebkitTextFillColor: 'transparent'
+            }}
+            onScroll={syncScroll}
             {...props}
+          />
+          
+          {/* Formatted preview beneath textarea */}
+          <div 
+            ref={previewRef}
+            style={textStyle} 
+            className="absolute top-0 left-0 w-full h-full min-h-[80px] px-3 py-2 pointer-events-none whitespace-pre-wrap"
+            dangerouslySetInnerHTML={{ 
+              __html: (props.value?.toString() || '').replace(/\n/g, '<br/>') 
+            }} 
           />
         </div>
       )
