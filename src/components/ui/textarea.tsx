@@ -131,28 +131,6 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         fontSize: textFormatting?.fontSize || '1rem',
       };
 
-      // Define exactly the same styles for both elements to ensure perfect alignment
-      const sharedStyles: React.CSSProperties = {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: '100%',
-        height: '100%',
-        padding: '0.5rem 0.75rem',
-        margin: 0,
-        border: 'none',
-        lineHeight: '1.5',
-        fontFamily: 'inherit',
-        fontSize: 'inherit',
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        overflowWrap: 'break-word',
-        overflowY: 'auto',
-        boxSizing: 'border-box'
-      };
-
       return (
         <div 
           ref={containerRef}
@@ -161,32 +139,43 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             className
           )}
         >
-          {/* The textarea for editing - exact same dimensions and position as preview */}
+          {/* The textarea for editing */}
           <textarea
             ref={setRefs}
-            className="resize-none outline-none selection:bg-blue-500/30"
+            className="absolute top-0 left-0 w-full h-full resize-none outline-none selection:bg-blue-500/30 px-3 py-2 box-border"
             style={{
-              ...sharedStyles,
               caretColor: 'white',
               color: 'transparent',
               backgroundColor: 'transparent',
-              zIndex: 2
+              zIndex: 2,
+              lineHeight: '1.5',
+              fontFamily: 'inherit',
+              fontSize: 'inherit',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+              overflowY: 'auto',
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
             {...props}
           />
           
-          {/* Formatted preview div - exact same dimensions and position as textarea */}
+          {/* Formatted preview div with the same dimensions and styling */}
           <div 
             ref={previewRef}
+            className="absolute top-0 left-0 w-full h-full px-3 py-2 text-white pointer-events-none box-border"
             style={{
-              ...sharedStyles,
               ...textStyle,
-              pointerEvents: 'none',
-              zIndex: 1
-            }} 
-            className="text-white"
+              zIndex: 1,
+              lineHeight: '1.5',
+              fontFamily: 'inherit',
+              fontSize: 'inherit',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+              overflowY: 'auto',
+            }}
             dangerouslySetInnerHTML={{ 
               __html: generateFormattedHTML() 
             }} 
