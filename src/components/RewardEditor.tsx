@@ -38,7 +38,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
         description: "Reward saved successfully",
       });
       
-      // Ensure we call onClose to close the dialog
+      // Important: Close the dialog after successful save
       onClose();
     } catch (error) {
       console.error("Error in RewardEditor save handler:", error);
@@ -52,12 +52,15 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) {
-        console.log("Dialog closing via onOpenChange");
-        onClose();
-      }
-    }}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        if (!open) {
+          console.log("Dialog closing via onOpenChange");
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="bg-navy border-light-navy text-white max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white">
