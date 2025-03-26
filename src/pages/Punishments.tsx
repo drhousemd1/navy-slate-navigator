@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
 import { Clock, Skull, Bomb, Zap, Plus } from 'lucide-react';
@@ -15,6 +14,24 @@ const PunishmentsContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const [initializing, setInitializing] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleAddNewPunishment = () => {
+      handleAddNewPunishmentClick();
+    };
+
+    const currentContainer = containerRef.current;
+    if (currentContainer) {
+      currentContainer.addEventListener('add-new-punishment', handleAddNewPunishment);
+    }
+
+    return () => {
+      if (currentContainer) {
+        currentContainer.removeEventListener('add-new-punishment', handleAddNewPunishment);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const initSamplePunishments = async () => {
@@ -79,7 +96,7 @@ const PunishmentsContent: React.FC = () => {
     }
   };
 
-  const handleAddNewPunishment = () => {
+  const handleAddNewPunishmentClick = () => {
     setCurrentPunishment(undefined);
     setIsEditorOpen(true);
   };
@@ -90,7 +107,7 @@ const PunishmentsContent: React.FC = () => {
   };
 
   return (
-    <div className="p-4 pt-6">
+    <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
       <PunishmentsHeader />
       
       {/* Removed the "New Punishment" button from here */}
