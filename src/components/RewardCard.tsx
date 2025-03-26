@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -16,6 +15,7 @@ interface RewardCardProps {
   iconName?: string;
   iconColor?: string;
   onBuy?: () => void;
+  onUse?: () => void;
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({
@@ -25,7 +25,8 @@ const RewardCard: React.FC<RewardCardProps> = ({
   supply,
   iconName = 'Gift',
   iconColor = '#9b87f5',
-  onBuy
+  onBuy,
+  onUse
 }) => {
   const { toast } = useToast();
 
@@ -35,6 +36,16 @@ const RewardCard: React.FC<RewardCardProps> = ({
       toast({
         title: "Reward Purchased",
         description: `You purchased ${title}`,
+      });
+    }
+  };
+
+  const handleUseClick = () => {
+    if (onUse) {
+      onUse();
+      toast({
+        title: "Reward Used",
+        description: `You used ${title}`,
       });
     }
   };
@@ -55,6 +66,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
                 variant="outline" 
                 size="sm"
                 className="p-1 h-7 text-blue-500 border-blue-500 hover:bg-blue-500/10 hover:text-blue-400 flex items-center gap-1"
+                onClick={handleUseClick}
               >
                 <Ticket className="h-4 w-4" />
                 <span>Use</span>

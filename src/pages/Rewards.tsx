@@ -59,6 +59,24 @@ const Rewards: React.FC = () => {
     }
   };
 
+  // Handle using a reward
+  const handleUse = (index: number) => {
+    const reward = rewards[index];
+    
+    // Check if the reward has any supply left
+    if (reward.supply > 0) {
+      // Create a new array with the updated reward
+      const updatedRewards = [...rewards];
+      updatedRewards[index] = {
+        ...reward,
+        supply: reward.supply - 1
+      };
+      
+      // Update state
+      setRewards(updatedRewards);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-4 pt-6">
@@ -80,6 +98,7 @@ const Rewards: React.FC = () => {
               iconName={reward.iconName}
               iconColor="#9b87f5"
               onBuy={() => handleBuy(index)}
+              onUse={() => handleUse(index)}
             />
           ))}
         </div>
