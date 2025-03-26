@@ -57,6 +57,68 @@ type RewardItem = {
   calendar_color?: string;
 };
 
+// Define the shape of data coming from Supabase
+type SupabaseReward = {
+  id: string;
+  title: string;
+  description: string | null;
+  cost: number;
+  supply: number;
+  icon_name: string | null;
+  icon_color: string | null;
+  created_at: string;
+  updated_at: string;
+  background_image_url?: string | null;
+  background_opacity?: number | null;
+  focal_point_x?: number | null;
+  focal_point_y?: number | null;
+  highlight_effect?: boolean | null;
+  title_color?: string | null;
+  subtext_color?: string | null;
+  calendar_color?: string | null;
+};
+
+// Convert Supabase reward to app RewardItem
+const mapSupabaseRewardToRewardItem = (reward: SupabaseReward): RewardItem => {
+  return {
+    id: reward.id,
+    title: reward.title,
+    description: reward.description || '',
+    cost: reward.cost,
+    supply: reward.supply || 0,
+    iconName: reward.icon_name || 'Gift',
+    icon_color: reward.icon_color || '#9b87f5',
+    background_image_url: reward.background_image_url || undefined,
+    background_opacity: reward.background_opacity || 100,
+    focal_point_x: reward.focal_point_x || 50,
+    focal_point_y: reward.focal_point_y || 50,
+    highlight_effect: reward.highlight_effect || false,
+    title_color: reward.title_color || '#FFFFFF',
+    subtext_color: reward.subtext_color || '#8E9196',
+    calendar_color: reward.calendar_color || '#7E69AB'
+  };
+};
+
+// Convert app RewardItem to Supabase format
+const mapRewardItemToSupabase = (reward: RewardItem) => {
+  return {
+    title: reward.title,
+    description: reward.description,
+    cost: reward.cost,
+    supply: reward.supply || 0,
+    icon_name: reward.iconName,
+    icon_color: reward.icon_color,
+    background_image_url: reward.background_image_url,
+    background_opacity: reward.background_opacity,
+    focal_point_x: reward.focal_point_x,
+    focal_point_y: reward.focal_point_y,
+    highlight_effect: reward.highlight_effect,
+    title_color: reward.title_color,
+    subtext_color: reward.subtext_color,
+    calendar_color: reward.calendar_color
+  };
+};
+
 interface RewardsContextType {
   totalPoints: number;
   rewards: RewardItem[];
@@ -103,11 +165,13 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         }
         
         if (data && data.length > 0) {
-          setRewards(data);
+          // Map the Supabase rewards to our app format
+          const mappedRewards = data.map(reward => mapSupabaseRewardToRewardItem(reward as SupabaseReward));
+          setRewards(mappedRewards);
         } else {
           // If no rewards exist, create initial ones
           for (const reward of initialRewards) {
-            await supabase.from('rewards').insert(reward);
+            await supabase.from('rewards').insert(mapRewardItemToSupabase(reward));
           }
           
           // Fetch again after inserting defaults
@@ -117,7 +181,12 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
             .order('created_at', { ascending: true });
             
           if (refreshError) throw refreshError;
-          if (refreshedData) setRewards(refreshedData);
+          if (refreshedData) {
+            const mappedRewards = refreshedData.map(reward => 
+              mapSupabaseRewardToRewardItem(reward as SupabaseReward)
+            );
+            setRewards(mappedRewards);
+          }
         }
       } catch (error) {
         console.error('Error fetching rewards:', error);
@@ -261,7 +330,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   const handleSaveReward = async (rewardData: any, index: number | null) => {
     try {
       // Format the data to match the Supabase schema
-      const formattedData = {
+      const formattedData = mapRewardItemToSupabase({
         title: rewardData.title,
         description: rewardData.description,
         cost: rewardData.cost,
@@ -276,7 +345,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         title_color: rewardData.title_color,
         subtext_color: rewardData.subtext_color,
         calendar_color: rewardData.calendar_color
-      };
+      });
 
       if (index !== null) {
         // Update existing reward
@@ -290,7 +359,14 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         
         // Update the local state
         const updatedRewards = [...rewards];
-        updatedRewards[index] = { ...formattedData, id: rewardId };
+        updatedRewards[index] = { 
+          ...mapSupabaseRewardToRewardItem({
+            ...formattedData,
+            id: rewardId || '',
+            created_at: '',
+            updated_at: ''
+          } as SupabaseReward)
+        };
         setRewards(updatedRewards);
       } else {
         // Add new reward
@@ -303,7 +379,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         
         // Update the local state with the new reward that includes the generated id
         if (data && data.length > 0) {
-          setRewards([...rewards, data[0]]);
+          const newReward = mapSupabaseRewardToRewardItem(data[0] as SupabaseReward);
+          setRewards([...rewards, newReward]);
         }
       }
       
