@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -130,14 +131,14 @@
 
   /* Highlighter effect */
   .highlighter {
-    display: inline;
-    background-color: rgba(245, 245, 209, 0.7);
-    padding: 2px 6px;
-    border-radius: 4px;
-    width: auto;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-    line-height: 1.8;
-    position: relative;
+    display: inline-block;
+    background-color: rgba(255, 255, 200, 0.25);
+    padding: 4px 8px;
+    border-radius: 6px;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    box-shadow: 0 0 8px rgba(255, 255, 150, 0.5);
+    font-weight: bold;
+    line-height: 1.6;
   }
 }

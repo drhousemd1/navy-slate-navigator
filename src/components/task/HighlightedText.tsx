@@ -7,35 +7,29 @@ interface HighlightedTextProps {
   color: string;
 }
 
-const HighlightedText: React.FC<HighlightedTextProps> = ({ 
-  text, 
-  highlight, 
-  color 
+const HighlightedText: React.FC<HighlightedTextProps> = ({
+  text,
+  highlight,
+  color
 }) => {
+  if (!highlight) {
+    return <span style={{ color }}>{text}</span>;
+  }
+
   const highlighterStyle: CSSProperties = {
-    backgroundColor: 'rgba(245, 245, 209, 0.7)',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    display: 'inline',
-    boxDecorationBreak: 'clone' as 'clone',
-    WebkitBoxDecorationBreak: 'clone' as 'clone',
-    lineHeight: '1.8',
-    position: 'relative',
-    width: 'auto'
+    display: 'inline-block',
+    backgroundColor: 'rgba(255, 255, 200, 0.25)',
+    color: color,
+    padding: '4px 8px',
+    borderRadius: '6px',
+    backdropFilter: 'blur(3px)',
+    WebkitBackdropFilter: 'blur(3px)',
+    boxShadow: '0 0 8px rgba(255, 255, 150, 0.5)',
+    fontWeight: 'bold',
+    lineHeight: 1.6,
   };
 
-  if (highlight) {
-    return (
-      <span className="highlighter" style={{
-        ...highlighterStyle,
-        color
-      }}>
-        {text}
-      </span>
-    );
-  }
-  
-  return <span style={{ color }}>{text}</span>;
+  return <span style={highlighterStyle}>{text}</span>;
 };
 
 export default HighlightedText;
