@@ -35,7 +35,7 @@ const DeleteRewardDialog: React.FC<DeleteRewardDialogProps> = ({
               "Are you sure you want to delete this reward? This action cannot be undone."}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
+        <AlertDialogFooter className="flex justify-end space-x-4 mt-6">
           <AlertDialogCancel className="bg-transparent border-light-navy text-white hover:bg-light-navy">Cancel</AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm} 
