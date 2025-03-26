@@ -1,5 +1,7 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { supabase } from '../integrations/supabase/client';
+import { toast } from '../hooks/use-toast';
 
 // Define initial rewards data
 const initialRewards = [
@@ -35,10 +37,10 @@ const initialRewards = [
 
 // localStorage keys
 const POINTS_STORAGE_KEY = 'rewardPoints';
-const REWARDS_STORAGE_KEY = 'rewardItems';
 const REWARD_USAGE_STORAGE_KEY = 'rewardUsage';
 
 type RewardItem = {
+  id?: string;
   title: string;
   description: string;
   cost: number;
@@ -61,10 +63,11 @@ interface RewardsContextType {
   rewardUsage: Record<string, boolean[]>;
   handleBuy: (index: number) => void;
   handleUse: (index: number) => void;
-  handleSaveReward: (rewardData: any, index: number | null) => void;
-  handleDeleteReward: (index: number) => void;
+  handleSaveReward: (rewardData: any, index: number | null) => Promise<void>;
+  handleDeleteReward: (index: number) => Promise<void>;
   getRewardUsage: (index: number) => boolean[];
   getFrequencyCount: (index: number) => number;
+  isLoading: boolean;
 }
 
 const RewardsContext = createContext<RewardsContextType | undefined>(undefined);
@@ -76,10 +79,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
     return savedPoints ? parseInt(savedPoints, 10) : 100;
   });
   
-  const [rewards, setRewards] = useState<RewardItem[]>(() => {
-    const savedRewards = localStorage.getItem(REWARDS_STORAGE_KEY);
-    return savedRewards ? JSON.parse(savedRewards) : initialRewards;
-  });
+  const [rewards, setRewards] = useState<RewardItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Initialize the usage tracking state
   const [rewardUsage, setRewardUsage] = useState(() => {
@@ -87,14 +88,58 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
     return savedUsage ? JSON.parse(savedUsage) : {};
   });
 
+  // Fetch rewards from Supabase on component mount
+  useEffect(() => {
+    const fetchRewards = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('rewards')
+          .select('*')
+          .order('created_at', { ascending: true });
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          setRewards(data);
+        } else {
+          // If no rewards exist, create initial ones
+          for (const reward of initialRewards) {
+            await supabase.from('rewards').insert(reward);
+          }
+          
+          // Fetch again after inserting defaults
+          const { data: refreshedData, error: refreshError } = await supabase
+            .from('rewards')
+            .select('*')
+            .order('created_at', { ascending: true });
+            
+          if (refreshError) throw refreshError;
+          if (refreshedData) setRewards(refreshedData);
+        }
+      } catch (error) {
+        console.error('Error fetching rewards:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load rewards. Using local data instead.",
+          variant: "destructive",
+        });
+        // Fallback to initial rewards if Supabase fails
+        setRewards(initialRewards);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchRewards();
+  }, []);
+
   // Save to localStorage whenever state changes
   useEffect(() => {
     localStorage.setItem(POINTS_STORAGE_KEY, totalPoints.toString());
   }, [totalPoints]);
-
-  useEffect(() => {
-    localStorage.setItem(REWARDS_STORAGE_KEY, JSON.stringify(rewards));
-  }, [rewards]);
 
   useEffect(() => {
     localStorage.setItem(REWARD_USAGE_STORAGE_KEY, JSON.stringify(rewardUsage));
@@ -135,6 +180,22 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
       // Update state
       setRewards(updatedRewards);
       setTotalPoints(totalPoints - reward.cost);
+      
+      // Update Supabase
+      supabase
+        .from('rewards')
+        .update({ supply: reward.supply + 1 })
+        .eq('id', reward.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error updating reward supply:', error);
+            toast({
+              title: "Error",
+              description: "Failed to update reward. Please try again.",
+              variant: "destructive",
+            });
+          }
+        });
     }
   };
 
@@ -153,6 +214,22 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
       
       // Update state
       setRewards(updatedRewards);
+      
+      // Update Supabase
+      supabase
+        .from('rewards')
+        .update({ supply: reward.supply - 1 })
+        .eq('id', reward.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error updating reward supply:', error);
+            toast({
+              title: "Error",
+              description: "Failed to update reward. Please try again.",
+              variant: "destructive",
+            });
+          }
+        });
       
       // Update usage tracking for this reward
       const currentDay = getCurrentDayOfWeek();
@@ -181,40 +258,115 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   };
 
   // Handle saving edited reward
-  const handleSaveReward = (rewardData: any, index: number | null) => {
-    if (index !== null) {
-      const updatedRewards = [...rewards];
-      updatedRewards[index] = {
-        ...rewards[index],
-        ...rewardData
+  const handleSaveReward = async (rewardData: any, index: number | null) => {
+    try {
+      // Format the data to match the Supabase schema
+      const formattedData = {
+        title: rewardData.title,
+        description: rewardData.description,
+        cost: rewardData.cost,
+        supply: rewardData.supply || 0,
+        iconName: rewardData.iconName,
+        icon_color: rewardData.icon_color,
+        background_image_url: rewardData.background_image_url,
+        background_opacity: rewardData.background_opacity,
+        focal_point_x: rewardData.focal_point_x,
+        focal_point_y: rewardData.focal_point_y,
+        highlight_effect: rewardData.highlight_effect,
+        title_color: rewardData.title_color,
+        subtext_color: rewardData.subtext_color,
+        calendar_color: rewardData.calendar_color
       };
+
+      if (index !== null) {
+        // Update existing reward
+        const rewardId = rewards[index].id;
+        const { error } = await supabase
+          .from('rewards')
+          .update(formattedData)
+          .eq('id', rewardId);
+          
+        if (error) throw error;
+        
+        // Update the local state
+        const updatedRewards = [...rewards];
+        updatedRewards[index] = { ...formattedData, id: rewardId };
+        setRewards(updatedRewards);
+      } else {
+        // Add new reward
+        const { data, error } = await supabase
+          .from('rewards')
+          .insert(formattedData)
+          .select();
+          
+        if (error) throw error;
+        
+        // Update the local state with the new reward that includes the generated id
+        if (data && data.length > 0) {
+          setRewards([...rewards, data[0]]);
+        }
+      }
       
-      setRewards(updatedRewards);
-    } else {
-      // Add new reward
-      setRewards([...rewards, rewardData]);
+      toast({
+        title: "Success",
+        description: index !== null ? "Reward updated successfully" : "Reward created successfully",
+      });
+    } catch (error) {
+      console.error('Error saving reward:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save reward. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
   // Handle deleting a reward
-  const handleDeleteReward = (index: number) => {
-    const updatedRewards = rewards.filter((_, i) => i !== index);
-    setRewards(updatedRewards);
-    
-    // Also clean up the usage data
-    const updatedUsage = { ...rewardUsage };
-    delete updatedUsage[`reward-${index}`];
-    
-    // Reindex the remaining rewards' usage data
-    Object.keys(updatedUsage).forEach(key => {
-      const keyIndex = parseInt(key.split('-')[1]);
-      if (keyIndex > index) {
-        updatedUsage[`reward-${keyIndex - 1}`] = updatedUsage[key];
-        delete updatedUsage[key];
-      }
-    });
-    
-    setRewardUsage(updatedUsage);
+  const handleDeleteReward = async (index: number) => {
+    try {
+      const rewardId = rewards[index].id;
+      
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('rewards')
+        .delete()
+        .eq('id', rewardId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      const updatedRewards = rewards.filter((_, i) => i !== index);
+      setRewards(updatedRewards);
+      
+      // Also clean up the usage data
+      const updatedUsage = { ...rewardUsage };
+      delete updatedUsage[`reward-${index}`];
+      
+      // Reindex the remaining rewards' usage data
+      Object.keys(updatedUsage).forEach(key => {
+        const keyIndex = parseInt(key.split('-')[1]);
+        if (keyIndex > index) {
+          updatedUsage[`reward-${keyIndex - 1}`] = updatedUsage[key];
+          delete updatedUsage[key];
+        }
+      });
+      
+      setRewardUsage(updatedUsage);
+      
+      toast({
+        title: "Success",
+        description: "Reward deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting reward:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete reward. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   return (
@@ -228,7 +380,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         handleSaveReward,
         handleDeleteReward,
         getRewardUsage,
-        getFrequencyCount
+        getFrequencyCount,
+        isLoading
       }}
     >
       {children}
