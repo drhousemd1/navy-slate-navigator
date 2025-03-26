@@ -1,17 +1,34 @@
 
 import React from 'react';
-import { Badge } from '../../components/ui/badge';
 import { useRewards } from '../../contexts/RewardsContext';
+import { Button } from '../ui/button';
+import { Plus } from 'lucide-react';
 
-const RewardsHeader: React.FC = () => {
+interface RewardsHeaderProps {
+  onAddNewReward?: () => void;
+}
+
+const RewardsHeader: React.FC<RewardsHeaderProps> = ({ onAddNewReward }) => {
   const { totalPoints } = useRewards();
-
+  
   return (
     <div className="flex justify-between items-center mb-6">
-      <h1 className="text-2xl font-semibold text-white">My Rewards</h1>
-      <Badge className="bg-nav-active text-white font-bold px-3 py-1">
-        {totalPoints} Points
-      </Badge>
+      <div>
+        <h1 className="text-2xl font-bold text-white mb-1">Rewards</h1>
+        <p className="text-gray-300">
+          You have <span className="font-bold text-purple-400">{totalPoints}</span> points to spend
+        </p>
+      </div>
+      
+      {onAddNewReward && (
+        <Button 
+          className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
+          onClick={onAddNewReward}
+        >
+          <Plus className="h-4 w-4" />
+          New Reward
+        </Button>
+      )}
     </div>
   );
 };

@@ -34,6 +34,9 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
 
   // Handle saving edited reward
   const handleSave = async (rewardData: any) => {
+    console.log("Rewards.tsx - Saving reward:", rewardData);
+    console.log("Rewards.tsx - Current reward index:", currentRewardIndex);
+    
     await handleSaveReward(rewardData, currentRewardIndex);
     closeEditor();
   };
@@ -54,7 +57,7 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
 
   return (
     <div className="p-4 pt-6">
-      <RewardsHeader />
+      <RewardsHeader onAddNewReward={handleAddNewReward} />
       <RewardsList onEdit={handleEdit} />
       
       <RewardEditor

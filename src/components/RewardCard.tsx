@@ -4,7 +4,6 @@ import { Card } from './ui/card';
 import RewardHeader from './rewards/RewardHeader';
 import RewardContent from './rewards/RewardContent';
 import RewardFooter from './rewards/RewardFooter';
-import { useToast } from '../hooks/use-toast';
 
 interface RewardCardProps {
   title: string;
@@ -60,7 +59,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
   calendar_color = '#7E69AB',
   usageData = Array(7).fill(false)
 }) => {
-  const { toast } = useToast();
+  console.log('Rendering RewardCard:', { title, cost, supply, usageData });
   
   if (!title || cost === undefined || supply === undefined) {
     console.error('Invalid reward data:', { title, cost, supply });

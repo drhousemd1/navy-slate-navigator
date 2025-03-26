@@ -62,6 +62,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         
         if (error) {
           console.error('Error getting session:', error);
+          setIsLoading(false);
           return;
         }
         
@@ -71,9 +72,11 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           console.log('User ID set:', data.session.user.id);
         } else {
           console.log('No active session found');
+          setIsLoading(false);
         }
       } catch (e) {
         console.error('Exception in getSession:', e);
+        setIsLoading(false);
       }
     };
 
@@ -145,7 +148,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
 
         if (rewardsError) {
           console.error('Error fetching rewards:', rewardsError);
-          throw rewardsError;
+          setIsLoading(false);
+          return;
         }
 
         console.log('Raw rewards data:', rewardsData);
@@ -167,7 +171,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
 
         if (userRewardsError) {
           console.error('Error fetching user rewards:', userRewardsError);
-          throw userRewardsError;
+          setIsLoading(false);
+          return;
         }
 
         console.log('Raw user rewards data:', userRewardsData);
@@ -223,7 +228,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
 
         if (response.error) {
           console.error('RPC get_reward_usage error:', response.error);
-          throw response.error;
+          return;
         }
 
         // Type assertion to help TypeScript understand the structure
@@ -495,12 +500,29 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         }
         console.log('Insert result:', data);
         result = data?.[0];
+        
+        // If this is a new reward, create a user_rewards entry with 0 supply
+        if (result && result.id) {
+          console.log('Creating user_rewards entry for new reward');
+          const { error: userRewardError } = await supabase
+            .from('user_rewards')
+            .insert({
+              user_id: userId,
+              reward_id: result.id,
+              supply: 0
+            });
+            
+          if (userRewardError) {
+            console.error('Error creating user_reward entry:', userRewardError);
+            // Don't throw error here, we already have the reward created
+          }
+        }
       }
 
       if (result) {
         console.log('Save operation successful, result:', result);
         // Update local state
-        if (index !== null) {
+        if (index !== null && index >= 0) {
           console.log(`Updating reward at index ${index}`);
           const updatedRewards = [...rewards];
           updatedRewards[index] = {
@@ -567,12 +589,17 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         .eq('reward_id', rewardId);
 
       // Delete reward usage through RPC with type assertion
-      const response = await (supabase.rpc as any)('delete_reward_usage', {
-        reward_id_param: rewardId
-      });
-      
-      if (response.error) {
-        console.error('RPC delete_reward_usage error:', response.error);
+      try {
+        const response = await (supabase.rpc as any)('delete_reward_usage', {
+          reward_id_param: rewardId
+        });
+        
+        if (response.error) {
+          console.error('RPC delete_reward_usage error:', response.error);
+          // Continue even if there's an error with usage deletion
+        }
+      } catch (error) {
+        console.error('Error deleting reward usage:', error);
         // Continue even if there's an error with usage deletion
       }
 

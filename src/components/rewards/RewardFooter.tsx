@@ -1,37 +1,37 @@
 
 import React from 'react';
-import { Button } from '../ui/button';
 import { Edit } from 'lucide-react';
+import { Button } from '../ui/button';
 import WeeklyUsageTracker from './WeeklyUsageTracker';
 
 interface RewardFooterProps {
   usageData: boolean[];
   calendarColor: string;
-  onEdit: () => void;
+  onEdit?: () => void;
 }
 
-const RewardFooter: React.FC<RewardFooterProps> = ({
-  usageData,
-  calendarColor,
-  onEdit
+const RewardFooter: React.FC<RewardFooterProps> = ({ 
+  usageData, 
+  calendarColor, 
+  onEdit 
 }) => {
   return (
-    <div className="flex items-center justify-between mt-4">
+    <div className="mt-4 flex justify-between items-center">
       <WeeklyUsageTracker 
-        usageData={usageData}
+        usageData={usageData} 
         calendarColor={calendarColor}
       />
       
-      <div className="flex space-x-2 ml-auto">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
+      {onEdit && (
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8 rounded-full hover:bg-gray-800"
           onClick={onEdit}
         >
-          <Edit className="h-4 w-4" />
+          <Edit className="h-4 w-4 text-gray-400" />
         </Button>
-      </div>
+      )}
     </div>
   );
 };
