@@ -13,6 +13,7 @@ import Tasks from "./pages/Tasks";
 import Rewards from "./pages/Rewards";
 import Punishments from "./pages/Punishments";
 import ThroneRoom from "./pages/ThroneRoom";
+import Encyclopedia from "./pages/Encyclopedia";
 
 // Create a client with aggressive caching to maintain state between page navigations
 const queryClient = new QueryClient({
@@ -41,6 +42,7 @@ const App = () => {
             <Route path="/rewards" element={<Rewards />} />
             <Route path="/punishments" element={<Punishments />} />
             <Route path="/throne-room" element={<ThroneRoom />} />
+            <Route path="/encyclopedia" element={<Encyclopedia />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

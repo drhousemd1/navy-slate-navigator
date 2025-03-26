@@ -50,7 +50,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               <Settings className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-navy border border-light-navy text-white z-50">
-              <DropdownMenuItem className="hover:bg-light-navy cursor-pointer" onClick={() => {}}>
+              <DropdownMenuItem className="hover:bg-light-navy cursor-pointer" onClick={() => navigate('/encyclopedia')}>
                 Encyclopedia
               </DropdownMenuItem>
             </DropdownMenuContent>
