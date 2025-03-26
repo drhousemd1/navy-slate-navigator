@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
 import { Clock, Skull, Bomb, Zap, Plus } from 'lucide-react';
@@ -8,11 +8,61 @@ import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments } from '../contexts/PunishmentsContext';
 import PunishmentEditor, { PunishmentData } from '../components/PunishmentEditor';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
 const PunishmentsContent: React.FC = () => {
-  const { punishments, loading } = usePunishments();
+  const { punishments, loading, createPunishment } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
+  const [initializing, setInitializing] = useState(false);
+
+  useEffect(() => {
+    const initSamplePunishments = async () => {
+      // Check if we need to add sample punishments
+      if (!loading && punishments.length === 0 && !initializing) {
+        setInitializing(true);
+        
+        // Sample punishments data
+        const samplePunishments = [
+          {
+            title: "Late to Meeting",
+            description: "Being late to scheduled meetings",
+            points: 10,
+            icon_name: "Clock",
+            icon_color: "#ea384c"
+          },
+          {
+            title: "Missed Deadline",
+            description: "Missing agreed upon deadlines",
+            points: 15,
+            icon_name: "Bomb",
+            icon_color: "#f97316"
+          },
+          {
+            title: "Breaking Rules",
+            description: "Violation of established rules",
+            points: 20,
+            icon_name: "Skull",
+            icon_color: "#7c3aed"
+          }
+        ];
+        
+        try {
+          // Create each sample punishment
+          for (const punishment of samplePunishments) {
+            await createPunishment(punishment);
+          }
+          console.log("Sample punishments created successfully");
+        } catch (error) {
+          console.error("Error creating sample punishments:", error);
+        } finally {
+          setInitializing(false);
+        }
+      }
+    };
+    
+    initSamplePunishments();
+  }, [loading, punishments.length, createPunishment, initializing]);
 
   const getIconComponent = (iconName: string) => {
     switch(iconName) {
@@ -53,7 +103,7 @@ const PunishmentsContent: React.FC = () => {
         </Button>
       </div>
       
-      {loading ? (
+      {loading || initializing ? (
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="h-32 bg-navy animate-pulse rounded-lg"></div>
