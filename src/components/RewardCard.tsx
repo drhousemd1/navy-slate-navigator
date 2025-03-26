@@ -12,14 +12,20 @@ interface RewardCardProps {
   cost: number;
   supply: number;
   iconName?: string;
+  icon_name?: string;
   iconColor?: string;
+  icon_color?: string;
   onBuy?: () => void;
   onUse?: () => void;
   onEdit?: () => void;
   backgroundImage?: string;
+  background_image_url?: string;
   backgroundOpacity?: number;
+  background_opacity?: number;
   focalPointX?: number;
+  focal_point_x?: number;
   focalPointY?: number;
+  focal_point_y?: number;
   highlight_effect?: boolean;
   title_color?: string;
   subtext_color?: string;
@@ -33,15 +39,21 @@ const RewardCard: React.FC<RewardCardProps> = ({
   description,
   cost,
   supply,
-  iconName = 'Gift',
-  iconColor = '#9b87f5',
+  iconName,
+  icon_name,
+  iconColor,
+  icon_color = '#9b87f5',
   onBuy,
   onUse,
   onEdit,
   backgroundImage,
-  backgroundOpacity = 100,
-  focalPointX = 50,
-  focalPointY = 50,
+  background_image_url,
+  backgroundOpacity,
+  background_opacity = 100,
+  focalPointX,
+  focal_point_x = 50,
+  focalPointY,
+  focal_point_y = 50,
   highlight_effect = false,
   title_color = '#FFFFFF',
   subtext_color = '#8E9196',
@@ -49,6 +61,14 @@ const RewardCard: React.FC<RewardCardProps> = ({
   usageData = Array(7).fill(false)
 }) => {
   const { toast } = useToast();
+  
+  // Handle both naming conventions
+  const effectiveIconName = iconName || icon_name || 'Gift';
+  const effectiveIconColor = iconColor || icon_color;
+  const effectiveBackgroundImage = backgroundImage || background_image_url;
+  const effectiveOpacity = backgroundOpacity || background_opacity;
+  const effectiveFocalX = focalPointX || focal_point_x;
+  const effectiveFocalY = focalPointY || focal_point_y;
 
   const handleBuy = () => {
     if (onBuy) {
@@ -80,14 +100,14 @@ const RewardCard: React.FC<RewardCardProps> = ({
       className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy"
       style={cardBorderStyle}
     >
-      {backgroundImage && (
+      {effectiveBackgroundImage && (
         <div 
           className="absolute inset-0 z-0" 
           style={{
-            backgroundImage: `url(${backgroundImage})`,
+            backgroundImage: `url(${effectiveBackgroundImage})`,
             backgroundSize: 'cover',
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100,
+            backgroundPosition: `${effectiveFocalX}% ${effectiveFocalY}%`,
+            opacity: effectiveOpacity / 100,
           }}
         />
       )}
@@ -103,8 +123,8 @@ const RewardCard: React.FC<RewardCardProps> = ({
         <RewardContent
           title={title}
           description={description}
-          iconName={iconName}
-          iconColor={iconColor}
+          iconName={effectiveIconName}
+          iconColor={effectiveIconColor}
           highlight_effect={highlight_effect}
           title_color={title_color}
           subtext_color={subtext_color}

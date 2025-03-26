@@ -1,49 +1,17 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-// Define initial rewards data
-const initialRewards = [
-  {
-    title: "Movie Night",
-    description: "Watch any movie of your choice",
-    cost: 20,
-    supply: 2,
-    iconName: "Film"
-  },
-  {
-    title: "Gaming Session",
-    description: "1 hour of uninterrupted gaming time",
-    cost: 15,
-    supply: 1,
-    iconName: "Gamepad2"
-  },
-  {
-    title: "Dessert Treat",
-    description: "Get your favorite dessert",
-    cost: 25,
-    supply: 3,
-    iconName: "Cake"
-  },
-  {
-    title: "Sleep In",
-    description: "Sleep an extra hour in the morning",
-    cost: 30,
-    supply: 0,
-    iconName: "Moon"
-  }
-];
-
-// localStorage keys
-const POINTS_STORAGE_KEY = 'rewardPoints';
-const REWARDS_STORAGE_KEY = 'rewardItems';
-const REWARD_USAGE_STORAGE_KEY = 'rewardUsage';
-
-type RewardItem = {
+// Define types for rewards data
+export type RewardItem = {
+  id: string;
   title: string;
-  description: string;
+  description: string | null;
   cost: number;
-  supply: number;
-  iconName: string;
+  supply?: number;
+  iconName?: string;
+  icon_name?: string;
   icon_color?: string;
   background_image_url?: string;
   background_opacity?: number;
@@ -55,14 +23,16 @@ type RewardItem = {
   calendar_color?: string;
 };
 
+// Define context type
 interface RewardsContextType {
   totalPoints: number;
   rewards: RewardItem[];
   rewardUsage: Record<string, boolean[]>;
+  isLoading: boolean;
   handleBuy: (index: number) => void;
   handleUse: (index: number) => void;
-  handleSaveReward: (rewardData: any, index: number | null) => void;
-  handleDeleteReward: (index: number) => void;
+  handleSaveReward: (rewardData: any, index: number | null) => Promise<void>;
+  handleDeleteReward: (index: number) => Promise<void>;
   getRewardUsage: (index: number) => boolean[];
   getFrequencyCount: (index: number) => number;
 }
@@ -70,49 +40,165 @@ interface RewardsContextType {
 const RewardsContext = createContext<RewardsContextType | undefined>(undefined);
 
 export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) => {
-  // Initialize state with localStorage values or defaults
-  const [totalPoints, setTotalPoints] = useState(() => {
-    const savedPoints = localStorage.getItem(POINTS_STORAGE_KEY);
-    return savedPoints ? parseInt(savedPoints, 10) : 100;
-  });
-  
-  const [rewards, setRewards] = useState<RewardItem[]>(() => {
-    const savedRewards = localStorage.getItem(REWARDS_STORAGE_KEY);
-    return savedRewards ? JSON.parse(savedRewards) : initialRewards;
-  });
+  const { toast } = useToast();
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [rewards, setRewards] = useState<RewardItem[]>([]);
+  const [rewardUsage, setRewardUsage] = useState<Record<string, boolean[]>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Initialize the usage tracking state
-  const [rewardUsage, setRewardUsage] = useState(() => {
-    const savedUsage = localStorage.getItem(REWARD_USAGE_STORAGE_KEY);
-    return savedUsage ? JSON.parse(savedUsage) : {};
-  });
-
-  // Save to localStorage whenever state changes
+  // Get the current session
   useEffect(() => {
-    localStorage.setItem(POINTS_STORAGE_KEY, totalPoints.toString());
-  }, [totalPoints]);
+    const getSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Error getting session:', error);
+        return;
+      }
+      
+      if (data.session) {
+        setUserId(data.session.user.id);
+      }
+    };
 
-  useEffect(() => {
-    localStorage.setItem(REWARDS_STORAGE_KEY, JSON.stringify(rewards));
-  }, [rewards]);
+    getSession();
 
-  useEffect(() => {
-    localStorage.setItem(REWARD_USAGE_STORAGE_KEY, JSON.stringify(rewardUsage));
-  }, [rewardUsage]);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUserId(session?.user.id || null);
+      }
+    );
 
-  // Check if we need to reset the weekly tracking
-  useEffect(() => {
-    const lastResetKey = 'lastWeeklyReset';
-    const lastReset = localStorage.getItem(lastResetKey);
-    const now = new Date();
-    const currentWeek = `${now.getFullYear()}-${now.getMonth() + 1}-${Math.floor(now.getDate() / 7)}`;
-    
-    if (lastReset !== currentWeek) {
-      // Reset weekly tracking
-      localStorage.setItem(lastResetKey, currentWeek);
-      setRewardUsage({});
-    }
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
+
+  // Fetch user points
+  useEffect(() => {
+    const fetchUserPoints = async () => {
+      if (!userId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('points')
+          .eq('id', userId)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          setTotalPoints(data.points);
+        }
+      } catch (error) {
+        console.error('Error fetching user points:', error);
+      }
+    };
+
+    fetchUserPoints();
+  }, [userId]);
+
+  // Fetch rewards
+  useEffect(() => {
+    const fetchRewards = async () => {
+      if (!userId) return;
+      
+      setIsLoading(true);
+      
+      try {
+        // Get all rewards
+        const { data: rewardsData, error: rewardsError } = await supabase
+          .from('rewards')
+          .select('*');
+
+        if (rewardsError) {
+          throw rewardsError;
+        }
+
+        // Get user's reward supplies
+        const { data: userRewardsData, error: userRewardsError } = await supabase
+          .from('user_rewards')
+          .select('reward_id, supply')
+          .eq('user_id', userId);
+
+        if (userRewardsError) {
+          throw userRewardsError;
+        }
+
+        // Create a mapping of reward_id to supply
+        const supplyMap: Record<string, number> = {};
+        userRewardsData?.forEach(item => {
+          supplyMap[item.reward_id] = item.supply;
+        });
+
+        // Combine the data
+        const combinedRewards = rewardsData?.map(reward => ({
+          ...reward,
+          iconName: reward.icon_name, // Map icon_name to iconName for backward compatibility
+          supply: supplyMap[reward.id] || 0
+        }));
+
+        setRewards(combinedRewards || []);
+      } catch (error) {
+        console.error('Error fetching rewards:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load rewards",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRewards();
+  }, [userId, toast]);
+
+  // Fetch reward usage
+  useEffect(() => {
+    const fetchRewardUsage = async () => {
+      if (!userId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('reward_usage')
+          .select('reward_id, day_of_week')
+          .eq('user_id', userId);
+
+        if (error) {
+          throw error;
+        }
+
+        const usageData: Record<string, boolean[]> = {};
+        
+        // Initialize all rewards with false for all days
+        rewards.forEach((reward, index) => {
+          usageData[`reward-${index}`] = Array(7).fill(false);
+        });
+        
+        // Update with actual usage data
+        data?.forEach(usage => {
+          const rewardIndex = rewards.findIndex(r => r.id === usage.reward_id);
+          if (rewardIndex !== -1) {
+            usageData[`reward-${rewardIndex}`][usage.day_of_week] = true;
+          }
+        });
+
+        setRewardUsage(usageData);
+      } catch (error) {
+        console.error('Error fetching reward usage:', error);
+      }
+    };
+
+    if (rewards.length > 0) {
+      fetchRewardUsage();
+    }
+  }, [rewards, userId]);
 
   // Get the current day of week (0-6, Sunday-Saturday)
   const getCurrentDayOfWeek = () => {
@@ -120,51 +206,159 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   };
 
   // Handle buying a reward
-  const handleBuy = (index: number) => {
+  const handleBuy = async (index: number) => {
+    if (!userId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to buy rewards",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const reward = rewards[index];
     
     // Check if user has enough points
     if (totalPoints >= reward.cost) {
-      // Create a new array with the updated reward
-      const updatedRewards = [...rewards];
-      updatedRewards[index] = {
-        ...reward,
-        supply: reward.supply + 1
-      };
-      
-      // Update state
-      setRewards(updatedRewards);
-      setTotalPoints(totalPoints - reward.cost);
+      try {
+        // Begin by updating the user's points
+        const { error: pointsError } = await supabase
+          .from('profiles')
+          .update({ points: totalPoints - reward.cost })
+          .eq('id', userId);
+
+        if (pointsError) {
+          throw pointsError;
+        }
+
+        // Then update the user's reward supply
+        const { error: supplyError } = await supabase
+          .from('user_rewards')
+          .upsert({
+            user_id: userId,
+            reward_id: reward.id,
+            supply: (reward.supply || 0) + 1
+          }, {
+            onConflict: 'user_id,reward_id'
+          });
+
+        if (supplyError) {
+          throw supplyError;
+        }
+
+        // Update local state
+        setTotalPoints(totalPoints - reward.cost);
+        
+        const updatedRewards = [...rewards];
+        updatedRewards[index] = {
+          ...reward,
+          supply: (reward.supply || 0) + 1
+        };
+        setRewards(updatedRewards);
+
+        toast({
+          title: "Reward Purchased",
+          description: `You purchased ${reward.title}`,
+        });
+      } catch (error) {
+        console.error('Error buying reward:', error);
+        toast({
+          title: "Purchase Failed",
+          description: "There was an error processing your purchase",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Insufficient Points",
+        description: `You need ${reward.cost - totalPoints} more points`,
+        variant: "destructive",
+      });
     }
   };
 
   // Handle using a reward
-  const handleUse = (index: number) => {
+  const handleUse = async (index: number) => {
+    if (!userId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to use rewards",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const reward = rewards[index];
     
     // Check if the reward has any supply left
-    if (reward.supply > 0) {
-      // Create a new array with the updated reward
-      const updatedRewards = [...rewards];
-      updatedRewards[index] = {
-        ...reward,
-        supply: reward.supply - 1
-      };
-      
-      // Update state
-      setRewards(updatedRewards);
-      
-      // Update usage tracking for this reward
-      const currentDay = getCurrentDayOfWeek();
-      const rewardId = `reward-${index}`;
-      
-      const updatedUsage = { ...rewardUsage };
-      if (!updatedUsage[rewardId]) {
-        updatedUsage[rewardId] = Array(7).fill(false);
+    if (reward.supply && reward.supply > 0) {
+      try {
+        // Update the user's reward supply
+        const { error: supplyError } = await supabase
+          .from('user_rewards')
+          .update({ supply: reward.supply - 1 })
+          .eq('user_id', userId)
+          .eq('reward_id', reward.id);
+
+        if (supplyError) {
+          throw supplyError;
+        }
+
+        // Track usage for this day of the week
+        const currentDay = getCurrentDayOfWeek();
+        
+        const { error: usageError } = await supabase
+          .from('reward_usage')
+          .upsert({
+            user_id: userId,
+            reward_id: reward.id,
+            day_of_week: currentDay,
+            used_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,reward_id,day_of_week'
+          });
+
+        if (usageError) {
+          throw usageError;
+        }
+
+        // Update local state
+        const updatedRewards = [...rewards];
+        updatedRewards[index] = {
+          ...reward,
+          supply: reward.supply - 1
+        };
+        setRewards(updatedRewards);
+        
+        // Update usage tracking
+        const rewardId = `reward-${index}`;
+        const updatedUsage = { ...rewardUsage };
+        
+        if (!updatedUsage[rewardId]) {
+          updatedUsage[rewardId] = Array(7).fill(false);
+        }
+        
+        updatedUsage[rewardId][currentDay] = true;
+        setRewardUsage(updatedUsage);
+
+        toast({
+          title: "Reward Used",
+          description: `You used ${reward.title}`,
+        });
+      } catch (error) {
+        console.error('Error using reward:', error);
+        toast({
+          title: "Error",
+          description: "Failed to use the reward",
+          variant: "destructive",
+        });
       }
-      
-      updatedUsage[rewardId][currentDay] = true;
-      setRewardUsage(updatedUsage);
+    } else {
+      toast({
+        title: "No Supply",
+        description: "You don't have any of this reward to use",
+        variant: "destructive",
+      });
     }
   };
 
@@ -181,40 +375,153 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   };
 
   // Handle saving edited reward
-  const handleSaveReward = (rewardData: any, index: number | null) => {
-    if (index !== null) {
-      const updatedRewards = [...rewards];
-      updatedRewards[index] = {
-        ...rewards[index],
-        ...rewardData
+  const handleSaveReward = async (rewardData: any, index: number | null) => {
+    if (!userId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to save rewards",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Prepare the data for Supabase
+      const supabaseData = {
+        title: rewardData.title,
+        description: rewardData.description,
+        cost: rewardData.cost,
+        icon_name: rewardData.iconName || rewardData.icon_name,
+        icon_color: rewardData.icon_color,
+        background_image_url: rewardData.background_image_url,
+        background_opacity: rewardData.background_opacity,
+        focal_point_x: rewardData.focal_point_x,
+        focal_point_y: rewardData.focal_point_y,
+        highlight_effect: rewardData.highlight_effect,
+        title_color: rewardData.title_color,
+        subtext_color: rewardData.subtext_color,
+        calendar_color: rewardData.calendar_color,
+        updated_at: new Date().toISOString()
       };
+
+      let result;
       
-      setRewards(updatedRewards);
-    } else {
-      // Add new reward
-      setRewards([...rewards, rewardData]);
+      if (index !== null && rewards[index]?.id) {
+        // Update existing reward
+        const { data, error } = await supabase
+          .from('rewards')
+          .update(supabaseData)
+          .eq('id', rewards[index].id)
+          .select();
+
+        if (error) throw error;
+        result = data?.[0];
+      } else {
+        // Insert new reward
+        const { data, error } = await supabase
+          .from('rewards')
+          .insert(supabaseData)
+          .select();
+
+        if (error) throw error;
+        result = data?.[0];
+      }
+
+      if (result) {
+        // Update local state
+        if (index !== null) {
+          const updatedRewards = [...rewards];
+          updatedRewards[index] = {
+            ...result,
+            iconName: result.icon_name,
+            supply: rewards[index]?.supply || 0
+          };
+          setRewards(updatedRewards);
+        } else {
+          setRewards(prevRewards => [
+            ...prevRewards,
+            {
+              ...result,
+              iconName: result.icon_name,
+              supply: 0
+            }
+          ]);
+        }
+
+        toast({
+          title: "Success",
+          description: "Reward saved successfully",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving reward:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save reward",
+        variant: "destructive",
+      });
     }
   };
 
   // Handle deleting a reward
-  const handleDeleteReward = (index: number) => {
-    const updatedRewards = rewards.filter((_, i) => i !== index);
-    setRewards(updatedRewards);
-    
-    // Also clean up the usage data
-    const updatedUsage = { ...rewardUsage };
-    delete updatedUsage[`reward-${index}`];
-    
-    // Reindex the remaining rewards' usage data
-    Object.keys(updatedUsage).forEach(key => {
-      const keyIndex = parseInt(key.split('-')[1]);
-      if (keyIndex > index) {
-        updatedUsage[`reward-${keyIndex - 1}`] = updatedUsage[key];
-        delete updatedUsage[key];
-      }
-    });
-    
-    setRewardUsage(updatedUsage);
+  const handleDeleteReward = async (index: number) => {
+    if (!userId || !rewards[index]?.id) {
+      return;
+    }
+
+    try {
+      const rewardId = rewards[index].id;
+      
+      // Delete the reward
+      const { error } = await supabase
+        .from('rewards')
+        .delete()
+        .eq('id', rewardId);
+
+      if (error) throw error;
+
+      // Also clean up user_rewards entries
+      await supabase
+        .from('user_rewards')
+        .delete()
+        .eq('reward_id', rewardId);
+
+      // And clean up reward_usage entries
+      await supabase
+        .from('reward_usage')
+        .delete()
+        .eq('reward_id', rewardId);
+
+      // Update local state
+      setRewards(prevRewards => prevRewards.filter((_, i) => i !== index));
+      
+      // Clean up the usage data
+      const updatedUsage = { ...rewardUsage };
+      delete updatedUsage[`reward-${index}`];
+      
+      // Reindex the remaining rewards' usage data
+      Object.keys(updatedUsage).forEach(key => {
+        const keyIndex = parseInt(key.split('-')[1]);
+        if (keyIndex > index) {
+          updatedUsage[`reward-${keyIndex - 1}`] = updatedUsage[key];
+          delete updatedUsage[key];
+        }
+      });
+      
+      setRewardUsage(updatedUsage);
+
+      toast({
+        title: "Reward Deleted",
+        description: "The reward has been deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting reward:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete reward",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -223,6 +530,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         totalPoints,
         rewards,
         rewardUsage,
+        isLoading,
         handleBuy,
         handleUse,
         handleSaveReward,

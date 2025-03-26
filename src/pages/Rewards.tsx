@@ -12,7 +12,7 @@ interface RewardsContentProps {
 }
 
 const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
-  const { rewards, handleSaveReward, handleDeleteReward } = useRewards();
+  const { rewards, handleSaveReward, handleDeleteReward, isLoading } = useRewards();
   
   // Editor state
   const [currentReward, setCurrentReward] = useState<any>(null);
@@ -33,15 +33,15 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   };
 
   // Handle saving edited reward
-  const handleSave = (rewardData: any) => {
-    handleSaveReward(rewardData, currentRewardIndex);
+  const handleSave = async (rewardData: any) => {
+    await handleSaveReward(rewardData, currentRewardIndex);
     closeEditor();
   };
 
   // Handle deleting a reward
-  const handleDelete = (index: number) => {
+  const handleDelete = async (index: number) => {
     if (index !== null) {
-      handleDeleteReward(index);
+      await handleDeleteReward(index);
       closeEditor();
     }
   };
