@@ -33,6 +33,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
         {children}
       </main>
       
+      {shouldShowAddButton && (
+        <div className="fixed bottom-16 right-4 z-40">
+          <Button 
+            className="bg-cyan-500 hover:bg-cyan-400 w-12 h-12 rounded-full shadow-xl p-0 flex items-center justify-center"
+            onClick={handleAddNewItem}
+          >
+            <Plus className="w-6 h-6 text-white" />
+          </Button>
+        </div>
+      )}
+      
       <MobileNavbar />
     </div>
   );
