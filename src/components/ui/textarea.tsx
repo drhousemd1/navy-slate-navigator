@@ -24,9 +24,21 @@ export interface TextareaProps
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, formattedPreview, textFormatting, onFormatSelection, formattedSections = [], ...props }, ref) => {
-    // Create a reference for syncing scroll position
+    // Create references for syncing
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
     const previewRef = React.useRef<HTMLDivElement | null>(null);
+    const containerRef = React.useRef<HTMLDivElement | null>(null);
+    
+    // Manually handle cursor positioning
+    const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
+      if (textareaRef.current) {
+        // First focus the textarea
+        textareaRef.current.focus();
+
+        // Let the native behavior handle the cursor position
+        // This is critical for proper cursor positioning
+      }
+    }, []);
     
     // Handle scroll synchronization between preview and textarea
     const syncScroll = React.useCallback((e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -125,27 +137,30 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
       return (
         <div 
+          ref={containerRef}
           className={cn(
             "flex min-h-[500px] w-full rounded-md border border-input bg-background text-sm relative",
             className
           )}
+          onMouseDown={handleMouseDown}
         >
-          {/* Textarea that captures input and selection - made the same size exactly as the preview */}
+          {/* The actual textarea for editing - MUST match preview dimensions & position exactly */}
           <textarea
             ref={setRefs}
-            className="absolute inset-0 w-full h-full px-3 py-2 resize-none outline-none selection:bg-blue-500/30"
+            className="absolute inset-0 w-full h-full resize-none outline-none selection:bg-blue-500/30"
             style={{
               caretColor: 'white',
-              zIndex: 2,
-              backgroundColor: 'transparent',
               color: 'transparent',
+              backgroundColor: 'transparent',
+              zIndex: 2,
+              padding: '0.5rem 0.75rem', // CRITICAL: match padding exactly with preview
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
             {...props}
           />
           
-          {/* Formatted preview layer - positioned exactly in the same place */}
+          {/* Formatted preview that shows the text - MUST match textarea dimensions & position exactly */}
           <div 
             ref={previewRef}
             style={{
@@ -156,8 +171,10 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               whiteSpace: 'pre-wrap',
               overflowWrap: 'break-word',
               wordBreak: 'break-word',
-              padding: '0.5rem 0.75rem',
-              overflow: 'auto'
+              padding: '0.5rem 0.75rem', // CRITICAL: match padding exactly with textarea
+              overflow: 'auto',
+              lineHeight: '1.5', // Ensure consistent line height
+              fontFamily: 'inherit', // Ensure consistent font
             }} 
             className="text-white"
             dangerouslySetInnerHTML={{ 
