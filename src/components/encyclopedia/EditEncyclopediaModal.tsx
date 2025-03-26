@@ -178,7 +178,12 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                     Delete
                   </Button>
                 )}
-                <Button type="button" variant="outline" onClick={onClose} className="border-light-navy text-white hover:bg-light-navy">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={onClose} 
+                  className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                >
                   Cancel
                 </Button>
                 <Button type="submit" className="bg-nav-active text-white hover:bg-nav-active/80">
