@@ -13,30 +13,49 @@ const PunishmentsContent: React.FC = () => {
       title: 'Missed Deadline',
       description: 'Failing to complete a task by the deadline',
       points: 15,
-      icon: <Skull className="h-5 w-5 text-white" />
+      icon_name: 'Skull',
+      icon_color: '#ea384c'
     },
     {
       id: '2',
       title: 'Late to Meeting',
       description: 'Being late to a scheduled meeting or appointment',
       points: 10,
-      icon: <Clock className="h-5 w-5 text-white" />
+      icon_name: 'Clock',
+      icon_color: '#ea384c'
     },
     {
       id: '3',
       title: 'Broke House Rule',
       description: 'Violating an established house rule',
       points: 20,
-      icon: <Bomb className="h-5 w-5 text-white" />
+      icon_name: 'Bomb',
+      icon_color: '#ea384c'
     },
     {
       id: '4',
       title: 'Procrastination',
       description: 'Postponing work without a valid reason',
       points: 5,
-      icon: <Zap className="h-5 w-5 text-white" />
+      icon_name: 'Zap',
+      icon_color: '#ea384c'
     }
   ];
+
+  const getIconComponent = (iconName: string) => {
+    switch(iconName) {
+      case 'Skull':
+        return <Skull className="h-5 w-5 text-white" />;
+      case 'Clock':
+        return <Clock className="h-5 w-5 text-white" />;
+      case 'Bomb':
+        return <Bomb className="h-5 w-5 text-white" />;
+      case 'Zap':
+        return <Zap className="h-5 w-5 text-white" />;
+      default:
+        return <Skull className="h-5 w-5 text-white" />;
+    }
+  };
 
   return (
     <div className="p-4 pt-6">
@@ -46,10 +65,13 @@ const PunishmentsContent: React.FC = () => {
         {samplePunishments.map(punishment => (
           <PunishmentCard
             key={punishment.id}
+            id={punishment.id}
             title={punishment.title}
             description={punishment.description}
             points={punishment.points}
-            icon={punishment.icon}
+            icon={getIconComponent(punishment.icon_name)}
+            icon_name={punishment.icon_name}
+            icon_color={punishment.icon_color}
           />
         ))}
       </div>
