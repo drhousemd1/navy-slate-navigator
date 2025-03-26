@@ -149,10 +149,15 @@ export const buyReward = async (reward: Reward): Promise<boolean> => {
     }
     
     // Start a transaction
+    // Fix: Type the parameters correctly
     const { error: transactionError } = await supabase.rpc('buy_reward', {
       p_user_id: user.user.id,
       p_reward_id: reward.id,
       p_cost: reward.cost
+    } as {
+      p_user_id: string;
+      p_reward_id: string;
+      p_cost: number;
     });
     
     if (transactionError) {
