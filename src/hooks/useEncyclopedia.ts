@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,17 +37,10 @@ export const useEncyclopedia = () => {
       
       // Initialize formatted sections for each entry if it has them
       const processedEntries = data.map(entry => {
-        // If entry already has formatted_sections, use them
-        if (entry.formatted_sections) {
-          return {
-            ...entry,
-            formatted_sections: entry.formatted_sections
-          };
-        }
-        // Otherwise, create empty formatted sections array
+        // Handle database entries that might not have formatted_sections yet
         return {
           ...entry,
-          formatted_sections: []
+          formatted_sections: (entry as any).formatted_sections || []
         };
       });
       
