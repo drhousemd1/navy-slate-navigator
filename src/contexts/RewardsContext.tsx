@@ -64,6 +64,26 @@ type UserReward = {
   supply: number;
 };
 
+// Define the shape of data that comes directly from Supabase
+type SupabaseReward = {
+  id: string;
+  title: string;
+  description: string | null;
+  cost: number;
+  icon_name: string | null;
+  icon_color: string | null;
+  created_at: string;
+  updated_at: string;
+  background_image_url?: string | null;
+  background_opacity?: number;
+  focal_point_x?: number | null;
+  focal_point_y?: number | null;
+  highlight_effect?: boolean;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+};
+
 interface RewardsContextType {
   totalPoints: number;
   rewards: RewardItem[];
@@ -164,7 +184,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
 
         if (data && data.length > 0) {
           // Map Supabase data to our RewardItem interface
-          const mappedRewards: RewardItem[] = data.map(reward => ({
+          const mappedRewards: RewardItem[] = data.map((reward: SupabaseReward) => ({
             id: reward.id,
             title: reward.title,
             description: reward.description || '',
@@ -173,11 +193,11 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
             iconName: reward.icon_name || 'Gift', // Map icon_name from Supabase to iconName for component
             icon_name: reward.icon_name || 'Gift',
             icon_color: reward.icon_color || '#9b87f5',
-            background_image_url: reward.background_image_url,
-            background_opacity: reward.background_opacity,
-            focal_point_x: reward.focal_point_x,
-            focal_point_y: reward.focal_point_y,
-            highlight_effect: reward.highlight_effect,
+            background_image_url: reward.background_image_url || undefined,
+            background_opacity: reward.background_opacity || 100,
+            focal_point_x: reward.focal_point_x || 50,
+            focal_point_y: reward.focal_point_y || 50,
+            highlight_effect: reward.highlight_effect || false,
             title_color: reward.title_color || '#FFFFFF',
             subtext_color: reward.subtext_color || '#8E9196',
             calendar_color: reward.calendar_color || '#7E69AB',
@@ -315,10 +335,10 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
             )
           );
         } else {
-          // Create new user_reward
+          // Create new user_reward using upsert
           const { data: newUserReward, error: insertError } = await supabase
             .from('user_rewards')
-            .insert([
+            .upsert([
               { 
                 user_id: userId, 
                 reward_id: rewardId, 
@@ -474,16 +494,22 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         title_color: rewardData.title_color || '#FFFFFF',
         subtext_color: rewardData.subtext_color || '#8E9196',
         calendar_color: rewardData.calendar_color || '#7E69AB',
+        updated_at: new Date().toISOString(),
       };
 
+      let savedReward;
+      
       if (index !== null && rewards[index]?.id) {
         // Update existing reward
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('rewards')
           .update(formattedData)
-          .eq('id', rewards[index].id);
+          .eq('id', rewards[index].id)
+          .select()
+          .single();
 
         if (error) throw error;
+        savedReward = data;
 
         // Update local state
         setRewards(prevRewards => 
@@ -501,23 +527,24 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           description: "Your changes have been saved",
         });
       } else {
-        // Add new reward
-        const { data: newReward, error } = await supabase
+        // Add new reward using upsert for better reliability
+        const { data, error } = await supabase
           .from('rewards')
-          .insert([formattedData])
+          .upsert([formattedData])
           .select()
           .single();
 
         if (error) throw error;
+        savedReward = data;
 
-        if (newReward) {
+        if (savedReward) {
           // Add new reward to state with supply 0 and map icon_name to iconName
           setRewards(prevRewards => [
             ...prevRewards, 
             { 
-              ...newReward, 
+              ...savedReward, 
               supply: 0,
-              iconName: newReward.icon_name // Set iconName from icon_name
+              iconName: savedReward.icon_name // Set iconName from icon_name
             }
           ]);
 
