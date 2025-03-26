@@ -56,7 +56,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   icon_color = '#9b87f5'
 }) => {
   return (
-    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
+    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''} z-0`}>
       {backgroundImage && (
         <div 
           className="absolute inset-0 w-full h-full z-0"
