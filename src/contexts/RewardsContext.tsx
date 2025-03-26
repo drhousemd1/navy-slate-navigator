@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -59,6 +58,7 @@ type RewardItem = {
   title_color?: string;
   subtext_color?: string;
   calendar_color?: string;
+  created_at?: string;
 };
 
 interface RewardsContextType {
@@ -108,7 +108,8 @@ const fetchRewards = async () => {
     highlight_effect: reward.highlight_effect,
     title_color: reward.title_color,
     subtext_color: reward.subtext_color,
-    calendar_color: reward.calendar_color
+    calendar_color: reward.calendar_color,
+    created_at: reward.created_at
   })) || [];
 };
 
@@ -400,6 +401,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         const existingReward = rewards[index];
         console.log("Updating existing reward with ID:", existingReward.id);
         
+        // Preserve the created_at timestamp when updating
         const { data, error } = await supabase
           .from('rewards')
           .update(dataToSave)
