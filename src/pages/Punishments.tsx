@@ -93,15 +93,7 @@ const PunishmentsContent: React.FC = () => {
     <div className="p-4 pt-6">
       <PunishmentsHeader />
       
-      <div className="mb-4 flex justify-end">
-        <Button 
-          onClick={handleAddNewPunishment}
-          className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          New Punishment
-        </Button>
-      </div>
+      {/* Removed the "New Punishment" button from here */}
       
       {loading || initializing ? (
         <div className="space-y-4">
@@ -148,7 +140,15 @@ const PunishmentsContent: React.FC = () => {
 
 const Punishments: React.FC = () => {
   return (
-    <AppLayout>
+    <AppLayout onAddNewItem={() => {
+      // This connects the Add New Item button at the bottom of the screen
+      // to the punishment editor functionality
+      const content = document.querySelector('.PunishmentsContent');
+      if (content) {
+        const event = new CustomEvent('add-new-punishment');
+        content.dispatchEvent(event);
+      }
+    }}>
       <RewardsProvider>
         <PunishmentsProvider>
           <PunishmentsContent />
