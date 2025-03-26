@@ -5,24 +5,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import PunishmentEditorForm from './punishments/PunishmentEditorForm';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tables } from '@/integrations/supabase/types';
+import { PunishmentData } from '@/contexts/punishments/types';
 
 // Define the PunishmentData type based on the Supabase tables
-export type PunishmentData = {
-  id?: string;
-  title: string;
-  description?: string;
-  points: number;
-  icon_name?: string;
-  icon_color?: string;
-  title_color?: string;
-  subtext_color?: string;
-  calendar_color?: string;
-  highlight_effect?: boolean;
-  background_image_url?: string;
-  background_opacity?: number;
-  focal_point_x?: number;
-  focal_point_y?: number;
-};
+// export type PunishmentData = {
+//   id?: string;
+//   title: string;
+//   description?: string;
+//   points: number;
+//   icon_name?: string;
+//   icon_color?: string;
+//   title_color?: string;
+//   subtext_color?: string;
+//   calendar_color?: string;
+//   highlight_effect?: boolean;
+//   background_image_url?: string;
+//   background_opacity?: number;
+//   focal_point_x?: number;
+//   focal_point_y?: number;
+// };
 
 interface PunishmentEditorProps {
   isOpen: boolean;
