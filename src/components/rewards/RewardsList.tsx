@@ -11,7 +11,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   const { rewards, handleBuy, handleUse, getRewardUsage, getFrequencyCount } = useRewards();
 
   return (
-    <div className="space-y-4 pb-20">
+    <div className="space-y-4">
       {rewards.map((reward, index) => (
         <RewardCard
           key={index}

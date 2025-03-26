@@ -4,7 +4,6 @@ import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Plus } from 'lucide-react';
-import { Separator } from './ui/separator';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -35,17 +34,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       </main>
       
       {shouldShowAddButton && (
-        <>
-          <Separator className="invisible h-16" /> {/* Invisible spacer above the button */}
-          <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-10">
-            <Button 
-              className="bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6"
-              onClick={handleAddNewItem}
-            >
-              <Plus className="w-5 h-5 mr-2" /> Add New Item
-            </Button>
-          </div>
-        </>
+        <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-10">
+          <Button 
+            className="bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6"
+            onClick={handleAddNewItem}
+          >
+            <Plus className="w-5 h-5 mr-2" /> Add New Item
+          </Button>
+        </div>
       )}
       
       <MobileNavbar />
