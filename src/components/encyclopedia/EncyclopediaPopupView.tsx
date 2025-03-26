@@ -40,6 +40,7 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="bg-navy border border-light-navy text-white p-0 max-w-full w-full h-full max-h-full flex flex-col inset-0 m-0 rounded-none absolute"
         style={{ transform: 'none', top: 0, left: 0, bottom: 0, right: 0 }}
+        hideCloseButton={true} // Add this prop to hide the default X button
       >
         {imageUrl && (
           <div 
