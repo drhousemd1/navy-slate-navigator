@@ -53,9 +53,9 @@ const RewardContent: React.FC<RewardContentProps> = ({
           </div>
         ) : (
           <>
-            <h3 className="text-xl font-semibold" style={{ color: title_color }}>
+            <div className="text-xl font-semibold" style={{ color: title_color }}>
               {title}
-            </h3>
+            </div>
             <div className="text-sm mt-1" style={{ color: subtext_color }}>
               {description}
             </div>

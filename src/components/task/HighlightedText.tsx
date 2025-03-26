@@ -21,12 +21,13 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
     WebkitBoxDecorationBreak: 'clone' as 'clone',
     width: 'fit-content',
     maxWidth: 'fit-content',
-    lineHeight: '1.6'
+    lineHeight: '1.6',
+    color: color
   };
 
   if (highlight) {
     return (
-      <span className="highlighter" style={{ ...highlighterStyle, color }}>
+      <span className="highlighter" style={highlighterStyle}>
         {text}
       </span>
     );
