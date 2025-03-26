@@ -16,30 +16,32 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   
   // Editor state
   const [currentReward, setCurrentReward] = useState<any>(null);
-  
+  const [currentRewardIndex, setCurrentRewardIndex] = useState<number | null>(null);
+
   // Handle editing a reward
-  const handleEdit = (reward: any) => {
-    setCurrentReward(reward);
+  const handleEdit = (index: number) => {
+    setCurrentReward(rewards[index]);
+    setCurrentRewardIndex(index);
     setIsEditorOpen(true);
   };
 
   // Handle adding a new reward
   const handleAddNewReward = () => {
     setCurrentReward(null);
+    setCurrentRewardIndex(null);
     setIsEditorOpen(true);
   };
 
   // Handle saving edited reward
-  const handleSave = async (rewardData: any) => {
-    const index = currentReward ? rewards.findIndex(r => r.id === currentReward.id) : null;
-    await handleSaveReward(rewardData, index);
+  const handleSave = (rewardData: any) => {
+    handleSaveReward(rewardData, currentRewardIndex);
     closeEditor();
   };
 
   // Handle deleting a reward
-  const handleDelete = (rewardId: string) => {
-    if (rewardId) {
-      handleDeleteReward(rewardId);
+  const handleDelete = (index: number) => {
+    if (index !== null) {
+      handleDeleteReward(index);
       closeEditor();
     }
   };
@@ -47,6 +49,7 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   const closeEditor = () => {
     setIsEditorOpen(false);
     setCurrentReward(null);
+    setCurrentRewardIndex(null);
   };
 
   return (
@@ -59,7 +62,7 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
         onClose={closeEditor}
         rewardData={currentReward}
         onSave={handleSave}
-        onDelete={() => currentReward?.id && handleDelete(currentReward.id)}
+        onDelete={() => currentRewardIndex !== null && handleDelete(currentRewardIndex)}
       />
     </div>
   );
