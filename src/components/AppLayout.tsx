@@ -27,6 +27,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
     }
   };
 
+  // Determine if we're on the rewards page or tasks page for special styling
+  const isRewardsPage = location.pathname === '/rewards';
+  const isTasksPage = location.pathname === '/tasks';
+  const useCircleButton = isRewardsPage || isTasksPage;
+
   return (
     <div className="flex flex-col min-h-screen bg-dark-navy">
       <main className="flex-1 pb-24 animate-fade-in">
@@ -34,12 +39,20 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       </main>
       
       {shouldShowAddButton && (
-        <div className="fixed bottom-16 right-4 z-40">
+        <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-40">
           <Button 
-            className="bg-cyan-500 hover:bg-cyan-400 w-12 h-12 rounded-full shadow-xl p-0 flex items-center justify-center"
+            className={`${useCircleButton 
+              ? 'bg-green-500 hover:bg-green-600 w-10 h-10 rounded-full shadow-xl p-0 flex items-center justify-center' 
+              : 'bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6'}`}
             onClick={handleAddNewItem}
           >
-            <Plus className="w-6 h-6 text-white" />
+            {useCircleButton ? (
+              <Plus className="w-6 h-6 text-white" />
+            ) : (
+              <>
+                <Plus className="w-5 h-5 mr-2" /> Add New Item
+              </>
+            )}
           </Button>
         </div>
       )}
