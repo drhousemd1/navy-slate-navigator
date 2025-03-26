@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { Save, Trash2 } from 'lucide-react';
 import DeleteRewardDialog from './DeleteRewardDialog';
 
 interface RewardFormActionsProps {
@@ -28,16 +29,17 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
   };
 
   return (
-    <div className="flex justify-between space-x-4 pt-4">
-      <div className="space-x-2">
-        {rewardData && onDelete && (
-          <DeleteRewardDialog
-            isOpen={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-            onConfirm={handleDelete}
-            rewardName={rewardData.title}
-          />
-        )}
+    <div className="flex justify-end space-x-4 pt-4">
+      {rewardData && onDelete && (
+        <DeleteRewardDialog
+          isOpen={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          onConfirm={handleDelete}
+          rewardName={rewardData.title}
+        />
+      )}
+      
+      <div className="flex space-x-4">
         {rewardData && onDelete && (
           <Button
             type="button"
@@ -47,26 +49,30 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
               setIsDeleteDialogOpen(true);
             }}
             disabled={loading}
-            className="bg-red-700 hover:bg-red-600"
+            className="bg-red-700 hover:bg-red-600 flex items-center gap-2"
           >
+            <Trash2 className="h-4 w-4" />
             Delete
           </Button>
         )}
+        
         <Button
           type="button"
           variant="outline"
           onClick={onCancel}
           disabled={loading}
+          className="bg-red-700 text-white hover:bg-red-600 border-0"
         >
           Cancel
         </Button>
-      </div>
-      <div>
+        
         <Button 
           type="submit" 
           disabled={loading}
+          className="bg-cyan-500 text-white hover:bg-cyan-400 flex items-center gap-2"
         >
-          {loading ? 'Saving...' : 'Save'}
+          <Save className="h-4 w-4" />
+          {loading ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </div>
