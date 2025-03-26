@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -195,8 +194,8 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
             Close
           </Button>
           
-          <div className="flex flex-col h-full pt-10">
-            <h1 className="text-3xl md:text-4xl font-bold mb-6">
+          <div className="flex flex-col h-full">
+            <h1 className="text-3xl md:text-4xl font-bold mb-6 pt-10">
               <HighlightedText 
                 text={title}
                 highlight={highlightEffect}
@@ -204,11 +203,9 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
               />
             </h1>
             
-            <div className="flex-1 overflow-y-auto pr-2">
-              <div className="max-w-3xl mx-auto w-full">
-                <div className="prose prose-invert max-w-none">
-                  {renderFormattedContent()}
-                </div>
+            <div className="flex-1 overflow-auto" style={{ display: 'flex', flexDirection: 'column' }}>
+              <div className="prose prose-invert max-w-none">
+                {renderFormattedContent()}
               </div>
             </div>
           </div>
