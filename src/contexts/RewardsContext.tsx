@@ -171,8 +171,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
       if (!userId || rewards.length === 0) return;
       
       try {
-        // Use the RPC function to get reward usage data
-        const response = await supabase.rpc('get_reward_usage', { 
+        // Use the RPC function to get reward usage data with type assertion
+        const response = await (supabase.rpc as any)('get_reward_usage', { 
           user_id_param: userId 
         });
 
@@ -318,8 +318,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         // Track usage for this day of the week
         const currentDay = getCurrentDayOfWeek();
         
-        // Use RPC function with proper error handling
-        const response = await supabase.rpc('upsert_reward_usage', {
+        // Use RPC function with proper error handling and type assertion
+        const response = await (supabase.rpc as any)('upsert_reward_usage', {
           user_id_param: userId,
           reward_id_param: reward.id,
           day_of_week_param: currentDay
@@ -494,8 +494,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         .delete()
         .eq('reward_id', rewardId);
 
-      // Delete reward usage through RPC
-      const response = await supabase.rpc('delete_reward_usage', {
+      // Delete reward usage through RPC with type assertion
+      const response = await (supabase.rpc as any)('delete_reward_usage', {
         reward_id_param: rewardId
       });
       
