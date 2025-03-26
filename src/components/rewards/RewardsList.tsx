@@ -20,7 +20,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   }
 
   // Enhanced debugging logs showing index and ID to track position stability
-  console.log("Rendering RewardsList with rewards:", 
+  console.log("[RewardsList] Rendering rewards list with stable order:", 
     rewards.map((r, i) => ({ 
       index: i, 
       id: r.id, 
@@ -35,7 +35,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {rewards.map((reward, index) => (
         <RewardCard
-          key={reward.id} // Use only ID as the key for stable rendering
+          key={reward.id} // CRITICAL: Use ONLY reward.id as the key for stable rendering
           title={reward.title}
           description={reward.description || ''}
           cost={reward.cost}

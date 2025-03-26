@@ -25,6 +25,8 @@ export interface Reward {
 
 export const fetchRewards = async (): Promise<Reward[]> => {
   try {
+    console.log("[fetchRewards] Fetching rewards without sorting");
+    
     // CRITICAL: Do NOT sort rewards at all, maintain database order
     // This ensures that the order remains stable across operations
     const { data, error } = await supabase
@@ -32,7 +34,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
       .select('*');
     
     if (error) {
-      console.error('Error fetching rewards:', error);
+      console.error('[fetchRewards] Error fetching rewards:', error);
       toast({
         title: 'Error fetching rewards',
         description: error.message,
@@ -41,13 +43,18 @@ export const fetchRewards = async (): Promise<Reward[]> => {
       return [];
     }
 
-    console.log('Fetched rewards from database with original order:', 
-      data?.map(r => ({ id: r.id, title: r.title, created_at: r.created_at }))
+    console.log('[fetchRewards] Fetched rewards with original order preserved:', 
+      data?.map((r, i) => ({
+        position: i,
+        id: r.id, 
+        title: r.title,
+        created_at: r.created_at
+      }))
     );
     
     return data as Reward[];
   } catch (err) {
-    console.error('Unexpected error fetching rewards:', err);
+    console.error('[fetchRewards] Unexpected error fetching rewards:', err);
     toast({
       title: 'Error fetching rewards',
       description: 'Could not fetch rewards',
@@ -68,7 +75,8 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       // Create a clean copy of the reward data without any timestamp fields
       const { created_at, updated_at, ...cleanRewardData } = reward;
       
-      console.log('Updating reward with clean data (no timestamps):', cleanRewardData);
+      console.log('[saveReward] Updating reward with clean data (no timestamps):', 
+        { id: existingId, ...cleanRewardData });
       
       const { data, error } = await supabase
         .from('rewards')
@@ -80,16 +88,18 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       return data[0] as Reward;
     } else {
       // Create new reward - no changes needed here
+      console.log('[saveReward] Creating new reward:', reward);
       const { data, error } = await supabase
         .from('rewards')
         .insert(reward)
         .select();
       
       if (error) throw error;
+      console.log('[saveReward] New reward created:', data[0]);
       return data[0] as Reward;
     }
   } catch (err: any) {
-    console.error('Error saving reward:', err);
+    console.error('[saveReward] Error saving reward:', err);
     toast({
       title: 'Error saving reward',
       description: err.message || 'Could not save reward',

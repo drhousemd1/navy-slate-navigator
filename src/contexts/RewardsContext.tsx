@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
@@ -45,11 +44,14 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   
   useEffect(() => {
     if (fetchedRewards.length > 0) {
-      console.log("Setting rewards from fetchedRewards:", fetchedRewards.map(r => ({ 
-        id: r.id, 
-        title: r.title,
-        created_at: r.created_at
-      })));
+      console.log("[RewardsContext] Setting rewards from fetchedRewards with preserved order:", 
+        fetchedRewards.map((r, i) => ({ 
+          position: i,
+          id: r.id, 
+          title: r.title,
+          created_at: r.created_at
+        }))
+      );
       setRewards(fetchedRewards);
     }
   }, [fetchedRewards]);
@@ -67,20 +69,23 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const refetchRewards = useCallback(async () => {
-    console.log("Manually refetching rewards");
+    console.log("[RewardsContext] Manually refetching rewards");
     const { data } = await refetch();
     if (data) {
-      console.log("Setting rewards after manual refetch:", data.map(r => ({ 
-        id: r.id, 
-        title: r.title,
-        created_at: r.created_at
-      })));
+      console.log("[RewardsContext] Setting rewards after manual refetch with preserved order:", 
+        data.map((r, i) => ({ 
+          position: i,
+          id: r.id, 
+          title: r.title,
+          created_at: r.created_at
+        }))
+      );
       setRewards(data);
     }
   }, [refetch]);
 
   const handleSaveReward = useCallback(async (rewardData: any, index: number | null): Promise<Reward | null> => {
-    console.log("Handling save reward with data:", rewardData, "at index:", index);
+    console.log("[RewardsContext] Handling save reward with data:", rewardData, "at index:", index);
     
     try {
       const dataToSave = { ...rewardData };
@@ -95,9 +100,20 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // CRITICAL: We're updating an existing reward
         const existingReward = rewards[index];
         
-        // Log the entire rewards array with stable ID-based keys before update
-        console.log("Rewards before update:", rewards.map((r, i) => 
-          `${i}: ${r.title} (${r.id}) - created ${r.created_at}`));
+        // CRITICAL: Log the exact position and complete rewards list before any update
+        console.log("[RewardsContext] Rewards list BEFORE update:", 
+          rewards.map((r, i) => ({
+            position: i,
+            id: r.id,
+            title: r.title,
+            created_at: r.created_at,
+            updated_at: r.updated_at
+          }))
+        );
+        
+        console.log("[RewardsContext] Updating reward at position:", index, 
+          "with ID:", existingReward.id, 
+          "title:", existingReward.title);
         
         // CRITICAL: Only update fields that the user has changed, never update timestamps
         const fieldsToUpdate = {
@@ -117,8 +133,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
           calendar_color: dataToSave.calendar_color,
         };
         
-        // Log the fields being updated
-        console.log("Updating fields for reward:", fieldsToUpdate);
+        console.log("[RewardsContext] Updating only these fields:", Object.keys(fieldsToUpdate));
         
         // CRITICAL: Never merge update with Supabase auto-update of timestamps
         const { data, error } = await supabase
@@ -130,39 +145,65 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (error) throw error;
         
         if (data && data.length > 0) {
-          // CRITICAL: Preserve the original created_at timestamp
+          // CRITICAL: Preserve the original created_at timestamp to prevent reordering
           result = {
             ...data[0],
             created_at: existingReward.created_at // Preserve original created_at
           };
           
-          // CRITICAL: Update rewards array IN PLACE at the existing index
-          // This ensures we don't change the order at all
+          // CRITICAL: Update the rewards array IN PLACE at the existing index
+          // This ensures we don't change the array order at all
           const updatedRewards = [...rewards];
           updatedRewards[index] = result;
           
-          console.log("Reward updated in place at index", index, "now has title:", updatedRewards[index].title);
-          console.log("Full rewards array after update with preserved order:", updatedRewards.map((r, i) => 
-            `${i}: ${r.title} (${r.id}) - created ${r.created_at}`));
+          console.log("[RewardsContext] Updated reward at position", index, 
+            "ID:", result.id, 
+            "title:", result.title);
+          
+          // CRITICAL: Log the exact rewards list after update to verify order preservation
+          console.log("[RewardsContext] Rewards list AFTER update:", 
+            updatedRewards.map((r, i) => ({
+              position: i,
+              id: r.id,
+              title: r.title,
+              created_at: r.created_at,
+              updated_at: r.updated_at
+            }))
+          );
           
           // Set the updated rewards array, maintaining exact order
           setRewards(updatedRewards);
         }
       } else {
-        // This is a new reward being created, no changes needed to this logic
-        console.log("Creating new reward");
+        // This is a new reward being created
+        console.log("[RewardsContext] Creating new reward");
         result = await saveReward(dataToSave as Reward & { title: string });
         
         if (result) {
           // For new rewards, append to the existing list
-          console.log("New reward created with ID:", result.id);
-          setRewards(prevRewards => [...prevRewards, result as Reward]);
+          console.log("[RewardsContext] New reward created with ID:", result.id);
+          
+          // Preserve existing list and append new reward
+          setRewards(prevRewards => {
+            const newList = [...prevRewards, result as Reward];
+            
+            console.log("[RewardsContext] Rewards list after adding new reward:", 
+              newList.map((r, i) => ({
+                position: i,
+                id: r.id,
+                title: r.title,
+                created_at: r.created_at
+              }))
+            );
+            
+            return newList;
+          });
         }
       }
       
       return result;
     } catch (error) {
-      console.error("Error in handleSaveReward:", error);
+      console.error("[RewardsContext] Error in handleSaveReward:", error);
       throw error;
     }
   }, [rewards]);
