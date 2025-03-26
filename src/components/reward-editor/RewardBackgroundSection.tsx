@@ -27,13 +27,13 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
     onRemoveImage();
   };
 
-  // Make sure opacity is properly set when the component mounts
+  // Force static opacity for testing
   useEffect(() => {
-    if (imagePreview && control._formValues.background_opacity === undefined) {
-      console.log("Setting initial opacity to 100");
-      setValue('background_opacity', 100);
+    if (imagePreview) {
+      console.log("Setting static opacity to 50 for testing");
+      setValue('background_opacity', 50);
     }
-  }, [imagePreview, control, setValue]);
+  }, [imagePreview, setValue]);
 
   return (
     <div className="space-y-4">

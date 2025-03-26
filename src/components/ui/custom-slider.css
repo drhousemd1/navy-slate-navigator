@@ -1,7 +1,7 @@
 
 /* Override Radix UI slider styles to ensure correct left-to-right filling */
 [data-radix-slider-range] {
-  left: 0 !important;  /* Ensure it's aligned to the left */
-  width: var(--radix-slider-range-width) !important;  /* Use the Radix variable for width */
-  transform: none !important;
+  left: 0 !important; /* Ensure it starts from the left */
+  width: 100% !important; /* Ensure it spans from left to right */
+  transform: none !important; /* Ensure no transforms are applied */
 }
