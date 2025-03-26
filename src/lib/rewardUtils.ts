@@ -54,7 +54,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   }
 };
 
-export const saveReward = async (reward: Partial<Reward>, existingId?: string): Promise<Reward | null> => {
+export const saveReward = async (reward: Partial<Reward> & { title: string }, existingId?: string): Promise<Reward | null> => {
   try {
     if (existingId) {
       // Update existing reward - CRITICAL: Don't include updated_at field at all

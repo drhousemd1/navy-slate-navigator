@@ -2,7 +2,6 @@
 import React from 'react';
 import { useRewards } from '../../contexts/RewardsContext';
 import RewardCard from '../RewardCard';
-import { Grid } from '../ui/grid';
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
@@ -26,7 +25,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   );
 
   return (
-    <Grid className="gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {rewards.map((reward, index) => (
         <RewardCard
           key={reward.id}
@@ -49,7 +48,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           calendar_color={reward.calendar_color}
         />
       ))}
-    </Grid>
+    </div>
   );
 };
 
