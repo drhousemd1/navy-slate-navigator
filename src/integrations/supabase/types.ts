@@ -30,6 +30,95 @@ export type Database = {
         }
         Relationships: []
       }
+      punishment_history: {
+        Row: {
+          applied_date: string | null
+          day_of_week: number
+          id: string
+          points_deducted: number
+          punishment_id: string | null
+        }
+        Insert: {
+          applied_date?: string | null
+          day_of_week: number
+          id?: string
+          points_deducted: number
+          punishment_id?: string | null
+        }
+        Update: {
+          applied_date?: string | null
+          day_of_week?: number
+          id?: string
+          points_deducted?: number
+          punishment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "punishment_history_punishment_id_fkey"
+            columns: ["punishment_id"]
+            isOneToOne: false
+            referencedRelation: "punishments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      punishments: {
+        Row: {
+          background_image_url: string | null
+          background_opacity: number | null
+          calendar_color: string | null
+          created_at: string | null
+          description: string | null
+          focal_point_x: number | null
+          focal_point_y: number | null
+          highlight_effect: boolean | null
+          icon_color: string | null
+          icon_name: string | null
+          id: string
+          points: number
+          subtext_color: string | null
+          title: string
+          title_color: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          background_image_url?: string | null
+          background_opacity?: number | null
+          calendar_color?: string | null
+          created_at?: string | null
+          description?: string | null
+          focal_point_x?: number | null
+          focal_point_y?: number | null
+          highlight_effect?: boolean | null
+          icon_color?: string | null
+          icon_name?: string | null
+          id?: string
+          points?: number
+          subtext_color?: string | null
+          title: string
+          title_color?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          background_image_url?: string | null
+          background_opacity?: number | null
+          calendar_color?: string | null
+          created_at?: string | null
+          description?: string | null
+          focal_point_x?: number | null
+          focal_point_y?: number | null
+          highlight_effect?: boolean | null
+          icon_color?: string | null
+          icon_name?: string | null
+          id?: string
+          points?: number
+          subtext_color?: string | null
+          title?: string
+          title_color?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       reward_usage: {
         Row: {
           created_at: string | null

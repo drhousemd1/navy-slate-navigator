@@ -7,16 +7,15 @@ import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "@/hooks/use-toast";
 import { Save } from 'lucide-react';
+import { toast } from "@/hooks/use-toast";
 import NumberField from '../task-editor/NumberField';
-import ColorPickerField from '../task-editor/ColorPickerField';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeletePunishmentDialog from './DeletePunishmentDialog';
 import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import PunishmentColorSettings from './PunishmentColorSettings';
+import { usePunishments } from '@/contexts/PunishmentsContext';
 
 const punishmentFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -25,7 +24,7 @@ const punishmentFormSchema = z.object({
   icon_color: z.string().optional(),
   title_color: z.string().default('#FFFFFF'),
   subtext_color: z.string().default('#8E9196'),
-  calendar_color: z.string().default('#7E69AB'),
+  calendar_color: z.string().default('#ea384c'),
   highlight_effect: z.boolean().default(false),
   background_opacity: z.number().min(0).max(100).default(50),
   focal_point_x: z.number().min(0).max(100).default(50),
@@ -52,6 +51,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { createPunishment, updatePunishment } = usePunishments();
 
   const form = useForm<PunishmentFormValues>({
     resolver: zodResolver(punishmentFormSchema),
@@ -62,7 +62,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
       icon_color: punishmentData?.icon_color || '#ea384c',
       title_color: punishmentData?.title_color || '#FFFFFF',
       subtext_color: punishmentData?.subtext_color || '#8E9196',
-      calendar_color: punishmentData?.calendar_color || '#7E69AB',
+      calendar_color: punishmentData?.calendar_color || '#ea384c',
       highlight_effect: punishmentData?.highlight_effect || false,
       background_opacity: punishmentData?.background_opacity || 50,
       focal_point_x: punishmentData?.focal_point_x || 50,
@@ -79,7 +79,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
         icon_color: punishmentData.icon_color || '#ea384c',
         title_color: punishmentData.title_color || '#FFFFFF',
         subtext_color: punishmentData.subtext_color || '#8E9196',
-        calendar_color: punishmentData.calendar_color || '#7E69AB',
+        calendar_color: punishmentData.calendar_color || '#ea384c',
         highlight_effect: punishmentData.highlight_effect || false,
         background_opacity: punishmentData.background_opacity || 50,
         focal_point_x: punishmentData.focal_point_x || 50,
@@ -106,12 +106,17 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
         background_image_url: imagePreview,
       };
       
-      await onSave(processedValues);
+      if (punishmentData?.id) {
+        // Update existing punishment
+        await updatePunishment(punishmentData.id, processedValues);
+      } else {
+        // Create new punishment
+        await createPunishment(processedValues);
+      }
       
-      toast({
-        title: "Success",
-        description: "Punishment saved successfully",
-      });
+      await onSave(processedValues);
+      onCancel();
+      
     } catch (error) {
       console.error('Error saving punishment:', error);
       toast({

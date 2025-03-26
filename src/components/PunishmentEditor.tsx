@@ -10,7 +10,7 @@ interface PunishmentEditorProps {
   onClose: () => void;
   punishmentData?: any;
   onSave: (data: any) => Promise<void>;
-  onDelete?: (index: any) => void;
+  onDelete?: (id: string) => void;
 }
 
 const PunishmentEditor: React.FC<PunishmentEditorProps> = ({

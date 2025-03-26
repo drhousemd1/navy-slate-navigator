@@ -8,6 +8,8 @@ import FrequencyTracker from './task/FrequencyTracker';
 import { useRewards } from '../contexts/RewardsContext';
 import { toast } from '@/hooks/use-toast';
 import PunishmentEditor from './PunishmentEditor';
+import { usePunishments } from '@/contexts/PunishmentsContext';
+import { cn } from '@/lib/utils';
 
 interface PunishmentCardProps {
   title: string;
@@ -17,6 +19,10 @@ interface PunishmentCardProps {
   id?: string;
   icon_name?: string;
   icon_color?: string;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  highlight_effect?: boolean;
 }
 
 const PunishmentCard: React.FC<PunishmentCardProps> = ({
@@ -26,31 +32,65 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   icon = <Skull className="h-5 w-5 text-white" />,
   id,
   icon_name,
-  icon_color = '#ea384c'
+  icon_color = '#ea384c',
+  title_color = '#FFFFFF',
+  subtext_color = '#8E9196',
+  calendar_color = '#ea384c',
+  highlight_effect = false
 }) => {
   const { totalPoints, setTotalPoints } = useRewards();
-  // Track punishment application for each day of the week
-  const [frequencyData, setFrequencyData] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  const { applyPunishment, getPunishmentHistory, updatePunishment, deletePunishment } = usePunishments();
+  
   // State for editor
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   
-  const handlePunish = () => {
-    // Deduct points
-    const newTotal = totalPoints - points;
-    setTotalPoints(newTotal);
+  // Get punishment history for this punishment
+  const history = id ? getPunishmentHistory(id) : [];
+  
+  // Create weekly usage data from history
+  const currentDate = new Date();
+  const currentDay = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  
+  // Initialize a week of zeros
+  const weekData = [0, 0, 0, 0, 0, 0, 0];
+  
+  // Fill in the data for days where punishment was applied
+  history.forEach(item => {
+    const itemDate = new Date(item.applied_date);
+    const daysSinceToday = Math.floor((currentDate.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24));
     
-    // Update the frequency tracker for the current day
-    const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const newFrequencyData = [...frequencyData];
-    newFrequencyData[today] = 1; // Mark today as punished
-    setFrequencyData(newFrequencyData);
+    // Only include data from the current week (last 7 days)
+    if (daysSinceToday < 7) {
+      const dayIndex = item.day_of_week;
+      weekData[dayIndex] = 1; // Mark as punished
+    }
+  });
+  
+  // Calculate frequency count (total times punishment was applied in this period)
+  const frequencyCount = weekData.reduce((acc, val) => acc + val, 0);
+  
+  const handlePunish = async () => {
+    if (!id) return;
     
-    // Show toast notification
-    toast({
-      title: "Punishment Applied",
-      description: `${points} points deducted. New total: ${newTotal} points.`,
-      variant: "destructive",
-    });
+    try {
+      // Deduct points
+      const newTotal = totalPoints - points;
+      setTotalPoints(newTotal);
+      
+      // Record the punishment application
+      await applyPunishment(id, points);
+      
+    } catch (error) {
+      console.error('Error applying punishment:', error);
+      // Restore points if there was an error
+      setTotalPoints(totalPoints);
+      
+      toast({
+        title: "Error",
+        description: "Failed to apply punishment. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEdit = () => {
@@ -58,16 +98,26 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   };
 
   const handleSavePunishment = async (updatedPunishment: any) => {
-    // In a real app, you would save this to a database or state management
-    console.log("Updated punishment:", updatedPunishment);
+    if (!id) return Promise.resolve();
     
-    // For now, we'll just show a toast notification
-    toast({
-      title: "Punishment Updated",
-      description: "Your changes have been saved.",
-    });
+    try {
+      await updatePunishment(id, updatedPunishment);
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error updating punishment:", error);
+      return Promise.reject(error);
+    }
+  };
+
+  const handleDeletePunishment = async () => {
+    if (!id) return;
     
-    return Promise.resolve();
+    try {
+      await deletePunishment(id);
+      setIsEditorOpen(false);
+    } catch (error) {
+      console.error("Error deleting punishment:", error);
+    }
   };
 
   return (
@@ -108,11 +158,23 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
             </div>
             
             <div className="flex-1 flex flex-col">
-              <h3 className="text-xl font-semibold text-white">
+              <h3 
+                className={cn(
+                  "text-xl font-semibold", 
+                  highlight_effect && "bg-yellow-300 bg-opacity-20 px-1 py-0.5 rounded"
+                )}
+                style={{ color: title_color }}
+              >
                 {title}
               </h3>
               
-              <div className="text-sm text-gray-300 mt-1">
+              <div 
+                className={cn(
+                  "text-sm mt-1", 
+                  highlight_effect && "bg-yellow-300 bg-opacity-10 px-1 py-0.5 rounded"
+                )}
+                style={{ color: subtext_color }}
+              >
                 {description}
               </div>
             </div>
@@ -122,9 +184,9 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
             {/* Frequency tracker with current day data */}
             <FrequencyTracker 
               frequency="daily" 
-              frequency_count={frequencyData.reduce((acc, val) => acc + val, 0)} 
-              calendar_color="#ea384c"
-              usage_data={frequencyData}
+              frequency_count={frequencyCount} 
+              calendar_color={calendar_color || "#ea384c"}
+              usage_data={weekData}
             />
             
             <div className="flex space-x-2 ml-auto">
@@ -151,9 +213,14 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
           description,
           points,
           icon_name,
-          icon_color
+          icon_color,
+          title_color,
+          subtext_color,
+          calendar_color,
+          highlight_effect
         }}
         onSave={handleSavePunishment}
+        onDelete={handleDeletePunishment}
       />
     </>
   );
