@@ -21,13 +21,6 @@ const RewardsContent: React.FC = () => {
     setIsEditorOpen(true);
   };
 
-  // Handle adding a new reward
-  const handleAddNewItem = () => {
-    setCurrentReward(null);
-    setCurrentRewardIndex(null);
-    setIsEditorOpen(true);
-  };
-
   // Handle saving edited reward
   const handleSave = (rewardData: any) => {
     handleSaveReward(rewardData, currentRewardIndex);
@@ -51,7 +44,7 @@ const RewardsContent: React.FC = () => {
   return (
     <div className="p-4 pt-6">
       <RewardsHeader />
-      <RewardsList onEdit={handleEdit} onAddNewItem={handleAddNewItem} />
+      <RewardsList onEdit={handleEdit} />
       
       <RewardEditor
         isOpen={isEditorOpen}
