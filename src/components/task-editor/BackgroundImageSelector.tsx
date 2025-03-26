@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: initialPosition?.x ?? 50, y: initialPosition?.y ?? 50 });
-  const [opacity, setOpacity] = useState(100);
+  const [opacity, setOpacity] = useState(50);
 
   useEffect(() => {
     if (initialPosition) {
@@ -34,16 +33,10 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     }
   }, [initialPosition]);
 
-  // Set default opacity to 100% when an image is uploaded
   useEffect(() => {
-    if (imagePreview && control._formValues.background_opacity === undefined) {
-      setValue('background_opacity', 100);
-      setOpacity(100);
-    } else if (control._formValues.background_opacity !== undefined) {
-      setOpacity(control._formValues.background_opacity);
-      console.log("Setting initial opacity from form values:", control._formValues.background_opacity);
-    }
-  }, [imagePreview, control, setValue]);
+    console.log("Using static opacity value for testing:", opacity);
+    setValue('background_opacity', 50);
+  }, [imagePreview, setValue]);
 
   const updatePosition = (clientX: number, clientY: number) => {
     if (!imageContainerRef.current) return;
@@ -92,6 +85,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     };
   }, [isDragging]);
 
+  console.log('Opacity value:', opacity);
+
   return (
     <div className="space-y-4">
       <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
@@ -111,7 +106,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                 alt="Background preview" 
                 className="w-full h-full object-cover"
                 style={{ 
-                  opacity: opacity / 100, // Convert percentage to decimal for opacity
+                  opacity: opacity / 100,
                   objectPosition: `${position.x}% ${position.y}%`
                 }}
               />
@@ -168,15 +163,16 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
           name="background_opacity"
           render={({ field }) => (
             <FormItem className="space-y-2">
-              <FormLabel className="text-white">Image Opacity ({field.value || 100}%)</FormLabel>
+              <FormLabel className="text-white">Image Opacity (50%)</FormLabel>
               <FormControl>
                 <Slider
-                  value={[field.value || 100]} // Ensure it's an array
+                  value={[50]}
                   min={0}
                   max={100}
                   step={1}
                   onValueChange={(value) => {
                     console.log("Slider value changed to:", value[0]);
+                    console.log("Slider value type:", typeof value[0]);
                     field.onChange(value[0]);
                     setOpacity(value[0]);
                   }}
