@@ -3,6 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import HighlightedText from '../task/HighlightedText';
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EncyclopediaPopupViewProps {
   isOpen: boolean;
@@ -142,8 +143,7 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
                 style={{
                   fontWeight: section.formatting.isBold ? 'bold' : 'inherit',
                   textDecoration: section.formatting.isUnderlined ? 'underline' : 'inherit',
-                  fontSize: section.formatting.fontSize || 'inherit',
-                  backgroundColor: section.formatting.isBold ? 'rgba(66, 153, 225, 0.2)' : 'transparent'
+                  fontSize: section.formatting.fontSize || 'inherit'
                 }}
               >
                 {sectionText}
@@ -186,7 +186,7 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
             aria-hidden="true"
           />
         )}
-        <div className="relative z-10 flex flex-col h-full p-6 overflow-y-auto">
+        <div className="relative z-10 flex flex-col h-full p-6">
           <Button 
             onClick={onClose}
             className="absolute right-4 top-4 z-20 bg-red-600 hover:bg-red-700 text-white"
@@ -195,18 +195,20 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
             Close
           </Button>
           
-          <div className="max-w-3xl mx-auto w-full pt-10">
-            <h1 className="text-3xl md:text-4xl font-bold mb-6">
-              <HighlightedText 
-                text={title}
-                highlight={highlightEffect}
-                color={titleColor}
-              />
-            </h1>
-            <div className="prose prose-invert max-w-none">
-              {renderFormattedContent()}
+          <ScrollArea className="flex-1 h-full mt-10 pr-4">
+            <div className="max-w-3xl mx-auto w-full">
+              <h1 className="text-3xl md:text-4xl font-bold mb-6">
+                <HighlightedText 
+                  text={title}
+                  highlight={highlightEffect}
+                  color={titleColor}
+                />
+              </h1>
+              <div className="prose prose-invert max-w-none">
+                {renderFormattedContent()}
+              </div>
             </div>
-          </div>
+          </ScrollArea>
         </div>
       </DialogContent>
     </Dialog>
