@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -50,48 +49,37 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   const { totalPoints, setTotalPoints } = useRewards();
   const { applyPunishment, getPunishmentHistory, updatePunishment, deletePunishment } = usePunishments();
   
-  // State for editor
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   
-  // Get punishment history for this punishment
   const history = id ? getPunishmentHistory(id) : [];
   
-  // Create weekly usage data from history
   const currentDate = new Date();
-  const currentDay = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const currentDay = currentDate.getDay();
   
-  // Initialize a week of zeros
   const weekData = [0, 0, 0, 0, 0, 0, 0];
   
-  // Fill in the data for days where punishment was applied
   history.forEach(item => {
     const itemDate = new Date(item.applied_date);
     const daysSinceToday = Math.floor((currentDate.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24));
     
-    // Only include data from the current week (last 7 days)
     if (daysSinceToday < 7) {
       const dayIndex = item.day_of_week;
-      weekData[dayIndex] = 1; // Mark as punished
+      weekData[dayIndex] = 1;
     }
   });
   
-  // Calculate frequency count (total times punishment was applied in this period)
   const frequencyCount = weekData.reduce((acc, val) => acc + val, 0);
   
   const handlePunish = async () => {
     if (!id) return;
     
     try {
-      // Deduct points
       const newTotal = totalPoints - points;
       setTotalPoints(newTotal);
       
-      // Record the punishment application
       await applyPunishment(id, points);
-      
     } catch (error) {
       console.error('Error applying punishment:', error);
-      // Restore points if there was an error
       setTotalPoints(totalPoints);
       
       toast({
@@ -129,7 +117,6 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
     }
   };
 
-  // Create background image style with proper types
   const backgroundImageStyle: React.CSSProperties = background_image_url 
     ? {
         backgroundImage: `url(${background_image_url})`,
@@ -154,11 +141,9 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
         )}
         <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
           <div className="flex justify-between items-start mb-3">
-            {/* Priority indicator placeholder */}
             <div className="h-6"></div>
             
             <div className="flex items-center gap-2">
-              {/* Points deduction badge */}
               <Badge 
                 className="bg-red-500 text-white font-bold flex items-center gap-1"
                 variant="default"
@@ -167,11 +152,10 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
                 {Math.abs(points)}
               </Badge>
               
-              {/* Punish button */}
               <Button
                 variant="destructive"
                 size="sm"
-                className="text-xs"
+                className="bg-red-500 text-white hover:bg-red-600/90 h-7"
                 onClick={handlePunish}
               >
                 Punish
@@ -218,7 +202,6 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
           </div>
           
           <div className="flex items-center justify-between mt-4">
-            {/* Frequency tracker with current day data */}
             <FrequencyTracker 
               frequency="daily" 
               frequency_count={frequencyCount} 
@@ -240,7 +223,6 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
         </div>
       </Card>
       
-      {/* Punishment Editor */}
       <PunishmentEditor 
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
