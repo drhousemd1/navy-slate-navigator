@@ -38,6 +38,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
         description: "Reward saved successfully",
       });
       
+      // Ensure we call onClose to close the dialog
       onClose();
     } catch (error) {
       console.error("Error in RewardEditor save handler:", error);
