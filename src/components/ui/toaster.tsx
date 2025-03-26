@@ -13,10 +13,10 @@ export function Toaster() {
   const { toasts } = useToast()
 
   return (
-    <ToastProvider duration={1000}>
+    <ToastProvider duration={2000}>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
-          <Toast key={id} duration={1000} {...props}>
+          <Toast key={id} duration={2000} {...props}>
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center space-x-2">
                 {title && <ToastTitle>{title}</ToastTitle>}

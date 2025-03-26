@@ -7,7 +7,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 500 // Further reduced from 1000ms to 500ms
+const TOAST_REMOVE_DELAY = 500 // Keep this at 500ms for smooth animations
 
 type ToasterToast = ToastProps & {
   id: string
@@ -156,6 +156,7 @@ function toast({ ...props }: Toast) {
       ...props,
       id,
       open: true,
+      duration: props.duration || 2000, // Set default duration to 2000ms (2 seconds)
       onOpenChange: (open) => {
         if (!open) dismiss()
       },
