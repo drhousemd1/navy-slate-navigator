@@ -84,13 +84,18 @@ export async function purchaseReward(userId: string, rewardId: string, cost: num
     cost: number;
   }
 
-  const { data, error } = await supabase.rpc<{ success: boolean }>(
+  // Define the return type for the RPC function
+  interface PurchaseRewardResult {
+    success: boolean;
+  }
+
+  const { data, error } = await supabase.rpc<PurchaseRewardResult, PurchaseRewardParams>(
     'purchase_reward', 
     { 
       user_id: userId, 
       reward_id: rewardId, 
       cost 
-    } as PurchaseRewardParams
+    }
   );
 
   if (error) {
