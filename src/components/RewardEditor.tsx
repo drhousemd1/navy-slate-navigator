@@ -19,30 +19,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   onDelete
 }) => {
   const handleSave = async (formData: any) => {
-    // Make sure we're preserving the ID and any other fields that shouldn't be changed
-    const dataToSave = {
-      ...(rewardData || {}), // Start with all existing data
-      ...formData,           // Override with new form data
-      id: rewardData?.id,    // Ensure ID is preserved
-      // Make sure we're explicitly capturing all the fields we need
-      title: formData.title,
-      description: formData.description,
-      cost: formData.cost,
-      supply: rewardData?.supply || 0,
-      iconName: formData.icon_name || formData.iconName,
-      icon_color: formData.icon_color,
-      background_image_url: formData.background_image_url,
-      background_opacity: formData.background_opacity,
-      focal_point_x: formData.focal_point_x,
-      focal_point_y: formData.focal_point_y,
-      highlight_effect: formData.highlight_effect,
-      title_color: formData.title_color,
-      subtext_color: formData.subtext_color,
-      calendar_color: formData.calendar_color
-    };
-    
-    console.log('Saving reward data:', dataToSave);
-    await onSave(dataToSave);
+    await onSave(formData);
     onClose();
   };
 
