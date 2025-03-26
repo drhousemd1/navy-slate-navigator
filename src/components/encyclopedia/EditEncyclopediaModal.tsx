@@ -44,6 +44,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [position, setPosition] = useState({ x: entry?.focal_point_x || 50, y: entry?.focal_point_y || 50 });
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedTextRange, setSelectedTextRange] = useState<{ start: number; end: number } | null>(null);
   const [formattedSections, setFormattedSections] = useState<Array<{
     start: number;
     end: number;
@@ -87,7 +88,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
           focal_point_x: entry.focal_point_x || 50,
           focal_point_y: entry.focal_point_y || 50,
           opacity: entry.opacity || 100,
-          popup_opacity: entry.popup_opacity || entry.opacity || 100,
+          popup_opacity: entry.popup_opacity || (entry.opacity || 100),
           title_color: entry.title_color || '#FFFFFF',
           subtext_color: entry.subtext_color || '#D1D5DB',
           highlight_effect: entry.highlight_effect || false,
@@ -160,8 +161,6 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       setIsDeleteDialogOpen(false);
     }
   };
-
-  const [selectedTextRange, setSelectedTextRange] = useState<{ start: number; end: number } | null>(null);
 
   const handleToggleBold = () => {
     if (selectedTextRange) {
@@ -256,39 +255,6 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
     form.setValue('formatted_sections', updatedSections);
     
     setSelectedTextRange(null);
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setImagePreview(base64String);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  
-  const handleRemoveImage = () => {
-    setImagePreview(null);
-  };
-  
-  const onSubmit = (data: EncyclopediaEntry) => {
-    const updatedEntry = {
-      ...data,
-      image_url: imagePreview,
-      formatted_sections: formattedSections
-    };
-    
-    onSave(updatedEntry);
-  };
-
-  const handleDelete = () => {
-    if (entry && onDelete) {
-      onDelete(entry.id);
-      setIsDeleteDialogOpen(false);
-    }
   };
 
   useEffect(() => {
