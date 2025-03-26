@@ -36,14 +36,14 @@ const RewardContent: React.FC<RewardContentProps> = ({
       <div className="flex flex-col">
         {highlight_effect ? (
           <div className="inline-flex flex-col items-start">
-            <div className="inline-block max-w-fit">
+            <div className="inline-block max-w-fit text-xl font-semibold">
               <HighlightedText 
                 text={title}
                 highlight={true}
                 color={title_color}
               />
             </div>
-            <div className="inline-block max-w-fit mt-1">
+            <div className="inline-block max-w-fit mt-1 text-sm">
               <HighlightedText
                 text={description}
                 highlight={true}
