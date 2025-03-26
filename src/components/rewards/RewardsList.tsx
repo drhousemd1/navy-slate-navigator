@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import RewardCard from '../RewardCard';
 import { useRewards } from '../../contexts/RewardsContext';
 
@@ -8,13 +8,32 @@ interface RewardsListProps {
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
-  const { rewards, handleBuy, handleUse, getRewardUsage, getFrequencyCount } = useRewards();
+  const { rewards, handleBuy, handleUse, getRewardUsage, getFrequencyCount, isLoading, refetchRewards } = useRewards();
+
+  // Ensure rewards data is fresh when component mounts
+  useEffect(() => {
+    console.log("RewardsList mounted, refreshing data if needed");
+    refetchRewards();
+  }, [refetchRewards]);
+
+  if (isLoading && !rewards.length) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div 
+            key={i} 
+            className="bg-navy border border-light-navy rounded-lg p-4 animate-pulse h-32"
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       {rewards.map((reward, index) => (
         <RewardCard
-          key={index}
+          key={reward.id || index}
           title={reward.title}
           description={reward.description}
           cost={reward.cost}

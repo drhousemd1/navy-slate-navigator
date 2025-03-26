@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Define initial rewards data - only used for fallback
 const initialRewards = [
@@ -41,6 +42,7 @@ const POINTS_STORAGE_KEY = 'rewardPoints';
 // Default points value if not found in localStorage
 const DEFAULT_POINTS = 100;
 
+// Define reward item type
 type RewardItem = {
   id?: string;
   title: string;
@@ -65,135 +67,137 @@ interface RewardsContextType {
   rewardUsage: Record<string, boolean[]>;
   handleBuy: (index: number) => void;
   handleUse: (index: number) => void;
-  handleSaveReward: (rewardData: any, index: number | null) => void;
+  handleSaveReward: (rewardData: any, index: number | null) => Promise<void>;
   handleDeleteReward: (index: number) => void;
   getRewardUsage: (index: number) => boolean[];
   getFrequencyCount: (index: number) => number;
+  isLoading: boolean;
+  refetchRewards: () => Promise<void>;
 }
 
 const RewardsContext = createContext<RewardsContextType | undefined>(undefined);
 
+// Fetch rewards function for React Query
+const fetchRewards = async () => {
+  const { data, error } = await supabase
+    .from('rewards')
+    .select('*')
+    .order('created_at', { ascending: true });
+  
+  if (error) {
+    console.error('Error fetching rewards:', error);
+    throw error;
+  }
+  
+  // Map Supabase data to the format expected by the app
+  return data?.map(reward => ({
+    id: reward.id,
+    title: reward.title,
+    description: reward.description || '',
+    cost: reward.cost,
+    supply: reward.supply,
+    iconName: reward.icon_name || '',
+    icon_color: reward.icon_color,
+    background_image_url: reward.background_image_url,
+    background_opacity: reward.background_opacity,
+    focal_point_x: reward.focal_point_x,
+    focal_point_y: reward.focal_point_y,
+    highlight_effect: reward.highlight_effect,
+    title_color: reward.title_color,
+    subtext_color: reward.subtext_color,
+    calendar_color: reward.calendar_color
+  })) || [];
+};
+
+// Fetch reward usage data for the current week
+const fetchRewardUsage = async () => {
+  // Get current week number
+  const now = new Date();
+  const currentWeek = `${now.getFullYear()}-${now.getMonth() + 1}-${Math.floor(now.getDate() / 7)}`;
+  
+  const { data, error } = await supabase
+    .from('reward_usage')
+    .select('*')
+    .eq('week_number', currentWeek);
+  
+  if (error) {
+    console.error('Error fetching reward usage:', error);
+    throw error;
+  }
+  
+  // Transform data to the format expected by the app
+  const usageMap: Record<string, boolean[]> = {};
+  
+  if (data && data.length > 0) {
+    data.forEach(usage => {
+      const rewardId = usage.reward_id;
+      if (!usageMap[`reward-${rewardId}`]) {
+        usageMap[`reward-${rewardId}`] = Array(7).fill(false);
+      }
+      usageMap[`reward-${rewardId}`][usage.day_of_week] = usage.used;
+    });
+  }
+  
+  return usageMap;
+};
+
 export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Initialize state with localStorage value for points
   const [totalPoints, setTotalPoints] = useState(() => {
     const savedPoints = localStorage.getItem(POINTS_STORAGE_KEY);
     return savedPoints ? parseInt(savedPoints, 10) : DEFAULT_POINTS;
   });
-  
-  const [rewards, setRewards] = useState<RewardItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Initialize the usage tracking state
-  const [rewardUsage, setRewardUsage] = useState<Record<string, boolean[]>>({});
+  // Use React Query for rewards data
+  const { 
+    data: rewards = [], 
+    isLoading: isRewardsLoading,
+    error: rewardsError,
+    refetch: refetchRewardsQuery
+  } = useQuery({
+    queryKey: ['rewards'],
+    queryFn: fetchRewards,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-  // Fetch rewards from Supabase
+  // Use React Query for reward usage data
+  const { 
+    data: rewardUsage = {}, 
+    isLoading: isUsageLoading,
+    error: usageError,
+    refetch: refetchUsageQuery
+  } = useQuery({
+    queryKey: ['rewardUsage'],
+    queryFn: fetchRewardUsage,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Combined loading state
+  const isLoading = isRewardsLoading || isUsageLoading;
+
+  // Handle errors
   useEffect(() => {
-    async function fetchRewards() {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('rewards')
-          .select('*')
-          .order('created_at', { ascending: true });
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (data && data.length > 0) {
-          // Map Supabase data to the format expected by the app
-          const formattedRewards = data.map(reward => ({
-            id: reward.id,
-            title: reward.title,
-            description: reward.description || '',
-            cost: reward.cost,
-            supply: reward.supply,
-            iconName: reward.icon_name || '',
-            icon_color: reward.icon_color,
-            background_image_url: reward.background_image_url,
-            background_opacity: reward.background_opacity,
-            focal_point_x: reward.focal_point_x,
-            focal_point_y: reward.focal_point_y,
-            highlight_effect: reward.highlight_effect,
-            title_color: reward.title_color,
-            subtext_color: reward.subtext_color,
-            calendar_color: reward.calendar_color
-          }));
-          
-          setRewards(formattedRewards);
-        } else {
-          // Fallback to initial rewards if no data is found
-          setRewards(initialRewards);
-        }
-      } catch (error) {
-        console.error('Error fetching rewards:', error);
-        setError('Failed to load rewards. Using default values instead.');
-        setRewards(initialRewards);
-        
-        toast({
-          title: "Error loading rewards",
-          description: "Could not load rewards from the database. Using default values instead.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
+    if (rewardsError) {
+      console.error('Error loading rewards:', rewardsError);
+      toast({
+        title: "Error loading rewards",
+        description: "Could not load rewards from the database.",
+        variant: "destructive",
+      });
     }
-    
-    fetchRewards();
-  }, []);
+
+    if (usageError) {
+      console.error('Error loading reward usage data:', usageError);
+    }
+  }, [rewardsError, usageError, toast]);
 
   // Save points to localStorage when they change
   useEffect(() => {
     localStorage.setItem(POINTS_STORAGE_KEY, totalPoints.toString());
   }, [totalPoints]);
-
-  // Fetch reward usage data
-  useEffect(() => {
-    async function fetchRewardUsage() {
-      try {
-        // Get current week number
-        const now = new Date();
-        const currentWeek = `${now.getFullYear()}-${now.getMonth() + 1}-${Math.floor(now.getDate() / 7)}`;
-        
-        const { data, error } = await supabase
-          .from('reward_usage')
-          .select('*')
-          .eq('week_number', currentWeek);
-        
-        if (error) {
-          throw error;
-        }
-        
-        // Transform data to the format expected by the app
-        const usageMap: Record<string, boolean[]> = {};
-        
-        if (data && data.length > 0) {
-          data.forEach(usage => {
-            const rewardId = usage.reward_id;
-            if (!usageMap[`reward-${rewardId}`]) {
-              usageMap[`reward-${rewardId}`] = Array(7).fill(false);
-            }
-            usageMap[`reward-${rewardId}`][usage.day_of_week] = usage.used;
-          });
-        }
-        
-        setRewardUsage(usageMap);
-      } catch (error) {
-        console.error('Error fetching reward usage:', error);
-        // Fallback to empty usage map
-        setRewardUsage({});
-      }
-    }
-    
-    // Only fetch usage if we have rewards
-    if (rewards.length > 0 && !loading) {
-      fetchRewardUsage();
-    }
-  }, [rewards, loading]);
 
   // Check if we need to reset the weekly tracking
   useEffect(() => {
@@ -205,9 +209,9 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
     if (lastReset !== currentWeek) {
       // Reset weekly tracking
       localStorage.setItem(lastResetKey, currentWeek);
-      setRewardUsage({});
+      queryClient.invalidateQueries({ queryKey: ['rewardUsage'] });
     }
-  }, []);
+  }, [queryClient]);
 
   // Get the current day of week (0-6, Sunday-Saturday)
   const getCurrentDayOfWeek = () => {
@@ -220,6 +224,15 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
     return `${now.getFullYear()}-${now.getMonth() + 1}-${Math.floor(now.getDate() / 7)}`;
   };
 
+  // Combined refetch function
+  const refetchRewards = async () => {
+    console.log("Manually refetching rewards and usage data");
+    await Promise.all([
+      refetchRewardsQuery(),
+      refetchUsageQuery()
+    ]);
+  };
+
   // Handle buying a reward
   const handleBuy = async (index: number) => {
     const reward = rewards[index];
@@ -227,6 +240,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
     // Check if user has enough points
     if (totalPoints >= reward.cost) {
       try {
+        console.log("Buying reward:", reward.title);
+        
         // Update the reward in Supabase
         const updatedSupply = reward.supply + 1;
         
@@ -239,15 +254,11 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           throw error;
         }
         
-        // Update local state
-        const updatedRewards = [...rewards];
-        updatedRewards[index] = {
-          ...reward,
-          supply: updatedSupply
-        };
-        
-        setRewards(updatedRewards);
+        // Update points locally
         setTotalPoints(totalPoints - reward.cost);
+        
+        // Invalidate the 'rewards' query to trigger a refetch
+        await refetchRewards();
         
         toast({
           title: "Reward Purchased",
@@ -278,6 +289,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
     // Check if the reward has any supply left
     if (reward.supply > 0) {
       try {
+        console.log("Using reward:", reward.title);
         // Update the reward in Supabase
         const updatedSupply = reward.supply - 1;
         
@@ -308,25 +320,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           throw usageError;
         }
         
-        // Update local states
-        const updatedRewards = [...rewards];
-        updatedRewards[index] = {
-          ...reward,
-          supply: updatedSupply
-        };
-        
-        setRewards(updatedRewards);
-        
-        // Update the usage state
-        const rewardId = `reward-${reward.id}`;
-        const updatedUsage = { ...rewardUsage };
-        
-        if (!updatedUsage[rewardId]) {
-          updatedUsage[rewardId] = Array(7).fill(false);
-        }
-        
-        updatedUsage[rewardId][currentDay] = true;
-        setRewardUsage(updatedUsage);
+        // Invalidate the 'rewards' and 'rewardUsage' queries to trigger a refetch
+        await refetchRewards();
         
         toast({
           title: "Reward Used",
@@ -368,6 +363,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   // Handle saving edited reward
   const handleSaveReward = async (rewardData: any, index: number | null) => {
     try {
+      console.log("Saving reward:", index !== null ? "edit existing" : "create new", rewardData);
+      
       if (index !== null) {
         // Updating existing reward
         const existingReward = rewards[index];
@@ -395,15 +392,6 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         if (error) {
           throw error;
         }
-        
-        // Update local state
-        const updatedRewards = [...rewards];
-        updatedRewards[index] = {
-          ...existingReward,
-          ...rewardData
-        };
-        
-        setRewards(updatedRewards);
         
         toast({
           title: "Reward Updated",
@@ -435,34 +423,15 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           throw error;
         }
         
-        // Add to local state with the returned ID
-        if (data && data.length > 0) {
-          const newReward = {
-            id: data[0].id,
-            title: rewardData.title,
-            description: rewardData.description,
-            cost: rewardData.cost,
-            supply: 0,
-            iconName: rewardData.iconName,
-            icon_color: rewardData.icon_color,
-            background_image_url: rewardData.background_image_url,
-            background_opacity: rewardData.background_opacity,
-            focal_point_x: rewardData.focal_point_x,
-            focal_point_y: rewardData.focal_point_y,
-            highlight_effect: rewardData.highlight_effect,
-            title_color: rewardData.title_color,
-            subtext_color: rewardData.subtext_color,
-            calendar_color: rewardData.calendar_color
-          };
-          
-          setRewards([...rewards, newReward]);
-          
-          toast({
-            title: "Reward Created",
-            description: "A new reward has been successfully created.",
-          });
-        }
+        toast({
+          title: "Reward Created",
+          description: "A new reward has been successfully created.",
+        });
       }
+      
+      // Refetch the rewards data after saving
+      await refetchRewards();
+      
     } catch (error) {
       console.error('Error saving reward:', error);
       
@@ -471,6 +440,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         description: "Failed to save reward. Please try again.",
         variant: "destructive",
       });
+      throw error; // Re-throw to let the caller know it failed
     }
   };
 
@@ -478,6 +448,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   const handleDeleteReward = async (index: number) => {
     try {
       const rewardToDelete = rewards[index];
+      console.log("Deleting reward:", rewardToDelete.title);
       
       // Delete from Supabase
       const { error } = await supabase
@@ -489,14 +460,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         throw error;
       }
       
-      // Remove from local state
-      const updatedRewards = rewards.filter((_, i) => i !== index);
-      setRewards(updatedRewards);
-      
-      // Also clean up the usage data
-      const updatedUsage = { ...rewardUsage };
-      delete updatedUsage[`reward-${rewardToDelete.id}`];
-      setRewardUsage(updatedUsage);
+      // Invalidate the 'rewards' query to trigger a refetch
+      await refetchRewards();
       
       toast({
         title: "Reward Deleted",
@@ -513,7 +478,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
     }
   };
 
-  if (loading) {
+  // Loading state representation during initial load
+  if (isRewardsLoading && !rewards.length) {
     return <div className="text-white text-center p-4">Loading rewards...</div>;
   }
 
@@ -528,7 +494,9 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         handleSaveReward,
         handleDeleteReward,
         getRewardUsage,
-        getFrequencyCount
+        getFrequencyCount,
+        isLoading,
+        refetchRewards
       }}
     >
       {children}

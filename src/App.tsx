@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -15,10 +16,21 @@ import Rewards from "./pages/Rewards";
 import Punishments from "./pages/Punishments";
 import ThroneRoom from "./pages/ThroneRoom";
 
-const App = () => {
-  // Create a client
-  const queryClient = new QueryClient();
+// Create a client with aggressive caching to maintain state between page navigations
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      cacheTime: 1000 * 60 * 30, // 30 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+      retry: 1,
+    },
+  },
+});
 
+const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -36,6 +48,8 @@ const App = () => {
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      {/* Add React Query DevTools in dev mode for easier debugging */}
+      {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 };

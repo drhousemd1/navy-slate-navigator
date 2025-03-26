@@ -142,6 +142,7 @@ export type Database = {
           icon_name: string | null
           icon_url: string | null
           id: string
+          last_completed_date: string | null
           points: number
           priority: string
           subtext_color: string
@@ -165,6 +166,7 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id?: string
+          last_completed_date?: string | null
           points?: number
           priority?: string
           subtext_color?: string
@@ -188,6 +190,7 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id?: string
+          last_completed_date?: string | null
           points?: number
           priority?: string
           subtext_color?: string

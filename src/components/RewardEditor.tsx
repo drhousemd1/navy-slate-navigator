@@ -2,6 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import RewardEditorForm from './reward-editor/RewardEditorForm';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface RewardEditorProps {
   isOpen: boolean;
@@ -18,13 +19,29 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   onSave,
   onDelete
 }) => {
+  const queryClient = useQueryClient();
+  
   const handleSave = async (formData: any) => {
-    await onSave(formData);
+    console.log("RewardEditor handling save with form data:", formData);
+    try {
+      await onSave(formData);
+      // Force a rewards data refresh after saving
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
+    } catch (error) {
+      console.error("Error in RewardEditor save handler:", error);
+      // Don't close dialog if save failed
+      return;
+    }
     onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        console.log("Dialog closing via onOpenChange");
+        onClose();
+      }
+    }}>
       <DialogContent className="bg-navy border-light-navy text-white max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white">

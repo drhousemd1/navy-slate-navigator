@@ -1,55 +1,63 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Save } from 'lucide-react';
 import DeleteRewardDialog from './DeleteRewardDialog';
 
 interface RewardFormActionsProps {
-  rewardData: any;
+  rewardData?: any;
   loading: boolean;
   isDeleteDialogOpen: boolean;
-  setIsDeleteDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsDeleteDialogOpen: (isOpen: boolean) => void;
   onCancel: () => void;
-  onDelete?: () => void;
+  onDelete?: (id: number) => void;
 }
 
-const RewardFormActions: React.FC<RewardFormActionsProps> = ({ 
-  rewardData, 
-  loading, 
-  isDeleteDialogOpen, 
-  setIsDeleteDialogOpen, 
-  onCancel, 
-  onDelete 
+const RewardFormActions: React.FC<RewardFormActionsProps> = ({
+  rewardData,
+  loading,
+  isDeleteDialogOpen,
+  setIsDeleteDialogOpen,
+  onCancel,
+  onDelete
 }) => {
   return (
-    <div className="pt-4 w-full flex items-center justify-end gap-3">
-      {rewardData && onDelete && (
-        <DeleteRewardDialog
-          isOpen={isDeleteDialogOpen}
-          onOpenChange={setIsDeleteDialogOpen}
-          onDelete={onDelete}
-        />
-      )}
-      <Button 
-        type="button" 
-        variant="destructive" 
-        onClick={onCancel}
-        className="bg-red-700 border-light-navy text-white hover:bg-red-600"
-      >
-        Cancel
-      </Button>
-      <Button 
-        type="submit" 
-        className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
-        disabled={loading}
-      >
-        {loading ? 'Saving...' : (
+    <div className="flex justify-between space-x-4 pt-4">
+      <div>
+        {rewardData && onDelete && (
           <>
-            <Save className="h-4 w-4" />
-            Save Changes
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={loading}
+            >
+              Delete
+            </Button>
+            <DeleteRewardDialog
+              isOpen={isDeleteDialogOpen}
+              onClose={() => setIsDeleteDialogOpen(false)}
+              onConfirm={() => onDelete(rewardData.id || rewardData.index)}
+              rewardName={rewardData.title}
+            />
           </>
         )}
-      </Button>
+      </div>
+      <div className="space-x-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={loading}
+        >
+          Cancel
+        </Button>
+        <Button 
+          type="submit" 
+          disabled={loading}
+        >
+          {loading ? 'Saving...' : 'Save'}
+        </Button>
+      </div>
     </div>
   );
 };
