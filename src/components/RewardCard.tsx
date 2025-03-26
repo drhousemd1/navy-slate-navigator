@@ -45,7 +45,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
             )}
           </div>
           
-          {/* Cost indicator */}
+          {/* Cost indicator - now using PointsBadge component directly */}
           <div className="flex items-center gap-2">
             <PointsBadge points={-cost} />
             <Button
