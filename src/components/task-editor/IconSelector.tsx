@@ -1,25 +1,8 @@
-
 import React from 'react';
-import { 
-  CheckSquare, BookOpen, Coffee, Dumbbell, Star, Heart, Trophy, Target, 
-  Upload, Activity, AlarmClock, Bell, Calendar, Camera, Music, Cloud, Home, 
-  User, File, Gift, Zap, Store, Book, Sun, Moon, Globe, Smile, Map, Settings,
-  ShoppingCart, CreditCard, Truck, Package, Phone, Mail, MessageSquare, Send,
-  Search, Trash, Edit, Eye, Plus, Minus, Calendar as CalendarIcon, Clock,
-  Video, Music as MusicIcon, Image, Folder, Tag, TagsIcon, Share, Link, Bookmark,
-  Award, Flag, Info, AlertCircle, AlertTriangle, BellRing, Mic, Monitor, Smartphone,
-  Tablet, Tv, Speaker, Battery, Bluetooth, Wifi, Loader, RefreshCw, RotateCw,
-  Download, Save, Printer, ExternalLink, Copy, Clipboard, Layout, Sidebar, Menu,
-  List, Grid, Terminal, Code, Server, Database, HardDrive, Cpu, PenTool, Scissors,
-  GitBranch, Anchor, Aperture, Archive, ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
-  AtSign, Box, Briefcase, Cast, Check, ChevronDown, ChevronLeft, ChevronRight,
-  ChevronUp, Circle, Compass, Crosshair, FileMinus, FilePlus, FileText, Film,
-  Filter, Hexagon, Key, Lock, MapPin, Maximize, Minimize, MoreHorizontal,
-  MoreVertical, Move, Navigation, Paperclip, PieChart, Play, Power, Radio,
-  SkipBack, SkipForward, Square, Thermometer, Unlock, Users, Watch, Wind
-} from 'lucide-react';
+import { predefinedIcons } from './IconSelector';
 import { Button } from "@/components/ui/button";
 import { toast } from '@/hooks/use-toast';
+import { Upload } from 'lucide-react';
 
 export const predefinedIcons = [
   { name: 'CheckSquare', icon: CheckSquare },
@@ -87,6 +70,7 @@ interface IconSelectorProps {
   onSelectIcon: (iconName: string) => void;
   onUploadIcon: () => void;
   onRemoveIcon: () => void;
+  renderIcon?: (iconName: string) => React.ReactNode;
 }
 
 const IconSelector: React.FC<IconSelectorProps> = ({ 
@@ -95,13 +79,16 @@ const IconSelector: React.FC<IconSelectorProps> = ({
   iconColor,
   onSelectIcon, 
   onUploadIcon, 
-  onRemoveIcon 
+  onRemoveIcon,
+  renderIcon
 }) => {
-  const renderIcon = (iconName: string) => {
+  const renderDefaultIcon = (iconName: string) => {
     const IconComponent = predefinedIcons.find(i => i.name === iconName)?.icon;
     if (!IconComponent) return null;
     return <IconComponent className="h-6 w-6" style={{ color: iconColor }} />;
   };
+
+  const iconRenderer = renderIcon || renderDefaultIcon;
 
   if (iconPreview) {
     return (
@@ -140,7 +127,7 @@ const IconSelector: React.FC<IconSelectorProps> = ({
     return (
       <div className="space-y-4">
         <div className="w-16 h-16 mx-auto bg-dark-navy rounded-lg flex items-center justify-center">
-          {renderIcon(selectedIconName)}
+          {iconRenderer(selectedIconName)}
         </div>
         <div className="flex flex-col space-y-2">
           <Button 

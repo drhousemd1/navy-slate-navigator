@@ -3,6 +3,7 @@ import React from 'react';
 import { FormLabel } from "@/components/ui/form";
 import IconSelector from '../../task-editor/IconSelector';
 import PredefinedIconsGrid from '../../task-editor/PredefinedIconsGrid';
+import TaskIcon from '@/components/task/TaskIcon';
 
 interface PunishmentIconSectionProps {
   selectedIconName: string | null;
@@ -33,6 +34,13 @@ const PunishmentIconSection: React.FC<PunishmentIconSectionProps> = ({
             onSelectIcon={onSelectIcon}
             onUploadIcon={onUploadIcon}
             onRemoveIcon={onRemoveIcon}
+            renderIcon={(iconName) => (
+              <TaskIcon 
+                icon_name={iconName} 
+                icon_color={iconColor}
+                className="h-6 w-6"
+              />
+            )}
           />
         </div>
         

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -10,6 +11,7 @@ import PunishmentEditor from './PunishmentEditor';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import { cn } from '@/lib/utils';
 import HighlightedText from './task/HighlightedText';
+import TaskIcon from './task/TaskIcon';
 
 interface PunishmentCardProps {
   title: string;
@@ -33,7 +35,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   title,
   description,
   points,
-  icon = <Skull className="h-5 w-5 text-white" />,
+  icon,
   id,
   icon_name,
   icon_color = '#ea384c',
@@ -165,8 +167,16 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
           
           <div className="flex items-start mb-auto">
             <div className="mr-4 flex-shrink-0">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: icon_color }}>
-                {icon}
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-red-500">
+                {icon_name ? (
+                  <TaskIcon 
+                    icon_name={icon_name} 
+                    icon_color="#FFFFFF" 
+                    className="h-5 w-5"
+                  />
+                ) : (
+                  <Skull className="h-5 w-5 text-white" />
+                )}
               </div>
             </div>
             

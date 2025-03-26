@@ -6,144 +6,153 @@ import {
   Zap, Store, Book, Sun, Moon, Globe, Smile, Map, Settings, ShoppingCart,
   CreditCard, Truck, Package, Phone, Mail, MessageSquare, Send, Search, Trash,
   Edit, Eye, Plus, Minus, Clock, Video, Image, Folder, Tag, Share, Link,
-  Bookmark, Award, Flag, Info, AlertCircle, AlertTriangle, BellRing
+  Bookmark, Award, Flag, Info, AlertCircle, AlertTriangle, BellRing, Skull
 } from 'lucide-react';
 
 interface TaskIconProps {
   icon_url?: string;
   icon_name?: string;
   icon_color?: string;
+  className?: string;
 }
 
 const TaskIcon: React.FC<TaskIconProps> = ({ 
   icon_url, 
   icon_name, 
-  icon_color = '#9b87f5' 
+  icon_color = '#9b87f5',
+  className = "w-6 h-6"
 }) => {
   if (icon_url) {
-    return <img src={icon_url} alt="Task icon" className="w-6 h-6" />;
+    return <img src={icon_url} alt="Task icon" className={className} />;
   }
   
   if (icon_name) {
+    const iconProps = {
+      className,
+      color: icon_color
+    };
+
     switch (icon_name) {
       case 'CheckSquare':
-        return <CheckSquare className="w-6 h-6" style={{ color: icon_color }} />;
+        return <CheckSquare {...iconProps} />;
       case 'BookOpen':
-        return <BookOpen className="w-6 h-6" style={{ color: icon_color }} />;
+        return <BookOpen {...iconProps} />;
       case 'Coffee':
-        return <Coffee className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Coffee {...iconProps} />;
       case 'Dumbbell':
-        return <Dumbbell className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Dumbbell {...iconProps} />;
       case 'Star':
-        return <Star className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Star {...iconProps} />;
       case 'Heart':
-        return <Heart className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Heart {...iconProps} />;
       case 'Trophy':
-        return <Trophy className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Trophy {...iconProps} />;
       case 'Target':
-        return <Target className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Target {...iconProps} />;
       case 'Activity':
-        return <Activity className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Activity {...iconProps} />;
       case 'AlarmClock':
-        return <AlarmClock className="w-6 h-6" style={{ color: icon_color }} />;
+        return <AlarmClock {...iconProps} />;
       case 'Bell':
-        return <Bell className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Bell {...iconProps} />;
       case 'Calendar':
-        return <Calendar className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Calendar {...iconProps} />;
       case 'Camera':
-        return <Camera className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Camera {...iconProps} />;
       case 'Music':
-        return <Music className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Music {...iconProps} />;
       case 'Cloud':
-        return <Cloud className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Cloud {...iconProps} />;
       case 'Home':
-        return <Home className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Home {...iconProps} />;
       case 'User':
-        return <User className="w-6 h-6" style={{ color: icon_color }} />;
+        return <User {...iconProps} />;
       case 'File':
-        return <File className="w-6 h-6" style={{ color: icon_color }} />;
+        return <File {...iconProps} />;
       case 'Gift':
-        return <Gift className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Gift {...iconProps} />;
       case 'Zap':
-        return <Zap className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Zap {...iconProps} />;
       case 'Store':
-        return <Store className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Store {...iconProps} />;
       case 'Book':
-        return <Book className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Book {...iconProps} />;
       case 'Sun':
-        return <Sun className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Sun {...iconProps} />;
       case 'Moon':
-        return <Moon className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Moon {...iconProps} />;
       case 'Globe':
-        return <Globe className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Globe {...iconProps} />;
       case 'Smile':
-        return <Smile className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Smile {...iconProps} />;
       case 'Map':
-        return <Map className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Map {...iconProps} />;
       case 'Settings':
-        return <Settings className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Settings {...iconProps} />;
       case 'ShoppingCart':
-        return <ShoppingCart className="w-6 h-6" style={{ color: icon_color }} />;
+        return <ShoppingCart {...iconProps} />;
       case 'CreditCard':
-        return <CreditCard className="w-6 h-6" style={{ color: icon_color }} />;
+        return <CreditCard {...iconProps} />;
       case 'Truck':
-        return <Truck className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Truck {...iconProps} />;
       case 'Package':
-        return <Package className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Package {...iconProps} />;
       case 'Phone':
-        return <Phone className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Phone {...iconProps} />;
       case 'Mail':
-        return <Mail className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Mail {...iconProps} />;
       case 'MessageSquare':
-        return <MessageSquare className="w-6 h-6" style={{ color: icon_color }} />;
+        return <MessageSquare {...iconProps} />;
       case 'Send':
-        return <Send className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Send {...iconProps} />;
       case 'Search':
-        return <Search className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Search {...iconProps} />;
       case 'Trash':
-        return <Trash className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Trash {...iconProps} />;
       case 'Edit':
-        return <Edit className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Edit {...iconProps} />;
       case 'Eye':
-        return <Eye className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Eye {...iconProps} />;
       case 'Plus':
-        return <Plus className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Plus {...iconProps} />;
       case 'Minus':
-        return <Minus className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Minus {...iconProps} />;
       case 'Clock':
-        return <Clock className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Clock {...iconProps} />;
       case 'Video':
-        return <Video className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Video {...iconProps} />;
       case 'Image':
-        return <Image className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Image {...iconProps} />;
       case 'Folder':
-        return <Folder className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Folder {...iconProps} />;
       case 'Tag':
-        return <Tag className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Tag {...iconProps} />;
       case 'Share':
-        return <Share className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Share {...iconProps} />;
       case 'Link':
-        return <Link className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Link {...iconProps} />;
       case 'Bookmark':
-        return <Bookmark className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Bookmark {...iconProps} />;
       case 'Award':
-        return <Award className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Award {...iconProps} />;
       case 'Flag':
-        return <Flag className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Flag {...iconProps} />;
       case 'Info':
-        return <Info className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Info {...iconProps} />;
       case 'AlertCircle':
-        return <AlertCircle className="w-6 h-6" style={{ color: icon_color }} />;
+        return <AlertCircle {...iconProps} />;
       case 'AlertTriangle':
-        return <AlertTriangle className="w-6 h-6" style={{ color: icon_color }} />;
+        return <AlertTriangle {...iconProps} />;
       case 'BellRing':
-        return <BellRing className="w-6 h-6" style={{ color: icon_color }} />;
+        return <BellRing {...iconProps} />;
+      case 'Skull':
+        return <Skull {...iconProps} />;
       default:
-        return <Calendar className="w-6 h-6" style={{ color: icon_color }} />;
+        return <Calendar {...iconProps} />;
     }
   }
   
-  return <Calendar className="w-6 h-6" style={{ color: icon_color }} />;
+  return <Calendar className={className} color={icon_color} />;
 };
 
 export default TaskIcon;
