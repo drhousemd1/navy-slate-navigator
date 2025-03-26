@@ -38,7 +38,9 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-navy border border-light-navy text-white p-0 max-w-full w-screen h-screen max-h-screen flex flex-col relative">
+      <DialogContent className="bg-navy border border-light-navy text-white p-0 max-w-full w-full h-full max-h-full flex flex-col inset-0 m-0 rounded-none absolute"
+        style={{ transform: 'none', top: 0, left: 0, bottom: 0, right: 0 }}
+      >
         {imageUrl && (
           <div 
             className="absolute inset-0 z-0" 
@@ -49,7 +51,7 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
         <div className="relative z-10 flex flex-col h-full p-6 overflow-y-auto">
           <button 
             onClick={onClose}
-            className="absolute right-4 top-4 p-2 text-white hover:text-cyan-500 transition-colors rounded-full bg-navy/60"
+            className="absolute right-4 top-4 p-2 text-white hover:text-cyan-500 transition-colors rounded-full bg-navy/60 z-20"
             aria-label="Close encyclopedia entry"
           >
             <X size={24} />
