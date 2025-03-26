@@ -32,60 +32,33 @@ export type Database = {
       }
       rewards: {
         Row: {
-          background_image_url: string | null
-          background_opacity: number | null
-          calendar_color: string | null
           cost: number
           created_at: string
           description: string | null
-          focal_point_x: number | null
-          focal_point_y: number | null
-          highlight_effect: boolean | null
           icon_color: string | null
           icon_name: string | null
           id: string
-          subtext_color: string | null
-          supply: number | null
           title: string
-          title_color: string | null
           updated_at: string
         }
         Insert: {
-          background_image_url?: string | null
-          background_opacity?: number | null
-          calendar_color?: string | null
           cost?: number
           created_at?: string
           description?: string | null
-          focal_point_x?: number | null
-          focal_point_y?: number | null
-          highlight_effect?: boolean | null
           icon_color?: string | null
           icon_name?: string | null
           id?: string
-          subtext_color?: string | null
-          supply?: number | null
           title: string
-          title_color?: string | null
           updated_at?: string
         }
         Update: {
-          background_image_url?: string | null
-          background_opacity?: number | null
-          calendar_color?: string | null
           cost?: number
           created_at?: string
           description?: string | null
-          focal_point_x?: number | null
-          focal_point_y?: number | null
-          highlight_effect?: boolean | null
           icon_color?: string | null
           icon_name?: string | null
           id?: string
-          subtext_color?: string | null
-          supply?: number | null
           title?: string
-          title_color?: string | null
           updated_at?: string
         }
         Relationships: []

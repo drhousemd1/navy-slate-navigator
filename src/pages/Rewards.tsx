@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardEditor from '../components/RewardEditor';
@@ -11,7 +12,7 @@ interface RewardsContentProps {
 }
 
 const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
-  const { rewards, handleSaveReward, handleDeleteReward, isLoading } = useRewards();
+  const { rewards, handleSaveReward, handleDeleteReward } = useRewards();
   
   // Editor state
   const [currentReward, setCurrentReward] = useState<any>(null);
@@ -32,26 +33,16 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   };
 
   // Handle saving edited reward
-  const handleSave = async (rewardData: any) => {
-    try {
-      await handleSaveReward(rewardData, currentRewardIndex);
-      closeEditor();
-    } catch (error) {
-      console.error("Error in handleSave:", error);
-      // Keep editor open to allow the user to try again
-    }
+  const handleSave = (rewardData: any) => {
+    handleSaveReward(rewardData, currentRewardIndex);
+    closeEditor();
   };
 
   // Handle deleting a reward
-  const handleDelete = async (index: number) => {
+  const handleDelete = (index: number) => {
     if (index !== null) {
-      try {
-        await handleDeleteReward(index);
-        closeEditor();
-      } catch (error) {
-        console.error("Error in handleDelete:", error);
-        // Keep editor open to allow the user to try again
-      }
+      handleDeleteReward(index);
+      closeEditor();
     }
   };
 
@@ -60,14 +51,6 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     setCurrentReward(null);
     setCurrentRewardIndex(null);
   };
-
-  if (isLoading) {
-    return (
-      <div className="p-4 pt-6 flex items-center justify-center h-[80vh]">
-        <div className="animate-pulse text-white">Loading rewards...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-4 pt-6">
