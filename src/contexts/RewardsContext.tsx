@@ -38,6 +38,9 @@ const POINTS_STORAGE_KEY = 'rewardPoints';
 const REWARDS_STORAGE_KEY = 'rewardItems';
 const REWARD_USAGE_STORAGE_KEY = 'rewardUsage';
 
+// Maximum size for background image data URLs (in characters)
+const MAX_IMAGE_SIZE = 100000; // Approximately 100KB
+
 type RewardItem = {
   title: string;
   description: string;
@@ -69,47 +72,103 @@ interface RewardsContextType {
 
 const RewardsContext = createContext<RewardsContextType | undefined>(undefined);
 
+// Helper function to safely save to localStorage
+const safeLocalStorageSetItem = (key: string, value: string): boolean => {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error) {
+    console.error(`Error saving to localStorage (${key}):`, error);
+    return false;
+  }
+};
+
+// Helper function to get data from localStorage
+const safeLocalStorageGetItem = (key: string, defaultValue: string): string => {
+  try {
+    const value = localStorage.getItem(key);
+    return value !== null ? value : defaultValue;
+  } catch (error) {
+    console.error(`Error retrieving from localStorage (${key}):`, error);
+    return defaultValue;
+  }
+};
+
+// Helper to process image URLs, limiting their size
+const processImageUrl = (url?: string): string | undefined => {
+  if (!url) return undefined;
+  
+  // If image URL is too large, don't store it
+  if (url.length > MAX_IMAGE_SIZE) {
+    console.warn('Image too large for localStorage, skipping storage');
+    return undefined;
+  }
+  
+  return url;
+};
+
 export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   // Initialize state with localStorage values or defaults
   const [totalPoints, setTotalPoints] = useState(() => {
-    const savedPoints = localStorage.getItem(POINTS_STORAGE_KEY);
-    return savedPoints ? parseInt(savedPoints, 10) : 100;
+    const savedPoints = safeLocalStorageGetItem(POINTS_STORAGE_KEY, '100');
+    return parseInt(savedPoints, 10);
   });
   
   const [rewards, setRewards] = useState<RewardItem[]>(() => {
-    const savedRewards = localStorage.getItem(REWARDS_STORAGE_KEY);
-    return savedRewards ? JSON.parse(savedRewards) : initialRewards;
+    const savedRewards = safeLocalStorageGetItem(REWARDS_STORAGE_KEY, JSON.stringify(initialRewards));
+    try {
+      return JSON.parse(savedRewards);
+    } catch (error) {
+      console.error('Error parsing rewards from localStorage:', error);
+      return initialRewards;
+    }
   });
 
   // Initialize the usage tracking state
   const [rewardUsage, setRewardUsage] = useState(() => {
-    const savedUsage = localStorage.getItem(REWARD_USAGE_STORAGE_KEY);
-    return savedUsage ? JSON.parse(savedUsage) : {};
+    const savedUsage = safeLocalStorageGetItem(REWARD_USAGE_STORAGE_KEY, '{}');
+    try {
+      return JSON.parse(savedUsage);
+    } catch (error) {
+      console.error('Error parsing reward usage from localStorage:', error);
+      return {};
+    }
   });
 
   // Save to localStorage whenever state changes
   useEffect(() => {
-    localStorage.setItem(POINTS_STORAGE_KEY, totalPoints.toString());
+    safeLocalStorageSetItem(POINTS_STORAGE_KEY, totalPoints.toString());
   }, [totalPoints]);
 
   useEffect(() => {
-    localStorage.setItem(REWARDS_STORAGE_KEY, JSON.stringify(rewards));
+    try {
+      // Process rewards to limit image size before saving
+      const processedRewards = rewards.map(reward => ({
+        ...reward,
+        background_image_url: processImageUrl(reward.background_image_url)
+      }));
+      
+      const rewardsString = JSON.stringify(processedRewards);
+      safeLocalStorageSetItem(REWARDS_STORAGE_KEY, rewardsString);
+    } catch (error) {
+      console.error('Error saving rewards to localStorage:', error);
+    }
   }, [rewards]);
 
   useEffect(() => {
-    localStorage.setItem(REWARD_USAGE_STORAGE_KEY, JSON.stringify(rewardUsage));
+    safeLocalStorageSetItem(REWARD_USAGE_STORAGE_KEY, JSON.stringify(rewardUsage));
   }, [rewardUsage]);
 
   // Check if we need to reset the weekly tracking
   useEffect(() => {
     const lastResetKey = 'lastWeeklyReset';
-    const lastReset = localStorage.getItem(lastResetKey);
+    const lastReset = safeLocalStorageGetItem(lastResetKey, '');
     const now = new Date();
     const currentWeek = `${now.getFullYear()}-${now.getMonth() + 1}-${Math.floor(now.getDate() / 7)}`;
     
     if (lastReset !== currentWeek) {
       // Reset weekly tracking
-      localStorage.setItem(lastResetKey, currentWeek);
+      safeLocalStorageSetItem(lastResetKey, currentWeek);
       setRewardUsage({});
     }
   }, []);
@@ -182,17 +241,23 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
 
   // Handle saving edited reward
   const handleSaveReward = (rewardData: any, index: number | null) => {
+    // Process image size limits
+    const processedRewardData = {
+      ...rewardData,
+      background_image_url: processImageUrl(rewardData.background_image_url)
+    };
+    
     if (index !== null) {
       const updatedRewards = [...rewards];
       updatedRewards[index] = {
         ...rewards[index],
-        ...rewardData
+        ...processedRewardData
       };
       
       setRewards(updatedRewards);
     } else {
       // Add new reward
-      setRewards([...rewards, rewardData]);
+      setRewards([...rewards, processedRewardData]);
     }
   };
 
