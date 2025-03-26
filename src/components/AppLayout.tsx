@@ -39,7 +39,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       </main>
       
       {shouldShowAddButton && (
-        <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-10">
+        <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-40">
           <Button 
             className={`${useCircleButton 
               ? 'bg-green-500 hover:bg-green-600 w-10 h-10 rounded-full shadow-xl p-0 flex items-center justify-center' 

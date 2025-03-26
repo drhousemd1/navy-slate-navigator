@@ -77,7 +77,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
 
   return (
     <Card 
-      className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy"
+      className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy z-0"
       style={cardBorderStyle}
     >
       {backgroundImage && (
