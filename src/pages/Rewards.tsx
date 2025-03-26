@@ -6,6 +6,7 @@ import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import RewardsList from '../components/rewards/RewardsList';
 import { Skeleton } from '../components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 
 interface RewardsContentProps {
   isEditorOpen: boolean;
@@ -14,15 +15,23 @@ interface RewardsContentProps {
 
 const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const { rewards, handleSaveReward, handleDeleteReward, refreshRewards, loading } = useRewards();
+  const [activeTab, setActiveTab] = useState("all");
   
   // Editor state
   const [currentReward, setCurrentReward] = useState<any>(null);
   const [currentRewardIndex, setCurrentRewardIndex] = useState<number | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Refresh rewards when this component mounts
   useEffect(() => {
     console.log("RewardsContent mounted, refreshing rewards...");
-    refreshRewards();
+    const loadRewards = async () => {
+      await refreshRewards();
+      // Set initial load to false after first successful load
+      setIsInitialLoad(false);
+    };
+    
+    loadRewards();
   }, [refreshRewards]);
 
   // Handle editing a reward
@@ -76,8 +85,8 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     };
   }, []);
 
-  // Show loading state while rewards are being fetched
-  if (loading) {
+  // Show loading state while rewards are being fetched during initial load
+  if (loading && isInitialLoad) {
     return (
       <div className="p-4 pt-6">
         <div className="flex justify-between items-center mb-6">
@@ -96,7 +105,38 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   return (
     <div className="p-4 pt-6">
       <RewardsHeader />
-      <RewardsList onEdit={handleEdit} />
+      
+      <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab} value={activeTab}>
+        <TabsList className="w-full mb-4 bg-light-navy">
+          <TabsTrigger value="all" className="flex-1">All Rewards</TabsTrigger>
+          <TabsTrigger value="available" className="flex-1">Available</TabsTrigger>
+          <TabsTrigger value="unavailable" className="flex-1">Unavailable</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="all" className="mt-2">
+          <RewardsList 
+            onEdit={handleEdit} 
+            filter="all"
+            key="all-rewards-list"
+          />
+        </TabsContent>
+        
+        <TabsContent value="available" className="mt-2">
+          <RewardsList 
+            onEdit={handleEdit} 
+            filter="available"
+            key="available-rewards-list"
+          />
+        </TabsContent>
+        
+        <TabsContent value="unavailable" className="mt-2">
+          <RewardsList 
+            onEdit={handleEdit} 
+            filter="unavailable"
+            key="unavailable-rewards-list"
+          />
+        </TabsContent>
+      </Tabs>
       
       <RewardEditor
         isOpen={isEditorOpen}
