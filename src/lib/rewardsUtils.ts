@@ -89,7 +89,8 @@ export async function purchaseReward(userId: string, rewardId: string, cost: num
     success: boolean;
   }
 
-  const { data, error } = await supabase.rpc<PurchaseRewardResult, PurchaseRewardParams>(
+  // Fix: Use the correct typing for supabase.rpc to avoid the 'never' constraint error
+  const { data, error } = await supabase.rpc(
     'purchase_reward', 
     { 
       user_id: userId, 
