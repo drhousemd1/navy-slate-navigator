@@ -73,6 +73,8 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
 
   useEffect(() => {
     if (punishmentData) {
+      console.log("Setting form data from punishmentData:", punishmentData);
+      
       form.reset({
         title: punishmentData.title || '',
         description: punishmentData.description || '',
@@ -101,6 +103,9 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     setLoading(true);
     
     try {
+      console.log("Submitting form with values:", values);
+      console.log("Background image:", imagePreview);
+      
       // Make sure required fields are included in the processed values
       const processedValues: PunishmentData = {
         title: values.title,
@@ -118,6 +123,8 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
         focal_point_y: values.focal_point_y,
       };
       
+      console.log("Processed values to save:", processedValues);
+      
       if (punishmentData?.id) {
         // Update existing punishment
         await updatePunishment(punishmentData.id, processedValues);
@@ -127,6 +134,12 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
       }
       
       await onSave(processedValues);
+      
+      toast({
+        title: punishmentData?.id ? "Punishment Updated" : "Punishment Created",
+        description: `Your punishment has been ${punishmentData?.id ? "updated" : "created"} successfully.`,
+      });
+      
       onCancel();
       
     } catch (error) {
@@ -184,11 +197,14 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("handleImageUpload called");
     const file = e.target.files?.[0];
     if (file) {
+      console.log("File selected:", file.name);
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
+        console.log("Image loaded as base64");
         setImagePreview(base64String);
       };
       reader.readAsDataURL(file);
@@ -257,19 +273,10 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
               y: form.getValues('focal_point_y')
             }}
             onRemoveImage={() => {
+              console.log("Removing image");
               setImagePreview(null);
             }}
-            onImageUpload={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  const base64String = reader.result as string;
-                  setImagePreview(base64String);
-                };
-                reader.readAsDataURL(file);
-              }
-            }}
+            onImageUpload={handleImageUpload}
             setValue={form.setValue}
           />
         </div>

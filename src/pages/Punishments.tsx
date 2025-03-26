@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -110,8 +111,6 @@ const PunishmentsContent: React.FC = () => {
     <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
       <PunishmentsHeader />
       
-      {/* Removed the "New Punishment" button from here */}
-      
       {loading || initializing ? (
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, index) => (
@@ -140,6 +139,10 @@ const PunishmentsContent: React.FC = () => {
               subtext_color={punishment.subtext_color}
               calendar_color={punishment.calendar_color}
               highlight_effect={punishment.highlight_effect}
+              background_image_url={punishment.background_image_url}
+              background_opacity={punishment.background_opacity}
+              focal_point_x={punishment.focal_point_x}
+              focal_point_y={punishment.focal_point_y}
             />
           ))}
         </div>

@@ -23,6 +23,10 @@ interface PunishmentCardProps {
   subtext_color?: string;
   calendar_color?: string;
   highlight_effect?: boolean;
+  background_image_url?: string;
+  background_opacity?: number;
+  focal_point_x?: number;
+  focal_point_y?: number;
 }
 
 const PunishmentCard: React.FC<PunishmentCardProps> = ({
@@ -36,7 +40,11 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   title_color = '#FFFFFF',
   subtext_color = '#8E9196',
   calendar_color = '#ea384c',
-  highlight_effect = false
+  highlight_effect = false,
+  background_image_url,
+  background_opacity = 50,
+  focal_point_x = 50,
+  focal_point_y = 50
 }) => {
   const { totalPoints, setTotalPoints } = useRewards();
   const { applyPunishment, getPunishmentHistory, updatePunishment, deletePunishment } = usePunishments();
@@ -120,9 +128,27 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
     }
   };
 
+  // Create background image style
+  const backgroundImageStyle = background_image_url ? {
+    backgroundImage: `url(${background_image_url})`,
+    backgroundSize: 'cover',
+    backgroundPosition: `${focal_point_x}% ${focal_point_y}%`,
+    backgroundRepeat: 'no-repeat',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: background_opacity / 100,
+    zIndex: 0
+  } : {};
+
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-red-500 bg-navy">
+        {background_image_url && (
+          <div style={backgroundImageStyle} aria-hidden="true" />
+        )}
         <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
           <div className="flex justify-between items-start mb-3">
             {/* Priority indicator placeholder */}
@@ -217,7 +243,11 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
           title_color,
           subtext_color,
           calendar_color,
-          highlight_effect
+          highlight_effect,
+          background_image_url,
+          background_opacity,
+          focal_point_x,
+          focal_point_y
         }}
         onSave={handleSavePunishment}
         onDelete={handleDeletePunishment}
