@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { X } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 import HighlightedText from '../task/HighlightedText';
 
 interface EncyclopediaPopupViewProps {
@@ -49,13 +49,13 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
           />
         )}
         <div className="relative z-10 flex flex-col h-full p-6 overflow-y-auto">
-          <button 
+          <Button 
             onClick={onClose}
-            className="absolute right-4 top-4 p-2 text-white hover:text-cyan-500 transition-colors rounded-full bg-navy/60 z-20"
+            className="absolute right-4 top-4 z-20 bg-red-600 hover:bg-red-700 text-white"
             aria-label="Close encyclopedia entry"
           >
-            <X size={24} />
-          </button>
+            Close
+          </Button>
           
           <div className="max-w-3xl mx-auto w-full pt-10">
             <h1 className="text-3xl md:text-4xl font-bold mb-6">
