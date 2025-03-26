@@ -19,6 +19,7 @@ export type Database = {
           id: string
           image_url: string | null
           opacity: number | null
+          popup_opacity: number | null
           popup_text: string | null
           popup_text_formatting: Json | null
           subtext: string
@@ -36,6 +37,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           opacity?: number | null
+          popup_opacity?: number | null
           popup_text?: string | null
           popup_text_formatting?: Json | null
           subtext: string
@@ -53,6 +55,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           opacity?: number | null
+          popup_opacity?: number | null
           popup_text?: string | null
           popup_text_formatting?: Json | null
           subtext?: string

@@ -71,7 +71,7 @@ export const useEncyclopedia = () => {
           focal_point_x: item.focal_point_x,
           focal_point_y: item.focal_point_y,
           opacity: item.opacity,
-          popup_opacity: item.popup_opacity,
+          popup_opacity: item.popup_opacity || item.opacity, // Use opacity as fallback if popup_opacity is null
           title_color: item.title_color,
           subtext_color: item.subtext_color,
           highlight_effect: item.highlight_effect,
