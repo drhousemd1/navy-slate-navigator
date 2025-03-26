@@ -35,7 +35,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {rewards.map((reward, index) => (
         <RewardCard
-          key={`${reward.id}-${index}`} // Use both id and index to ensure React maintains correct order
+          key={reward.id} // Use only ID as the key for stable rendering
           title={reward.title}
           description={reward.description || ''}
           cost={reward.cost}

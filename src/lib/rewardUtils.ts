@@ -41,7 +41,10 @@ export const fetchRewards = async (): Promise<Reward[]> => {
       return [];
     }
 
-    console.log('Fetched rewards without any sorting:', data);
+    console.log('Fetched rewards from database with original order:', 
+      data?.map(r => ({ id: r.id, title: r.title, created_at: r.created_at }))
+    );
+    
     return data as Reward[];
   } catch (err) {
     console.error('Unexpected error fetching rewards:', err);

@@ -94,9 +94,8 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (index !== null) {
         // CRITICAL: We're updating an existing reward
         const existingReward = rewards[index];
-        console.log("Updating existing reward at index", index, "with ID:", existingReward.id);
         
-        // Log the entire rewards array and the specific index before update
+        // Log the entire rewards array with stable ID-based keys before update
         console.log("Rewards before update:", rewards.map((r, i) => 
           `${i}: ${r.title} (${r.id}) - created ${r.created_at}`));
         
@@ -118,6 +117,9 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
           calendar_color: dataToSave.calendar_color,
         };
         
+        // Log the fields being updated
+        console.log("Updating fields for reward:", fieldsToUpdate);
+        
         // CRITICAL: Never merge update with Supabase auto-update of timestamps
         const { data, error } = await supabase
           .from('rewards')
@@ -128,7 +130,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (error) throw error;
         
         if (data && data.length > 0) {
-          // CRITICAL: Preserve the original created_at timestamp and position
+          // CRITICAL: Preserve the original created_at timestamp
           result = {
             ...data[0],
             created_at: existingReward.created_at // Preserve original created_at
@@ -152,6 +154,8 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         result = await saveReward(dataToSave as Reward & { title: string });
         
         if (result) {
+          // For new rewards, append to the existing list
+          console.log("New reward created with ID:", result.id);
           setRewards(prevRewards => [...prevRewards, result as Reward]);
         }
       }
