@@ -6,11 +6,15 @@ import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import RewardsList from '../components/rewards/RewardsList';
 
-const RewardsContent: React.FC = () => {
+interface RewardsContentProps {
+  isEditorOpen: boolean;
+  setIsEditorOpen: (isOpen: boolean) => void;
+}
+
+const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const { rewards, handleSaveReward, handleDeleteReward } = useRewards();
   
   // Editor state
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentReward, setCurrentReward] = useState<any>(null);
   const [currentRewardIndex, setCurrentRewardIndex] = useState<number | null>(null);
 
@@ -18,6 +22,13 @@ const RewardsContent: React.FC = () => {
   const handleEdit = (index: number) => {
     setCurrentReward(rewards[index]);
     setCurrentRewardIndex(index);
+    setIsEditorOpen(true);
+  };
+
+  // Handle adding a new reward
+  const handleAddNewReward = () => {
+    setCurrentReward(null);
+    setCurrentRewardIndex(null);
     setIsEditorOpen(true);
   };
 
@@ -58,10 +69,15 @@ const RewardsContent: React.FC = () => {
 };
 
 const Rewards: React.FC = () => {
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  
   return (
-    <AppLayout>
+    <AppLayout onAddNewItem={() => setIsEditorOpen(true)}>
       <RewardsProvider>
-        <RewardsContent />
+        <RewardsContent 
+          isEditorOpen={isEditorOpen}
+          setIsEditorOpen={setIsEditorOpen}
+        />
       </RewardsProvider>
     </AppLayout>
   );
