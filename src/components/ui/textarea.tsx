@@ -76,48 +76,96 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       const text = props.value?.toString() || '';
       
       if (!formattedSections || formattedSections.length === 0) {
-        // If no formatted sections, just return the text with line breaks
-        return text.replace(/\n/g, '<br/>');
+        // If no formatted sections, return an empty string to prevent duplicating text
+        // The actual text is already visible in the textarea
+        return '';
       }
 
       // Sort sections by start position to process in order
       const sortedSections = [...formattedSections].sort((a, b) => a.start - b.start);
       
-      let html = '';
-      let lastIndex = 0;
+      // Create an array of objects representing each character and its formatting
+      const characters: Array<{
+        char: string;
+        formatting: {
+          isBold?: boolean;
+          isUnderlined?: boolean;
+          fontSize?: string;
+        } | null;
+      }> = text.split('').map(() => ({ char: '', formatting: null }));
       
-      // Process each formatted section
+      // Apply formatting information to each character
       for (const section of sortedSections) {
-        // Add unformatted text before this section
-        if (section.start > lastIndex) {
-          html += text.substring(lastIndex, section.start).replace(/\n/g, '<br/>');
+        for (let i = section.start; i < section.end && i < characters.length; i++) {
+          characters[i].formatting = section.formatting;
         }
-        
-        // Get the section text
-        const sectionText = text.substring(section.start, section.end).replace(/\n/g, '<br/>');
-        
-        // Apply formatting to this section
-        const { isBold, isUnderlined, fontSize } = section.formatting;
-        let formattedText = sectionText;
-        
-        // Wrap in formatting tags as needed
-        if (isBold) {
-          formattedText = `<strong>${formattedText}</strong>`;
-        }
-        if (isUnderlined) {
-          formattedText = `<u>${formattedText}</u>`;
-        }
-        if (fontSize) {
-          formattedText = `<span style="font-size:${fontSize}">${formattedText}</span>`;
-        }
-        
-        html += formattedText;
-        lastIndex = section.end;
       }
       
-      // Add any remaining text after the last formatted section
-      if (lastIndex < text.length) {
-        html += text.substring(lastIndex).replace(/\n/g, '<br/>');
+      // Build the HTML with only the formatted sections visible
+      let html = '';
+      let currentFormatting = null;
+      let currentSpan = '';
+      
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const formatting = characters[i].formatting;
+        
+        // If this character has formatting
+        if (formatting) {
+          // If we're starting a new formatted section or changing formatting
+          if (!currentFormatting || 
+              currentFormatting.isBold !== formatting.isBold || 
+              currentFormatting.isUnderlined !== formatting.isUnderlined || 
+              currentFormatting.fontSize !== formatting.fontSize) {
+            
+            // Close previous span if there was one
+            if (currentSpan) {
+              html += currentSpan;
+              currentSpan = '';
+            }
+            
+            // Start a new formatted span
+            currentFormatting = formatting;
+            
+            // Create CSS for this span
+            const style = `
+              position: absolute; 
+              left: 0; 
+              top: 0; 
+              pointer-events: none;
+              padding: 0;
+              margin: 0;
+              font-weight: ${formatting.isBold ? 'bold' : 'inherit'};
+              text-decoration: ${formatting.isUnderlined ? 'underline' : 'none'};
+              font-size: ${formatting.fontSize || 'inherit'};
+              white-space: pre-wrap;
+              word-break: break-word;
+              overflow-wrap: break-word;
+              color: transparent;
+              background-color: ${formatting.isBold ? 'rgba(66, 153, 225, 0.3)' : 'transparent'};
+              border-bottom: ${formatting.isUnderlined ? '2px solid rgba(66, 153, 225, 0.5)' : 'none'};
+            `;
+            
+            currentSpan = `<span style="${style}" data-start="${i}">`;
+          }
+          
+          // Add the character to the current span
+          currentSpan += char === '\n' ? '<br/>' : char;
+        } else {
+          // If we were in a formatted span but this character has no formatting
+          if (currentFormatting) {
+            currentSpan += '</span>';
+            html += currentSpan;
+            currentSpan = '';
+            currentFormatting = null;
+          }
+        }
+      }
+      
+      // Close the last span if there is one
+      if (currentSpan) {
+        currentSpan += '</span>';
+        html += currentSpan;
       }
       
       return html;

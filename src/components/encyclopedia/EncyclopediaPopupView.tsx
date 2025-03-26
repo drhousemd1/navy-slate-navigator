@@ -80,18 +80,26 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
 
     // Split content by paragraphs to maintain paragraph structure
     const paragraphs = content.split('\n');
+    let charOffset = 0;
     
     return paragraphs.map((paragraph, paragraphIndex) => {
-      if (!paragraph.trim()) return <br key={paragraphIndex} />;
-      
-      // Calculate the character offset for this paragraph
-      const paragraphOffset = content.indexOf(paragraph);
-      const paragraphEndOffset = paragraphOffset + paragraph.length;
+      if (!paragraph.trim()) {
+        charOffset += 1; // Account for the newline character
+        return <br key={paragraphIndex} />;
+      }
       
       // Find sections that overlap with this paragraph
+      const paragraphLength = paragraph.length;
+      const paragraphEnd = charOffset + paragraphLength;
+      
       const relevantSections = formattedSections.filter(section => 
-        !(section.end <= paragraphOffset || section.start >= paragraphEndOffset)
+        !(section.end <= charOffset || section.start >= paragraphEnd)
       );
+      
+      // Increment the character offset for the next paragraph
+      // (add 1 for the newline character)
+      const currentOffset = charOffset;
+      charOffset += paragraphLength + 1;
       
       if (relevantSections.length === 0) {
         // No formatting in this paragraph
@@ -108,7 +116,7 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
       
       // Sort sections by start position
       const sortedSections = [...relevantSections].sort((a, b) => 
-        (a.start - paragraphOffset) - (b.start - paragraphOffset)
+        (a.start - currentOffset) - (b.start - currentOffset)
       );
       
       // Create an array of text segments with their formatting
@@ -117,8 +125,8 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
       
       for (const section of sortedSections) {
         // Calculate relative positions within this paragraph
-        const relativeStart = Math.max(0, section.start - paragraphOffset);
-        const relativeEnd = Math.min(paragraph.length, section.end - paragraphOffset);
+        const relativeStart = Math.max(0, section.start - currentOffset);
+        const relativeEnd = Math.min(paragraphLength, section.end - currentOffset);
         
         if (relativeStart > lastIndex) {
           // Add unformatted text before this section
@@ -137,8 +145,8 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
           <span 
             key={`${paragraphIndex}-${relativeStart}`}
             style={{
-              fontWeight: isBold ? 'bold' : 'normal',
-              textDecoration: isUnderlined ? 'underline' : 'none',
+              fontWeight: isBold ? 'bold' : 'inherit',
+              textDecoration: isUnderlined ? 'underline' : 'inherit',
               fontSize: fontSize || 'inherit'
             }}
           >
@@ -150,7 +158,7 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
       }
       
       // Add any remaining text after the last formatted section
-      if (lastIndex < paragraph.length) {
+      if (lastIndex < paragraphLength) {
         segments.push(
           <span key={`${paragraphIndex}-${lastIndex}`}>
             {paragraph.substring(lastIndex)}
