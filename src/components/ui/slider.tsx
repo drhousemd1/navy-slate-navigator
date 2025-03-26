@@ -20,7 +20,7 @@ const Slider = React.forwardRef<
       <SliderPrimitive.Range 
         className="absolute h-full bg-primary" 
         style={{
-          width: `${(props.value && props.value[0]) || 0}%`, // Set width as direct percentage
+          width: `${(props.value && props.value[0]) || 0}%`, // Ensure the width reflects from left to right
         }}
       />
     </SliderPrimitive.Track>
