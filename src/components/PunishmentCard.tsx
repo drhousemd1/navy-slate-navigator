@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import PunishmentEditor from './PunishmentEditor';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import { cn } from '@/lib/utils';
+import HighlightedText from './task/HighlightedText';
 
 interface PunishmentCardProps {
   title: string;
@@ -186,25 +187,33 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
             </div>
             
             <div className="flex-1 flex flex-col">
-              <h3 
-                className={cn(
-                  "text-xl font-semibold", 
-                  highlight_effect && "bg-yellow-300 bg-opacity-20 px-1 py-0.5 rounded"
-                )}
-                style={{ color: title_color }}
-              >
-                {title}
-              </h3>
-              
-              <div 
-                className={cn(
-                  "text-sm mt-1", 
-                  highlight_effect && "bg-yellow-300 bg-opacity-10 px-1 py-0.5 rounded"
-                )}
-                style={{ color: subtext_color }}
-              >
-                {description}
-              </div>
+              {highlight_effect ? (
+                <div className="inline-flex flex-col items-start">
+                  <div className="inline-block max-w-fit text-xl font-semibold">
+                    <HighlightedText 
+                      text={title}
+                      highlight={true}
+                      color={title_color}
+                    />
+                  </div>
+                  <div className="inline-block max-w-fit mt-1 text-sm">
+                    <HighlightedText
+                      text={description}
+                      highlight={true}
+                      color={subtext_color}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="text-xl font-semibold" style={{ color: title_color }}>
+                    {title}
+                  </div>
+                  <div className="text-sm mt-1" style={{ color: subtext_color }}>
+                    {description}
+                  </div>
+                </>
+              )}
             </div>
           </div>
           
