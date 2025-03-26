@@ -3,15 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
 import TaskCard from '../components/TaskCard';
 import TaskEditor from '../components/TaskEditor';
-import { 
-  fetchTasks, 
-  Task, 
-  saveTask, 
-  updateTaskCompletion, 
-  deleteTask,
-  getLocalDateString,
-  wasCompletedToday
-} from '../lib/taskUtils';
+import { fetchTasks, Task, saveTask, updateTaskCompletion, deleteTask } from '../lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 
 const Tasks: React.FC = () => {
@@ -23,50 +15,6 @@ const Tasks: React.FC = () => {
     queryKey: ['tasks'],
     queryFn: fetchTasks,
   });
-
-  useEffect(() => {
-    const checkForReset = () => {
-      const now = new Date();
-      console.log('Checking for task reset. Current local time:', now.toLocaleTimeString());
-      
-      if (tasks.length > 0) {
-        const tasksToReset = tasks.filter(task => 
-          task.completed && 
-          task.frequency === 'daily' && 
-          !wasCompletedToday(task)
-        );
-        
-        if (tasksToReset.length > 0) {
-          console.log('Found tasks that need to be reset:', tasksToReset.length);
-          queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        }
-      }
-    };
-
-    checkForReset();
-    
-    const scheduleMidnightCheck = () => {
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      
-      const timeUntilMidnight = tomorrow.getTime() - now.getTime();
-      console.log('Time until midnight check:', timeUntilMidnight, 'ms');
-      
-      return setTimeout(() => {
-        console.log('Midnight reached, checking tasks');
-        queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        
-        const newTimeout = scheduleMidnightCheck();
-        return () => clearTimeout(newTimeout);
-      }, timeUntilMidnight);
-    };
-    
-    const timeoutId = scheduleMidnightCheck();
-    
-    return () => clearTimeout(timeoutId);
-  }, [queryClient, tasks]);
 
   useEffect(() => {
     if (error) {
