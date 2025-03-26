@@ -195,20 +195,23 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
             Close
           </Button>
           
-          <ScrollArea className="flex-1 h-full mt-10 pr-4">
-            <div className="max-w-3xl mx-auto w-full">
-              <h1 className="text-3xl md:text-4xl font-bold mb-6">
-                <HighlightedText 
-                  text={title}
-                  highlight={highlightEffect}
-                  color={titleColor}
-                />
-              </h1>
-              <div className="prose prose-invert max-w-none">
-                {renderFormattedContent()}
+          <div className="flex flex-col h-full pt-10">
+            <h1 className="text-3xl md:text-4xl font-bold mb-6">
+              <HighlightedText 
+                text={title}
+                highlight={highlightEffect}
+                color={titleColor}
+              />
+            </h1>
+            
+            <div className="flex-1 overflow-y-auto pr-2">
+              <div className="max-w-3xl mx-auto w-full">
+                <div className="prose prose-invert max-w-none">
+                  {renderFormattedContent()}
+                </div>
               </div>
             </div>
-          </ScrollArea>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
