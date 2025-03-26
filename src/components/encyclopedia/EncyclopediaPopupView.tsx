@@ -12,6 +12,7 @@ interface EncyclopediaPopupViewProps {
   focalPointX?: number;
   focalPointY?: number;
   opacity?: number;
+  titleColor?: string;
 }
 
 const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
@@ -22,7 +23,8 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
   imageUrl,
   focalPointX = 50,
   focalPointY = 50,
-  opacity = 100
+  opacity = 100,
+  titleColor = '#FFFFFF'
 }) => {
   const backgroundStyle = imageUrl ? {
     backgroundImage: `url(${imageUrl})`,
@@ -51,7 +53,12 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
           </button>
           
           <div className="max-w-3xl mx-auto w-full pt-10">
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-6">{title}</h1>
+            <h1 
+              className="text-3xl md:text-4xl font-bold mb-6"
+              style={{ color: titleColor }}
+            >
+              {title}
+            </h1>
             <div className="prose prose-invert max-w-none">
               {content.split('\n').map((paragraph, index) => (
                 paragraph.trim() ? <p key={index} className="text-lg mb-4">{paragraph}</p> : <br key={index} />

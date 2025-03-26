@@ -20,7 +20,9 @@ const initialEntries: EncyclopediaEntry[] = [
     popup_text: "# Getting Started\n\nWelcome to our system! This guide will help you get up and running quickly.\n\nThe system is designed to be intuitive and easy to use, but there are a few key concepts that will help you make the most of it.\n\nTake your time to explore the different features and don't hesitate to reach out if you have any questions.",
     focal_point_x: 50,
     focal_point_y: 50,
-    opacity: 100
+    opacity: 100,
+    title_color: '#FFFFFF',
+    subtext_color: '#D1D5DB'
   },
   {
     id: "key-features",
@@ -29,7 +31,9 @@ const initialEntries: EncyclopediaEntry[] = [
     popup_text: "# Key Features\n\nOur system comes packed with powerful features to help you succeed:\n\n- **Task Management**: Create, organize and track tasks efficiently\n- **Encyclopedia**: Build a knowledge base for your organization\n- **Rewards System**: Motivate users with achievements and rewards\n- **Customization**: Tailor the system to match your specific needs\n\nEach feature is designed to work seamlessly with the others, creating a cohesive experience.",
     focal_point_x: 50,
     focal_point_y: 50,
-    opacity: 100
+    opacity: 100,
+    title_color: '#FFFFFF',
+    subtext_color: '#D1D5DB'
   }
 ];
 
@@ -89,6 +93,8 @@ const Encyclopedia: React.FC = () => {
                 focalPointX={entry.focal_point_x}
                 focalPointY={entry.focal_point_y}
                 opacity={entry.opacity}
+                titleColor={entry.title_color}
+                subtextColor={entry.subtext_color}
               />
             ))}
           </div>

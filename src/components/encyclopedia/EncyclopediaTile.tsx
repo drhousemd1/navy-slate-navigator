@@ -14,6 +14,8 @@ interface EncyclopediaTileProps {
   focalPointX?: number;
   focalPointY?: number;
   opacity?: number;
+  titleColor?: string;
+  subtextColor?: string;
 }
 
 const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({ 
@@ -25,7 +27,9 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
   imageUrl,
   focalPointX = 50,
   focalPointY = 50,
-  opacity = 100
+  opacity = 100,
+  titleColor = '#FFFFFF',
+  subtextColor = '#D1D5DB'
 }) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   
@@ -64,8 +68,18 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
         )}
         <div className="relative z-10 h-full">
           <CardContent className="p-4 h-full flex flex-col">
-            <h3 className="text-lg font-medium text-white mb-2">{title}</h3>
-            <p className="text-gray-300 text-sm flex-grow">{subtext}</p>
+            <h3 
+              className="text-lg font-medium mb-2"
+              style={{ color: titleColor }}
+            >
+              {title}
+            </h3>
+            <p 
+              className="text-sm flex-grow"
+              style={{ color: subtextColor }}
+            >
+              {subtext}
+            </p>
             
             {showEditIcon && (
               <button 
@@ -90,6 +104,7 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
           focalPointX={focalPointX}
           focalPointY={focalPointY}
           opacity={opacity}
+          titleColor={titleColor}
         />
       )}
     </>

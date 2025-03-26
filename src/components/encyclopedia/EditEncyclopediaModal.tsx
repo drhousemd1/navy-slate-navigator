@@ -10,6 +10,7 @@ import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSel
 import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import ColorPickerField from '@/components/task-editor/ColorPickerField';
 
 interface EditEncyclopediaModalProps {
   isOpen: boolean;
@@ -23,11 +24,13 @@ export interface EncyclopediaEntry {
   id: string;
   title: string;
   subtext: string;
-  popup_text?: string; // New field for pop-up text
+  popup_text?: string;
   image_url?: string | null;
   focal_point_x: number;
   focal_point_y: number;
   opacity: number;
+  title_color: string;
+  subtext_color: string;
 }
 
 const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({ 
@@ -50,6 +53,8 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       focal_point_x: entry?.focal_point_x || 50,
       focal_point_y: entry?.focal_point_y || 50,
       opacity: entry?.opacity || 100,
+      title_color: entry?.title_color || '#FFFFFF',
+      subtext_color: entry?.subtext_color || '#D1D5DB',
     }
   });
   
@@ -63,6 +68,8 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
         focal_point_x: entry.focal_point_x || 50,
         focal_point_y: entry.focal_point_y || 50,
         opacity: entry.opacity || 100,
+        title_color: entry.title_color || '#FFFFFF',
+        subtext_color: entry.subtext_color || '#D1D5DB',
       });
       setImagePreview(entry.image_url || null);
     }
@@ -171,6 +178,23 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                   </FormItem>
                 )}
               />
+              
+              <div className="space-y-4">
+                <div className="text-white font-medium text-sm">Text Colors</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ColorPickerField 
+                    control={form.control}
+                    name="title_color"
+                    label="Title Color"
+                  />
+                  
+                  <ColorPickerField 
+                    control={form.control}
+                    name="subtext_color"
+                    label="Description Color"
+                  />
+                </div>
+              </div>
               
               <div className="space-y-2">
                 <FormLabel className="text-white">Background Image</FormLabel>
