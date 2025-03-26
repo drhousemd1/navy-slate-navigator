@@ -165,7 +165,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
           
           <div className="flex items-start mb-auto">
             <div className="mr-4 flex-shrink-0">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-red-500" style={{ backgroundColor: icon_color }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: icon_color }}>
                 {icon}
               </div>
             </div>
