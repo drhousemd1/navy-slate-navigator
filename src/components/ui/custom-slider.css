@@ -1,0 +1,7 @@
+
+/* Override Radix UI slider styles to ensure correct left-to-right filling */
+[data-radix-slider-range] {
+  left: 0 !important;
+  right: auto !important;
+  transform-origin: left !important;
+}
