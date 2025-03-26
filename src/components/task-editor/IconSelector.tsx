@@ -166,13 +166,32 @@ const IconSelector: React.FC<IconSelectorProps> = ({
   }
 
   return (
-    <div className="relative h-32">
-      <Upload className="mx-auto h-8 w-8 text-light-navy mb-2" />
-      <p className="text-light-navy">Upload custom icon</p>
+    <div className="flex flex-col items-center space-y-4 h-full">
+      <div className="w-20 h-20 bg-[#1A1F2C] rounded-md flex items-center justify-center">
+        {/* Empty square placeholder for icon */}
+      </div>
+      <div className="flex flex-col w-full space-y-2">
+        <Button 
+          type="button"
+          onClick={onUploadIcon}
+          className="w-full bg-[#222F45] hover:bg-[#2A3754] text-white flex items-center justify-center gap-2"
+        >
+          <Upload className="h-4 w-4" />
+          Upload Icon
+        </Button>
+        <Button 
+          type="button"
+          onClick={onRemoveIcon}
+          className="w-full bg-[#1A1F2C] hover:bg-[#222F45] text-white"
+        >
+          Remove Icon
+        </Button>
+      </div>
+      
       <input
         type="file"
         accept="image/*"
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        className="hidden"
         onChange={(e) => {
           if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
@@ -187,6 +206,7 @@ const IconSelector: React.FC<IconSelectorProps> = ({
             reader.readAsDataURL(file);
           }
         }}
+        id="icon-file-input"
       />
     </div>
   );
