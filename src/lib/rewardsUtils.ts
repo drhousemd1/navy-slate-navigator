@@ -77,20 +77,8 @@ export function hasEnoughPoints(userPoints: number, rewardCost: number): boolean
 
 // Purchase a reward
 export async function purchaseReward(userId: string, rewardId: string, cost: number) {
-  // Define the type for the parameters explicitly
-  interface PurchaseRewardParams {
-    user_id: string;
-    reward_id: string;
-    cost: number;
-  }
-
-  // Define the return type for the RPC function
-  interface PurchaseRewardResult {
-    success: boolean;
-  }
-
-  // Fix: Use the correct typing for supabase.rpc to avoid the 'never' constraint error
-  const { data, error } = await supabase.rpc(
+  // Explicitly specify the type parameters for the RPC call
+  const { data, error } = await supabase.rpc<{ success: boolean }>(
     'purchase_reward', 
     { 
       user_id: userId, 
