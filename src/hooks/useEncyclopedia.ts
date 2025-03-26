@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,7 +46,12 @@ export const useEncyclopedia = () => {
         popup_opacity: entry.popup_opacity || entry.opacity, // Use tile opacity as default if popup opacity not set
         title_color: entry.title_color,
         subtext_color: entry.subtext_color,
-        highlight_effect: entry.highlight_effect
+        highlight_effect: entry.highlight_effect,
+        popup_text_formatting: entry.popup_text_formatting || {
+          isBold: false,
+          isUnderlined: false,
+          fontSize: '1rem'
+        }
       };
       
       console.log('Saving entry:', preparedEntry);

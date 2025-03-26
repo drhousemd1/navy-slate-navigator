@@ -15,6 +15,11 @@ interface EncyclopediaPopupViewProps {
   opacity?: number;
   titleColor?: string;
   highlightEffect?: boolean;
+  textFormatting?: {
+    isBold?: boolean;
+    isUnderlined?: boolean;
+    fontSize?: string;
+  };
 }
 
 const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
@@ -27,7 +32,8 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
   focalPointY = 50,
   opacity = 100,
   titleColor = '#FFFFFF',
-  highlightEffect = false
+  highlightEffect = false,
+  textFormatting = {}
 }) => {
   const backgroundStyle = imageUrl ? {
     backgroundImage: `url(${imageUrl})`,
@@ -35,6 +41,13 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
     backgroundPosition: `${focalPointX}% ${focalPointY}%`,
     opacity: opacity / 100
   } : undefined;
+
+  // Create text style based on formatting options
+  const textStyle: React.CSSProperties = {
+    fontWeight: textFormatting.isBold ? 'bold' : 'normal',
+    textDecoration: textFormatting.isUnderlined ? 'underline' : 'none',
+    fontSize: textFormatting.fontSize || 'inherit'
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -69,7 +82,11 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
             <div className="prose prose-invert max-w-none">
               {content.split('\n').map((paragraph, index) => (
                 paragraph.trim() ? (
-                  <p key={index} className="text-lg mb-4 text-white">
+                  <p 
+                    key={index} 
+                    className="text-lg mb-4 text-white"
+                    style={textStyle}
+                  >
                     {paragraph}
                   </p>
                 ) : <br key={index} />

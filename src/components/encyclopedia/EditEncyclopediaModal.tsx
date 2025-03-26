@@ -1,18 +1,19 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Loader2, Upload } from 'lucide-react';
+import { Trash2, Loader2, Upload, Bold, Underline, AlignLeft } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import { Switch } from "@/components/ui/switch";
 import { EncyclopediaEntry } from '@/types/encyclopedia';
 import { Slider } from "@/components/ui/slider";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface EditEncyclopediaModalProps {
   isOpen: boolean;
@@ -52,6 +53,11 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       title_color: entry?.title_color || '#FFFFFF',
       subtext_color: entry?.subtext_color || '#D1D5DB',
       highlight_effect: entry?.highlight_effect || false,
+      popup_text_formatting: entry?.popup_text_formatting || {
+        isBold: false,
+        isUnderlined: false,
+        fontSize: '1rem'
+      }
     }
   });
   
@@ -71,6 +77,11 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
           title_color: entry.title_color || '#FFFFFF',
           subtext_color: entry.subtext_color || '#D1D5DB',
           highlight_effect: entry.highlight_effect || false,
+          popup_text_formatting: entry.popup_text_formatting || {
+            isBold: false,
+            isUnderlined: false,
+            fontSize: '1rem'
+          }
         });
         setImagePreview(entry.image_url || null);
         setPosition({ x: entry.focal_point_x || 50, y: entry.focal_point_y || 50 });
@@ -88,6 +99,11 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
           title_color: '#FFFFFF',
           subtext_color: '#D1D5DB',
           highlight_effect: false,
+          popup_text_formatting: {
+            isBold: false,
+            isUnderlined: false,
+            fontSize: '1rem'
+          }
         });
         setImagePreview(null);
         setPosition({ x: 50, y: 50 });
@@ -127,7 +143,30 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
     }
   };
 
-  // Image focal point handling
+  const handleToggleBold = () => {
+    const currentFormatting = form.getValues('popup_text_formatting') || {};
+    form.setValue('popup_text_formatting', {
+      ...currentFormatting,
+      isBold: !currentFormatting.isBold
+    });
+  };
+
+  const handleToggleUnderline = () => {
+    const currentFormatting = form.getValues('popup_text_formatting') || {};
+    form.setValue('popup_text_formatting', {
+      ...currentFormatting,
+      isUnderlined: !currentFormatting.isUnderlined
+    });
+  };
+
+  const handleFontSizeChange = (value: string) => {
+    const currentFormatting = form.getValues('popup_text_formatting') || {};
+    form.setValue('popup_text_formatting', {
+      ...currentFormatting,
+      fontSize: value
+    });
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -226,23 +265,66 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                 )}
               />
               
-              <FormField
-                control={form.control}
-                name="popup_text"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Pop-up Text</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Enter text to show in full-screen pop-up" 
-                        className="bg-dark-navy border-light-navy text-white"
-                        rows={6}
-                        {...field} 
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-2">
+                <FormLabel className="text-white">Pop-up Text</FormLabel>
+                
+                <div className="bg-dark-navy border border-light-navy rounded-md p-2 mb-2 flex flex-wrap gap-2">
+                  <ToggleGroup type="multiple" className="justify-start">
+                    <ToggleGroupItem 
+                      value="bold" 
+                      aria-label="Toggle bold"
+                      className={form.watch('popup_text_formatting.isBold') ? "bg-nav-active" : ""}
+                      onClick={handleToggleBold}
+                    >
+                      <Bold className="h-4 w-4" />
+                    </ToggleGroupItem>
+                    
+                    <ToggleGroupItem 
+                      value="underline" 
+                      aria-label="Toggle underline"
+                      className={form.watch('popup_text_formatting.isUnderlined') ? "bg-nav-active" : ""}
+                      onClick={handleToggleUnderline}
+                    >
+                      <Underline className="h-4 w-4" />
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                  
+                  <Select
+                    value={form.watch('popup_text_formatting.fontSize') || '1rem'}
+                    onValueChange={handleFontSizeChange}
+                  >
+                    <SelectTrigger className="w-32 bg-dark-navy border-light-navy text-white">
+                      <SelectValue placeholder="Font size" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-dark-navy border-light-navy text-white">
+                      <SelectItem value="0.875rem">Small</SelectItem>
+                      <SelectItem value="1rem">Medium</SelectItem>
+                      <SelectItem value="1.25rem">Large</SelectItem>
+                      <SelectItem value="1.5rem">X-Large</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="popup_text"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Enter text to show in full-screen pop-up" 
+                          className="bg-dark-navy border-light-navy text-white"
+                          rows={6}
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription className="text-light-navy">
+                        Text will appear with the formatting options selected above
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+              </div>
               
               <div className="space-y-4">
                 <div className="text-white font-medium text-sm">Text Colors</div>
