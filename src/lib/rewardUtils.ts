@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -76,8 +75,7 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       // 3. Remove any timestamps from the data we're sending
       
       // Create a clean copy of the reward data without any timestamp fields
-      // Also remove icon_url field if it exists
-      const { created_at, updated_at, icon_url, ...cleanRewardData } = reward;
+      const { created_at, updated_at, ...cleanRewardData } = reward;
       
       console.log('[saveReward] Updating reward with clean data (no timestamps):', 
         { id: existingId, ...cleanRewardData });
@@ -93,12 +91,11 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       console.log('[saveReward] Reward updated successfully, returned data:', data[0]);
       return data[0] as Reward;
     } else {
-      // Create new reward - ensure no icon_url is sent
-      const { icon_url, ...cleanRewardData } = reward;
-      console.log('[saveReward] Creating new reward:', cleanRewardData);
+      // Create new reward
+      console.log('[saveReward] Creating new reward:', reward);
       const { data, error } = await supabase
         .from('rewards')
-        .insert(cleanRewardData)
+        .insert(reward)
         .select();
       
       if (error) throw error;
