@@ -38,7 +38,7 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
   title,
   content,
   imageUrl,
-  focalPointX = 50,
+  focalPointX =, 50,
   focalPointY = 50,
   opacity = 100,
   titleColor = '#FFFFFF',
@@ -61,117 +61,112 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
     fontSize: textFormatting?.fontSize || 'inherit'
   };
 
-  // Function to render text with formatting applied to specific sections
+  // Render content with formatted sections
   const renderFormattedContent = () => {
-    if (!formattedSections || formattedSections.length === 0) {
-      // If no formatted sections, render paragraphs with default formatting
-      return content.split('\n').map((paragraph, index) => (
-        paragraph.trim() ? (
-          <p 
-            key={index} 
-            className="text-lg mb-4 text-white"
-            style={textStyle}
-          >
-            {paragraph}
-          </p>
-        ) : <br key={index} />
-      ));
-    }
-
-    // Split content by paragraphs to maintain paragraph structure
-    const paragraphs = content.split('\n');
-    let charOffset = 0;
+    if (!content) return null;
     
-    return paragraphs.map((paragraph, paragraphIndex) => {
+    // Split content by paragraphs
+    const paragraphs = content.split('\n');
+    
+    return paragraphs.map((paragraph, pIndex) => {
       if (!paragraph.trim()) {
-        charOffset += 1; // Account for the newline character
-        return <br key={paragraphIndex} />;
+        return <br key={`p-${pIndex}`} />;
       }
       
-      // Find sections that overlap with this paragraph
+      // If no formatted sections, render paragraph with default style
+      if (!formattedSections || formattedSections.length === 0) {
+        return (
+          <p key={`p-${pIndex}`} className="text-lg mb-4 text-white" style={textStyle}>
+            {paragraph}
+          </p>
+        );
+      }
+      
+      // Find formatted sections that apply to this paragraph
+      let charOffset = 0;
+      paragraphs.forEach((p, i) => {
+        if (i < pIndex) {
+          charOffset += p.length + 1; // +1 for the newline
+        }
+      });
+      
       const paragraphLength = paragraph.length;
       const paragraphEnd = charOffset + paragraphLength;
       
       const relevantSections = formattedSections.filter(section => 
-        !(section.end <= charOffset || section.start >= paragraphEnd)
+        section.start < paragraphEnd && section.end > charOffset
       );
       
-      // Increment the character offset for the next paragraph
-      // (add 1 for the newline character)
-      const currentOffset = charOffset;
-      charOffset += paragraphLength + 1;
-      
+      // If no formatted sections in this paragraph
       if (relevantSections.length === 0) {
-        // No formatting in this paragraph
         return (
-          <p 
-            key={paragraphIndex} 
-            className="text-lg mb-4 text-white"
-            style={textStyle}
-          >
+          <p key={`p-${pIndex}`} className="text-lg mb-4 text-white" style={textStyle}>
             {paragraph}
           </p>
         );
       }
       
-      // Sort sections by start position
-      const sortedSections = [...relevantSections].sort((a, b) => 
-        (a.start - currentOffset) - (b.start - currentOffset)
-      );
-      
-      // Create an array of text segments with their formatting
+      // Build segments with formatting
       const segments: JSX.Element[] = [];
       let lastIndex = 0;
       
-      for (const section of sortedSections) {
-        // Calculate relative positions within this paragraph
-        const relativeStart = Math.max(0, section.start - currentOffset);
-        const relativeEnd = Math.min(paragraphLength, section.end - currentOffset);
-        
-        if (relativeStart > lastIndex) {
-          // Add unformatted text before this section
-          segments.push(
-            <span key={`${paragraphIndex}-${lastIndex}`}>
-              {paragraph.substring(lastIndex, relativeStart)}
-            </span>
-          );
-        }
-        
-        // Add the formatted section
-        const sectionText = paragraph.substring(relativeStart, relativeEnd);
-        const { isBold, isUnderlined, fontSize } = section.formatting;
-        
-        segments.push(
-          <span 
-            key={`${paragraphIndex}-${relativeStart}`}
-            style={{
-              fontWeight: isBold ? 'bold' : 'inherit',
-              textDecoration: isUnderlined ? 'underline' : 'inherit',
-              fontSize: fontSize || 'inherit'
-            }}
-          >
-            {sectionText}
-          </span>
-        );
-        
-        lastIndex = relativeEnd;
-      }
+      // Sort sections by start position
+      const sortedSections = [...relevantSections].sort((a, b) => 
+        (a.start - charOffset) - (b.start - charOffset)
+      );
       
-      // Add any remaining text after the last formatted section
+      sortedSections.forEach((section, i) => {
+        const sectionStart = Math.max(0, section.start - charOffset);
+        const sectionEnd = Math.min(paragraphLength, section.end - charOffset);
+        
+        if (sectionStart <= paragraphLength && sectionEnd >= 0) {
+          // Add unformatted text before this section
+          if (sectionStart > lastIndex) {
+            segments.push(
+              <span key={`regular-${i}`}>
+                {paragraph.substring(lastIndex, sectionStart)}
+              </span>
+            );
+          }
+          
+          // Add formatted section
+          const sectionText = paragraph.substring(
+            Math.max(0, sectionStart),
+            Math.min(paragraphLength, sectionEnd)
+          );
+          
+          if (sectionText) {
+            segments.push(
+              <span 
+                key={`formatted-${i}`}
+                style={{
+                  fontWeight: section.formatting.isBold ? 'bold' : 'inherit',
+                  textDecoration: section.formatting.isUnderlined ? 'underline' : 'inherit',
+                  fontSize: section.formatting.fontSize || 'inherit',
+                  backgroundColor: section.formatting.isBold ? 'rgba(66, 153, 225, 0.2)' : 'transparent'
+                }}
+              >
+                {sectionText}
+              </span>
+            );
+          }
+          
+          lastIndex = Math.max(lastIndex, sectionEnd);
+        }
+      });
+      
+      // Add remaining text
       if (lastIndex < paragraphLength) {
         segments.push(
-          <span key={`${paragraphIndex}-${lastIndex}`}>
+          <span key="remaining">
             {paragraph.substring(lastIndex)}
           </span>
         );
       }
       
+      // Return the paragraph with all segments
       return (
-        <p 
-          key={paragraphIndex} 
-          className="text-lg mb-4 text-white"
-          style={textStyle}
-        >
+        <p key={`p-${pIndex}`} className="text-lg mb-4 text-white" style={textStyle}>
           {segments}
         </p>
       );

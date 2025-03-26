@@ -71,104 +71,68 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     }, [onFormatSelection]);
 
-    // Generate formatted HTML preview with section-specific formatting
+    // Generate formatted HTML preview
     const generateFormattedHTML = React.useCallback(() => {
       const text = props.value?.toString() || '';
       
       if (!formattedSections || formattedSections.length === 0) {
-        // If no formatted sections, return an empty string to prevent duplicating text
-        // The actual text is already visible in the textarea
         return '';
       }
 
-      // Sort sections by start position to process in order
-      const sortedSections = [...formattedSections].sort((a, b) => a.start - b.start);
+      let html = text;
       
-      // Create an array of objects representing each character and its formatting
-      const characters: Array<{
-        char: string;
-        formatting: {
-          isBold?: boolean;
-          isUnderlined?: boolean;
-          fontSize?: string;
-        } | null;
-      }> = text.split('').map(() => ({ char: '', formatting: null }));
+      // Convert newlines to <br> for HTML rendering
+      html = html.replace(/\n/g, '<br>');
       
-      // Apply formatting information to each character
+      // Sort sections from end to start to avoid index shifting issues
+      const sortedSections = [...formattedSections].sort((a, b) => b.start - a.start);
+      
+      // Apply formatting to each section
       for (const section of sortedSections) {
-        for (let i = section.start; i < section.end && i < characters.length; i++) {
-          characters[i].formatting = section.formatting;
-        }
-      }
-      
-      // Build the HTML with only the formatted sections visible
-      let html = '';
-      let currentFormatting = null;
-      let currentSpan = '';
-      
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const formatting = characters[i].formatting;
+        const { start, end, formatting } = section;
+        const { isBold, isUnderlined, fontSize } = formatting;
         
-        // If this character has formatting
-        if (formatting) {
-          // If we're starting a new formatted section or changing formatting
-          if (!currentFormatting || 
-              currentFormatting.isBold !== formatting.isBold || 
-              currentFormatting.isUnderlined !== formatting.isUnderlined || 
-              currentFormatting.fontSize !== formatting.fontSize) {
-            
-            // Close previous span if there was one
-            if (currentSpan) {
-              html += currentSpan;
-              currentSpan = '';
-            }
-            
-            // Start a new formatted span
-            currentFormatting = formatting;
-            
-            // Create CSS for this span
-            const style = `
-              position: absolute; 
-              left: 0; 
-              top: 0; 
-              pointer-events: none;
-              padding: 0;
-              margin: 0;
-              font-weight: ${formatting.isBold ? 'bold' : 'inherit'};
-              text-decoration: ${formatting.isUnderlined ? 'underline' : 'none'};
-              font-size: ${formatting.fontSize || 'inherit'};
-              white-space: pre-wrap;
-              word-break: break-word;
-              overflow-wrap: break-word;
-              color: transparent;
-              background-color: ${formatting.isBold ? 'rgba(66, 153, 225, 0.3)' : 'transparent'};
-              border-bottom: ${formatting.isUnderlined ? '2px solid rgba(66, 153, 225, 0.5)' : 'none'};
-            `;
-            
-            currentSpan = `<span style="${style}" data-start="${i}">`;
-          }
-          
-          // Add the character to the current span
-          currentSpan += char === '\n' ? '<br/>' : char;
-        } else {
-          // If we were in a formatted span but this character has no formatting
-          if (currentFormatting) {
-            currentSpan += '</span>';
-            html += currentSpan;
-            currentSpan = '';
-            currentFormatting = null;
-          }
+        if (start < 0 || end > html.length || start >= end) continue;
+        
+        // Extract the section content (after converting newlines)
+        // We need to adjust for added <br> tags
+        let adjustedStart = start;
+        let adjustedEnd = end;
+        
+        // Count newlines before start position to adjust indices
+        const beforeStart = text.substring(0, start);
+        const newlineCountBeforeStart = (beforeStart.match(/\n/g) || []).length;
+        adjustedStart += newlineCountBeforeStart * 3; // <br> adds 3 chars compared to \n
+        
+        // Count newlines before end position
+        const beforeEnd = text.substring(0, end);
+        const newlineCountBeforeEnd = (beforeEnd.match(/\n/g) || []).length;
+        adjustedEnd += newlineCountBeforeEnd * 3;
+        
+        // Extract section with adjusted indices
+        const beforeSection = html.substring(0, adjustedStart);
+        const sectionContent = html.substring(adjustedStart, adjustedEnd);
+        const afterSection = html.substring(adjustedEnd);
+        
+        // Apply styling as CSS classes instead of inline styles for cleaner code
+        let formattedContent = `<span class="`;
+        if (isBold) formattedContent += "formatted-bold ";
+        if (isUnderlined) formattedContent += "formatted-underline ";
+        formattedContent += `" ${fontSize ? `style="font-size:${fontSize};"` : ''}>${sectionContent}</span>`;
+        
+        html = beforeSection + formattedContent + afterSection;
+      }
+      
+      return `<style>
+        .formatted-bold { 
+          font-weight: bold; 
+          background-color: rgba(66, 153, 225, 0.2);
         }
-      }
-      
-      // Close the last span if there is one
-      if (currentSpan) {
-        currentSpan += '</span>';
-        html += currentSpan;
-      }
-      
-      return html;
+        .formatted-underline { 
+          text-decoration: underline; 
+          border-bottom: 2px solid rgba(66, 153, 225, 0.4);
+        }
+      </style>${html}`;
     }, [props.value, formattedSections]);
 
     if (formattedPreview) {
@@ -187,42 +151,28 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             className
           )}
         >
+          {/* Main textarea (user input) */}
           <textarea
             ref={setRefs}
-            className="absolute top-0 left-0 w-full h-full resize-none outline-none px-3 py-2 box-border selection:bg-blue-500/30"
+            className="w-full h-full resize-none px-3 py-2 bg-transparent text-white focus:outline-none"
             style={{
-              color: 'white',
-              backgroundColor: 'transparent',
-              zIndex: 2,
-              lineHeight: '1.5',
-              fontFamily: 'inherit',
-              fontSize: 'inherit',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              overflowWrap: 'break-word',
-              overflowY: 'auto',
               caretColor: 'white',
+              position: 'relative',
+              zIndex: 2,
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
             {...props}
           />
           
+          {/* Formatted preview overlay */}
           <div 
             ref={previewRef}
-            className="absolute top-0 left-0 w-full h-full px-3 py-2 text-white pointer-events-none box-border"
+            className="absolute top-0 left-0 w-full h-full px-3 py-2 pointer-events-none"
             style={{
               ...textStyle,
               zIndex: 1,
-              lineHeight: '1.5',
-              fontFamily: 'inherit',
-              fontSize: 'inherit',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              overflowWrap: 'break-word',
-              overflowY: 'auto',
-              pointerEvents: 'none',
-              userSelect: 'none',
+              overflow: 'hidden',
             }}
             dangerouslySetInnerHTML={{ 
               __html: generateFormattedHTML() 
