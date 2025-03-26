@@ -65,10 +65,11 @@ interface RewardsContextType {
   rewardUsage: Record<string, boolean[]>;
   handleBuy: (index: number) => void;
   handleUse: (index: number) => void;
-  handleSaveReward: (rewardData: any, index: number | null) => void;
+  handleSaveReward: (rewardData: any, index: number | null) => Promise<void>;
   handleDeleteReward: (index: number) => void;
   getRewardUsage: (index: number) => boolean[];
   getFrequencyCount: (index: number) => number;
+  refreshRewards: () => Promise<void>;
 }
 
 const RewardsContext = createContext<RewardsContextType | undefined>(undefined);
@@ -89,60 +90,70 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   // Initialize the usage tracking state
   const [rewardUsage, setRewardUsage] = useState<Record<string, boolean[]>>({});
 
-  // Fetch rewards from Supabase
-  useEffect(() => {
-    async function fetchRewards() {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('rewards')
-          .select('*')
-          .order('created_at', { ascending: true });
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (data && data.length > 0) {
-          // Map Supabase data to the format expected by the app
-          const formattedRewards = data.map(reward => ({
-            id: reward.id,
-            title: reward.title,
-            description: reward.description || '',
-            cost: reward.cost,
-            supply: reward.supply,
-            iconName: reward.icon_name || '',
-            icon_color: reward.icon_color,
-            background_image_url: reward.background_image_url,
-            background_opacity: reward.background_opacity,
-            focal_point_x: reward.focal_point_x,
-            focal_point_y: reward.focal_point_y,
-            highlight_effect: reward.highlight_effect,
-            title_color: reward.title_color,
-            subtext_color: reward.subtext_color,
-            calendar_color: reward.calendar_color
-          }));
-          
-          setRewards(formattedRewards);
-        } else {
-          // Fallback to initial rewards if no data is found
-          setRewards(initialRewards);
-        }
-      } catch (error) {
-        console.error('Error fetching rewards:', error);
-        setError('Failed to load rewards. Using default values instead.');
-        setRewards(initialRewards);
-        
-        toast({
-          title: "Error loading rewards",
-          description: "Could not load rewards from the database. Using default values instead.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+  // Function to fetch rewards from Supabase
+  const fetchRewards = async () => {
+    try {
+      setLoading(true);
+      console.log("Fetching rewards from Supabase...");
+      
+      const { data, error } = await supabase
+        .from('rewards')
+        .select('*')
+        .order('created_at', { ascending: true });
+      
+      if (error) {
+        throw error;
       }
+      
+      if (data && data.length > 0) {
+        // Map Supabase data to the format expected by the app
+        const formattedRewards = data.map(reward => ({
+          id: reward.id,
+          title: reward.title,
+          description: reward.description || '',
+          cost: reward.cost,
+          supply: reward.supply,
+          iconName: reward.icon_name || '',
+          icon_color: reward.icon_color,
+          background_image_url: reward.background_image_url,
+          background_opacity: reward.background_opacity,
+          focal_point_x: reward.focal_point_x,
+          focal_point_y: reward.focal_point_y,
+          highlight_effect: reward.highlight_effect,
+          title_color: reward.title_color,
+          subtext_color: reward.subtext_color,
+          calendar_color: reward.calendar_color
+        }));
+        
+        console.log("Rewards fetched successfully:", formattedRewards);
+        setRewards(formattedRewards);
+      } else {
+        // Fallback to initial rewards if no data is found
+        console.log("No rewards found, using initial rewards");
+        setRewards(initialRewards);
+      }
+    } catch (err) {
+      console.error('Error fetching rewards:', err);
+      setError('Failed to load rewards. Using default values instead.');
+      setRewards(initialRewards);
+      
+      toast({
+        title: "Error loading rewards",
+        description: "Could not load rewards from the database. Using default values instead.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    
+  };
+
+  // Function to refresh rewards - this can be called from outside components
+  const refreshRewards = async () => {
+    await fetchRewards();
+  };
+
+  // Fetch rewards on initial load
+  useEffect(() => {
     fetchRewards();
   }, []);
 
@@ -151,7 +162,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
     localStorage.setItem(POINTS_STORAGE_KEY, totalPoints.toString());
   }, [totalPoints]);
 
-  // Fetch reward usage data
+  // Fetch reward usage data whenever rewards change
   useEffect(() => {
     async function fetchRewardUsage() {
       try {
@@ -252,6 +263,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         toast({
           title: "Reward Purchased",
           description: `You purchased ${reward.title}`,
+          duration: 3000,
         });
       } catch (error) {
         console.error('Error buying reward:', error);
@@ -260,6 +272,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           title: "Error",
           description: "Failed to purchase reward. Please try again.",
           variant: "destructive",
+          duration: 3000,
         });
       }
     } else {
@@ -267,6 +280,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         title: "Not Enough Points",
         description: "You don't have enough points to buy this reward.",
         variant: "destructive",
+        duration: 3000,
       });
     }
   };
@@ -331,6 +345,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         toast({
           title: "Reward Used",
           description: `You used ${reward.title}`,
+          duration: 3000,
         });
       } catch (error) {
         console.error('Error using reward:', error);
@@ -339,6 +354,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           title: "Error",
           description: "Failed to use reward. Please try again.",
           variant: "destructive",
+          duration: 3000,
         });
       }
     } else {
@@ -346,6 +362,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         title: "No Supply",
         description: "You don't have any of this reward to use.",
         variant: "destructive",
+        duration: 3000,
       });
     }
   };
@@ -368,67 +385,94 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   // Handle saving edited reward
   const handleSaveReward = async (rewardData: any, index: number | null) => {
     try {
+      console.log("Saving reward data:", rewardData, "at index:", index);
+      
       if (index !== null) {
         // Updating existing reward
         const existingReward = rewards[index];
+        console.log("Existing reward:", existingReward);
+        
+        const updateData = {
+          title: rewardData.title,
+          description: rewardData.description,
+          cost: rewardData.cost,
+          icon_name: rewardData.iconName,
+          icon_color: rewardData.icon_color,
+          background_image_url: rewardData.background_image_url,
+          background_opacity: rewardData.background_opacity,
+          focal_point_x: rewardData.focal_point_x,
+          focal_point_y: rewardData.focal_point_y,
+          highlight_effect: rewardData.highlight_effect,
+          title_color: rewardData.title_color,
+          subtext_color: rewardData.subtext_color,
+          calendar_color: rewardData.calendar_color,
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log("Updating with data:", updateData);
         
         const { error } = await supabase
           .from('rewards')
-          .update({
-            title: rewardData.title,
-            description: rewardData.description,
-            cost: rewardData.cost,
-            icon_name: rewardData.iconName,
-            icon_color: rewardData.icon_color,
-            background_image_url: rewardData.background_image_url,
-            background_opacity: rewardData.background_opacity,
-            focal_point_x: rewardData.focal_point_x,
-            focal_point_y: rewardData.focal_point_y,
-            highlight_effect: rewardData.highlight_effect,
-            title_color: rewardData.title_color,
-            subtext_color: rewardData.subtext_color,
-            calendar_color: rewardData.calendar_color,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', existingReward.id);
         
         if (error) {
           throw error;
         }
         
-        // Update local state
+        // Update local state with the combined data
         const updatedRewards = [...rewards];
         updatedRewards[index] = {
           ...existingReward,
-          ...rewardData
+          title: rewardData.title,
+          description: rewardData.description,
+          cost: rewardData.cost,
+          iconName: rewardData.iconName,
+          icon_color: rewardData.icon_color,
+          background_image_url: rewardData.background_image_url,
+          background_opacity: rewardData.background_opacity,
+          focal_point_x: rewardData.focal_point_x,
+          focal_point_y: rewardData.focal_point_y,
+          highlight_effect: rewardData.highlight_effect,
+          title_color: rewardData.title_color,
+          subtext_color: rewardData.subtext_color,
+          calendar_color: rewardData.calendar_color
         };
         
+        console.log("Updated rewards array:", updatedRewards);
         setRewards(updatedRewards);
         
         toast({
           title: "Reward Updated",
           description: "The reward has been successfully updated.",
+          duration: 3000,
         });
       } else {
         // Adding new reward
+        console.log("Creating new reward");
+        
+        const insertData = {
+          title: rewardData.title,
+          description: rewardData.description,
+          cost: rewardData.cost,
+          supply: 0,  // New rewards start with 0 supply
+          icon_name: rewardData.iconName,
+          icon_color: rewardData.icon_color,
+          background_image_url: rewardData.background_image_url,
+          background_opacity: rewardData.background_opacity,
+          focal_point_x: rewardData.focal_point_x,
+          focal_point_y: rewardData.focal_point_y,
+          highlight_effect: rewardData.highlight_effect,
+          title_color: rewardData.title_color,
+          subtext_color: rewardData.subtext_color,
+          calendar_color: rewardData.calendar_color
+        };
+        
+        console.log("Inserting with data:", insertData);
+        
         const { data, error } = await supabase
           .from('rewards')
-          .insert({
-            title: rewardData.title,
-            description: rewardData.description,
-            cost: rewardData.cost,
-            supply: 0,  // New rewards start with 0 supply
-            icon_name: rewardData.iconName,
-            icon_color: rewardData.icon_color,
-            background_image_url: rewardData.background_image_url,
-            background_opacity: rewardData.background_opacity,
-            focal_point_x: rewardData.focal_point_x,
-            focal_point_y: rewardData.focal_point_y,
-            highlight_effect: rewardData.highlight_effect,
-            title_color: rewardData.title_color,
-            subtext_color: rewardData.subtext_color,
-            calendar_color: rewardData.calendar_color
-          })
+          .insert(insertData)
           .select();
         
         if (error) {
@@ -437,6 +481,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         
         // Add to local state with the returned ID
         if (data && data.length > 0) {
+          console.log("Received data from insert:", data[0]);
+          
           const newReward = {
             id: data[0].id,
             title: rewardData.title,
@@ -455,14 +501,21 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
             calendar_color: rewardData.calendar_color
           };
           
-          setRewards([...rewards, newReward]);
+          const newRewards = [...rewards, newReward];
+          console.log("Updated rewards array with new reward:", newRewards);
+          setRewards(newRewards);
           
           toast({
             title: "Reward Created",
             description: "A new reward has been successfully created.",
+            duration: 3000,
           });
         }
       }
+      
+      // Force a refresh of rewards after saving
+      await fetchRewards();
+      
     } catch (error) {
       console.error('Error saving reward:', error);
       
@@ -470,6 +523,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         title: "Error",
         description: "Failed to save reward. Please try again.",
         variant: "destructive",
+        duration: 3000,
       });
     }
   };
@@ -501,6 +555,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
       toast({
         title: "Reward Deleted",
         description: "The reward has been successfully deleted.",
+        duration: 3000,
       });
     } catch (error) {
       console.error('Error deleting reward:', error);
@@ -509,6 +564,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         title: "Error",
         description: "Failed to delete reward. Please try again.",
         variant: "destructive",
+        duration: 3000,
       });
     }
   };
@@ -528,7 +584,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         handleSaveReward,
         handleDeleteReward,
         getRewardUsage,
-        getFrequencyCount
+        getFrequencyCount,
+        refreshRewards
       }}
     >
       {children}

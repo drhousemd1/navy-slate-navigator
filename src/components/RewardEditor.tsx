@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import RewardEditorForm from './reward-editor/RewardEditorForm';
 
@@ -18,8 +18,23 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   onSave,
   onDelete
 }) => {
+  // For debugging
+  useEffect(() => {
+    if (rewardData) {
+      console.log("RewardEditor received data:", rewardData);
+    }
+  }, [rewardData]);
+
   const handleSave = async (formData: any) => {
-    await onSave(formData);
+    console.log("RewardEditor saving form data:", formData);
+    
+    // Preserve all fields from the original rewardData
+    const mergedData = rewardData 
+      ? { ...rewardData, ...formData } 
+      : formData;
+    
+    console.log("Merged data to save:", mergedData);
+    await onSave(mergedData);
     onClose();
   };
 
