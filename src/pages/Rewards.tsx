@@ -54,18 +54,24 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     } catch (error) {
       console.error("Failed to save reward:", error);
       // Editor stays open if save failed
+      throw error; // Re-throw to allow RewardEditor to show error message
     }
   };
 
   // Handle deleting a reward
-  const handleDelete = (index: number) => {
+  const handleDelete = async (index: number) => {
     if (index !== null) {
       console.log("Deleting reward at index:", index);
-      handleDeleteReward(index);
-      closeEditor();
-      // Force refresh of rewards data after deleting
-      queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      refetchRewards();
+      try {
+        await handleDeleteReward(index);
+        closeEditor();
+        // Force refresh of rewards data after deleting
+        await queryClient.invalidateQueries({ queryKey: ['rewards'] });
+        await refetchRewards();
+      } catch (error) {
+        console.error("Failed to delete reward:", error);
+        throw error;
+      }
     }
   };
 

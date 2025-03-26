@@ -41,7 +41,6 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
         variant: "destructive",
       });
       // Don't close dialog if save failed
-      return;
     }
   };
 
