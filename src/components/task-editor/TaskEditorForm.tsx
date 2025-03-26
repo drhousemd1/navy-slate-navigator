@@ -273,6 +273,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               form.setValue('background_image_url', undefined);
             }}
             onImageUpload={handleImageUpload}
+            setValue={form.setValue}
           />
         </div>
         

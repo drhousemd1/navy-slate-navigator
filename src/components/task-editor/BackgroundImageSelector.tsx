@@ -4,7 +4,7 @@ import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/for
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Upload } from 'lucide-react';
-import { Control } from 'react-hook-form';
+import { Control, UseFormSetValue } from 'react-hook-form';
 
 interface BackgroundImageSelectorProps {
   control: Control<any>;
@@ -12,6 +12,7 @@ interface BackgroundImageSelectorProps {
   initialPosition?: { x: number; y: number };
   onRemoveImage: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setValue: UseFormSetValue<any>;
 }
 
 const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
@@ -19,7 +20,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   imagePreview,
   initialPosition,
   onRemoveImage,
-  onImageUpload
+  onImageUpload,
+  setValue
 }) => {
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -43,8 +45,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
     
     setPosition({ x, y });
-    control.setValue('focal_point_x', Math.round(x));
-    control.setValue('focal_point_y', Math.round(y));
+    setValue('focal_point_x', Math.round(x));
+    setValue('focal_point_y', Math.round(y));
     
     const handleMouseMove = (moveEvent: MouseEvent) => {
       if (!isDragging || !imageContainerRef.current) return;
@@ -54,8 +56,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
       const y = Math.max(0, Math.min(100, ((moveEvent.clientY - rect.top) / rect.height) * 100));
       
       setPosition({ x, y });
-      control.setValue('focal_point_x', Math.round(x));
-      control.setValue('focal_point_y', Math.round(y));
+      setValue('focal_point_x', Math.round(x));
+      setValue('focal_point_y', Math.round(y));
     };
     
     const handleMouseUp = () => {
@@ -79,8 +81,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
     
     setPosition({ x, y });
-    control.setValue('focal_point_x', Math.round(x));
-    control.setValue('focal_point_y', Math.round(y));
+    setValue('focal_point_x', Math.round(x));
+    setValue('focal_point_y', Math.round(y));
     
     const handleTouchMove = (moveEvent: TouchEvent) => {
       if (!isDragging || !imageContainerRef.current || moveEvent.touches.length === 0) return;
@@ -93,8 +95,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
       const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
       
       setPosition({ x, y });
-      control.setValue('focal_point_x', Math.round(x));
-      control.setValue('focal_point_y', Math.round(y));
+      setValue('focal_point_x', Math.round(x));
+      setValue('focal_point_y', Math.round(y));
     };
     
     const handleTouchEnd = () => {
