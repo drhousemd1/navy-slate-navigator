@@ -29,46 +29,34 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
     );
   }
 
-  // Sort rewards by created_at to ensure consistent ordering
-  const sortedRewards = [...rewards].sort((a, b) => {
-    // If created_at exists on both objects, compare them
-    if (a.created_at && b.created_at) {
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    }
-    return 0; // Keep original order if created_at is missing
-  });
-
+  // The rewards array is already sorted by created_at in the API call
+  // No additional sorting needed here
   return (
     <div className="space-y-4">
-      {sortedRewards.map((reward, index) => {
-        // Find the original index in the rewards array
-        const originalIndex = rewards.findIndex(r => r.id === reward.id);
-        
-        return (
-          <RewardCard
-            key={reward.id || index}
-            title={reward.title}
-            description={reward.description}
-            cost={reward.cost}
-            supply={reward.supply}
-            iconName={reward.iconName}
-            iconColor={reward.icon_color || "#9b87f5"}
-            onBuy={() => handleBuy(originalIndex)}
-            onUse={() => handleUse(originalIndex)}
-            onEdit={() => onEdit(originalIndex)}
-            backgroundImage={reward.background_image_url}
-            backgroundOpacity={reward.background_opacity}
-            focalPointX={reward.focal_point_x}
-            focalPointY={reward.focal_point_y}
-            highlight_effect={reward.highlight_effect}
-            title_color={reward.title_color}
-            subtext_color={reward.subtext_color}
-            calendar_color={reward.calendar_color}
-            usageData={getRewardUsage(originalIndex)}
-            frequencyCount={getFrequencyCount(originalIndex)}
-          />
-        );
-      })}
+      {rewards.map((reward, index) => (
+        <RewardCard
+          key={reward.id || index}
+          title={reward.title}
+          description={reward.description}
+          cost={reward.cost}
+          supply={reward.supply}
+          iconName={reward.iconName}
+          iconColor={reward.icon_color || "#9b87f5"}
+          onBuy={() => handleBuy(index)}
+          onUse={() => handleUse(index)}
+          onEdit={() => onEdit(index)}
+          backgroundImage={reward.background_image_url}
+          backgroundOpacity={reward.background_opacity}
+          focalPointX={reward.focal_point_x}
+          focalPointY={reward.focal_point_y}
+          highlight_effect={reward.highlight_effect}
+          title_color={reward.title_color}
+          subtext_color={reward.subtext_color}
+          calendar_color={reward.calendar_color}
+          usageData={getRewardUsage(index)}
+          frequencyCount={getFrequencyCount(index)}
+        />
+      ))}
     </div>
   );
 };
