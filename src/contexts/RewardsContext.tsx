@@ -73,7 +73,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   // Initialize state with localStorage values or defaults
   const [totalPoints, setTotalPoints] = useState(() => {
     const savedPoints = localStorage.getItem(POINTS_STORAGE_KEY);
-    return savedPoints ? parseInt(savedPoints, 10) : 100;
+    return savedPoints ? parseInt(savedPoints, 10) : 100; // Reset to 100 for testing
   });
   
   const [rewards, setRewards] = useState<RewardItem[]>(() => {
