@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { PunishmentData } from '../PunishmentEditor';
+import { PunishmentData } from '@/contexts/PunishmentsContext';
 import PunishmentBasicDetails from './form/PunishmentBasicDetails';
 import PunishmentIconSection from './form/PunishmentIconSection';
 import PunishmentBackgroundSection from './form/PunishmentBackgroundSection';

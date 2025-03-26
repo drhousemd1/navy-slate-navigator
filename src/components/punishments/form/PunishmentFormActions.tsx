@@ -1,9 +1,8 @@
-
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Save, Trash } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, Trash2 } from 'lucide-react';
+import { PunishmentData } from '@/contexts/PunishmentsContext';
 import DeletePunishmentDialog from '../DeletePunishmentDialog';
-import { PunishmentData } from '../../PunishmentEditor';
 
 interface PunishmentFormActionsProps {
   punishmentData?: PunishmentData;
@@ -32,7 +31,7 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
             onClick={() => setIsDeleteDialogOpen(true)}
             className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
           >
-            <Trash className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
             Delete
           </Button>
           <DeletePunishmentDialog
@@ -58,7 +57,7 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
       >
         {loading ? 'Saving...' : (
           <>
-            <Save className="h-4 w-4" />
+            <AlertCircle className="h-4 w-4" />
             Save Changes
           </>
         )}

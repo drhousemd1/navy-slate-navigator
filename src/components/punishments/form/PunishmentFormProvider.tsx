@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form } from "@/components/ui/form";
-import { PunishmentData } from '../../PunishmentEditor';
+import { z } from 'zod';
+import { Form } from '@/components/ui/form';
+import { PunishmentData } from '@/contexts/PunishmentsContext';
 
 export const punishmentFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
