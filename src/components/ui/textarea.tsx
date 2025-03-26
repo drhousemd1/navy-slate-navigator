@@ -76,7 +76,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       const text = props.value?.toString() || '';
       
       if (!formattedSections || formattedSections.length === 0) {
-        return '';
+        return text;
       }
 
       let html = text;
@@ -114,25 +114,21 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         const sectionContent = html.substring(adjustedStart, adjustedEnd);
         const afterSection = html.substring(adjustedEnd);
         
-        // Apply styling as CSS classes instead of inline styles for cleaner code
-        let formattedContent = `<span class="`;
-        if (isBold) formattedContent += "formatted-bold ";
-        if (isUnderlined) formattedContent += "formatted-underline ";
-        formattedContent += `" ${fontSize ? `style="font-size:${fontSize};"` : ''}>${sectionContent}</span>`;
+        // Apply styling with more visible highlighting
+        let formattedContent = `<span class="formatted-section" style="`;
+        if (isBold) formattedContent += "font-weight: bold; ";
+        if (isUnderlined) formattedContent += "text-decoration: underline; ";
+        if (fontSize) formattedContent += `font-size: ${fontSize}; `;
+        formattedContent += `background-color: rgba(66, 153, 225, 0.15); 
+                             padding: 0px 1px;
+                             border-radius: 2px;
+                             border-bottom: 1px solid rgba(66, 153, 225, 0.4);
+                            ">${sectionContent}</span>`;
         
         html = beforeSection + formattedContent + afterSection;
       }
       
-      return `<style>
-        .formatted-bold { 
-          font-weight: bold; 
-          background-color: rgba(66, 153, 225, 0.2);
-        }
-        .formatted-underline { 
-          text-decoration: underline; 
-          border-bottom: 2px solid rgba(66, 153, 225, 0.4);
-        }
-      </style>${html}`;
+      return html;
     }, [props.value, formattedSections]);
 
     if (formattedPreview) {
@@ -141,24 +137,30 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
         textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
         fontSize: textFormatting?.fontSize || '1rem',
+        color: 'white',
+        lineHeight: '1.5',
+        whiteSpace: 'pre-wrap'
       };
 
       return (
         <div 
           ref={containerRef}
           className={cn(
-            "flex min-h-[500px] w-full rounded-md border border-input bg-background text-sm relative",
+            "relative min-h-[500px] w-full rounded-md border border-input bg-transparent text-sm",
             className
           )}
+          style={{ display: 'flex', flexDirection: 'column' }}
         >
           {/* Main textarea (user input) */}
           <textarea
             ref={setRefs}
-            className="w-full h-full resize-none px-3 py-2 bg-transparent text-white focus:outline-none"
+            className="absolute inset-0 w-full h-full resize-none px-3 py-2 bg-transparent text-white focus:outline-none"
             style={{
               caretColor: 'white',
-              position: 'relative',
-              zIndex: 2,
+              zIndex: 1,
+              color: 'rgba(255, 255, 255, 0.8)',
+              lineHeight: '1.5',
+              whiteSpace: 'pre-wrap'
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
@@ -168,11 +170,10 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {/* Formatted preview overlay */}
           <div 
             ref={previewRef}
-            className="absolute top-0 left-0 w-full h-full px-3 py-2 pointer-events-none"
+            className="absolute inset-0 w-full h-full px-3 py-2 pointer-events-none overflow-hidden"
             style={{
               ...textStyle,
-              zIndex: 1,
-              overflow: 'hidden',
+              zIndex: 0
             }}
             dangerouslySetInnerHTML={{ 
               __html: generateFormattedHTML() 
