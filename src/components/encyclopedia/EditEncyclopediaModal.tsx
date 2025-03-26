@@ -42,6 +42,15 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [position, setPosition] = useState({ x: entry?.focal_point_x || 50, y: entry?.focal_point_y || 50 });
   const [isDragging, setIsDragging] = useState(false);
+  const [formattedSections, setFormattedSections] = useState<Array<{
+    start: number;
+    end: number;
+    formatting: {
+      isBold?: boolean;
+      isUnderlined?: boolean;
+      fontSize?: string;
+    }
+  }>>(entry?.formatted_sections || []);
   
   const form = useForm<EncyclopediaEntry>({
     defaultValues: {
@@ -60,7 +69,8 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
         isBold: false,
         isUnderlined: false,
         fontSize: '1rem'
-      }
+      },
+      formatted_sections: entry?.formatted_sections || []
     }
   });
   
@@ -83,8 +93,10 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
             isBold: false,
             isUnderlined: false,
             fontSize: '1rem'
-          }
+          },
+          formatted_sections: entry?.formatted_sections || []
         });
+        setFormattedSections(entry?.formatted_sections || []);
         setImagePreview(entry.image_url || null);
         setPosition({ x: entry.focal_point_x || 50, y: entry.focal_point_y || 50 });
       } else {
@@ -104,8 +116,10 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
             isBold: false,
             isUnderlined: false,
             fontSize: '1rem'
-          }
+          },
+          formatted_sections: []
         });
+        setFormattedSections([]);
         setImagePreview(null);
         setPosition({ x: 50, y: 50 });
       }
@@ -131,7 +145,8 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   const onSubmit = (data: EncyclopediaEntry) => {
     const updatedEntry = {
       ...data,
-      image_url: imagePreview
+      image_url: imagePreview,
+      formatted_sections: formattedSections
     };
     
     onSave(updatedEntry);
@@ -145,27 +160,39 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   };
 
   const handleToggleBold = () => {
-    const currentFormatting = form.getValues('popup_text_formatting') || {};
-    form.setValue('popup_text_formatting', {
-      ...currentFormatting,
-      isBold: !currentFormatting.isBold
-    });
+    if (selectedTextRange) {
+      applyFormattingToSelectedText({ isBold: true });
+    } else {
+      const currentFormatting = form.getValues('popup_text_formatting') || {};
+      form.setValue('popup_text_formatting', {
+        ...currentFormatting,
+        isBold: !currentFormatting.isBold
+      });
+    }
   };
 
   const handleToggleUnderline = () => {
-    const currentFormatting = form.getValues('popup_text_formatting') || {};
-    form.setValue('popup_text_formatting', {
-      ...currentFormatting,
-      isUnderlined: !currentFormatting.isUnderlined
-    });
+    if (selectedTextRange) {
+      applyFormattingToSelectedText({ isUnderlined: true });
+    } else {
+      const currentFormatting = form.getValues('popup_text_formatting') || {};
+      form.setValue('popup_text_formatting', {
+        ...currentFormatting,
+        isUnderlined: !currentFormatting.isUnderlined
+      });
+    }
   };
 
   const handleFontSizeChange = (value: string) => {
-    const currentFormatting = form.getValues('popup_text_formatting') || {};
-    form.setValue('popup_text_formatting', {
-      ...currentFormatting,
-      fontSize: value
-    });
+    if (selectedTextRange) {
+      applyFormattingToSelectedText({ fontSize: value });
+    } else {
+      const currentFormatting = form.getValues('popup_text_formatting') || {};
+      form.setValue('popup_text_formatting', {
+        ...currentFormatting,
+        fontSize: value
+      });
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -191,6 +218,36 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
     setPosition({ x, y });
     form.setValue('focal_point_x', Math.round(x));
     form.setValue('focal_point_y', Math.round(y));
+  };
+
+  const handleTextSelection = (selection: { start: number; end: number }) => {
+    setSelectedTextRange(selection);
+    if (onFormatSelection) {
+      onFormatSelection(selection);
+    }
+  };
+
+  const applyFormattingToSelectedText = (
+    formatting: { isBold?: boolean; isUnderlined?: boolean; fontSize?: string }
+  ) => {
+    if (!selectedTextRange) return;
+    
+    const { start, end } = selectedTextRange;
+    
+    const newFormattedSection = {
+      start,
+      end,
+      formatting: { ...formatting }
+    };
+    
+    const updatedSections = [...formattedSections, newFormattedSection];
+    setFormattedSections(updatedSections);
+    
+    form.setValue('formatted_sections', updatedSections);
+    
+    setSelectedTextRange(null);
+    
+    console.log(`Applied formatting to text from ${start} to ${end}:`, formatting);
   };
 
   useEffect(() => {
@@ -221,6 +278,8 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   }, [isDragging]);
   
   const currentTextFormatting = form.watch('popup_text_formatting') || {};
+  
+  const [selectedTextRange, setSelectedTextRange] = useState<{ start: number; end: number } | null>(null);
   
   return (
     <>
@@ -279,14 +338,15 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                           <ToggleGroupItem 
                             value="bold" 
                             aria-label="Toggle bold"
-                            className={form.watch('popup_text_formatting.isBold') ? "bg-nav-active" : ""}
+                            className={selectedTextRange ? "bg-blue-600" : 
+                              (form.watch('popup_text_formatting.isBold') ? "bg-nav-active" : "")}
                             onClick={handleToggleBold}
                           >
                             <Bold className="h-4 w-4" />
                           </ToggleGroupItem>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Bold</p>
+                          <p>{selectedTextRange ? "Apply bold to selection" : "Toggle bold for all text"}</p>
                         </TooltipContent>
                       </Tooltip>
                       
@@ -295,14 +355,15 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                           <ToggleGroupItem 
                             value="underline" 
                             aria-label="Toggle underline"
-                            className={form.watch('popup_text_formatting.isUnderlined') ? "bg-nav-active" : ""}
+                            className={selectedTextRange ? "bg-blue-600" : 
+                              (form.watch('popup_text_formatting.isUnderlined') ? "bg-nav-active" : "")}
                             onClick={handleToggleUnderline}
                           >
                             <Underline className="h-4 w-4" />
                           </ToggleGroupItem>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Underline</p>
+                          <p>{selectedTextRange ? "Apply underline to selection" : "Toggle underline for all text"}</p>
                         </TooltipContent>
                       </Tooltip>
                     </ToggleGroup>
@@ -322,6 +383,12 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                       <SelectItem value="1.5rem">X-Large</SelectItem>
                     </SelectContent>
                   </Select>
+                  
+                  {selectedTextRange && (
+                    <div className="ml-2 px-2 py-1 bg-blue-600/20 rounded text-sm text-white">
+                      Text selected: Apply formatting to selection
+                    </div>
+                  )}
                 </div>
                 
                 <FormField
@@ -336,7 +403,8 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                           rows={6}
                           formattedPreview={true}
                           textFormatting={currentTextFormatting}
-                          onFormatSelection={onFormatSelection}
+                          onFormatSelection={handleTextSelection}
+                          formattedSections={formattedSections}
                           {...field} 
                         />
                       </FormControl>

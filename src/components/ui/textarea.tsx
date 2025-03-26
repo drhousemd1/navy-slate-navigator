@@ -11,10 +11,19 @@ export interface TextareaProps
     fontSize?: string;
   };
   onFormatSelection?: (selection: { start: number; end: number }) => void;
+  formattedSections?: Array<{
+    start: number;
+    end: number;
+    formatting: {
+      isBold?: boolean;
+      isUnderlined?: boolean;
+      fontSize?: string;
+    }
+  }>;
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, formattedPreview, textFormatting, onFormatSelection, ...props }, ref) => {
+  ({ className, formattedPreview, textFormatting, onFormatSelection, formattedSections = [], ...props }, ref) => {
     // Create a reference for syncing scroll position
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
     const previewRef = React.useRef<HTMLDivElement | null>(null);
@@ -54,7 +63,60 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       [ref]
     );
 
+    // Generate formatted HTML preview with section-specific formatting
+    const generateFormattedHTML = React.useCallback(() => {
+      const text = props.value?.toString() || '';
+      
+      if (!formattedSections || formattedSections.length === 0) {
+        // If no formatted sections, just return the text with line breaks
+        return text.replace(/\n/g, '<br/>');
+      }
+
+      // Sort sections by start position to process in order
+      const sortedSections = [...formattedSections].sort((a, b) => a.start - b.start);
+      
+      let html = '';
+      let lastIndex = 0;
+      
+      // Process each formatted section
+      for (const section of sortedSections) {
+        // Add unformatted text before this section
+        if (section.start > lastIndex) {
+          html += text.substring(lastIndex, section.start).replace(/\n/g, '<br/>');
+        }
+        
+        // Get the section text
+        const sectionText = text.substring(section.start, section.end).replace(/\n/g, '<br/>');
+        
+        // Apply formatting to this section
+        const { isBold, isUnderlined, fontSize } = section.formatting;
+        let formattedText = sectionText;
+        
+        // Wrap in formatting tags as needed
+        if (isBold) {
+          formattedText = `<strong>${formattedText}</strong>`;
+        }
+        if (isUnderlined) {
+          formattedText = `<u>${formattedText}</u>`;
+        }
+        if (fontSize) {
+          formattedText = `<span style="font-size:${fontSize}">${formattedText}</span>`;
+        }
+        
+        html += formattedText;
+        lastIndex = section.end;
+      }
+      
+      // Add any remaining text after the last formatted section
+      if (lastIndex < text.length) {
+        html += text.substring(lastIndex).replace(/\n/g, '<br/>');
+      }
+      
+      return html;
+    }, [props.value, formattedSections]);
+
     if (formattedPreview) {
+      // Default text style for the entire content
       const textStyle: React.CSSProperties = {
         fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
         textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
@@ -71,7 +133,6 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             ref={setRefs}
             className="w-full h-full min-h-[80px] px-3 py-2 bg-transparent resize-none outline-none text-transparent caret-white selection:bg-blue-500/30"
             style={{
-              ...textStyle,
               WebkitTextFillColor: 'transparent'
             }}
             onScroll={syncScroll}
@@ -85,7 +146,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             style={textStyle} 
             className="absolute top-0 left-0 w-full h-full min-h-[80px] px-3 py-2 pointer-events-none whitespace-pre-wrap"
             dangerouslySetInnerHTML={{ 
-              __html: (props.value?.toString() || '').replace(/\n/g, '<br/>') 
+              __html: generateFormattedHTML() 
             }} 
           />
         </div>
