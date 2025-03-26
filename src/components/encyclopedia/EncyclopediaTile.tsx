@@ -75,7 +75,7 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
     <>
       <div 
         className={cn(
-          "group relative overflow-hidden rounded-lg border border-light-navy cursor-pointer h-48 transition-all duration-300 bg-navy hover:shadow-lg",
+          "relative overflow-hidden rounded-lg border border-light-navy cursor-pointer h-48 bg-navy",
           imageUrl ? "" : ""
         )}
         onClick={handleOpenPopup}
@@ -83,17 +83,17 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
         {/* Background image with customized focal point and opacity */}
         {imageUrl && (
           <div 
-            className="absolute inset-0 z-0 transition-transform duration-500 group-hover:scale-110" 
+            className="absolute inset-0 z-0" 
             style={backgroundStyle} 
           />
         )}
         
         {/* Content overlay */}
-        <div className="absolute inset-0 z-10 flex flex-col justify-between p-4 bg-gradient-to-t from-dark-navy/90 to-transparent">
+        <div className="absolute inset-0 z-10 flex flex-col p-4 bg-gradient-to-t from-dark-navy/90 to-transparent">
           
           {/* Title and edit button */}
           <div className="flex justify-between items-start">
-            <h3 className="text-lg font-semibold mb-1 group-hover:underline">
+            <h3 className="text-lg font-semibold mb-1">
               <HighlightedText
                 text={title}
                 highlight={highlightEffect}
@@ -107,7 +107,7 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
                   e.stopPropagation();
                   onEdit();
                 }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white hover:text-nav-active p-1 rounded"
+                className="text-white hover:text-nav-active p-1 rounded"
                 aria-label={`Edit ${title}`}
               >
                 <Edit className="h-4 w-4" />
@@ -115,8 +115,8 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
             )}
           </div>
           
-          {/* Description */}
-          <div className="mt-auto">
+          {/* Description - moved directly below title */}
+          <div>
             <p 
               className="text-sm"
               style={{ color: subtextColor }}
