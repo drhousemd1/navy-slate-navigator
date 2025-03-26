@@ -128,20 +128,22 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
     }
   };
 
-  // Create background image style
-  const backgroundImageStyle = background_image_url ? {
-    backgroundImage: `url(${background_image_url})`,
-    backgroundSize: 'cover',
-    backgroundPosition: `${focal_point_x}% ${focal_point_y}%`,
-    backgroundRepeat: 'no-repeat',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: background_opacity / 100,
-    zIndex: 0
-  } : {};
+  // Create background image style with proper types
+  const backgroundImageStyle: React.CSSProperties = background_image_url 
+    ? {
+        backgroundImage: `url(${background_image_url})`,
+        backgroundSize: 'cover',
+        backgroundPosition: `${focal_point_x}% ${focal_point_y}%`,
+        backgroundRepeat: 'no-repeat',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        opacity: background_opacity / 100,
+        zIndex: 0
+      }
+    : {};
 
   return (
     <>
