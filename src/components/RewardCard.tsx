@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -7,7 +8,6 @@ import PointsBadge from './task/PointsBadge';
 import { Badge } from './ui/badge';
 import { useToast } from '../hooks/use-toast';
 import HighlightedText from './task/HighlightedText';
-import FrequencyTracker from './task/FrequencyTracker';
 
 interface RewardCardProps {
   title: string;
@@ -27,6 +27,8 @@ interface RewardCardProps {
   title_color?: string;
   subtext_color?: string;
   calendar_color?: string;
+  usageData?: boolean[];
+  frequencyCount?: number;
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({
@@ -46,7 +48,9 @@ const RewardCard: React.FC<RewardCardProps> = ({
   highlight_effect = false,
   title_color = '#FFFFFF',
   subtext_color = '#8E9196',
-  calendar_color = '#7E69AB'
+  calendar_color = '#7E69AB',
+  usageData = Array(7).fill(false),
+  frequencyCount = 0
 }) => {
   const { toast } = useToast();
 
@@ -75,15 +79,6 @@ const RewardCard: React.FC<RewardCardProps> = ({
       onEdit();
     }
   };
-
-  const cardStyle = backgroundImage
-    ? {
-        backgroundImage: `url(${backgroundImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-        backgroundOpacity: backgroundOpacity / 100,
-      }
-    : {};
 
   return (
     <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
@@ -174,10 +169,9 @@ const RewardCard: React.FC<RewardCardProps> = ({
         </div>
         
         <div className="flex items-center justify-between mt-4">
-          <FrequencyTracker 
-            frequency="daily"
-            frequency_count={2}  
-            calendar_color={calendar_color}
+          <WeeklyUsageTracker 
+            usageData={usageData}
+            calendarColor={calendar_color}
           />
           
           <div className="flex space-x-2 ml-auto">
@@ -193,6 +187,37 @@ const RewardCard: React.FC<RewardCardProps> = ({
         </div>
       </div>
     </Card>
+  );
+};
+
+interface WeeklyUsageTrackerProps {
+  usageData: boolean[];
+  calendarColor: string;
+}
+
+const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({ 
+  usageData, 
+  calendarColor 
+}) => {
+  return (
+    <div className="flex space-x-1 items-center">
+      <Calendar 
+        className="h-4 w-4 mr-1" 
+        style={{ color: calendarColor }}
+      />
+      <div className="flex space-x-1">
+        {usageData.map((used, index) => (
+          <div 
+            key={index}
+            className={`w-4 h-4 rounded-full border ${used ? 'border-transparent' : 'bg-transparent'}`}
+            style={{
+              backgroundColor: used ? calendarColor : 'transparent',
+              borderColor: used ? 'transparent' : calendarColor || 'rgba(142, 145, 150, 0.5)'
+            }}
+          />
+        ))}
+      </div>
+    </div>
   );
 };
 

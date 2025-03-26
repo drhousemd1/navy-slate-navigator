@@ -40,6 +40,7 @@ const initialRewards = [
 // localStorage keys
 const POINTS_STORAGE_KEY = 'rewardPoints';
 const REWARDS_STORAGE_KEY = 'rewardItems';
+const REWARD_USAGE_STORAGE_KEY = 'rewardUsage';
 
 const Rewards: React.FC = () => {
   // Initialize state with localStorage values or defaults
@@ -51,6 +52,12 @@ const Rewards: React.FC = () => {
   const [rewards, setRewards] = useState(() => {
     const savedRewards = localStorage.getItem(REWARDS_STORAGE_KEY);
     return savedRewards ? JSON.parse(savedRewards) : initialRewards;
+  });
+
+  // Initialize the usage tracking state
+  const [rewardUsage, setRewardUsage] = useState(() => {
+    const savedUsage = localStorage.getItem(REWARD_USAGE_STORAGE_KEY);
+    return savedUsage ? JSON.parse(savedUsage) : {};
   });
 
   // Editor state
@@ -66,6 +73,29 @@ const Rewards: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(REWARDS_STORAGE_KEY, JSON.stringify(rewards));
   }, [rewards]);
+
+  useEffect(() => {
+    localStorage.setItem(REWARD_USAGE_STORAGE_KEY, JSON.stringify(rewardUsage));
+  }, [rewardUsage]);
+
+  // Check if we need to reset the weekly tracking
+  useEffect(() => {
+    const lastResetKey = 'lastWeeklyReset';
+    const lastReset = localStorage.getItem(lastResetKey);
+    const now = new Date();
+    const currentWeek = `${now.getFullYear()}-${now.getMonth() + 1}-${Math.floor(now.getDate() / 7)}`;
+    
+    if (lastReset !== currentWeek) {
+      // Reset weekly tracking
+      localStorage.setItem(lastResetKey, currentWeek);
+      setRewardUsage({});
+    }
+  }, []);
+
+  // Get the current day of week (0-6, Sunday-Saturday)
+  const getCurrentDayOfWeek = () => {
+    return new Date().getDay();
+  };
 
   // Handle buying a reward
   const handleBuy = (index: number) => {
@@ -101,7 +131,31 @@ const Rewards: React.FC = () => {
       
       // Update state
       setRewards(updatedRewards);
+      
+      // Update usage tracking for this reward
+      const currentDay = getCurrentDayOfWeek();
+      const rewardId = `reward-${index}`;
+      
+      const updatedUsage = { ...rewardUsage };
+      if (!updatedUsage[rewardId]) {
+        updatedUsage[rewardId] = Array(7).fill(false);
+      }
+      
+      updatedUsage[rewardId][currentDay] = true;
+      setRewardUsage(updatedUsage);
     }
+  };
+
+  // Get usage data for a specific reward
+  const getRewardUsage = (index: number) => {
+    const rewardId = `reward-${index}`;
+    return rewardUsage[rewardId] || Array(7).fill(false);
+  };
+  
+  // Calculate frequency count (number of days used this week)
+  const getFrequencyCount = (index: number) => {
+    const usage = getRewardUsage(index);
+    return usage.filter(Boolean).length;
   };
 
   // Handle editing a reward
@@ -155,6 +209,8 @@ const Rewards: React.FC = () => {
               title_color={reward.title_color}
               subtext_color={reward.subtext_color}
               calendar_color={reward.calendar_color}
+              usageData={getRewardUsage(index)}
+              frequencyCount={getFrequencyCount(index)}
             />
           ))}
         </div>
