@@ -71,64 +71,97 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     }, [onFormatSelection]);
 
-    // Generate formatted HTML preview
-    const generateFormattedHTML = React.useCallback(() => {
+    // Generate HTML content with formatted sections
+    const renderFormattedContent = React.useCallback(() => {
       const text = props.value?.toString() || '';
-      
+      if (!text) return null;
+
+      // If no formatted sections, just render the text
       if (!formattedSections || formattedSections.length === 0) {
-        return text;
+        return text.split('\n').map((line, i) => (
+          <div key={i} className="whitespace-pre-wrap">{line || '\u00A0'}</div>
+        ));
       }
 
-      let html = text;
+      // Sort sections by start position to process from beginning to end
+      const sortedSections = [...formattedSections].sort((a, b) => a.start - b.start);
       
-      // Convert newlines to <br> for HTML rendering
-      html = html.replace(/\n/g, '<br>');
+      // Convert text to paragraphs with formatted sections
+      const lines = text.split('\n');
+      let charCounter = 0;
       
-      // Sort sections from end to start to avoid index shifting issues
-      const sortedSections = [...formattedSections].sort((a, b) => b.start - a.start);
-      
-      // Apply formatting to each section
-      for (const section of sortedSections) {
-        const { start, end, formatting } = section;
-        const { isBold, isUnderlined, fontSize } = formatting;
+      return lines.map((line, lineIndex) => {
+        const lineStart = charCounter;
+        const lineLength = line.length;
+        const lineEnd = lineStart + lineLength;
+        charCounter += lineLength + 1; // +1 for the newline character
         
-        if (start < 0 || end > html.length || start >= end) continue;
+        // Find sections that overlap with this line
+        const relevantSections = sortedSections.filter(
+          section => section.start < lineEnd && section.end > lineStart
+        );
         
-        // Extract the section content (after converting newlines)
-        // We need to adjust for added <br> tags
-        let adjustedStart = start;
-        let adjustedEnd = end;
+        if (relevantSections.length === 0) {
+          // No formatting for this line
+          return <div key={lineIndex} className="whitespace-pre-wrap">{line || '\u00A0'}</div>;
+        }
         
-        // Count newlines before start position to adjust indices
-        const beforeStart = text.substring(0, start);
-        const newlineCountBeforeStart = (beforeStart.match(/\n/g) || []).length;
-        adjustedStart += newlineCountBeforeStart * 3; // <br> adds 3 chars compared to \n
+        // Build segments with relevant formatting
+        const segments: React.ReactNode[] = [];
+        let lastPos = 0;
         
-        // Count newlines before end position
-        const beforeEnd = text.substring(0, end);
-        const newlineCountBeforeEnd = (beforeEnd.match(/\n/g) || []).length;
-        adjustedEnd += newlineCountBeforeEnd * 3;
+        relevantSections.forEach((section) => {
+          const sectionStart = Math.max(0, section.start - lineStart);
+          const sectionEnd = Math.min(lineLength, section.end - lineStart);
+          
+          if (sectionStart > lastPos) {
+            // Add unformatted text before this section
+            segments.push(
+              <span key={`text-${lastPos}`}>
+                {line.substring(lastPos, sectionStart)}
+              </span>
+            );
+          }
+          
+          if (sectionStart < sectionEnd) {
+            // Add formatted section
+            segments.push(
+              <span 
+                key={`fmt-${sectionStart}`}
+                className="formatted-section"
+                style={{
+                  fontWeight: section.formatting.isBold ? 'bold' : 'inherit',
+                  textDecoration: section.formatting.isUnderlined ? 'underline' : 'inherit',
+                  fontSize: section.formatting.fontSize || 'inherit',
+                  backgroundColor: 'rgba(66, 153, 225, 0.15)',
+                  padding: '0px 1px',
+                  borderRadius: '2px',
+                  borderBottom: '1px solid rgba(66, 153, 225, 0.4)'
+                }}
+              >
+                {line.substring(sectionStart, sectionEnd)}
+              </span>
+            );
+          }
+          
+          lastPos = Math.max(lastPos, sectionEnd);
+        });
         
-        // Extract section with adjusted indices
-        const beforeSection = html.substring(0, adjustedStart);
-        const sectionContent = html.substring(adjustedStart, adjustedEnd);
-        const afterSection = html.substring(adjustedEnd);
+        // Add any remaining unformatted text
+        if (lastPos < lineLength) {
+          segments.push(
+            <span key={`text-end-${lastPos}`}>
+              {line.substring(lastPos)}
+            </span>
+          );
+        }
         
-        // Apply styling with more visible highlighting
-        let formattedContent = `<span class="formatted-section" style="`;
-        if (isBold) formattedContent += "font-weight: bold; ";
-        if (isUnderlined) formattedContent += "text-decoration: underline; ";
-        if (fontSize) formattedContent += `font-size: ${fontSize}; `;
-        formattedContent += `background-color: rgba(66, 153, 225, 0.15); 
-                             padding: 0px 1px;
-                             border-radius: 2px;
-                             border-bottom: 1px solid rgba(66, 153, 225, 0.4);
-                            ">${sectionContent}</span>`;
-        
-        html = beforeSection + formattedContent + afterSection;
-      }
-      
-      return html;
+        return (
+          <div key={lineIndex} className="whitespace-pre-wrap">
+            {segments.length > 0 ? segments : '\u00A0'}
+          </div>
+        );
+      });
     }, [props.value, formattedSections]);
 
     if (formattedPreview) {
@@ -137,9 +170,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
         textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
         fontSize: textFormatting?.fontSize || '1rem',
-        color: 'white',
         lineHeight: '1.5',
-        whiteSpace: 'pre-wrap'
+        color: 'white'
       };
 
       return (
@@ -149,38 +181,33 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             "relative min-h-[500px] w-full rounded-md border border-input bg-transparent text-sm",
             className
           )}
-          style={{ display: 'flex', flexDirection: 'column' }}
         >
-          {/* Main textarea (user input) */}
+          {/* Invisible textarea for editing */}
           <textarea
             ref={setRefs}
-            className="absolute inset-0 w-full h-full resize-none px-3 py-2 bg-transparent text-white focus:outline-none"
-            style={{
+            className="absolute inset-0 w-full h-full resize-none px-3 py-2 bg-transparent text-transparent caret-white focus:outline-none"
+            style={{ 
               caretColor: 'white',
-              zIndex: 1,
-              color: 'rgba(255, 255, 255, 0.8)',
-              lineHeight: '1.5',
-              whiteSpace: 'pre-wrap'
+              zIndex: 1
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
             {...props}
           />
           
-          {/* Formatted preview overlay */}
+          {/* Visible formatted content */}
           <div 
             ref={previewRef}
-            className="absolute inset-0 w-full h-full px-3 py-2 pointer-events-none overflow-hidden"
+            className="absolute inset-0 w-full h-full px-3 py-2 pointer-events-none overflow-auto"
             style={{
               ...textStyle,
               zIndex: 0
             }}
-            dangerouslySetInnerHTML={{ 
-              __html: generateFormattedHTML() 
-            }} 
-          />
+          >
+            {renderFormattedContent()}
+          </div>
         </div>
-      )
+      );
     }
 
     return (
