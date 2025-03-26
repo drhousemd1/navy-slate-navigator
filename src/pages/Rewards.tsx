@@ -4,7 +4,7 @@ import AppLayout from '../components/AppLayout';
 import RewardCard from '../components/RewardCard';
 
 const Rewards: React.FC = () => {
-  // Example rewards for layout purposes only
+  // Static local rewards data
   const exampleRewards = [
     {
       title: "Movie Night",
