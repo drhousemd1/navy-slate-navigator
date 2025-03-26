@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { predefinedIcons } from './IconSelector';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import CustomIconsModal from './CustomIconsModal';
+import { predefinedIcons } from './IconSelector';
 
 interface PredefinedIconsGridProps {
   selectedIconName: string | null;

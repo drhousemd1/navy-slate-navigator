@@ -4,6 +4,7 @@ import { Control } from 'react-hook-form';
 import { FormLabel } from "@/components/ui/form";
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
+import TaskIcon from '@/components/task/TaskIcon';
 
 interface RewardIconSectionProps {
   control: Control<any>;
@@ -36,6 +37,13 @@ const RewardIconSection: React.FC<RewardIconSectionProps> = ({
             onSelectIcon={onSelectIcon}
             onUploadIcon={onUploadIcon}
             onRemoveIcon={onRemoveIcon}
+            renderIcon={(iconName) => (
+              <TaskIcon 
+                icon_name={iconName} 
+                icon_color={iconColor}
+                className="h-6 w-6"
+              />
+            )}
           />
         </div>
         

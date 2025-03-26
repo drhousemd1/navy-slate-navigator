@@ -1,9 +1,17 @@
+
 import React from 'react';
-import { predefinedIcons } from './IconSelector';
 import { Button } from "@/components/ui/button";
 import { toast } from '@/hooks/use-toast';
-import { Upload } from 'lucide-react';
+import { 
+  Upload, CheckSquare, BookOpen, Coffee, Dumbbell, Star, Heart, Trophy, Target, 
+  Activity, AlarmClock, Bell, Calendar, Camera, Music, Cloud, Home, User, File, Gift,
+  Zap, Store, Book, Sun, Moon, Globe, Smile, Map, Settings, ShoppingCart,
+  CreditCard, Truck, Package, Phone, Mail, MessageSquare, Send, Search, Trash,
+  Edit, Eye, Plus, Minus, Clock, Video, Image, Folder, Tag, Share, Link,
+  Bookmark, Award, Flag, Info, AlertCircle, AlertTriangle, BellRing
+} from 'lucide-react';
 
+// Define the predefined icons array
 export const predefinedIcons = [
   { name: 'CheckSquare', icon: CheckSquare },
   { name: 'BookOpen', icon: BookOpen },
