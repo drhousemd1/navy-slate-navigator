@@ -220,12 +220,6 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   
   const currentTextFormatting = form.watch('popup_text_formatting') || {};
   
-  const textPreviewStyle: React.CSSProperties = {
-    fontWeight: currentTextFormatting.isBold ? 'bold' : 'normal',
-    textDecoration: currentTextFormatting.isUnderlined ? 'underline' : 'none',
-    fontSize: currentTextFormatting.fontSize || '1rem'
-  };
-  
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -334,34 +328,15 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <div className="relative">
-                          <Textarea 
-                            placeholder="Enter text to show in full-screen pop-up" 
-                            className="bg-dark-navy border-light-navy text-white"
-                            rows={6}
-                            {...field} 
-                          />
-                          {field.value && (
-                            <div 
-                              className="absolute top-0 right-0 bottom-0 left-0 overflow-auto pointer-events-none p-2"
-                              aria-hidden="true"
-                            >
-                              <div className="opacity-0">
-                                {field.value}
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        <Textarea 
+                          placeholder="Enter text to show in full-screen pop-up" 
+                          className="bg-dark-navy border-light-navy text-white"
+                          rows={6}
+                          formattedPreview={true}
+                          textFormatting={currentTextFormatting}
+                          {...field} 
+                        />
                       </FormControl>
-                      <FormDescription className="text-light-navy mt-2">
-                        Preview: <span style={textPreviewStyle} className="text-white inline-block mt-2 p-2 bg-dark-navy/50 border border-light-navy rounded w-full">
-                          {form.watch('popup_text') ? 
-                            form.watch('popup_text').split('\n').map((paragraph, i) => (
-                              <p key={i} className="mb-1">{paragraph || ' '}</p>
-                            ))
-                            : 'Text preview will appear here'}
-                        </span>
-                      </FormDescription>
                     </FormItem>
                   )}
                 />
