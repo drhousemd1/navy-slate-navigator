@@ -30,7 +30,7 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   // Handle editing a reward
   const handleEdit = (index: number) => {
     console.log("Editing reward at index:", index, "with data:", rewards[index]);
-    setCurrentReward(rewards[index]);
+    setCurrentReward({...rewards[index]});
     setCurrentRewardIndex(index);
     setIsEditorOpen(true);
   };

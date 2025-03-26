@@ -1,50 +1,43 @@
 
-import React, { useEffect } from 'react';
-import RewardCard from '../RewardCard';
+import React from 'react';
 import { useRewards } from '../../contexts/RewardsContext';
+import RewardCard from '../RewardCard';
+import { Grid } from '../ui/grid';
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
-  const { rewards, handleBuy, handleUse, getRewardUsage, getFrequencyCount, isLoading, refetchRewards } = useRewards();
-
-  // Ensure rewards data is fresh when component mounts
-  useEffect(() => {
-    console.log("RewardsList mounted, refreshing data if needed");
-    refetchRewards();
-  }, [refetchRewards]);
-
-  if (isLoading && !rewards.length) {
+  const { rewards, handleBuyReward, handleUseReward } = useRewards();
+  
+  if (!rewards || rewards.length === 0) {
     return (
-      <div className="space-y-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div 
-            key={i} 
-            className="bg-navy border border-light-navy rounded-lg p-4 animate-pulse h-32"
-          />
-        ))}
+      <div className="text-center p-10">
+        <p className="text-light-navy mb-4">You don't have any rewards yet.</p>
+        <p className="text-light-navy">Click the + button to create your first reward!</p>
       </div>
     );
   }
 
-  // No sorting needed here as we rely on the backend sorting by created_at
-  console.log("Rendering rewards list, count:", rewards.length);
-  
+  // Log rewards for debugging
+  console.log("Rendering RewardsList with rewards:", 
+    rewards.map(r => ({ id: r.id, title: r.title, created_at: r.created_at }))
+  );
+
   return (
-    <div className="space-y-4">
+    <Grid className="gap-4 md:grid-cols-2 lg:grid-cols-3">
       {rewards.map((reward, index) => (
         <RewardCard
-          key={reward.id || index}
+          key={reward.id}
           title={reward.title}
-          description={reward.description}
+          description={reward.description || ''}
           cost={reward.cost}
           supply={reward.supply}
-          iconName={reward.iconName}
-          iconColor={reward.icon_color || "#9b87f5"}
-          onBuy={() => handleBuy(index)}
-          onUse={() => handleUse(index)}
+          iconName={reward.icon_name}
+          iconColor={reward.icon_color}
+          onBuy={() => handleBuyReward(reward.id)}
+          onUse={() => handleUseReward(reward.id)}
           onEdit={() => onEdit(index)}
           backgroundImage={reward.background_image_url}
           backgroundOpacity={reward.background_opacity}
@@ -54,11 +47,9 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           title_color={reward.title_color}
           subtext_color={reward.subtext_color}
           calendar_color={reward.calendar_color}
-          usageData={getRewardUsage(index)}
-          frequencyCount={getFrequencyCount(index)}
         />
       ))}
-    </div>
+    </Grid>
   );
 };
 
