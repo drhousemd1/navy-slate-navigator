@@ -20,6 +20,12 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
   onCancel,
   onDelete
 }) => {
+  const handleDelete = () => {
+    if (rewardData && onDelete) {
+      onDelete(rewardData.id || rewardData.index);
+    }
+  };
+
   return (
     <div className="flex justify-between space-x-4 pt-4">
       <div>
@@ -35,8 +41,8 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
             </Button>
             <DeleteRewardDialog
               isOpen={isDeleteDialogOpen}
-              onClose={() => setIsDeleteDialogOpen(false)}
-              onConfirm={() => onDelete(rewardData.id || rewardData.index)}
+              onOpenChange={setIsDeleteDialogOpen}
+              onConfirm={handleDelete}
               rewardName={rewardData.title}
             />
           </>

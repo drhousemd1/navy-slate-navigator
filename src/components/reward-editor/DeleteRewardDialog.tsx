@@ -17,10 +17,16 @@ import {
 interface DeleteRewardDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onDelete: () => void;
+  onConfirm: () => void;
+  rewardName?: string;
 }
 
-const DeleteRewardDialog: React.FC<DeleteRewardDialogProps> = ({ isOpen, onOpenChange, onDelete }) => {
+const DeleteRewardDialog: React.FC<DeleteRewardDialogProps> = ({ 
+  isOpen, 
+  onOpenChange, 
+  onConfirm,
+  rewardName 
+}) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogTrigger asChild>
@@ -37,13 +43,15 @@ const DeleteRewardDialog: React.FC<DeleteRewardDialogProps> = ({ isOpen, onOpenC
         <AlertDialogHeader>
           <AlertDialogTitle className="text-white text-xl">Delete Reward</AlertDialogTitle>
           <AlertDialogDescription className="text-white text-sm">
-            Are you sure you want to delete this reward? This action cannot be undone.
+            {rewardName ? 
+              `Are you sure you want to delete "${rewardName}"? This action cannot be undone.` : 
+              "Are you sure you want to delete this reward? This action cannot be undone."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel className="bg-transparent border-light-navy text-white hover:bg-light-navy">Cancel</AlertDialogCancel>
           <AlertDialogAction 
-            onClick={onDelete} 
+            onClick={onConfirm} 
             className="bg-red-700 text-white hover:bg-red-600"
           >
             Delete
