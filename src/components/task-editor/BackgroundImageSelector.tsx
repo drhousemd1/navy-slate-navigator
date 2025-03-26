@@ -36,6 +36,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
 
   // Initialize opacity
   useEffect(() => {
+    console.log("Setting default opacity to 50");
     setValue('background_opacity', 50);
     setOpacity(50);
   }, [setValue]);
@@ -88,6 +89,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   }, [isDragging]);
 
   const handleOpacityChange = (value: number[]) => {
+    console.log("New opacity value:", value[0]);
     const opacityValue = value[0];
     setOpacity(opacityValue);
     setValue('background_opacity', opacityValue);

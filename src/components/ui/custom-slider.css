@@ -1,1 +1,36 @@
+
 /* Custom styles for slider */
+.slider-track {
+  position: relative;
+  height: 8px;
+  width: 100%;
+  background-color: hsl(var(--secondary));
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.slider-range {
+  position: absolute;
+  height: 100%;
+  background-color: hsl(var(--primary));
+  left: 0;
+  width: 0%;
+}
+
+.slider-thumb {
+  display: block;
+  height: 20px;
+  width: 20px;
+  border-radius: 9999px;
+  border: 2px solid hsl(var(--primary));
+  background-color: hsl(var(--background));
+  transition-property: color;
+  transition-duration: 150ms;
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  cursor: pointer;
+}
+
+.slider-thumb:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
