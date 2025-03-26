@@ -41,6 +41,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
       setOpacity(100);
     } else if (control._formValues.background_opacity !== undefined) {
       setOpacity(control._formValues.background_opacity);
+      console.log("Setting initial opacity from form values:", control._formValues.background_opacity);
     }
   }, [imagePreview, control, setValue]);
 
@@ -175,6 +176,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                   max={100}
                   step={1}
                   onValueChange={(value) => {
+                    console.log("Slider value changed to:", value[0]);
                     field.onChange(value[0]);
                     setOpacity(value[0]);
                   }}
