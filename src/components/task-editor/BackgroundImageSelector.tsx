@@ -26,6 +26,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: initialPosition?.x ?? 50, y: initialPosition?.y ?? 50 });
+  const [opacity, setOpacity] = useState(100);
 
   useEffect(() => {
     if (initialPosition) {
@@ -37,6 +38,9 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   useEffect(() => {
     if (imagePreview && control._formValues.background_opacity === undefined) {
       setValue('background_opacity', 100);
+      setOpacity(100);
+    } else if (control._formValues.background_opacity !== undefined) {
+      setOpacity(control._formValues.background_opacity);
     }
   }, [imagePreview, control, setValue]);
 
@@ -106,7 +110,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                 alt="Background preview" 
                 className="w-full h-full object-cover"
                 style={{ 
-                  opacity: (control._formValues.background_opacity || 100) / 100,
+                  opacity: opacity / 100,
                   objectPosition: `${position.x}% ${position.y}%`
                 }}
               />
@@ -117,7 +121,6 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                   pointerEvents: 'auto', 
                   touchAction: 'none',
                   zIndex: 10,
-                  border: '2px solid red' 
                 }}
               >
                 <div 
@@ -171,7 +174,10 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                   min={0}
                   max={100}
                   step={1}
-                  onValueChange={(value) => field.onChange(value[0])}
+                  onValueChange={(value) => {
+                    field.onChange(value[0]);
+                    setOpacity(value[0]);
+                  }}
                   className="py-4"
                 />
               </FormControl>

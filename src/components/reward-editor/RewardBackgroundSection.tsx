@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import { FormLabel } from "@/components/ui/form";
 import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
@@ -28,8 +28,9 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
   };
 
   // Make sure opacity is properly set when the component mounts
-  React.useEffect(() => {
+  useEffect(() => {
     if (imagePreview && control._formValues.background_opacity === undefined) {
+      console.log("Setting initial opacity to 100");
       setValue('background_opacity', 100);
     }
   }, [imagePreview, control, setValue]);
