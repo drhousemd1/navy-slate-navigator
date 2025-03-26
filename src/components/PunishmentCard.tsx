@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Edit, Minus, Skull } from 'lucide-react';
@@ -22,11 +22,19 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   icon = <Skull className="h-5 w-5 text-white" />
 }) => {
   const { totalPoints, setTotalPoints } = useRewards();
-
+  // Track punishment application for each day of the week
+  const [frequencyData, setFrequencyData] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  
   const handlePunish = () => {
     // Deduct points
     const newTotal = totalPoints - points;
     setTotalPoints(newTotal);
+    
+    // Update the frequency tracker for the current day
+    const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const newFrequencyData = [...frequencyData];
+    newFrequencyData[today] = 1; // Mark today as punished
+    setFrequencyData(newFrequencyData);
     
     // Show toast notification
     toast({
@@ -84,11 +92,12 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
         </div>
         
         <div className="flex items-center justify-between mt-4">
-          {/* Frequency tracker placeholder */}
+          {/* Frequency tracker with current day data */}
           <FrequencyTracker 
             frequency="daily" 
-            frequency_count={0} 
-            calendar_color="#ea384c" 
+            frequency_count={frequencyData.reduce((acc, val) => acc + val, 0)} 
+            calendar_color="#ea384c"
+            usage_data={frequencyData}
           />
           
           <div className="flex space-x-2 ml-auto">
