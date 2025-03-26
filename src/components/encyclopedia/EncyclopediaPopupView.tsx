@@ -1,8 +1,8 @@
+
 import React from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import HighlightedText from '../task/HighlightedText';
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EncyclopediaPopupViewProps {
   isOpen: boolean;
@@ -174,10 +174,11 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-navy border border-light-navy text-white p-0 max-w-full w-full h-full max-h-full flex flex-col inset-0 m-0 rounded-none absolute"
-        style={{ transform: 'none', top: 0, left: 0, bottom: 0, right: 0 }}
+      <DialogContent className="bg-navy border border-light-navy text-white p-0 max-w-full w-full h-full max-h-full flex flex-col m-0 rounded-none fixed inset-0"
+        style={{ transform: 'none' }}
         hideCloseButton={true}
       >
+        {/* Background image layer */}
         {imageUrl && (
           <div 
             className="absolute inset-0 z-0" 
@@ -185,7 +186,10 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
             aria-hidden="true"
           />
         )}
-        <div className="relative z-10 flex flex-col h-full p-6">
+        
+        {/* Content container */}
+        <div className="relative z-10 flex flex-col h-full w-full overflow-hidden p-6">
+          {/* Close button */}
           <Button 
             onClick={onClose}
             className="absolute right-4 top-4 z-20 bg-red-600 hover:bg-red-700 text-white"
@@ -194,19 +198,19 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
             Close
           </Button>
           
-          <div className="flex flex-col h-full">
-            <h1 className="text-3xl md:text-4xl font-bold mb-6 pt-10">
-              <HighlightedText 
-                text={title}
-                highlight={highlightEffect}
-                color={titleColor}
-              />
-            </h1>
-            
-            <div className="flex-1 overflow-auto" style={{ display: 'flex', flexDirection: 'column' }}>
-              <div className="prose prose-invert max-w-none">
-                {renderFormattedContent()}
-              </div>
+          {/* Title */}
+          <h1 className="text-3xl md:text-4xl font-bold mb-6 pt-10">
+            <HighlightedText 
+              text={title}
+              highlight={highlightEffect}
+              color={titleColor}
+            />
+          </h1>
+          
+          {/* Content area - this is the key part that needs fixing */}
+          <div className="flex-1 overflow-y-auto pb-6">
+            <div className="prose prose-invert max-w-none">
+              {renderFormattedContent()}
             </div>
           </div>
         </div>
