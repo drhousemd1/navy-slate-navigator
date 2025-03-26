@@ -1,18 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { Save } from 'lucide-react';
+import { Form } from "@/components/ui/form";
 import { toast } from '@/hooks/use-toast';
-import NumberField from '../task-editor/NumberField';
-import ColorPickerField from '../task-editor/ColorPickerField';
-import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
-import IconSelector from '../task-editor/IconSelector';
-import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
-import DeleteRewardDialog from './DeleteRewardDialog';
+import RewardBasicDetails from './RewardBasicDetails';
+import RewardBackgroundSection from './RewardBackgroundSection';
+import RewardIconSection from './RewardIconSection';
+import RewardColorSettings from './RewardColorSettings';
+import RewardFormActions from './RewardFormActions';
 
 interface RewardFormValues {
   title: string;
@@ -182,170 +177,52 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <FormField
+        <RewardBasicDetails 
           control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-white">Title</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Reward title" 
-                  className="bg-dark-navy border-light-navy text-white" 
-                  {...field} 
-                />
-              </FormControl>
-            </FormItem>
-          )}
+          incrementCost={incrementCost}
+          decrementCost={decrementCost}
         />
         
-        <FormField
+        <RewardBackgroundSection
           control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-white">Description</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Reward description" 
-                  className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
-                  {...field} 
-                />
-              </FormControl>
-            </FormItem>
-          )}
+          imagePreview={imagePreview}
+          initialPosition={{ 
+            x: rewardData?.focal_point_x || 50, 
+            y: rewardData?.focal_point_y || 50 
+          }}
+          onRemoveImage={() => {
+            setImagePreview(null);
+            form.setValue('background_image_url', undefined);
+          }}
+          onImageUpload={handleImageUpload}
+          setValue={form.setValue}
         />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <NumberField
-            control={form.control}
-            name="cost"
-            label="Cost (Points)"
-            onIncrement={incrementCost}
-            onDecrement={decrementCost}
-            minValue={0}
-          />
-        </div>
-        
-        <div className="space-y-4">
-          <FormLabel className="text-white text-lg">Background Image</FormLabel>
-          <BackgroundImageSelector
-            control={form.control}
-            imagePreview={imagePreview}
-            initialPosition={{ 
-              x: rewardData?.focal_point_x || 50, 
-              y: rewardData?.focal_point_y || 50 
-            }}
-            onRemoveImage={() => {
-              setImagePreview(null);
-              form.setValue('background_image_url', undefined);
-            }}
-            onImageUpload={handleImageUpload}
-            setValue={form.setValue}
-          />
-        </div>
-        
-        <div className="space-y-4">
-          <FormLabel className="text-white text-lg">Reward Icon</FormLabel>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center h-full">
-              <IconSelector
-                selectedIconName={selectedIconName}
-                iconPreview={iconPreview}
-                iconColor={form.watch('icon_color')}
-                onSelectIcon={handleIconSelect}
-                onUploadIcon={handleIconUpload}
-                onRemoveIcon={() => {
-                  setIconPreview(null);
-                  setSelectedIconName(null);
-                  form.setValue('icon_url', undefined);
-                  form.setValue('icon_name', undefined);
-                }}
-              />
-            </div>
-            
-            <PredefinedIconsGrid
-              selectedIconName={selectedIconName}
-              iconColor={form.watch('icon_color')}
-              onSelectIcon={handleIconSelect}
-            />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <ColorPickerField 
-            control={form.control} 
-            name="title_color" 
-            label="Title Color" 
-          />
-          
-          <ColorPickerField 
-            control={form.control} 
-            name="subtext_color" 
-            label="Subtext Color" 
-          />
-          
-          <ColorPickerField 
-            control={form.control} 
-            name="calendar_color" 
-            label="Calendar Color" 
-          />
-          
-          <ColorPickerField 
-            control={form.control} 
-            name="icon_color" 
-            label="Icon Color" 
-          />
-        </div>
-        
-        <FormField
+        <RewardIconSection
           control={form.control}
-          name="highlight_effect"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between">
-              <div className="space-y-0.5">
-                <FormLabel className="text-white">Highlight Effect</FormLabel>
-                <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-            </FormItem>
-          )}
+          selectedIconName={selectedIconName}
+          iconPreview={iconPreview}
+          iconColor={form.watch('icon_color')}
+          onSelectIcon={handleIconSelect}
+          onUploadIcon={handleIconUpload}
+          onRemoveIcon={() => {
+            setIconPreview(null);
+            setSelectedIconName(null);
+            form.setValue('icon_url', undefined);
+            form.setValue('icon_name', undefined);
+          }}
         />
         
-        <div className="pt-4 w-full flex items-center justify-end gap-3">
-          {rewardData && onDelete && (
-            <DeleteRewardDialog
-              isOpen={isDeleteDialogOpen}
-              onOpenChange={setIsDeleteDialogOpen}
-              onDelete={handleDelete}
-            />
-          )}
-          <Button 
-            type="button" 
-            variant="destructive" 
-            onClick={onCancel}
-            className="bg-red-700 border-light-navy text-white hover:bg-red-600"
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
-            disabled={loading}
-          >
-            {loading ? 'Saving...' : (
-              <>
-                <Save className="h-4 w-4" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        </div>
+        <RewardColorSettings control={form.control} />
+        
+        <RewardFormActions
+          rewardData={rewardData}
+          loading={loading}
+          isDeleteDialogOpen={isDeleteDialogOpen}
+          setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+          onCancel={onCancel}
+          onDelete={handleDelete}
+        />
       </form>
     </Form>
   );
