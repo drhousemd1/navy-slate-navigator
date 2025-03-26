@@ -32,9 +32,27 @@ export const useEncyclopedia = () => {
   // Save an encyclopedia entry (create or update)
   const saveEntryMutation = useMutation({
     mutationFn: async (entry: EncyclopediaEntry) => {
+      // Create a prepared entry object that matches the database schema
+      // We need to make sure we're only including fields that exist in the database
+      const preparedEntry = {
+        id: entry.id,
+        title: entry.title,
+        subtext: entry.subtext,
+        popup_text: entry.popup_text,
+        image_url: entry.image_url,
+        focal_point_x: entry.focal_point_x,
+        focal_point_y: entry.focal_point_y,
+        opacity: entry.opacity,
+        title_color: entry.title_color,
+        subtext_color: entry.subtext_color,
+        highlight_effect: entry.highlight_effect
+      };
+      
+      console.log('Saving entry:', preparedEntry);
+      
       const { data, error } = await supabase
         .from('encyclopedia_entries')
-        .upsert(entry)
+        .upsert(preparedEntry)
         .select()
         .single();
       
