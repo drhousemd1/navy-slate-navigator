@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -348,8 +347,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                       <FormControl>
                         <Textarea 
                           placeholder="Enter text to show in full-screen pop-up" 
-                          className="bg-dark-navy border-light-navy text-white"
-                          rows={15}
+                          className="bg-dark-navy border-light-navy text-white h-[500px]"
                           formattedPreview={true}
                           textFormatting={currentTextFormatting}
                           onFormatSelection={handleTextSelection}

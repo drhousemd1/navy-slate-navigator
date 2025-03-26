@@ -27,6 +27,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     // Create a reference for syncing scroll position
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
     const previewRef = React.useRef<HTMLDivElement | null>(null);
+    const containerRef = React.useRef<HTMLDivElement | null>(null);
     
     // Handle scroll synchronization between preview and textarea
     const syncScroll = React.useCallback((e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -48,32 +49,28 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     }, [onFormatSelection]);
 
-    // Handle click in the textarea area to position cursor correctly
+    // Handle click in the textarea container to position cursor correctly
     const handleClick = React.useCallback((e: React.MouseEvent) => {
-      if (textareaRef.current) {
-        // Calculate correct position for textarea cursor
-        const rect = e.currentTarget.getBoundingClientRect();
-        const offsetY = e.clientY - rect.top;
-        const offsetX = e.clientX - rect.left;
+      if (textareaRef.current && containerRef.current) {
+        // Get the exact coordinates within the container
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
         
-        // Focus on the real textarea
+        // Focus the textarea first
         textareaRef.current.focus();
         
-        // Let the browser position the cursor at the clicked point
-        // This is crucial for making selections work properly across the entire textarea
-        setTimeout(() => {
-          if (textareaRef.current && document.activeElement === textareaRef.current) {
-            // Force the re-calculation of cursor position
-            const event = new MouseEvent('click', {
-              bubbles: true,
-              cancelable: true,
-              view: window,
-              clientX: e.clientX,
-              clientY: e.clientY
-            });
-            textareaRef.current.dispatchEvent(event);
-          }
-        }, 0);
+        // Create and dispatch a mousedown event to position the cursor
+        const mouseEvent = new MouseEvent('mousedown', {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          clientX: e.clientX,
+          clientY: e.clientY
+        });
+        
+        // Dispatch the event directly on the textarea
+        textareaRef.current.dispatchEvent(mouseEvent);
       }
     }, []);
 
@@ -154,16 +151,17 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
       return (
         <div 
+          ref={containerRef}
           className={cn(
-            "flex min-h-[300px] w-full rounded-md border border-input bg-background text-sm relative",
+            "flex min-h-[500px] w-full rounded-md border border-input bg-background text-sm relative",
             className
           )}
           onClick={handleClick}
         >
-          {/* Visible textarea where user types */}
+          {/* Invisible textarea that captures input and selection */}
           <textarea
             ref={setRefs}
-            className="w-full h-full min-h-[300px] px-3 py-2 bg-transparent resize-none outline-none selection:bg-blue-500/30"
+            className="w-full h-full min-h-[500px] px-3 py-2 bg-transparent resize-none outline-none selection:bg-blue-500/30"
             style={{
               color: 'transparent',
               caretColor: 'white',
@@ -172,15 +170,15 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               left: 0,
               right: 0,
               bottom: 0,
-              zIndex: 2, // Ensures textarea is above the preview for cursor interaction
-              padding: '0.5rem 0.75rem' // Match the padding with preview div
+              zIndex: 2,
+              padding: '0.5rem 0.75rem'
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
             {...props}
           />
           
-          {/* Formatted preview beneath textarea */}
+          {/* Formatted preview layer */}
           <div 
             ref={previewRef}
             style={{
