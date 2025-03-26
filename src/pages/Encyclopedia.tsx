@@ -17,6 +17,7 @@ const initialEntries: EncyclopediaEntry[] = [
     id: "getting-started",
     title: "Getting Started",
     subtext: "Learn the basics of how to use the system effectively.",
+    popup_text: "# Getting Started\n\nWelcome to our system! This guide will help you get up and running quickly.\n\nThe system is designed to be intuitive and easy to use, but there are a few key concepts that will help you make the most of it.\n\nTake your time to explore the different features and don't hesitate to reach out if you have any questions.",
     focal_point_x: 50,
     focal_point_y: 50,
     opacity: 100
@@ -25,6 +26,7 @@ const initialEntries: EncyclopediaEntry[] = [
     id: "key-features",
     title: "Key Features",
     subtext: "Explore the powerful features available in the system.",
+    popup_text: "# Key Features\n\nOur system comes packed with powerful features to help you succeed:\n\n- **Task Management**: Create, organize and track tasks efficiently\n- **Encyclopedia**: Build a knowledge base for your organization\n- **Rewards System**: Motivate users with achievements and rewards\n- **Customization**: Tailor the system to match your specific needs\n\nEach feature is designed to work seamlessly with the others, creating a cohesive experience.",
     focal_point_x: 50,
     focal_point_y: 50,
     opacity: 100
@@ -80,6 +82,7 @@ const Encyclopedia: React.FC = () => {
                 key={entry.id}
                 title={entry.title} 
                 subtext={entry.subtext}
+                popupText={entry.popup_text}
                 showEditIcon={isAdminMode()}
                 onEdit={() => handleEditTile(entry.id)}
                 imageUrl={entry.image_url}

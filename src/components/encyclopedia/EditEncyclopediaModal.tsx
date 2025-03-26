@@ -23,6 +23,7 @@ export interface EncyclopediaEntry {
   id: string;
   title: string;
   subtext: string;
+  popup_text?: string; // New field for pop-up text
   image_url?: string | null;
   focal_point_x: number;
   focal_point_y: number;
@@ -45,6 +46,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       id: entry?.id || '',
       title: entry?.title || '',
       subtext: entry?.subtext || '',
+      popup_text: entry?.popup_text || '',
       focal_point_x: entry?.focal_point_x || 50,
       focal_point_y: entry?.focal_point_y || 50,
       opacity: entry?.opacity || 100,
@@ -57,6 +59,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
         id: entry.id,
         title: entry.title,
         subtext: entry.subtext,
+        popup_text: entry.popup_text || '',
         focal_point_x: entry.focal_point_x || 50,
         focal_point_y: entry.focal_point_y || 50,
         opacity: entry.opacity || 100,
@@ -144,6 +147,24 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                       <Textarea 
                         placeholder="Enter description" 
                         className="bg-dark-navy border-light-navy text-white"
+                        {...field} 
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="popup_text"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Pop-up Text</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Enter text to show in full-screen pop-up" 
+                        className="bg-dark-navy border-light-navy text-white"
+                        rows={6}
                         {...field} 
                       />
                     </FormControl>
