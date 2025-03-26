@@ -38,7 +38,7 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
   title,
   content,
   imageUrl,
-  focalPointX =, 50,
+  focalPointX = 50,
   focalPointY = 50,
   opacity = 100,
   titleColor = '#FFFFFF',
