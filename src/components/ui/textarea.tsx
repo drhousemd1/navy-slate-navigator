@@ -139,10 +139,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             className
           )}
         >
-          {/* Hidden textarea used for proper functionality */}
           <textarea
             ref={setRefs}
-            className="absolute top-0 left-0 w-full h-full resize-none outline-none px-3 py-2 box-border"
+            className="absolute top-0 left-0 w-full h-full resize-none outline-none px-3 py-2 box-border selection:bg-blue-500/30"
             style={{
               color: 'white',
               backgroundColor: 'transparent',
@@ -154,13 +153,13 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               wordBreak: 'break-word',
               overflowWrap: 'break-word',
               overflowY: 'auto',
+              caretColor: 'white',
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
             {...props}
           />
           
-          {/* Formatted preview div with the same dimensions and styling */}
           <div 
             ref={previewRef}
             className="absolute top-0 left-0 w-full h-full px-3 py-2 text-white pointer-events-none box-border"
@@ -174,6 +173,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               wordBreak: 'break-word',
               overflowWrap: 'break-word',
               overflowY: 'auto',
+              pointerEvents: 'none',
+              userSelect: 'none',
             }}
             dangerouslySetInnerHTML={{ 
               __html: generateFormattedHTML() 

@@ -74,10 +74,7 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
   return (
     <>
       <div 
-        className={cn(
-          "relative overflow-hidden rounded-lg border border-light-navy cursor-pointer h-48 bg-navy",
-          imageUrl ? "" : ""
-        )}
+        className="relative overflow-hidden rounded-lg border border-light-navy h-48 bg-navy"
         onClick={handleOpenPopup}
       >
         {/* Background image with customized focal point and opacity */}
@@ -115,15 +112,13 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
             )}
           </div>
           
-          {/* Description - moved directly below title */}
-          <div>
-            <p 
-              className="text-sm"
-              style={{ color: subtextColor }}
-            >
-              {subtext}
-            </p>
-          </div>
+          {/* Description directly below title */}
+          <p 
+            className="text-sm"
+            style={{ color: subtextColor }}
+          >
+            {subtext}
+          </p>
         </div>
       </div>
       
