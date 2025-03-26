@@ -18,6 +18,7 @@ interface EncyclopediaPopupViewProps {
   textFormatting?: {
     isBold?: boolean;
     isUnderlined?: boolean;
+    isItalic?: boolean;
     fontSize?: string;
   };
   onFormatSelection?: (selection: { start: number; end: number }) => void;
@@ -27,6 +28,7 @@ interface EncyclopediaPopupViewProps {
     formatting: {
       isBold?: boolean;
       isUnderlined?: boolean;
+      isItalic?: boolean;
       fontSize?: string;
     }
   }>;
@@ -124,16 +126,21 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
           );
         }
         
-        // Add formatted section with ONLY the specific formatting properties that were set
+        // Add formatted section with styling applied correctly
         if (relativeEnd > relativeStart) {
           const formattingStyle: React.CSSProperties = {};
           
+          // Only apply the specific formatting that was set
           if (section.formatting.isBold) {
             formattingStyle.fontWeight = 'bold';
           }
           
           if (section.formatting.isUnderlined) {
             formattingStyle.textDecoration = 'underline';
+          }
+          
+          if (section.formatting.isItalic) {
+            formattingStyle.fontStyle = 'italic';
           }
           
           if (section.formatting.fontSize) {

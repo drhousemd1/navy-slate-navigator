@@ -22,6 +22,7 @@ interface EncyclopediaTileProps {
   popupTextFormatting?: {
     isBold?: boolean;
     isUnderlined?: boolean;
+    isItalic?: boolean;
     fontSize?: string;
   };
   onFormatSelection?: (selection: { start: number; end: number }) => void;
@@ -31,6 +32,7 @@ interface EncyclopediaTileProps {
     formatting: {
       isBold?: boolean;
       isUnderlined?: boolean;
+      isItalic?: boolean;
       fontSize?: string;
     }
   }>;
