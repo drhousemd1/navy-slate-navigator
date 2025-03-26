@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
+import { Switch } from "@/components/ui/switch";
 
 interface EditEncyclopediaModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export interface EncyclopediaEntry {
   opacity: number;
   title_color: string;
   subtext_color: string;
+  highlight_effect?: boolean; // Add this new property
 }
 
 const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({ 
@@ -55,6 +57,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       opacity: entry?.opacity || 100,
       title_color: entry?.title_color || '#FFFFFF',
       subtext_color: entry?.subtext_color || '#D1D5DB',
+      highlight_effect: entry?.highlight_effect || false, // Set default to false
     }
   });
   
@@ -70,6 +73,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
         opacity: entry.opacity || 100,
         title_color: entry.title_color || '#FFFFFF',
         subtext_color: entry.subtext_color || '#D1D5DB',
+        highlight_effect: entry.highlight_effect || false, // Include in reset
       });
       setImagePreview(entry.image_url || null);
     }
@@ -195,6 +199,26 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                   />
                 </div>
               </div>
+              
+              {/* Add highlight effect toggle */}
+              <FormField
+                control={form.control}
+                name="highlight_effect"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-white">Highlight Effect</FormLabel>
+                      <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
               
               <div className="space-y-2">
                 <FormLabel className="text-white">Background Image</FormLabel>

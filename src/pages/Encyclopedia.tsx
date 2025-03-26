@@ -22,7 +22,8 @@ const initialEntries: EncyclopediaEntry[] = [
     focal_point_y: 50,
     opacity: 100,
     title_color: '#FFFFFF',
-    subtext_color: '#D1D5DB'
+    subtext_color: '#D1D5DB',
+    highlight_effect: false
   },
   {
     id: "key-features",
@@ -33,7 +34,8 @@ const initialEntries: EncyclopediaEntry[] = [
     focal_point_y: 50,
     opacity: 100,
     title_color: '#FFFFFF',
-    subtext_color: '#D1D5DB'
+    subtext_color: '#D1D5DB',
+    highlight_effect: false
   }
 ];
 
@@ -95,6 +97,7 @@ const Encyclopedia: React.FC = () => {
                 opacity={entry.opacity}
                 titleColor={entry.title_color}
                 subtextColor={entry.subtext_color}
+                highlightEffect={entry.highlight_effect}
               />
             ))}
           </div>

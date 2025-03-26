@@ -2,6 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X } from 'lucide-react';
+import HighlightedText from '../task/HighlightedText';
 
 interface EncyclopediaPopupViewProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface EncyclopediaPopupViewProps {
   focalPointY?: number;
   opacity?: number;
   titleColor?: string;
+  highlightEffect?: boolean;
 }
 
 const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
@@ -24,7 +26,8 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
   focalPointX = 50,
   focalPointY = 50,
   opacity = 100,
-  titleColor = '#FFFFFF'
+  titleColor = '#FFFFFF',
+  highlightEffect = false
 }) => {
   const backgroundStyle = imageUrl ? {
     backgroundImage: `url(${imageUrl})`,
@@ -53,15 +56,20 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
           </button>
           
           <div className="max-w-3xl mx-auto w-full pt-10">
-            <h1 
-              className="text-3xl md:text-4xl font-bold mb-6"
-              style={{ color: titleColor }}
-            >
-              {title}
+            <h1 className="text-3xl md:text-4xl font-bold mb-6">
+              <HighlightedText 
+                text={title}
+                highlight={highlightEffect}
+                color={titleColor}
+              />
             </h1>
             <div className="prose prose-invert max-w-none">
               {content.split('\n').map((paragraph, index) => (
-                paragraph.trim() ? <p key={index} className="text-lg mb-4">{paragraph}</p> : <br key={index} />
+                paragraph.trim() ? (
+                  <p key={index} className="text-lg mb-4 text-white">
+                    {paragraph}
+                  </p>
+                ) : <br key={index} />
               ))}
             </div>
           </div>

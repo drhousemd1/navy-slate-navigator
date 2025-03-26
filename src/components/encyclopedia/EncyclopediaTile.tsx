@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Edit } from 'lucide-react';
 import EncyclopediaPopupView from './EncyclopediaPopupView';
+import HighlightedText from '../task/HighlightedText';
 
 interface EncyclopediaTileProps {
   title: string;
@@ -16,6 +17,7 @@ interface EncyclopediaTileProps {
   opacity?: number;
   titleColor?: string;
   subtextColor?: string;
+  highlightEffect?: boolean;
 }
 
 const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({ 
@@ -29,7 +31,8 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
   focalPointY = 50,
   opacity = 100,
   titleColor = '#FFFFFF',
-  subtextColor = '#D1D5DB'
+  subtextColor = '#D1D5DB',
+  highlightEffect = false
 }) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   
@@ -68,17 +71,19 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
         )}
         <div className="relative z-10 h-full">
           <CardContent className="p-4 h-full flex flex-col">
-            <h3 
-              className="text-lg font-medium mb-2"
-              style={{ color: titleColor }}
-            >
-              {title}
+            <h3 className="text-lg font-medium mb-2">
+              <HighlightedText 
+                text={title}
+                highlight={highlightEffect}
+                color={titleColor}
+              />
             </h3>
-            <p 
-              className="text-sm flex-grow"
-              style={{ color: subtextColor }}
-            >
-              {subtext}
+            <p className="text-sm flex-grow">
+              <HighlightedText 
+                text={subtext}
+                highlight={highlightEffect}
+                color={subtextColor}
+              />
             </p>
             
             {showEditIcon && (
@@ -105,6 +110,7 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
           focalPointY={focalPointY}
           opacity={opacity}
           titleColor={titleColor}
+          highlightEffect={highlightEffect}
         />
       )}
     </>
