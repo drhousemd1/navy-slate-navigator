@@ -3,7 +3,18 @@ import React from 'react';
 import AppLayout from '../components/AppLayout';
 import EncyclopediaTile from '../components/encyclopedia/EncyclopediaTile';
 
+// This would be replaced with a real environment check or auth check in a production app
+const isAdminMode = () => {
+  // For demo purposes, this could be controlled by a localStorage setting, environment variable, or auth state
+  return true; // Set to true for now to show the edit functionality
+};
+
 const Encyclopedia: React.FC = () => {
+  const handleEditTile = (id: string) => {
+    console.log(`Editing tile with ID: ${id}`);
+    // Future implementation: Open editor modal or navigate to edit page
+  };
+
   return (
     <AppLayout>
       <div className="p-4 pt-6">
@@ -18,6 +29,8 @@ const Encyclopedia: React.FC = () => {
             <EncyclopediaTile 
               title="Getting Started" 
               subtext="Learn the basics of how to use the system effectively."
+              showEditIcon={isAdminMode()}
+              onEdit={() => handleEditTile("getting-started")}
             />
           </div>
         </div>
