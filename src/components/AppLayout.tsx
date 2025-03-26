@@ -35,6 +35,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 
   return (
     <div className="flex flex-col min-h-screen bg-dark-navy">
+      {/* Top header section - new addition */}
+      <div className="w-full bg-navy border-b border-light-navy py-2 px-4">
+        <div className="max-w-screen-lg mx-auto">
+          {/* This space is intentionally left empty for future content */}
+        </div>
+      </div>
+      
       <main className="flex-1 pb-24 animate-fade-in">
         {children}
       </main>
