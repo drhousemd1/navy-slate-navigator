@@ -35,7 +35,10 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                 aria-label="Toggle bold"
                 className={selectedTextRange ? "bg-blue-600" : 
                   (currentFormatting.isBold ? "bg-nav-active" : "")}
-                onClick={onToggleBold}
+                onClick={(e) => {
+                  e.preventDefault(); // Prevent default to avoid losing focus
+                  onToggleBold();
+                }}
               >
                 <Bold className="h-4 w-4" />
               </ToggleGroupItem>
@@ -52,7 +55,10 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                 aria-label="Toggle underline"
                 className={selectedTextRange ? "bg-blue-600" : 
                   (currentFormatting.isUnderlined ? "bg-nav-active" : "")}
-                onClick={onToggleUnderline}
+                onClick={(e) => {
+                  e.preventDefault(); // Prevent default to avoid losing focus
+                  onToggleUnderline();
+                }}
               >
                 <Underline className="h-4 w-4" />
               </ToggleGroupItem>
@@ -66,7 +72,9 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
       
       <Select
         value={currentFormatting.fontSize || '1rem'}
-        onValueChange={onFontSizeChange}
+        onValueChange={(value) => {
+          onFontSizeChange(value);
+        }}
       >
         <SelectTrigger className="w-32 bg-dark-navy border-light-navy text-white">
           <SelectValue placeholder="Font size" />

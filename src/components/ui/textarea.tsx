@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
@@ -128,7 +129,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     }, [props.value]);
     
-    // Handle focus event with proper typing
+    // Handle focus event 
     const handleFocus = (e: React.FocusEvent<HTMLDivElement>) => {
       if (props.onFocus) {
         // Create a synthetic event that matches what the form expects
@@ -144,7 +145,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     };
     
-    // Handle blur event with proper typing
+    // Handle blur event
     const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
       if (props.onBlur) {
         // Create a synthetic event that matches what the form expects
@@ -158,6 +159,15 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         
         props.onBlur(syntheticEvent);
       }
+    };
+    
+    // Apply base styling to the text based on global formatting settings
+    const baseStyle: React.CSSProperties = {
+      fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
+      textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
+      fontSize: textFormatting?.fontSize || 'inherit',
+      lineHeight: '1.5',
+      minHeight: '200px'
     };
     
     return (
@@ -175,10 +185,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={editorRef}
           contentEditable
           className="w-full focus:outline-none whitespace-pre-wrap text-white"
-          style={{
-            lineHeight: '1.5',
-            minHeight: '200px'
-          }}
+          style={baseStyle}
           onInput={handleInput}
           onSelect={handleSelect}
           suppressContentEditableWarning={true}

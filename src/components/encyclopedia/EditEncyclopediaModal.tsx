@@ -62,7 +62,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       focal_point_x: entry?.focal_point_x || 50,
       focal_point_y: entry?.focal_point_y || 50,
       opacity: entry?.opacity || 100,
-      popup_opacity: entry?.popup_opacity || entry?.opacity || 100,
+      popup_opacity: entry?.popup_opacity || entry.opacity || 100,
       title_color: entry?.title_color || '#FFFFFF',
       subtext_color: entry?.subtext_color || '#D1D5DB',
       highlight_effect: entry?.highlight_effect || false,
@@ -164,11 +164,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
 
   const handleToggleBold = () => {
     if (selectedTextRange) {
-      console.log("Applying formatting:", {
-        start: selectedTextRange.start,
-        end: selectedTextRange.end,
-        formatting: { isBold: true }
-      });
+      console.log("Applying bold formatting to selection:", selectedTextRange);
       applyFormattingToSelectedText({ isBold: true });
     } else {
       const currentFormatting = form.getValues('popup_text_formatting') || {};
@@ -181,6 +177,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
 
   const handleToggleUnderline = () => {
     if (selectedTextRange) {
+      console.log("Applying underline formatting to selection:", selectedTextRange);
       applyFormattingToSelectedText({ isUnderlined: true });
     } else {
       const currentFormatting = form.getValues('popup_text_formatting') || {};
@@ -193,6 +190,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
 
   const handleFontSizeChange = (value: string) => {
     if (selectedTextRange) {
+      console.log("Applying font size formatting to selection:", selectedTextRange, value);
       applyFormattingToSelectedText({ fontSize: value });
     } else {
       const currentFormatting = form.getValues('popup_text_formatting') || {};

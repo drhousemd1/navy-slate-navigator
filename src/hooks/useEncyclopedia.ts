@@ -142,6 +142,7 @@ export const useEncyclopedia = () => {
 
   // Handle text selection for formatting
   const handleTextSelection = (selection: { start: number; end: number }) => {
+    console.log("useEncyclopedia: Text selection received", selection);
     setSelectedTextRange(selection);
   };
 
@@ -150,7 +151,10 @@ export const useEncyclopedia = () => {
     text: string, 
     formatting: { isBold?: boolean; isUnderlined?: boolean; fontSize?: string }
   ) => {
-    if (!selectedTextRange) return text;
+    if (!selectedTextRange) {
+      console.log("No text range selected");
+      return text;
+    }
     
     const { start, end } = selectedTextRange;
     
