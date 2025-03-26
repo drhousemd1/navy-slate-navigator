@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -171,7 +170,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
                 {icon_name ? (
                   <TaskIcon 
                     icon_name={icon_name} 
-                    icon_color="#FFFFFF" 
+                    icon_color={icon_color} 
                     className="h-5 w-5"
                   />
                 ) : (
