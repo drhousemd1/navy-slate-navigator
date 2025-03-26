@@ -24,6 +24,7 @@ interface EncyclopediaTileProps {
     isUnderlined?: boolean;
     fontSize?: string;
   };
+  onFormatSelection?: (selection: { start: number; end: number }) => void;
 }
 
 const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({ 
@@ -40,7 +41,8 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
   titleColor = '#FFFFFF',
   subtextColor = '#D1D5DB',
   highlightEffect = false,
-  popupTextFormatting
+  popupTextFormatting,
+  onFormatSelection
 }) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   
@@ -129,6 +131,7 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
           titleColor={titleColor}
           highlightEffect={highlightEffect}
           textFormatting={popupTextFormatting}
+          onFormatSelection={onFormatSelection}
         />
       )}
     </>

@@ -24,6 +24,7 @@ interface EditEncyclopediaModalProps {
   entry?: EncyclopediaEntry;
   isSaving?: boolean;
   isDeleting?: boolean;
+  onFormatSelection?: (selection: { start: number; end: number }) => void;
 }
 
 const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({ 
@@ -33,7 +34,8 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   onDelete, 
   entry,
   isSaving = false,
-  isDeleting = false
+  isDeleting = false,
+  onFormatSelection
 }) => {
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(entry?.image_url || null);
@@ -334,6 +336,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                           rows={6}
                           formattedPreview={true}
                           textFormatting={currentTextFormatting}
+                          onFormatSelection={onFormatSelection}
                           {...field} 
                         />
                       </FormControl>
