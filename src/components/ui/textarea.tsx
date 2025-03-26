@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
@@ -133,6 +134,38 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     }, [props.value]);
     
+    // Handle focus event with proper typing
+    const handleFocus = (e: React.FocusEvent<HTMLDivElement>) => {
+      if (props.onFocus) {
+        // Create a synthetic event that matches what the form expects
+        const syntheticEvent = {
+          ...e,
+          currentTarget: {
+            ...e.currentTarget,
+            value: e.currentTarget.innerText
+          }
+        } as unknown as React.FocusEvent<HTMLTextAreaElement>;
+        
+        props.onFocus(syntheticEvent);
+      }
+    };
+    
+    // Handle blur event with proper typing
+    const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+      if (props.onBlur) {
+        // Create a synthetic event that matches what the form expects
+        const syntheticEvent = {
+          ...e,
+          currentTarget: {
+            ...e.currentTarget,
+            value: e.currentTarget.innerText
+          }
+        } as unknown as React.FocusEvent<HTMLTextAreaElement>;
+        
+        props.onBlur(syntheticEvent);
+      }
+    };
+    
     return (
       <div 
         className={cn(
@@ -155,8 +188,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           placeholder={props.placeholder}
           // We use data attribute for placeholder
           data-placeholder={props.placeholder}
-          onFocus={props.onFocus}
-          onBlur={props.onBlur}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
         />
       </div>
     );
