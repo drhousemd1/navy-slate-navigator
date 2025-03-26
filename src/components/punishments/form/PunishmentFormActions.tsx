@@ -29,13 +29,14 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
           isOpen={isDeleteDialogOpen}
           onOpenChange={setIsDeleteDialogOpen}
           onDelete={() => onDelete(punishmentData.id as string)}
+          punishmentName={punishmentData.title}
         />
       )}
       <Button 
         type="button" 
-        variant="destructive" 
+        variant="outline" 
         onClick={onCancel}
-        className="bg-red-700 border-light-navy text-white hover:bg-red-600"
+        className="bg-transparent border border-slate-700 text-white hover:bg-slate-800"
       >
         Cancel
       </Button>
