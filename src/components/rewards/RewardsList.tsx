@@ -29,8 +29,9 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
     );
   }
 
-  // We don't need to sort here since the rewards are already sorted by created_at
-  // in the fetchRewards query in RewardsContext.tsx
+  // No sorting needed here as we rely on the backend sorting by created_at
+  console.log("Rendering rewards list, count:", rewards.length);
+  
   return (
     <div className="space-y-4">
       {rewards.map((reward, index) => (
@@ -45,7 +46,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           onBuy={() => handleBuy(index)}
           onUse={() => handleUse(index)}
           onEdit={() => onEdit(index)}
-          backgroundImage={reward.background_image_url || undefined}
+          backgroundImage={reward.background_image_url}
           backgroundOpacity={reward.background_opacity}
           focalPointX={reward.focal_point_x}
           focalPointY={reward.focal_point_y}

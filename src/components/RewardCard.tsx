@@ -16,7 +16,7 @@ interface RewardCardProps {
   onBuy?: () => void;
   onUse?: () => void;
   onEdit?: () => void;
-  backgroundImage?: string;
+  backgroundImage?: string | null;
   backgroundOpacity?: number;
   focalPointX?: number;
   focalPointY?: number;

@@ -257,7 +257,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           .from('rewards')
           .update({ 
             supply: updatedSupply,
-            // Keep the same created_at timestamp to maintain position
+            // Do not update the updated_at timestamp to preserve sorting
             updated_at: reward.created_at 
           })
           .eq('id', reward.id);
@@ -310,7 +310,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           .from('rewards')
           .update({ 
             supply: updatedSupply,
-            // Keep the same created_at timestamp to maintain position
+            // Do not update the updated_at timestamp to preserve sorting
             updated_at: reward.created_at
           })
           .eq('id', reward.id);
@@ -408,14 +408,12 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         const existingReward = rewards[index];
         console.log("Updating existing reward with ID:", existingReward.id);
         
-        // Only update needed fields, preserve created_at and set updated_at to same value
-        // to maintain the order in the list
+        // Only update needed fields, preserve created_at and do NOT update updated_at at all
+        // This is critical to maintain the order in the list
         const { data, error } = await supabase
           .from('rewards')
           .update({
             ...dataToSave,
-            // Keep the same created_at date to maintain position
-            updated_at: existingReward.created_at
           })
           .eq('id', existingReward.id)
           .select();
@@ -432,13 +430,12 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           description: "The reward has been successfully updated.",
         });
       } else {
-        // Adding new reward
+        // Adding new reward - set created_at to now for new rewards
         console.log("Creating new reward");
         const newRewardData = {
           ...dataToSave,
           supply: 0,  // New rewards start with 0 supply
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
         };
         
         const { data, error } = await supabase
