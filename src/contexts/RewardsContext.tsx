@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -118,23 +117,39 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
       
       try {
         // Get all rewards
+        console.log('Fetching rewards data...');
         const { data: rewardsData, error: rewardsError } = await supabase
           .from('rewards')
           .select('*');
 
         if (rewardsError) {
+          console.error('Error fetching rewards:', rewardsError);
           throw rewardsError;
         }
 
+        console.log('Rewards data:', rewardsData);
+        
+        // Check if there are any rewards at all
+        if (!rewardsData || rewardsData.length === 0) {
+          console.log('No rewards found in the database');
+          setRewards([]);
+          setIsLoading(false);
+          return;
+        }
+
         // Get user's reward supplies
+        console.log('Fetching user reward supplies...');
         const { data: userRewardsData, error: userRewardsError } = await supabase
           .from('user_rewards')
           .select('reward_id, supply')
           .eq('user_id', userId);
 
         if (userRewardsError) {
+          console.error('Error fetching user rewards:', userRewardsError);
           throw userRewardsError;
         }
+
+        console.log('User rewards data:', userRewardsData);
 
         // Create a mapping of reward_id to supply
         const supplyMap: Record<string, number> = {};
@@ -149,14 +164,18 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           supply: supplyMap[reward.id] || 0
         }));
 
+        console.log('Combined rewards:', combinedRewards);
+
         setRewards(combinedRewards || []);
       } catch (error) {
-        console.error('Error fetching rewards:', error);
+        console.error('Error in rewards fetching process:', error);
         toast({
           title: "Error",
           description: "Failed to load rewards",
           variant: "destructive",
         });
+        // Set rewards to empty array so we exit loading state
+        setRewards([]);
       } finally {
         setIsLoading(false);
       }

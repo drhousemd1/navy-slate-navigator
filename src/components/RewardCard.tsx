@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import RewardHeader from './rewards/RewardHeader';
@@ -62,7 +61,11 @@ const RewardCard: React.FC<RewardCardProps> = ({
 }) => {
   const { toast } = useToast();
   
-  // Handle both naming conventions
+  if (!title || cost === undefined || supply === undefined) {
+    console.error('Invalid reward data:', { title, cost, supply });
+    return null; // Skip rendering this card
+  }
+  
   const effectiveIconName = iconName || icon_name || 'Gift';
   const effectiveIconColor = iconColor || icon_color;
   const effectiveBackgroundImage = backgroundImage || background_image_url;
@@ -122,7 +125,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
         
         <RewardContent
           title={title}
-          description={description}
+          description={description || ''}
           iconName={effectiveIconName}
           iconColor={effectiveIconColor}
           highlight_effect={highlight_effect}
