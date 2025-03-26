@@ -27,87 +27,58 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: initialPosition?.x ?? 50, y: initialPosition?.y ?? 50 });
 
-  // Update local position state when prop changes (e.g., when form loads with initial data)
   useEffect(() => {
     if (initialPosition) {
       setPosition(initialPosition);
     }
   }, [initialPosition]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const updatePosition = (clientX: number, clientY: number) => {
     if (!imageContainerRef.current) return;
-    
-    e.preventDefault();
-    setIsDragging(true);
-    
     const rect = imageContainerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-    
+    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
     setPosition({ x, y });
     setValue('focal_point_x', Math.round(x));
     setValue('focal_point_y', Math.round(y));
-    
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!isDragging || !imageContainerRef.current) return;
-      
-      const rect = imageContainerRef.current.getBoundingClientRect();
-      const x = Math.max(0, Math.min(100, ((moveEvent.clientX - rect.left) / rect.width) * 100));
-      const y = Math.max(0, Math.min(100, ((moveEvent.clientY - rect.top) / rect.height) * 100));
-      
-      setPosition({ x, y });
-      setValue('focal_point_x', Math.round(x));
-      setValue('focal_point_y', Math.round(y));
-    };
-    
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    updatePosition(e.clientX, e.clientY);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (!imageContainerRef.current || e.touches.length === 0) return;
-    
+    if (e.touches.length === 0) return;
     setIsDragging(true);
-    
-    const touch = e.touches[0];
-    const rect = imageContainerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
-    
-    setPosition({ x, y });
-    setValue('focal_point_x', Math.round(x));
-    setValue('focal_point_y', Math.round(y));
-    
-    const handleTouchMove = (moveEvent: TouchEvent) => {
-      if (!isDragging || !imageContainerRef.current || moveEvent.touches.length === 0) return;
-      
-      moveEvent.preventDefault();
-      
-      const touch = moveEvent.touches[0];
-      const rect = imageContainerRef.current.getBoundingClientRect();
-      const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
-      const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
-      
-      setPosition({ x, y });
-      setValue('focal_point_x', Math.round(x));
-      setValue('focal_point_y', Math.round(y));
-    };
-    
-    const handleTouchEnd = () => {
-      setIsDragging(false);
-      document.removeEventListener('touchmove', handleTouchMove, { passive: false } as AddEventListenerOptions);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-    
-    document.addEventListener('touchmove', handleTouchMove, { passive: false } as AddEventListenerOptions);
-    document.addEventListener('touchend', handleTouchEnd);
+    updatePosition(e.touches[0].clientX, e.touches[0].clientY);
   };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging) updatePosition(e.clientX, e.clientY);
+    };
+    const handleTouchMove = (e: TouchEvent) => {
+      if (isDragging && e.touches.length > 0) {
+        e.preventDefault();
+        updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+    const stopDragging = () => setIsDragging(false);
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', stopDragging);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', stopDragging);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', stopDragging);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', stopDragging);
+    };
+  }, [isDragging]);
 
   return (
     <div className="space-y-4">
@@ -120,6 +91,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
               role="button"
               tabIndex={0}
               aria-label="Drag to adjust focal point"
+              onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
             >
               <img 
                 src={imagePreview} 
@@ -130,21 +103,16 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                   objectPosition: `${position.x}% ${position.y}%`
                 }}
               />
-              {/* Interactive overlay directly handling mouse and touch events */}
               <div 
                 className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors duration-200"
-                onMouseDown={handleMouseDown}
-                onTouchStart={handleTouchStart}
                 style={{ 
                   cursor: 'crosshair',
-                  position: 'absolute',
                   pointerEvents: 'auto', 
                   touchAction: 'none',
                   zIndex: 10,
-                  border: '2px solid red' // Keeping the debugging border as requested
+                  border: '2px solid red' 
                 }}
               >
-                {/* Focal point indicator with pointer-events: none */}
                 <div 
                   className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg"
                   style={{ 
@@ -153,7 +121,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                     animation: isDragging ? 'none' : 'pulse 2s infinite',
                     boxShadow: isDragging ? '0 0 0 4px rgba(126, 105, 171, 0.5)' : '',
                     zIndex: 20,
-                    pointerEvents: 'none' // Ensuring the marker doesn't block input
+                    pointerEvents: 'none' 
                   }}
                 />
                 <span className="text-sm text-white bg-black/70 px-3 py-2 rounded-full shadow-md pointer-events-none">
@@ -183,7 +151,6 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
           </div>
         )}
       </div>
-      
       {imagePreview && (
         <FormField
           control={control}
