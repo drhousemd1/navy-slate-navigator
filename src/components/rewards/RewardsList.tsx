@@ -11,7 +11,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   const { rewards, handleBuy, handleUse, getRewardUsage, getFrequencyCount } = useRewards();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24">
       {rewards.map((reward, index) => (
         <RewardCard
           key={index}
@@ -36,6 +36,9 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           frequencyCount={getFrequencyCount(index)}
         />
       ))}
+      
+      {/* Spacer to prevent content from being hidden behind the Add button */}
+      <div className="h-6" aria-hidden="true"></div>
     </div>
   );
 };
