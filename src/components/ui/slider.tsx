@@ -15,6 +15,7 @@ interface SliderProps {
 
 const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
   ({ className, min = 0, max = 100, step = 1, value, onValueChange, disabled = false, ...props }, ref) => {
+    const sliderRef = React.useRef<HTMLDivElement>(null)
     const trackRef = React.useRef<HTMLDivElement>(null)
     const rangeRef = React.useRef<HTMLDivElement>(null)
     const thumbRef = React.useRef<HTMLDivElement>(null)
@@ -33,75 +34,87 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
       }
     }, [percentage])
     
-    const getValueFromPosition = (position: number) => {
+    const getValueFromPosition = (clientX: number) => {
       if (!trackRef.current) return min
       
       const trackRect = trackRef.current.getBoundingClientRect()
+      const trackLeft = trackRect.left
       const trackWidth = trackRect.width
       
-      // Calculate position ratio (0 to 1)
-      let ratio = Math.max(0, Math.min(1, position / trackWidth))
+      // Calculate position relative to track
+      const position = Math.max(0, Math.min(trackWidth, clientX - trackLeft))
+      
+      // Calculate ratio (0 to 1)
+      const ratio = position / trackWidth
       
       // Calculate value based on ratio
-      let newValue = min + Math.round((ratio * (max - min)) / step) * step
+      const rawValue = min + ratio * (max - min)
+      
+      // Apply step
+      const steppedValue = Math.round(rawValue / step) * step
       
       // Ensure value is within min and max
-      newValue = Math.max(min, Math.min(max, newValue))
-      
-      return newValue
+      return Math.max(min, Math.min(max, steppedValue))
     }
     
     const updateValue = (clientX: number) => {
       if (!trackRef.current || disabled) return
       
-      const trackRect = trackRef.current.getBoundingClientRect()
-      const position = clientX - trackRect.left
-      const newValue = getValueFromPosition(position)
+      const newValue = getValueFromPosition(clientX)
       
       if (newValue !== value[0]) {
         onValueChange([newValue])
       }
     }
     
-    const handleMouseDown = (e: React.MouseEvent) => {
+    const handleInteractionStart = (clientX: number) => {
       if (disabled) return
       setIsDragging(true)
-      updateValue(e.clientX)
+      updateValue(clientX)
+    }
+    
+    const handleMouseDown = (e: React.MouseEvent) => {
+      handleInteractionStart(e.clientX)
     }
     
     const handleTouchStart = (e: React.TouchEvent) => {
-      if (disabled || !e.touches[0]) return
-      setIsDragging(true)
-      updateValue(e.touches[0].clientX)
+      if (!e.touches[0]) return
+      handleInteractionStart(e.touches[0].clientX)
     }
     
     React.useEffect(() => {
-      const handleMouseMove = (e: MouseEvent) => {
+      const handleInteractionMove = (clientX: number) => {
         if (isDragging) {
-          updateValue(e.clientX)
+          updateValue(clientX)
         }
+      }
+      
+      const handleMouseMove = (e: MouseEvent) => {
+        handleInteractionMove(e.clientX)
       }
       
       const handleTouchMove = (e: TouchEvent) => {
-        if (isDragging && e.touches[0]) {
-          updateValue(e.touches[0].clientX)
+        if (e.touches[0]) {
+          handleInteractionMove(e.touches[0].clientX)
         }
       }
       
-      const handleUp = () => {
+      const handleInteractionEnd = () => {
         setIsDragging(false)
       }
       
+      // Add event listeners
       document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleUp)
-      document.addEventListener('touchmove', handleTouchMove)
-      document.addEventListener('touchend', handleUp)
+      document.addEventListener('mouseup', handleInteractionEnd)
+      document.addEventListener('touchmove', handleTouchMove, { passive: true })
+      document.addEventListener('touchend', handleInteractionEnd)
       
+      // Clean up
       return () => {
         document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleUp)
+        document.removeEventListener('mouseup', handleInteractionEnd)
         document.removeEventListener('touchmove', handleTouchMove)
-        document.removeEventListener('touchend', handleUp)
+        document.removeEventListener('touchend', handleInteractionEnd)
       }
     }, [isDragging])
     
@@ -111,26 +124,32 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
         className={cn("relative flex w-full touch-none select-none items-center py-4", className)}
         {...props}
       >
-        <div
-          ref={trackRef}
-          className="slider-track"
+        <div 
+          ref={sliderRef} 
+          className="slider-container"
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         >
-          <div ref={rangeRef} className="slider-range" style={{ width: `${percentage}%` }} />
+          <div ref={trackRef} className="slider-track">
+            <div 
+              ref={rangeRef} 
+              className="slider-range" 
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+          <div 
+            ref={thumbRef}
+            className="slider-thumb"
+            style={{ left: `${percentage}%` }}
+            role="slider"
+            tabIndex={disabled ? -1 : 0}
+            aria-valuemin={min}
+            aria-valuemax={max}
+            aria-valuenow={value[0]}
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+          />
         </div>
-        <div 
-          ref={thumbRef}
-          className="slider-thumb absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
-          style={{ left: `${percentage}%` }}
-          role="slider"
-          aria-valuemin={min}
-          aria-valuemax={max}
-          aria-valuenow={value[0]}
-          tabIndex={disabled ? -1 : 0}
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleTouchStart}
-        />
       </div>
     )
   }
