@@ -255,7 +255,10 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         
         const { error } = await supabase
           .from('rewards')
-          .update({ supply: updatedSupply })
+          .update({ 
+            supply: updatedSupply,
+            updated_at: reward.created_at 
+          })
           .eq('id', reward.id);
         
         if (error) {
@@ -304,7 +307,10 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         
         const { error: updateError } = await supabase
           .from('rewards')
-          .update({ supply: updatedSupply })
+          .update({ 
+            supply: updatedSupply,
+            updated_at: reward.created_at
+          })
           .eq('id', reward.id);
         
         if (updateError) {
@@ -390,8 +396,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         highlight_effect: rewardData.highlight_effect,
         title_color: rewardData.title_color,
         subtext_color: rewardData.subtext_color,
-        calendar_color: rewardData.calendar_color,
-        updated_at: new Date().toISOString()
+        calendar_color: rewardData.calendar_color
       };
       
       console.log("Data to save to Supabase:", dataToSave);
@@ -401,10 +406,15 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         const existingReward = rewards[index];
         console.log("Updating existing reward with ID:", existingReward.id);
         
-        // Preserve the created_at timestamp when updating
+        // Only update needed fields, preserve created_at and set updated_at to same value
+        // to maintain the order in the list
         const { data, error } = await supabase
           .from('rewards')
-          .update(dataToSave)
+          .update({
+            ...dataToSave,
+            // Keep the same created_at date to maintain position
+            updated_at: existingReward.created_at
+          })
           .eq('id', existingReward.id)
           .select();
         
@@ -425,7 +435,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         const newRewardData = {
           ...dataToSave,
           supply: 0,  // New rewards start with 0 supply
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         };
         
         const { data, error } = await supabase

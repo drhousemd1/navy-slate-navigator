@@ -161,6 +161,11 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         iconName: selectedIconName || undefined,
       };
       
+      // Explicitly ensure background_image_url is properly handled
+      if (!imagePreview) {
+        rewardToSave.background_image_url = null;
+      }
+      
       console.log("Calling onSave with data:", rewardToSave);
       await onSave(rewardToSave);
       

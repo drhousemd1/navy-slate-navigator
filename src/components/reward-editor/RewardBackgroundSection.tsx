@@ -21,6 +21,12 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
   onImageUpload, 
   setValue 
 }) => {
+  const handleRemoveImage = () => {
+    // Set the background_image_url to null explicitly to ensure the image is removed
+    setValue('background_image_url', null);
+    onRemoveImage();
+  };
+
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Image</FormLabel>
@@ -28,7 +34,7 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
         control={control}
         imagePreview={imagePreview}
         initialPosition={initialPosition}
-        onRemoveImage={onRemoveImage}
+        onRemoveImage={handleRemoveImage}
         onImageUpload={onImageUpload}
         setValue={setValue}
       />
