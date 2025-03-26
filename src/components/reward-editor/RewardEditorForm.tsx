@@ -45,6 +45,8 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
+  console.log("RewardEditorForm initialized with reward data:", rewardData);
+  
   const form = useForm<RewardFormValues>({
     defaultValues: {
       title: rewardData?.title || '',
@@ -67,6 +69,12 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
     setImagePreview(rewardData?.background_image_url || null);
     setIconPreview(rewardData?.icon_url || null);
     setSelectedIconName(rewardData?.iconName || null);
+    
+    console.log("RewardEditorForm useEffect - setting initial values", {
+      imagePreview: rewardData?.background_image_url || null,
+      iconPreview: rewardData?.icon_url || null,
+      selectedIconName: rewardData?.iconName || null
+    });
   }, [rewardData]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,6 +85,7 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         const base64String = reader.result as string;
         setImagePreview(base64String);
         form.setValue('background_image_url', base64String);
+        console.log("Image uploaded and set to form value");
       };
       reader.readAsDataURL(file);
     }
@@ -97,6 +106,7 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
             setSelectedIconName(null);
             form.setValue('icon_url', base64String);
             form.setValue('icon_name', undefined);
+            console.log("Custom icon uploaded and set to form value");
           };
           reader.readAsDataURL(file);
         }
@@ -106,6 +116,8 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   };
 
   const handleIconSelect = (iconName: string) => {
+    console.log("Icon selected:", iconName);
+    
     if (iconName.startsWith('custom:')) {
       const iconUrl = iconName.substring(7);
       setIconPreview(iconUrl);
@@ -132,20 +144,24 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   const handleDelete = () => {
     if (rewardData && onDelete) {
+      console.log("Calling onDelete with ID:", rewardData.id || rewardData.index);
       onDelete(rewardData.id || rewardData.index);
       setIsDeleteDialogOpen(false);
     }
   };
 
   const handleSubmit = async (values: RewardFormValues) => {
+    console.log("Form submitted with values:", values);
     setLoading(true);
     
     try {
+      // Prepare the reward data object with all form values
       const rewardToSave = {
         ...values,
         iconName: selectedIconName || undefined,
       };
       
+      console.log("Calling onSave with data:", rewardToSave);
       await onSave(rewardToSave);
       
       toast({

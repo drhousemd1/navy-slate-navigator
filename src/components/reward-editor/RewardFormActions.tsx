@@ -21,6 +21,7 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
   onDelete
 }) => {
   const handleDelete = () => {
+    console.log("Delete button clicked for reward:", rewardData);
     if (rewardData && onDelete) {
       onDelete(rewardData.id || rewardData.index);
     }
@@ -34,7 +35,10 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
             <Button
               type="button"
               variant="destructive"
-              onClick={() => setIsDeleteDialogOpen(true)}
+              onClick={() => {
+                console.log("Opening delete dialog for reward:", rewardData);
+                setIsDeleteDialogOpen(true);
+              }}
               disabled={loading}
             >
               Delete

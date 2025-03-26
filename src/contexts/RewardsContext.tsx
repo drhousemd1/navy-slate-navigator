@@ -79,6 +79,7 @@ const RewardsContext = createContext<RewardsContextType | undefined>(undefined);
 
 // Fetch rewards function for React Query
 const fetchRewards = async () => {
+  console.log("Fetching rewards from Supabase");
   const { data, error } = await supabase
     .from('rewards')
     .select('*')
@@ -88,6 +89,8 @@ const fetchRewards = async () => {
     console.error('Error fetching rewards:', error);
     throw error;
   }
+  
+  console.log("Fetched rewards data:", data);
   
   // Map Supabase data to the format expected by the app
   return data?.map(reward => ({
@@ -115,6 +118,8 @@ const fetchRewardUsage = async () => {
   const now = new Date();
   const currentWeek = `${now.getFullYear()}-${now.getMonth() + 1}-${Math.floor(now.getDate() / 7)}`;
   
+  console.log("Fetching reward usage for week:", currentWeek);
+  
   const { data, error } = await supabase
     .from('reward_usage')
     .select('*')
@@ -124,6 +129,8 @@ const fetchRewardUsage = async () => {
     console.error('Error fetching reward usage:', error);
     throw error;
   }
+  
+  console.log("Fetched reward usage data:", data);
   
   // Transform data to the format expected by the app
   const usageMap: Record<string, boolean[]> = {};
@@ -251,6 +258,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           .eq('id', reward.id);
         
         if (error) {
+          console.error("Error updating reward supply:", error);
           throw error;
         }
         
@@ -299,6 +307,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           .eq('id', reward.id);
         
         if (updateError) {
+          console.error("Error updating reward supply:", updateError);
           throw updateError;
         }
         
@@ -317,6 +326,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           });
         
         if (usageError) {
+          console.error("Error recording reward usage:", usageError);
           throw usageError;
         }
         
@@ -363,35 +373,45 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   // Handle saving edited reward
   const handleSaveReward = async (rewardData: any, index: number | null) => {
     try {
-      console.log("Saving reward:", index !== null ? "edit existing" : "create new", rewardData);
+      console.log("Preparing to save reward:", index !== null ? "edit existing" : "create new", rewardData);
+      
+      // Prepare the data object for Supabase
+      const dataToSave = {
+        title: rewardData.title,
+        description: rewardData.description,
+        cost: rewardData.cost,
+        icon_name: rewardData.iconName,
+        icon_color: rewardData.icon_color,
+        background_image_url: rewardData.background_image_url,
+        background_opacity: rewardData.background_opacity,
+        focal_point_x: rewardData.focal_point_x,
+        focal_point_y: rewardData.focal_point_y,
+        highlight_effect: rewardData.highlight_effect,
+        title_color: rewardData.title_color,
+        subtext_color: rewardData.subtext_color,
+        calendar_color: rewardData.calendar_color,
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log("Data to save to Supabase:", dataToSave);
       
       if (index !== null) {
         // Updating existing reward
         const existingReward = rewards[index];
+        console.log("Updating existing reward with ID:", existingReward.id);
         
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('rewards')
-          .update({
-            title: rewardData.title,
-            description: rewardData.description,
-            cost: rewardData.cost,
-            icon_name: rewardData.iconName,
-            icon_color: rewardData.icon_color,
-            background_image_url: rewardData.background_image_url,
-            background_opacity: rewardData.background_opacity,
-            focal_point_x: rewardData.focal_point_x,
-            focal_point_y: rewardData.focal_point_y,
-            highlight_effect: rewardData.highlight_effect,
-            title_color: rewardData.title_color,
-            subtext_color: rewardData.subtext_color,
-            calendar_color: rewardData.calendar_color,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingReward.id);
+          .update(dataToSave)
+          .eq('id', existingReward.id)
+          .select();
         
         if (error) {
+          console.error("Supabase update error:", error);
           throw error;
         }
+        
+        console.log("Supabase update result:", data);
         
         toast({
           title: "Reward Updated",
@@ -399,29 +419,24 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         });
       } else {
         // Adding new reward
+        console.log("Creating new reward");
+        const newRewardData = {
+          ...dataToSave,
+          supply: 0,  // New rewards start with 0 supply
+          created_at: new Date().toISOString()
+        };
+        
         const { data, error } = await supabase
           .from('rewards')
-          .insert({
-            title: rewardData.title,
-            description: rewardData.description,
-            cost: rewardData.cost,
-            supply: 0,  // New rewards start with 0 supply
-            icon_name: rewardData.iconName,
-            icon_color: rewardData.icon_color,
-            background_image_url: rewardData.background_image_url,
-            background_opacity: rewardData.background_opacity,
-            focal_point_x: rewardData.focal_point_x,
-            focal_point_y: rewardData.focal_point_y,
-            highlight_effect: rewardData.highlight_effect,
-            title_color: rewardData.title_color,
-            subtext_color: rewardData.subtext_color,
-            calendar_color: rewardData.calendar_color
-          })
+          .insert(newRewardData)
           .select();
         
         if (error) {
+          console.error("Supabase insert error:", error);
           throw error;
         }
+        
+        console.log("Supabase insert result:", data);
         
         toast({
           title: "Reward Created",
@@ -448,7 +463,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   const handleDeleteReward = async (index: number) => {
     try {
       const rewardToDelete = rewards[index];
-      console.log("Deleting reward:", rewardToDelete.title);
+      console.log("Deleting reward:", rewardToDelete.title, "with ID:", rewardToDelete.id);
       
       // Delete from Supabase
       const { error } = await supabase
@@ -457,8 +472,11 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         .eq('id', rewardToDelete.id);
       
       if (error) {
+        console.error("Supabase delete error:", error);
         throw error;
       }
+      
+      console.log("Reward successfully deleted from Supabase");
       
       // Invalidate the 'rewards' query to trigger a refetch
       await refetchRewards();
@@ -475,6 +493,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         description: "Failed to delete reward. Please try again.",
         variant: "destructive",
       });
+      throw error;
     }
   };
 
