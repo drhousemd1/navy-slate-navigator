@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { predefinedIcons } from './predefinedIcons';
 
 export const findIconComponent = (iconName: string) => {
@@ -12,5 +13,5 @@ export const renderIconWithColor = (
 ) => {
   const IconComponent = findIconComponent(iconName);
   if (!IconComponent) return null;
-  return <IconComponent className={className} style={{ color: iconColor }} />;
+  return React.createElement(IconComponent, { className, style: { color: iconColor } });
 };
