@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -33,9 +32,9 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     }
   }, [initialPosition]);
 
-  // Initialize opacity to 100 by default
+  // Initialize opacity to 100 by default when an image is uploaded
   useEffect(() => {
-    if (imagePreview && control._formValues.background_opacity === undefined) {
+    if (imagePreview && (!control._formValues.background_opacity || control._formValues.background_opacity < 50)) {
       setValue('background_opacity', 100);
     }
   }, [imagePreview, control._formValues.background_opacity, setValue]);
