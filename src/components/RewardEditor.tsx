@@ -25,7 +25,10 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   const handleSave = async (formData: any) => {
     console.log("RewardEditor handling save with form data:", formData);
     try {
-      await onSave(formData);
+      // For existing rewards, pass the existing ID along with the form data
+      const dataToSave = rewardData ? { ...formData, id: rewardData.id } : formData;
+      
+      await onSave(dataToSave);
       
       // Force a rewards data refresh after saving
       queryClient.invalidateQueries({ queryKey: ['rewards'] });

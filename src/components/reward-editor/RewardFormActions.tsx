@@ -62,7 +62,7 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
           variant="outline"
           onClick={onCancel}
           disabled={loading}
-          className="bg-red-700 text-white hover:bg-red-600 border-0"
+          className="bg-transparent border border-slate-700 text-white hover:bg-slate-800"
         >
           Cancel
         </Button>

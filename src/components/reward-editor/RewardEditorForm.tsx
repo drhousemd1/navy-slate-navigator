@@ -50,6 +50,8 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  console.log("RewardEditorForm rendering with rewardData:", rewardData);
+
   // Initialize form with default values or existing reward data
   const form = useForm<RewardFormValues>({
     resolver: zodResolver(rewardFormSchema),
@@ -58,9 +60,9 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       description: rewardData?.description || '',
       cost: rewardData?.cost || 0,
       background_image_url: rewardData?.background_image_url || null,
-      background_opacity: rewardData?.background_opacity || 1,
-      focal_point_x: rewardData?.focal_point_x || 0.5,
-      focal_point_y: rewardData?.focal_point_y || 0.5,
+      background_opacity: rewardData?.background_opacity ? rewardData.background_opacity / 100 : 1,
+      focal_point_x: rewardData?.focal_point_x ? rewardData.focal_point_x / 100 : 0.5,
+      focal_point_y: rewardData?.focal_point_y ? rewardData.focal_point_y / 100 : 0.5,
       icon_url: rewardData?.icon_url || null,
       title_color: rewardData?.title_color || '#FFFFFF',
       subtext_color: rewardData?.subtext_color || '#CCCCCC',
@@ -73,6 +75,25 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   // Load existing data when component mounts or rewardData changes
   useEffect(() => {
     if (rewardData) {
+      console.log("Setting form data from rewardData:", rewardData);
+      
+      // Reset the form with the reward data
+      form.reset({
+        title: rewardData.title || '',
+        description: rewardData.description || '',
+        cost: rewardData.cost || 0,
+        background_image_url: rewardData.background_image_url || null,
+        background_opacity: rewardData.background_opacity ? rewardData.background_opacity / 100 : 1,
+        focal_point_x: rewardData.focal_point_x ? rewardData.focal_point_x / 100 : 0.5,
+        focal_point_y: rewardData.focal_point_y ? rewardData.focal_point_y / 100 : 0.5,
+        icon_url: rewardData.icon_url || null,
+        title_color: rewardData.title_color || '#FFFFFF',
+        subtext_color: rewardData.subtext_color || '#CCCCCC',
+        calendar_color: rewardData.calendar_color || '#3B82F6',
+        highlight_effect: rewardData.highlight_effect || false,
+        icon_color: rewardData.icon_color || '#FFFFFF',
+      });
+      
       // Set image preview if exists
       if (rewardData.background_image_url) {
         setImagePreview(rewardData.background_image_url);
@@ -88,26 +109,29 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         setSelectedIconName(rewardData.icon_name);
       }
     }
-  }, [rewardData]);
+  }, [rewardData, form]);
 
   const handleSubmit = async (values: RewardFormValues) => {
     console.log("Form submitted with values:", values);
     setLoading(true);
     
     try {
-      // Prepare the reward data object with all form values
-      const rewardToSave = {
+      // Convert 0-1 values back to 0-100 for the database
+      const processedValues = {
         ...values,
-        iconName: selectedIconName || undefined,
+        background_opacity: values.background_opacity ? Math.round(values.background_opacity * 100) : 100,
+        focal_point_x: values.focal_point_x ? Math.round(values.focal_point_x * 100) : 50,
+        focal_point_y: values.focal_point_y ? Math.round(values.focal_point_y * 100) : 50,
+        icon_name: selectedIconName || undefined,
       };
       
       // Explicitly ensure background_image_url is properly handled
       if (!imagePreview) {
-        rewardToSave.background_image_url = null;
+        processedValues.background_image_url = null;
       }
       
-      console.log("Calling onSave with data:", rewardToSave);
-      await onSave(rewardToSave);
+      console.log("Calling onSave with processed data:", processedValues);
+      await onSave(processedValues);
       
       toast({
         title: "Success",
