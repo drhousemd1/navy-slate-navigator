@@ -70,8 +70,8 @@ const RewardCard: React.FC<RewardCardProps> = ({
 
   const cardBorderStyle = supply > 0 
     ? {
-        borderColor: '#FFD700',
-        boxShadow: '0 0 8px 2px rgba(255, 215, 0, 0.6)'
+        borderColor: '#FEF7CD', // Changed from #FFD700 to #FEF7CD for a whiter yellow
+        boxShadow: '0 0 8px 2px rgba(254, 247, 205, 0.6)' // Updated shadow to match new color
       } 
     : {};
 
