@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import { FormLabel } from "@/components/ui/form";
 import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';

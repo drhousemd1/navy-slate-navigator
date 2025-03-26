@@ -179,7 +179,6 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                   max={100}
                   step={1}
                   onValueChange={handleOpacityChange}
-                  className="py-4"
                 />
               </FormControl>
             </FormItem>
