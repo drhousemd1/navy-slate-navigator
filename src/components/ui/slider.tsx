@@ -14,6 +14,13 @@ const Slider = React.forwardRef<
       "relative flex w-full touch-none select-none items-center",
       className
     )}
+    style={{
+      // Calculate and set the CSS variable for slider range width
+      ["--slider-range-width" as any]: `${props.value ? 
+        (Array.isArray(props.value) ? 
+          ((props.value[0] - (props.min || 0)) / ((props.max || 100) - (props.min || 0)) * 100) : 0
+        ) : 0}%`
+    }}
     {...props}
   >
     <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary">

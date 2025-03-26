@@ -3,5 +3,6 @@
 [data-radix-slider-range] {
   left: 0 !important;
   right: auto !important;
-  transform-origin: left !important;
+  width: var(--slider-range-width) !important;
+  transform: none !important;
 }
