@@ -165,18 +165,13 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
       if (!userId || rewards.length === 0) return;
       
       try {
-        // Use a generic fetch approach to avoid TypeScript errors with the reward_usage table
-        const { data, error } = await supabase
-          .rpc('get_reward_usage', { user_id_param: userId })
-          .catch(() => {
-            // Fallback to direct query using any to bypass type checking
-            return (supabase as any)
-              .from('reward_usage')
-              .select('reward_id, day_of_week')
-              .eq('user_id', userId);
-          });
+        // Use the RPC function to get reward usage data
+        const { data, error } = await supabase.rpc('get_reward_usage', { 
+          user_id_param: userId 
+        });
 
         if (error) {
+          console.error('RPC get_reward_usage error:', error);
           throw error;
         }
 
@@ -189,7 +184,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         
         // Update with actual usage data if we have it
         if (data) {
-          data.forEach((usage: any) => {
+          data.forEach((usage: { reward_id: string, day_of_week: number }) => {
             const rewardIndex = rewards.findIndex(r => r.id === usage.reward_id);
             if (rewardIndex !== -1) {
               usageData[`reward-${rewardIndex}`][usage.day_of_week] = true;
@@ -314,19 +309,18 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         // Track usage for this day of the week
         const currentDay = getCurrentDayOfWeek();
         
-        // Use a generic approach to avoid TypeScript errors
-        const { error: usageError } = await (supabase as any)
-          .from('reward_usage')
-          .upsert({
-            user_id: userId,
-            reward_id: reward.id,
-            day_of_week: currentDay,
-            used_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id,reward_id,day_of_week'
-          });
+        // We use the typed supabase client for RPC calls
+        const { error: usageError } = await supabase.rpc('upsert_reward_usage', {
+          user_id_param: userId,
+          reward_id_param: reward.id,
+          day_of_week_param: currentDay
+        }).catch((error) => {
+          console.error('RPC upsert_reward_usage error:', error);
+          return { error };
+        });
 
         if (usageError) {
+          console.error('Usage error:', usageError);
           throw usageError;
         }
 
@@ -494,11 +488,13 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         .delete()
         .eq('reward_id', rewardId);
 
-      // And clean up reward_usage entries - using generic approach
-      await (supabase as any)
-        .from('reward_usage')
-        .delete()
-        .eq('reward_id', rewardId);
+      // Delete reward usage through RPC
+      await supabase.rpc('delete_reward_usage', {
+        reward_id_param: rewardId
+      }).catch((error) => {
+        console.error('RPC delete_reward_usage error:', error);
+        return { error };
+      });
 
       // Update local state
       setRewards(prevRewards => prevRewards.filter((_, i) => i !== index));
