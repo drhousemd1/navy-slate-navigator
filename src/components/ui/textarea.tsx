@@ -136,7 +136,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       return (
         <div 
           className={cn(
-            "flex min-h-[80px] w-full rounded-md border border-input bg-background text-sm relative",
+            "flex min-h-[200px] w-full rounded-md border border-input bg-background text-sm relative",
             className
           )}
           onClick={handleClick}
@@ -144,7 +144,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {/* Visible textarea where user types */}
           <textarea
             ref={setRefs}
-            className="w-full h-full min-h-[80px] px-3 py-2 bg-transparent resize-none outline-none caret-white selection:bg-blue-500/30"
+            className="w-full h-full min-h-[200px] px-3 py-2 bg-transparent resize-none outline-none caret-white selection:bg-blue-500/30"
             style={{
               color: 'transparent',
               caretColor: 'white',
