@@ -6,9 +6,8 @@ import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Loader2 } from 'lucide-react';
+import { Trash2, Loader2, Upload } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import { Switch } from "@/components/ui/switch";
@@ -37,6 +36,8 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(entry?.image_url || null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [position, setPosition] = useState({ x: entry?.focal_point_x || 50, y: entry?.focal_point_y || 50 });
+  const [isDragging, setIsDragging] = useState(false);
   
   const form = useForm<EncyclopediaEntry>({
     defaultValues: {
@@ -72,6 +73,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
           highlight_effect: entry.highlight_effect || false,
         });
         setImagePreview(entry.image_url || null);
+        setPosition({ x: entry.focal_point_x || 50, y: entry.focal_point_y || 50 });
       } else {
         // Creating new entry
         form.reset({
@@ -88,6 +90,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
           highlight_effect: false,
         });
         setImagePreview(null);
+        setPosition({ x: 50, y: 50 });
       }
     }
   }, [isOpen, entry, form]);
@@ -123,6 +126,59 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       setIsDeleteDialogOpen(false);
     }
   };
+
+  // Image focal point handling
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    updatePosition(e.clientX, e.clientY);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 0) return;
+    setIsDragging(true);
+    updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+  };
+
+  const updatePosition = (clientX: number, clientY: number) => {
+    const imageContainer = document.getElementById('focal-point-container');
+    if (!imageContainer) return;
+    
+    const rect = imageContainer.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+    
+    setPosition({ x, y });
+    form.setValue('focal_point_x', Math.round(x));
+    form.setValue('focal_point_y', Math.round(y));
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging) updatePosition(e.clientX, e.clientY);
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      if (isDragging && e.touches.length > 0) {
+        e.preventDefault();
+        updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+    
+    const stopDragging = () => setIsDragging(false);
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', stopDragging);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', stopDragging);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', stopDragging);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', stopDragging);
+    };
+  }, [isDragging]);
   
   return (
     <>
@@ -224,19 +280,77 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                 )}
               />
               
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <FormLabel className="text-white">Background Image</FormLabel>
-                <BackgroundImageSelector
-                  control={form.control}
-                  imagePreview={imagePreview}
-                  initialPosition={{
-                    x: form.getValues('focal_point_x'), 
-                    y: form.getValues('focal_point_y')
-                  }}
-                  onRemoveImage={handleRemoveImage}
-                  onImageUpload={handleImageUpload}
-                  setValue={form.setValue}
-                />
+                
+                <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
+                  {imagePreview ? (
+                    <div className="space-y-4">
+                      <div 
+                        id="focal-point-container"
+                        className="relative w-full h-48 rounded-lg overflow-hidden"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Drag to adjust focal point"
+                        onMouseDown={handleMouseDown}
+                        onTouchStart={handleTouchStart}
+                      >
+                        <img 
+                          src={imagePreview} 
+                          alt="Background preview" 
+                          className="w-full h-full object-cover"
+                          style={{ 
+                            opacity: form.watch('opacity') / 100,
+                            objectPosition: `${position.x}% ${position.y}%`
+                          }}
+                        />
+                        <div 
+                          className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors duration-200"
+                          style={{ 
+                            cursor: 'crosshair',
+                            pointerEvents: 'auto', 
+                            touchAction: 'none',
+                            zIndex: 10,
+                          }}
+                        >
+                          <div 
+                            className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg"
+                            style={{ 
+                              left: `${position.x}%`, 
+                              top: `${position.y}%`,
+                              animation: isDragging ? 'none' : 'pulse 2s infinite',
+                              boxShadow: isDragging ? '0 0 0 4px rgba(126, 105, 171, 0.5)' : '',
+                              zIndex: 20,
+                              pointerEvents: 'none' 
+                            }}
+                          />
+                          <span className="text-sm text-white bg-black/70 px-3 py-2 rounded-full shadow-md pointer-events-none">
+                            Click and drag to adjust focal point
+                          </span>
+                        </div>
+                      </div>
+                      <Button 
+                        type="button"
+                        variant="secondary" 
+                        onClick={handleRemoveImage}
+                        className="bg-dark-navy text-white hover:bg-light-navy"
+                      >
+                        Remove Image
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="relative h-32 flex flex-col items-center justify-center">
+                      <Upload className="h-10 w-10 text-light-navy mb-2" />
+                      <p className="text-light-navy">Click to upload or drag and drop</p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={handleImageUpload}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
               
               {imagePreview && (
