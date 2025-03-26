@@ -1,20 +1,22 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Loader2, Upload, Bold, Underline, AlignLeft } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import ColorPickerField from '@/components/task-editor/ColorPickerField';
+import { Loader2, Trash2 } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { EncyclopediaEntry } from '@/types/encyclopedia';
-import { Slider } from "@/components/ui/slider";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+
+import ColorPickerField from '@/components/task-editor/ColorPickerField';
+import TextFormatToolbar from './formatting/TextFormatToolbar';
+import ImageUploadSection from './image/ImageUploadSection';
+import ImageFocalPointControl from './image/ImageFocalPointControl';
+import OpacitySlider from './image/OpacitySlider';
+import DeleteConfirmationDialog from './DeleteConfirmationDialog';
 
 interface EditEncyclopediaModalProps {
   isOpen: boolean;
@@ -159,6 +161,8 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
     }
   };
 
+  const [selectedTextRange, setSelectedTextRange] = useState<{ start: number; end: number } | null>(null);
+
   const handleToggleBold = () => {
     if (selectedTextRange) {
       applyFormattingToSelectedText({ isBold: true });
@@ -279,8 +283,6 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   
   const currentTextFormatting = form.watch('popup_text_formatting') || {};
   
-  const [selectedTextRange, setSelectedTextRange] = useState<{ start: number; end: number } | null>(null);
-  
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -330,66 +332,13 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
               <div className="space-y-2">
                 <FormLabel className="text-white">Pop-up Text</FormLabel>
                 
-                <div className="bg-dark-navy border border-light-navy rounded-md p-2 mb-2 flex flex-wrap gap-2">
-                  <TooltipProvider>
-                    <ToggleGroup type="multiple" className="justify-start">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <ToggleGroupItem 
-                            value="bold" 
-                            aria-label="Toggle bold"
-                            className={selectedTextRange ? "bg-blue-600" : 
-                              (form.watch('popup_text_formatting.isBold') ? "bg-nav-active" : "")}
-                            onClick={handleToggleBold}
-                          >
-                            <Bold className="h-4 w-4" />
-                          </ToggleGroupItem>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{selectedTextRange ? "Apply bold to selection" : "Toggle bold for all text"}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <ToggleGroupItem 
-                            value="underline" 
-                            aria-label="Toggle underline"
-                            className={selectedTextRange ? "bg-blue-600" : 
-                              (form.watch('popup_text_formatting.isUnderlined') ? "bg-nav-active" : "")}
-                            onClick={handleToggleUnderline}
-                          >
-                            <Underline className="h-4 w-4" />
-                          </ToggleGroupItem>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{selectedTextRange ? "Apply underline to selection" : "Toggle underline for all text"}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </ToggleGroup>
-                  </TooltipProvider>
-                  
-                  <Select
-                    value={form.watch('popup_text_formatting.fontSize') || '1rem'}
-                    onValueChange={handleFontSizeChange}
-                  >
-                    <SelectTrigger className="w-32 bg-dark-navy border-light-navy text-white">
-                      <SelectValue placeholder="Font size" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-dark-navy border-light-navy text-white">
-                      <SelectItem value="0.875rem">Small</SelectItem>
-                      <SelectItem value="1rem">Medium</SelectItem>
-                      <SelectItem value="1.25rem">Large</SelectItem>
-                      <SelectItem value="1.5rem">X-Large</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  {selectedTextRange && (
-                    <div className="ml-2 px-2 py-1 bg-blue-600/20 rounded text-sm text-white">
-                      Text selected: Apply formatting to selection
-                    </div>
-                  )}
-                </div>
+                <TextFormatToolbar 
+                  selectedTextRange={selectedTextRange}
+                  currentFormatting={currentTextFormatting}
+                  onToggleBold={handleToggleBold}
+                  onToggleUnderline={handleToggleUnderline}
+                  onFontSizeChange={handleFontSizeChange}
+                />
                 
                 <FormField
                   control={form.control}
@@ -449,117 +398,35 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                 )}
               />
               
-              <div className="space-y-4">
-                <FormLabel className="text-white">Background Image</FormLabel>
-                
-                <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
-                  {imagePreview ? (
-                    <div className="space-y-4">
-                      <div 
-                        id="focal-point-container"
-                        className="relative w-full h-48 rounded-lg overflow-hidden"
-                        role="button"
-                        tabIndex={0}
-                        aria-label="Drag to adjust focal point"
-                        onMouseDown={handleMouseDown}
-                        onTouchStart={handleTouchStart}
-                      >
-                        <img 
-                          src={imagePreview} 
-                          alt="Background preview" 
-                          className="w-full h-full object-cover"
-                          style={{ 
-                            opacity: form.watch('opacity') / 100,
-                            objectPosition: `${position.x}% ${position.y}%`
-                          }}
-                        />
-                        <div 
-                          className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors duration-200"
-                          style={{ 
-                            cursor: 'crosshair',
-                            pointerEvents: 'auto', 
-                            touchAction: 'none',
-                            zIndex: 10,
-                          }}
-                        >
-                          <div 
-                            className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg"
-                            style={{ 
-                              left: `${position.x}%`, 
-                              top: `${position.y}%`,
-                              animation: isDragging ? 'none' : 'pulse 2s infinite',
-                              boxShadow: isDragging ? '0 0 0 4px rgba(126, 105, 171, 0.5)' : '',
-                              zIndex: 20,
-                              pointerEvents: 'none' 
-                            }}
-                          />
-                          <span className="text-sm text-white bg-black/70 px-3 py-2 rounded-full shadow-md pointer-events-none">
-                            Click and drag to adjust focal point
-                          </span>
-                        </div>
-                      </div>
-                      <Button 
-                        type="button"
-                        variant="secondary" 
-                        onClick={handleRemoveImage}
-                        className="bg-dark-navy text-white hover:bg-light-navy"
-                      >
-                        Remove Image
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="relative h-32 flex flex-col items-center justify-center">
-                      <Upload className="h-10 w-10 text-light-navy mb-2" />
-                      <p className="text-light-navy">Click to upload or drag and drop</p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        onChange={handleImageUpload}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ImageUploadSection
+                imagePreview={imagePreview}
+                onImageUpload={handleImageUpload}
+                onRemoveImage={handleRemoveImage}
+              >
+                {imagePreview && (
+                  <ImageFocalPointControl
+                    imagePreview={imagePreview}
+                    position={position}
+                    opacity={form.watch('opacity')}
+                    isDragging={isDragging}
+                    onMouseDown={handleMouseDown}
+                    onTouchStart={handleTouchStart}
+                  />
+                )}
+              </ImageUploadSection>
               
               {imagePreview && (
                 <div className="space-y-4">
-                  <FormField
+                  <OpacitySlider 
                     control={form.control}
                     name="opacity"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-white">Tile Image Opacity ({field.value}%)</FormLabel>
-                        <FormControl>
-                          <Slider
-                            value={[field.value]}
-                            min={0}
-                            max={100}
-                            step={1}
-                            onValueChange={(values) => field.onChange(values[0])}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
+                    label="Tile Image Opacity"
                   />
                   
-                  <FormField
+                  <OpacitySlider 
                     control={form.control}
                     name="popup_opacity"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-white">Popup Image Opacity ({field.value}%)</FormLabel>
-                        <FormControl>
-                          <Slider
-                            value={[field.value]}
-                            min={0}
-                            max={100}
-                            step={1}
-                            onValueChange={(values) => field.onChange(values[0])}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
+                    label="Popup Image Opacity"
                   />
                 </div>
               )}
@@ -606,32 +473,12 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="bg-navy border border-light-navy text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this encyclopedia entry.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-light-navy text-white hover:bg-light-navy">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete}
-              className="bg-red-700 hover:bg-red-800 text-white"
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
-              ) : (
-                'Delete'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onDelete={handleDelete}
+        isDeleting={isDeleting}
+      />
     </>
   );
 };
