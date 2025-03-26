@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -80,8 +79,18 @@ const RewardCard: React.FC<RewardCardProps> = ({
     }
   };
 
+  const cardBorderStyle = supply > 0 
+    ? {
+        borderColor: '#FFD700',
+        boxShadow: '0 0 8px 2px rgba(255, 215, 0, 0.6)'
+      } 
+    : {};
+
   return (
-    <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
+    <Card 
+      className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy"
+      style={cardBorderStyle}
+    >
       {backgroundImage && (
         <div 
           className="absolute inset-0 z-0" 
