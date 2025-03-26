@@ -149,13 +149,13 @@ const RewardCard: React.FC<RewardCardProps> = ({
               <>
                 <HighlightedText 
                   text={title}
-                  className="text-xl font-semibold"
-                  style={{ color: title_color }}
+                  highlight={true}
+                  color={title_color}
                 />
                 <HighlightedText
                   text={description}
-                  className="text-sm mt-1"
-                  style={{ color: subtext_color }}
+                  highlight={true}
+                  color={subtext_color}
                 />
               </>
             ) : (
