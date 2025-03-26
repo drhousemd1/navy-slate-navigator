@@ -110,7 +110,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
                 alt="Background preview" 
                 className="w-full h-full object-cover"
                 style={{ 
-                  opacity: opacity / 100,
+                  opacity: opacity / 100, // Convert percentage to decimal for opacity
                   objectPosition: `${position.x}% ${position.y}%`
                 }}
               />
@@ -170,7 +170,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
               <FormLabel className="text-white">Image Opacity ({field.value || 100}%)</FormLabel>
               <FormControl>
                 <Slider
-                  value={[field.value || 100]}
+                  value={[field.value || 100]} // Ensure it's an array
                   min={0}
                   max={100}
                   step={1}
