@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -36,11 +35,9 @@ const PunishmentsContent: React.FC = () => {
 
   useEffect(() => {
     const initSamplePunishments = async () => {
-      // Check if we need to add sample punishments
       if (!loading && punishments.length === 0 && !initializing) {
         setInitializing(true);
         
-        // Sample punishments data
         const samplePunishments = [
           {
             title: "Late to Meeting",
@@ -66,7 +63,6 @@ const PunishmentsContent: React.FC = () => {
         ];
         
         try {
-          // Create each sample punishment
           for (const punishment of samplePunishments) {
             await createPunishment(punishment);
           }
@@ -103,7 +99,6 @@ const PunishmentsContent: React.FC = () => {
   };
 
   const handleSavePunishment = async (data: PunishmentData): Promise<void> => {
-    // This is handled in PunishmentEditorForm through context
     return Promise.resolve();
   };
 
@@ -161,8 +156,6 @@ const PunishmentsContent: React.FC = () => {
 const Punishments: React.FC = () => {
   return (
     <AppLayout onAddNewItem={() => {
-      // This connects the Add New Item button at the bottom of the screen
-      // to the punishment editor functionality
       const content = document.querySelector('.PunishmentsContent');
       if (content) {
         const event = new CustomEvent('add-new-punishment');

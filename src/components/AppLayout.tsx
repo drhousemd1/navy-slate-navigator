@@ -27,10 +27,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
     }
   };
 
-  // Determine if we're on the rewards page or tasks page for special styling
+  // Determine if we're on the rewards page, tasks page, or punishments page for special styling
   const isRewardsPage = location.pathname === '/rewards';
   const isTasksPage = location.pathname === '/tasks';
-  const useCircleButton = isRewardsPage || isTasksPage;
+  const isPunishmentsPage = location.pathname === '/punishments';
+  const useCircleButton = isRewardsPage || isTasksPage || isPunishmentsPage;
 
   return (
     <div className="flex flex-col min-h-screen bg-dark-navy">
