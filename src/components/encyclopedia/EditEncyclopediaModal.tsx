@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -145,14 +144,12 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   };
   
   const onSubmit = (data: EncyclopediaEntry) => {
-    // Ensure we include the formatted sections when saving
     const updatedEntry = {
       ...data,
       image_url: imagePreview,
       formatted_sections: formattedSections
     };
     
-    // Call the save function from props
     onSave(updatedEntry);
   };
 
@@ -227,6 +224,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   };
 
   const handleTextSelection = (selection: { start: number; end: number }) => {
+    console.log("Text selected:", selection);
     setSelectedTextRange(selection);
     if (onFormatSelection) {
       onFormatSelection(selection);
@@ -246,14 +244,14 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       formatting: { ...formatting }
     };
     
+    console.log("Applying formatting:", newFormattedSection);
+    
     const updatedSections = [...formattedSections, newFormattedSection];
     setFormattedSections(updatedSections);
     
     form.setValue('formatted_sections', updatedSections);
     
     setSelectedTextRange(null);
-    
-    console.log(`Applied formatting to text from ${start} to ${end}:`, formatting);
   };
 
   useEffect(() => {

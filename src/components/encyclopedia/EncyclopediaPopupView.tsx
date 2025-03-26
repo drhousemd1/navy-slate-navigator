@@ -44,7 +44,6 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
   titleColor = '#FFFFFF',
   highlightEffect = false,
   textFormatting = {},
-  onFormatSelection,
   formattedSections = []
 }) => {
   const backgroundStyle = imageUrl ? {
@@ -54,118 +53,105 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
     opacity: opacity / 100
   } : undefined;
 
-  // Create text style based on formatting options (used as default)
-  const textStyle: React.CSSProperties = {
+  // Base text style
+  const baseTextStyle: React.CSSProperties = {
     fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
     textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
     fontSize: textFormatting?.fontSize || 'inherit'
   };
 
-  // Render content with formatted sections
+  // Render content with formatting
   const renderFormattedContent = () => {
     if (!content) return null;
     
-    // Split content by paragraphs
+    // Split text by paragraphs
     const paragraphs = content.split('\n');
     
     return paragraphs.map((paragraph, pIndex) => {
       if (!paragraph.trim()) {
-        return <br key={`p-${pIndex}`} />;
+        return <div key={`p-${pIndex}`} className="h-4"></div>;
       }
       
-      // If no formatted sections, render paragraph with default style
+      // If no formatted sections, render with base style
       if (!formattedSections || formattedSections.length === 0) {
         return (
-          <p key={`p-${pIndex}`} className="text-lg mb-4 text-white" style={textStyle}>
+          <p key={`p-${pIndex}`} className="text-lg mb-4 text-white" style={baseTextStyle}>
             {paragraph}
           </p>
         );
       }
       
-      // Find formatted sections that apply to this paragraph
+      // Calculate character offset for this paragraph
       let charOffset = 0;
-      paragraphs.forEach((p, i) => {
-        if (i < pIndex) {
-          charOffset += p.length + 1; // +1 for the newline
-        }
+      for (let i = 0; i < pIndex; i++) {
+        charOffset += paragraphs[i].length + 1; // +1 for newline
+      }
+      
+      // Find formatted sections for this paragraph
+      const relevantSections = formattedSections.filter(section => {
+        const sectionEnd = section.end;
+        const sectionStart = section.start;
+        const paragraphStart = charOffset;
+        const paragraphEnd = charOffset + paragraph.length;
+        
+        return sectionStart < paragraphEnd && sectionEnd > paragraphStart;
       });
       
-      const paragraphLength = paragraph.length;
-      const paragraphEnd = charOffset + paragraphLength;
-      
-      const relevantSections = formattedSections.filter(section => 
-        section.start < paragraphEnd && section.end > charOffset
-      );
-      
-      // If no formatted sections in this paragraph
       if (relevantSections.length === 0) {
         return (
-          <p key={`p-${pIndex}`} className="text-lg mb-4 text-white" style={textStyle}>
+          <p key={`p-${pIndex}`} className="text-lg mb-4 text-white" style={baseTextStyle}>
             {paragraph}
           </p>
         );
       }
       
-      // Build segments with formatting
-      const segments: JSX.Element[] = [];
-      let lastIndex = 0;
+      // Create segments with correct formatting
+      const segments: React.ReactNode[] = [];
+      let currentPos = 0;
       
       // Sort sections by start position
-      const sortedSections = [...relevantSections].sort((a, b) => 
-        (a.start - charOffset) - (b.start - charOffset)
-      );
+      const sortedSections = [...relevantSections].sort((a, b) => a.start - b.start);
       
+      // Build segments
       sortedSections.forEach((section, i) => {
-        const sectionStart = Math.max(0, section.start - charOffset);
-        const sectionEnd = Math.min(paragraphLength, section.end - charOffset);
+        const relativeStart = Math.max(0, section.start - charOffset);
+        const relativeEnd = Math.min(paragraph.length, section.end - charOffset);
         
-        if (sectionStart <= paragraphLength && sectionEnd >= 0) {
-          // Add unformatted text before this section
-          if (sectionStart > lastIndex) {
-            segments.push(
-              <span key={`regular-${i}`}>
-                {paragraph.substring(lastIndex, sectionStart)}
-              </span>
-            );
-          }
-          
-          // Add formatted section
-          const sectionText = paragraph.substring(
-            Math.max(0, sectionStart),
-            Math.min(paragraphLength, sectionEnd)
+        // Add unformatted text before this section
+        if (relativeStart > currentPos) {
+          segments.push(
+            <span key={`text-${i}`}>{paragraph.substring(currentPos, relativeStart)}</span>
           );
-          
-          if (sectionText) {
-            segments.push(
-              <span 
-                key={`formatted-${i}`}
-                style={{
-                  fontWeight: section.formatting.isBold ? 'bold' : 'inherit',
-                  textDecoration: section.formatting.isUnderlined ? 'underline' : 'inherit',
-                  fontSize: section.formatting.fontSize || 'inherit'
-                }}
-              >
-                {sectionText}
-              </span>
-            );
-          }
-          
-          lastIndex = Math.max(lastIndex, sectionEnd);
         }
+        
+        // Add formatted section
+        if (relativeEnd > relativeStart) {
+          segments.push(
+            <span 
+              key={`fmt-${i}`}
+              style={{
+                fontWeight: section.formatting.isBold ? 'bold' : 'inherit',
+                textDecoration: section.formatting.isUnderlined ? 'underline' : 'inherit',
+                fontSize: section.formatting.fontSize || 'inherit'
+              }}
+            >
+              {paragraph.substring(relativeStart, relativeEnd)}
+            </span>
+          );
+        }
+        
+        currentPos = Math.max(currentPos, relativeEnd);
       });
       
-      // Add remaining text
-      if (lastIndex < paragraphLength) {
+      // Add remaining unformatted text
+      if (currentPos < paragraph.length) {
         segments.push(
-          <span key="remaining">
-            {paragraph.substring(lastIndex)}
-          </span>
+          <span key="remaining">{paragraph.substring(currentPos)}</span>
         );
       }
       
-      // Return the paragraph with all segments
       return (
-        <p key={`p-${pIndex}`} className="text-lg mb-4 text-white" style={textStyle}>
+        <p key={`p-${pIndex}`} className="text-lg mb-4 text-white" style={baseTextStyle}>
           {segments}
         </p>
       );
@@ -178,7 +164,7 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
         style={{ transform: 'none' }}
         hideCloseButton={true}
       >
-        {/* Background image layer */}
+        {/* Background image */}
         {imageUrl && (
           <div 
             className="absolute inset-0 z-0" 
@@ -187,7 +173,7 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
           />
         )}
         
-        {/* Content container */}
+        {/* Content */}
         <div className="relative z-10 flex flex-col h-full w-full overflow-hidden p-6">
           {/* Close button */}
           <Button 
@@ -207,7 +193,7 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
             />
           </h1>
           
-          {/* Content area - this is the key part that needs fixing */}
+          {/* Content area */}
           <div className="flex-1 overflow-y-auto pb-6">
             <div className="prose prose-invert max-w-none">
               {renderFormattedContent()}

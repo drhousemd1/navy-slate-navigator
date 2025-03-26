@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
@@ -47,184 +46,118 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         />
       )
     }
-
-    // For formatted preview, we need a container with textarea and preview div
-    const containerRef = React.useRef<HTMLDivElement>(null);
-    const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
-    const previewRef = React.useRef<HTMLDivElement | null>(null);
-
-    // Set the ref to our local ref or the forwarded ref
-    const setRefs = React.useCallback(
-      (element: HTMLTextAreaElement | null) => {
-        // Set local ref
-        textareaRef.current = element;
-        // Forward ref if provided
-        if (typeof ref === 'function') {
-          ref(element);
-        } else if (ref) {
-          ref.current = element;
-        }
-      },
-      [ref]
-    );
-
-    // Synchronize scroll position between preview and textarea
-    const syncScroll = React.useCallback((e: React.UIEvent<HTMLTextAreaElement>) => {
-      if (previewRef.current) {
-        previewRef.current.scrollTop = e.currentTarget.scrollTop;
-      }
-    }, []);
-
-    // Handle text selection in the textarea
-    const handleSelect = React.useCallback(() => {
-      if (textareaRef.current && onFormatSelection) {
-        const start = textareaRef.current.selectionStart;
-        const end = textareaRef.current.selectionEnd;
-        
-        // Only trigger if there's an actual selection (start is different from end)
-        if (start !== end) {
-          onFormatSelection({ start, end });
-        }
-      }
-    }, [onFormatSelection]);
-
-    // Create a rendering function that properly handles formatted text
-    const renderFormattedContent = () => {
-      const text = props.value?.toString() || '';
-      if (!text) return null;
-
-      // Split text by newlines to process line by line
-      const lines = text.split('\n');
+    
+    // Use contentEditable div instead of textarea for better formatting control
+    const editorRef = React.useRef<HTMLDivElement>(null);
+    
+    // Forward the ref to our component
+    React.useImperativeHandle(ref, () => {
+      // Create a mock textarea interface that the form expects
+      return {
+        value: props.value as string,
+        focus: () => {
+          if (editorRef.current) editorRef.current.focus();
+        },
+        blur: () => {
+          if (editorRef.current) editorRef.current.blur();
+        },
+        // Other required properties
+        name: props.name,
+        form: null,
+        // Empty implementations for methods
+        select: () => {},
+        setSelectionRange: () => {},
+        setRangeText: () => {},
+      } as unknown as HTMLTextAreaElement;
+    });
+    
+    // Handle changes to the contentEditable div
+    const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+      const content = e.currentTarget.innerText;
       
-      return (
-        <>
-          {lines.map((line, lineIndex) => {
-            // For empty lines, return a non-breaking space to maintain line height
-            if (!line) {
-              return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap min-h-[1.5em]">&nbsp;</div>;
-            }
-
-            // If no formatted sections, return the line as is
-            if (formattedSections.length === 0) {
-              return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">{line}</div>;
-            }
-
-            // Calculate character offset for this line
-            let charOffset = 0;
-            for (let i = 0; i < lineIndex; i++) {
-              charOffset += lines[i].length + 1; // +1 for newline
-            }
-
-            // Find sections that apply to this line
-            const relevantSections = formattedSections.filter(section => {
-              const sectionStart = section.start;
-              const sectionEnd = section.end;
-              const lineStart = charOffset;
-              const lineEnd = charOffset + line.length;
-              
-              return sectionStart < lineEnd && sectionEnd > lineStart;
-            });
-
-            // If no formatted sections in this line
-            if (relevantSections.length === 0) {
-              return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">{line}</div>;
-            }
-
-            // Sort sections by start position for proper rendering
-            const sortedSections = [...relevantSections].sort((a, b) => a.start - b.start);
-
-            // Build segments with proper formatting
-            const segments: React.ReactNode[] = [];
-            let currentPos = 0;
-
-            for (const section of sortedSections) {
-              // Calculate relative positions within this line
-              const relativeStart = Math.max(0, section.start - charOffset);
-              const relativeEnd = Math.min(line.length, section.end - charOffset);
-              
-              // Skip if section doesn't apply to this line
-              if (relativeEnd <= 0 || relativeStart >= line.length) continue;
-              
-              // Add unformatted text before this section if needed
-              if (relativeStart > currentPos) {
-                segments.push(
-                  <span key={`text-${currentPos}-${relativeStart}`}>
-                    {line.substring(currentPos, relativeStart)}
-                  </span>
-                );
-              }
-              
-              // Add formatted text segment
-              segments.push(
-                <span 
-                  key={`fmt-${relativeStart}-${relativeEnd}`}
-                  style={{
-                    fontWeight: section.formatting.isBold ? 'bold' : 'inherit',
-                    textDecoration: section.formatting.isUnderlined ? 'underline' : 'inherit',
-                    fontSize: section.formatting.fontSize || 'inherit',
-                    backgroundColor: 'rgba(66, 153, 225, 0.15)',
-                    borderBottom: '1px solid rgba(66, 153, 225, 0.4)'
-                  }}
-                >
-                  {line.substring(relativeStart, relativeEnd)}
-                </span>
-              );
-              
-              // Update current position
-              currentPos = relativeEnd;
-            }
-            
-            // Add remaining unformatted text
-            if (currentPos < line.length) {
-              segments.push(
-                <span key={`remaining-${currentPos}`}>
-                  {line.substring(currentPos)}
-                </span>
-              );
-            }
-            
-            return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">{segments}</div>;
-          })}
-        </>
-      );
+      // Call the onChange handler expected by React Hook Form
+      if (props.onChange) {
+        const event = {
+          target: {
+            name: props.name,
+            value: content
+          }
+        } as unknown as React.ChangeEvent<HTMLTextAreaElement>;
+        
+        props.onChange(event);
+      }
     };
-
+    
+    // Handle selection for formatting
+    const handleSelect = () => {
+      if (!editorRef.current || !onFormatSelection) return;
+      
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+      
+      const range = selection.getRangeAt(0);
+      if (!range) return;
+      
+      // Only handle selections within our editor
+      if (!editorRef.current.contains(range.commonAncestorContainer)) return;
+      
+      // Get the text content of the editor
+      const text = editorRef.current.innerText;
+      
+      // If there's a real selection (not just cursor)
+      if (range.startOffset !== range.endOffset) {
+        // Find the absolute offsets in the full text
+        onFormatSelection({
+          start: range.startOffset,
+          end: range.endOffset
+        });
+      }
+    };
+    
+    // Apply base formatting to the entire editor
+    const baseStyle: React.CSSProperties = {
+      fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
+      textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
+      fontSize: textFormatting?.fontSize || '1rem',
+      lineHeight: '1.5',
+      color: 'white',
+      minHeight: '200px'
+    };
+    
+    // Set initial content when value changes from outside
+    React.useEffect(() => {
+      if (editorRef.current && props.value) {
+        if (editorRef.current.innerText !== props.value) {
+          editorRef.current.innerText = props.value as string;
+        }
+      }
+    }, [props.value]);
+    
     return (
       <div 
-        ref={containerRef}
         className={cn(
-          "relative min-h-[500px] w-full rounded-md border border-input bg-dark-navy text-sm",
+          "flex w-full rounded-md border border-input bg-dark-navy px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-auto",
           className
         )}
+        style={{
+          minHeight: '200px',
+          maxHeight: '400px'
+        }}
       >
-        {/* Invisible textarea for editing but with a visible caret */}
-        <textarea
-          ref={setRefs}
-          className="absolute inset-0 w-full h-full resize-none px-3 py-2 bg-transparent opacity-0 text-white focus:outline-none z-10"
-          style={{ 
-            caretColor: 'white', 
-          }}
-          onScroll={syncScroll}
+        <div
+          ref={editorRef}
+          contentEditable
+          className="w-full focus:outline-none whitespace-pre-wrap"
+          style={baseStyle}
+          onInput={handleInput}
           onSelect={handleSelect}
-          {...props}
+          suppressContentEditableWarning={true}
+          placeholder={props.placeholder}
+          // We use data attribute for placeholder
+          data-placeholder={props.placeholder}
+          onFocus={props.onFocus}
+          onBlur={props.onBlur}
         />
-        
-        {/* Formatted preview layer - we don't use pointer-events-none to allow text selection */}
-        <div 
-          ref={previewRef}
-          className="absolute inset-0 w-full h-full px-3 py-2 overflow-auto z-0"
-          style={{
-            fontFamily: 'inherit',
-            fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
-            textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
-            fontSize: textFormatting?.fontSize || '1rem',
-            lineHeight: '1.5',
-            color: 'white',
-            userSelect: 'none'
-          }}
-        >
-          {renderFormattedContent()}
-        </div>
       </div>
     );
   }
