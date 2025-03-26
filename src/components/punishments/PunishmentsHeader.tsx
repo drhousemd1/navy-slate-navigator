@@ -8,15 +8,15 @@ const PunishmentsHeader: React.FC = () => {
   const { totalPoints } = useRewards();
 
   return (
-    <header className="bg-dark-navy py-4 px-4 flex justify-between items-center">
+    <div className="flex justify-between items-center mb-6">
       <h1 className="text-2xl font-semibold text-white">Punishments</h1>
-      <div className="flex items-center gap-4">
-        <Badge className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold px-5 py-2 rounded-full text-sm">
+      <div className="flex items-center gap-3">
+        <Badge className="bg-cyan-500 text-white font-bold px-3 py-1">
           {totalPoints} Points
         </Badge>
-        <Settings className="w-6 h-6 text-white cursor-pointer hover:text-cyan-500 transition-colors" />
+        <Settings className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
       </div>
-    </header>
+    </div>
   );
 };
 

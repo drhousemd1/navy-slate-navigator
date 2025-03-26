@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -6,6 +7,8 @@ import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts/PunishmentsContext';
 import PunishmentEditor from '../components/PunishmentEditor';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
 const PunishmentsContent: React.FC = () => {
   const { punishments, loading, createPunishment } = usePunishments();
@@ -101,21 +104,23 @@ const PunishmentsContent: React.FC = () => {
   };
 
   return (
-    <div className="pt-0 px-4 pb-4 PunishmentsContent" ref={containerRef}>
+    <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
+      <PunishmentsHeader />
+      
       {loading || initializing ? (
-        <div className="space-y-4 mt-6">
+        <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="h-32 bg-navy animate-pulse rounded-lg"></div>
           ))}
         </div>
       ) : punishments.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 mt-6">
+        <div className="text-center py-12 text-gray-400">
           <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
           <h3 className="text-xl font-semibold mb-2">No Punishments Yet</h3>
           <p>Create your first punishment to deduct points for undesirable behaviors.</p>
         </div>
       ) : (
-        <div className="space-y-4 mt-6">
+        <div className="space-y-4">
           {punishments.map(punishment => (
             <PunishmentCard
               key={punishment.id}
@@ -151,22 +156,19 @@ const PunishmentsContent: React.FC = () => {
 
 const Punishments: React.FC = () => {
   return (
-    <>
+    <AppLayout onAddNewItem={() => {
+      const content = document.querySelector('.PunishmentsContent');
+      if (content) {
+        const event = new CustomEvent('add-new-punishment');
+        content.dispatchEvent(event);
+      }
+    }}>
       <RewardsProvider>
-        <PunishmentsHeader />
-        <AppLayout onAddNewItem={() => {
-          const content = document.querySelector('.PunishmentsContent');
-          if (content) {
-            const event = new CustomEvent('add-new-punishment');
-            content.dispatchEvent(event);
-          }
-        }}>
-          <PunishmentsProvider>
-            <PunishmentsContent />
-          </PunishmentsProvider>
-        </AppLayout>
+        <PunishmentsProvider>
+          <PunishmentsContent />
+        </PunishmentsProvider>
       </RewardsProvider>
-    </>
+    </AppLayout>
   );
 };
 
