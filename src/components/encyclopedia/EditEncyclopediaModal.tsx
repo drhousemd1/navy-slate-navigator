@@ -8,10 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 import { useToast } from "@/hooks/use-toast";
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import { Switch } from "@/components/ui/switch";
+import { EncyclopediaEntry } from '@/types/encyclopedia';
 
 interface EditEncyclopediaModalProps {
   isOpen: boolean;
@@ -19,20 +20,8 @@ interface EditEncyclopediaModalProps {
   onSave: (data: EncyclopediaEntry) => void;
   onDelete?: (id: string) => void;
   entry?: EncyclopediaEntry;
-}
-
-export interface EncyclopediaEntry {
-  id: string;
-  title: string;
-  subtext: string;
-  popup_text?: string;
-  image_url?: string | null;
-  focal_point_x: number;
-  focal_point_y: number;
-  opacity: number;
-  title_color: string;
-  subtext_color: string;
-  highlight_effect?: boolean; // Add this new property
+  isSaving?: boolean;
+  isDeleting?: boolean;
 }
 
 const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({ 
@@ -40,7 +29,9 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   onClose, 
   onSave,
   onDelete, 
-  entry 
+  entry,
+  isSaving = false,
+  isDeleting = false
 }) => {
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(entry?.image_url || null);
@@ -57,25 +48,43 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       opacity: entry?.opacity || 100,
       title_color: entry?.title_color || '#FFFFFF',
       subtext_color: entry?.subtext_color || '#D1D5DB',
-      highlight_effect: entry?.highlight_effect || false, // Set default to false
+      highlight_effect: entry?.highlight_effect || false,
     }
   });
   
   useEffect(() => {
-    if (isOpen && entry) {
-      form.reset({
-        id: entry.id,
-        title: entry.title,
-        subtext: entry.subtext,
-        popup_text: entry.popup_text || '',
-        focal_point_x: entry.focal_point_x || 50,
-        focal_point_y: entry.focal_point_y || 50,
-        opacity: entry.opacity || 100,
-        title_color: entry.title_color || '#FFFFFF',
-        subtext_color: entry.subtext_color || '#D1D5DB',
-        highlight_effect: entry.highlight_effect || false, // Include in reset
-      });
-      setImagePreview(entry.image_url || null);
+    if (isOpen) {
+      if (entry) {
+        // Editing existing entry
+        form.reset({
+          id: entry.id,
+          title: entry.title,
+          subtext: entry.subtext,
+          popup_text: entry.popup_text || '',
+          focal_point_x: entry.focal_point_x || 50,
+          focal_point_y: entry.focal_point_y || 50,
+          opacity: entry.opacity || 100,
+          title_color: entry.title_color || '#FFFFFF',
+          subtext_color: entry.subtext_color || '#D1D5DB',
+          highlight_effect: entry.highlight_effect || false,
+        });
+        setImagePreview(entry.image_url || null);
+      } else {
+        // Creating new entry
+        form.reset({
+          id: '',
+          title: '',
+          subtext: '',
+          popup_text: '',
+          focal_point_x: 50,
+          focal_point_y: 50,
+          opacity: 100,
+          title_color: '#FFFFFF',
+          subtext_color: '#D1D5DB',
+          highlight_effect: false,
+        });
+        setImagePreview(null);
+      }
     }
   }, [isOpen, entry, form]);
   
@@ -102,22 +111,12 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
     };
     
     onSave(updatedEntry);
-    toast({
-      title: "Success",
-      description: "Encyclopedia entry updated successfully.",
-    });
-    onClose();
   };
 
   const handleDelete = () => {
     if (entry && onDelete) {
       onDelete(entry.id);
-      toast({
-        title: "Deleted",
-        description: "Encyclopedia entry has been deleted.",
-      });
       setIsDeleteDialogOpen(false);
-      onClose();
     }
   };
   
@@ -126,7 +125,9 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="bg-navy border border-light-navy text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl">Edit Encyclopedia Entry</DialogTitle>
+            <DialogTitle className="text-xl">
+              {entry ? 'Edit Encyclopedia Entry' : 'Create Encyclopedia Entry'}
+            </DialogTitle>
           </DialogHeader>
           
           <Form {...form}>
@@ -200,7 +201,6 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                 </div>
               </div>
               
-              {/* Add highlight effect toggle */}
               <FormField
                 control={form.control}
                 name="highlight_effect"
@@ -236,15 +236,19 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
               </div>
               
               <DialogFooter className="pt-4 space-x-2">
-                {onDelete && (
+                {entry && onDelete && (
                   <Button 
                     type="button" 
                     variant="destructive" 
                     onClick={() => setIsDeleteDialogOpen(true)}
                     className="mr-auto bg-red-700 hover:bg-red-800"
+                    disabled={isDeleting}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {isDeleting ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
+                    ) : (
+                      <><Trash2 className="mr-2 h-4 w-4" /> Delete</>
+                    )}
                   </Button>
                 )}
                 <Button 
@@ -252,11 +256,20 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                   variant="outline" 
                   onClick={onClose} 
                   className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                  disabled={isSaving || isDeleting}
                 >
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-nav-active text-white hover:bg-nav-active/80">
-                  Save Changes
+                <Button 
+                  type="submit" 
+                  className="bg-nav-active text-white hover:bg-nav-active/80"
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </Button>
               </DialogFooter>
             </form>
@@ -279,8 +292,13 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
             <AlertDialogAction 
               onClick={handleDelete}
               className="bg-red-700 hover:bg-red-800 text-white"
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
+              ) : (
+                'Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

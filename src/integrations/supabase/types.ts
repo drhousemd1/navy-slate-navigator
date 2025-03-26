@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      encyclopedia_entries: {
+        Row: {
+          created_at: string | null
+          focal_point_x: number | null
+          focal_point_y: number | null
+          highlight_effect: boolean | null
+          id: string
+          image_url: string | null
+          opacity: number | null
+          popup_text: string | null
+          subtext: string
+          subtext_color: string | null
+          title: string
+          title_color: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          focal_point_x?: number | null
+          focal_point_y?: number | null
+          highlight_effect?: boolean | null
+          id?: string
+          image_url?: string | null
+          opacity?: number | null
+          popup_text?: string | null
+          subtext: string
+          subtext_color?: string | null
+          title: string
+          title_color?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          focal_point_x?: number | null
+          focal_point_y?: number | null
+          highlight_effect?: boolean | null
+          id?: string
+          image_url?: string | null
+          opacity?: number | null
+          popup_text?: string | null
+          subtext?: string
+          subtext_color?: string | null
+          title?: string
+          title_color?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
