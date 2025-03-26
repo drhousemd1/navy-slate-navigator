@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -77,8 +76,9 @@ export function hasEnoughPoints(userPoints: number, rewardCost: number): boolean
 
 // Purchase a reward
 export async function purchaseReward(userId: string, rewardId: string, cost: number) {
-  // Explicitly specify the type parameters for the RPC call
-  const { data, error } = await supabase.rpc<{ success: boolean }>(
+  // When using rpc with TypeScript, we need to provide both the return type and the params type
+  // The first type argument is the return type, the second is the params type
+  const { data, error } = await supabase.rpc<{ success: boolean }, { user_id: string; reward_id: string; cost: number }>(
     'purchase_reward', 
     { 
       user_id: userId, 
