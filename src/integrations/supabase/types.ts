@@ -30,101 +30,6 @@ export type Database = {
         }
         Relationships: []
       }
-      reward_usage: {
-        Row: {
-          created_at: string | null
-          day_of_week: number
-          id: string
-          reward_id: string | null
-          used: boolean | null
-          week_number: string
-        }
-        Insert: {
-          created_at?: string | null
-          day_of_week: number
-          id?: string
-          reward_id?: string | null
-          used?: boolean | null
-          week_number: string
-        }
-        Update: {
-          created_at?: string | null
-          day_of_week?: number
-          id?: string
-          reward_id?: string | null
-          used?: boolean | null
-          week_number?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reward_usage_reward_id_fkey"
-            columns: ["reward_id"]
-            isOneToOne: false
-            referencedRelation: "rewards"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      rewards: {
-        Row: {
-          background_image_url: string | null
-          background_opacity: number | null
-          calendar_color: string | null
-          cost: number
-          created_at: string | null
-          description: string | null
-          focal_point_x: number | null
-          focal_point_y: number | null
-          highlight_effect: boolean | null
-          icon_color: string | null
-          icon_name: string | null
-          id: string
-          subtext_color: string | null
-          supply: number
-          title: string
-          title_color: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          background_image_url?: string | null
-          background_opacity?: number | null
-          calendar_color?: string | null
-          cost?: number
-          created_at?: string | null
-          description?: string | null
-          focal_point_x?: number | null
-          focal_point_y?: number | null
-          highlight_effect?: boolean | null
-          icon_color?: string | null
-          icon_name?: string | null
-          id?: string
-          subtext_color?: string | null
-          supply?: number
-          title: string
-          title_color?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          background_image_url?: string | null
-          background_opacity?: number | null
-          calendar_color?: string | null
-          cost?: number
-          created_at?: string | null
-          description?: string | null
-          focal_point_x?: number | null
-          focal_point_y?: number | null
-          highlight_effect?: boolean | null
-          icon_color?: string | null
-          icon_name?: string | null
-          id?: string
-          subtext_color?: string | null
-          supply?: number
-          title?: string
-          title_color?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       tasks: {
         Row: {
           background_image_url: string | null
@@ -142,7 +47,6 @@ export type Database = {
           icon_name: string | null
           icon_url: string | null
           id: string
-          last_completed_date: string | null
           points: number
           priority: string
           subtext_color: string
@@ -166,7 +70,6 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id?: string
-          last_completed_date?: string | null
           points?: number
           priority?: string
           subtext_color?: string
@@ -190,7 +93,6 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id?: string
-          last_completed_date?: string | null
           points?: number
           priority?: string
           subtext_color?: string
