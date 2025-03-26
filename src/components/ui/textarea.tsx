@@ -48,7 +48,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       )
     }
 
-    // For formatted preview, we'll create a container with an invisible textarea and a visible preview
+    // For formatted preview, we need a container with textarea and preview div
     const containerRef = React.useRef<HTMLDivElement>(null);
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
     const previewRef = React.useRef<HTMLDivElement | null>(null);
@@ -80,131 +80,132 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       if (textareaRef.current && onFormatSelection) {
         const start = textareaRef.current.selectionStart;
         const end = textareaRef.current.selectionEnd;
+        
+        // Only trigger if there's an actual selection (start is different from end)
         if (start !== end) {
           onFormatSelection({ start, end });
         }
       }
     }, [onFormatSelection]);
 
-    // Default text style for the entire content
-    const textStyle: React.CSSProperties = {
-      fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
-      textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
-      fontSize: textFormatting?.fontSize || '1rem',
-      lineHeight: '1.5',
-      color: 'white'
-    };
-
-    // Render formatted text
+    // Create a rendering function that properly handles formatted text
     const renderFormattedContent = () => {
       const text = props.value?.toString() || '';
       if (!text) return null;
 
-      // Split by newlines to process line by line
+      // Split text by newlines to process line by line
       const lines = text.split('\n');
-      return lines.map((line, lineIndex) => {
-        // For empty lines, return a non-breaking space
-        if (!line) {
-          return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap min-h-[1.5em]">&nbsp;</div>;
-        }
+      
+      return (
+        <>
+          {lines.map((line, lineIndex) => {
+            // For empty lines, return a non-breaking space to maintain line height
+            if (!line) {
+              return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap min-h-[1.5em]">&nbsp;</div>;
+            }
 
-        // If no formatted sections, return the line as is
-        if (!formattedSections || formattedSections.length === 0) {
-          return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">{line}</div>;
-        }
+            // If no formatted sections, return the line as is
+            if (formattedSections.length === 0) {
+              return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">{line}</div>;
+            }
 
-        // Calculate offset for this line
-        let charOffset = 0;
-        for (let i = 0; i < lineIndex; i++) {
-          charOffset += lines[i].length + 1; // +1 for newline
-        }
+            // Calculate character offset for this line
+            let charOffset = 0;
+            for (let i = 0; i < lineIndex; i++) {
+              charOffset += lines[i].length + 1; // +1 for newline
+            }
 
-        // Find sections that apply to this line
-        const relevantSections = formattedSections.filter(section => {
-          const sectionStart = section.start;
-          const sectionEnd = section.end;
-          const lineStart = charOffset;
-          const lineEnd = charOffset + line.length;
-          return sectionStart < lineEnd && sectionEnd > lineStart;
-        });
+            // Find sections that apply to this line
+            const relevantSections = formattedSections.filter(section => {
+              const sectionStart = section.start;
+              const sectionEnd = section.end;
+              const lineStart = charOffset;
+              const lineEnd = charOffset + line.length;
+              
+              return sectionStart < lineEnd && sectionEnd > lineStart;
+            });
 
-        // If no formatted sections in this line
-        if (relevantSections.length === 0) {
-          return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">{line}</div>;
-        }
+            // If no formatted sections in this line
+            if (relevantSections.length === 0) {
+              return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">{line}</div>;
+            }
 
-        // Sort sections by start position
-        const sortedSections = [...relevantSections].sort((a, b) => a.start - b.start);
+            // Sort sections by start position for proper rendering
+            const sortedSections = [...relevantSections].sort((a, b) => a.start - b.start);
 
-        // Build segments with proper formatting
-        const segments: React.ReactNode[] = [];
-        let currentPos = 0;
+            // Build segments with proper formatting
+            const segments: React.ReactNode[] = [];
+            let currentPos = 0;
 
-        for (const section of sortedSections) {
-          // Calculate relative positions for this line
-          const relativeStart = Math.max(0, section.start - charOffset);
-          const relativeEnd = Math.min(line.length, section.end - charOffset);
-
-          // Skip if section doesn't apply to this line
-          if (relativeEnd <= 0 || relativeStart >= line.length) continue;
-
-          // Add unformatted text before this section if needed
-          if (relativeStart > currentPos) {
-            segments.push(
-              <span key={`plain-${currentPos}-${relativeStart}`}>
-                {line.substring(currentPos, relativeStart)}
-              </span>
-            );
-          }
-
-          // Add formatted text segment
-          segments.push(
-            <span 
-              key={`fmt-${relativeStart}-${relativeEnd}`}
-              style={{
-                fontWeight: section.formatting.isBold ? 'bold' : 'inherit',
-                textDecoration: section.formatting.isUnderlined ? 'underline' : 'inherit',
-                fontSize: section.formatting.fontSize || 'inherit',
-                backgroundColor: 'rgba(66, 153, 225, 0.15)',
-                borderBottom: '1px solid rgba(66, 153, 225, 0.4)'
-              }}
-            >
-              {line.substring(relativeStart, relativeEnd)}
-            </span>
-          );
-
-          // Update current position
-          currentPos = Math.max(currentPos, relativeEnd);
-        }
-
-        // Add remaining unformatted text
-        if (currentPos < line.length) {
-          segments.push(
-            <span key={`remaining-${currentPos}`}>
-              {line.substring(currentPos)}
-            </span>
-          );
-        }
-
-        return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">{segments}</div>;
-      });
+            for (const section of sortedSections) {
+              // Calculate relative positions within this line
+              const relativeStart = Math.max(0, section.start - charOffset);
+              const relativeEnd = Math.min(line.length, section.end - charOffset);
+              
+              // Skip if section doesn't apply to this line
+              if (relativeEnd <= 0 || relativeStart >= line.length) continue;
+              
+              // Add unformatted text before this section if needed
+              if (relativeStart > currentPos) {
+                segments.push(
+                  <span key={`text-${currentPos}-${relativeStart}`}>
+                    {line.substring(currentPos, relativeStart)}
+                  </span>
+                );
+              }
+              
+              // Add formatted text segment
+              segments.push(
+                <span 
+                  key={`fmt-${relativeStart}-${relativeEnd}`}
+                  style={{
+                    fontWeight: section.formatting.isBold ? 'bold' : 'inherit',
+                    textDecoration: section.formatting.isUnderlined ? 'underline' : 'inherit',
+                    fontSize: section.formatting.fontSize || 'inherit',
+                    backgroundColor: 'rgba(66, 153, 225, 0.15)',
+                    borderBottom: '1px solid rgba(66, 153, 225, 0.4)'
+                  }}
+                >
+                  {line.substring(relativeStart, relativeEnd)}
+                </span>
+              );
+              
+              // Update current position
+              currentPos = relativeEnd;
+            }
+            
+            // Add remaining unformatted text
+            if (currentPos < line.length) {
+              segments.push(
+                <span key={`remaining-${currentPos}`}>
+                  {line.substring(currentPos)}
+                </span>
+              );
+            }
+            
+            return <div key={`line-${lineIndex}`} className="whitespace-pre-wrap">{segments}</div>;
+          })}
+        </>
+      );
     };
 
     return (
       <div 
         ref={containerRef}
         className={cn(
-          "relative min-h-[500px] w-full rounded-md border border-input bg-transparent text-sm",
+          "relative min-h-[500px] w-full rounded-md border border-input bg-dark-navy text-sm",
           className
         )}
       >
-        {/* Textarea for editing - invisible but functional */}
+        {/* Invisible textarea for editing - functional but not visible */}
         <textarea
           ref={setRefs}
           className="absolute inset-0 w-full h-full resize-none px-3 py-2 bg-transparent text-transparent caret-white focus:outline-none"
           style={{ 
             caretColor: 'white',
-            zIndex: 1
+            zIndex: 2, // Ensure it's on top for input functionality
+            color: 'transparent', // Make text invisible
+            WebkitTextFillColor: 'transparent' // Ensure text is truly invisible
           }}
           onScroll={syncScroll}
           onSelect={handleSelect}
@@ -214,10 +215,14 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         {/* Formatted preview layer */}
         <div 
           ref={previewRef}
-          className="absolute inset-0 w-full h-full px-3 py-2 pointer-events-none overflow-auto"
+          className="absolute inset-0 w-full h-full px-3 py-2 overflow-auto pointer-events-none"
           style={{
-            ...textStyle,
-            zIndex: 0
+            fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
+            textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
+            fontSize: textFormatting?.fontSize || '1rem',
+            lineHeight: '1.5',
+            color: 'white',
+            zIndex: 1 // Below the textarea for input purposes
           }}
         >
           {renderFormattedContent()}
