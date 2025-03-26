@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -26,10 +27,10 @@ const RewardCard: React.FC<RewardCardProps> = ({
     <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">
-          {/* Supply indicator - updated to match the points badge size */}
+          {/* Supply indicator - updated to match the image */}
           <div className="flex items-center gap-2">
-            <div className="bg-blue-500 text-white font-bold rounded-full flex items-center gap-1 px-2 py-0.5">
-              <Box className="h-3 w-3" />
+            <div className="bg-blue-500 text-white font-bold rounded-full px-2 py-0.5 flex items-center gap-1">
+              <Box className="h-4 w-4" />
               <span>{supply}</span>
             </div>
             
@@ -45,7 +46,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
             )}
           </div>
           
-          {/* Cost indicator - now using PointsBadge component directly */}
+          {/* Cost indicator */}
           <div className="flex items-center gap-2">
             <PointsBadge points={-cost} />
             <Button
