@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from "@/hooks/use-toast";
 
 type PunishmentData = {
   id?: string;
@@ -55,15 +54,13 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     try {
       setLoading(true);
       
-      // Fetch punishments
       const { data: punishmentsData, error: punishmentsError } = await supabase
         .from('punishments')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
       
       if (punishmentsError) throw punishmentsError;
       
-      // Fetch punishment history
       const { data: historyData, error: historyError } = await supabase
         .from('punishment_history')
         .select('*')
@@ -74,7 +71,6 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setPunishments(punishmentsData || []);
       setPunishmentHistory(historyData || []);
       
-      // Calculate total points deducted
       const totalDeducted = (historyData || []).reduce((sum, item) => sum + item.points_deducted, 0);
       setTotalPointsDeducted(totalDeducted);
       
@@ -101,7 +97,7 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
       if (error) throw error;
       
-      setPunishments(prev => [data, ...prev]);
+      setPunishments(prev => [...prev, data]);
       toast({
         title: "Success",
         description: "Punishment created successfully",
@@ -121,7 +117,6 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const updatePunishment = async (id: string, punishmentData: PunishmentData): Promise<void> => {
     try {
-      // Remove the id from the data to be updated if it exists
       const { id: _, ...dataToUpdate } = punishmentData;
       
       const { error } = await supabase
@@ -182,7 +177,7 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const applyPunishment = async (punishmentId: string, points: number): Promise<void> => {
     try {
       const today = new Date();
-      const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const dayOfWeek = today.getDay();
       
       const historyEntry = {
         punishment_id: punishmentId,
