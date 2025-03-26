@@ -3,7 +3,7 @@ import React, { ReactNode } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Settings } from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -35,10 +35,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 
   return (
     <div className="flex flex-col min-h-screen bg-dark-navy">
-      {/* Top header section - new addition */}
+      {/* Top header section with settings icon */}
       <div className="w-full bg-navy border-b border-light-navy py-2 px-4">
-        <div className="max-w-screen-lg mx-auto">
-          {/* This space is intentionally left empty for future content */}
+        <div className="max-w-screen-lg mx-auto flex justify-between items-center">
+          <div>{/* Left side - empty for now */}</div>
+          <Settings className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
         </div>
       </div>
       
