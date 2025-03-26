@@ -29,30 +29,29 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
 
   return (
     <div className="flex justify-between space-x-4 pt-4">
-      <div>
-        {rewardData && onDelete && (
-          <>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => {
-                console.log("Opening delete dialog for reward:", rewardData);
-                setIsDeleteDialogOpen(true);
-              }}
-              disabled={loading}
-            >
-              Delete
-            </Button>
-            <DeleteRewardDialog
-              isOpen={isDeleteDialogOpen}
-              onOpenChange={setIsDeleteDialogOpen}
-              onConfirm={handleDelete}
-              rewardName={rewardData.title}
-            />
-          </>
-        )}
-      </div>
       <div className="space-x-2">
+        {rewardData && onDelete && (
+          <DeleteRewardDialog
+            isOpen={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+            onConfirm={handleDelete}
+            rewardName={rewardData.title}
+          />
+        )}
+        {rewardData && onDelete && (
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => {
+              console.log("Opening delete dialog for reward:", rewardData);
+              setIsDeleteDialogOpen(true);
+            }}
+            disabled={loading}
+            className="bg-red-700 hover:bg-red-600"
+          >
+            Delete
+          </Button>
+        )}
         <Button
           type="button"
           variant="outline"
@@ -61,6 +60,8 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
         >
           Cancel
         </Button>
+      </div>
+      <div>
         <Button 
           type="submit" 
           disabled={loading}
