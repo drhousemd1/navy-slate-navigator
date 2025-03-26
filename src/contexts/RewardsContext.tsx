@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
@@ -7,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface RewardsContextType {
   rewards: Reward[];
   totalPoints: number;
+  setTotalPoints: (points: number) => void;
   isLoading: boolean;
   refetchRewards: () => Promise<void>;
   handleSaveReward: (rewardData: any, index: number | null) => Promise<Reward | null>;
@@ -18,6 +20,7 @@ interface RewardsContextType {
 const RewardsContext = createContext<RewardsContextType>({
   rewards: [],
   totalPoints: 0,
+  setTotalPoints: () => {},
   isLoading: true,
   refetchRewards: async () => {},
   handleSaveReward: async () => null,
@@ -324,6 +327,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const value = {
     rewards,
     totalPoints,
+    setTotalPoints,
     isLoading,
     refetchRewards,
     handleSaveReward,

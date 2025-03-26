@@ -5,6 +5,8 @@ import { Button } from './ui/button';
 import { Edit, Minus, Skull } from 'lucide-react';
 import { Badge } from './ui/badge';
 import FrequencyTracker from './task/FrequencyTracker';
+import { useRewards } from '../contexts/RewardsContext';
+import { toast } from '@/hooks/use-toast';
 
 interface PunishmentCardProps {
   title: string;
@@ -19,6 +21,21 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   points,
   icon = <Skull className="h-5 w-5 text-white" />
 }) => {
+  const { totalPoints, setTotalPoints } = useRewards();
+
+  const handlePunish = () => {
+    // Deduct points
+    const newTotal = totalPoints - points;
+    setTotalPoints(newTotal);
+    
+    // Show toast notification
+    toast({
+      title: "Punishment Applied",
+      description: `${points} points deducted. New total: ${newTotal} points.`,
+      variant: "destructive",
+    });
+  };
+
   return (
     <Card className="relative overflow-hidden border-2 border-red-500 bg-navy">
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
@@ -41,6 +58,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
               variant="destructive"
               size="sm"
               className="text-xs"
+              onClick={handlePunish}
             >
               Punish
             </Button>
