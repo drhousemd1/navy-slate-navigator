@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -9,34 +9,125 @@ import { Control } from 'react-hook-form';
 interface BackgroundImageSelectorProps {
   control: Control<any>;
   imagePreview: string | null;
-  position: { x: number; y: number };
-  isDragging: boolean;
+  initialPosition?: { x: number; y: number };
   onRemoveImage: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onMouseDown: (e: React.MouseEvent) => void;
-  onTouchStart: (e: React.TouchEvent) => void;
 }
 
 const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   control,
   imagePreview,
-  position,
-  isDragging,
+  initialPosition,
   onRemoveImage,
-  onImageUpload,
-  onMouseDown,
-  onTouchStart
+  onImageUpload
 }) => {
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState({ x: initialPosition?.x ?? 50, y: initialPosition?.y ?? 50 });
+
+  // Update local position state when prop changes (e.g., when form loads with initial data)
+  useEffect(() => {
+    if (initialPosition) {
+      setPosition(initialPosition);
+    }
+  }, [initialPosition]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    console.log("Mouse down event triggered in BackgroundImageSelector");
-    onMouseDown(e);
+    if (!imageContainerRef.current) return;
+    
+    e.preventDefault();
+    console.log("Mouse down - Setting isDragging to true", { x: e.clientX, y: e.clientY });
+    setIsDragging(true);
+    
+    const rect = imageContainerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    
+    console.log("Initial position set to:", { x, y });
+    setPosition({ x, y });
+    control.setValue('focal_point_x', Math.round(x));
+    control.setValue('focal_point_y', Math.round(y));
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDragging) return;
+      
+      console.log("Dragging", { 
+        clientX: moveEvent.clientX, 
+        clientY: moveEvent.clientY,
+        isDragging: true
+      });
+      
+      if (!imageContainerRef.current) return;
+      
+      const rect = imageContainerRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, ((moveEvent.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((moveEvent.clientY - rect.top) / rect.height) * 100));
+      
+      console.log("Moving position to:", { x, y });
+      setPosition({ x, y });
+      control.setValue('focal_point_x', Math.round(x));
+      control.setValue('focal_point_y', Math.round(y));
+    };
+    
+    const handleMouseUp = () => {
+      console.log("Mouse up - Setting isDragging to false");
+      setIsDragging(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    console.log("Touch start event triggered in BackgroundImageSelector");
-    onTouchStart(e);
+    if (!imageContainerRef.current || e.touches.length === 0) return;
+    
+    console.log("Touch start - Setting isDragging to true");
+    setIsDragging(true);
+    
+    const touch = e.touches[0];
+    const rect = imageContainerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
+    
+    console.log("Initial touch position set to:", { x, y });
+    setPosition({ x, y });
+    control.setValue('focal_point_x', Math.round(x));
+    control.setValue('focal_point_y', Math.round(y));
+    
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (!isDragging) return;
+      
+      console.log("Touch Dragging", { 
+        isDragging: true,
+        touchesLength: moveEvent.touches.length
+      });
+      
+      if (!imageContainerRef.current || moveEvent.touches.length === 0) return;
+      
+      moveEvent.preventDefault();
+      
+      const touch = moveEvent.touches[0];
+      const rect = imageContainerRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
+      
+      console.log("Moving touch position to:", { x, y });
+      setPosition({ x, y });
+      control.setValue('focal_point_x', Math.round(x));
+      control.setValue('focal_point_y', Math.round(y));
+    };
+    
+    const handleTouchEnd = () => {
+      console.log("Touch end - Setting isDragging to false");
+      setIsDragging(false);
+      document.removeEventListener('touchmove', handleTouchMove, { passive: false } as AddEventListenerOptions);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+    
+    document.addEventListener('touchmove', handleTouchMove, { passive: false } as AddEventListenerOptions);
+    document.addEventListener('touchend', handleTouchEnd);
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -53,11 +53,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 50, y: 50 });
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const imageContainerRef = useRef<HTMLDivElement>(null);
   
   const form = useForm<TaskFormValues>({
     defaultValues: {
@@ -84,89 +81,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     setImagePreview(taskData?.background_image_url || null);
     setIconPreview(taskData?.icon_url || null);
     setSelectedIconName(taskData?.icon_name || null);
-    setPosition({
-      x: taskData?.focal_point_x || 50,
-      y: taskData?.focal_point_y || 50
-    });
   }, [taskData]);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!imageContainerRef.current) return;
-    
-    e.preventDefault();
-    setIsDragging(true);
-    
-    const rect = imageContainerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-    
-    setPosition({ x, y });
-    form.setValue('focal_point_x', Math.round(x));
-    form.setValue('focal_point_y', Math.round(y));
-    
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      console.log("Dragging");
-      
-      if (!imageContainerRef.current) return;
-      
-      const rect = imageContainerRef.current.getBoundingClientRect();
-      const x = Math.max(0, Math.min(100, ((moveEvent.clientX - rect.left) / rect.width) * 100));
-      const y = Math.max(0, Math.min(100, ((moveEvent.clientY - rect.top) / rect.height) * 100));
-      
-      setPosition({ x, y });
-      form.setValue('focal_point_x', Math.round(x));
-      form.setValue('focal_point_y', Math.round(y));
-    };
-    
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!imageContainerRef.current || e.touches.length === 0) return;
-    
-    setIsDragging(true);
-    
-    const touch = e.touches[0];
-    const rect = imageContainerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
-    
-    setPosition({ x, y });
-    form.setValue('focal_point_x', Math.round(x));
-    form.setValue('focal_point_y', Math.round(y));
-    
-    const handleTouchMove = (moveEvent: TouchEvent) => {
-      console.log("Touch Dragging");
-      if (!imageContainerRef.current || moveEvent.touches.length === 0) return;
-      
-      moveEvent.preventDefault();
-      
-      const touch = moveEvent.touches[0];
-      const rect = imageContainerRef.current.getBoundingClientRect();
-      const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
-      const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
-      
-      setPosition({ x, y });
-      form.setValue('focal_point_x', Math.round(x));
-      form.setValue('focal_point_y', Math.round(y));
-    };
-    
-    const handleTouchEnd = () => {
-      setIsDragging(false);
-      document.removeEventListener('touchmove', handleTouchMove, { passive: false } as AddEventListenerOptions);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-    
-    document.addEventListener('touchmove', handleTouchMove, { passive: false } as AddEventListenerOptions);
-    document.addEventListener('touchend', handleTouchEnd);
-  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -349,15 +264,15 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
           <BackgroundImageSelector
             control={form.control}
             imagePreview={imagePreview}
-            position={position}
-            isDragging={isDragging}
+            initialPosition={{ 
+              x: taskData?.focal_point_x || 50, 
+              y: taskData?.focal_point_y || 50 
+            }}
             onRemoveImage={() => {
               setImagePreview(null);
               form.setValue('background_image_url', undefined);
             }}
             onImageUpload={handleImageUpload}
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
           />
         </div>
         
