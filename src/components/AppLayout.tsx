@@ -27,6 +27,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
     }
   };
 
+  const isRewardsPage = location.pathname === '/rewards';
+
   return (
     <div className="flex flex-col min-h-screen bg-dark-navy">
       <main className="flex-1 pb-24 animate-fade-in">
@@ -36,10 +38,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       {shouldShowAddButton && (
         <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-10">
           <Button 
-            className="bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6"
+            className={isRewardsPage 
+              ? "bg-navy border border-light-navy text-nav-active rounded-full shadow-lg h-12 w-12 p-0 flex items-center justify-center" 
+              : "bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6"
+            }
             onClick={handleAddNewItem}
           >
-            <Plus className="w-5 h-5 mr-2" /> Add New Item
+            {isRewardsPage ? (
+              <Plus className="w-5 h-5" />
+            ) : (
+              <>
+                <Plus className="w-5 h-5 mr-2" /> Add New Item
+              </>
+            )}
           </Button>
         </div>
       )}

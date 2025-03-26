@@ -1,10 +1,10 @@
 
 import React from 'react';
 import { Card } from './ui/card';
-import { Button } from './ui/button';
-import { Edit, Calendar, Box, Ticket } from 'lucide-react';
-import TaskIcon from './task/TaskIcon';
-import PointsBadge from './task/PointsBadge';
+import RewardHeader from './rewards/RewardHeader';
+import RewardContent from './rewards/RewardContent';
+import RewardFooter from './rewards/RewardFooter';
+import { useToast } from '../hooks/use-toast';
 
 interface RewardCardProps {
   title: string;
@@ -13,6 +13,19 @@ interface RewardCardProps {
   supply: number;
   iconName?: string;
   iconColor?: string;
+  onBuy?: () => void;
+  onUse?: () => void;
+  onEdit?: () => void;
+  backgroundImage?: string;
+  backgroundOpacity?: number;
+  focalPointX?: number;
+  focalPointY?: number;
+  highlight_effect?: boolean;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  usageData?: boolean[];
+  frequencyCount?: number;
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({
@@ -21,89 +34,87 @@ const RewardCard: React.FC<RewardCardProps> = ({
   cost,
   supply,
   iconName = 'Gift',
-  iconColor = '#9b87f5'
+  iconColor = '#9b87f5',
+  onBuy,
+  onUse,
+  onEdit,
+  backgroundImage,
+  backgroundOpacity = 100,
+  focalPointX = 50,
+  focalPointY = 50,
+  highlight_effect = false,
+  title_color = '#FFFFFF',
+  subtext_color = '#8E9196',
+  calendar_color = '#7E69AB',
+  usageData = Array(7).fill(false)
 }) => {
+  const { toast } = useToast();
+
+  const handleBuy = () => {
+    if (onBuy) {
+      onBuy();
+    }
+  };
+
+  const handleUse = () => {
+    if (onUse) {
+      onUse();
+    }
+  };
+
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit();
+    }
+  };
+
+  const cardBorderStyle = supply > 0 
+    ? {
+        borderColor: '#FFD700',
+        boxShadow: '0 0 8px 2px rgba(255, 215, 0, 0.6)'
+      } 
+    : {};
+
   return (
-    <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
+    <Card 
+      className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy"
+      style={cardBorderStyle}
+    >
+      {backgroundImage && (
+        <div 
+          className="absolute inset-0 z-0" 
+          style={{
+            backgroundImage: `url(${backgroundImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: backgroundOpacity / 100,
+          }}
+        />
+      )}
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
-        <div className="flex justify-between items-start mb-3">
-          {/* Supply indicator - updated to match the image */}
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-500 text-white font-bold rounded-full px-2 py-0.5 flex items-center gap-1">
-              <Box className="h-4 w-4" />
-              <span>{supply}</span>
-            </div>
-            
-            {supply > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="p-1 h-7 text-blue-500 border-blue-500 hover:bg-blue-500/10 hover:text-blue-400 flex items-center gap-1"
-              >
-                <Ticket className="h-4 w-4" />
-                <span>Use</span>
-              </Button>
-            )}
-          </div>
-          
-          {/* Cost indicator */}
-          <div className="flex items-center gap-2">
-            <PointsBadge points={-cost} />
-            <Button
-              variant="default"
-              size="sm"
-              className="bg-nav-active text-white hover:bg-nav-active/90 h-7"
-            >
-              Buy
-            </Button>
-          </div>
-        </div>
+        <RewardHeader
+          title={title}
+          supply={supply}
+          cost={cost}
+          onBuy={handleBuy}
+          onUse={handleUse}
+        />
         
-        <div className="flex items-start mb-auto">
-          <div className="mr-4 flex-shrink-0">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00f0ff' }}>
-              <TaskIcon 
-                icon_name={iconName} 
-                icon_color={iconColor} 
-              />
-            </div>
-          </div>
-          
-          <div className="flex-1 flex flex-col">
-            <h3 className="text-xl font-semibold text-white">
-              {title}
-            </h3>
-            
-            <div className="text-sm mt-1 text-[#8E9196]">
-              {description}
-            </div>
-          </div>
-        </div>
+        <RewardContent
+          title={title}
+          description={description}
+          iconName={iconName}
+          iconColor={iconColor}
+          highlight_effect={highlight_effect}
+          title_color={title_color}
+          subtext_color={subtext_color}
+        />
         
-        <div className="flex items-center justify-between mt-4">
-          {/* Calendar tracker placeholder */}
-          <div className="flex space-x-1 items-center">
-            <Calendar className="h-4 w-4 mr-1 text-[#7E69AB]" />
-            <div className="flex space-x-1">
-              {[...Array(4)].map((_, i) => (
-                <div 
-                  key={i}
-                  className="w-4 h-4 rounded-full border border-[#7E69AB] bg-transparent"
-                />
-              ))}
-            </div>
-          </div>
-          
-          <div className="flex space-x-2 ml-auto">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <RewardFooter
+          usageData={usageData}
+          calendarColor={calendar_color}
+          onEdit={handleEdit}
+        />
       </div>
     </Card>
   );

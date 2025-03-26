@@ -24,7 +24,29 @@ export interface Task {
   calendar_color?: string;
   highlight_effect?: boolean;
   icon_color?: string;
+  last_completed_date?: string; // Track the local date when task was last completed
 }
+
+// Helper function to get today's date in YYYY-MM-DD format in local time zone
+export const getLocalDateString = (): string => {
+  const today = new Date();
+  return today.toLocaleDateString('en-CA'); // en-CA produces YYYY-MM-DD format
+};
+
+// Helper function to check if a task was completed today
+export const wasCompletedToday = (task: Task): boolean => {
+  return task.last_completed_date === getLocalDateString();
+};
+
+// Helper to check if task can be completed based on frequency
+export const canCompleteTask = (task: Task): boolean => {
+  if (task.frequency === 'daily') {
+    // For daily tasks, check if already completed today
+    return !wasCompletedToday(task);
+  }
+  // For weekly tasks or tasks without frequency, always allow completion
+  return true;
+};
 
 export const fetchTasks = async (): Promise<Task[]> => {
   try {
@@ -42,7 +64,16 @@ export const fetchTasks = async (): Promise<Task[]> => {
       return [];
     }
     
-    return data as Task[];
+    // Process tasks to determine if they should be marked as incomplete based on local date
+    const processedTasks = (data as Task[]).map(task => {
+      // If the task was completed, but not today (in user's local time), reset it
+      if (task.completed && task.frequency === 'daily' && !wasCompletedToday(task)) {
+        return { ...task, completed: false };
+      }
+      return task;
+    });
+    
+    return processedTasks;
   } catch (err) {
     console.error('Unexpected error fetching tasks:', err);
     toast({
@@ -83,6 +114,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           focal_point_y: task.focal_point_y,
           priority: task.priority,
           icon_color: task.icon_color,
+          last_completed_date: task.last_completed_date,
           updated_at: new Date().toISOString(),
         })
         .eq('id', task.id)
@@ -114,6 +146,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           focal_point_y: task.focal_point_y,
           priority: task.priority,
           icon_color: task.icon_color,
+          last_completed_date: null, // Initialize as null for new tasks
         })
         .select()
         .single();
@@ -145,11 +178,27 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     
     const task = taskData as Task;
     
-    // Update task with new completion info
+    // If trying to complete a daily task that was already completed today, prevent it
+    if (completed && task.frequency === 'daily' && wasCompletedToday(task)) {
+      toast({
+        title: 'Task already completed',
+        description: 'This task has already been completed today.',
+        variant: 'default',
+      });
+      return false;
+    }
+    
+    // Update task with new completion info and last completion date if completed
     const { error } = await supabase
       .from('tasks')
       .update({ 
-        completed
+        completed,
+        // Only set last_completed_date if task is being marked as completed
+        last_completed_date: completed ? getLocalDateString() : task.last_completed_date,
+        // Update frequency count if appropriate
+        frequency_count: completed 
+          ? (task.frequency_count || 0) + 1 
+          : task.frequency_count
       })
       .eq('id', id);
     
@@ -188,15 +237,19 @@ export const deleteTask = async (id: string): Promise<boolean> => {
   }
 };
 
-// Add function to reset completion counts (to be called at midnight or week start)
+// Add function to reset completion counts at midnight or week start (for weekly tasks)
 export const resetTaskCompletions = async (frequency: 'daily' | 'weekly'): Promise<boolean> => {
   try {
+    // For daily tasks, reset all tasks that weren't completed today
+    const today = getLocalDateString();
+    
     const { error } = await supabase
       .from('tasks')
       .update({ 
-        completed: false 
+        completed: false
       })
-      .eq('frequency', frequency);
+      .eq('frequency', frequency)
+      .not('last_completed_date', 'eq', today);
     
     if (error) throw error;
     return true;

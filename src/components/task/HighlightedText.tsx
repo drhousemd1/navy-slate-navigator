@@ -26,15 +26,12 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
 
   if (highlight) {
     return (
-      <span className="highlighter" style={{
-        ...highlighterStyle,
-        color
-      }}>
+      <span className="highlighter" style={{ ...highlighterStyle, color }}>
         {text}
       </span>
     );
   }
-  
+
   return <span style={{ color }}>{text}</span>;
 };
 

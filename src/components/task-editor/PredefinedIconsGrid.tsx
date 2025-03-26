@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { predefinedIcons } from './IconSelector';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,6 @@ interface RecentIcon {
   name: string;
   isCustom: boolean;
   url?: string;
-  // Removed color property - we don't want to store the color with recent icons
 }
 
 // Helper function to manage recently used icons
