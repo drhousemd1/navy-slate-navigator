@@ -51,9 +51,28 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     // Handle click in the textarea area to position cursor correctly
     const handleClick = React.useCallback((e: React.MouseEvent) => {
       if (textareaRef.current) {
-        // Force the native cursor positioning to work
+        // Calculate correct position for textarea cursor
+        const rect = e.currentTarget.getBoundingClientRect();
+        const offsetY = e.clientY - rect.top;
+        const offsetX = e.clientX - rect.left;
+        
+        // Focus on the real textarea
+        textareaRef.current.focus();
+        
+        // Let the browser position the cursor at the clicked point
+        // This is crucial for making selections work properly across the entire textarea
         setTimeout(() => {
-          textareaRef.current?.focus();
+          if (textareaRef.current && document.activeElement === textareaRef.current) {
+            // Force the re-calculation of cursor position
+            const event = new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              view: window,
+              clientX: e.clientX,
+              clientY: e.clientY
+            });
+            textareaRef.current.dispatchEvent(event);
+          }
         }, 0);
       }
     }, []);
@@ -136,7 +155,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       return (
         <div 
           className={cn(
-            "flex min-h-[200px] w-full rounded-md border border-input bg-background text-sm relative",
+            "flex min-h-[300px] w-full rounded-md border border-input bg-background text-sm relative",
             className
           )}
           onClick={handleClick}
@@ -144,7 +163,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {/* Visible textarea where user types */}
           <textarea
             ref={setRefs}
-            className="w-full h-full min-h-[200px] px-3 py-2 bg-transparent resize-none outline-none caret-white selection:bg-blue-500/30"
+            className="w-full h-full min-h-[300px] px-3 py-2 bg-transparent resize-none outline-none selection:bg-blue-500/30"
             style={{
               color: 'transparent',
               caretColor: 'white',
@@ -153,7 +172,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               left: 0,
               right: 0,
               bottom: 0,
-              zIndex: 2
+              zIndex: 2, // Ensures textarea is above the preview for cursor interaction
+              padding: '0.5rem 0.75rem' // Match the padding with preview div
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
@@ -174,9 +194,10 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               whiteSpace: 'pre-wrap',
               overflowWrap: 'break-word',
               wordBreak: 'break-word',
-              padding: '0.5rem 0.75rem'
+              padding: '0.5rem 0.75rem',
+              overflow: 'auto'
             }} 
-            className="px-3 py-2 overflow-auto"
+            className="text-white"
             dangerouslySetInnerHTML={{ 
               __html: generateFormattedHTML() 
             }} 

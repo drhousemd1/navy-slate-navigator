@@ -286,7 +286,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="bg-navy border border-light-navy text-white max-w-4xl">
+        <DialogContent className="bg-navy border border-light-navy text-white max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl">
               {entry ? 'Edit Encyclopedia Entry' : 'Create Encyclopedia Entry'}
@@ -349,7 +349,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                         <Textarea 
                           placeholder="Enter text to show in full-screen pop-up" 
                           className="bg-dark-navy border-light-navy text-white"
-                          rows={10}
+                          rows={15}
                           formattedPreview={true}
                           textFormatting={currentTextFormatting}
                           onFormatSelection={handleTextSelection}
