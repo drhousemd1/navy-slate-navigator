@@ -14,25 +14,6 @@ const Rewards: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Check if user is authenticated
-  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(false);
-
-  React.useEffect(() => {
-    // Check current auth state
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
   // Fetch rewards
   const { 
     data: rewards, 
@@ -41,7 +22,6 @@ const Rewards: React.FC = () => {
   } = useQuery({
     queryKey: ['rewards'],
     queryFn: fetchRewards,
-    enabled: isAuthenticated,
   });
 
   // Fetch user profile for points
@@ -52,7 +32,6 @@ const Rewards: React.FC = () => {
   } = useQuery({
     queryKey: ['userProfile'],
     queryFn: fetchUserProfile,
-    enabled: isAuthenticated,
   });
 
   // Fetch user rewards
@@ -63,7 +42,6 @@ const Rewards: React.FC = () => {
   } = useQuery({
     queryKey: ['userRewards'],
     queryFn: fetchUserRewards,
-    enabled: isAuthenticated,
   });
 
   // Function to find user supply for a specific reward
@@ -124,10 +102,10 @@ const Rewards: React.FC = () => {
       }
     };
 
-    if (isAuthenticated && !isLoadingRewards && !rewardsError) {
+    if (!isLoadingRewards && !rewardsError) {
       seedExampleRewards();
     }
-  }, [isAuthenticated, rewards, isLoadingRewards, rewardsError, queryClient]);
+  }, [rewards, isLoadingRewards, rewardsError, queryClient]);
 
   // Handle refresh data
   const handleRefresh = () => {
@@ -135,30 +113,6 @@ const Rewards: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['userProfile'] });
     queryClient.invalidateQueries({ queryKey: ['userRewards'] });
   };
-
-  if (!isAuthenticated) {
-    return (
-      <AppLayout>
-        <div className="p-4 pt-6 text-center">
-          <h1 className="text-2xl font-semibold text-white mb-4">My Rewards</h1>
-          <p className="text-gray-300 mb-4">Please sign in to view and manage your rewards.</p>
-          <Button 
-            variant="default" 
-            onClick={() => {
-              // You should redirect to login page here
-              // For now, just show a toast
-              toast({
-                title: "Authentication Required",
-                description: "Please sign in to access rewards",
-              });
-            }}
-          >
-            Sign In
-          </Button>
-        </div>
-      </AppLayout>
-    );
-  }
 
   if (rewardsError || profileError || userRewardsError) {
     return (
