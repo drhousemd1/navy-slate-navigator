@@ -45,9 +45,9 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
       )}
       <Button 
         type="button" 
-        variant="outline" 
+        variant="destructive" 
         onClick={onCancel}
-        className="bg-transparent border border-slate-700 text-white hover:bg-slate-800"
+        className="bg-red-700 text-white hover:bg-red-600"
       >
         Cancel
       </Button>
