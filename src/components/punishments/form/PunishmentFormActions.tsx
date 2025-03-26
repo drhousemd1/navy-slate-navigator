@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Save } from 'lucide-react';
+import { Save, Trash } from 'lucide-react';
 import DeletePunishmentDialog from '../DeletePunishmentDialog';
 import { PunishmentData } from '../../PunishmentEditor';
 
@@ -25,12 +25,23 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
   return (
     <div className="pt-4 w-full flex items-center justify-end gap-3">
       {punishmentData?.id && onDelete && (
-        <DeletePunishmentDialog
-          isOpen={isDeleteDialogOpen}
-          onOpenChange={setIsDeleteDialogOpen}
-          onDelete={() => onDelete(punishmentData.id as string)}
-          punishmentName={punishmentData.title}
-        />
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="bg-transparent border border-red-600 text-red-600 hover:bg-red-900/10 flex items-center gap-2"
+          >
+            <Trash className="h-4 w-4" />
+            Delete
+          </Button>
+          <DeletePunishmentDialog
+            isOpen={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+            onDelete={() => onDelete(punishmentData.id as string)}
+            punishmentName={punishmentData.title}
+          />
+        </>
       )}
       <Button 
         type="button" 
