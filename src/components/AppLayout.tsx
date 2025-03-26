@@ -38,7 +38,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       {shouldShowAddButton && (
         <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-10">
           <Button 
-            className="bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6"
+            className={isRewardsPage 
+              ? "bg-navy border border-light-navy text-nav-active rounded-full shadow-lg h-12 w-12 p-0 flex items-center justify-center" 
+              : "bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6"
+            }
             onClick={handleAddNewItem}
           >
             {isRewardsPage ? (
