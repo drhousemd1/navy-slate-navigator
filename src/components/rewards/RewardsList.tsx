@@ -2,13 +2,33 @@
 import React from 'react';
 import RewardCard from '../RewardCard';
 import { useRewards } from '../../contexts/RewardsContext';
+import { Skeleton } from '../ui/skeleton';
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
-  const { rewards, handleBuy, handleUse, getRewardUsage, getFrequencyCount } = useRewards();
+  const { rewards, handleBuy, handleUse, getRewardUsage, getFrequencyCount, loading } = useRewards();
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((item) => (
+          <Skeleton key={item} className="h-40 w-full rounded-lg bg-gray-700" />
+        ))}
+      </div>
+    );
+  }
+
+  if (rewards.length === 0) {
+    return (
+      <div className="text-white text-center p-8 bg-navy rounded-lg border border-light-navy">
+        <p className="text-xl">No rewards found.</p>
+        <p className="text-gray-400 mt-2">Create your first reward using the "+" button!</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

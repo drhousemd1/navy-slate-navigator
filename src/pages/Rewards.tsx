@@ -5,6 +5,7 @@ import RewardEditor from '../components/RewardEditor';
 import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import RewardsList from '../components/rewards/RewardsList';
+import { Skeleton } from '../components/ui/skeleton';
 
 interface RewardsContentProps {
   isEditorOpen: boolean;
@@ -12,7 +13,7 @@ interface RewardsContentProps {
 }
 
 const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
-  const { rewards, handleSaveReward, handleDeleteReward, refreshRewards } = useRewards();
+  const { rewards, handleSaveReward, handleDeleteReward, refreshRewards, loading } = useRewards();
   
   // Editor state
   const [currentReward, setCurrentReward] = useState<any>(null);
@@ -74,6 +75,23 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
       window.removeEventListener('add-new-item', handleAddNewItem);
     };
   }, []);
+
+  // Show loading state while rewards are being fetched
+  if (loading) {
+    return (
+      <div className="p-4 pt-6">
+        <div className="flex justify-between items-center mb-6">
+          <Skeleton className="h-8 w-40 bg-gray-700" />
+          <Skeleton className="h-8 w-24 rounded-full bg-gray-700" />
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((item) => (
+            <Skeleton key={item} className="h-40 w-full rounded-lg bg-gray-700" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 pt-6">

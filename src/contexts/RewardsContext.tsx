@@ -1,5 +1,4 @@
-
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -63,6 +62,7 @@ interface RewardsContextType {
   totalPoints: number;
   rewards: RewardItem[];
   rewardUsage: Record<string, boolean[]>;
+  loading: boolean;
   handleBuy: (index: number) => void;
   handleUse: (index: number) => void;
   handleSaveReward: (rewardData: any, index: number | null) => Promise<void>;
@@ -148,9 +148,9 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   };
 
   // Function to refresh rewards - this can be called from outside components
-  const refreshRewards = async () => {
+  const refreshRewards = useCallback(async () => {
     await fetchRewards();
-  };
+  }, []);
 
   // Fetch rewards on initial load
   useEffect(() => {
@@ -579,6 +579,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         totalPoints,
         rewards,
         rewardUsage,
+        loading,
         handleBuy,
         handleUse,
         handleSaveReward,
