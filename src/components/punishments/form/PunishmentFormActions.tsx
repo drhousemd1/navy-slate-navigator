@@ -28,9 +28,9 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
         <>
           <Button
             type="button"
-            variant="outline"
+            variant="destructive"
             onClick={() => setIsDeleteDialogOpen(true)}
-            className="bg-transparent border border-red-600 text-red-600 hover:bg-red-900/10 flex items-center gap-2"
+            className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
           >
             <Trash className="h-4 w-4" />
             Delete
