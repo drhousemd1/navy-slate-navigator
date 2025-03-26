@@ -12,7 +12,7 @@ const Slider = React.forwardRef<
   const calculateWidthPercentage = () => {
     if (!props.value) return "0%";
     
-    const min = props.min || 0;
+    const min = props.min || a0;
     const max = props.max || 100;
     const range = max - min;
     
