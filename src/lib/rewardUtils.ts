@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -25,12 +24,11 @@ export interface Reward {
 
 export const fetchRewards = async (): Promise<Reward[]> => {
   try {
-    // Always explicitly sort by created_at to maintain consistent order
-    // This ensures the initial fetch has a stable order
+    // IMPORTANT: Remove the sorting by created_at as it affects the order stability
+    // Instead, let the application maintain the order of rewards as they are in the database
     const { data, error } = await supabase
       .from('rewards')
-      .select('*')
-      .order('created_at', { ascending: true });
+      .select('*');
     
     if (error) {
       console.error('Error fetching rewards:', error);
@@ -42,7 +40,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
       return [];
     }
 
-    console.log('Fetched rewards with sort order:', data);
+    console.log('Fetched rewards without any sorting:', data);
     return data as Reward[];
   } catch (err) {
     console.error('Unexpected error fetching rewards:', err);

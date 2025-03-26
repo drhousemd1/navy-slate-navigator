@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
@@ -34,7 +33,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [rewards, setRewards] = useState<Reward[]>([]);
   const queryClient = useQueryClient();
   
-  // Fetch rewards using React Query
   const { 
     data: fetchedRewards = [], 
     isLoading,
@@ -44,25 +42,20 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     queryFn: fetchRewards,
   });
   
-  // Update local state when fetched rewards change
   useEffect(() => {
     if (fetchedRewards.length > 0) {
+      console.log("Setting rewards from fetchedRewards:", fetchedRewards.map(r => ({ 
+        id: r.id, 
+        title: r.title,
+        created_at: r.created_at
+      })));
       setRewards(fetchedRewards);
     }
   }, [fetchedRewards]);
   
-  console.log("RewardsProvider rendered with rewards:", rewards.map(r => ({ 
-    id: r.id, 
-    title: r.title, 
-    created_at: r.created_at,
-    background_image_url: r.background_image_url?.substring(0, 30) + '...' 
-  })));
-
-  // Fetch total points
   useEffect(() => {
     const fetchTotalPoints = async () => {
       try {
-        // Mock implementation - you should replace with actual implementation
         setTotalPoints(500);
       } catch (error) {
         console.error('Error fetching total points:', error);
@@ -76,19 +69,21 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log("Manually refetching rewards");
     const { data } = await refetch();
     if (data) {
+      console.log("Setting rewards after manual refetch:", data.map(r => ({ 
+        id: r.id, 
+        title: r.title,
+        created_at: r.created_at
+      })));
       setRewards(data);
     }
   }, [refetch]);
 
-  // Save a reward (create or update)
   const handleSaveReward = useCallback(async (rewardData: any, index: number | null): Promise<Reward | null> => {
     console.log("Handling save reward with data:", rewardData, "at index:", index);
     
     try {
-      // Clean up data before saving
       const dataToSave = { ...rewardData };
       
-      // Ensure null is properly handled for background_image_url
       if (!dataToSave.background_image_url) {
         dataToSave.background_image_url = null;
       }
@@ -96,56 +91,53 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       let result: Reward | null = null;
       
       if (index !== null) {
-        // Update existing reward - implement direct update to maintain position
         const existingReward = rewards[index];
-        console.log("Updating existing reward with ID:", existingReward.id);
+        console.log("Updating existing reward at index", index, "with ID:", existingReward.id);
         
-        // Create an updated reward copy with the new data
-        const updatedRewards = [...rewards];
-        const updatedReward = {
-          ...existingReward,
-          ...dataToSave,
-          // Preserve id and timestamps
-          id: existingReward.id,
-          created_at: existingReward.created_at,
-        };
+        const { created_at, updated_at, ...fieldsToUpdate } = dataToSave;
         
-        // Update Supabase without affecting order
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('rewards')
           .update({
-            title: updatedReward.title,
-            description: updatedReward.description,
-            cost: updatedReward.cost,
-            icon_name: updatedReward.icon_name,
-            icon_url: updatedReward.icon_url,
-            icon_color: updatedReward.icon_color,
-            background_image_url: updatedReward.background_image_url,
-            background_opacity: updatedReward.background_opacity,
-            focal_point_x: updatedReward.focal_point_x,
-            focal_point_y: updatedReward.focal_point_y,
-            highlight_effect: updatedReward.highlight_effect,
-            title_color: updatedReward.title_color,
-            subtext_color: updatedReward.subtext_color,
-            calendar_color: updatedReward.calendar_color,
-            updated_at: new Date().toISOString()
+            title: dataToSave.title,
+            description: dataToSave.description,
+            cost: dataToSave.cost,
+            icon_name: dataToSave.icon_name,
+            icon_url: dataToSave.icon_url,
+            icon_color: dataToSave.icon_color,
+            background_image_url: dataToSave.background_image_url,
+            background_opacity: dataToSave.background_opacity,
+            focal_point_x: dataToSave.focal_point_x,
+            focal_point_y: dataToSave.focal_point_y,
+            highlight_effect: dataToSave.highlight_effect,
+            title_color: dataToSave.title_color,
+            subtext_color: dataToSave.subtext_color,
+            calendar_color: dataToSave.calendar_color,
           })
-          .eq('id', existingReward.id);
+          .eq('id', existingReward.id)
+          .select();
         
         if (error) throw error;
         
-        // Update local state without changing order
-        updatedRewards[index] = updatedReward;
-        setRewards(updatedRewards);
-        
-        console.log("Reward updated in place at index:", index);
-        result = updatedReward;
+        if (data && data.length > 0) {
+          result = data[0];
+          
+          const updatedRewards = [...rewards];
+          updatedRewards[index] = {
+            ...result,
+            created_at: existingReward.created_at
+          };
+          
+          console.log("Reward updated at index", index, "now has title:", updatedRewards[index].title);
+          console.log("Full rewards array after update:", updatedRewards.map((r, i) => 
+            `${i}: ${r.title} (${r.id}) - created ${r.created_at}`));
+          
+          setRewards(updatedRewards);
+        }
       } else {
-        // Create new reward
         console.log("Creating new reward");
         result = await saveReward(dataToSave as Reward & { title: string });
         
-        // Add the new reward to local state
         if (result) {
           setRewards(prevRewards => [...prevRewards, result as Reward]);
         }
@@ -158,7 +150,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [rewards]);
 
-  // Delete a reward
   const handleDeleteReward = useCallback(async (index: number): Promise<boolean> => {
     console.log("Handling delete reward at index:", index);
     
@@ -173,7 +164,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       if (success) {
         console.log("Reward deleted successfully");
-        // Update local state by removing the deleted reward
         setRewards(prevRewards => prevRewards.filter((_, i) => i !== index));
         return true;
       }
@@ -185,7 +175,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [rewards]);
 
-  // Buy a reward
   const handleBuyReward = useCallback(async (id: string) => {
     console.log("Handling buy reward with ID:", id);
     
@@ -198,14 +187,12 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       const reward = rewards[rewardIndex];
       
-      // Update the reward supply
       const updatedSupply = reward.supply + 1;
       const success = await updateRewardSupply(reward.id, updatedSupply);
       
       if (success) {
         console.log("Reward bought successfully");
         
-        // Update local state without changing order
         const updatedRewards = [...rewards];
         updatedRewards[rewardIndex] = { ...reward, supply: updatedSupply };
         setRewards(updatedRewards);
@@ -226,7 +213,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [rewards]);
 
-  // Use a reward
   const handleUseReward = useCallback(async (id: string) => {
     console.log("Handling use reward with ID:", id);
     
@@ -239,7 +225,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       const reward = rewards[rewardIndex];
       
-      // Cannot use a reward with no supply
       if (reward.supply <= 0) {
         console.error("Cannot use reward with no supply");
         
@@ -252,14 +237,12 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
       
-      // Update the reward supply
       const updatedSupply = reward.supply - 1;
       const success = await updateRewardSupply(reward.id, updatedSupply);
       
       if (success) {
         console.log("Reward used successfully");
         
-        // Update local state without changing order
         const updatedRewards = [...rewards];
         updatedRewards[rewardIndex] = { ...reward, supply: updatedSupply };
         setRewards(updatedRewards);

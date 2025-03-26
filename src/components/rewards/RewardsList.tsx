@@ -19,9 +19,15 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
     );
   }
 
-  // Log rewards for debugging
+  // Enhanced debugging logs showing index and ID to track position stability
   console.log("Rendering RewardsList with rewards:", 
-    rewards.map((r, i) => ({ index: i, id: r.id, title: r.title, created_at: r.created_at }))
+    rewards.map((r, i) => ({ 
+      index: i, 
+      id: r.id, 
+      title: r.title, 
+      created_at: r.created_at,
+      updated_at: r.updated_at
+    }))
   );
 
   return (
