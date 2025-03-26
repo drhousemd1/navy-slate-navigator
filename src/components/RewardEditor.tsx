@@ -8,13 +8,15 @@ interface RewardEditorProps {
   onClose: () => void;
   rewardData?: any;
   onSave: (rewardData: any) => void;
+  onDelete?: (id: number) => void;
 }
 
 const RewardEditor: React.FC<RewardEditorProps> = ({ 
   isOpen, 
   onClose, 
   rewardData, 
-  onSave 
+  onSave,
+  onDelete
 }) => {
   const handleSave = async (formData: any) => {
     await onSave(formData);
@@ -37,6 +39,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
           rewardData={rewardData}
           onSave={handleSave}
           onCancel={onClose}
+          onDelete={onDelete}
         />
       </DialogContent>
     </Dialog>

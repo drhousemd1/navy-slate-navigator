@@ -12,6 +12,7 @@ import ColorPickerField from '../task-editor/ColorPickerField';
 import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
+import DeleteRewardDialog from './DeleteRewardDialog';
 
 interface RewardFormValues {
   title: string;
@@ -34,17 +35,20 @@ interface RewardEditorFormProps {
   rewardData?: any;
   onSave: (rewardData: any) => void;
   onCancel: () => void;
+  onDelete?: (id: number) => void;
 }
 
 const RewardEditorForm: React.FC<RewardEditorFormProps> = ({ 
   rewardData,
   onSave,
-  onCancel
+  onCancel,
+  onDelete
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const form = useForm<RewardFormValues>({
     defaultValues: {
@@ -128,6 +132,13 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         title: "Icon selected",
         description: `${iconName} icon selected`,
       });
+    }
+  };
+
+  const handleDelete = () => {
+    if (rewardData && onDelete) {
+      onDelete(rewardData.id || rewardData.index);
+      setIsDeleteDialogOpen(false);
     }
   };
 
@@ -307,6 +318,13 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         />
         
         <div className="pt-4 w-full flex items-center justify-end gap-3">
+          {rewardData && onDelete && (
+            <DeleteRewardDialog
+              isOpen={isDeleteDialogOpen}
+              onOpenChange={setIsDeleteDialogOpen}
+              onDelete={handleDelete}
+            />
+          )}
           <Button 
             type="button" 
             variant="destructive" 

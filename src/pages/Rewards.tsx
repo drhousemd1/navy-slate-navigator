@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardCard from '../components/RewardCard';
@@ -178,6 +177,17 @@ const Rewards: React.FC = () => {
     }
   };
 
+  // Handle deleting a reward
+  const handleDeleteReward = (index: number) => {
+    if (index !== null) {
+      const updatedRewards = rewards.filter((_, i) => i !== index);
+      setRewards(updatedRewards);
+      setIsEditorOpen(false);
+      setCurrentReward(null);
+      setCurrentRewardIndex(null);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-4 pt-6">
@@ -225,6 +235,7 @@ const Rewards: React.FC = () => {
         }}
         rewardData={currentReward}
         onSave={handleSaveReward}
+        onDelete={handleDeleteReward}
       />
     </AppLayout>
   );
