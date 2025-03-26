@@ -27,11 +27,12 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   try {
     console.log("[fetchRewards] Fetching rewards without sorting");
     
-    // CRITICAL: Do NOT sort rewards at all, maintain database order
-    // This ensures that the order remains stable across operations
+    // CRITICAL: Using explicit id-based sorting for consistent order
+    // This ensures rewards are always in the same order across operations
     const { data, error } = await supabase
       .from('rewards')
-      .select('*');
+      .select('*')
+      .order('id', { ascending: true });
     
     if (error) {
       console.error('[fetchRewards] Error fetching rewards:', error);
@@ -43,15 +44,17 @@ export const fetchRewards = async (): Promise<Reward[]> => {
       return [];
     }
 
-    console.log('[fetchRewards] Fetched rewards with original order preserved:', 
+    console.log('[fetchRewards] Raw data from Supabase BEFORE any processing:', 
       data?.map((r, i) => ({
         position: i,
         id: r.id, 
         title: r.title,
-        created_at: r.created_at
+        created_at: r.created_at,
+        updated_at: r.updated_at
       }))
     );
     
+    // Return data exactly as received from database with consistent sorting
     return data as Reward[];
   } catch (err) {
     console.error('[fetchRewards] Unexpected error fetching rewards:', err);
@@ -85,6 +88,8 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
         .select();
       
       if (error) throw error;
+      
+      console.log('[saveReward] Reward updated successfully, returned data:', data[0]);
       return data[0] as Reward;
     } else {
       // Create new reward - no changes needed here
