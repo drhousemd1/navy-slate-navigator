@@ -10,7 +10,6 @@ import RewardBackgroundSection from './RewardBackgroundSection';
 import RewardColorSettings from './RewardColorSettings';
 import RewardFormActions from './RewardFormActions';
 
-// Define the form schema for validation
 const rewardFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
@@ -26,7 +25,6 @@ const rewardFormSchema = z.object({
   icon_color: z.string().optional(),
 });
 
-// Define the type for the form values
 export type RewardFormValues = z.infer<typeof rewardFormSchema>;
 
 interface RewardEditorFormProps {
@@ -49,8 +47,8 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   console.log("RewardEditorForm rendering with rewardData:", rewardData);
+  console.log("Initial background_opacity:", rewardData?.background_opacity);
 
-  // Initialize form with default values or existing reward data
   const form = useForm<RewardFormValues>({
     resolver: zodResolver(rewardFormSchema),
     defaultValues: {
@@ -58,9 +56,9 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       description: rewardData?.description || '',
       cost: rewardData?.cost || 0,
       background_image_url: rewardData?.background_image_url || null,
-      background_opacity: rewardData?.background_opacity ? rewardData.background_opacity / 100 : 1,
-      focal_point_x: rewardData?.focal_point_x ? rewardData.focal_point_x / 100 : 0.5,
-      focal_point_y: rewardData?.focal_point_y ? rewardData.focal_point_y / 100 : 0.5,
+      background_opacity: rewardData?.background_opacity || 100,
+      focal_point_x: rewardData?.focal_point_x || 50,
+      focal_point_y: rewardData?.focal_point_y || 50,
       title_color: rewardData?.title_color || '#FFFFFF',
       subtext_color: rewardData?.subtext_color || '#CCCCCC',
       calendar_color: rewardData?.calendar_color || '#3B82F6',
@@ -69,20 +67,21 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
     }
   });
 
-  // Load existing data when component mounts or rewardData changes
+  console.log("Form background_opacity value:", form.getValues('background_opacity'));
+
   useEffect(() => {
     if (rewardData) {
       console.log("Setting form data from rewardData:", rewardData);
+      console.log("Setting background_opacity to:", rewardData.background_opacity || 100);
       
-      // Reset the form with the reward data
       form.reset({
         title: rewardData.title || '',
         description: rewardData.description || '',
         cost: rewardData.cost || 0,
         background_image_url: rewardData.background_image_url || null,
-        background_opacity: rewardData.background_opacity ? rewardData.background_opacity / 100 : 1,
-        focal_point_x: rewardData.focal_point_x ? rewardData.focal_point_x / 100 : 0.5,
-        focal_point_y: rewardData.focal_point_y ? rewardData.focal_point_y / 100 : 0.5,
+        background_opacity: rewardData.background_opacity || 100,
+        focal_point_x: rewardData.focal_point_x || 50,
+        focal_point_y: rewardData.focal_point_y || 50,
         title_color: rewardData.title_color || '#FFFFFF',
         subtext_color: rewardData.subtext_color || '#CCCCCC',
         calendar_color: rewardData.calendar_color || '#3B82F6',
@@ -90,12 +89,10 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         icon_color: rewardData.icon_color || '#FFFFFF',
       });
       
-      // Set image preview if exists
       if (rewardData.background_image_url) {
         setImagePreview(rewardData.background_image_url);
       }
       
-      // Set selected icon name if exists
       if (rewardData.icon_name) {
         setSelectedIconName(rewardData.icon_name);
       }
@@ -107,7 +104,6 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
     setLoading(true);
     
     try {
-      // Convert 0-1 values back to 0-100 for the database
       const processedValues = {
         ...values,
         background_opacity: values.background_opacity ? Math.round(values.background_opacity * 100) : 100,
@@ -116,7 +112,6 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         icon_name: selectedIconName || undefined,
       };
       
-      // Explicitly ensure background_image_url is properly handled
       if (!imagePreview) {
         processedValues.background_image_url = null;
       }
@@ -158,6 +153,8 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         const result = event.target?.result as string;
         setImagePreview(result);
         form.setValue('background_image_url', result);
+        form.setValue('background_opacity', 100);
+        console.log("Image uploaded, setting opacity to 100%");
       };
       reader.readAsDataURL(file);
     }

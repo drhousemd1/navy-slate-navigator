@@ -27,6 +27,13 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
     onRemoveImage();
   };
 
+  // Make sure opacity is properly set when the component mounts
+  React.useEffect(() => {
+    if (imagePreview && control._formValues.background_opacity === undefined) {
+      setValue('background_opacity', 100);
+    }
+  }, [imagePreview, control, setValue]);
+
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Image</FormLabel>
