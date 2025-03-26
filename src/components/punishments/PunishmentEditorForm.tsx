@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -101,7 +100,6 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
       console.log("Submitting form with values:", values);
       console.log("Background image:", imagePreview);
       
-      // Make sure required fields are included in the processed values
       const processedValues: PunishmentData = {
         title: values.title,
         points: values.points,
@@ -121,10 +119,8 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
       console.log("Processed values to save:", processedValues);
       
       if (punishmentData?.id) {
-        // Update existing punishment
         await updatePunishment(punishmentData.id, processedValues);
       } else {
-        // Create new punishment
         await createPunishment(processedValues);
       }
       
@@ -198,7 +194,10 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <PunishmentBasicDetails control={form.control} />
+        <PunishmentBasicDetails 
+          control={form.control} 
+          setValue={form.setValue}
+        />
         
         <PunishmentBackgroundSection
           control={form.control}

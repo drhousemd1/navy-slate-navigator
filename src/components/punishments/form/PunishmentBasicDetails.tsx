@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Control } from 'react-hook-form';
+import { Control, UseFormSetValue } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,9 +8,10 @@ import NumberField from '../../task-editor/NumberField';
 
 interface PunishmentBasicDetailsProps {
   control: Control<any>;
+  setValue: UseFormSetValue<any>;
 }
 
-const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control }) => {
+const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control, setValue }) => {
   return (
     <>
       <FormField
@@ -52,12 +53,12 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
         name="points"
         label="Points"
         onIncrement={() => {
-          const currentPoints = control._getWatch('points');
-          control._formState.setValue('points', currentPoints + 1);
+          const currentPoints = control._getWatch('points') || 0;
+          setValue('points', currentPoints + 1);
         }}
         onDecrement={() => {
-          const currentPoints = control._getWatch('points');
-          control._formState.setValue('points', Math.max(0, currentPoints - 1));
+          const currentPoints = control._getWatch('points') || 0;
+          setValue('points', Math.max(0, currentPoints - 1));
         }}
         minValue={0}
       />
