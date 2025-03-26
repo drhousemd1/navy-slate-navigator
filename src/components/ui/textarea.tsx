@@ -48,6 +48,16 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     }, [onFormatSelection]);
 
+    // Handle click in the textarea area to position cursor correctly
+    const handleClick = React.useCallback((e: React.MouseEvent) => {
+      if (textareaRef.current) {
+        // Force the native cursor positioning to work
+        setTimeout(() => {
+          textareaRef.current?.focus();
+        }, 0);
+      }
+    }, []);
+
     // Set the ref to our local ref or the forwarded ref
     const setRefs = React.useCallback(
       (element: HTMLTextAreaElement | null) => {
@@ -124,16 +134,26 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       };
 
       return (
-        <div className={cn(
-          "flex min-h-[80px] w-full rounded-md border border-input bg-background text-sm relative",
-          className
-        )}>
+        <div 
+          className={cn(
+            "flex min-h-[80px] w-full rounded-md border border-input bg-background text-sm relative",
+            className
+          )}
+          onClick={handleClick}
+        >
           {/* Visible textarea where user types */}
           <textarea
             ref={setRefs}
-            className="w-full h-full min-h-[80px] px-3 py-2 bg-transparent resize-none outline-none text-transparent caret-white selection:bg-blue-500/30"
+            className="w-full h-full min-h-[80px] px-3 py-2 bg-transparent resize-none outline-none caret-white selection:bg-blue-500/30"
             style={{
-              WebkitTextFillColor: 'transparent'
+              color: 'transparent',
+              caretColor: 'white',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 2
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
@@ -143,8 +163,20 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {/* Formatted preview beneath textarea */}
           <div 
             ref={previewRef}
-            style={textStyle} 
-            className="absolute top-0 left-0 w-full h-full min-h-[80px] px-3 py-2 pointer-events-none whitespace-pre-wrap"
+            style={{
+              ...textStyle,
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              pointerEvents: 'none',
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'break-word',
+              wordBreak: 'break-word',
+              padding: '0.5rem 0.75rem'
+            }} 
+            className="px-3 py-2 overflow-auto"
             dangerouslySetInnerHTML={{ 
               __html: generateFormattedHTML() 
             }} 
