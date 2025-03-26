@@ -1,44 +1,65 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardCard from '../components/RewardCard';
 import { Badge } from '../components/ui/badge';
 
+// Define initial rewards data
+const initialRewards = [
+  {
+    title: "Movie Night",
+    description: "Watch any movie of your choice",
+    cost: 20,
+    supply: 2,
+    iconName: "Film"
+  },
+  {
+    title: "Gaming Session",
+    description: "1 hour of uninterrupted gaming time",
+    cost: 15,
+    supply: 1,
+    iconName: "Gamepad2"
+  },
+  {
+    title: "Dessert Treat",
+    description: "Get your favorite dessert",
+    cost: 25,
+    supply: 3,
+    iconName: "Cake"
+  },
+  {
+    title: "Sleep In",
+    description: "Sleep an extra hour in the morning",
+    cost: 30,
+    supply: 0,
+    iconName: "Moon"
+  }
+];
+
+// localStorage keys
+const POINTS_STORAGE_KEY = 'rewardPoints';
+const REWARDS_STORAGE_KEY = 'rewardItems';
+
 const Rewards: React.FC = () => {
-  // User total points
-  const [totalPoints, setTotalPoints] = useState(100);
+  // Initialize state with localStorage values or defaults
+  const [totalPoints, setTotalPoints] = useState(() => {
+    const savedPoints = localStorage.getItem(POINTS_STORAGE_KEY);
+    return savedPoints ? parseInt(savedPoints, 10) : 100;
+  });
   
-  // Static local rewards data
-  const [rewards, setRewards] = useState([
-    {
-      title: "Movie Night",
-      description: "Watch any movie of your choice",
-      cost: 20,
-      supply: 2,
-      iconName: "Film"
-    },
-    {
-      title: "Gaming Session",
-      description: "1 hour of uninterrupted gaming time",
-      cost: 15,
-      supply: 1,
-      iconName: "Gamepad2"
-    },
-    {
-      title: "Dessert Treat",
-      description: "Get your favorite dessert",
-      cost: 25,
-      supply: 3,
-      iconName: "Cake"
-    },
-    {
-      title: "Sleep In",
-      description: "Sleep an extra hour in the morning",
-      cost: 30,
-      supply: 0,
-      iconName: "Moon"
-    }
-  ]);
+  const [rewards, setRewards] = useState(() => {
+    const savedRewards = localStorage.getItem(REWARDS_STORAGE_KEY);
+    return savedRewards ? JSON.parse(savedRewards) : initialRewards;
+  });
+
+  // Save to localStorage whenever state changes
+  useEffect(() => {
+    localStorage.setItem(POINTS_STORAGE_KEY, totalPoints.toString());
+  }, [totalPoints]);
+
+  useEffect(() => {
+    localStorage.setItem(REWARDS_STORAGE_KEY, JSON.stringify(rewards));
+  }, [rewards]);
 
   // Handle buying a reward
   const handleBuy = (index: number) => {
