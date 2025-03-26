@@ -10,7 +10,7 @@ interface RewardFormActionsProps {
   isDeleteDialogOpen: boolean;
   setIsDeleteDialogOpen: (isOpen: boolean) => void;
   onCancel: () => void;
-  onDelete?: (id: number) => void;
+  onDelete?: (index: number) => void;
 }
 
 const RewardFormActions: React.FC<RewardFormActionsProps> = ({
@@ -24,7 +24,8 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
   const handleDelete = () => {
     console.log("Delete button clicked for reward:", rewardData);
     if (rewardData && onDelete) {
-      onDelete(rewardData.id || rewardData.index);
+      // We need to pass the index, not the ID
+      onDelete(rewardData.index);
     }
   };
 

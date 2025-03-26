@@ -28,7 +28,12 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   // Handle editing a reward
   const handleEdit = (index: number) => {
     console.log("Editing reward at index:", index, "with data:", rewards[index]);
-    setCurrentReward({...rewards[index]});
+    // Store the index in the reward data so we can access it during delete
+    const rewardWithIndex = {
+      ...rewards[index],
+      index: index
+    };
+    setCurrentReward(rewardWithIndex);
     setCurrentRewardIndex(index);
     setIsEditorOpen(true);
   };
@@ -77,28 +82,26 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
 
   // Handle deleting a reward
   const handleDelete = async (index: number) => {
-    if (index !== null) {
-      console.log("Deleting reward at index:", index);
-      try {
-        await handleDeleteReward(index);
-        
-        toast({
-          title: "Success", 
-          description: "Reward deleted successfully",
-        });
-        
-        closeEditor();
-      } catch (error) {
-        console.error("Failed to delete reward:", error);
-        
-        toast({
-          title: "Error",
-          description: "Failed to delete reward. Please try again.",
-          variant: "destructive",
-        });
-        
-        throw error;
-      }
+    console.log("Deleting reward at index:", index);
+    try {
+      await handleDeleteReward(index);
+      
+      toast({
+        title: "Success", 
+        description: "Reward deleted successfully",
+      });
+      
+      closeEditor();
+    } catch (error) {
+      console.error("Failed to delete reward:", error);
+      
+      toast({
+        title: "Error",
+        description: "Failed to delete reward. Please try again.",
+        variant: "destructive",
+      });
+      
+      throw error;
     }
   };
 
