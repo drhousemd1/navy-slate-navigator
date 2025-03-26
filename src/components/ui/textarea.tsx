@@ -23,37 +23,33 @@ export interface TextareaProps
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, formattedPreview, textFormatting, onFormatSelection, formattedSections = [], ...props }, ref) => {
-    // Create references for syncing
+  (
+    {
+      className,
+      formattedPreview,
+      textFormatting,
+      onFormatSelection,
+      formattedSections = [],
+      ...props
+    },
+    ref
+  ) => {
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
     const previewRef = React.useRef<HTMLDivElement | null>(null);
     const containerRef = React.useRef<HTMLDivElement | null>(null);
-    
-    // Manually handle cursor positioning
-    const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
-      if (textareaRef.current) {
-        // First focus the textarea
-        textareaRef.current.focus();
 
-        // Let the native behavior handle the cursor position
-        // This is critical for proper cursor positioning
-      }
-    }, []);
-    
-    // Handle scroll synchronization between preview and textarea
+    // Synchronize scroll position between preview and textarea
     const syncScroll = React.useCallback((e: React.UIEvent<HTMLTextAreaElement>) => {
       if (previewRef.current) {
         previewRef.current.scrollTop = e.currentTarget.scrollTop;
       }
     }, []);
 
-    // Handle selection in the textarea
+    // Handle text selection in the textarea
     const handleSelect = React.useCallback(() => {
       if (textareaRef.current && onFormatSelection) {
         const start = textareaRef.current.selectionStart;
         const end = textareaRef.current.selectionEnd;
-        
-        // Only trigger if there's an actual selection
         if (start !== end) {
           onFormatSelection({ start, end });
         }
@@ -135,6 +131,21 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         fontSize: textFormatting?.fontSize || '1rem',
       };
 
+      // Common styles for both textarea and preview
+      const commonStyles: React.CSSProperties = {
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        padding: '0.5rem 0.75rem',
+        lineHeight: '1.5',
+        fontFamily: 'inherit',
+        overflowY: 'auto',
+        whiteSpace: 'pre-wrap',
+        overflowWrap: 'break-word',
+        wordBreak: 'break-word',
+      };
+
       return (
         <div 
           ref={containerRef}
@@ -142,39 +153,31 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             "flex min-h-[500px] w-full rounded-md border border-input bg-background text-sm relative",
             className
           )}
-          onMouseDown={handleMouseDown}
         >
-          {/* The actual textarea for editing - MUST match preview dimensions & position exactly */}
+          {/* The textarea for editing - exact same dimensions and position as preview */}
           <textarea
             ref={setRefs}
             className="absolute inset-0 w-full h-full resize-none outline-none selection:bg-blue-500/30"
             style={{
+              ...commonStyles,
               caretColor: 'white',
               color: 'transparent',
               backgroundColor: 'transparent',
               zIndex: 2,
-              padding: '0.5rem 0.75rem', // CRITICAL: match padding exactly with preview
             }}
             onScroll={syncScroll}
             onSelect={handleSelect}
             {...props}
           />
           
-          {/* Formatted preview that shows the text - MUST match textarea dimensions & position exactly */}
+          {/* Formatted preview div - exact same dimensions and position as textarea */}
           <div 
             ref={previewRef}
             style={{
+              ...commonStyles,
               ...textStyle,
-              position: 'absolute',
-              inset: 0,
               pointerEvents: 'none',
-              whiteSpace: 'pre-wrap',
-              overflowWrap: 'break-word',
-              wordBreak: 'break-word',
-              padding: '0.5rem 0.75rem', // CRITICAL: match padding exactly with textarea
-              overflow: 'auto',
-              lineHeight: '1.5', // Ensure consistent line height
-              fontFamily: 'inherit', // Ensure consistent font
+              zIndex: 1,
             }} 
             className="text-white"
             dangerouslySetInnerHTML={{ 
