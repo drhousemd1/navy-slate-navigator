@@ -38,6 +38,9 @@ const POINTS_STORAGE_KEY = 'rewardPoints';
 const REWARDS_STORAGE_KEY = 'rewardItems';
 const REWARD_USAGE_STORAGE_KEY = 'rewardUsage';
 
+// Reset points to 100 for testing
+localStorage.setItem(POINTS_STORAGE_KEY, '100');
+
 type RewardItem = {
   title: string;
   description: string;
