@@ -1,4 +1,3 @@
-
 import React from 'react';
 import AppLayout from '../components/AppLayout';
 import EncyclopediaTile from '../components/encyclopedia/EncyclopediaTile';
@@ -12,7 +11,7 @@ const isAdminMode = () => {
   // For production/deployed app, default to false
   // This ensures users won't see the "Add Entry" button
   // Set to true only for development/editing in Lovable
-  return false; // Default to false for regular users
+  return true; // Set to true while editing in Lovable
 };
 
 const Encyclopedia: React.FC = () => {
