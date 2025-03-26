@@ -3,6 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import RewardEditorForm from './reward-editor/RewardEditorForm';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 
 interface RewardEditorProps {
   isOpen: boolean;
@@ -27,12 +28,21 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
       await onSave(formData);
       // Force a rewards data refresh after saving
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      toast({
+        title: "Success",
+        description: "Reward saved successfully",
+      });
+      onClose();
     } catch (error) {
       console.error("Error in RewardEditor save handler:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save reward. Please try again.",
+        variant: "destructive",
+      });
       // Don't close dialog if save failed
       return;
     }
-    onClose();
   };
 
   return (

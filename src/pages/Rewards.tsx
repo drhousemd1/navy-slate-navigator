@@ -47,6 +47,9 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     console.log("Saving reward with data:", rewardData, "at index:", currentRewardIndex);
     try {
       await handleSaveReward(rewardData, currentRewardIndex);
+      // Force refresh of rewards data after saving
+      await queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      await refetchRewards();
       closeEditor();
     } catch (error) {
       console.error("Failed to save reward:", error);
@@ -60,6 +63,9 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
       console.log("Deleting reward at index:", index);
       handleDeleteReward(index);
       closeEditor();
+      // Force refresh of rewards data after deleting
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      refetchRewards();
     }
   };
 
@@ -91,7 +97,7 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
         onClose={closeEditor}
         rewardData={currentReward}
         onSave={handleSave}
-        onDelete={() => currentRewardIndex !== null && handleDelete(currentRewardIndex)}
+        onDelete={currentRewardIndex !== null ? handleDelete : undefined}
       />
     </div>
   );
