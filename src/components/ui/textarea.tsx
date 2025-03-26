@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
@@ -107,22 +106,17 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       
       // If there's a real selection (not just cursor)
       if (range.startOffset !== range.endOffset) {
+        console.log("Text selected:", {
+          start: range.startOffset,
+          end: range.endOffset
+        });
+        
         // Find the absolute offsets in the full text
         onFormatSelection({
           start: range.startOffset,
           end: range.endOffset
         });
       }
-    };
-    
-    // Apply base formatting to the entire editor
-    const baseStyle: React.CSSProperties = {
-      fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
-      textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
-      fontSize: textFormatting?.fontSize || '1rem',
-      lineHeight: '1.5',
-      color: 'white',
-      minHeight: '200px'
     };
     
     // Set initial content when value changes from outside
@@ -180,13 +174,14 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         <div
           ref={editorRef}
           contentEditable
-          className="w-full focus:outline-none whitespace-pre-wrap"
-          style={baseStyle}
+          className="w-full focus:outline-none whitespace-pre-wrap text-white"
+          style={{
+            lineHeight: '1.5',
+            minHeight: '200px'
+          }}
           onInput={handleInput}
           onSelect={handleSelect}
           suppressContentEditableWarning={true}
-          placeholder={props.placeholder}
-          // We use data attribute for placeholder
           data-placeholder={props.placeholder}
           onFocus={handleFocus}
           onBlur={handleBlur}

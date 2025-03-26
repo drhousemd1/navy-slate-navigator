@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -155,20 +154,17 @@ export const useEncyclopedia = () => {
     
     const { start, end } = selectedTextRange;
     
-    // Add the new formatted section
+    // Create a new formatted section just for the selected text range
     const newFormattedSection = {
       start,
       end,
       formatting: { ...formatting }
     };
     
-    // Check if this section overlaps with any existing sections and handle accordingly
-    const updatedSections = [...formattedSections];
+    console.log(`Applied formatting to selected text from ${start} to ${end}:`, formatting);
     
-    // For simplicity, we'll just add the new section - in a more complex implementation
-    // you might want to handle overlaps differently
-    updatedSections.push(newFormattedSection);
-    
+    // Add the new section without affecting other sections
+    const updatedSections = [...formattedSections, newFormattedSection];
     setFormattedSections(updatedSections);
     
     // If this is part of an entry being edited, update the entry
@@ -181,8 +177,6 @@ export const useEncyclopedia = () => {
     
     // Clear the selection after applying
     setSelectedTextRange(null);
-    
-    console.log(`Applied formatting to selected text from ${start} to ${end}:`, formatting);
     
     return text;
   };

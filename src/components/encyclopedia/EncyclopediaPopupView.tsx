@@ -124,16 +124,26 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
           );
         }
         
-        // Add formatted section
+        // Add formatted section with ONLY the specific formatting properties that were set
         if (relativeEnd > relativeStart) {
+          const formattingStyle: React.CSSProperties = {};
+          
+          if (section.formatting.isBold) {
+            formattingStyle.fontWeight = 'bold';
+          }
+          
+          if (section.formatting.isUnderlined) {
+            formattingStyle.textDecoration = 'underline';
+          }
+          
+          if (section.formatting.fontSize) {
+            formattingStyle.fontSize = section.formatting.fontSize;
+          }
+          
           segments.push(
             <span 
               key={`fmt-${i}`}
-              style={{
-                fontWeight: section.formatting.isBold ? 'bold' : 'inherit',
-                textDecoration: section.formatting.isUnderlined ? 'underline' : 'inherit',
-                fontSize: section.formatting.fontSize || 'inherit'
-              }}
+              style={formattingStyle}
             >
               {paragraph.substring(relativeStart, relativeEnd)}
             </span>

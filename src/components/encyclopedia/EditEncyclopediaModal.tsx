@@ -164,6 +164,11 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
 
   const handleToggleBold = () => {
     if (selectedTextRange) {
+      console.log("Applying formatting:", {
+        start: selectedTextRange.start,
+        end: selectedTextRange.end,
+        formatting: { isBold: true }
+      });
       applyFormattingToSelectedText({ isBold: true });
     } else {
       const currentFormatting = form.getValues('popup_text_formatting') || {};
