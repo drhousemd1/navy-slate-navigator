@@ -139,13 +139,12 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             className
           )}
         >
-          {/* The textarea for editing */}
+          {/* Hidden textarea used for proper functionality */}
           <textarea
             ref={setRefs}
-            className="absolute top-0 left-0 w-full h-full resize-none outline-none selection:bg-blue-500/30 px-3 py-2 box-border"
+            className="absolute top-0 left-0 w-full h-full resize-none outline-none px-3 py-2 box-border"
             style={{
-              caretColor: 'white',
-              color: 'transparent',
+              color: 'white',
               backgroundColor: 'transparent',
               zIndex: 2,
               lineHeight: '1.5',

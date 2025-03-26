@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -144,12 +145,14 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   };
   
   const onSubmit = (data: EncyclopediaEntry) => {
+    // Ensure we include the formatted sections when saving
     const updatedEntry = {
       ...data,
       image_url: imagePreview,
       formatted_sections: formattedSections
     };
     
+    // Call the save function from props
     onSave(updatedEntry);
   };
 
