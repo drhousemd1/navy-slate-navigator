@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -55,15 +56,24 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   // Get the current session
   useEffect(() => {
     const getSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Error getting session:', error);
-        return;
-      }
-      
-      if (data.session) {
-        setUserId(data.session.user.id);
+      try {
+        console.log('Getting current session...');
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          return;
+        }
+        
+        console.log('Session data:', data);
+        if (data.session) {
+          setUserId(data.session.user.id);
+          console.log('User ID set:', data.session.user.id);
+        } else {
+          console.log('No active session found');
+        }
+      } catch (e) {
+        console.error('Exception in getSession:', e);
       }
     };
 
@@ -71,7 +81,8 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        console.log('Auth state changed:', event, session?.user.id);
         setUserId(session?.user.id || null);
       }
     );
@@ -84,9 +95,13 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   // Fetch user points
   useEffect(() => {
     const fetchUserPoints = async () => {
-      if (!userId) return;
+      if (!userId) {
+        console.log('No user ID, skipping points fetch');
+        return;
+      }
 
       try {
+        console.log('Fetching points for user:', userId);
         const { data, error } = await supabase
           .from('profiles')
           .select('points')
@@ -94,14 +109,16 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           .single();
 
         if (error) {
-          throw error;
+          console.error('Error fetching user points:', error);
+          return;
         }
 
         if (data) {
+          console.log('User points data:', data);
           setTotalPoints(data.points);
         }
       } catch (error) {
-        console.error('Error fetching user points:', error);
+        console.error('Exception in fetchUserPoints:', error);
       }
     };
 
@@ -111,7 +128,11 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   // Fetch rewards
   useEffect(() => {
     const fetchRewards = async () => {
-      if (!userId) return;
+      if (!userId) {
+        console.log('No user ID, skipping rewards fetch');
+        setIsLoading(false);
+        return;
+      }
       
       setIsLoading(true);
       
@@ -127,7 +148,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           throw rewardsError;
         }
 
-        console.log('Rewards data:', rewardsData);
+        console.log('Raw rewards data:', rewardsData);
         
         // Check if there are any rewards at all
         if (!rewardsData || rewardsData.length === 0) {
@@ -149,7 +170,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           throw userRewardsError;
         }
 
-        console.log('User rewards data:', userRewardsData);
+        console.log('Raw user rewards data:', userRewardsData);
 
         // Create a mapping of reward_id to supply
         const supplyMap: Record<string, number> = {};
@@ -177,6 +198,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         // Set rewards to empty array so we exit loading state
         setRewards([]);
       } finally {
+        console.log('Finished fetchRewards, setting isLoading to false');
         setIsLoading(false);
       }
     };
@@ -187,9 +209,13 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   // Fetch reward usage
   useEffect(() => {
     const fetchRewardUsage = async () => {
-      if (!userId || rewards.length === 0) return;
+      if (!userId || rewards.length === 0) {
+        console.log('No user ID or no rewards, skipping usage fetch');
+        return;
+      }
       
       try {
+        console.log('Fetching reward usage for user:', userId);
         // Use the RPC function to get reward usage data with type assertion
         const response = await (supabase.rpc as any)('get_reward_usage', { 
           user_id_param: userId 
@@ -202,6 +228,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
 
         // Type assertion to help TypeScript understand the structure
         const data = response.data as RewardUsage[] | null;
+        console.log('Raw reward usage data:', data);
         
         const usageData: Record<string, boolean[]> = {};
         
@@ -220,6 +247,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           });
         }
 
+        console.log('Processed reward usage data:', usageData);
         setRewardUsage(usageData);
       } catch (error) {
         console.error('Error fetching reward usage:', error);
