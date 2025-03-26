@@ -20,6 +20,7 @@ interface EncyclopediaPopupViewProps {
     isUnderlined?: boolean;
     fontSize?: string;
   };
+  onFormatSelection?: (selection: { start: number; end: number }) => void;
 }
 
 const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
@@ -33,7 +34,8 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
   opacity = 100,
   titleColor = '#FFFFFF',
   highlightEffect = false,
-  textFormatting = {}
+  textFormatting = {},
+  onFormatSelection
 }) => {
   const backgroundStyle = imageUrl ? {
     backgroundImage: `url(${imageUrl})`,

@@ -10,10 +10,11 @@ export interface TextareaProps
     isUnderlined?: boolean;
     fontSize?: string;
   };
+  onFormatSelection?: (selection: { start: number; end: number }) => void;
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, formattedPreview, textFormatting, ...props }, ref) => {
+  ({ className, formattedPreview, textFormatting, onFormatSelection, ...props }, ref) => {
     // Create a reference for syncing scroll position
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
     const previewRef = React.useRef<HTMLDivElement | null>(null);
@@ -24,6 +25,19 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         previewRef.current.scrollTop = e.currentTarget.scrollTop;
       }
     }, []);
+
+    // Handle selection in the textarea
+    const handleSelect = React.useCallback(() => {
+      if (textareaRef.current && onFormatSelection) {
+        const start = textareaRef.current.selectionStart;
+        const end = textareaRef.current.selectionEnd;
+        
+        // Only trigger if there's an actual selection
+        if (start !== end) {
+          onFormatSelection({ start, end });
+        }
+      }
+    }, [onFormatSelection]);
 
     // Set the ref to our local ref or the forwarded ref
     const setRefs = React.useCallback(
@@ -61,6 +75,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               WebkitTextFillColor: 'transparent'
             }}
             onScroll={syncScroll}
+            onSelect={handleSelect}
             {...props}
           />
           

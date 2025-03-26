@@ -10,6 +10,7 @@ export const useEncyclopedia = () => {
   const queryClient = useQueryClient();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentEntry, setCurrentEntry] = useState<EncyclopediaEntry | undefined>(undefined);
+  const [selectedTextRange, setSelectedTextRange] = useState<{ start: number; end: number } | null>(null);
 
   // Fetch all encyclopedia entries
   const { data: entries = [], isLoading, error } = useQuery({
@@ -120,6 +121,34 @@ export const useEncyclopedia = () => {
     }
   });
 
+  // Handle text selection for formatting
+  const handleTextSelection = (selection: { start: number; end: number }) => {
+    setSelectedTextRange(selection);
+  };
+
+  // Apply formatting to selected text
+  const applyFormattingToSelection = (
+    text: string, 
+    formatting: { isBold?: boolean; isUnderlined?: boolean; fontSize?: string }
+  ) => {
+    if (!selectedTextRange) return text;
+    
+    const { start, end } = selectedTextRange;
+    const before = text.substring(0, start);
+    const selected = text.substring(start, end);
+    const after = text.substring(end);
+    
+    // Apply formatting to selected portion
+    // In a real implementation, you would need to store the formatting information
+    // per text segment and render accordingly
+    console.log(`Applying formatting to selected text: "${selected}"`);
+    
+    // Clear the selection after applying
+    setSelectedTextRange(null);
+    
+    return text;
+  };
+
   // Edit an existing entry
   const handleEditEntry = (id: string) => {
     const entryToEdit = entries.find(entry => entry.id === id);
@@ -139,6 +168,7 @@ export const useEncyclopedia = () => {
   const closeModal = () => {
     setIsEditModalOpen(false);
     setCurrentEntry(undefined);
+    setSelectedTextRange(null);
   };
 
   // Save an entry (create or update)
@@ -157,6 +187,9 @@ export const useEncyclopedia = () => {
     error,
     isEditModalOpen,
     currentEntry,
+    selectedTextRange,
+    handleTextSelection,
+    applyFormattingToSelection,
     handleEditEntry,
     handleCreateEntry,
     closeModal,

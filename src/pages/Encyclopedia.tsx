@@ -22,6 +22,7 @@ const Encyclopedia: React.FC = () => {
     error,
     isEditModalOpen,
     currentEntry,
+    handleTextSelection,
     handleEditEntry,
     handleCreateEntry,
     closeModal,
@@ -81,6 +82,7 @@ const Encyclopedia: React.FC = () => {
                   popupText={entry.popup_text}
                   showEditIcon={isAdminMode()}
                   onEdit={() => handleEditEntry(entry.id)}
+                  onFormatSelection={handleTextSelection}
                   imageUrl={entry.image_url}
                   focalPointX={entry.focal_point_x}
                   focalPointY={entry.focal_point_y}
@@ -103,6 +105,7 @@ const Encyclopedia: React.FC = () => {
         onSave={handleSaveEntry}
         onDelete={handleDeleteEntry}
         entry={currentEntry}
+        onFormatSelection={handleTextSelection}
       />
     </AppLayout>
   );
