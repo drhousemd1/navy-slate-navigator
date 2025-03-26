@@ -1,17 +1,17 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent } from '../ui/card';
-import { Edit } from 'lucide-react';
-import EncyclopediaPopupView from './EncyclopediaPopupView';
+import { cn } from '@/lib/utils';
 import HighlightedText from '../task/HighlightedText';
+import EncyclopediaPopupView from './EncyclopediaPopupView';
+import { Edit } from 'lucide-react';
 
 interface EncyclopediaTileProps {
   title: string;
   subtext: string;
-  popupText?: string;
-  showEditIcon?: boolean;
-  onEdit?: () => void;
+  popupText: string;
   imageUrl?: string | null;
+  onEdit?: () => void;
+  showEditIcon?: boolean;
   focalPointX?: number;
   focalPointY?: number;
   opacity?: number;
@@ -30,9 +30,9 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
   title, 
   subtext, 
   popupText,
-  showEditIcon = false, 
-  onEdit,
   imageUrl,
+  onEdit,
+  showEditIcon = false,
   focalPointX = 50,
   focalPointY = 50,
   opacity = 100,
@@ -50,67 +50,76 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
     backgroundPosition: `${focalPointX}% ${focalPointY}%`,
     opacity: opacity / 100
   } : undefined;
-
-  const handleClick = () => {
-    if (popupText) {
-      setIsPopupOpen(true);
-    }
+  
+  const handleOpenPopup = () => {
+    setIsPopupOpen(true);
   };
-
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the tile click
-    if (onEdit) {
-      onEdit();
-    }
+  
+  const handleClosePopup = () => {
+    setIsPopupOpen(false);
   };
 
   return (
     <>
-      <Card 
-        className="bg-navy border border-light-navy hover:border-cyan-800 transition-colors relative overflow-hidden h-[180px] cursor-pointer"
-        onClick={handleClick}
+      <div 
+        className={cn(
+          "group relative overflow-hidden rounded-lg border border-light-navy cursor-pointer h-48 transition-all duration-300 bg-navy hover:shadow-lg",
+          imageUrl ? "" : ""
+        )}
+        onClick={handleOpenPopup}
       >
+        {/* Background image with customized focal point and opacity */}
         {imageUrl && (
           <div 
-            className="absolute inset-0 z-0" 
-            style={backgroundStyle}
-            aria-hidden="true"
+            className="absolute inset-0 z-0 transition-transform duration-500 group-hover:scale-110" 
+            style={backgroundStyle} 
           />
         )}
-        <div className="relative z-10 h-full">
-          <CardContent className="p-4 h-full flex flex-col">
-            <h3 className="text-lg font-medium mb-2">
-              <HighlightedText 
+        
+        {/* Content overlay */}
+        <div className="absolute inset-0 z-10 flex flex-col justify-between p-4 bg-gradient-to-t from-dark-navy/90 to-transparent">
+          
+          {/* Title and edit button */}
+          <div className="flex justify-between items-start">
+            <h3 className="text-lg font-semibold mb-1 group-hover:underline">
+              <HighlightedText
                 text={title}
                 highlight={highlightEffect}
                 color={titleColor}
               />
             </h3>
-            <p className="text-sm flex-grow">
-              <HighlightedText 
-                text={subtext}
-                highlight={highlightEffect}
-                color={subtextColor}
-              />
-            </p>
             
-            {showEditIcon && (
+            {showEditIcon && onEdit && (
               <button 
-                onClick={handleEditClick}
-                className="absolute bottom-2 right-2 p-1 text-gray-400 hover:text-cyan-500 transition-colors bg-navy/60 rounded-full"
-                aria-label="Edit encyclopedia entry"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white hover:text-nav-active p-1 rounded"
+                aria-label={`Edit ${title}`}
               >
-                <Edit size={16} />
+                <Edit className="h-4 w-4" />
               </button>
             )}
-          </CardContent>
+          </div>
+          
+          {/* Description */}
+          <div className="mt-auto">
+            <p 
+              className="text-sm"
+              style={{ color: subtextColor }}
+            >
+              {subtext}
+            </p>
+          </div>
         </div>
-      </Card>
-
-      {popupText && (
+      </div>
+      
+      {/* Popup view */}
+      {isPopupOpen && (
         <EncyclopediaPopupView
           isOpen={isPopupOpen}
-          onClose={() => setIsPopupOpen(false)}
+          onClose={handleClosePopup}
           title={title}
           content={popupText}
           imageUrl={imageUrl}

@@ -44,16 +44,16 @@ const EncyclopediaPopupView: React.FC<EncyclopediaPopupViewProps> = ({
 
   // Create text style based on formatting options
   const textStyle: React.CSSProperties = {
-    fontWeight: textFormatting.isBold ? 'bold' : 'normal',
-    textDecoration: textFormatting.isUnderlined ? 'underline' : 'none',
-    fontSize: textFormatting.fontSize || 'inherit'
+    fontWeight: textFormatting?.isBold ? 'bold' : 'normal',
+    textDecoration: textFormatting?.isUnderlined ? 'underline' : 'none',
+    fontSize: textFormatting?.fontSize || 'inherit'
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="bg-navy border border-light-navy text-white p-0 max-w-full w-full h-full max-h-full flex flex-col inset-0 m-0 rounded-none absolute"
         style={{ transform: 'none', top: 0, left: 0, bottom: 0, right: 0 }}
-        hideCloseButton={true} // Add this prop to hide the default X button
+        hideCloseButton={true}
       >
         {imageUrl && (
           <div 

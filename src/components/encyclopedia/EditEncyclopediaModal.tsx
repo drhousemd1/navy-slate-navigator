@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -344,18 +343,24 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                           />
                           {field.value && (
                             <div 
-                              className="absolute top-2 right-2 bottom-2 left-2 overflow-auto pointer-events-none text-white"
-                              style={textPreviewStyle}
+                              className="absolute top-0 right-0 bottom-0 left-0 overflow-auto pointer-events-none p-2"
+                              aria-hidden="true"
                             >
-                              {field.value.split('\n').map((paragraph, i) => (
-                                <p key={i} className="mb-1">{paragraph}</p>
-                              ))}
+                              <div className="opacity-0">
+                                {field.value}
+                              </div>
                             </div>
                           )}
                         </div>
                       </FormControl>
-                      <FormDescription className="text-light-navy">
-                        Text will appear with the formatting options selected above
+                      <FormDescription className="text-light-navy mt-2">
+                        Preview: <span style={textPreviewStyle} className="text-white inline-block mt-2 p-2 bg-dark-navy/50 border border-light-navy rounded w-full">
+                          {form.watch('popup_text') ? 
+                            form.watch('popup_text').split('\n').map((paragraph, i) => (
+                              <p key={i} className="mb-1">{paragraph || ' '}</p>
+                            ))
+                            : 'Text preview will appear here'}
+                        </span>
                       </FormDescription>
                     </FormItem>
                   )}

@@ -54,7 +54,7 @@ export const useEncyclopedia = () => {
         }
       };
       
-      console.log('Saving entry:', preparedEntry);
+      console.log('Saving entry with formatting:', preparedEntry.popup_text_formatting);
       
       const { data, error } = await supabase
         .from('encyclopedia_entries')
