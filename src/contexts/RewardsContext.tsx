@@ -413,6 +413,9 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
     }
 
     try {
+      console.log('Saving reward with data:', rewardData);
+      console.log('Current index:', index);
+      
       // Prepare the data for Supabase
       const supabaseData = {
         title: rewardData.title,
@@ -431,32 +434,46 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         updated_at: new Date().toISOString()
       };
 
+      console.log('Prepared Supabase data:', supabaseData);
+      
       let result;
       
       if (index !== null && rewards[index]?.id) {
         // Update existing reward
+        console.log(`Updating existing reward with ID: ${rewards[index].id}`);
         const { data, error } = await supabase
           .from('rewards')
           .update(supabaseData)
           .eq('id', rewards[index].id)
           .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating reward:', error);
+          throw error;
+        }
+        console.log('Update result:', data);
         result = data?.[0];
       } else {
         // Insert new reward
+        console.log('Inserting new reward');
         const { data, error } = await supabase
           .from('rewards')
           .insert(supabaseData)
           .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error inserting reward:', error);
+          throw error;
+        }
+        console.log('Insert result:', data);
         result = data?.[0];
       }
 
       if (result) {
+        console.log('Save operation successful, result:', result);
         // Update local state
         if (index !== null) {
+          console.log(`Updating reward at index ${index}`);
           const updatedRewards = [...rewards];
           updatedRewards[index] = {
             ...result,
@@ -465,6 +482,7 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           };
           setRewards(updatedRewards);
         } else {
+          console.log('Adding new reward to state');
           setRewards(prevRewards => [
             ...prevRewards,
             {
@@ -478,6 +496,13 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         toast({
           title: "Success",
           description: "Reward saved successfully",
+        });
+      } else {
+        console.error('No result returned from Supabase operation');
+        toast({
+          title: "Warning",
+          description: "Reward may not have been saved properly",
+          variant: "destructive",
         });
       }
     } catch (error) {
