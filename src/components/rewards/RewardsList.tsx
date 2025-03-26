@@ -2,12 +2,15 @@
 import React from 'react';
 import RewardCard from '../RewardCard';
 import { useRewards } from '../../contexts/RewardsContext';
+import { Button } from '../ui/button';
+import { Plus } from 'lucide-react';
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
+  onAddNewItem?: () => void;
 }
 
-const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
+const RewardsList: React.FC<RewardsListProps> = ({ onEdit, onAddNewItem }) => {
   const { rewards, handleBuy, handleUse, getRewardUsage, getFrequencyCount } = useRewards();
 
   return (
@@ -36,6 +39,18 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           frequencyCount={getFrequencyCount(index)}
         />
       ))}
+      
+      {onAddNewItem && (
+        <div className="flex justify-center mt-6 pb-12">
+          <Button 
+            onClick={onAddNewItem}
+            className="bg-navy border border-light-navy text-nav-active rounded-full w-12 h-12 p-0 shadow-lg hover:bg-light-navy hover:shadow-xl transition-all"
+            aria-label="Add New Reward"
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

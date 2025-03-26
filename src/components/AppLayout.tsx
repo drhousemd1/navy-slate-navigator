@@ -14,12 +14,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Only show "Add" button for specific routes
+  // Only show "Add" button for specific routes, excluding the rewards page
   const shouldShowAddButton = 
-    location.pathname === '/tasks' || 
+    (location.pathname === '/tasks' || 
     location.pathname === '/rules' || 
-    location.pathname === '/rewards' || 
-    location.pathname === '/punishments';
+    location.pathname === '/punishments') &&
+    location.pathname !== '/rewards';
 
   const handleAddNewItem = () => {
     if (onAddNewItem) {
