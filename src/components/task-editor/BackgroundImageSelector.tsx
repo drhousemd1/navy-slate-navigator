@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: initialPosition?.x ?? 50, y: initialPosition?.y ?? 50 });
-  const [opacity, setOpacity] = useState(50);
+  const [opacity, setOpacity] = useState(control._formValues.background_opacity || 100);
 
   useEffect(() => {
     if (initialPosition) {
@@ -33,10 +34,20 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     }
   }, [initialPosition]);
 
+  // Ensure opacity is correctly initialized from form values or defaults to 100
   useEffect(() => {
-    console.log("Using static opacity value for testing:", opacity);
-    setValue('background_opacity', 50);
-  }, [imagePreview, setValue]);
+    if (imagePreview) {
+      const formOpacity = control._formValues.background_opacity;
+      if (formOpacity !== undefined) {
+        console.log("Setting opacity from form:", formOpacity);
+        setOpacity(formOpacity);
+      } else {
+        console.log("Setting default opacity to 100");
+        setOpacity(100);
+        setValue('background_opacity', 100);
+      }
+    }
+  }, [imagePreview, control, setValue]);
 
   const updatePosition = (clientX: number, clientY: number) => {
     if (!imageContainerRef.current) return;
@@ -85,7 +96,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     };
   }, [isDragging]);
 
-  console.log('Opacity value:', opacity);
+  console.log('Current opacity value:', opacity);
 
   return (
     <div className="space-y-4">
@@ -163,10 +174,10 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
           name="background_opacity"
           render={({ field }) => (
             <FormItem className="space-y-2">
-              <FormLabel className="text-white">Image Opacity (50%)</FormLabel>
+              <FormLabel className="text-white">Image Opacity ({opacity}%)</FormLabel>
               <FormControl>
                 <Slider
-                  value={[50]}
+                  value={[opacity]}
                   min={0}
                   max={100}
                   step={1}

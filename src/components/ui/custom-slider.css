@@ -2,6 +2,6 @@
 /* Override Radix UI slider styles to ensure correct left-to-right filling */
 [data-radix-slider-range] {
   left: 0 !important;  /* Ensure it's aligned to the left */
-  width: 100% !important;  /* Ensure it spans correctly from left to right */
+  width: var(--radix-slider-range-width) !important;  /* Use the Radix variable for width */
   transform: none !important;
 }
