@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -16,7 +15,7 @@ const rewardFormSchema = z.object({
   description: z.string().optional(),
   cost: z.number().min(0, "Cost must be 0 or greater"),
   background_image_url: z.string().nullable().optional(),
-  background_opacity: z.number().min(0).max(1).optional(),
+  background_opacity: z.number().min(0).max(100).optional(),
   focal_point_x: z.number().optional(),
   focal_point_y: z.number().optional(),
   title_color: z.string().optional(),
@@ -57,9 +56,9 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       description: rewardData?.description || '',
       cost: rewardData?.cost || 0,
       background_image_url: rewardData?.background_image_url || null,
-      background_opacity: rewardData?.background_opacity || 1, // Fixed: Using 1 (100%) as default
-      focal_point_x: rewardData?.focal_point_x || 0.5, // Fixed: Using 0.5 (50%) as default
-      focal_point_y: rewardData?.focal_point_y || 0.5, // Fixed: Using 0.5 (50%) as default
+      background_opacity: rewardData?.background_opacity || 100,
+      focal_point_x: rewardData?.focal_point_x || 50,
+      focal_point_y: rewardData?.focal_point_y || 50,
       title_color: rewardData?.title_color || '#FFFFFF',
       subtext_color: rewardData?.subtext_color || '#CCCCCC',
       calendar_color: rewardData?.calendar_color || '#3B82F6',
@@ -74,19 +73,8 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
     if (rewardData) {
       console.log("Setting form data from rewardData:", rewardData);
       
-      // Fix: Convert percentage values to decimals if needed
-      const opacityValue = rewardData.background_opacity > 1 
-        ? rewardData.background_opacity / 100 
-        : rewardData.background_opacity || 1;
+      const opacityValue = rewardData.background_opacity || 100;
         
-      const focalX = rewardData.focal_point_x > 1 
-        ? rewardData.focal_point_x / 100 
-        : rewardData.focal_point_x || 0.5;
-        
-      const focalY = rewardData.focal_point_y > 1 
-        ? rewardData.focal_point_y / 100 
-        : rewardData.focal_point_y || 0.5;
-      
       console.log("Setting background_opacity to:", opacityValue);
       
       form.reset({
@@ -95,8 +83,8 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         cost: rewardData.cost || 0,
         background_image_url: rewardData.background_image_url || null,
         background_opacity: opacityValue,
-        focal_point_x: focalX,
-        focal_point_y: focalY,
+        focal_point_x: rewardData.focal_point_x || 50,
+        focal_point_y: rewardData.focal_point_y || 50,
         title_color: rewardData.title_color || '#FFFFFF',
         subtext_color: rewardData.subtext_color || '#CCCCCC',
         calendar_color: rewardData.calendar_color || '#3B82F6',
@@ -119,7 +107,6 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
     setLoading(true);
     
     try {
-      // Fix: Don't convert decimal values to percentages here, just pass the values as is
       const processedValues = {
         ...values,
         icon_name: selectedIconName || undefined,
@@ -215,8 +202,8 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           control={form.control}
           imagePreview={imagePreview}
           initialPosition={{
-            x: form.getValues('focal_point_x') || 0.5,
-            y: form.getValues('focal_point_y') || 0.5
+            x: form.getValues('focal_point_x') || 50,
+            y: form.getValues('focal_point_y') || 50
           }}
           onRemoveImage={handleRemoveImage}
           onImageUpload={handleImageUpload}

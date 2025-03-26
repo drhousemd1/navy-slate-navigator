@@ -1,42 +1,47 @@
 
 import React from 'react';
+import { FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Control, UseFormSetValue } from 'react-hook-form';
-import { FormLabel } from "@/components/ui/form";
-import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
+import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 
 interface RewardBackgroundSectionProps {
   control: Control<any>;
   imagePreview: string | null;
-  initialPosition?: { x: number; y: number };
+  initialPosition: { x: number; y: number };
   onRemoveImage: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setValue: UseFormSetValue<any>;
 }
 
-const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({ 
-  control, 
-  imagePreview, 
-  initialPosition, 
-  onRemoveImage, 
-  onImageUpload, 
-  setValue 
+const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
+  control,
+  imagePreview,
+  initialPosition,
+  onRemoveImage,
+  onImageUpload,
+  setValue
 }) => {
-  // We need to explicitly set background_image_url to null to ensure it's removed from the database
-  const handleRemoveImage = () => {
-    setValue('background_image_url', null);
-    onRemoveImage();
-  };
-
   return (
     <div className="space-y-4">
-      <FormLabel className="text-white text-lg">Background Image</FormLabel>
-      <BackgroundImageSelector
+      <FormLabel className="block text-lg font-medium text-white">Background Image</FormLabel>
+      <p className="text-sm text-muted-foreground pb-2">
+        Add a background image to make your reward more visually appealing.
+      </p>
+      <FormField
         control={control}
-        imagePreview={imagePreview}
-        initialPosition={initialPosition}
-        onRemoveImage={handleRemoveImage}
-        onImageUpload={onImageUpload}
-        setValue={setValue}
+        name="background_image"
+        render={() => (
+          <FormItem>
+            <BackgroundImageSelector
+              control={control}
+              imagePreview={imagePreview}
+              initialPosition={initialPosition}
+              onRemoveImage={onRemoveImage}
+              onImageUpload={onImageUpload}
+              setValue={setValue}
+            />
+          </FormItem>
+        )}
       />
     </div>
   );
