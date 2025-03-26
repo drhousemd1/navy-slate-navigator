@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -112,15 +111,15 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
             cost: reward.cost,
             supply: reward.supply,
             iconName: reward.icon_name || '',
-            icon_color: reward.icon_color,
+            icon_color: reward.icon_color || '#9b87f5',
             background_image_url: reward.background_image_url,
-            background_opacity: reward.background_opacity,
-            focal_point_x: reward.focal_point_x,
-            focal_point_y: reward.focal_point_y,
-            highlight_effect: reward.highlight_effect,
-            title_color: reward.title_color,
-            subtext_color: reward.subtext_color,
-            calendar_color: reward.calendar_color
+            background_opacity: reward.background_opacity || 100,
+            focal_point_x: reward.focal_point_x || 50,
+            focal_point_y: reward.focal_point_y || 50,
+            highlight_effect: reward.highlight_effect || false,
+            title_color: reward.title_color || '#FFFFFF',
+            subtext_color: reward.subtext_color || '#8E9196',
+            calendar_color: reward.calendar_color || '#7E69AB'
           }));
           
           setRewards(formattedRewards);
@@ -396,11 +395,23 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           throw error;
         }
         
-        // Update local state
+        // Update local state - ensure we keep all properties
         const updatedRewards = [...rewards];
         updatedRewards[index] = {
           ...existingReward,
-          ...rewardData
+          title: rewardData.title,
+          description: rewardData.description,
+          cost: rewardData.cost,
+          iconName: rewardData.iconName,
+          icon_color: rewardData.icon_color,
+          background_image_url: rewardData.background_image_url,
+          background_opacity: rewardData.background_opacity,
+          focal_point_x: rewardData.focal_point_x,
+          focal_point_y: rewardData.focal_point_y,
+          highlight_effect: rewardData.highlight_effect,
+          title_color: rewardData.title_color,
+          subtext_color: rewardData.subtext_color,
+          calendar_color: rewardData.calendar_color
         };
         
         setRewards(updatedRewards);

@@ -19,7 +19,17 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   onDelete
 }) => {
   const handleSave = async (formData: any) => {
-    await onSave(formData);
+    // Preserve any existing fields that might not be captured in the form
+    const dataToSave = {
+      ...formData,
+      // Make sure we're capturing all the fields we need for display
+      highlight_effect: formData.highlight_effect ?? rewardData?.highlight_effect,
+      title_color: formData.title_color ?? rewardData?.title_color,
+      subtext_color: formData.subtext_color ?? rewardData?.subtext_color,
+      calendar_color: formData.calendar_color ?? rewardData?.calendar_color
+    };
+    
+    await onSave(dataToSave);
     onClose();
   };
 
