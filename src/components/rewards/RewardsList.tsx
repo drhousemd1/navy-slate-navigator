@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import RewardCard from '../RewardCard';
 import { useRewards } from '../../contexts/RewardsContext';
 
@@ -9,6 +9,26 @@ interface RewardsListProps {
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   const { rewards, handleBuy, handleUse, getRewardUsage, getFrequencyCount } = useRewards();
+
+  // Add invisible button for adding new rewards via custom event
+  useEffect(() => {
+    // Create the button if it doesn't exist
+    if (!document.getElementById('add-new-reward-button')) {
+      const button = document.createElement('button');
+      button.id = 'add-new-reward-button';
+      button.style.display = 'none';
+      button.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(button);
+    }
+    
+    return () => {
+      // Clean up on unmount
+      const button = document.getElementById('add-new-reward-button');
+      if (button) {
+        document.body.removeChild(button);
+      }
+    };
+  }, []);
 
   console.log('Current rewards in RewardsList:', rewards);
 

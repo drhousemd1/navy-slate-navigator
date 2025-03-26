@@ -6,15 +6,12 @@ import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import RewardsList from '../components/rewards/RewardsList';
 
-interface RewardsContentProps {
-  isEditorOpen: boolean;
-  setIsEditorOpen: (isOpen: boolean) => void;
-}
-
-const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
+// This component uses the useRewards hook so it must be inside the RewardsProvider
+const RewardsContent: React.FC = () => {
   const { rewards, handleSaveReward, handleDeleteReward } = useRewards();
   
   // Editor state
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentReward, setCurrentReward] = useState<any>(null);
   const [currentRewardIndex, setCurrentRewardIndex] = useState<number | null>(null);
 
@@ -70,19 +67,33 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   );
 };
 
+// Main component that wraps everything with the RewardsProvider
 const Rewards: React.FC = () => {
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  
   return (
-    <AppLayout onAddNewItem={() => setIsEditorOpen(true)}>
+    <AppLayout onAddNewItem={() => {
+      // Find the RewardsContent component instance and call handleAddNewReward
+      // We need to use a different approach since RewardsContent now manages its own state
+      // and we can't pass setIsEditorOpen directly
+      
+      // Create a custom event to trigger adding a new reward
+      const event = new CustomEvent('add-new-reward');
+      document.dispatchEvent(event);
+    }}>
       <RewardsProvider>
-        <RewardsContent 
-          isEditorOpen={isEditorOpen}
-          setIsEditorOpen={setIsEditorOpen}
-        />
+        <RewardsContent />
       </RewardsProvider>
     </AppLayout>
   );
 };
+
+// Listen for the custom event to add a new reward
+// This is needed because AppLayout's onAddNewItem can't directly access RewardsContent's state
+document.addEventListener('add-new-reward', () => {
+  // Find and click an invisible button that will trigger adding a new reward
+  const addButton = document.getElementById('add-new-reward-button');
+  if (addButton) {
+    addButton.click();
+  }
+});
 
 export default Rewards;
