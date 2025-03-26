@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardCard from '../components/RewardCard';
+import RewardEditor from '../components/RewardEditor';
 import { Badge } from '../components/ui/badge';
 
 // Define initial rewards data
@@ -52,6 +53,11 @@ const Rewards: React.FC = () => {
     return savedRewards ? JSON.parse(savedRewards) : initialRewards;
   });
 
+  // Editor state
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [currentReward, setCurrentReward] = useState<any>(null);
+  const [currentRewardIndex, setCurrentRewardIndex] = useState<number | null>(null);
+
   // Save to localStorage whenever state changes
   useEffect(() => {
     localStorage.setItem(POINTS_STORAGE_KEY, totalPoints.toString());
@@ -98,6 +104,26 @@ const Rewards: React.FC = () => {
     }
   };
 
+  // Handle editing a reward
+  const handleEdit = (index: number) => {
+    setCurrentReward(rewards[index]);
+    setCurrentRewardIndex(index);
+    setIsEditorOpen(true);
+  };
+
+  // Handle saving edited reward
+  const handleSaveReward = (rewardData: any) => {
+    if (currentRewardIndex !== null) {
+      const updatedRewards = [...rewards];
+      updatedRewards[currentRewardIndex] = {
+        ...rewards[currentRewardIndex],
+        ...rewardData
+      };
+      
+      setRewards(updatedRewards);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-4 pt-6">
@@ -117,13 +143,33 @@ const Rewards: React.FC = () => {
               cost={reward.cost}
               supply={reward.supply}
               iconName={reward.iconName}
-              iconColor="#9b87f5"
+              iconColor={reward.icon_color || "#9b87f5"}
               onBuy={() => handleBuy(index)}
               onUse={() => handleUse(index)}
+              onEdit={() => handleEdit(index)}
+              backgroundImage={reward.background_image_url}
+              backgroundOpacity={reward.background_opacity}
+              focalPointX={reward.focal_point_x}
+              focalPointY={reward.focal_point_y}
+              highlight_effect={reward.highlight_effect}
+              title_color={reward.title_color}
+              subtext_color={reward.subtext_color}
+              calendar_color={reward.calendar_color}
             />
           ))}
         </div>
       </div>
+      
+      <RewardEditor
+        isOpen={isEditorOpen}
+        onClose={() => {
+          setIsEditorOpen(false);
+          setCurrentReward(null);
+          setCurrentRewardIndex(null);
+        }}
+        rewardData={currentReward}
+        onSave={handleSaveReward}
+      />
     </AppLayout>
   );
 };

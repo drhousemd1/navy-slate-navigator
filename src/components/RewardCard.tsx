@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -6,6 +7,7 @@ import TaskIcon from './task/TaskIcon';
 import PointsBadge from './task/PointsBadge';
 import { Badge } from './ui/badge';
 import { useToast } from '../hooks/use-toast';
+import HighlightedText from './task/HighlightedText';
 
 interface RewardCardProps {
   title: string;
@@ -16,6 +18,15 @@ interface RewardCardProps {
   iconColor?: string;
   onBuy?: () => void;
   onUse?: () => void;
+  onEdit?: () => void;
+  backgroundImage?: string;
+  backgroundOpacity?: number;
+  focalPointX?: number;
+  focalPointY?: number;
+  highlight_effect?: boolean;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({
@@ -26,7 +37,16 @@ const RewardCard: React.FC<RewardCardProps> = ({
   iconName = 'Gift',
   iconColor = '#9b87f5',
   onBuy,
-  onUse
+  onUse,
+  onEdit,
+  backgroundImage,
+  backgroundOpacity = 100,
+  focalPointX = 50,
+  focalPointY = 50,
+  highlight_effect = false,
+  title_color = '#FFFFFF',
+  subtext_color = '#8E9196',
+  calendar_color = '#7E69AB'
 }) => {
   const { toast } = useToast();
 
@@ -50,8 +70,34 @@ const RewardCard: React.FC<RewardCardProps> = ({
     }
   };
 
+  const handleEditClick = () => {
+    if (onEdit) {
+      onEdit();
+    }
+  };
+
+  const cardStyle = backgroundImage
+    ? {
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+        backgroundOpacity: backgroundOpacity / 100,
+      }
+    : {};
+
   return (
     <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
+      {backgroundImage && (
+        <div 
+          className="absolute inset-0 z-0" 
+          style={{
+            backgroundImage: `url(${backgroundImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: backgroundOpacity / 100,
+          }}
+        />
+      )}
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">
           {/* Supply indicator - updated to match the points badge styling */}
@@ -99,25 +145,42 @@ const RewardCard: React.FC<RewardCardProps> = ({
           </div>
           
           <div className="flex-1 flex flex-col">
-            <h3 className="text-xl font-semibold text-white">
-              {title}
-            </h3>
-            
-            <div className="text-sm mt-1 text-[#8E9196]">
-              {description}
-            </div>
+            {highlight_effect ? (
+              <>
+                <HighlightedText 
+                  text={title}
+                  className="text-xl font-semibold"
+                  style={{ color: title_color }}
+                />
+                <HighlightedText
+                  text={description}
+                  className="text-sm mt-1"
+                  style={{ color: subtext_color }}
+                />
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl font-semibold" style={{ color: title_color }}>
+                  {title}
+                </h3>
+                <div className="text-sm mt-1" style={{ color: subtext_color }}>
+                  {description}
+                </div>
+              </>
+            )}
           </div>
         </div>
         
         <div className="flex items-center justify-between mt-4">
           {/* Calendar tracker placeholder */}
           <div className="flex space-x-1 items-center">
-            <Calendar className="h-4 w-4 mr-1 text-[#7E69AB]" />
+            <Calendar className="h-4 w-4 mr-1" style={{ color: calendar_color }} />
             <div className="flex space-x-1">
               {[...Array(4)].map((_, i) => (
                 <div 
                   key={i}
-                  className="w-4 h-4 rounded-full border border-[#7E69AB] bg-transparent"
+                  className="w-4 h-4 rounded-full border bg-transparent"
+                  style={{ borderColor: calendar_color }}
                 />
               ))}
             </div>
@@ -128,6 +191,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
               variant="ghost"
               size="icon"
               className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
+              onClick={handleEditClick}
             >
               <Edit className="h-4 w-4" />
             </Button>
