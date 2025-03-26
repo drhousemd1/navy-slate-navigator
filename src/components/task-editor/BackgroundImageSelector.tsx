@@ -45,8 +45,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     
     console.log("Initial position set to:", { x, y });
     setPosition({ x, y });
-    control.setValue('focal_point_x', Math.round(x));
-    control.setValue('focal_point_y', Math.round(y));
+    control._formValues.focal_point_x = Math.round(x);
+    control._formValues.focal_point_y = Math.round(y);
     
     const handleMouseMove = (moveEvent: MouseEvent) => {
       if (!isDragging) return;
@@ -65,8 +65,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
       
       console.log("Moving position to:", { x, y });
       setPosition({ x, y });
-      control.setValue('focal_point_x', Math.round(x));
-      control.setValue('focal_point_y', Math.round(y));
+      control._formValues.focal_point_x = Math.round(x);
+      control._formValues.focal_point_y = Math.round(y);
     };
     
     const handleMouseUp = () => {
@@ -93,8 +93,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     
     console.log("Initial touch position set to:", { x, y });
     setPosition({ x, y });
-    control.setValue('focal_point_x', Math.round(x));
-    control.setValue('focal_point_y', Math.round(y));
+    control._formValues.focal_point_x = Math.round(x);
+    control._formValues.focal_point_y = Math.round(y);
     
     const handleTouchMove = (moveEvent: TouchEvent) => {
       if (!isDragging) return;
@@ -115,8 +115,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
       
       console.log("Moving touch position to:", { x, y });
       setPosition({ x, y });
-      control.setValue('focal_point_x', Math.round(x));
-      control.setValue('focal_point_y', Math.round(y));
+      control._formValues.focal_point_x = Math.round(x);
+      control._formValues.focal_point_y = Math.round(y);
     };
     
     const handleTouchEnd = () => {
