@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -8,6 +7,7 @@ import PointsBadge from './task/PointsBadge';
 import { Badge } from './ui/badge';
 import { useToast } from '../hooks/use-toast';
 import HighlightedText from './task/HighlightedText';
+import FrequencyTracker from './task/FrequencyTracker';
 
 interface RewardCardProps {
   title: string;
@@ -100,7 +100,6 @@ const RewardCard: React.FC<RewardCardProps> = ({
       )}
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">
-          {/* Supply indicator - updated to match the points badge styling */}
           <div className="flex items-center gap-2">
             <Badge className="bg-blue-500 text-white font-bold flex items-center gap-1">
               <Box className="h-3 w-3" />
@@ -120,7 +119,6 @@ const RewardCard: React.FC<RewardCardProps> = ({
             )}
           </div>
           
-          {/* Cost indicator - now using PointsBadge component directly */}
           <div className="flex items-center gap-2">
             <PointsBadge points={-cost} />
             <Button
@@ -176,19 +174,11 @@ const RewardCard: React.FC<RewardCardProps> = ({
         </div>
         
         <div className="flex items-center justify-between mt-4">
-          {/* Calendar tracker placeholder */}
-          <div className="flex space-x-1 items-center">
-            <Calendar className="h-4 w-4 mr-1" style={{ color: calendar_color }} />
-            <div className="flex space-x-1">
-              {[...Array(4)].map((_, i) => (
-                <div 
-                  key={i}
-                  className="w-4 h-4 rounded-full border bg-transparent"
-                  style={{ borderColor: calendar_color }}
-                />
-              ))}
-            </div>
-          </div>
+          <FrequencyTracker 
+            frequency="daily"
+            frequency_count={2}  
+            calendar_color={calendar_color}
+          />
           
           <div className="flex space-x-2 ml-auto">
             <Button
