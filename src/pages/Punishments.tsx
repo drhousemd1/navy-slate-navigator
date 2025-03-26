@@ -6,12 +6,13 @@ import { Clock, Skull, Bomb, Zap, Plus } from 'lucide-react';
 import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments } from '../contexts/PunishmentsContext';
-import PunishmentEditor from '../components/PunishmentEditor';
+import PunishmentEditor, { PunishmentData } from '../components/PunishmentEditor';
 import { Button } from '@/components/ui/button';
 
 const PunishmentsContent: React.FC = () => {
   const { punishments, loading } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
 
   const getIconComponent = (iconName: string) => {
     switch(iconName) {
@@ -28,13 +29,23 @@ const PunishmentsContent: React.FC = () => {
     }
   };
 
+  const handleAddNewPunishment = () => {
+    setCurrentPunishment(undefined);
+    setIsEditorOpen(true);
+  };
+
+  const handleSavePunishment = async (data: PunishmentData): Promise<void> => {
+    // This is handled in PunishmentEditorForm through context
+    return Promise.resolve();
+  };
+
   return (
     <div className="p-4 pt-6">
       <PunishmentsHeader />
       
       <div className="mb-4 flex justify-end">
         <Button 
-          onClick={() => setIsEditorOpen(true)}
+          onClick={handleAddNewPunishment}
           className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
@@ -78,10 +89,8 @@ const PunishmentsContent: React.FC = () => {
       <PunishmentEditor 
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
-        onSave={async () => {
-          // This is handled in PunishmentEditorForm
-          return Promise.resolve();
-        }}
+        punishmentData={currentPunishment}
+        onSave={handleSavePunishment}
       />
     </div>
   );

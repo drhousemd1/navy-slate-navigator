@@ -16,6 +16,7 @@ import DeletePunishmentDialog from './DeletePunishmentDialog';
 import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import PunishmentColorSettings from './PunishmentColorSettings';
 import { usePunishments } from '@/contexts/PunishmentsContext';
+import { PunishmentData } from '../PunishmentEditor';
 
 const punishmentFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -34,10 +35,10 @@ const punishmentFormSchema = z.object({
 export type PunishmentFormValues = z.infer<typeof punishmentFormSchema>;
 
 interface PunishmentEditorFormProps {
-  punishmentData?: any;
-  onSave: (data: PunishmentFormValues) => Promise<void>;
+  punishmentData?: PunishmentData;
+  onSave: (data: PunishmentData) => Promise<void>;
   onCancel: () => void;
-  onDelete?: (index: any) => void;
+  onDelete?: (index: string) => void;
 }
 
 const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
@@ -100,10 +101,13 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     setLoading(true);
     
     try {
-      const processedValues = {
+      // Make sure title is included in the processed values
+      const processedValues: PunishmentData = {
         ...values,
+        title: values.title, // Explicitly include title to satisfy TypeScript
+        points: values.points, // Explicitly include points to satisfy TypeScript
         icon_name: selectedIconName || undefined,
-        background_image_url: imagePreview,
+        background_image_url: imagePreview || undefined,
       };
       
       if (punishmentData?.id) {
@@ -224,8 +228,14 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
           control={form.control}
           name="points"
           label="Points"
-          onIncrement={incrementPoints}
-          onDecrement={decrementPoints}
+          onIncrement={() => {
+            const currentPoints = form.getValues('points');
+            form.setValue('points', currentPoints + 1);
+          }}
+          onDecrement={() => {
+            const currentPoints = form.getValues('points');
+            form.setValue('points', Math.max(0, currentPoints - 1));
+          }}
           minValue={0}
         />
 
@@ -241,7 +251,17 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
             onRemoveImage={() => {
               setImagePreview(null);
             }}
-            onImageUpload={handleImageUpload}
+            onImageUpload={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const base64String = reader.result as string;
+                  setImagePreview(base64String);
+                };
+                reader.readAsDataURL(file);
+              }
+            }}
             setValue={form.setValue}
           />
         </div>
@@ -254,16 +274,45 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
                 selectedIconName={selectedIconName}
                 iconPreview={iconPreview}
                 iconColor={form.watch('icon_color')}
-                onSelectIcon={handleSelectIcon}
-                onUploadIcon={handleUploadIcon}
-                onRemoveIcon={handleRemoveIcon}
+                onSelectIcon={(iconName) => {
+                  setSelectedIconName(iconName);
+                  setIconPreview(null);
+                }}
+                onUploadIcon={() => {
+                  // Implementation for uploading custom icons
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = (e) => {
+                    if (e.target instanceof HTMLInputElement && e.target.files) {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          const base64String = reader.result as string;
+                          setIconPreview(base64String);
+                          setSelectedIconName(null);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }
+                  };
+                  input.click();
+                }}
+                onRemoveIcon={() => {
+                  setSelectedIconName(null);
+                  setIconPreview(null);
+                }}
               />
             </div>
             
             <PredefinedIconsGrid
               selectedIconName={selectedIconName}
               iconColor={form.watch('icon_color')}
-              onSelectIcon={handleSelectIcon}
+              onSelectIcon={(iconName) => {
+                setSelectedIconName(iconName);
+                setIconPreview(null);
+              }}
             />
           </div>
         </div>
@@ -275,7 +324,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
             <DeletePunishmentDialog
               isOpen={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
-              onDelete={() => onDelete(punishmentData.id)}
+              onDelete={() => onDelete(punishmentData.id as string)}
             />
           )}
           <Button 

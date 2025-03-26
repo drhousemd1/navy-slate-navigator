@@ -4,12 +4,31 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import PunishmentEditorForm from './punishments/PunishmentEditorForm';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Tables } from '@/integrations/supabase/types';
+
+// Define the PunishmentData type based on the Supabase tables
+export type PunishmentData = {
+  id?: string;
+  title: string;
+  description?: string;
+  points: number;
+  icon_name?: string;
+  icon_color?: string;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  highlight_effect?: boolean;
+  background_image_url?: string;
+  background_opacity?: number;
+  focal_point_x?: number;
+  focal_point_y?: number;
+};
 
 interface PunishmentEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  punishmentData?: any;
-  onSave: (data: any) => Promise<void>;
+  punishmentData?: PunishmentData;
+  onSave: (data: PunishmentData) => Promise<void>;
   onDelete?: (id: string) => void;
 }
 
@@ -22,7 +41,7 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
 }) => {
   const isMobile = useIsMobile();
 
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: PunishmentData) => {
     try {
       await onSave(data);
       onClose();
