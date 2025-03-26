@@ -27,14 +27,6 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
     onRemoveImage();
   };
 
-  // Force static opacity for testing
-  useEffect(() => {
-    if (imagePreview) {
-      console.log("Setting static opacity to 50 for testing");
-      setValue('background_opacity', 50);
-    }
-  }, [imagePreview, setValue]);
-
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Image</FormLabel>

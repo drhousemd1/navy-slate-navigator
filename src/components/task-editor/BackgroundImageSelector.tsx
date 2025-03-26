@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: initialPosition?.x ?? 50, y: initialPosition?.y ?? 50 });
-  const [opacity, setOpacity] = useState(50); // Static value for testing
+  const [opacity, setOpacity] = useState(50);
 
   useEffect(() => {
     if (initialPosition) {
@@ -33,12 +34,11 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     }
   }, [initialPosition]);
 
-  // Force static opacity value for testing
+  // Initialize opacity
   useEffect(() => {
-    console.log("Setting static opacity value to 50 for testing");
-    setOpacity(50);
     setValue('background_opacity', 50);
-  }, [imagePreview, setValue]);
+    setOpacity(50);
+  }, [setValue]);
 
   const updatePosition = (clientX: number, clientY: number) => {
     if (!imageContainerRef.current) return;
@@ -87,7 +87,11 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     };
   }, [isDragging]);
 
-  console.log('Before opacity change - Current opacity value:', opacity);
+  const handleOpacityChange = (value: number[]) => {
+    const opacityValue = value[0];
+    setOpacity(opacityValue);
+    setValue('background_opacity', opacityValue);
+  };
 
   return (
     <div className="space-y-4">
@@ -163,22 +167,16 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
         <FormField
           control={control}
           name="background_opacity"
-          render={({ field }) => (
+          render={() => (
             <FormItem className="space-y-2">
-              <FormLabel className="text-white">Image Opacity (50%)</FormLabel>
+              <FormLabel className="text-white">Image Opacity ({opacity}%)</FormLabel>
               <FormControl>
                 <Slider
-                  value={[50]} // Static value for testing
+                  value={[opacity]}
                   min={0}
                   max={100}
                   step={1}
-                  onValueChange={(value) => {
-                    console.log("Slider value changed to:", value[0]);
-                    console.log("Slider value type:", typeof value[0]);
-                    console.log('Slider value after change:', value);
-                    field.onChange(value[0]);
-                    setOpacity(value[0]);
-                  }}
+                  onValueChange={handleOpacityChange}
                   className="py-4"
                 />
               </FormControl>
