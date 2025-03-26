@@ -14,12 +14,16 @@ import ColorPickerField from '../task-editor/ColorPickerField';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeletePunishmentDialog from './DeletePunishmentDialog';
+import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 
 const punishmentFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   points: z.number().min(0, "Points must be 0 or greater"),
   icon_color: z.string().optional(),
+  background_opacity: z.number().min(0).max(100).default(50),
+  focal_point_x: z.number().min(0).max(100).default(50),
+  focal_point_y: z.number().min(0).max(100).default(50),
 });
 
 export type PunishmentFormValues = z.infer<typeof punishmentFormSchema>;
@@ -40,6 +44,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const form = useForm<PunishmentFormValues>({
@@ -49,6 +54,9 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
       description: punishmentData?.description || '',
       points: punishmentData?.points || 5,
       icon_color: punishmentData?.icon_color || '#ea384c',
+      background_opacity: punishmentData?.background_opacity || 50,
+      focal_point_x: punishmentData?.focal_point_x || 50,
+      focal_point_y: punishmentData?.focal_point_y || 50,
     }
   });
 
@@ -59,10 +67,17 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
         description: punishmentData.description || '',
         points: punishmentData.points || 5,
         icon_color: punishmentData.icon_color || '#ea384c',
+        background_opacity: punishmentData.background_opacity || 50,
+        focal_point_x: punishmentData.focal_point_x || 50,
+        focal_point_y: punishmentData.focal_point_y || 50,
       });
       
       if (punishmentData.icon_name) {
         setSelectedIconName(punishmentData.icon_name);
+      }
+      
+      if (punishmentData.background_image_url) {
+        setImagePreview(punishmentData.background_image_url);
       }
     }
   }, [punishmentData, form]);
@@ -74,6 +89,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
       const processedValues = {
         ...values,
         icon_name: selectedIconName || undefined,
+        background_image_url: imagePreview,
       };
       
       await onSave(processedValues);
@@ -136,6 +152,18 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     setIconPreview(null);
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setImagePreview(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -181,6 +209,23 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
           onDecrement={decrementPoints}
           minValue={0}
         />
+
+        <div className="space-y-4">
+          <FormLabel className="text-white text-lg">Background Image</FormLabel>
+          <BackgroundImageSelector
+            control={form.control}
+            imagePreview={imagePreview}
+            initialPosition={{
+              x: form.getValues('focal_point_x'),
+              y: form.getValues('focal_point_y')
+            }}
+            onRemoveImage={() => {
+              setImagePreview(null);
+            }}
+            onImageUpload={handleImageUpload}
+            setValue={form.setValue}
+          />
+        </div>
 
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Punishment Icon</FormLabel>
