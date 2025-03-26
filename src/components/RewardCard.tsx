@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Edit, Calendar, Box } from 'lucide-react';
+import { Edit, Calendar, Box, Ticket } from 'lucide-react';
 import TaskIcon from './task/TaskIcon';
 import PointsBadge from './task/PointsBadge';
 
@@ -36,11 +36,12 @@ const RewardCard: React.FC<RewardCardProps> = ({
             
             {supply > 0 && (
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="sm"
-                className="p-0 h-7 text-white hover:bg-nav-active/20"
+                className="p-1 h-7 text-blue-500 border-blue-500 hover:bg-blue-500/10 hover:text-blue-400 flex items-center gap-1"
               >
-                Use
+                <Ticket className="h-4 w-4" />
+                <span>Use</span>
               </Button>
             )}
           </div>
