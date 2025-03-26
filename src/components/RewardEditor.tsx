@@ -21,12 +21,17 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   const handleSave = async (formData: any) => {
     // Preserve any existing fields that might not be captured in the form
     const dataToSave = {
-      ...formData,
-      // Make sure we're capturing all the fields we need for display
+      ...rewardData, // Start with all existing data
+      ...formData,    // Override with new form data
+      // Make sure we're explicitly capturing all the fields we need for display
       highlight_effect: formData.highlight_effect ?? rewardData?.highlight_effect,
       title_color: formData.title_color ?? rewardData?.title_color,
       subtext_color: formData.subtext_color ?? rewardData?.subtext_color,
-      calendar_color: formData.calendar_color ?? rewardData?.calendar_color
+      calendar_color: formData.calendar_color ?? rewardData?.calendar_color,
+      icon_color: formData.icon_color ?? rewardData?.icon_color,
+      background_opacity: formData.background_opacity ?? rewardData?.background_opacity,
+      focal_point_x: formData.focal_point_x ?? rewardData?.focal_point_x,
+      focal_point_y: formData.focal_point_y ?? rewardData?.focal_point_y
     };
     
     await onSave(dataToSave);

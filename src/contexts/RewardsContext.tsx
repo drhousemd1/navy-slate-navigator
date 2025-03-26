@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -89,59 +90,60 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   const [rewardUsage, setRewardUsage] = useState<Record<string, boolean[]>>({});
 
   // Fetch rewards from Supabase
-  useEffect(() => {
-    async function fetchRewards() {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('rewards')
-          .select('*')
-          .order('created_at', { ascending: true });
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (data && data.length > 0) {
-          // Map Supabase data to the format expected by the app
-          const formattedRewards = data.map(reward => ({
-            id: reward.id,
-            title: reward.title,
-            description: reward.description || '',
-            cost: reward.cost,
-            supply: reward.supply,
-            iconName: reward.icon_name || '',
-            icon_color: reward.icon_color || '#9b87f5',
-            background_image_url: reward.background_image_url,
-            background_opacity: reward.background_opacity || 100,
-            focal_point_x: reward.focal_point_x || 50,
-            focal_point_y: reward.focal_point_y || 50,
-            highlight_effect: reward.highlight_effect || false,
-            title_color: reward.title_color || '#FFFFFF',
-            subtext_color: reward.subtext_color || '#8E9196',
-            calendar_color: reward.calendar_color || '#7E69AB'
-          }));
-          
-          setRewards(formattedRewards);
-        } else {
-          // Fallback to initial rewards if no data is found
-          setRewards(initialRewards);
-        }
-      } catch (error) {
-        console.error('Error fetching rewards:', error);
-        setError('Failed to load rewards. Using default values instead.');
-        setRewards(initialRewards);
-        
-        toast({
-          title: "Error loading rewards",
-          description: "Could not load rewards from the database. Using default values instead.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+  const fetchRewards = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('rewards')
+        .select('*')
+        .order('created_at', { ascending: true });
+      
+      if (error) {
+        throw error;
       }
+      
+      if (data && data.length > 0) {
+        // Map Supabase data to the format expected by the app
+        const formattedRewards = data.map(reward => ({
+          id: reward.id,
+          title: reward.title,
+          description: reward.description || '',
+          cost: reward.cost,
+          supply: reward.supply,
+          iconName: reward.icon_name || '',
+          icon_color: reward.icon_color || '#9b87f5',
+          background_image_url: reward.background_image_url,
+          background_opacity: reward.background_opacity || 100,
+          focal_point_x: reward.focal_point_x || 50,
+          focal_point_y: reward.focal_point_y || 50,
+          highlight_effect: reward.highlight_effect || false,
+          title_color: reward.title_color || '#FFFFFF',
+          subtext_color: reward.subtext_color || '#8E9196',
+          calendar_color: reward.calendar_color || '#7E69AB'
+        }));
+        
+        setRewards(formattedRewards);
+      } else {
+        // Fallback to initial rewards if no data is found
+        setRewards(initialRewards);
+      }
+    } catch (error) {
+      console.error('Error fetching rewards:', error);
+      setError('Failed to load rewards. Using default values instead.');
+      setRewards(initialRewards);
+      
+      toast({
+        title: "Error loading rewards",
+        description: "Could not load rewards from the database. Using default values instead.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    
+  };
+
+  // Fetch rewards on initial load
+  useEffect(() => {
     fetchRewards();
   }, []);
 
@@ -371,24 +373,29 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         // Updating existing reward
         const existingReward = rewards[index];
         
+        // Create the update object with all necessary fields
+        const updateData = {
+          title: rewardData.title,
+          description: rewardData.description,
+          cost: rewardData.cost,
+          icon_name: rewardData.iconName,
+          icon_color: rewardData.icon_color,
+          background_image_url: rewardData.background_image_url,
+          background_opacity: rewardData.background_opacity,
+          focal_point_x: rewardData.focal_point_x,
+          focal_point_y: rewardData.focal_point_y,
+          highlight_effect: rewardData.highlight_effect,
+          title_color: rewardData.title_color,
+          subtext_color: rewardData.subtext_color,
+          calendar_color: rewardData.calendar_color,
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log('Updating reward with data:', updateData);
+        
         const { error } = await supabase
           .from('rewards')
-          .update({
-            title: rewardData.title,
-            description: rewardData.description,
-            cost: rewardData.cost,
-            icon_name: rewardData.iconName,
-            icon_color: rewardData.icon_color,
-            background_image_url: rewardData.background_image_url,
-            background_opacity: rewardData.background_opacity,
-            focal_point_x: rewardData.focal_point_x,
-            focal_point_y: rewardData.focal_point_y,
-            highlight_effect: rewardData.highlight_effect,
-            title_color: rewardData.title_color,
-            subtext_color: rewardData.subtext_color,
-            calendar_color: rewardData.calendar_color,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', existingReward.id);
         
         if (error) {
@@ -415,6 +422,9 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         };
         
         setRewards(updatedRewards);
+        
+        // Refresh the rewards list to ensure we have the latest data
+        fetchRewards();
         
         toast({
           title: "Reward Updated",
@@ -467,6 +477,9 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
           };
           
           setRewards([...rewards, newReward]);
+          
+          // Refresh the rewards list to ensure we have the latest data
+          fetchRewards();
           
           toast({
             title: "Reward Created",
