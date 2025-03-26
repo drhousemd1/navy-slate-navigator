@@ -57,17 +57,26 @@ export const fetchRewards = async (): Promise<Reward[]> => {
 export const saveReward = async (reward: Partial<Reward> & { title: string }, existingId?: string): Promise<Reward | null> => {
   try {
     if (existingId) {
-      // Update existing reward - CRITICAL: Don't include updated_at field at all
+      // CRITICAL FIX: When updating an existing reward:
+      // 1. Never update the created_at timestamp
+      // 2. Don't include updated_at field at all (let Supabase handle it)
+      // 3. Remove any timestamps from the data we're sending
+      
+      // Create a clean copy of the reward data without any timestamp fields
+      const { created_at, updated_at, ...cleanRewardData } = reward;
+      
+      console.log('Updating reward with clean data (no timestamps):', cleanRewardData);
+      
       const { data, error } = await supabase
         .from('rewards')
-        .update(reward)
+        .update(cleanRewardData)
         .eq('id', existingId)
         .select();
       
       if (error) throw error;
       return data[0] as Reward;
     } else {
-      // Create new reward
+      // Create new reward - no changes needed here
       const { data, error } = await supabase
         .from('rewards')
         .insert(reward)

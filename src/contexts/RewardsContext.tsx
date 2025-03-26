@@ -84,15 +84,18 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       let result: Reward | null = null;
       
       if (index !== null) {
-        // Update existing reward
+        // Update existing reward - CRITICAL: Preserve the original reward's ID
         const existingReward = rewards[index];
         console.log("Updating existing reward with ID:", existingReward.id);
         
-        result = await saveReward(dataToSave, existingReward.id);
+        // Never send created_at or updated_at to the update function
+        const { created_at, updated_at, ...cleanData } = dataToSave;
+        
+        result = await saveReward(cleanData as Reward & { title: string }, existingReward.id);
       } else {
         // Create new reward
         console.log("Creating new reward");
-        result = await saveReward(dataToSave);
+        result = await saveReward(dataToSave as Reward & { title: string });
       }
       
       // Refresh rewards list
