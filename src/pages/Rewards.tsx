@@ -5,7 +5,6 @@ import RewardEditor from '../components/RewardEditor';
 import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import RewardsList from '../components/rewards/RewardsList';
-import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 
 interface RewardsContentProps {
@@ -15,7 +14,6 @@ interface RewardsContentProps {
 
 const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const { rewards, handleSaveReward, handleDeleteReward, isLoading, refetchRewards } = useRewards();
-  const queryClient = useQueryClient();
   
   // Editor state
   const [currentReward, setCurrentReward] = useState<any>(null);
@@ -48,10 +46,6 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     console.log("Saving reward with data:", rewardData, "at index:", currentRewardIndex);
     try {
       await handleSaveReward(rewardData, currentRewardIndex);
-      
-      // Force refresh of rewards data after saving
-      await queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      await refetchRewards();
       
       toast({
         title: "Success",
@@ -86,10 +80,6 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
         });
         
         closeEditor();
-        
-        // Force refresh of rewards data after deleting
-        await queryClient.invalidateQueries({ queryKey: ['rewards'] });
-        await refetchRewards();
       } catch (error) {
         console.error("Failed to delete reward:", error);
         
