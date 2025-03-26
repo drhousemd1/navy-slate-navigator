@@ -3,8 +3,10 @@ import React from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
 import { Clock, Skull, Bomb, Zap } from 'lucide-react';
+import { RewardsProvider } from '../contexts/RewardsContext';
+import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 
-const Punishments: React.FC = () => {
+const PunishmentsContent: React.FC = () => {
   const samplePunishments = [
     {
       id: '1',
@@ -37,24 +39,30 @@ const Punishments: React.FC = () => {
   ];
 
   return (
-    <AppLayout>
-      <div className="p-4 pt-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-white">Punishments</h1>
-        </div>
-        
-        <div className="space-y-4">
-          {samplePunishments.map(punishment => (
-            <PunishmentCard
-              key={punishment.id}
-              title={punishment.title}
-              description={punishment.description}
-              points={punishment.points}
-              icon={punishment.icon}
-            />
-          ))}
-        </div>
+    <div className="p-4 pt-6">
+      <PunishmentsHeader />
+      
+      <div className="space-y-4">
+        {samplePunishments.map(punishment => (
+          <PunishmentCard
+            key={punishment.id}
+            title={punishment.title}
+            description={punishment.description}
+            points={punishment.points}
+            icon={punishment.icon}
+          />
+        ))}
       </div>
+    </div>
+  );
+};
+
+const Punishments: React.FC = () => {
+  return (
+    <AppLayout>
+      <RewardsProvider>
+        <PunishmentsContent />
+      </RewardsProvider>
     </AppLayout>
   );
 };
