@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -62,7 +63,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       focal_point_x: entry?.focal_point_x || 50,
       focal_point_y: entry?.focal_point_y || 50,
       opacity: entry?.opacity || 100,
-      popup_opacity: entry?.popup_opacity || entry.opacity || 100,
+      popup_opacity: entry?.popup_opacity || (entry?.opacity || 100),
       title_color: entry?.title_color || '#FFFFFF',
       subtext_color: entry?.subtext_color || '#D1D5DB',
       highlight_effect: entry?.highlight_effect || false,
@@ -95,9 +96,9 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
             isUnderlined: false,
             fontSize: '1rem'
           },
-          formatted_sections: entry?.formatted_sections || []
+          formatted_sections: entry.formatted_sections || []
         });
-        setFormattedSections(entry?.formatted_sections || []);
+        setFormattedSections(entry.formatted_sections || []);
         setImagePreview(entry.image_url || null);
         setPosition({ x: entry.focal_point_x || 50, y: entry.focal_point_y || 50 });
       } else {
@@ -255,6 +256,39 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
     form.setValue('formatted_sections', updatedSections);
     
     setSelectedTextRange(null);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setImagePreview(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+  };
+  
+  const onSubmit = (data: EncyclopediaEntry) => {
+    const updatedEntry = {
+      ...data,
+      image_url: imagePreview,
+      formatted_sections: formattedSections
+    };
+    
+    onSave(updatedEntry);
+  };
+
+  const handleDelete = () => {
+    if (entry && onDelete) {
+      onDelete(entry.id);
+      setIsDeleteDialogOpen(false);
+    }
   };
 
   useEffect(() => {
