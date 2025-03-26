@@ -6,6 +6,7 @@ import { Edit, Calendar, Box, Ticket } from 'lucide-react';
 import TaskIcon from './task/TaskIcon';
 import PointsBadge from './task/PointsBadge';
 import { Badge } from './ui/badge';
+import { useToast } from '../hooks/use-toast';
 
 interface RewardCardProps {
   title: string;
@@ -14,6 +15,7 @@ interface RewardCardProps {
   supply: number;
   iconName?: string;
   iconColor?: string;
+  onBuy?: () => void;
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({
@@ -22,8 +24,21 @@ const RewardCard: React.FC<RewardCardProps> = ({
   cost,
   supply,
   iconName = 'Gift',
-  iconColor = '#9b87f5'
+  iconColor = '#9b87f5',
+  onBuy
 }) => {
+  const { toast } = useToast();
+
+  const handleBuyClick = () => {
+    if (onBuy) {
+      onBuy();
+      toast({
+        title: "Reward Purchased",
+        description: `You purchased ${title}`,
+      });
+    }
+  };
+
   return (
     <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
@@ -54,6 +69,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
               variant="default"
               size="sm"
               className="bg-nav-active text-white hover:bg-nav-active/90 h-7"
+              onClick={handleBuyClick}
             >
               Buy
             </Button>
