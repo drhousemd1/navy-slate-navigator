@@ -44,7 +44,8 @@ type RewardItem = {
   description: string;
   cost: number;
   supply: number;
-  iconName: string;
+  iconName?: string;
+  icon_name?: string; // Adding this to match Supabase column name
   icon_color?: string;
   background_image_url?: string;
   background_opacity?: number;
@@ -86,9 +87,14 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
   const { toast } = useToast();
 
   // Initialize the usage tracking state from localStorage
-  const [rewardUsage, setRewardUsage] = useState(() => {
-    const savedUsage = localStorage.getItem(REWARD_USAGE_STORAGE_KEY);
-    return savedUsage ? JSON.parse(savedUsage) : {};
+  const [rewardUsage, setRewardUsage] = useState<Record<string, boolean[]>>(() => {
+    try {
+      const savedUsage = localStorage.getItem(REWARD_USAGE_STORAGE_KEY);
+      return savedUsage ? JSON.parse(savedUsage) : {};
+    } catch (error) {
+      console.error('Error accessing localStorage:', error);
+      return {};
+    }
   });
 
   // Check for current user and set userId
@@ -157,10 +163,26 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         }
 
         if (data && data.length > 0) {
-          setRewards(data.map(reward => ({
-            ...reward,
+          // Map Supabase data to our RewardItem interface
+          const mappedRewards: RewardItem[] = data.map(reward => ({
+            id: reward.id,
+            title: reward.title,
+            description: reward.description || '',
+            cost: reward.cost,
             supply: 0, // Default supply to 0, will be updated from user_rewards
-          })));
+            iconName: reward.icon_name || 'Gift', // Map icon_name from Supabase to iconName for component
+            icon_name: reward.icon_name || 'Gift',
+            icon_color: reward.icon_color || '#9b87f5',
+            background_image_url: reward.background_image_url,
+            background_opacity: reward.background_opacity,
+            focal_point_x: reward.focal_point_x,
+            focal_point_y: reward.focal_point_y,
+            highlight_effect: reward.highlight_effect,
+            title_color: reward.title_color || '#FFFFFF',
+            subtext_color: reward.subtext_color || '#8E9196',
+            calendar_color: reward.calendar_color || '#7E69AB',
+          }));
+          setRewards(mappedRewards);
         } else {
           // If no rewards found, use initialRewards
           setRewards(initialRewards);
@@ -216,20 +238,29 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
 
   // Save rewardUsage to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem(REWARD_USAGE_STORAGE_KEY, JSON.stringify(rewardUsage));
+    try {
+      localStorage.setItem(REWARD_USAGE_STORAGE_KEY, JSON.stringify(rewardUsage));
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+      // Implement a fallback or error handling mechanism
+    }
   }, [rewardUsage]);
 
   // Check if we need to reset the weekly tracking
   useEffect(() => {
-    const lastResetKey = 'lastWeeklyReset';
-    const lastReset = localStorage.getItem(lastResetKey);
-    const now = new Date();
-    const currentWeek = `${now.getFullYear()}-${now.getMonth() + 1}-${Math.floor(now.getDate() / 7)}`;
-    
-    if (lastReset !== currentWeek) {
-      // Reset weekly tracking
-      localStorage.setItem(lastResetKey, currentWeek);
-      setRewardUsage({});
+    try {
+      const lastResetKey = 'lastWeeklyReset';
+      const lastReset = localStorage.getItem(lastResetKey);
+      const now = new Date();
+      const currentWeek = `${now.getFullYear()}-${now.getMonth() + 1}-${Math.floor(now.getDate() / 7)}`;
+      
+      if (lastReset !== currentWeek) {
+        // Reset weekly tracking
+        localStorage.setItem(lastResetKey, currentWeek);
+        setRewardUsage({});
+      }
+    } catch (error) {
+      console.error('Error checking weekly reset:', error);
     }
   }, []);
 
@@ -457,7 +488,11 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         // Update local state
         setRewards(prevRewards => 
           prevRewards.map((r, i) => 
-            i === index ? { ...r, ...formattedData } : r
+            i === index ? { 
+              ...r, 
+              ...formattedData,
+              iconName: formattedData.icon_name // Ensure iconName is updated to match icon_name
+            } : r
           )
         );
 
@@ -476,10 +511,14 @@ export const RewardsProvider: React.FC<{children: ReactNode}> = ({ children }) =
         if (error) throw error;
 
         if (newReward) {
-          // Add new reward to state with supply 0
+          // Add new reward to state with supply 0 and map icon_name to iconName
           setRewards(prevRewards => [
             ...prevRewards, 
-            { ...newReward, supply: 0 }
+            { 
+              ...newReward, 
+              supply: 0,
+              iconName: newReward.icon_name // Set iconName from icon_name
+            }
           ]);
 
           toast({
