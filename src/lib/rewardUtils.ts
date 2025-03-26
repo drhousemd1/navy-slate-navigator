@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -24,8 +25,8 @@ export interface Reward {
 
 export const fetchRewards = async (): Promise<Reward[]> => {
   try {
-    // IMPORTANT: Remove the sorting by created_at as it affects the order stability
-    // Instead, let the application maintain the order of rewards as they are in the database
+    // CRITICAL: Do NOT sort rewards at all, maintain database order
+    // This ensures that the order remains stable across operations
     const { data, error } = await supabase
       .from('rewards')
       .select('*');

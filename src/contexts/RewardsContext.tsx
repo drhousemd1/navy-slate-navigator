@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
@@ -91,50 +92,62 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       let result: Reward | null = null;
       
       if (index !== null) {
+        // CRITICAL: We're updating an existing reward
         const existingReward = rewards[index];
         console.log("Updating existing reward at index", index, "with ID:", existingReward.id);
         
-        const { created_at, updated_at, ...fieldsToUpdate } = dataToSave;
+        // Log the entire rewards array and the specific index before update
+        console.log("Rewards before update:", rewards.map((r, i) => 
+          `${i}: ${r.title} (${r.id}) - created ${r.created_at}`));
         
+        // CRITICAL: Only update fields that the user has changed, never update timestamps
+        const fieldsToUpdate = {
+          title: dataToSave.title,
+          description: dataToSave.description,
+          cost: dataToSave.cost,
+          icon_name: dataToSave.icon_name,
+          icon_url: dataToSave.icon_url,
+          icon_color: dataToSave.icon_color,
+          background_image_url: dataToSave.background_image_url,
+          background_opacity: dataToSave.background_opacity,
+          focal_point_x: dataToSave.focal_point_x,
+          focal_point_y: dataToSave.focal_point_y,
+          highlight_effect: dataToSave.highlight_effect,
+          title_color: dataToSave.title_color,
+          subtext_color: dataToSave.subtext_color,
+          calendar_color: dataToSave.calendar_color,
+        };
+        
+        // CRITICAL: Never merge update with Supabase auto-update of timestamps
         const { data, error } = await supabase
           .from('rewards')
-          .update({
-            title: dataToSave.title,
-            description: dataToSave.description,
-            cost: dataToSave.cost,
-            icon_name: dataToSave.icon_name,
-            icon_url: dataToSave.icon_url,
-            icon_color: dataToSave.icon_color,
-            background_image_url: dataToSave.background_image_url,
-            background_opacity: dataToSave.background_opacity,
-            focal_point_x: dataToSave.focal_point_x,
-            focal_point_y: dataToSave.focal_point_y,
-            highlight_effect: dataToSave.highlight_effect,
-            title_color: dataToSave.title_color,
-            subtext_color: dataToSave.subtext_color,
-            calendar_color: dataToSave.calendar_color,
-          })
+          .update(fieldsToUpdate)
           .eq('id', existingReward.id)
           .select();
         
         if (error) throw error;
         
         if (data && data.length > 0) {
-          result = data[0];
-          
-          const updatedRewards = [...rewards];
-          updatedRewards[index] = {
-            ...result,
-            created_at: existingReward.created_at
+          // CRITICAL: Preserve the original created_at timestamp and position
+          result = {
+            ...data[0],
+            created_at: existingReward.created_at // Preserve original created_at
           };
           
-          console.log("Reward updated at index", index, "now has title:", updatedRewards[index].title);
-          console.log("Full rewards array after update:", updatedRewards.map((r, i) => 
+          // CRITICAL: Update rewards array IN PLACE at the existing index
+          // This ensures we don't change the order at all
+          const updatedRewards = [...rewards];
+          updatedRewards[index] = result;
+          
+          console.log("Reward updated in place at index", index, "now has title:", updatedRewards[index].title);
+          console.log("Full rewards array after update with preserved order:", updatedRewards.map((r, i) => 
             `${i}: ${r.title} (${r.id}) - created ${r.created_at}`));
           
+          // Set the updated rewards array, maintaining exact order
           setRewards(updatedRewards);
         }
       } else {
+        // This is a new reward being created, no changes needed to this logic
         console.log("Creating new reward");
         result = await saveReward(dataToSave as Reward & { title: string });
         

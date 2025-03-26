@@ -30,11 +30,12 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
     }))
   );
 
+  // DO NOT sort or modify the order here - maintain exactly as received from context
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {rewards.map((reward, index) => (
         <RewardCard
-          key={reward.id}
+          key={`${reward.id}-${index}`} // Use both id and index to ensure React maintains correct order
           title={reward.title}
           description={reward.description || ''}
           cost={reward.cost}
