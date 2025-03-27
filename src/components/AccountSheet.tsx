@@ -8,7 +8,7 @@ import {
   SheetTitle,
   SheetTrigger
 } from '@/components/ui/sheet';
-import { UserCircle2, User, LogOut } from 'lucide-react';
+import { UserCircle2, User, LogOut, BookOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -31,6 +31,10 @@ const AccountSheet = () => {
   const handleLogout = async () => {
     await signOut();
     navigate('/auth');
+  };
+  
+  const handleEncyclopediaClick = () => {
+    navigate('/encyclopedia');
   };
   
   // Get user's nickname and role
@@ -145,6 +149,16 @@ const AccountSheet = () => {
                 </Button>
               </div>
             )}
+            
+            {/* Encyclopedia button */}
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-white hover:bg-light-navy border border-white"
+              onClick={handleEncyclopediaClick}
+            >
+              <BookOpen className="w-5 h-5 mr-2" />
+              Encyclopedia
+            </Button>
             
             {/* Logout button */}
             <Button 
