@@ -48,7 +48,7 @@ const Rules: React.FC = () => {
                 <div className="ml-12 mt-3">
                   <Button 
                     variant="outline" 
-                    className="bg-gray-300 bg-opacity-60 text-gray-700 border-none hover:bg-gray-400"
+                    className="text-gray-700 border-none hover:bg-gray-400"
                   >
                     Get a spanking
                   </Button>
