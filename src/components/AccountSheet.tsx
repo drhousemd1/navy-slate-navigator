@@ -8,8 +8,9 @@ import {
   SheetTitle,
   SheetTrigger
 } from '@/components/ui/sheet';
-import { UserCircle2 } from 'lucide-react';
+import { UserCircle2, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
 
 const AccountSheet = () => {
   const { user } = useAuth();
@@ -43,6 +44,14 @@ const AccountSheet = () => {
           </div>
           
           <div className="space-y-4 mt-6">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-white hover:bg-light-navy"
+              onClick={() => {}}
+            >
+              <User className="w-5 h-5 mr-2" />
+              Account
+            </Button>
             {/* Placeholder for future menu items */}
             <p className="text-sm text-gray-400">More options will be added here</p>
           </div>
