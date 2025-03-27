@@ -3,7 +3,7 @@ import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Pencil, Lock, Copy, Check, Trash2, Unlink2, Camera } from 'lucide-react';
+import { Pencil, Lock, Copy, Check, Trash2, Unlink2, Camera, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -42,6 +42,10 @@ const Profile = () => {
     isOpen: false,
     type: 'delete'
   });
+
+  const handleGoBack = () => {
+    navigate(-1);
+  };
 
   useEffect(() => {
     if (user) {
@@ -695,7 +699,17 @@ const Profile = () => {
 
   return (
     <AppLayout>
-      <div className="container mx-auto max-w-4xl p-4">
+      <div className="container mx-auto max-w-4xl p-4 relative">
+        <Button 
+          variant="destructive" 
+          size="sm" 
+          className="absolute top-2 right-2 text-white"
+          onClick={handleGoBack}
+        >
+          <X className="w-4 h-4 mr-1" />
+          Close
+        </Button>
+        
         <h1 className="text-xl font-bold text-white mb-4">Profile</h1>
         
         <div className="flex flex-col items-center mb-6">

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -37,11 +36,9 @@ const AccountSheet = () => {
     navigate('/encyclopedia');
   };
   
-  // Get user's nickname and role
   const nickname = getNickname();
-  const userRole = getUserRole(); // This will now return properly capitalized role
-  
-  // Fetch the profile image directly from the database
+  const userRole = getUserRole();
+
   useEffect(() => {
     const fetchProfileImage = async () => {
       if (!user) {
@@ -76,7 +73,6 @@ const AccountSheet = () => {
     fetchProfileImage();
   }, [user]);
 
-  // Use context function as fallback
   useEffect(() => {
     if (!profileImage) {
       const contextImage = getProfileImage();
@@ -137,7 +133,6 @@ const AccountSheet = () => {
               Account
             </Button>
             
-            {/* Profile dropdown menu */}
             {showProfileOptions && (
               <div className="ml-6 space-y-2 animate-fade-in">
                 <Button 
@@ -150,7 +145,6 @@ const AccountSheet = () => {
               </div>
             )}
             
-            {/* Encyclopedia button */}
             <Button 
               variant="ghost" 
               className="w-full justify-start text-white hover:bg-light-navy border border-white"
@@ -160,7 +154,6 @@ const AccountSheet = () => {
               Encyclopedia
             </Button>
             
-            {/* Logout button */}
             <Button 
               variant="ghost" 
               className="w-full justify-start text-white hover:bg-light-navy border border-red-500 hover:bg-red-800"
@@ -170,7 +163,6 @@ const AccountSheet = () => {
               Log Out
             </Button>
             
-            {/* Placeholder for future menu items */}
             <p className="text-sm text-gray-400">More options will be added here</p>
           </div>
         </div>
