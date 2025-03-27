@@ -9,12 +9,59 @@ export const usePointsManagement = () => {
   useEffect(() => {
     const fetchTotalPoints = async () => {
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('points')
-          .single();
+        // Attempt to get user auth data first
+        const { data: authData } = await supabase.auth.getUser();
+        const userId = authData.user?.id;
         
-        if (error) {
+        let data;
+        let error;
+        
+        if (userId) {
+          // If authenticated, get points for this user
+          console.log('Fetching points for authenticated user:', userId);
+          const response = await supabase
+            .from('profiles')
+            .select('points')
+            .eq('id', userId)
+            .single();
+            
+          data = response.data;
+          error = response.error;
+        } else {
+          // If not authenticated, get the first profile or any record
+          console.log('No authenticated user, fetching first available profile');
+          const response = await supabase
+            .from('profiles')
+            .select('points')
+            .limit(1);
+            
+          data = response.data?.[0];
+          error = response.error;
+        }
+        
+        if (error && error.code === 'PGRST116') {
+          // No data found - either no user or no profiles
+          console.log('No points data found, creating initial profile with default points');
+          
+          // Create a default profile
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({ points: 500 })
+            .select()
+            .single();
+            
+          if (createError) {
+            console.error('Error creating default profile:', createError);
+            setTotalPoints(500);
+            return;
+          }
+          
+          if (newProfile) {
+            console.log('Created new profile with points:', newProfile.points);
+            setTotalPoints(newProfile.points);
+            return;
+          }
+        } else if (error) {
           console.error('Error fetching points:', error);
           setTotalPoints(500);
           return;
@@ -42,22 +89,42 @@ export const usePointsManagement = () => {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       
       if (authError || !authData?.user?.id) {
-        console.error('Authentication error:', authError || 'No user ID available');
+        console.log('No authenticated user, updating first available profile');
         
-        // For development/testing without auth, update points in profiles without a user ID filter
-        // This is a fallback that allows the app to work without authentication
-        const { error } = await supabase
+        // Get first profile if exists
+        const { data: profiles } = await supabase
           .from('profiles')
-          .update({ points: newPoints })
-          .is('id', null);
-        
-        if (error) {
-          console.error('Error updating points without auth:', error);
-          return false;
+          .select('id')
+          .limit(1);
+          
+        if (profiles && profiles.length > 0) {
+          // Update the existing profile
+          const { error } = await supabase
+            .from('profiles')
+            .update({ points: newPoints })
+            .eq('id', profiles[0].id);
+          
+          if (error) {
+            console.error('Error updating points without auth:', error);
+            return false;
+          }
+          
+          console.log('Points updated for existing profile:', newPoints);
+          return true;
+        } else {
+          // Create a new profile
+          const { error } = await supabase
+            .from('profiles')
+            .insert({ points: newPoints });
+          
+          if (error) {
+            console.error('Error creating profile with points:', error);
+            return false;
+          }
+          
+          console.log('Created new profile with points:', newPoints);
+          return true;
         }
-        
-        console.log('Points updated in database without auth:', newPoints);
-        return true;
       }
       
       // We have a user ID, proceed with normal update
