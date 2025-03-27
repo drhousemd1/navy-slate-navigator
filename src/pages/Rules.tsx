@@ -24,9 +24,6 @@ const Rules: React.FC = () => {
               <div className="flex justify-between items-center mb-3">
                 <PriorityBadge priority="medium" />
                 <div className="flex items-center gap-2">
-                  <Button size="sm" className="bg-cyan-500 hover:bg-cyan-600 h-8 px-2 rounded-full flex items-center">
-                    <Plus className="w-4 h-4 mr-1" /> 5
-                  </Button>
                   <Badge className="bg-green-500 text-white border-none px-3 py-1 rounded-full">
                     (0/2) Complete
                   </Badge>
@@ -60,10 +57,20 @@ const Rules: React.FC = () => {
                   usage_data={[1, 1, 1, 0, 0, 0, 0]}
                 />
                 
-                {/* Edit Button */}
-                <Button size="sm" className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0">
-                  <Edit className="w-4 h-4" />
-                </Button>
+                {/* Replace Complete button with Punish button */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="bg-red-500 text-white hover:bg-red-600/90 h-7"
+                    onClick={() => console.log("Punish clicked")}
+                  >
+                    Punish
+                  </Button>
+                  <Button size="sm" className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0">
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
