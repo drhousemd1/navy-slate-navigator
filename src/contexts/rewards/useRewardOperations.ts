@@ -34,6 +34,10 @@ export const useRewardOperations = () => {
     }
   }, [refetch]);
 
+  const getTotalRewardsSupply = useCallback(() => {
+    return rewards.reduce((total, reward) => total + reward.supply, 0);
+  }, [rewards]);
+
   const handleSaveReward = useCallback(async (rewardData: any, index: number | null): Promise<Reward | null> => {
     console.log("[RewardsContext] Handling save reward with data:", rewardData, "at index:", index);
     
@@ -297,6 +301,7 @@ export const useRewardOperations = () => {
     handleSaveReward,
     handleDeleteReward,
     handleBuyReward,
-    handleUseReward
+    handleUseReward,
+    getTotalRewardsSupply
   };
 };

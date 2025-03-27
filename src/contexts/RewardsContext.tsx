@@ -8,6 +8,7 @@ import { useRewardOperations } from './rewards/useRewardOperations';
 const RewardsContext = createContext<RewardsContextType>({
   rewards: [],
   totalPoints: 0,
+  totalRewardsSupply: 0,
   setTotalPoints: () => {},
   isLoading: true,
   refetchRewards: async () => {},
@@ -31,7 +32,8 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     handleSaveReward,
     handleDeleteReward,
     handleBuyReward,
-    handleUseReward
+    handleUseReward,
+    getTotalRewardsSupply
   } = useRewardOperations();
   
   // Effect to update rewards from fetched data
@@ -49,9 +51,13 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [fetchedRewards, setRewards]);
 
+  // Calculate total rewards supply
+  const totalRewardsSupply = getTotalRewardsSupply();
+
   const value = {
     rewards,
     totalPoints,
+    totalRewardsSupply,
     setTotalPoints,
     isLoading,
     refetchRewards,

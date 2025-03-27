@@ -4,6 +4,7 @@ import { Reward } from '@/lib/rewardUtils';
 export interface RewardsContextType {
   rewards: Reward[];
   totalPoints: number;
+  totalRewardsSupply: number;
   setTotalPoints: (points: number) => void;
   isLoading: boolean;
   refetchRewards: () => Promise<void>;

@@ -5,8 +5,7 @@ import { useRewards } from '../../contexts/RewardsContext';
 import { Box, Coins } from 'lucide-react';
 
 const PunishmentsHeader: React.FC = () => {
-  const { totalPoints, rewards } = useRewards();
-  const totalRewards = rewards.reduce((total, reward) => total + reward.supply, 0);
+  const { totalPoints, totalRewardsSupply } = useRewards();
 
   return (
     <div className="flex justify-between items-center mb-6">
@@ -14,7 +13,7 @@ const PunishmentsHeader: React.FC = () => {
       <div className="flex items-center gap-2">
         <Badge className="bg-green-500 text-white font-bold px-3 py-1 flex items-center gap-1">
           <Box className="w-3 h-3" />
-          <span>{totalRewards}</span>
+          <span>{totalRewardsSupply}</span>
         </Badge>
         <Badge className="bg-cyan-500 text-white font-bold px-3 py-1 flex items-center gap-1">
           <Coins className="w-3 h-3" />
