@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 
 const AccountSheet = () => {
   const navigate = useNavigate();
-  const { user, getNickname, getProfileImage } = useAuth();
+  const { user, getNickname, getProfileImage, getUserRole } = useAuth();
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   
   const toggleProfileOptions = () => {
@@ -26,9 +26,10 @@ const AccountSheet = () => {
     navigate('/profile');
   };
   
-  // Get user's nickname and profile image
+  // Get user's nickname, role and profile image
   const nickname = getNickname();
   const profileImageUrl = getProfileImage();
+  const userRole = getUserRole();
   
   return (
     <Sheet>
@@ -54,6 +55,9 @@ const AccountSheet = () => {
             <div>
               <p className="text-lg font-medium">
                 {user ? nickname : 'Guest'}
+              </p>
+              <p className="text-sm text-gray-400">
+                {user ? userRole : 'Not logged in'}
               </p>
             </div>
           </div>

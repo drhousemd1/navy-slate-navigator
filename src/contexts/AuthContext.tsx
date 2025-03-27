@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -20,6 +19,8 @@ type AuthContextType = {
   getNickname: () => string;
   updateProfileImage: (imageUrl: string) => void;
   getProfileImage: () => string;
+  getUserRole: () => string;
+  updateUserRole: (role: string) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -226,6 +227,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return user.user_metadata?.avatar_url || '';
   };
 
+  const getUserRole = (): string => {
+    if (!user) return 'Submissive'; // Default role
+    
+    return user.user_metadata?.role || 'Submissive';
+  };
+
+  const updateUserRole = async (role: string) => {
+    if (user) {
+      try {
+        const { error } = await supabase.auth.updateUser({
+          data: { 
+            role 
+          }
+        });
+        
+        if (error) {
+          toast({
+            title: 'Error updating role',
+            description: error.message,
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        const updatedUser = {
+          ...user,
+          user_metadata: {
+            ...(user.user_metadata || {}),
+            role
+          }
+        };
+        setUser(updatedUser);
+        
+        toast({
+          title: 'Role updated',
+          description: `Your role has been updated to ${role}`,
+        });
+      } catch (error: any) {
+        toast({
+          title: 'Error updating role',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -243,6 +291,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getNickname,
         updateProfileImage,
         getProfileImage,
+        getUserRole,
+        updateUserRole,
       }}
     >
       {children}

@@ -40,6 +40,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   // Get profile image and nickname for the avatar
   const nickname = getNickname();
   const profileImageUrl = getProfileImage();
+  
+  // For this implementation, we're hardcoding the role types
+  // In a real implementation, you would fetch this from your database
+  const userRole = user?.user_metadata?.role || 'Submissive'; // Default to Submissive if not set
 
   // Determine if we're on the rewards page, tasks page, or punishments page for special styling
   const isRewardsPage = location.pathname === '/rewards';
@@ -52,7 +56,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       {/* Top header section with account and settings icons */}
       <div className="w-full bg-navy border-b border-light-navy py-2 px-4">
         <div className="max-w-screen-lg mx-auto flex justify-between items-center">
-          <div>
+          <div className="flex items-center">
             {/* Left side avatar */}
             <Avatar 
               className="h-7 w-7 cursor-pointer" 
@@ -63,6 +67,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
                 {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
               </AvatarFallback>
             </Avatar>
+            
+            {/* Username and role display */}
+            <div className="ml-2 hidden sm:block">
+              <p className="text-white text-sm font-medium leading-tight">{nickname}</p>
+              <p className="text-gray-400 text-xs leading-tight">{userRole}</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {/* Character icon for account/login using our new AccountSheet component */}
