@@ -12,4 +12,5 @@ export interface RewardsContextType {
   handleDeleteReward: (index: number) => Promise<boolean>;
   handleBuyReward: (id: string, cost: number) => Promise<void>;
   handleUseReward: (id: string) => Promise<void>;
+  refreshPointsFromDatabase: () => Promise<void>;
 }

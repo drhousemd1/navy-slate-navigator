@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect } from 'react';
 import { Reward } from '@/lib/rewardUtils';
 import { supabase } from '@/integrations/supabase/client';
