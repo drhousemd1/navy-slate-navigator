@@ -10,6 +10,7 @@ type AuthContextType = {
   session: any | null;
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
   signUp: (email: string, password: string) => Promise<{ error: any | null; data: any | null }>;
+  resetPassword: (email: string) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
@@ -159,6 +160,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/profile?reset-password=true',
+      });
+      
+      if (error) {
+        console.error('Password reset error:', error);
+        toast({
+          title: 'Password reset failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return { error };
+      }
+      
+      toast({
+        title: 'Password reset email sent',
+        description: 'Check your email for the password reset link.',
+      });
+      
+      return { error: null };
+    } catch (error: any) {
+      toast({
+        title: 'Password reset failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return { error };
+    }
+  };
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -286,6 +319,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         signIn,
         signUp,
+        resetPassword,
         signOut,
         loading,
         isAdmin,
