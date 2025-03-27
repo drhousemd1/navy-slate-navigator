@@ -12,7 +12,7 @@ import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const Profile = () => {
-  const { user, updateNickname, signOut } = useAuth();
+  const { user, updateNickname, signOut, updateProfileImage } = useAuth();
   const navigate = useNavigate();
   const [nickname, setNickname] = useState<string>('');
   const [email, setEmail] = useState<string>('');
@@ -158,7 +158,7 @@ const Profile = () => {
 
       const avatarUrl = urlData.publicUrl;
       
-      // Update the profile
+      // Update the profile in Supabase
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: avatarUrl })
@@ -166,7 +166,11 @@ const Profile = () => {
 
       if (updateError) throw updateError;
 
+      // Update the local state
       setProfileImageUrl(avatarUrl);
+      
+      // Update the user metadata in the Auth context
+      updateProfileImage(avatarUrl);
       
       toast({
         title: "Profile image updated",

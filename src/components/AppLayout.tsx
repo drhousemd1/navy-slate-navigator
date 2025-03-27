@@ -1,3 +1,4 @@
+
 import React, { ReactNode } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -10,6 +11,8 @@ import {
   DropdownMenuTrigger 
 } from './ui/dropdown-menu';
 import AccountSheet from './AccountSheet';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -19,6 +22,7 @@ interface AppLayoutProps {
 const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, getNickname } = useAuth();
 
   // Only show "Add" button for specific routes
   const shouldShowAddButton = 
@@ -32,6 +36,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       onAddNewItem();
     }
   };
+  
+  // Get profile image and nickname for the avatar
+  const nickname = getNickname();
+  const profileImageUrl = user?.user_metadata?.avatar_url || '';
 
   // Determine if we're on the rewards page, tasks page, or punishments page for special styling
   const isRewardsPage = location.pathname === '/rewards';
@@ -44,7 +52,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       {/* Top header section with account and settings icons */}
       <div className="w-full bg-navy border-b border-light-navy py-2 px-4">
         <div className="max-w-screen-lg mx-auto flex justify-between items-center">
-          <div>{/* Left side - empty for now */}</div>
+          <div>
+            {/* Left side avatar */}
+            <Avatar 
+              className="h-7 w-7 cursor-pointer" 
+              onClick={() => navigate('/profile')}
+            >
+              <AvatarImage src={profileImageUrl} alt={nickname} />
+              <AvatarFallback className="bg-light-navy text-nav-active text-xs">
+                {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
+              </AvatarFallback>
+            </Avatar>
+          </div>
           <div className="flex items-center gap-3">
             {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />

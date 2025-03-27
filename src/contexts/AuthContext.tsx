@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -17,6 +18,8 @@ type AuthContextType = {
   checkUserRole: () => Promise<void>;
   updateNickname: (nickname: string) => void;
   getNickname: () => string;
+  updateProfileImage: (imageUrl: string) => void;
+  getProfileImage: () => string;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -191,6 +194,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateProfileImage = (imageUrl: string) => {
+    if (user) {
+      const updatedUser = {
+        ...user,
+        user_metadata: {
+          ...(user.user_metadata || {}),
+          avatar_url: imageUrl
+        }
+      };
+      setUser(updatedUser);
+    }
+  };
+
   const getNickname = (): string => {
     if (!user) return 'Guest';
     
@@ -203,6 +219,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     return 'User';
+  };
+
+  const getProfileImage = (): string => {
+    if (!user) return '';
+    return user.user_metadata?.avatar_url || '';
   };
 
   return (
@@ -220,6 +241,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         checkUserRole,
         updateNickname,
         getNickname,
+        updateProfileImage,
+        getProfileImage,
       }}
     >
       {children}
