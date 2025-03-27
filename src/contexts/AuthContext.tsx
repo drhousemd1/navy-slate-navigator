@@ -158,6 +158,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      
+      setUser(null);
+      setSession(null);
+      setIsAuthenticated(false);
+      setUserRole(null);
+      setIsAdmin(false);
+      
       toast({
         title: 'Logged out',
         description: 'You have been successfully logged out.',

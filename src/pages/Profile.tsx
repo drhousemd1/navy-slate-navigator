@@ -3,13 +3,16 @@ import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Pencil, Lock, Copy, Check } from 'lucide-react';
+import { Pencil, Lock, Copy, Check, Trash2, Unlink2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useNavigate } from 'react-router-dom';
+import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 
 const Profile = () => {
-  const { user, updateNickname } = useAuth();
+  const { user, updateNickname, signOut } = useAuth();
+  const navigate = useNavigate();
   const [nickname, setNickname] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [currentPassword, setCurrentPassword] = useState<string>('');
@@ -26,6 +29,7 @@ const Profile = () => {
   const [isLinkingPartner, setIsLinkingPartner] = useState<boolean>(false);
   const [linkedPartnerNickname, setLinkedPartnerNickname] = useState<string>('');
   const [isRoleLocked, setIsRoleLocked] = useState<boolean>(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (user) {
@@ -438,6 +442,41 @@ const Profile = () => {
     }
   };
   
+  const handleDeleteAccount = async () => {
+    setIsLoading(true);
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user?.id);
+
+      if (profileError) throw profileError;
+
+      const { error: authError } = await supabase.auth.admin.deleteUser(
+        user?.id as string
+      );
+
+      if (authError) throw authError;
+
+      await signOut();
+      
+      navigate('/auth');
+
+      toast({
+        title: "Account deleted",
+        description: "Your account has been permanently deleted.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Delete failed",
+        description: error.message || "There was an error deleting your account.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const unlinkPartner = async () => {
     setIsLoading(true);
     try {
@@ -787,7 +826,45 @@ const Profile = () => {
             </div>
           )}
         </div>
+        
+        <div className="bg-navy py-4 px-4 rounded-lg border border-light-navy mb-3">
+          <h2 className="text-white font-semibold mb-4">Account Management</h2>
+          
+          <div className="flex flex-col gap-3">
+            {linkedPartnerNickname && (
+              <Button 
+                variant="destructive" 
+                onClick={unlinkPartner}
+                disabled={isLoading}
+                className="w-full sm:w-auto flex items-center justify-center gap-2"
+              >
+                <Unlink2 className="h-4 w-4" />
+                Unlink Account
+              </Button>
+            )}
+            
+            <Button 
+              variant="destructive" 
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={isLoading}
+              className="w-full sm:w-auto flex items-center justify-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Account
+            </Button>
+          </div>
+          
+          <p className="text-gray-400 text-xs mt-3">
+            Deleting your account will permanently remove all your data and cannot be undone.
+          </p>
+        </div>
       </div>
+      
+      <DeleteAccountDialog 
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeleteAccount}
+      />
     </AppLayout>
   );
 };
