@@ -41,13 +41,13 @@ export function DeleteAccountDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel 
-            className="bg-red-600 text-white hover:bg-red-700"
+            className="bg-transparent text-white border-gray-600 hover:bg-gray-800"
           >
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-gray-600 text-white hover:bg-gray-700"
+            className={isDelete ? "bg-red-600 text-white hover:bg-red-700" : "bg-cyan-600 text-white hover:bg-cyan-700"}
           >
             {isDelete ? 'Delete Account' : 'Unlink Account'}
           </AlertDialogAction>
