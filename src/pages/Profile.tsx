@@ -23,17 +23,13 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      // Default to email username (part before @)
       const defaultNickname = user.email ? user.email.split('@')[0] : 'User';
       
-      // Try to get the nickname from user metadata if it exists
       const userNickname = user.user_metadata?.nickname || defaultNickname;
       setNickname(userNickname);
       
-      // Set email
       setEmail(user.email || '');
       
-      // Set role from user metadata if it exists
       if (user.user_metadata?.role) {
         setRole(user.user_metadata.role);
       }
@@ -50,7 +46,6 @@ const Profile = () => {
   
   const handleEditPasswordToggle = () => {
     setIsEditingPassword(!isEditingPassword);
-    // Reset password fields when toggling
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
@@ -68,14 +63,12 @@ const Profile = () => {
 
     setIsLoading(true);
     try {
-      // Update the user's metadata with the new nickname
       const { error } = await supabase.auth.updateUser({
         data: { nickname }
       });
 
       if (error) throw error;
 
-      // Update the nickname in the auth context
       if (updateNickname) {
         updateNickname(nickname);
       }
@@ -108,7 +101,6 @@ const Profile = () => {
 
     setIsLoading(true);
     try {
-      // Update the user's email
       const { error } = await supabase.auth.updateUser({ email });
 
       if (error) throw error;
@@ -130,7 +122,6 @@ const Profile = () => {
   };
   
   const handleSavePassword = async () => {
-    // Validate passwords
     if (!currentPassword) {
       toast({
         title: "Current password required",
@@ -158,7 +149,6 @@ const Profile = () => {
       return;
     }
     
-    // Minimum password length
     if (newPassword.length < 6) {
       toast({
         title: "Password too short",
@@ -170,7 +160,6 @@ const Profile = () => {
 
     setIsLoading(true);
     try {
-      // First verify current password by signing in
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: user?.email || '',
         password: currentPassword
@@ -180,7 +169,6 @@ const Profile = () => {
         throw new Error("Current password is incorrect");
       }
       
-      // Then update to the new password
       const { error } = await supabase.auth.updateUser({ 
         password: newPassword 
       });
@@ -193,7 +181,6 @@ const Profile = () => {
       });
       setIsEditingPassword(false);
       
-      // Clear password fields
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -213,7 +200,6 @@ const Profile = () => {
     
     setIsLoading(true);
     try {
-      // Update the user's metadata with the new role
       const { error } = await supabase.auth.updateUser({
         data: { role: value }
       });
@@ -241,7 +227,6 @@ const Profile = () => {
       <div className="container mx-auto max-w-4xl p-4">
         <h1 className="text-xl font-bold text-white mb-4">Profile</h1>
         
-        {/* Nickname Box */}
         <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy mb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -288,7 +273,6 @@ const Profile = () => {
           )}
         </div>
         
-        {/* Email Box */}
         <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy mb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -336,7 +320,6 @@ const Profile = () => {
           )}
         </div>
         
-        {/* Password Box */}
         <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy mb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -412,7 +395,6 @@ const Profile = () => {
           )}
         </div>
         
-        {/* Role Box */}
         <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy mb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -427,7 +409,7 @@ const Profile = () => {
                 >
                   <ToggleGroupItem 
                     value="dominant" 
-                    className="w-full data-[state=on]:bg-purple-600 data-[state=on]:text-white"
+                    className="w-full data-[state=on]:bg-red-500 data-[state=on]:text-white"
                   >
                     Dominant
                   </ToggleGroupItem>
