@@ -16,15 +16,18 @@ const PunishmentsHeader: React.FC = () => {
     <div className="flex items-center mb-6">
       <h1 className="text-base font-semibold text-white mr-auto">Punishments</h1>
       <div className="flex items-center gap-2">
-        <Button 
-          variant="outline" 
-          className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white border-none h-8 px-3 text-sm font-medium rounded-md"
-          onClick={() => setIsRandomSelectorOpen(true)}
-          disabled={punishments.length === 0}
-        >
-          <Shuffle className="w-4 h-4" />
-          Random
-        </Button>
+        <div className="relative">
+          <div className="absolute inset-0 bg-red-600 rounded-md blur-md opacity-70"></div>
+          <Button 
+            variant="outline" 
+            className="relative flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white border-none h-8 px-3 text-sm font-medium rounded-md"
+            onClick={() => setIsRandomSelectorOpen(true)}
+            disabled={punishments.length === 0}
+          >
+            <Shuffle className="w-4 h-4" />
+            Random
+          </Button>
+        </div>
         <Badge className="bg-green-500 text-white font-bold px-3 py-1 flex items-center gap-1">
           <Box className="w-3 h-3" />
           <span>{totalRewardsSupply}</span>
