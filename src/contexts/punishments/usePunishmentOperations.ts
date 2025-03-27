@@ -80,6 +80,9 @@ export const usePunishmentOperations = () => {
     try {
       const { id: _, ...dataToUpdate } = punishmentData;
       
+      console.log("Updating punishment with ID:", id);
+      console.log("Data to update:", dataToUpdate);
+      
       const { error } = await supabase
         .from('punishments')
         .update(dataToUpdate)

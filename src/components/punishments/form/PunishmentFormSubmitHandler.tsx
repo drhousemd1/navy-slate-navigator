@@ -29,6 +29,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       const icon_name = selectedIconName || null;
       const background_image_url = imagePreview || null;
       
+      // Make sure we get all form values including the icon_color
       const dataToSave: PunishmentData = {
         ...values,
         icon_name: icon_name,
