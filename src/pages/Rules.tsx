@@ -17,7 +17,7 @@ const Rules: React.FC = () => {
         
         <div className="space-y-4">
           {/* Rule Card Example - Styled to match the screenshot */}
-          <Card className="bg-dark-navy border border-light-navy overflow-hidden">
+          <Card className="bg-dark-navy border-2 border-[#00f0ff] overflow-hidden">
             <div className="relative p-4">
               {/* Card Header Row */}
               <div className="flex justify-between items-center mb-3">
@@ -40,7 +40,7 @@ const Rules: React.FC = () => {
                   <div className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center">
                     <Check className="w-6 h-6 text-white" />
                   </div>
-                  <div className="bg-gray-300 bg-opacity-60 text-black font-bold py-1 px-4 rounded-md border-2 border-[#00f0ff]">
+                  <div className="bg-gray-300 bg-opacity-60 text-black font-bold py-1 px-4 rounded-md">
                     Spanking
                   </div>
                 </div>
