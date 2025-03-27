@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Sheet, 
@@ -14,6 +14,11 @@ import { Button } from '@/components/ui/button';
 
 const AccountSheet = () => {
   const { user } = useAuth();
+  const [showProfileOptions, setShowProfileOptions] = useState(false);
+  
+  const toggleProfileOptions = () => {
+    setShowProfileOptions(!showProfileOptions);
+  };
   
   return (
     <Sheet>
@@ -47,11 +52,25 @@ const AccountSheet = () => {
             <Button 
               variant="ghost" 
               className="w-full justify-start text-white hover:bg-light-navy border border-white"
-              onClick={() => {}}
+              onClick={toggleProfileOptions}
             >
               <User className="w-5 h-5 mr-2" />
               Account
             </Button>
+            
+            {/* Profile dropdown menu */}
+            {showProfileOptions && (
+              <div className="ml-6 space-y-2 animate-fade-in">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-white hover:bg-light-navy"
+                  onClick={() => {}}
+                >
+                  Profile
+                </Button>
+              </div>
+            )}
+            
             {/* Placeholder for future menu items */}
             <p className="text-sm text-gray-400">More options will be added here</p>
           </div>
