@@ -25,6 +25,7 @@ export interface Task {
   icon_color?: string;
   last_completed_date?: string;
   usage_data?: number[];
+  created_at?: string;
 }
 
 export const getLocalDateString = (): string => {
@@ -59,7 +60,8 @@ export const fetchTasks = async (): Promise<Task[]> => {
   try {
     const { data, error } = await supabase
       .from('tasks')
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: true });  // Sort by creation date in ascending order
     
     if (error) {
       console.error('Error fetching tasks:', error);
@@ -102,6 +104,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     console.log('Saving task with usage_data:', task.usage_data);
     
     const usage_data = task.usage_data || Array(7).fill(0);
+    const now = new Date().toISOString();
     
     if (task.id) {
       const { data, error } = await supabase
@@ -127,7 +130,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           icon_color: task.icon_color,
           last_completed_date: task.last_completed_date,
           usage_data: usage_data,
-          updated_at: new Date().toISOString(),
+          updated_at: now,
         })
         .eq('id', task.id)
         .select()
@@ -159,6 +162,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           icon_color: task.icon_color,
           last_completed_date: null,
           usage_data: usage_data,
+          created_at: now,
         })
         .select()
         .single();
