@@ -30,12 +30,12 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
     }))
   );
 
-  // DO NOT sort or modify the order here - maintain exactly as received from context
+  // Changed from grid to flex column layout with gap
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="flex flex-col gap-4 max-w-3xl mx-auto">
       {rewards.map((reward, index) => (
         <RewardCard
-          key={reward.id} // CRITICAL: Use ONLY reward.id as the key for stable rendering
+          key={reward.id}
           title={reward.title}
           description={reward.description || ''}
           cost={reward.cost}
