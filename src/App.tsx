@@ -33,6 +33,29 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Admin-only route component
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen bg-navy">
+      <p className="text-white">Loading...</p>
+    </div>;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" />;
+  }
+  
+  if (!isAdmin) {
+    // Still render the component, it will handle the redirect internally
+    // This allows for a more graceful UX with proper messages
+    return <>{children}</>;
+  }
+  
+  return <>{children}</>;
+};
+
 // Create a client with aggressive caching to maintain state between page navigations
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,7 +79,7 @@ const AppRoutes = () => {
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
       <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
       <Route path="/punishments" element={<ProtectedRoute><Punishments /></ProtectedRoute>} />
-      <Route path="/throne-room" element={<ProtectedRoute><ThroneRoom /></ProtectedRoute>} />
+      <Route path="/throne-room" element={<AdminRoute><ThroneRoom /></AdminRoute>} />
       <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -3,6 +3,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+type UserRole = 'admin' | 'user';
+
 type AuthContextType = {
   isAuthenticated: boolean;
   user: any | null;
@@ -11,6 +13,9 @@ type AuthContextType = {
   signUp: (email: string, password: string) => Promise<{ error: any | null; data: any | null }>;
   signOut: () => Promise<void>;
   loading: boolean;
+  isAdmin: boolean;
+  userRole: UserRole | null;
+  checkUserRole: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,6 +25,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<any | null>(null);
   const [session, setSession] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  const checkUserRole = async () => {
+    if (!user) {
+      setUserRole(null);
+      setIsAdmin(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return;
+      }
+
+      if (data) {
+        setUserRole(data.role as UserRole);
+        setIsAdmin(data.role === 'admin');
+      } else {
+        setUserRole('user');
+        setIsAdmin(false);
+      }
+    } catch (error) {
+      console.error('Error in checkUserRole:', error);
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -44,6 +82,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
+
+  // Check user role whenever authentication state changes
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      checkUserRole();
+    } else {
+      setUserRole(null);
+      setIsAdmin(false);
+    }
+  }, [isAuthenticated, user]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -135,6 +183,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signOut,
         loading,
+        isAdmin,
+        userRole,
+        checkUserRole,
       }}
     >
       {children}
