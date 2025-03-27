@@ -22,6 +22,9 @@ const PunishmentIconSection: React.FC<PunishmentIconSectionProps> = ({
   onUploadIcon,
   onRemoveIcon
 }) => {
+  // Ensure iconColor is never undefined
+  const safeIconColor = iconColor || '#ea384c';
+  
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Punishment Icon</FormLabel>
@@ -30,14 +33,14 @@ const PunishmentIconSection: React.FC<PunishmentIconSectionProps> = ({
           <IconSelector
             selectedIconName={selectedIconName}
             iconPreview={iconPreview}
-            iconColor={iconColor}
+            iconColor={safeIconColor}
             onSelectIcon={onSelectIcon}
             onUploadIcon={onUploadIcon}
             onRemoveIcon={onRemoveIcon}
             renderIcon={(iconName) => (
               <TaskIcon 
                 icon_name={iconName} 
-                icon_color={iconColor}
+                icon_color={safeIconColor}
                 className="h-6 w-6"
               />
             )}
@@ -46,7 +49,7 @@ const PunishmentIconSection: React.FC<PunishmentIconSectionProps> = ({
         
         <PredefinedIconsGrid
           selectedIconName={selectedIconName}
-          iconColor={iconColor}
+          iconColor={safeIconColor}
           onSelectIcon={onSelectIcon}
         />
       </div>

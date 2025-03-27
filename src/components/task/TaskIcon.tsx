@@ -30,7 +30,7 @@ const TaskIcon: React.FC<TaskIconProps> = ({
     const iconProps = {
       className,
       color: icon_color,
-      style: { color: icon_color } // Add explicit style to ensure color is applied
+      style: { color: icon_color } // Ensure color is applied both ways
     };
 
     switch (icon_name) {

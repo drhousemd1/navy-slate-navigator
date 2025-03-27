@@ -36,6 +36,9 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
         background_image_url: background_image_url,
       };
       
+      // Log data to help debug
+      console.log("Submitting punishment with data:", dataToSave);
+      
       // If editing, include the id
       if (punishmentData?.id) {
         dataToSave.id = punishmentData.id;
