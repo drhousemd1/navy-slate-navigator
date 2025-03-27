@@ -90,10 +90,26 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updatePointsInDatabase = useCallback(async (newPoints: number) => {
     try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !authData.user) {
+        console.error('Error getting user session:', authError);
+        throw authError || new Error('User not authenticated');
+      }
+      
+      const userId = authData.user.id;
+      
+      if (!userId) {
+        console.error('User ID not found in session');
+        throw new Error('User ID not available');
+      }
+      
+      console.log('Updating points for user:', userId);
+      
       const { error } = await supabase
         .from('profiles')
         .update({ points: newPoints })
-        .eq('id', (await supabase.auth.getUser()).data.user?.id);
+        .eq('id', userId);
       
       if (error) {
         console.error('Error updating points in database:', error);
