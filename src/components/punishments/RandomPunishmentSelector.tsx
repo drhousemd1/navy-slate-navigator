@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } f
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { Button } from '@/components/ui/button';
-import { Skull, RefreshCw, X } from 'lucide-react';
+import { Skull, RefreshCw, X, Shuffle } from 'lucide-react';
 import TaskIcon from '@/components/task/TaskIcon';
 import PointsBadge from '@/components/task/PointsBadge';
 
