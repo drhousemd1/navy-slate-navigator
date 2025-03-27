@@ -109,9 +109,9 @@ const Profile = () => {
                 Save
               </Button>
               <Button 
-                variant="outline" 
+                variant="destructive" 
                 onClick={handleEditToggle}
-                className="border-light-navy text-gray-300 hover:text-white"
+                className="text-white"
               >
                 Cancel
               </Button>
