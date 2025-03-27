@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Edit, Check, Plus } from 'lucide-react';
 import FrequencyTracker from '../components/task/FrequencyTracker';
 import PriorityBadge from '../components/task/PriorityBadge';
@@ -23,11 +22,14 @@ const Rules: React.FC = () => {
               {/* Card Header Row */}
               <div className="flex justify-between items-center mb-3">
                 <PriorityBadge priority="medium" />
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-green-500 text-white border-none px-3 py-1 rounded-full">
-                    (0/2) Complete
-                  </Badge>
-                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="bg-red-500 text-white hover:bg-red-600/90 h-7"
+                  onClick={() => console.log("Punish clicked")}
+                >
+                  Punish
+                </Button>
               </div>
               
               {/* Main Rule Content */}
@@ -57,20 +59,9 @@ const Rules: React.FC = () => {
                   usage_data={[1, 1, 1, 0, 0, 0, 0]}
                 />
                 
-                {/* Replace Complete button with Punish button */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="bg-red-500 text-white hover:bg-red-600/90 h-7"
-                    onClick={() => console.log("Punish clicked")}
-                  >
-                    Punish
-                  </Button>
-                  <Button size="sm" className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0">
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                </div>
+                <Button size="sm" className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0">
+                  <Edit className="w-4 h-4" />
+                </Button>
               </div>
             </div>
           </Card>
