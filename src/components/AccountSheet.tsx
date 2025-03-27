@@ -8,7 +8,7 @@ import {
   SheetTitle,
   SheetTrigger
 } from '@/components/ui/sheet';
-import { UserCircle2, User } from 'lucide-react';
+import { UserCircle2, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const AccountSheet = () => {
   const navigate = useNavigate();
-  const { user, getNickname, getProfileImage, getUserRole } = useAuth();
+  const { user, getNickname, getProfileImage, getUserRole, signOut } = useAuth();
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   
@@ -26,6 +26,11 @@ const AccountSheet = () => {
   
   const handleProfileClick = () => {
     navigate('/profile');
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
   };
   
   // Get user's nickname and role
@@ -140,6 +145,16 @@ const AccountSheet = () => {
                 </Button>
               </div>
             )}
+            
+            {/* Logout button */}
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-white hover:bg-light-navy border border-red-500 hover:bg-red-800"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-5 h-5 mr-2" />
+              Log Out
+            </Button>
             
             {/* Placeholder for future menu items */}
             <p className="text-sm text-gray-400">More options will be added here</p>
