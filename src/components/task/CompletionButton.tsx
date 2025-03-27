@@ -18,17 +18,22 @@ const CompletionButton: React.FC<CompletionButtonProps> = ({
   const hasReachedMax = currentCompletions >= maxCompletions;
   
   return (
-    <Button
-      variant="default"
-      size="sm"
-      className={`${hasReachedMax ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500'} text-white px-2 py-0 h-7`}
-      onClick={() => !hasReachedMax && onToggleCompletion(!completed)}
-      disabled={hasReachedMax}
-    >
-      <span className="text-xs">
-        {hasReachedMax ? 'Complete' : `Complete (${currentCompletions}/${maxCompletions})`}
+    <div className="flex items-center gap-2">
+      <span className="text-xs font-medium text-white">
+        ({currentCompletions}/{maxCompletions})
       </span>
-    </Button>
+      <Button
+        variant="default"
+        size="sm"
+        className={`${hasReachedMax ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500'} text-white px-2 py-0 h-7`}
+        onClick={() => !hasReachedMax && onToggleCompletion(!completed)}
+        disabled={hasReachedMax}
+      >
+        <span className="text-xs">
+          {hasReachedMax ? 'Complete' : 'Complete'}
+        </span>
+      </Button>
+    </div>
   );
 };
 

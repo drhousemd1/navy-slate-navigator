@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -80,7 +79,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">
-          {/* Priority indicator without background */}
           <PriorityBadge priority={priority} />
           
           {onToggleCompletion && (
