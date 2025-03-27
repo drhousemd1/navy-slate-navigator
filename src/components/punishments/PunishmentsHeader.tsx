@@ -14,7 +14,7 @@ const PunishmentsHeader: React.FC = () => {
 
   return (
     <div className="flex justify-between items-center mb-6">
-      <h1 className="text-2xl font-semibold text-white">Punishments</h1>
+      <h1 className="text-xl font-semibold text-white">Punishments</h1>
       <div className="flex items-center gap-2">
         <Button 
           variant="outline" 
