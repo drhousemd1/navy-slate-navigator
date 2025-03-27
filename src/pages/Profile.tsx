@@ -75,8 +75,13 @@ const Profile = () => {
         <h1 className="text-xl font-bold text-white mb-6">Profile</h1>
         <div className="bg-navy p-6 rounded-lg border border-light-navy">
           <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-white text-sm">Nickname:</label>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <label className="text-white text-sm">Nickname:</label>
+                {!isEditing && (
+                  <p className="text-white">{nickname}</p>
+                )}
+              </div>
               {!isEditing && (
                 <Button 
                   variant="ghost" 
@@ -89,7 +94,7 @@ const Profile = () => {
               )}
             </div>
             
-            {isEditing ? (
+            {isEditing && (
               <div className="flex gap-2">
                 <Input
                   value={nickname}
@@ -112,8 +117,6 @@ const Profile = () => {
                   Cancel
                 </Button>
               </div>
-            ) : (
-              <p className="text-white">{nickname}</p>
             )}
           </div>
         </div>
