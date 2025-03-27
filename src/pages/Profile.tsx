@@ -3,7 +3,7 @@ import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Pencil, Lock, Copy, Check, Trash2, Unlink2, Camera, X } from 'lucide-react';
+import { Pencil, Lock, Copy, Check, Trash2, Unlink2, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -706,7 +706,6 @@ const Profile = () => {
           className="absolute top-2 right-2 text-white"
           onClick={handleGoBack}
         >
-          <X className="w-4 h-4 mr-1" />
           Close
         </Button>
         
