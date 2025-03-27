@@ -26,11 +26,11 @@ const PunishmentCardContent: React.FC<PunishmentCardContentProps> = ({
   return (
     <div className="flex items-start mb-auto">
       <div className="mr-4 flex-shrink-0">
-        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: icon_color }}>
+        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#ea384c' }}>
           {icon_name ? (
             <TaskIcon 
               icon_name={icon_name} 
-              icon_color="white" 
+              icon_color={icon_color} 
               className="h-5 w-5"
             />
           ) : (
