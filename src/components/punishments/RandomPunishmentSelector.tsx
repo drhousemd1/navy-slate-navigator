@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
 import { usePunishments } from '@/contexts/PunishmentsContext';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skull, RefreshCw, X, Shuffle } from 'lucide-react';
 import TaskIcon from '@/components/task/TaskIcon';
 import PointsBadge from '@/components/task/PointsBadge';
+import PunishmentBackground from './PunishmentBackground';
 
 interface RandomPunishmentSelectorProps {
   isOpen: boolean;
@@ -89,48 +91,70 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
     }
   }, [isOpen, punishments.length]);
   
-  const renderPunishmentCard = () => {
-    const punishment = selectedPunishment || 
+  const getCurrentPunishment = () => {
+    return selectedPunishment || 
       (punishments.length > 0 ? punishments[currentIndex] : null);
+  };
+  
+  const renderPunishmentCard = () => {
+    const punishment = getCurrentPunishment();
     
     if (!punishment) return null;
     
     return (
-      <div className="bg-navy border-2 border-red-500 rounded-lg p-4 mb-4">
-        <div className="flex items-start">
-          <div className="mr-4 flex-shrink-0">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center" 
-              style={{ backgroundColor: '#ea384c' }}
-            >
-              {punishment.icon_name ? (
-                <TaskIcon 
-                  icon_name={punishment.icon_name} 
-                  icon_color={punishment.icon_color || '#FFFFFF'} 
-                  className="h-5 w-5"
-                />
-              ) : (
-                <Skull className="h-5 w-5" style={{ color: punishment.icon_color || '#FFFFFF' }} />
-              )}
-            </div>
-          </div>
-          <div className="flex-1">
-            <div className="flex justify-between items-start">
-              <div className="flex flex-col">
-                <span className="text-xl font-semibold" style={{ color: punishment.title_color || '#FFFFFF' }}>
-                  {punishment.title}
-                </span>
-                <span className="text-sm mt-1" style={{ color: punishment.subtext_color || '#8E9196' }}>
-                  {punishment.description}
-                </span>
+      <div className="bg-navy border-2 border-red-500 rounded-lg p-4 mb-4 relative overflow-hidden">
+        {punishment.background_image_url && (
+          <PunishmentBackground
+            background_image_url={punishment.background_image_url}
+            background_opacity={punishment.background_opacity || 50}
+            focal_point_x={punishment.focal_point_x || 50}
+            focal_point_y={punishment.focal_point_y || 50}
+          />
+        )}
+        <div className="relative z-10">
+          <div className="flex items-start">
+            <div className="mr-4 flex-shrink-0">
+              <div 
+                className="w-10 h-10 rounded-full flex items-center justify-center" 
+                style={{ backgroundColor: '#ea384c' }}
+              >
+                {punishment.icon_name ? (
+                  <TaskIcon 
+                    icon_name={punishment.icon_name} 
+                    icon_color={punishment.icon_color || '#FFFFFF'} 
+                    className="h-5 w-5"
+                  />
+                ) : (
+                  <Skull className="h-5 w-5" style={{ color: punishment.icon_color || '#FFFFFF' }} />
+                )}
               </div>
-              <PointsBadge points={-punishment.points} />
+            </div>
+            <div className="flex-1">
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col">
+                  <span className="text-xl font-semibold" style={{ color: punishment.title_color || '#FFFFFF' }}>
+                    {punishment.title}
+                  </span>
+                  <span className="text-sm mt-1" style={{ color: punishment.subtext_color || '#8E9196' }}>
+                    {punishment.description}
+                  </span>
+                </div>
+                <PointsBadge points={-punishment.points} />
+              </div>
             </div>
           </div>
         </div>
       </div>
     );
   };
+  
+  const currentPunishment = getCurrentPunishment();
+  const backgroundImageStyle = currentPunishment?.background_image_url ? {
+    backgroundImage: `url(${currentPunishment.background_image_url})`,
+    backgroundSize: 'cover',
+    backgroundPosition: `${currentPunishment.focal_point_x || 50}% ${currentPunishment.focal_point_y || 50}%`,
+    opacity: (currentPunishment.background_opacity || 50) / 100
+  } : undefined;
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
