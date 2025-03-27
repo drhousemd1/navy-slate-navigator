@@ -17,8 +17,12 @@ import {
 } from '../lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 
-const TasksContent: React.FC = () => {
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
+interface TasksContentProps {
+  isEditorOpen: boolean;
+  setIsEditorOpen: (isOpen: boolean) => void;
+}
+
+const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
 
@@ -220,13 +224,17 @@ const Tasks: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   
   const handleNewTask = () => {
+    console.log("Parent component triggering new task");
     setIsEditorOpen(true);
   };
   
   return (
     <AppLayout onAddNewItem={handleNewTask}>
       <RewardsProvider>
-        <TasksContent />
+        <TasksContent 
+          isEditorOpen={isEditorOpen}
+          setIsEditorOpen={setIsEditorOpen}
+        />
       </RewardsProvider>
     </AppLayout>
   );
