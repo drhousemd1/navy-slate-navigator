@@ -4,9 +4,10 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Auth: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ const Auth: React.FC = () => {
     setLoading(true);
 
     try {
-      if (isLogin) {
+      if (activeTab === "login") {
         const { error } = await signIn(email, password);
         if (!error) {
           navigate('/');
@@ -26,7 +27,7 @@ const Auth: React.FC = () => {
       } else {
         const { error } = await signUp(email, password);
         if (!error) {
-          setIsLogin(true);
+          setActiveTab("login");
         }
       }
     } finally {
@@ -43,59 +44,89 @@ const Auth: React.FC = () => {
     <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
       <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
         <h1 className="text-2xl font-bold text-center text-white">
-          {isLogin ? 'Login to Your Account' : 'Create a New Account'}
+          Welcome to the Rewards System
         </h1>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-white text-sm">Email</label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="bg-navy border-light-navy text-white"
-              placeholder="your@email.com"
-            />
-          </div>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "login" | "signup")} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="login">Sign In</TabsTrigger>
+            <TabsTrigger value="signup">Create Account</TabsTrigger>
+          </TabsList>
           
-          <div className="space-y-2">
-            <label className="text-white text-sm">Password</label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="bg-navy border-light-navy text-white"
-              placeholder="********"
-              minLength={6}
-            />
-          </div>
+          <TabsContent value="login" className="mt-0">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-white text-sm">Email</label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="bg-navy border-light-navy text-white"
+                  placeholder="your@email.com"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-white text-sm">Password</label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="bg-navy border-light-navy text-white"
+                  placeholder="********"
+                  minLength={6}
+                />
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full bg-primary hover:bg-primary/90" 
+                disabled={loading}
+              >
+                {loading ? 'Signing In...' : 'Sign In'}
+              </Button>
+            </form>
+          </TabsContent>
           
-          <Button 
-            type="submit" 
-            className="w-full bg-primary hover:bg-primary/90" 
-            disabled={loading}
-          >
-            {loading 
-              ? 'Processing...' 
-              : isLogin 
-                ? 'Sign In' 
-                : 'Create Account'}
-          </Button>
-        </form>
-        
-        <div className="text-center">
-          <button
-            type="button"
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-primary hover:underline text-sm"
-          >
-            {isLogin 
-              ? "Don't have an account? Sign Up" 
-              : "Already have an account? Sign In"}
-          </button>
-        </div>
+          <TabsContent value="signup" className="mt-0">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-white text-sm">Email</label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="bg-navy border-light-navy text-white"
+                  placeholder="your@email.com"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-white text-sm">Password</label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="bg-navy border-light-navy text-white"
+                  placeholder="********"
+                  minLength={6}
+                />
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full bg-primary hover:bg-primary/90" 
+                disabled={loading}
+              >
+                {loading ? 'Creating Account...' : 'Create Account'}
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
