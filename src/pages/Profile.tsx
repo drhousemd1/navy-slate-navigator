@@ -115,7 +115,6 @@ const Profile = () => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
 
-    // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "File too large",
@@ -125,7 +124,6 @@ const Profile = () => {
       return;
     }
 
-    // Check file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Invalid file type",
@@ -137,10 +135,8 @@ const Profile = () => {
 
     setIsUploadingImage(true);
     try {
-      // Create a unique filename for this user's avatar
       const fileName = `${user.id}-${Date.now()}`;
       
-      // Upload the file to the 'avatars' bucket
       const { error: uploadError, data } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
@@ -150,14 +146,12 @@ const Profile = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get the public URL
       const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
 
       const avatarUrl = urlData.publicUrl;
       
-      // Update the profile in Supabase
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: avatarUrl })
@@ -165,10 +159,8 @@ const Profile = () => {
 
       if (updateError) throw updateError;
 
-      // Update the local state
       setProfileImageUrl(avatarUrl);
       
-      // Update the user metadata in the Auth context
       updateProfileImage(avatarUrl);
       
       toast({
@@ -183,7 +175,6 @@ const Profile = () => {
       });
     } finally {
       setIsUploadingImage(false);
-      // Clear the file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -1015,4 +1006,13 @@ const Profile = () => {
       </div>
       
       <DeleteAccountDialog 
-        isOpen={dialogConfig.isOpen
+        isOpen={dialogConfig.isOpen}
+        onClose={handleDialogClose}
+        onConfirm={handleDialogConfirm}
+        type={dialogConfig.type}
+      />
+    </AppLayout>
+  );
+};
+
+export default Profile;
