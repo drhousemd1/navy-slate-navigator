@@ -295,6 +295,7 @@ export type Database = {
           title: string
           title_color: string
           updated_at: string
+          usage_data: Json | null
         }
         Insert: {
           background_image_url?: string | null
@@ -319,6 +320,7 @@ export type Database = {
           title: string
           title_color?: string
           updated_at?: string
+          usage_data?: Json | null
         }
         Update: {
           background_image_url?: string | null
@@ -343,6 +345,7 @@ export type Database = {
           title?: string
           title_color?: string
           updated_at?: string
+          usage_data?: Json | null
         }
         Relationships: []
       }

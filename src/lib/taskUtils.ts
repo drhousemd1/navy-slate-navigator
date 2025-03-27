@@ -107,6 +107,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     console.log('Saving task with highlight effect:', task.highlight_effect);
     console.log('Saving task with icon name:', task.icon_name);
     console.log('Saving task with icon color:', task.icon_color);
+    console.log('Saving task with usage_data:', task.usage_data);
     
     // Initialize usage_data if it doesn't exist
     const usage_data = task.usage_data || Array(7).fill(0);
