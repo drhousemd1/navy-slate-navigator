@@ -4,14 +4,12 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from '@/hooks/use-toast';
 import { LogIn, UserPlus, ArrowLeft } from 'lucide-react';
 
 type AuthView = "login" | "signup" | "forgot-password";
 
 const Auth: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const [authView, setAuthView] = useState<AuthView>("login");
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,9 +24,8 @@ const Auth: React.FC = () => {
     setLoginError(null);
 
     try {
-      console.log(`Attempting to ${activeTab === "login" ? "sign in" : "sign up"} with email: ${email}`);
-      
-      if (activeTab === "login") {
+      if (authView === "login") {
+        console.log("Attempting to sign in with email:", email);
         const { error } = await signIn(email, password);
         if (error) {
           console.error("Login error:", error);
@@ -38,6 +35,7 @@ const Auth: React.FC = () => {
           navigate('/');
         }
       } else {
+        console.log("Attempting to sign up with email:", email);
         const { error } = await signUp(email, password);
         if (error) {
           console.error("Signup error:", error);
@@ -47,7 +45,7 @@ const Auth: React.FC = () => {
             title: "Account created",
             description: "Please check your email for verification instructions.",
           });
-          setActiveTab("login");
+          setAuthView("login");
         }
       }
     } catch (error) {
@@ -149,7 +147,7 @@ const Auth: React.FC = () => {
     );
   }
 
-  // Regular login/signup view
+  // Login or Signup view (combined into a single view with different form submissions)
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
       <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
@@ -157,110 +155,81 @@ const Auth: React.FC = () => {
           Welcome to the Rewards System
         </h1>
         
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "login" | "signup")} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="login">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Create Account</TabsTrigger>
-          </TabsList>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-white text-sm">Email</label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="bg-navy border-light-navy text-white"
+              placeholder="your@email.com"
+            />
+          </div>
           
-          <TabsContent value="login" className="mt-0">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-white text-sm">Email</label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-navy border-light-navy text-white"
-                  placeholder="your@email.com"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-white text-sm">Password</label>
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="bg-navy border-light-navy text-white"
-                  placeholder="********"
-                  minLength={6}
-                />
-                <div className="text-right">
-                  <Button 
-                    type="button" 
-                    variant="link" 
-                    className="text-sm text-blue-400 hover:text-blue-300 p-0"
-                    onClick={() => setAuthView("forgot-password")}
-                  >
-                    Forgot Password?
-                  </Button>
-                </div>
-              </div>
-              
-              {loginError && (
-                <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded">
-                  {loginError}
-                </div>
-              )}
-              
+          <div className="space-y-2">
+            <label className="text-white text-sm">Password</label>
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="bg-navy border-light-navy text-white"
+              placeholder="********"
+              minLength={6}
+            />
+            <div className="text-right">
               <Button 
-                type="submit" 
-                className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center" 
-                disabled={loading}
+                type="button" 
+                variant="link" 
+                className="text-sm text-blue-400 hover:text-blue-300 p-0"
+                onClick={() => setAuthView("forgot-password")}
               >
-                <LogIn className="w-4 h-4 mr-2" />
-                {loading ? 'Signing In...' : 'Sign In'}
+                Forgot Password?
               </Button>
-            </form>
-          </TabsContent>
+            </div>
+          </div>
           
-          <TabsContent value="signup" className="mt-0">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-white text-sm">Email</label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-navy border-light-navy text-white"
-                  placeholder="your@email.com"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-white text-sm">Password</label>
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="bg-navy border-light-navy text-white"
-                  placeholder="********"
-                  minLength={6}
-                />
-              </div>
-              
-              {loginError && (
-                <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded">
-                  {loginError}
-                </div>
-              )}
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-green-600 hover:bg-green-700 flex items-center justify-center" 
-                disabled={loading}
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                {loading ? 'Creating Account...' : 'Create Account'}
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
+          {loginError && (
+            <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded">
+              {loginError}
+            </div>
+          )}
+          
+          {/* Sign In Button */}
+          <Button 
+            type="submit" 
+            className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center" 
+            disabled={loading}
+            onClick={() => {
+              if (authView !== "login") {
+                setAuthView("login");
+                return false; // Prevent form submission when just switching views
+              }
+              return true; // Allow form submission when already on login view
+            }}
+          >
+            <LogIn className="w-4 h-4 mr-2" />
+            {loading && authView === "login" ? 'Signing In...' : 'Sign In'}
+          </Button>
+          
+          {/* Create Account Button */}
+          <Button 
+            type={authView === "signup" ? "submit" : "button"}
+            className="w-full bg-green-600 hover:bg-green-700 flex items-center justify-center" 
+            disabled={loading}
+            onClick={(e) => {
+              if (authView !== "signup") {
+                e.preventDefault();
+                setAuthView("signup");
+              }
+            }}
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            {loading && authView === "signup" ? 'Creating Account...' : 'Create Account'}
+          </Button>
+        </form>
         
         <div className="text-center text-xs text-gray-400 pt-2">
           <p>Note: If you have trouble signing in, try using a new email to create a fresh account.</p>
