@@ -228,9 +228,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const getUserRole = (): string => {
-    if (!user) return 'Submissive'; // Default role
+    if (!user) return 'Submissive'; // Default role with proper capitalization
     
-    return user.user_metadata?.role || 'Submissive';
+    // Get the role from metadata and ensure it's properly capitalized
+    const role = user.user_metadata?.role || 'Submissive';
+    
+    // Ensure first letter is capitalized (in case it's stored lowercase in the database)
+    return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
   const updateUserRole = async (role: string) => {

@@ -29,7 +29,7 @@ const AccountSheet = () => {
   // Get user's nickname, role and profile image
   const nickname = getNickname();
   const profileImageUrl = getProfileImage();
-  const userRole = getUserRole();
+  const userRole = getUserRole(); // This will now return properly capitalized role
   
   return (
     <Sheet>
