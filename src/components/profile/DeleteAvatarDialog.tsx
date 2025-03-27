@@ -32,7 +32,7 @@ export const DeleteAvatarDialog: React.FC<DeleteAvatarDialogProps> = ({
             This will remove your profile image. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
+        <AlertDialogFooter className="flex flex-row justify-center gap-4 w-full">
           <AlertDialogCancel 
             onClick={onClose}
             className="bg-light-navy text-white hover:bg-gray-700"

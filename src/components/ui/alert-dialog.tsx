@@ -80,7 +80,7 @@ const AlertDialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-row justify-end space-x-2 w-full",
+      "flex flex-row justify-center gap-4 w-full",
       className
     )}
     {...props}
@@ -133,7 +133,7 @@ const AlertDialogCancel = React.forwardRef<
     ref={ref}
     className={cn(
       buttonVariants({ variant: "outline" }),
-      "mt-2 sm:mt-0",
+      "mt-0",
       className
     )}
     {...props}
