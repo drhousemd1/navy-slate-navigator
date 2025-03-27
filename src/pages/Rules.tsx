@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -39,7 +40,7 @@ const Rules: React.FC = () => {
                   <div className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center">
                     <Check className="w-6 h-6 text-white" />
                   </div>
-                  <div className="bg-gray-300 bg-opacity-60 text-black font-bold py-1 px-4 rounded-md">
+                  <div className="bg-gray-300 bg-opacity-60 text-black font-bold py-1 px-4 rounded-md border-2 border-[#00f0ff]">
                     Spanking
                   </div>
                 </div>
