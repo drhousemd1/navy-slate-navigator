@@ -18,7 +18,7 @@ const RewardsHeader: React.FC = () => {
         </Badge>
         <Badge className="bg-nav-active text-white font-bold px-3 py-1 flex items-center gap-1">
           <Coins className="w-3 h-3" />
-          <span>{totalPoints} Points</span>
+          <span>{totalPoints}</span>
         </Badge>
       </div>
     </div>
