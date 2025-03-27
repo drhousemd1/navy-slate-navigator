@@ -15,6 +15,8 @@ type AuthContextType = {
   isAdmin: boolean;
   userRole: UserRole | null;
   checkUserRole: () => Promise<void>;
+  updateNickname: (nickname: string) => void;
+  getNickname: () => string;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -169,6 +171,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateNickname = (nickname: string) => {
+    if (user) {
+      const updatedUser = {
+        ...user,
+        user_metadata: {
+          ...(user.user_metadata || {}),
+          nickname
+        }
+      };
+      setUser(updatedUser);
+    }
+  };
+
+  const getNickname = (): string => {
+    if (!user) return 'Guest';
+    
+    if (user.user_metadata?.nickname) {
+      return user.user_metadata.nickname;
+    }
+    
+    if (user.email) {
+      return user.email.split('@')[0];
+    }
+    
+    return 'User';
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -182,6 +211,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         userRole,
         checkUserRole,
+        updateNickname,
+        getNickname,
       }}
     >
       {children}

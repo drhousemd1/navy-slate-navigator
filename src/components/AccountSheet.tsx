@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 
 const AccountSheet = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, getNickname } = useAuth();
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   
   const toggleProfileOptions = () => {
@@ -25,6 +25,9 @@ const AccountSheet = () => {
   const handleProfileClick = () => {
     navigate('/profile');
   };
+  
+  // Get user's nickname
+  const nickname = getNickname();
   
   return (
     <Sheet>
@@ -44,12 +47,12 @@ const AccountSheet = () => {
             <Avatar className="h-12 w-12 border border-light-navy">
               <AvatarImage src="" alt="User avatar" />
               <AvatarFallback className="bg-light-navy text-nav-active">
-                {user ? user.email?.charAt(0).toUpperCase() : 'G'}
+                {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
               </AvatarFallback>
             </Avatar>
             <div>
               <p className="text-lg font-medium">
-                {user ? user.email : 'Guest'}
+                {user ? nickname : 'Guest'}
               </p>
             </div>
           </div>
