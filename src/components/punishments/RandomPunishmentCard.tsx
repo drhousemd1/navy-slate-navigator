@@ -5,6 +5,7 @@ import { Skull } from 'lucide-react';
 import TaskIcon from '@/components/task/TaskIcon';
 import PointsBadge from '@/components/task/PointsBadge';
 import PunishmentBackground from './PunishmentBackground';
+import PunishmentCardContent from './PunishmentCardContent';
 
 interface PunishmentCardProps {
   punishment: PunishmentData | null;
@@ -44,12 +45,15 @@ const RandomPunishmentCard: React.FC<PunishmentCardProps> = ({ punishment }) => 
           <div className="flex-1">
             <div className="flex justify-between items-start">
               <div className="flex flex-col">
-                <span className="text-xl font-semibold" style={{ color: punishment.title_color || '#FFFFFF' }}>
-                  {punishment.title}
-                </span>
-                <span className="text-sm mt-1" style={{ color: punishment.subtext_color || '#8E9196' }}>
-                  {punishment.description}
-                </span>
+                <PunishmentCardContent
+                  icon_name={punishment.icon_name}
+                  icon_color={punishment.icon_color || '#FFFFFF'}
+                  title={punishment.title}
+                  description={punishment.description || ''}
+                  title_color={punishment.title_color || '#FFFFFF'}
+                  subtext_color={punishment.subtext_color || '#8E9196'}
+                  highlight_effect={punishment.highlight_effect || false}
+                />
               </div>
               <PointsBadge points={-punishment.points} />
             </div>

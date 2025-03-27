@@ -42,7 +42,7 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
             <Shuffle className="h-5 w-5 text-red-500" />
             Random Punishment
           </DialogTitle>
-          <DialogDescription className="text-light-navy">
+          <DialogDescription className="text-white">
             {isSelecting 
               ? "Selecting a random punishment..." 
               : selectedPunishment 
