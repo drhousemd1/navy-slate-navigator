@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,6 +14,7 @@ import Rewards from "./pages/Rewards";
 import Punishments from "./pages/Punishments";
 import ThroneRoom from "./pages/ThroneRoom";
 import Encyclopedia from "./pages/Encyclopedia";
+import Profile from "./pages/Profile";
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -81,6 +81,7 @@ const AppRoutes = () => {
       <Route path="/punishments" element={<ProtectedRoute><Punishments /></ProtectedRoute>} />
       <Route path="/throne-room" element={<AdminRoute><ThroneRoom /></AdminRoute>} />
       <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

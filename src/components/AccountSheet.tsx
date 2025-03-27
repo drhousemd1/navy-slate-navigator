@@ -11,13 +11,19 @@ import {
 import { UserCircle2, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const AccountSheet = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   
   const toggleProfileOptions = () => {
     setShowProfileOptions(!showProfileOptions);
+  };
+  
+  const handleProfileClick = () => {
+    navigate('/profile');
   };
   
   return (
@@ -64,7 +70,7 @@ const AccountSheet = () => {
                 <Button 
                   variant="ghost" 
                   className="w-full justify-start text-white hover:bg-light-navy"
-                  onClick={() => {}}
+                  onClick={handleProfileClick}
                 >
                   Profile
                 </Button>
