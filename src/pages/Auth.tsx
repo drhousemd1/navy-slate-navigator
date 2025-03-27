@@ -5,31 +5,51 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from '@/hooks/use-toast';
+import { LogIn, UserPlus } from 'lucide-react';
 
 const Auth: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const { signIn, signUp, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setLoginError(null);
 
     try {
+      console.log(`Attempting to ${activeTab === "login" ? "sign in" : "sign up"} with email: ${email}`);
+      
       if (activeTab === "login") {
         const { error } = await signIn(email, password);
-        if (!error) {
+        if (error) {
+          console.error("Login error:", error);
+          setLoginError(error.message || "Invalid login credentials. Please check your email and password.");
+        } else {
+          console.log("Login successful, navigating to home");
           navigate('/');
         }
       } else {
         const { error } = await signUp(email, password);
-        if (!error) {
+        if (error) {
+          console.error("Signup error:", error);
+          setLoginError(error.message || "Error creating account. This email may already be in use.");
+        } else {
+          toast({
+            title: "Account created",
+            description: "Please check your email for verification instructions.",
+          });
           setActiveTab("login");
         }
       }
+    } catch (error) {
+      console.error("Authentication error:", error);
+      setLoginError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -80,11 +100,18 @@ const Auth: React.FC = () => {
                 />
               </div>
               
+              {loginError && (
+                <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded">
+                  {loginError}
+                </div>
+              )}
+              
               <Button 
                 type="submit" 
-                className="w-full bg-primary hover:bg-primary/90" 
+                className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center" 
                 disabled={loading}
               >
+                <LogIn className="w-4 h-4 mr-2" />
                 {loading ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
@@ -117,16 +144,27 @@ const Auth: React.FC = () => {
                 />
               </div>
               
+              {loginError && (
+                <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded">
+                  {loginError}
+                </div>
+              )}
+              
               <Button 
                 type="submit" 
-                className="w-full bg-primary hover:bg-primary/90" 
+                className="w-full bg-green-600 hover:bg-green-700 flex items-center justify-center" 
                 disabled={loading}
               >
+                <UserPlus className="w-4 h-4 mr-2" />
                 {loading ? 'Creating Account...' : 'Create Account'}
               </Button>
             </form>
           </TabsContent>
         </Tabs>
+        
+        <div className="text-center text-xs text-gray-400 pt-2">
+          <p>Note: If you have trouble signing in, try using a new email to create a fresh account.</p>
+        </div>
       </div>
     </div>
   );
