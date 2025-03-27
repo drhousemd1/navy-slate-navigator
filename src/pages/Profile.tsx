@@ -72,53 +72,51 @@ const Profile = () => {
   return (
     <AppLayout>
       <div className="container mx-auto max-w-4xl p-4">
-        <h1 className="text-xl font-bold text-white mb-6">Profile</h1>
-        <div className="bg-navy p-6 rounded-lg border border-light-navy">
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <label className="text-white text-sm">Nickname:</label>
-                {!isEditing && (
-                  <p className="text-white">{nickname}</p>
-                )}
-              </div>
+        <h1 className="text-xl font-bold text-white mb-4">Profile</h1>
+        <div className="bg-navy py-3 px-4 rounded-lg border border-light-navy">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="text-white text-sm">Nickname:</label>
               {!isEditing && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-gray-300 hover:text-white"
-                  onClick={handleEditToggle}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+                <p className="text-white">{nickname}</p>
               )}
             </div>
-            
-            {isEditing && (
-              <div className="flex gap-2">
-                <Input
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  className="bg-light-navy text-white border-light-navy"
-                  placeholder="Enter nickname"
-                />
-                <Button 
-                  onClick={handleSave} 
-                  disabled={isLoading}
-                  className="bg-cyan-600 hover:bg-cyan-700 text-white"
-                >
-                  Save
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={handleEditToggle}
-                  className="border-light-navy text-gray-300 hover:text-white"
-                >
-                  Cancel
-                </Button>
-              </div>
+            {!isEditing && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-300 hover:text-white"
+                onClick={handleEditToggle}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
             )}
           </div>
+          
+          {isEditing && (
+            <div className="flex gap-2 mt-2">
+              <Input
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                className="bg-light-navy text-white border-light-navy"
+                placeholder="Enter nickname"
+              />
+              <Button 
+                onClick={handleSave} 
+                disabled={isLoading}
+                className="bg-cyan-600 hover:bg-cyan-700 text-white"
+              >
+                Save
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleEditToggle}
+                className="border-light-navy text-gray-300 hover:text-white"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </AppLayout>
