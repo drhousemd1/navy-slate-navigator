@@ -18,7 +18,7 @@ const PunishmentsHeader: React.FC = () => {
       <div className="flex items-center gap-2">
         <Button 
           variant="outline" 
-          className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white border-none"
+          className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white border-none h-8 px-3 text-sm font-medium rounded-md"
           onClick={() => setIsRandomSelectorOpen(true)}
           disabled={punishments.length === 0}
         >
