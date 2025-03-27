@@ -137,14 +137,13 @@ const Profile = () => {
 
     setIsUploadingImage(true);
     try {
-      // Create a storage bucket for profile images if it doesn't exist
+      // Create a unique filename for this user's avatar
       const fileName = `${user.id}-${Date.now()}`;
-      const filePath = `${fileName}`;
       
-      // Upload the file
+      // Upload the file to the 'avatars' bucket
       const { error: uploadError, data } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, {
+        .upload(fileName, file, {
           cacheControl: '3600',
           upsert: true
         });
@@ -154,7 +153,7 @@ const Profile = () => {
       // Get the public URL
       const { data: urlData } = supabase.storage
         .from('avatars')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
       const avatarUrl = urlData.publicUrl;
       
@@ -1016,13 +1015,4 @@ const Profile = () => {
       </div>
       
       <DeleteAccountDialog 
-        isOpen={dialogConfig.isOpen}
-        onClose={handleDialogClose}
-        onConfirm={handleDialogConfirm}
-        type={dialogConfig.type}
-      />
-    </AppLayout>
-  );
-};
-
-export default Profile;
+        isOpen={dialogConfig.isOpen

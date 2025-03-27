@@ -22,7 +22,7 @@ interface AppLayoutProps {
 const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, getNickname } = useAuth();
+  const { user, getNickname, getProfileImage } = useAuth();
 
   // Only show "Add" button for specific routes
   const shouldShowAddButton = 
@@ -39,7 +39,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   
   // Get profile image and nickname for the avatar
   const nickname = getNickname();
-  const profileImageUrl = user?.user_metadata?.avatar_url || '';
+  const profileImageUrl = getProfileImage();
 
   // Determine if we're on the rewards page, tasks page, or punishments page for special styling
   const isRewardsPage = location.pathname === '/rewards';
