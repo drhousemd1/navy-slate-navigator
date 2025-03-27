@@ -23,18 +23,27 @@ const PunishmentCardContent: React.FC<PunishmentCardContentProps> = ({
   subtext_color,
   highlight_effect
 }) => {
+  // Use the provided icon color for the background
+  const iconBgColor = '#ea384c'; // Keep red background for the circle
+
   return (
     <div className="flex items-start mb-auto">
       <div className="mr-4 flex-shrink-0">
-        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#ea384c' }}>
+        <div 
+          className="w-10 h-10 rounded-full flex items-center justify-center" 
+          style={{ backgroundColor: iconBgColor }}
+        >
           {icon_name ? (
             <TaskIcon 
               icon_name={icon_name} 
-              icon_color={icon_color} // Fixed: Use the actual icon_color prop
+              icon_color={icon_color} 
               className="h-5 w-5"
             />
           ) : (
-            <Skull className="h-5 w-5 text-white" />
+            <Skull 
+              className="h-5 w-5" 
+              style={{ color: icon_color }} 
+            />
           )}
         </div>
       </div>

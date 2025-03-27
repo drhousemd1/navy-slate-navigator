@@ -22,15 +22,18 @@ const TaskIcon: React.FC<TaskIconProps> = ({
   icon_color = '#9b87f5',
   className = "w-6 h-6"
 }) => {
+  console.log('TaskIcon rendering with icon_color:', icon_color);
+  
   if (icon_url) {
     return <img src={icon_url} alt="Task icon" className={className} />;
   }
   
   if (icon_name) {
+    // Ensure color is applied both through the color prop and style
     const iconProps = {
       className,
       color: icon_color,
-      style: { color: icon_color } // Ensure color is applied both ways
+      style: { color: icon_color }
     };
 
     switch (icon_name) {
@@ -155,7 +158,8 @@ const TaskIcon: React.FC<TaskIconProps> = ({
     }
   }
   
-  return <Calendar className={className} style={{ color: icon_color }} />;
+  // Default icon with color applied
+  return <Calendar className={className} color={icon_color} style={{ color: icon_color }} />;
 };
 
 export default TaskIcon;

@@ -54,6 +54,8 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
     handleDeletePunishment
   } = usePunishmentCard({ id, points });
 
+  console.log('PunishmentCard rendering with icon_color:', icon_color);
+
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-red-500 bg-navy">
