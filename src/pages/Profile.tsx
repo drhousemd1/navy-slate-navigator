@@ -4,7 +4,7 @@ import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
+import { Pencil, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -12,8 +12,12 @@ const Profile = () => {
   const { user, updateNickname } = useAuth();
   const [nickname, setNickname] = useState<string>('');
   const [email, setEmail] = useState<string>('');
+  const [currentPassword, setCurrentPassword] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [isEditingNickname, setIsEditingNickname] = useState<boolean>(false);
   const [isEditingEmail, setIsEditingEmail] = useState<boolean>(false);
+  const [isEditingPassword, setIsEditingPassword] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
@@ -36,6 +40,14 @@ const Profile = () => {
   
   const handleEditEmailToggle = () => {
     setIsEditingEmail(!isEditingEmail);
+  };
+  
+  const handleEditPasswordToggle = () => {
+    setIsEditingPassword(!isEditingPassword);
+    // Reset password fields when toggling
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
   };
 
   const handleSaveNickname = async () => {
@@ -110,6 +122,85 @@ const Profile = () => {
       setIsLoading(false);
     }
   };
+  
+  const handleSavePassword = async () => {
+    // Validate passwords
+    if (!currentPassword) {
+      toast({
+        title: "Current password required",
+        description: "Please enter your current password.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!newPassword) {
+      toast({
+        title: "New password required",
+        description: "Please enter a new password.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "New password and confirmation must match.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Minimum password length
+    if (newPassword.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // First verify current password by signing in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: currentPassword
+      });
+      
+      if (signInError) {
+        throw new Error("Current password is incorrect");
+      }
+      
+      // Then update to the new password
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword 
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password updated",
+        description: "Your password has been updated successfully.",
+      });
+      setIsEditingPassword(false);
+      
+      // Clear password fields
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message || "There was an error updating your password.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <AppLayout>
@@ -164,7 +255,7 @@ const Profile = () => {
         </div>
         
         {/* Email Box */}
-        <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy">
+        <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy mb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <label className="text-white text-sm">Email:</label>
@@ -207,6 +298,82 @@ const Profile = () => {
               >
                 Cancel
               </Button>
+            </div>
+          )}
+        </div>
+        
+        {/* Password Box */}
+        <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="text-white text-sm">Password:</label>
+              {!isEditingPassword && (
+                <p className="text-white">••••••••</p>
+              )}
+            </div>
+            {!isEditingPassword && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-300 hover:text-white"
+                onClick={handleEditPasswordToggle}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          
+          {isEditingPassword && (
+            <div className="flex flex-col gap-2 mt-2">
+              <div>
+                <label className="text-white text-sm mb-1 block">Current Password:</label>
+                <Input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="bg-light-navy text-white border-light-navy"
+                  placeholder="Enter current password"
+                />
+              </div>
+              
+              <div>
+                <label className="text-white text-sm mb-1 block">New Password:</label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="bg-light-navy text-white border-light-navy"
+                  placeholder="Enter new password"
+                />
+              </div>
+              
+              <div>
+                <label className="text-white text-sm mb-1 block">Confirm New Password:</label>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="bg-light-navy text-white border-light-navy"
+                  placeholder="Confirm new password"
+                />
+              </div>
+              
+              <div className="flex gap-2 mt-2">
+                <Button 
+                  onClick={handleSavePassword} 
+                  disabled={isLoading}
+                  className="bg-cyan-600 hover:bg-cyan-700 text-white"
+                >
+                  Save
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleEditPasswordToggle}
+                  className="text-white"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
         </div>
