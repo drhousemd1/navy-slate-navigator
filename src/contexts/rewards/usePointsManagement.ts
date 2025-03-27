@@ -6,68 +6,80 @@ import { toast } from '@/hooks/use-toast';
 export const usePointsManagement = () => {
   const [totalPoints, setTotalPoints] = useState<number>(0);
 
-  useEffect(() => {
-    const fetchTotalPoints = async () => {
-      try {
-        // Attempt to get user auth data first
-        const { data: authData } = await supabase.auth.getUser();
-        const userId = authData.user?.id;
-        
-        let data;
-        let error;
-        
-        if (userId) {
-          // If authenticated, get points for this user
-          console.log('Fetching points for authenticated user:', userId);
-          const response = await supabase
-            .from('profiles')
-            .select('points')
-            .eq('id', userId)
-            .single();
-            
-          data = response.data;
-          error = response.error;
-        } else {
-          // If not authenticated, get the first profile or any record
-          console.log('No authenticated user, fetching first available profile');
-          const response = await supabase
-            .from('profiles')
-            .select('points')
-            .limit(1);
-            
-          data = response.data?.[0];
-          error = response.error;
-        }
-        
-        if (error && error.code === 'PGRST116') {
-          // No data found - either no user or no profiles
-          console.log('No points data found, creating initial profile');
+  const fetchTotalPoints = useCallback(async () => {
+    try {
+      // Attempt to get user auth data first
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData.user?.id;
+      
+      let data;
+      let error;
+      
+      if (userId) {
+        // If authenticated, get points for this user
+        console.log('Fetching points for authenticated user:', userId);
+        const response = await supabase
+          .from('profiles')
+          .select('points')
+          .eq('id', userId)
+          .single();
           
-          // We'll just set a default value in the client, since we can't create profiles due to RLS
-          console.log('Using default points value in client');
-          setTotalPoints(0);
-          return;
-        } else if (error) {
-          console.error('Error fetching points:', error);
+        data = response.data;
+        error = response.error;
+      } else {
+        // If not authenticated, get the first profile or any record
+        console.log('No authenticated user, fetching first available profile');
+        const response = await supabase
+          .from('profiles')
+          .select('points')
+          .limit(1);
+          
+        data = response.data?.[0];
+        error = response.error;
+      }
+      
+      if (error && error.code === 'PGRST116') {
+        // No data found - either no user or no profiles
+        console.log('No points data found, creating initial profile');
+        
+        // Create an initial profile with 0 points
+        const { data: newProfileData, error: createError } = await supabase
+          .from('profiles')
+          .insert({ points: 0 })
+          .select()
+          .single();
+          
+        if (createError) {
+          console.error('Error creating profile:', createError);
           setTotalPoints(0);
           return;
         }
         
-        if (data) {
-          console.log('Fetched points from database:', data.points);
-          setTotalPoints(data.points);
-        } else {
-          console.log('No points data found, using default');
-          setTotalPoints(0);
-        }
-      } catch (error) {
-        console.error('Error fetching total points:', error);
+        console.log('Created new profile with points:', newProfileData.points);
+        setTotalPoints(newProfileData.points);
+        return;
+      } else if (error) {
+        console.error('Error fetching points:', error);
+        setTotalPoints(0);
+        return;
+      }
+      
+      if (data) {
+        console.log('Fetched points from database:', data.points);
+        setTotalPoints(data.points);
+      } else {
+        console.log('No points data found, using default');
         setTotalPoints(0);
       }
-    };
-
-    fetchTotalPoints();
+    } catch (error) {
+      console.error('Error fetching total points:', error);
+      setTotalPoints(0);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchTotalPoints();
+  }, [fetchTotalPoints]);
 
   const updatePointsInDatabase = useCallback(async (newPoints: number) => {
     try {
@@ -96,10 +108,23 @@ export const usePointsManagement = () => {
           }
           
           console.log('Points updated for existing profile:', newPoints);
+          setTotalPoints(newPoints); // Update UI immediately
           return true;
         } else {
-          // We can't create a new profile due to RLS, so we'll handle this client-side
-          console.log('No profiles to update, handling points client-side');
+          // Create a new profile
+          const { data: newProfile, error } = await supabase
+            .from('profiles')
+            .insert({ points: newPoints })
+            .select()
+            .single();
+            
+          if (error) {
+            console.error('Error creating profile:', error);
+            return false;
+          }
+          
+          console.log('Created new profile with points:', newPoints);
+          setTotalPoints(newPoints); // Update UI immediately
           return true;
         }
       }
@@ -119,6 +144,7 @@ export const usePointsManagement = () => {
       }
       
       console.log('Points updated in database:', newPoints);
+      setTotalPoints(newPoints); // Update UI immediately
       return true;
     } catch (error) {
       console.error('Error in updatePointsInDatabase:', error);
@@ -129,6 +155,7 @@ export const usePointsManagement = () => {
   return {
     totalPoints,
     setTotalPoints,
-    updatePointsInDatabase
+    updatePointsInDatabase,
+    refreshPointsFromDatabase: fetchTotalPoints
   };
 };

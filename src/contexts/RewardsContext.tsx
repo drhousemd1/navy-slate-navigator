@@ -33,7 +33,8 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     handleDeleteReward,
     handleBuyReward,
     handleUseReward,
-    getTotalRewardsSupply
+    getTotalRewardsSupply,
+    refreshPointsFromDatabase
   } = useRewardOperations();
   
   // Effect to update rewards from fetched data
@@ -50,6 +51,11 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setRewards(fetchedRewards);
     }
   }, [fetchedRewards, setRewards]);
+
+  // Add an effect to refresh points on mount
+  useEffect(() => {
+    refreshPointsFromDatabase();
+  }, [refreshPointsFromDatabase]);
 
   // Calculate total rewards supply
   const totalRewardsSupply = getTotalRewardsSupply();

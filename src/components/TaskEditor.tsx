@@ -46,7 +46,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
         <TaskEditorForm
           taskData={taskData}
           onSave={handleSave}
-          onDelete={onDelete}
+          onDelete={handleDelete}
           onCancel={onClose}
         />
       </DialogContent>

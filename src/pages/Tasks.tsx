@@ -146,15 +146,18 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
 
   const handleToggleCompletion = async (taskId: string, completed: boolean) => {
     try {
+      console.log(`Toggling task ${taskId} completion to ${completed}`);
       const success = await updateTaskCompletion(taskId, completed);
       
       if (success) {
-        // Invalidate both tasks and rewards queries to refresh the points
+        // Make sure to invalidate both queries to refresh the UI
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
         queryClient.invalidateQueries({ queryKey: ['rewards'] });
         
         if (completed) {
-          // Toast notification is now handled in the updateTaskCompletion function
+          const task = tasks.find(t => t.id === taskId);
+          const points = task?.points || 0;
+          console.log(`Task completed, earned ${points} points`);
         }
       }
     } catch (err) {

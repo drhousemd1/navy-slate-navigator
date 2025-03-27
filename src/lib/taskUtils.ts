@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -226,7 +227,9 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     
     if (completed) {
       try {
-        // Check if a profile exists first
+        const taskPoints = task.points || 0;
+        
+        // Get current profile points
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, points')
@@ -238,20 +241,30 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         }
         
         if (!profilesData || profilesData.length === 0) {
-          // Instead of creating a profile (which fails due to RLS), we'll update the points in the client
-          // and let the points management handle showing the correct value
-          console.log('No profiles found to update points');
+          // Create a new profile with points
+          console.log('No profile found, creating one with initial points:', taskPoints);
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert([{ points: taskPoints }]);
+            
+          if (createError) {
+            console.error('Error creating profile:', createError);
+            throw createError;
+          }
+          
           toast({
             title: 'Points Earned',
-            description: `You earned ${task.points} points!`,
+            description: `You earned ${taskPoints} points!`,
             variant: 'default',
           });
+          
           return true;
         }
         
         // Update existing profile
         const profile = profilesData[0];
-        const newPoints = profile.points + task.points;
+        const newPoints = (profile.points || 0) + taskPoints;
+        console.log('Updating profile points from', profile.points, 'to', newPoints);
         
         const { error: pointsError } = await supabase
           .from('profiles')
@@ -260,19 +273,15 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           
         if (pointsError) {
           console.error('Error updating points:', pointsError);
-          toast({
-            title: 'Error updating points',
-            description: 'Your task was completed, but we could not update your points.',
-            variant: 'destructive',
-          });
-        } else {
-          console.log('Points updated successfully:', newPoints);
-          toast({
-            title: 'Points Earned',
-            description: `You earned ${task.points} points!`,
-            variant: 'default',
-          });
+          throw pointsError;
         }
+        
+        console.log('Points updated successfully:', newPoints);
+        toast({
+          title: 'Points Earned',
+          description: `You earned ${taskPoints} points!`,
+          variant: 'default',
+        });
       } catch (err) {
         console.error('Error handling points:', err);
         toast({

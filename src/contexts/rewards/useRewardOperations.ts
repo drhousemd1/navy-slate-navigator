@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const useRewardOperations = () => {
   const [rewards, setRewards] = useState<Reward[]>([]);
-  const { totalPoints, setTotalPoints, updatePointsInDatabase } = usePointsManagement();
+  const { totalPoints, setTotalPoints, updatePointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
   
   const { 
     data: fetchedRewards = [], 
@@ -32,7 +32,9 @@ export const useRewardOperations = () => {
       );
       setRewards(data);
     }
-  }, [refetch]);
+    
+    await refreshPointsFromDatabase();
+  }, [refetch, refreshPointsFromDatabase]);
 
   const getTotalRewardsSupply = useCallback(() => {
     return rewards.reduce((total, reward) => total + reward.supply, 0);
@@ -193,16 +195,13 @@ export const useRewardOperations = () => {
       
       const reward = rewards[rewardIndex];
       
-      // Update local state first for immediate UI feedback
       const newTotalPoints = totalPoints - cost;
       setTotalPoints(newTotalPoints);
       
-      // Then update database
       const pointsUpdateSuccess = await updatePointsInDatabase(newTotalPoints);
       
       if (!pointsUpdateSuccess) {
         console.error("Failed to update points in database");
-        // Revert the local state change if the database update fails
         setTotalPoints(totalPoints);
         
         toast({
@@ -213,7 +212,6 @@ export const useRewardOperations = () => {
         return;
       }
       
-      // Now update the reward supply
       const updatedSupply = reward.supply + 1;
       const success = await updateRewardSupply(reward.id, updatedSupply);
       
@@ -302,6 +300,7 @@ export const useRewardOperations = () => {
     handleDeleteReward,
     handleBuyReward,
     handleUseReward,
-    getTotalRewardsSupply
+    getTotalRewardsSupply,
+    refreshPointsFromDatabase
   };
 };
