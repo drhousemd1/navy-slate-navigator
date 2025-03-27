@@ -26,8 +26,20 @@ const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({
       // For daily frequency, highlight today's circle
       const isCurrentDay = frequency === 'daily' && i === currentDayOfWeek;
       
-      // Determine if this day has been used (either from usage_data or frequency_count)
-      const isUsed = usage_data ? usage_data[i] > 0 : i < frequency_count;
+      // Check if this specific day has usage data
+      let isUsed = false;
+      
+      if (usage_data) {
+        // If we have specific usage_data, use that to determine if the day is used
+        isUsed = usage_data[i] > 0;
+      } else if (frequency === 'daily') {
+        // For daily tasks without usage data, use frequency_count as fallback
+        // but this shouldn't typically happen as tasks should track specific days
+        isUsed = i < frequency_count;
+      } else {
+        // For weekly tasks, just use the frequency count
+        isUsed = i < frequency_count;
+      }
       
       circles.push(
         <div 

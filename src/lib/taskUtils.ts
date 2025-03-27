@@ -25,6 +25,7 @@ export interface Task {
   highlight_effect?: boolean;
   icon_color?: string;
   last_completed_date?: string; // Track the local date when task was last completed
+  usage_data?: number[]; // Track daily completion data (array of 7 days)
 }
 
 // Helper function to get today's date in YYYY-MM-DD format in local time zone
@@ -38,6 +39,11 @@ export const wasCompletedToday = (task: Task): boolean => {
   return task.last_completed_date === getLocalDateString();
 };
 
+// Helper function to get current day of week (0-6, where 0 is Sunday)
+export const getCurrentDayOfWeek = (): number => {
+  return new Date().getDay();
+};
+
 // Helper to check if task can be completed based on frequency
 export const canCompleteTask = (task: Task): boolean => {
   if (task.frequency === 'daily') {
@@ -46,6 +52,12 @@ export const canCompleteTask = (task: Task): boolean => {
   }
   // For weekly tasks or tasks without frequency, always allow completion
   return true;
+};
+
+// Helper to initialize usage data array if not present
+const initializeUsageDataArray = (task: Task): number[] => {
+  // Create an array of 7 zeros (one for each day of the week)
+  return task.usage_data || Array(7).fill(0);
 };
 
 export const fetchTasks = async (): Promise<Task[]> => {
@@ -66,6 +78,11 @@ export const fetchTasks = async (): Promise<Task[]> => {
     
     // Process tasks to determine if they should be marked as incomplete based on local date
     const processedTasks = (data as Task[]).map(task => {
+      // Initialize usage_data if it doesn't exist
+      if (!task.usage_data) {
+        task.usage_data = Array(7).fill(0);
+      }
+      
       // If the task was completed, but not today (in user's local time), reset it
       if (task.completed && task.frequency === 'daily' && !wasCompletedToday(task)) {
         return { ...task, completed: false };
@@ -91,6 +108,9 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     console.log('Saving task with icon name:', task.icon_name);
     console.log('Saving task with icon color:', task.icon_color);
     
+    // Initialize usage_data if it doesn't exist
+    const usage_data = task.usage_data || Array(7).fill(0);
+    
     if (task.id) {
       // Update existing task
       const { data, error } = await supabase
@@ -115,6 +135,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           priority: task.priority,
           icon_color: task.icon_color,
           last_completed_date: task.last_completed_date,
+          usage_data: usage_data,
           updated_at: new Date().toISOString(),
         })
         .eq('id', task.id)
@@ -147,6 +168,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           priority: task.priority,
           icon_color: task.icon_color,
           last_completed_date: null, // Initialize as null for new tasks
+          usage_data: usage_data, // Initialize with zero usage
         })
         .select()
         .single();
@@ -188,6 +210,15 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
       return false;
     }
     
+    // Initialize usage_data array if it doesn't exist
+    const usage_data = initializeUsageDataArray(task);
+    
+    // If completing the task, update the usage data for the current day of week
+    if (completed) {
+      const dayOfWeek = getCurrentDayOfWeek(); // Get current day (0-6)
+      usage_data[dayOfWeek] = (usage_data[dayOfWeek] || 0) + 1;
+    }
+    
     // Update task with new completion info and last completion date if completed
     const { error } = await supabase
       .from('tasks')
@@ -198,7 +229,9 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         // Update frequency count if appropriate
         frequency_count: completed 
           ? (task.frequency_count || 0) + 1 
-          : task.frequency_count
+          : task.frequency_count,
+        // Update the usage_data array
+        usage_data
       })
       .eq('id', id);
     

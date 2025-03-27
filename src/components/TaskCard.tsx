@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -23,6 +24,7 @@ interface TaskCardProps {
   onDelete?: () => void;
   frequency?: 'daily' | 'weekly';
   frequency_count?: number;
+  usage_data?: number[];
   icon_url?: string;
   icon_name?: string;
   priority?: 'low' | 'medium' | 'high';
@@ -46,6 +48,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onToggleCompletion,
   frequency,
   frequency_count = 0,
+  usage_data,
   icon_url,
   icon_name,
   priority = 'medium',
@@ -120,7 +123,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
             <FrequencyTracker 
               frequency={frequency} 
               frequency_count={frequency_count} 
-              calendar_color={calendar_color} 
+              calendar_color={calendar_color}
+              usage_data={usage_data}
             />
           )}
           

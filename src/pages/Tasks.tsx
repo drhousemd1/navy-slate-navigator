@@ -187,6 +187,7 @@ const Tasks: React.FC = () => {
                 focalPointY={task.focal_point_y}
                 frequency={task.frequency}
                 frequency_count={task.frequency_count}
+                usage_data={task.usage_data}
                 icon_url={task.icon_url}
                 icon_name={task.icon_name}
                 priority={task.priority}
