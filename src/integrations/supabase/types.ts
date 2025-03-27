@@ -70,22 +70,36 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          linked_partner_id: string | null
+          partner_link_code: string | null
           points: number
           updated_at: string
         }
         Insert: {
           created_at?: string
           id: string
+          linked_partner_id?: string | null
+          partner_link_code?: string | null
           points?: number
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          linked_partner_id?: string | null
+          partner_link_code?: string | null
           points?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_linked_partner_id_fkey"
+            columns: ["linked_partner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       punishment_history: {
         Row: {
