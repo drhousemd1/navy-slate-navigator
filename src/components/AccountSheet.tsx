@@ -47,7 +47,9 @@ const AccountSheet = () => {
         <div className="py-6">
           <div className="flex items-center space-x-4 mb-6">
             <Avatar className="h-12 w-12 border border-light-navy">
-              <AvatarImage src={profileImageUrl} alt="User avatar" />
+              {profileImageUrl ? (
+                <AvatarImage src={profileImageUrl} alt={nickname} />
+              ) : null}
               <AvatarFallback className="bg-light-navy text-nav-active">
                 {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
               </AvatarFallback>

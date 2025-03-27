@@ -41,9 +41,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const nickname = getNickname();
   const profileImageUrl = getProfileImage();
   
-  // For this implementation, we're hardcoding the role types
-  // In a real implementation, you would fetch this from your database
-  const userRole = getUserRole(); // Use the getUserRole function from AuthContext
+  // Get user role with proper capitalization
+  const userRole = getUserRole();
 
   // Determine if we're on the rewards page, tasks page, or punishments page for special styling
   const isRewardsPage = location.pathname === '/rewards';
@@ -62,7 +61,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               className="h-7 w-7 cursor-pointer" 
               onClick={() => navigate('/profile')}
             >
-              <AvatarImage src={profileImageUrl} alt={nickname} />
+              {profileImageUrl ? (
+                <AvatarImage src={profileImageUrl} alt={nickname} />
+              ) : null}
               <AvatarFallback className="bg-light-navy text-nav-active text-xs">
                 {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
               </AvatarFallback>
