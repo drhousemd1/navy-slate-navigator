@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -13,8 +12,7 @@ const Rules: React.FC = () => {
   return (
     <AppLayout onAddNewItem={() => console.log("Add new rule")}>
       <div className="container mx-auto px-4 py-6">
-        {/* Updated heading size to match other pages */}
-        <h1 className="text-3xl font-bold text-white mb-6">Rules</h1>
+        <h1 className="text-base font-semibold text-white mb-6">Rules</h1>
         
         <div className="space-y-4">
           {/* Rule Card Example - Styled to match the screenshot */}
