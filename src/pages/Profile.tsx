@@ -859,17 +859,15 @@ const Profile = () => {
           <h2 className="text-white font-semibold mb-4">Account Management</h2>
           
           <div className="flex flex-col gap-3 sm:flex-row">
-            {linkedPartnerNickname && (
-              <Button 
-                variant="destructive" 
-                onClick={openUnlinkDialog}
-                disabled={isLoading}
-                className="w-full sm:w-auto flex items-center justify-center gap-2"
-              >
-                <Unlink2 className="h-4 w-4" />
-                Unlink Account
-              </Button>
-            )}
+            <Button 
+              variant="destructive" 
+              onClick={openUnlinkDialog}
+              disabled={isLoading || !linkedPartnerNickname}
+              className="w-full sm:w-auto flex items-center justify-center gap-2"
+            >
+              <Unlink2 className="h-4 w-4" />
+              Unlink Account
+            </Button>
             
             <Button 
               variant="destructive" 
