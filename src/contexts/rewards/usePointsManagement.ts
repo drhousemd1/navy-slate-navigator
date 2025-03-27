@@ -43,10 +43,11 @@ export const usePointsManagement = () => {
           // No data found - either no user or no profiles
           console.log('No points data found, creating initial profile with default points');
           
-          // Create a default profile
+          // Create a default profile - we need to use a random UUID for the id
+          const newId = crypto.randomUUID();
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
-            .insert({ points: 500 })
+            .insert({ id: newId, points: 500 })
             .select()
             .single();
             
@@ -112,10 +113,11 @@ export const usePointsManagement = () => {
           console.log('Points updated for existing profile:', newPoints);
           return true;
         } else {
-          // Create a new profile
+          // Create a new profile with a random UUID
+          const newId = crypto.randomUUID();
           const { error } = await supabase
             .from('profiles')
-            .insert({ points: newPoints });
+            .insert({ id: newId, points: newPoints });
           
           if (error) {
             console.error('Error creating profile with points:', error);

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -142,13 +143,12 @@ const TasksContent: React.FC = () => {
       const success = await updateTaskCompletion(taskId, completed);
       
       if (success) {
+        // Invalidate both tasks and rewards queries to refresh the points
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        queryClient.invalidateQueries({ queryKey: ['rewards'] });
         
         if (completed) {
-          toast({
-            title: 'Task Completed',
-            description: 'Good job on completing your task!',
-          });
+          // Toast notification is now handled in the updateTaskCompletion function
         }
       }
     } catch (err) {

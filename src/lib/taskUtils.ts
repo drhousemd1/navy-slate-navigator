@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -24,39 +23,31 @@ export interface Task {
   calendar_color?: string;
   highlight_effect?: boolean;
   icon_color?: string;
-  last_completed_date?: string; // Track the local date when task was last completed
-  usage_data?: number[]; // Track daily completion data (array of 7 days)
+  last_completed_date?: string;
+  usage_data?: number[];
 }
 
-// Helper function to get today's date in YYYY-MM-DD format in local time zone
 export const getLocalDateString = (): string => {
   const today = new Date();
-  return today.toLocaleDateString('en-CA'); // en-CA produces YYYY-MM-DD format
+  return today.toLocaleDateString('en-CA');
 };
 
-// Helper function to check if a task was completed today
 export const wasCompletedToday = (task: Task): boolean => {
   return task.last_completed_date === getLocalDateString();
 };
 
-// Helper function to get current day of week (0-6, where 0 is Sunday)
 export const getCurrentDayOfWeek = (): number => {
   return new Date().getDay();
 };
 
-// Helper to check if task can be completed based on frequency
 export const canCompleteTask = (task: Task): boolean => {
   if (task.frequency === 'daily') {
-    // For daily tasks, check if already completed today
     return !wasCompletedToday(task);
   }
-  // For weekly tasks or tasks without frequency, always allow completion
   return true;
 };
 
-// Helper to initialize usage data array if not present
 const initializeUsageDataArray = (task: Task): number[] => {
-  // Create an array of 7 zeros (one for each day of the week)
   return task.usage_data || Array(7).fill(0);
 };
 
@@ -76,14 +67,11 @@ export const fetchTasks = async (): Promise<Task[]> => {
       return [];
     }
     
-    // Process tasks to determine if they should be marked as incomplete based on local date
     const processedTasks = (data as Task[]).map(task => {
-      // Initialize usage_data if it doesn't exist
       if (!task.usage_data) {
         task.usage_data = Array(7).fill(0);
       }
       
-      // If the task was completed, but not today (in user's local time), reset it
       if (task.completed && task.frequency === 'daily' && !wasCompletedToday(task)) {
         return { ...task, completed: false };
       }
@@ -109,11 +97,9 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     console.log('Saving task with icon color:', task.icon_color);
     console.log('Saving task with usage_data:', task.usage_data);
     
-    // Initialize usage_data if it doesn't exist
     const usage_data = task.usage_data || Array(7).fill(0);
     
     if (task.id) {
-      // Update existing task
       const { data, error } = await supabase
         .from('tasks')
         .update({
@@ -146,7 +132,6 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
       if (error) throw error;
       return data as Task;
     } else {
-      // Create new task
       const { data, error } = await supabase
         .from('tasks')
         .insert({
@@ -168,8 +153,8 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           focal_point_y: task.focal_point_y,
           priority: task.priority,
           icon_color: task.icon_color,
-          last_completed_date: null, // Initialize as null for new tasks
-          usage_data: usage_data, // Initialize with zero usage
+          last_completed_date: null,
+          usage_data: usage_data,
         })
         .select()
         .single();
@@ -190,7 +175,6 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
 
 export const updateTaskCompletion = async (id: string, completed: boolean): Promise<boolean> => {
   try {
-    // First get the current task
     const { data: taskData, error: taskError } = await supabase
       .from('tasks')
       .select('*')
@@ -201,7 +185,6 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     
     const task = taskData as Task;
     
-    // If trying to complete a daily task that was already completed today, prevent it
     if (completed && task.frequency === 'daily' && wasCompletedToday(task)) {
       toast({
         title: 'Task already completed',
@@ -211,32 +194,66 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
       return false;
     }
     
-    // Initialize usage_data array if it doesn't exist
     const usage_data = initializeUsageDataArray(task);
     
-    // If completing the task, update the usage data for the current day of week
     if (completed) {
-      const dayOfWeek = getCurrentDayOfWeek(); // Get current day (0-6)
+      const dayOfWeek = getCurrentDayOfWeek();
       usage_data[dayOfWeek] = (usage_data[dayOfWeek] || 0) + 1;
     }
     
-    // Update task with new completion info and last completion date if completed
     const { error } = await supabase
       .from('tasks')
       .update({ 
         completed,
-        // Only set last_completed_date if task is being marked as completed
         last_completed_date: completed ? getLocalDateString() : task.last_completed_date,
-        // Update frequency count if appropriate
         frequency_count: completed 
           ? (task.frequency_count || 0) + 1 
           : task.frequency_count,
-        // Update the usage_data array
         usage_data
       })
       .eq('id', id);
     
     if (error) throw error;
+    
+    if (completed) {
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, points')
+        .limit(1);
+        
+      if (profilesData && profilesData.length > 0) {
+        const profile = profilesData[0];
+        const newPoints = profile.points + task.points;
+        
+        const { error: pointsError } = await supabase
+          .from('profiles')
+          .update({ points: newPoints })
+          .eq('id', profile.id);
+          
+        if (pointsError) {
+          console.error('Error updating points:', pointsError);
+          toast({
+            title: 'Error updating points',
+            description: 'Your task was completed, but we could not update your points.',
+            variant: 'destructive',
+          });
+        } else {
+          console.log('Points updated successfully:', newPoints);
+          toast({
+            title: 'Points Earned',
+            description: `You earned ${task.points} points!`,
+            variant: 'default',
+          });
+        }
+      } else {
+        console.error('No profile found to update points');
+        toast({
+          title: 'Error updating points',
+          description: 'Your task was completed, but we could not find a profile to update points.',
+          variant: 'destructive',
+        });
+      }
+    }
     
     return true;
   } catch (err: any) {
@@ -271,10 +288,8 @@ export const deleteTask = async (id: string): Promise<boolean> => {
   }
 };
 
-// Add function to reset completion counts at midnight or week start (for weekly tasks)
 export const resetTaskCompletions = async (frequency: 'daily' | 'weekly'): Promise<boolean> => {
   try {
-    // For daily tasks, reset all tasks that weren't completed today
     const today = getLocalDateString();
     
     const { error } = await supabase
