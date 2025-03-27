@@ -27,7 +27,7 @@ const CompletionButton: React.FC<CompletionButtonProps> = ({
     >
       <span className="text-xs flex items-center gap-1">
         <span className="font-medium">({currentCompletions}/{maxCompletions})</span>
-        <span>Complete</span>
+        <span>{hasReachedMax ? 'Completed' : 'Complete'}</span>
       </span>
     </Button>
   );
