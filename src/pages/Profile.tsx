@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Pencil, Lock, Copy, Check, Trash2, Unlink2 } from 'lucide-react';
+import { Pencil, Lock, Copy, Check, Trash2, Unlink2, Camera, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useNavigate } from 'react-router-dom';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const Profile = () => {
   const { user, updateNickname, signOut } = useAuth();
@@ -29,6 +30,9 @@ const Profile = () => {
   const [isLinkingPartner, setIsLinkingPartner] = useState<boolean>(false);
   const [linkedPartnerNickname, setLinkedPartnerNickname] = useState<string>('');
   const [isRoleLocked, setIsRoleLocked] = useState<boolean>(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string>('');
+  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [dialogConfig, setDialogConfig] = useState<{
     isOpen: boolean;
     type: 'delete' | 'unlink';
@@ -60,7 +64,7 @@ const Profile = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('partner_link_code, linked_partner_id')
+        .select('partner_link_code, linked_partner_id, avatar_url')
         .eq('id', user.id)
         .single();
       
@@ -68,6 +72,10 @@ const Profile = () => {
       
       if (data?.partner_link_code) {
         setPartnerLinkCode(data.partner_link_code);
+      }
+      
+      if (data?.avatar_url) {
+        setProfileImageUrl(data.avatar_url);
       }
       
       if (data?.linked_partner_id) {
@@ -94,6 +102,88 @@ const Profile = () => {
       }
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
+    }
+  };
+
+  const handleProfileImageClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Profile image must be less than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      // Create a storage bucket for profile images if it doesn't exist
+      const fileName = `${user.id}-${Date.now()}`;
+      const filePath = `${fileName}`;
+      
+      // Upload the file
+      const { error: uploadError, data } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const avatarUrl = urlData.publicUrl;
+      
+      // Update the profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfileImageUrl(avatarUrl);
+      
+      toast({
+        title: "Profile image updated",
+        description: "Your profile image has been updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message || "There was an error uploading your profile image.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingImage(false);
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -553,6 +643,36 @@ const Profile = () => {
     <AppLayout>
       <div className="container mx-auto max-w-4xl p-4">
         <h1 className="text-xl font-bold text-white mb-4">Profile</h1>
+        
+        <div className="flex flex-col items-center mb-6">
+          <div className="relative group">
+            <Avatar className="h-24 w-24 border-2 border-light-navy cursor-pointer" onClick={handleProfileImageClick}>
+              <AvatarImage src={profileImageUrl} alt={nickname} />
+              <AvatarFallback className="bg-light-navy text-nav-active text-xl">
+                {nickname ? nickname.charAt(0).toUpperCase() : 'U'}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div 
+              className="absolute bottom-0 right-0 bg-cyan-600 hover:bg-cyan-700 rounded-full p-1 cursor-pointer"
+              onClick={handleProfileImageClick}
+            >
+              <Pencil className="h-4 w-4 text-white" />
+            </div>
+            
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleImageUpload}
+              disabled={isUploadingImage}
+            />
+          </div>
+          {isUploadingImage && (
+            <p className="text-white text-sm mt-2">Uploading...</p>
+          )}
+        </div>
         
         <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy mb-3">
           <div className="flex items-center justify-between">
