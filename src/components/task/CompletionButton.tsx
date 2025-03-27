@@ -1,32 +1,33 @@
 
 import React from 'react';
 import { Button } from '../ui/button';
-import { Check } from 'lucide-react';
 
 interface CompletionButtonProps {
   completed: boolean;
   onToggleCompletion: (completed: boolean) => void;
+  currentCompletions: number;
+  maxCompletions: number;
 }
 
 const CompletionButton: React.FC<CompletionButtonProps> = ({ 
   completed, 
-  onToggleCompletion 
+  onToggleCompletion,
+  currentCompletions = 0,
+  maxCompletions = 1
 }) => {
+  const hasReachedMax = currentCompletions >= maxCompletions;
+  
   return (
     <Button
       variant="default"
       size="sm"
-      className={`${completed ? 'bg-green-600 text-white' : 'bg-green-500 text-white'} px-2 py-0 h-7`}
-      onClick={() => onToggleCompletion(!completed)}
+      className={`${hasReachedMax ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500'} text-white px-2 py-0 h-7`}
+      onClick={() => !hasReachedMax && onToggleCompletion(!completed)}
+      disabled={hasReachedMax}
     >
-      {completed ? (
-        <span className="flex items-center gap-1">
-          <Check className="h-3 w-3" />
-          <span className="text-xs">Completed</span>
-        </span>
-      ) : (
-        <span className="text-xs">Complete</span>
-      )}
+      <span className="text-xs">
+        {hasReachedMax ? 'Complete' : `Complete (${currentCompletions}/${maxCompletions})`}
+      </span>
     </Button>
   );
 };

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -42,16 +41,14 @@ export const getCurrentDayOfWeek = (): number => {
 };
 
 export const canCompleteTask = (task: Task): boolean => {
-  if (task.frequency === 'daily') {
-    if (!task.last_completed_date || task.last_completed_date !== getLocalDateString()) {
-      return true;
-    }
-    // Check if we haven't reached the max daily completions yet
-    const todayIndex = getCurrentDayOfWeek();
-    const todayCompletions = task.usage_data?.[todayIndex] || 0;
-    return todayCompletions < (task.frequency_count || 1);
+  if (!task.frequency_count) {
+    return !task.completed;
   }
-  return true;
+  
+  const todayIndex = getCurrentDayOfWeek();
+  const todayCompletions = task.usage_data?.[todayIndex] || 0;
+  
+  return todayCompletions < (task.frequency_count || 1);
 };
 
 const initializeUsageDataArray = (task: Task): number[] => {
@@ -202,19 +199,21 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
       return false;
     }
     
-    const usage_data = initializeUsageDataArray(task);
+    const usage_data = task.usage_data || Array(7).fill(0);
     
     if (completed) {
       const dayOfWeek = getCurrentDayOfWeek();
       usage_data[dayOfWeek] = (usage_data[dayOfWeek] || 0) + 1;
     }
     
+    const dayOfWeek = getCurrentDayOfWeek();
+    const isFullyCompleted = usage_data[dayOfWeek] >= (task.frequency_count || 1);
+    
     const { error } = await supabase
       .from('tasks')
       .update({ 
-        completed: completed && usage_data[getCurrentDayOfWeek()] >= (task.frequency_count || 1),
+        completed: isFullyCompleted,
         last_completed_date: completed ? getLocalDateString() : task.last_completed_date,
-        frequency_count: task.frequency_count,
         usage_data
       })
       .eq('id', id);

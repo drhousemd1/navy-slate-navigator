@@ -9,6 +9,7 @@ import CompletionButton from './task/CompletionButton';
 import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
 import HighlightedText from './task/HighlightedText';
+import { getCurrentDayOfWeek } from '@/lib/taskUtils';
 
 interface TaskCardProps {
   title: string;
@@ -47,8 +48,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onEdit,
   onToggleCompletion,
   frequency,
-  frequency_count = 0,
-  usage_data,
+  frequency_count = 1,
+  usage_data = Array(7).fill(0),
   icon_url,
   icon_name,
   priority = 'medium',
@@ -58,6 +59,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
   calendar_color = '#7E69AB',
   icon_color = '#9b87f5'
 }) => {
+  const currentDayOfWeek = getCurrentDayOfWeek();
+  const currentCompletions = usage_data[currentDayOfWeek] || 0;
+  const maxCompletions = frequency_count || 1;
+  const isFullyCompleted = currentCompletions >= maxCompletions;
+
   return (
     <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
       {backgroundImage && (
@@ -82,7 +88,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
               <PointsBadge points={points} />
               <CompletionButton 
                 completed={completed} 
-                onToggleCompletion={onToggleCompletion} 
+                onToggleCompletion={onToggleCompletion}
+                currentCompletions={currentCompletions}
+                maxCompletions={maxCompletions}
               />
             </div>
           )}
@@ -141,7 +149,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         </div>
       </div>
       
-      {completed && (
+      {isFullyCompleted && (
         <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
       )}
     </Card>
