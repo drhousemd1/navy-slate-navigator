@@ -25,6 +25,7 @@ const Profile = () => {
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [isLinkingPartner, setIsLinkingPartner] = useState<boolean>(false);
   const [linkedPartnerNickname, setLinkedPartnerNickname] = useState<string>('');
+  const [isRoleLocked, setIsRoleLocked] = useState<boolean>(false);
 
   useEffect(() => {
     if (user) {
@@ -60,6 +61,8 @@ const Profile = () => {
       }
       
       if (data?.linked_partner_id) {
+        setIsRoleLocked(true);
+        
         const { data: partnerData, error: partnerError } = await supabase
           .from('profiles')
           .select('id')
@@ -244,7 +247,7 @@ const Profile = () => {
   };
 
   const handleRoleChange = async (value: string) => {
-    if (!value || value === role) return;
+    if (!value || value === role || isRoleLocked) return;
     
     setIsLoading(true);
     try {
@@ -270,22 +273,51 @@ const Profile = () => {
     }
   };
 
-  const generatePartnerCode = async () => {
+  const generateLinkCode = async (partnerRole: string) => {
+    if (isRoleLocked) {
+      toast({
+        title: "Role locked",
+        description: "Your role is locked because you are already linked with a partner.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const userRole = partnerRole === 'dominant' ? 'submissive' : 'dominant';
+    
+    if (role !== userRole) {
+      const { error: roleError } = await supabase.auth.updateUser({
+        data: { role: userRole }
+      });
+      
+      if (roleError) {
+        toast({
+          title: "Role update failed",
+          description: roleError.message || "Could not update your role.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setRole(userRole);
+    }
+    
     setIsLoading(true);
     try {
-      const randomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const code = `${randomPart}-${partnerRole.substring(0, 3).toUpperCase()}-${user?.id.substring(0, 8)}`;
       
       const { error } = await supabase
         .from('profiles')
-        .update({ partner_link_code: randomCode })
+        .update({ partner_link_code: code })
         .eq('id', user?.id);
         
       if (error) throw error;
       
-      setPartnerLinkCode(randomCode);
+      setPartnerLinkCode(code);
       toast({
         title: "Code generated",
-        description: "Share this code with your partner to link accounts.",
+        description: `Share this code with your ${partnerRole} partner to link accounts.`,
       });
     } catch (error: any) {
       toast({
@@ -321,6 +353,17 @@ const Profile = () => {
     
     setIsLinkingPartner(true);
     try {
+      const codeParts = enteredPartnerCode.split('-');
+      if (codeParts.length !== 3) {
+        throw new Error("Invalid partner code format.");
+      }
+      
+      const requiredRole = codeParts[1].toLowerCase() === 'dom' ? 'dominant' : 'submissive';
+      
+      if (requiredRole === role) {
+        throw new Error(`This code is meant for a ${requiredRole} user, but you are also a ${role}. Partners must have different roles.`);
+      }
+      
       const { data: partnerData, error: partnerError } = await supabase
         .from('profiles')
         .select('id')
@@ -335,27 +378,54 @@ const Profile = () => {
         throw new Error("You cannot link to your own account.");
       }
       
+      const { data: partnerCheck, error: checkError } = await supabase
+        .from('profiles')
+        .select('linked_partner_id')
+        .eq('id', partnerData.id)
+        .single();
+        
+      if (!checkError && partnerCheck?.linked_partner_id) {
+        throw new Error("This user is already linked with another partner.");
+      }
+      
+      const { error: roleError } = await supabase.auth.updateUser({
+        data: { role: requiredRole }
+      });
+      
+      if (roleError) {
+        throw new Error("Failed to update your role: " + roleError.message);
+      }
+      
+      setRole(requiredRole);
+      
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ linked_partner_id: partnerData.id })
+        .update({ 
+          linked_partner_id: partnerData.id,
+          partner_link_code: null
+        })
         .eq('id', user?.id);
         
       if (updateError) throw updateError;
       
       const { error: partnerUpdateError } = await supabase
         .from('profiles')
-        .update({ linked_partner_id: user?.id })
+        .update({ 
+          linked_partner_id: user?.id,
+          partner_link_code: null
+        })
         .eq('id', partnerData.id);
         
       if (partnerUpdateError) throw partnerUpdateError;
       
       setEnteredPartnerCode('');
+      setIsRoleLocked(true);
       
       await fetchUserProfile();
       
       toast({
         title: "Accounts linked!",
-        description: "Your account has been successfully linked with your partner.",
+        description: `Your account has been successfully linked with your partner. Your role is now locked as ${requiredRole}.`,
       });
     } catch (error: any) {
       toast({
@@ -396,10 +466,11 @@ const Profile = () => {
       }
       
       setLinkedPartnerNickname('');
+      setIsRoleLocked(false);
       
       toast({
         title: "Accounts unlinked",
-        description: "Your account is no longer linked with your partner.",
+        description: "Your account is no longer linked with your partner. You can now change your role.",
       });
     } catch (error: any) {
       toast({
@@ -595,7 +666,7 @@ const Profile = () => {
                   value={role} 
                   onValueChange={handleRoleChange}
                   className="bg-light-navy p-1 rounded-md"
-                  disabled={isLoading}
+                  disabled={isLoading || isRoleLocked}
                 >
                   <ToggleGroupItem 
                     value="dominant" 
@@ -612,7 +683,18 @@ const Profile = () => {
                 </ToggleGroup>
               </div>
             </div>
+            {isRoleLocked && (
+              <div className="flex items-center text-amber-400">
+                <Lock className="h-4 w-4 mr-1" />
+                <span className="text-xs">Locked</span>
+              </div>
+            )}
           </div>
+          {isRoleLocked && (
+            <p className="text-gray-400 text-xs mt-1">
+              Your role is locked because you are linked with a partner.
+            </p>
+          )}
         </div>
         
         <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy mb-3">
@@ -635,15 +717,25 @@ const Profile = () => {
           ) : (
             <div className="space-y-3">
               <div>
-                <p className="text-white text-sm mb-2">Generate a code to share with your partner:</p>
-                <div className="flex gap-2 items-center">
-                  <Button 
-                    onClick={generatePartnerCode} 
-                    disabled={isLoading}
-                    className="bg-cyan-600 hover:bg-cyan-700 text-white"
-                  >
-                    Generate Code
-                  </Button>
+                <p className="text-white text-sm mb-2">Generate a linking code for your partner:</p>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {role === 'dominant' ? (
+                    <Button 
+                      onClick={() => generateLinkCode('submissive')} 
+                      disabled={isLoading}
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      Link a Submissive
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={() => generateLinkCode('dominant')} 
+                      disabled={isLoading}
+                      className="bg-red-500 hover:bg-red-600 text-white"
+                    >
+                      Link a Dominant
+                    </Button>
+                  )}
                 </div>
               </div>
               
@@ -688,6 +780,9 @@ const Profile = () => {
                     Link Account
                   </Button>
                 </div>
+                <p className="text-gray-400 text-xs mt-1">
+                  Entering this code will link your accounts and may change your role to match your partner's requirements.
+                </p>
               </div>
             </div>
           )}
