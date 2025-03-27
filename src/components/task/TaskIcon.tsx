@@ -29,7 +29,8 @@ const TaskIcon: React.FC<TaskIconProps> = ({
   if (icon_name) {
     const iconProps = {
       className,
-      color: icon_color
+      color: icon_color,
+      style: { color: icon_color } // Add explicit style to ensure color is applied
     };
 
     switch (icon_name) {
@@ -154,7 +155,7 @@ const TaskIcon: React.FC<TaskIconProps> = ({
     }
   }
   
-  return <Calendar className={className} color={icon_color} />;
+  return <Calendar className={className} style={{ color: icon_color }} />;
 };
 
 export default TaskIcon;
