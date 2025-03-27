@@ -1,8 +1,6 @@
 
 import React from 'react';
 import { PunishmentData } from '@/contexts/punishments/types';
-import { Skull } from 'lucide-react';
-import TaskIcon from '@/components/task/TaskIcon';
 import PointsBadge from '@/components/task/PointsBadge';
 import PunishmentBackground from './PunishmentBackground';
 import PunishmentCardContent from './PunishmentCardContent';
@@ -26,22 +24,6 @@ const RandomPunishmentCard: React.FC<PunishmentCardProps> = ({ punishment }) => 
       )}
       <div className="relative z-10">
         <div className="flex items-start">
-          <div className="mr-4 flex-shrink-0">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center" 
-              style={{ backgroundColor: '#ea384c' }}
-            >
-              {punishment.icon_name ? (
-                <TaskIcon 
-                  icon_name={punishment.icon_name} 
-                  icon_color={punishment.icon_color || '#FFFFFF'} 
-                  className="h-5 w-5"
-                />
-              ) : (
-                <Skull className="h-5 w-5" style={{ color: punishment.icon_color || '#FFFFFF' }} />
-              )}
-            </div>
-          </div>
           <div className="flex-1">
             <div className="flex justify-between items-start">
               <div className="flex flex-col">
@@ -53,6 +35,7 @@ const RandomPunishmentCard: React.FC<PunishmentCardProps> = ({ punishment }) => 
                   title_color={punishment.title_color || '#FFFFFF'}
                   subtext_color={punishment.subtext_color || '#8E9196'}
                   highlight_effect={punishment.highlight_effect || false}
+                  showIcon={false}
                 />
               </div>
               <PointsBadge points={-punishment.points} />
