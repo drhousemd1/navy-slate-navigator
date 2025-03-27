@@ -31,7 +31,7 @@ export const usePointsManagement = () => {
         console.log('No authenticated user, fetching first available profile');
         const response = await supabase
           .from('profiles')
-          .select('points')
+          .select('points, id')
           .limit(1);
           
         data = response.data?.[0];
@@ -42,10 +42,13 @@ export const usePointsManagement = () => {
         // No data found - either no user or no profiles
         console.log('No points data found, creating initial profile');
         
+        // Generate a random UUID for the profile if no user is authenticated
+        const profileId = userId || crypto.randomUUID();
+        
         // Create an initial profile with 0 points
         const { data: newProfileData, error: createError } = await supabase
           .from('profiles')
-          .insert({ points: 0 })
+          .insert({ id: profileId, points: 0 })
           .select()
           .single();
           
@@ -111,10 +114,13 @@ export const usePointsManagement = () => {
           setTotalPoints(newPoints); // Update UI immediately
           return true;
         } else {
+          // Create a new profile with a randomly generated UUID
+          const profileId = crypto.randomUUID();
+          
           // Create a new profile
           const { data: newProfile, error } = await supabase
             .from('profiles')
-            .insert({ points: newPoints })
+            .insert({ id: profileId, points: newPoints })
             .select()
             .single();
             

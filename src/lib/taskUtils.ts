@@ -241,11 +241,13 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         }
         
         if (!profilesData || profilesData.length === 0) {
-          // Create a new profile with points
+          // Create a new profile with points and a random UUID
+          const profileId = crypto.randomUUID();
           console.log('No profile found, creating one with initial points:', taskPoints);
+          
           const { error: createError } = await supabase
             .from('profiles')
-            .insert([{ points: taskPoints }]);
+            .insert([{ id: profileId, points: taskPoints }]);
             
           if (createError) {
             console.error('Error creating profile:', createError);
