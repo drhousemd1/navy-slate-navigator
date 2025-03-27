@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
@@ -13,7 +12,7 @@ interface RewardsContextType {
   refetchRewards: () => Promise<void>;
   handleSaveReward: (rewardData: any, index: number | null) => Promise<Reward | null>;
   handleDeleteReward: (index: number) => Promise<boolean>;
-  handleBuyReward: (id: string) => Promise<void>;
+  handleBuyReward: (id: string, cost: number) => Promise<void>;
   handleUseReward: (id: string) => Promise<void>;
 }
 
@@ -62,13 +61,51 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     const fetchTotalPoints = async () => {
       try {
-        setTotalPoints(500);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('points')
+          .single();
+        
+        if (error) {
+          console.error('Error fetching points:', error);
+          setTotalPoints(500);
+          return;
+        }
+        
+        if (data) {
+          console.log('Fetched points from database:', data.points);
+          setTotalPoints(data.points);
+        } else {
+          console.log('No points data found, using default');
+          setTotalPoints(500);
+        }
       } catch (error) {
         console.error('Error fetching total points:', error);
+        setTotalPoints(500);
       }
     };
 
     fetchTotalPoints();
+  }, []);
+
+  const updatePointsInDatabase = useCallback(async (newPoints: number) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ points: newPoints })
+        .eq('id', (await supabase.auth.getUser()).data.user?.id);
+      
+      if (error) {
+        console.error('Error updating points in database:', error);
+        throw error;
+      }
+      
+      console.log('Points updated in database:', newPoints);
+      return true;
+    } catch (error) {
+      console.error('Error in updatePointsInDatabase:', error);
+      return false;
+    }
   }, []);
 
   const refetchRewards = useCallback(async () => {
@@ -100,10 +137,8 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       let result: Reward | null = null;
       
       if (index !== null) {
-        // CRITICAL: We're updating an existing reward
         const existingReward = rewards[index];
         
-        // CRITICAL: Log the exact position and complete rewards list before any update
         console.log("[RewardsContext] Rewards list BEFORE update:", 
           rewards.map((r, i) => ({
             position: i,
@@ -118,7 +153,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
           "with ID:", existingReward.id, 
           "title:", existingReward.title);
         
-        // CRITICAL: Only update fields that the user has changed, never update timestamps
         const fieldsToUpdate = {
           title: dataToSave.title,
           description: dataToSave.description,
@@ -138,7 +172,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         
         console.log("[RewardsContext] Updating only these fields:", Object.keys(fieldsToUpdate));
         
-        // CRITICAL: Never merge update with Supabase auto-update of timestamps
         const { data, error } = await supabase
           .from('rewards')
           .update(fieldsToUpdate)
@@ -148,14 +181,11 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (error) throw error;
         
         if (data && data.length > 0) {
-          // CRITICAL: Preserve the original created_at timestamp to prevent reordering
           result = {
             ...data[0],
-            created_at: existingReward.created_at // Preserve original created_at
+            created_at: existingReward.created_at
           };
           
-          // CRITICAL: Update the rewards array IN PLACE at the existing index
-          // This ensures we don't change the array order at all
           const updatedRewards = [...rewards];
           updatedRewards[index] = result;
           
@@ -163,7 +193,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
             "ID:", result.id, 
             "title:", result.title);
           
-          // CRITICAL: Log the exact rewards list after update to verify order preservation
           console.log("[RewardsContext] Rewards list AFTER update:", 
             updatedRewards.map((r, i) => ({
               position: i,
@@ -174,19 +203,12 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
             }))
           );
           
-          // Set the updated rewards array, maintaining exact order
           setRewards(updatedRewards);
         }
       } else {
-        // This is a new reward being created
-        console.log("[RewardsContext] Creating new reward");
         result = await saveReward(dataToSave as Reward & { title: string });
         
         if (result) {
-          // For new rewards, append to the existing list
-          console.log("[RewardsContext] New reward created with ID:", result.id);
-          
-          // Preserve existing list and append new reward
           setRewards(prevRewards => {
             const newList = [...prevRewards, result as Reward];
             
@@ -236,10 +258,19 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [rewards]);
 
-  const handleBuyReward = useCallback(async (id: string) => {
-    console.log("Handling buy reward with ID:", id);
+  const handleBuyReward = useCallback(async (id: string, cost: number) => {
+    console.log("Handling buy reward with ID:", id, "Cost:", cost);
     
     try {
+      if (totalPoints < cost) {
+        toast({
+          title: "Not Enough Points",
+          description: `You need ${cost} points to buy this reward.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const rewardIndex = rewards.findIndex(r => r.id === id);
       if (rewardIndex === -1) {
         console.error("Reward not found with ID:", id);
@@ -247,6 +278,21 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       
       const reward = rewards[rewardIndex];
+      
+      const newTotalPoints = totalPoints - cost;
+      
+      const pointsUpdateSuccess = await updatePointsInDatabase(newTotalPoints);
+      
+      if (!pointsUpdateSuccess) {
+        toast({
+          title: "Error",
+          description: "Failed to update points. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setTotalPoints(newTotalPoints);
       
       const updatedSupply = reward.supply + 1;
       const success = await updateRewardSupply(reward.id, updatedSupply);
@@ -272,7 +318,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         variant: "destructive",
       });
     }
-  }, [rewards]);
+  }, [rewards, totalPoints, updatePointsInDatabase]);
 
   const handleUseReward = useCallback(async (id: string) => {
     console.log("Handling use reward with ID:", id);

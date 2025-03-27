@@ -42,7 +42,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           supply={reward.supply}
           iconName={reward.icon_name}
           iconColor={reward.icon_color}
-          onBuy={() => handleBuyReward(reward.id)}
+          onBuy={() => handleBuyReward(reward.id, reward.cost)}
           onUse={() => handleUseReward(reward.id)}
           onEdit={() => onEdit(index)}
           backgroundImage={reward.background_image_url}

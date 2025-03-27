@@ -9,7 +9,7 @@ interface RewardHeaderProps {
   title: string;
   supply: number;
   cost: number;
-  onBuy: () => void;
+  onBuy: (cost: number) => void;
   onUse: () => void;
 }
 
@@ -47,7 +47,7 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
           variant="default"
           size="sm"
           className="bg-nav-active text-white hover:bg-nav-active/90 h-7"
-          onClick={onBuy}
+          onClick={() => onBuy(cost)}
         >
           Buy
         </Button>
