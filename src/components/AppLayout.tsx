@@ -57,6 +57,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
                 <DropdownMenuItem className="hover:bg-light-navy cursor-pointer" onClick={() => navigate('/encyclopedia')}>
                   Encyclopedia
                 </DropdownMenuItem>
+                <DropdownMenuItem className="hover:bg-light-navy cursor-pointer" onClick={() => navigate('/profile')}>
+                  Edit Profile
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
