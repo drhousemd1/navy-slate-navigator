@@ -21,6 +21,10 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
   onImageUpload,
   setValue
 }) => {
+  // Log the opacity value to verify it's being passed correctly
+  const currentOpacity = control._formValues?.background_opacity;
+  console.log("RewardBackgroundSection initializing with opacity:", currentOpacity);
+  
   return (
     <div className="space-y-4">
       <FormLabel className="block text-lg font-medium text-white">Background Image</FormLabel>

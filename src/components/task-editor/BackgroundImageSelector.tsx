@@ -26,7 +26,13 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: initialPosition?.x ?? 50, y: initialPosition?.y ?? 50 });
-  const [opacity, setOpacity] = useState(50);
+  
+  // Use the form's control to get the current background_opacity value
+  const [opacity, setOpacity] = useState<number>(() => {
+    // Start with the value from the form if it exists, otherwise default to 100
+    const formValue = control._formValues?.background_opacity;
+    return typeof formValue === 'number' ? formValue : 100;
+  });
 
   // Initialize with defaults or existing values
   useEffect(() => {
@@ -35,11 +41,19 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     }
   }, [initialPosition]);
 
-  // Set default opacity on mount
+  // This useEffect is modified to set the opacity value from the form if available
   useEffect(() => {
-    setValue('background_opacity', 50);
-    setOpacity(50);
-  }, [setValue]);
+    const formOpacity = control._formValues?.background_opacity;
+    if (typeof formOpacity === 'number') {
+      console.log("Setting opacity from form value:", formOpacity);
+      setOpacity(formOpacity);
+    } else if (imagePreview && !formOpacity) {
+      // Only set default if we have an image but no opacity value
+      console.log("Setting default opacity for new image to 100");
+      setValue('background_opacity', 100);
+      setOpacity(100);
+    }
+  }, [control._formValues?.background_opacity, imagePreview, setValue]);
 
   const updatePosition = (clientX: number, clientY: number) => {
     if (!imageContainerRef.current) return;
@@ -90,7 +104,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
 
   const handleOpacityChange = (values: number[]) => {
     const opacityValue = values[0];
-    console.log("New opacity value:", opacityValue);
+    console.log("Slider changing opacity to:", opacityValue);
     setOpacity(opacityValue);
     setValue('background_opacity', opacityValue);
   };
