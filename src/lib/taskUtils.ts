@@ -42,7 +42,13 @@ export const getCurrentDayOfWeek = (): number => {
 
 export const canCompleteTask = (task: Task): boolean => {
   if (task.frequency === 'daily') {
-    return !wasCompletedToday(task);
+    if (!task.last_completed_date || task.last_completed_date !== getLocalDateString()) {
+      return true;
+    }
+    // Check if we haven't reached the max daily completions yet
+    const todayIndex = getCurrentDayOfWeek();
+    const todayCompletions = task.usage_data?.[todayIndex] || 0;
+    return todayCompletions < (task.frequency_count || 1);
   }
   return true;
 };
@@ -185,10 +191,11 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     
     const task = taskData as Task;
     
-    if (completed && task.frequency === 'daily' && wasCompletedToday(task)) {
+    // Check if we can complete the task
+    if (completed && !canCompleteTask(task)) {
       toast({
-        title: 'Task already completed',
-        description: 'This task has already been completed today.',
+        title: 'Maximum completions reached',
+        description: 'You have reached the maximum completions for today.',
         variant: 'default',
       });
       return false;
@@ -204,11 +211,9 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     const { error } = await supabase
       .from('tasks')
       .update({ 
-        completed,
+        completed: completed && usage_data[getCurrentDayOfWeek()] >= (task.frequency_count || 1),
         last_completed_date: completed ? getLocalDateString() : task.last_completed_date,
-        frequency_count: completed 
-          ? (task.frequency_count || 0) + 1 
-          : task.frequency_count,
+        frequency_count: task.frequency_count,
         usage_data
       })
       .eq('id', id);
