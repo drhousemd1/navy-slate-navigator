@@ -5,7 +5,7 @@ import {
   Zap, Store, Book, Sun, Moon, Globe, Smile, Map, Settings, ShoppingCart,
   CreditCard, Truck, Package, Phone, Mail, MessageSquare, Send, Search, Trash,
   Edit, Eye, Plus, Minus, Clock, Video, Image, Folder, Tag, Share, Link,
-  Bookmark, Award, Flag, Info, AlertCircle, AlertTriangle, BellRing, LucideIcon
+  Bookmark, Award, Flag, Info, AlertCircle, AlertTriangle, BellRing, Coins, LucideIcon
 } from 'lucide-react';
 
 // Define the predefined icons array
@@ -70,5 +70,6 @@ export const predefinedIcons: PredefinedIcon[] = [
   { name: 'Info', icon: Info },
   { name: 'AlertCircle', icon: AlertCircle },
   { name: 'AlertTriangle', icon: AlertTriangle },
-  { name: 'BellRing', icon: BellRing }
+  { name: 'BellRing', icon: BellRing },
+  { name: 'Coins', icon: Coins }
 ];

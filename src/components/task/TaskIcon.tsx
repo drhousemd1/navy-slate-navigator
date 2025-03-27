@@ -6,7 +6,7 @@ import {
   Zap, Store, Book, Sun, Moon, Globe, Smile, Map, Settings, ShoppingCart,
   CreditCard, Truck, Package, Phone, Mail, MessageSquare, Send, Search, Trash,
   Edit, Eye, Plus, Minus, Clock, Video, Image, Folder, Tag, Share, Link,
-  Bookmark, Award, Flag, Info, AlertCircle, AlertTriangle, BellRing, Skull
+  Bookmark, Award, Flag, Info, AlertCircle, AlertTriangle, BellRing, Skull, Coins
 } from 'lucide-react';
 
 interface TaskIconProps {
@@ -147,6 +147,8 @@ const TaskIcon: React.FC<TaskIconProps> = ({
         return <BellRing {...iconProps} />;
       case 'Skull':
         return <Skull {...iconProps} />;
+      case 'Coins':
+        return <Coins {...iconProps} />;
       default:
         return <Calendar {...iconProps} />;
     }

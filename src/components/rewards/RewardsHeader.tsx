@@ -2,7 +2,7 @@
 import React from 'react';
 import { Badge } from '../../components/ui/badge';
 import { useRewards } from '../../contexts/RewardsContext';
-import { Gift } from 'lucide-react';
+import { Gift, Coins } from 'lucide-react';
 
 const RewardsHeader: React.FC = () => {
   const { totalPoints, rewards } = useRewards();
@@ -16,8 +16,9 @@ const RewardsHeader: React.FC = () => {
           <Gift className="w-3 h-3" />
           <span>{totalRewards} Rewards</span>
         </Badge>
-        <Badge className="bg-nav-active text-white font-bold px-3 py-1">
-          {totalPoints} Points
+        <Badge className="bg-nav-active text-white font-bold px-3 py-1 flex items-center gap-1">
+          <Coins className="w-3 h-3" />
+          <span>{totalPoints} Points</span>
         </Badge>
       </div>
     </div>
