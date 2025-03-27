@@ -763,7 +763,7 @@ const Profile = () => {
           )}
         </div>
         
-        <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy mb-3">
+        <div className="bg-navy py-4 px-4 rounded-lg border border-light-navy mb-3">
           <h2 className="text-white font-semibold mb-2">Link Partner</h2>
           
           {linkedPartnerNickname ? (
@@ -859,15 +859,20 @@ const Profile = () => {
           <h2 className="text-white font-semibold mb-4">Account Management</h2>
           
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button 
-              variant="destructive" 
-              onClick={openUnlinkDialog}
-              disabled={isLoading || !linkedPartnerNickname}
-              className="w-full sm:w-auto flex items-center justify-center gap-2"
-            >
-              <Unlink2 className="h-4 w-4" />
-              Unlink Account
-            </Button>
+            <div className="flex flex-col">
+              <Button 
+                variant="destructive" 
+                onClick={openUnlinkDialog}
+                disabled={isLoading || !linkedPartnerNickname}
+                className="w-full sm:w-auto flex items-center justify-center gap-2"
+              >
+                <Unlink2 className="h-4 w-4" />
+                Unlink Account
+              </Button>
+              {!linkedPartnerNickname && (
+                <p className="text-gray-400 text-xs mt-1">You have no linked accounts</p>
+              )}
+            </div>
             
             <Button 
               variant="destructive" 

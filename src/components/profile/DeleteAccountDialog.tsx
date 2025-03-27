@@ -42,7 +42,6 @@ export function DeleteAccountDialog({
         <AlertDialogFooter>
           <AlertDialogCancel 
             className="bg-red-600 text-white hover:bg-red-700"
-            onClick={onClose}
           >
             Cancel
           </AlertDialogCancel>
