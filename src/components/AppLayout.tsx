@@ -1,5 +1,5 @@
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
@@ -13,6 +13,7 @@ import {
 import AccountSheet from './AccountSheet';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, getNickname, getProfileImage, getUserRole } = useAuth();
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   // Only show "Add" button for specific routes
   const shouldShowAddButton = 
@@ -39,10 +41,55 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   
   // Get profile image and nickname for the avatar
   const nickname = getNickname();
-  const profileImageUrl = getProfileImage();
   
   // Get user role with proper capitalization
   const userRole = getUserRole();
+
+  // Fetch profile directly from Supabase to ensure we get the latest data
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      if (!user) {
+        setProfileImage(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching profile image:', error);
+          return;
+        }
+        
+        if (data && data.avatar_url) {
+          console.log('Profile image from DB:', data.avatar_url);
+          setProfileImage(data.avatar_url);
+        } else {
+          console.log('No profile image found in DB for user', user.id);
+          setProfileImage(null);
+        }
+      } catch (err) {
+        console.error('Exception fetching profile:', err);
+      }
+    };
+
+    fetchProfileImage();
+  }, [user]);
+
+  // Use context function as fallback
+  useEffect(() => {
+    if (!profileImage) {
+      const contextImage = getProfileImage();
+      if (contextImage) {
+        console.log('Using profile image from context:', contextImage);
+        setProfileImage(contextImage);
+      }
+    }
+  }, [getProfileImage, profileImage]);
 
   // Determine if we're on the rewards page, tasks page, or punishments page for special styling
   const isRewardsPage = location.pathname === '/rewards';
@@ -61,8 +108,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               className="h-7 w-7 cursor-pointer" 
               onClick={() => navigate('/profile')}
             >
-              {profileImageUrl ? (
-                <AvatarImage src={profileImageUrl} alt={nickname} />
+              {profileImage ? (
+                <AvatarImage 
+                  src={profileImage} 
+                  alt={nickname}
+                  onError={(e) => {
+                    console.error('Failed to load avatar image:', profileImage);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
               ) : null}
               <AvatarFallback className="bg-light-navy text-nav-active text-xs">
                 {nickname ? nickname.charAt(0).toUpperCase() : 'G'}

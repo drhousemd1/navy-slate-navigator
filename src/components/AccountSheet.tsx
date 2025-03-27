@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Sheet, 
@@ -12,11 +12,13 @@ import { UserCircle2, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const AccountSheet = () => {
   const navigate = useNavigate();
   const { user, getNickname, getProfileImage, getUserRole } = useAuth();
   const [showProfileOptions, setShowProfileOptions] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   
   const toggleProfileOptions = () => {
     setShowProfileOptions(!showProfileOptions);
@@ -26,10 +28,55 @@ const AccountSheet = () => {
     navigate('/profile');
   };
   
-  // Get user's nickname, role and profile image
+  // Get user's nickname and role
   const nickname = getNickname();
-  const profileImageUrl = getProfileImage();
   const userRole = getUserRole(); // This will now return properly capitalized role
+  
+  // Fetch the profile image directly from the database
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      if (!user) {
+        setProfileImage(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) {
+          console.error('AccountSheet: Error fetching profile image:', error);
+          return;
+        }
+        
+        if (data && data.avatar_url) {
+          console.log('AccountSheet: Profile image from DB:', data.avatar_url);
+          setProfileImage(data.avatar_url);
+        } else {
+          console.log('AccountSheet: No profile image found in DB for user', user.id);
+          setProfileImage(null);
+        }
+      } catch (err) {
+        console.error('AccountSheet: Exception fetching profile:', err);
+      }
+    };
+
+    fetchProfileImage();
+  }, [user]);
+
+  // Use context function as fallback
+  useEffect(() => {
+    if (!profileImage) {
+      const contextImage = getProfileImage();
+      if (contextImage) {
+        console.log('AccountSheet: Using profile image from context:', contextImage);
+        setProfileImage(contextImage);
+      }
+    }
+  }, [getProfileImage, profileImage]);
   
   return (
     <Sheet>
@@ -47,8 +94,15 @@ const AccountSheet = () => {
         <div className="py-6">
           <div className="flex items-center space-x-4 mb-6">
             <Avatar className="h-12 w-12 border border-light-navy">
-              {profileImageUrl ? (
-                <AvatarImage src={profileImageUrl} alt={nickname} />
+              {profileImage ? (
+                <AvatarImage 
+                  src={profileImage} 
+                  alt={nickname} 
+                  onError={(e) => {
+                    console.error('AccountSheet: Failed to load avatar image:', profileImage);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
               ) : null}
               <AvatarFallback className="bg-light-navy text-nav-active">
                 {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
