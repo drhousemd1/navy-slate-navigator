@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
 import TaskCard from '../components/TaskCard';
 import TaskEditor from '../components/TaskEditor';
+import TasksHeader from '../components/task/TasksHeader';
 import { 
   fetchTasks, 
   Task, 
@@ -162,9 +163,7 @@ const Tasks: React.FC = () => {
   return (
     <AppLayout onAddNewItem={handleNewTask}>
       <div className="p-4 pt-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-white">My Tasks</h1>
-        </div>
+        <TasksHeader />
         
         {isLoading ? (
           <div className="text-white">Loading tasks...</div>
