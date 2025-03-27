@@ -3,12 +3,13 @@ import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Pencil, Lock, Copy, Check, Trash2, Unlink2, Camera, Upload } from 'lucide-react';
+import { Pencil, Lock, Copy, Check, Trash2, Unlink2, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useNavigate } from 'react-router-dom';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
+import { DeleteAvatarDialog } from '@/components/profile/DeleteAvatarDialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const Profile = () => {
@@ -32,6 +33,7 @@ const Profile = () => {
   const [isRoleLocked, setIsRoleLocked] = useState<boolean>(false);
   const [profileImageUrl, setProfileImageUrl] = useState<string>('');
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
+  const [isDeleteAvatarDialogOpen, setIsDeleteAvatarDialogOpen] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dialogConfig, setDialogConfig] = useState<{
     isOpen: boolean;
@@ -178,6 +180,64 @@ const Profile = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleDeleteAvatar = () => {
+    setIsDeleteAvatarDialogOpen(true);
+  };
+
+  const handleConfirmDeleteAvatar = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      const { data: profileData, error: fetchError } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
+      if (profileData && profileData.avatar_url) {
+        const urlParts = profileData.avatar_url.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        
+        if (fileName) {
+          const { error: deleteFileError } = await supabase.storage
+            .from('avatars')
+            .remove([fileName]);
+            
+          if (deleteFileError) {
+            console.error('Error deleting avatar file:', deleteFileError);
+          }
+        }
+      }
+      
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', user.id);
+        
+      if (updateError) throw updateError;
+      
+      setProfileImageUrl('');
+      updateProfileImage('');
+      
+      toast({
+        title: "Profile image deleted",
+        description: "Your profile image has been removed.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Delete failed",
+        description: error.message || "There was an error deleting your profile image.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setIsDeleteAvatarDialogOpen(false);
     }
   };
 
@@ -654,6 +714,13 @@ const Profile = () => {
               <Pencil className="h-4 w-4 text-white" />
             </div>
             
+            {profileImageUrl && (
+              <div className="absolute bottom-0 left-0 bg-red-600 hover:bg-red-700 rounded-full p-1 cursor-pointer"
+                  onClick={handleDeleteAvatar}>
+                <Trash2 className="h-4 w-4 text-white" />
+              </div>
+            )}
+            
             <input
               type="file"
               ref={fileInputRef}
@@ -1010,6 +1077,12 @@ const Profile = () => {
         onClose={handleDialogClose}
         onConfirm={handleDialogConfirm}
         type={dialogConfig.type}
+      />
+
+      <DeleteAvatarDialog
+        isOpen={isDeleteAvatarDialogOpen}
+        onClose={() => setIsDeleteAvatarDialogOpen(false)}
+        onConfirm={handleConfirmDeleteAvatar}
       />
     </AppLayout>
   );
