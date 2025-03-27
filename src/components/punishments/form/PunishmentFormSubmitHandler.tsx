@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
@@ -34,12 +35,18 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
         background_image_url: background_image_url,
       };
       
+      // If editing, include the id
+      if (punishmentData?.id) {
+        dataToSave.id = punishmentData.id;
+      }
+      
       await onSave(dataToSave);
       form.reset();
       toast({
         title: "Success",
         description: "Punishment saved successfully!",
       });
+      onCancel();
     } catch (error) {
       console.error("Error saving punishment:", error);
       toast({

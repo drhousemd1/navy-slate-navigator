@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
 const PunishmentsContent: React.FC = () => {
-  const { punishments, loading, createPunishment } = usePunishments();
+  const { punishments, loading, createPunishment, updatePunishment } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const [initializing, setInitializing] = useState(false);
@@ -100,7 +100,19 @@ const PunishmentsContent: React.FC = () => {
   };
 
   const handleSavePunishment = async (data: PunishmentData): Promise<void> => {
-    return Promise.resolve();
+    try {
+      if (data.id) {
+        // Update existing punishment
+        await updatePunishment(data.id, data);
+      } else {
+        // Create new punishment
+        await createPunishment(data);
+      }
+      setIsEditorOpen(false);
+    } catch (error) {
+      console.error("Error saving punishment:", error);
+      throw error;
+    }
   };
 
   return (
