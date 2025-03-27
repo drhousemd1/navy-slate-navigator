@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Check, Plus } from 'lucide-react';
 import FrequencyTracker from '../components/task/FrequencyTracker';
+import PriorityBadge from '../components/task/PriorityBadge';
 
 const Rules: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,9 +22,7 @@ const Rules: React.FC = () => {
             <div className="relative p-4">
               {/* Card Header Row */}
               <div className="flex justify-between items-center mb-3">
-                <Badge className="bg-amber-500 text-white font-medium border-none px-4 py-1 rounded-full">
-                  Medium
-                </Badge>
+                <PriorityBadge priority="medium" />
                 <div className="flex items-center gap-2">
                   <Button size="sm" className="bg-cyan-500 hover:bg-cyan-600 h-8 px-2 rounded-full flex items-center">
                     <Plus className="w-4 h-4 mr-1" /> 5
