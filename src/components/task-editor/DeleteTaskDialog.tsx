@@ -21,6 +21,11 @@ interface DeleteTaskDialogProps {
 }
 
 const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ isOpen, onOpenChange, onDelete }) => {
+  const handleDelete = () => {
+    onDelete();
+    onOpenChange(false); // Explicitly close the dialog after delete
+  };
+
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogTrigger asChild>
@@ -43,7 +48,7 @@ const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ isOpen, onOpenChang
         <AlertDialogFooter>
           <AlertDialogCancel className="bg-transparent border-light-navy text-white hover:bg-light-navy">Cancel</AlertDialogCancel>
           <AlertDialogAction 
-            onClick={onDelete} 
+            onClick={handleDelete} 
             className="bg-red-700 text-white hover:bg-red-600"
           >
             Delete

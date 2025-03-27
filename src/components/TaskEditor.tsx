@@ -27,7 +27,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
   const handleDelete = (taskId: string) => {
     if (onDelete) {
       onDelete(taskId);
-      onClose();
+      onClose(); // Ensure modal closes after deletion
     }
   };
 

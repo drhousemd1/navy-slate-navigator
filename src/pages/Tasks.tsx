@@ -126,6 +126,8 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       const success = await deleteTask(taskId);
       
       if (success) {
+        setCurrentTask(null);
+        setIsEditorOpen(false);
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
         toast({
           title: 'Success',
