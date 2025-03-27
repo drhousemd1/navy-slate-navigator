@@ -8,6 +8,8 @@ import { Skull, RefreshCw, X, Shuffle } from 'lucide-react';
 import TaskIcon from '@/components/task/TaskIcon';
 import PointsBadge from '@/components/task/PointsBadge';
 import PunishmentBackground from './PunishmentBackground';
+import { useRewards } from '@/contexts/RewardsContext';
+import { toast } from '@/hooks/use-toast';
 
 interface RandomPunishmentSelectorProps {
   isOpen: boolean;
@@ -19,6 +21,7 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
   onClose 
 }) => {
   const { punishments, applyPunishment } = usePunishments();
+  const { totalPoints, setTotalPoints } = useRewards();
   const [selectedPunishment, setSelectedPunishment] = useState<PunishmentData | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -71,10 +74,31 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
     if (!selectedPunishment || !selectedPunishment.id) return;
     
     try {
+      // First update the total points in the UI immediately
+      const newTotal = totalPoints - selectedPunishment.points;
+      setTotalPoints(newTotal);
+      
+      // Then call the applyPunishment function
       await applyPunishment(selectedPunishment.id, selectedPunishment.points);
+      
+      // Show success toast
+      toast({
+        title: "Punishment Applied",
+        description: `${selectedPunishment.points} points deducted.`,
+        variant: "destructive",
+      });
+      
       onClose();
     } catch (error) {
       console.error("Error applying punishment:", error);
+      // Revert the point deduction if there was an error
+      setTotalPoints(totalPoints);
+      
+      toast({
+        title: "Error",
+        description: "Failed to apply punishment. Please try again.",
+        variant: "destructive",
+      });
     }
   };
   
