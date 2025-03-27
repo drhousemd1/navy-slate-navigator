@@ -77,7 +77,7 @@ export const usePointsManagement = () => {
     }
 
     try {
-      console.log('Updating points for user:', user.id);
+      console.log('Updating points for user:', user.id, 'to', newPoints);
       
       // Check if profile exists
       const { data: existingProfile } = await supabase
@@ -90,8 +90,7 @@ export const usePointsManagement = () => {
         // Create a new profile
         const { error } = await supabase
           .from('profiles')
-          .insert({ id: user.id, points: newPoints })
-          .select();
+          .insert({ id: user.id, points: newPoints });
           
         if (error) {
           console.error('Error creating profile with points:', error);

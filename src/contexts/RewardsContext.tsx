@@ -16,6 +16,7 @@ const RewardsContext = createContext<RewardsContextType>({
   handleDeleteReward: async () => false,
   handleBuyReward: async () => {},
   handleUseReward: async () => {},
+  refreshPointsFromDatabase: async () => {},
 });
 
 export const useRewards = () => useContext(RewardsContext);
@@ -71,6 +72,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     handleDeleteReward,
     handleBuyReward,
     handleUseReward,
+    refreshPointsFromDatabase,
   };
 
   return (

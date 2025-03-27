@@ -1,11 +1,16 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Badge } from '../ui/badge';
 import { useRewards } from '../../contexts/RewardsContext';
 import { Box, Coins } from 'lucide-react';
 
 const TasksHeader: React.FC = () => {
-  const { totalPoints, totalRewardsSupply } = useRewards();
+  const { totalPoints, totalRewardsSupply, refreshPointsFromDatabase } = useRewards();
+
+  // Refresh points when component mounts
+  useEffect(() => {
+    refreshPointsFromDatabase();
+  }, [refreshPointsFromDatabase]);
 
   return (
     <div className="flex items-center mb-6">

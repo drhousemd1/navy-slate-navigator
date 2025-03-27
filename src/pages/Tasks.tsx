@@ -5,7 +5,7 @@ import AppLayout from '../components/AppLayout';
 import TaskCard from '../components/TaskCard';
 import TaskEditor from '../components/TaskEditor';
 import TasksHeader from '../components/task/TasksHeader';
-import { RewardsProvider } from '../contexts/RewardsContext';
+import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import { 
   fetchTasks, 
   Task, 
@@ -25,6 +25,7 @@ interface TasksContentProps {
 const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
+  const { refreshPointsFromDatabase } = useRewards();
 
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['tasks'],
@@ -152,12 +153,15 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       if (success) {
         // Make sure to invalidate both queries to refresh the UI
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        queryClient.invalidateQueries({ queryKey: ['rewards'] });
         
+        // Refresh points from database after task completion
         if (completed) {
           const task = tasks.find(t => t.id === taskId);
           const points = task?.points || 0;
           console.log(`Task completed, earned ${points} points`);
+          
+          // Refresh points immediately from the database
+          await refreshPointsFromDatabase();
         }
       }
     } catch (err) {
