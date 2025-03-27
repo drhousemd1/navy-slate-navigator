@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -221,12 +222,68 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     if (error) throw error;
     
     if (completed) {
-      const { data: profilesData } = await supabase
+      // Check if a profile exists first
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, points')
         .limit(1);
         
-      if (profilesData && profilesData.length > 0) {
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        // Create a profile if none exists
+        const newProfileId = crypto.randomUUID();
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({ id: newProfileId, points: task.points })
+          .select()
+          .single();
+          
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          toast({
+            title: 'Error updating points',
+            description: 'Your task was completed, but we could not update your points.',
+            variant: 'destructive',
+          });
+          return true; // Return true because the task was still completed
+        }
+        
+        console.log('Created new profile with points:', newProfile.points);
+        toast({
+          title: 'Points Earned',
+          description: `You earned ${task.points} points!`,
+          variant: 'default',
+        });
+        return true;
+      }
+        
+      if (!profilesData || profilesData.length === 0) {
+        // Create a new profile with the task points
+        const newProfileId = crypto.randomUUID();
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({ id: newProfileId, points: task.points })
+          .select()
+          .single();
+          
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          toast({
+            title: 'Error updating points',
+            description: 'Your task was completed, but we could not create a profile to store your points.',
+            variant: 'destructive',
+          });
+          return true; // Return true because the task was still completed
+        }
+        
+        console.log('Created new profile with points:', newProfile.points);
+        toast({
+          title: 'Points Earned',
+          description: `You earned ${task.points} points!`,
+          variant: 'default',
+        });
+      } else {
+        // Update existing profile
         const profile = profilesData[0];
         const newPoints = profile.points + task.points;
         
@@ -250,13 +307,6 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
             variant: 'default',
           });
         }
-      } else {
-        console.error('No profile found to update points');
-        toast({
-          title: 'Error updating points',
-          description: 'Your task was completed, but we could not find a profile to update points.',
-          variant: 'destructive',
-        });
       }
     }
     
