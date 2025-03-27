@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
 import { usePunishments } from '@/contexts/PunishmentsContext';
@@ -23,7 +22,6 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
       setSelectedPunishment(null);
@@ -31,7 +29,6 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
     }
   }, [isOpen]);
   
-  // Clean up timer on unmount
   useEffect(() => {
     return () => {
       if (animationRef.current) {
@@ -47,27 +44,24 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
     setSelectedPunishment(null);
     
     let counter = 0;
-    const totalIterations = 15; // How many times to cycle through punishments
-    const cycleSpeed = 80; // Speed in ms, gets progressively slower
+    const totalIterations = 15;
+    const cycleSpeed = 80;
     
     const animateCycle = () => {
       const randomIndex = Math.floor(Math.random() * punishments.length);
       setCurrentIndex(randomIndex);
       counter++;
       
-      // Progressively slow down the animation
       const nextSpeed = cycleSpeed + (counter * 10);
       
       if (counter < totalIterations) {
         animationRef.current = setTimeout(animateCycle, nextSpeed);
       } else {
-        // Selection complete
         setSelectedPunishment(punishments[randomIndex]);
         setIsSelecting(false);
       }
     };
     
-    // Start the animation
     animationRef.current = setTimeout(animateCycle, cycleSpeed);
   };
   
@@ -90,13 +84,11 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
   };
   
   useEffect(() => {
-    // Auto-start the selection when dialog is opened
     if (isOpen && punishments.length > 0 && !isSelecting && !selectedPunishment) {
       startRandomSelection();
     }
   }, [isOpen, punishments.length]);
   
-  // The punishment card that is displayed during selection and when selected
   const renderPunishmentCard = () => {
     const punishment = selectedPunishment || 
       (punishments.length > 0 ? punishments[currentIndex] : null);
@@ -174,6 +166,7 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
                   onClick={handleReroll} 
                   className="flex-1 flex items-center justify-center gap-1"
                   variant="outline"
+                  style={{ backgroundColor: '#334155' }}
                 >
                   <RefreshCw className="h-4 w-4" />
                   Re-roll
@@ -182,6 +175,7 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
                   onClick={onClose} 
                   className="flex-1 flex items-center justify-center gap-1"
                   variant="outline"
+                  style={{ backgroundColor: '#1e293b' }}
                 >
                   <X className="h-4 w-4" />
                   Cancel
