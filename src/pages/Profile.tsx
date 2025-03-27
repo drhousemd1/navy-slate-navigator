@@ -29,7 +29,13 @@ const Profile = () => {
   const [isLinkingPartner, setIsLinkingPartner] = useState<boolean>(false);
   const [linkedPartnerNickname, setLinkedPartnerNickname] = useState<string>('');
   const [isRoleLocked, setIsRoleLocked] = useState<boolean>(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [dialogConfig, setDialogConfig] = useState<{
+    isOpen: boolean;
+    type: 'delete' | 'unlink';
+  }>({
+    isOpen: false,
+    type: 'delete'
+  });
 
   useEffect(() => {
     if (user) {
@@ -441,7 +447,7 @@ const Profile = () => {
       setIsLinkingPartner(false);
     }
   };
-  
+
   const handleDeleteAccount = async () => {
     setIsLoading(true);
     try {
@@ -519,6 +525,27 @@ const Profile = () => {
       });
     } finally {
       setIsLoading(false);
+      setDialogConfig({ isOpen: false, type: 'unlink' });
+    }
+  };
+
+  const openDeleteDialog = () => {
+    setDialogConfig({ isOpen: true, type: 'delete' });
+  };
+
+  const openUnlinkDialog = () => {
+    setDialogConfig({ isOpen: true, type: 'unlink' });
+  };
+
+  const handleDialogClose = () => {
+    setDialogConfig({ ...dialogConfig, isOpen: false });
+  };
+
+  const handleDialogConfirm = () => {
+    if (dialogConfig.type === 'delete') {
+      handleDeleteAccount();
+    } else {
+      unlinkPartner();
     }
   };
 
@@ -746,10 +773,11 @@ const Profile = () => {
               </p>
               <Button 
                 variant="destructive" 
-                onClick={unlinkPartner}
+                onClick={openUnlinkDialog}
                 disabled={isLoading}
                 className="text-white"
               >
+                <Unlink2 className="h-4 w-4 mr-2" />
                 Unlink Partner
               </Button>
             </div>
@@ -830,11 +858,11 @@ const Profile = () => {
         <div className="bg-navy py-4 px-4 rounded-lg border border-light-navy mb-3">
           <h2 className="text-white font-semibold mb-4">Account Management</h2>
           
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             {linkedPartnerNickname && (
               <Button 
                 variant="destructive" 
-                onClick={unlinkPartner}
+                onClick={openUnlinkDialog}
                 disabled={isLoading}
                 className="w-full sm:w-auto flex items-center justify-center gap-2"
               >
@@ -845,7 +873,7 @@ const Profile = () => {
             
             <Button 
               variant="destructive" 
-              onClick={() => setIsDeleteDialogOpen(true)}
+              onClick={openDeleteDialog}
               disabled={isLoading}
               className="w-full sm:w-auto flex items-center justify-center gap-2"
             >
@@ -861,9 +889,10 @@ const Profile = () => {
       </div>
       
       <DeleteAccountDialog 
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={handleDeleteAccount}
+        isOpen={dialogConfig.isOpen}
+        onClose={handleDialogClose}
+        onConfirm={handleDialogConfirm}
+        type={dialogConfig.type}
       />
     </AppLayout>
   );
