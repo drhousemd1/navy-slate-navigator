@@ -4,8 +4,9 @@ import AppLayout from '../components/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Edit, Check, Plus } from 'lucide-react';
+import { Edit, Check, Plus } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import FrequencyTracker from '../components/task/FrequencyTracker';
 
 const Rules: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -59,23 +60,18 @@ const Rules: React.FC = () => {
               </div>
               
               {/* Frequency Tracker */}
-              <div className="flex items-center space-x-2 mt-2">
-                <Calendar className="w-5 h-5 text-purple-500" />
-                <div className="flex space-x-1">
-                  {[...Array(7)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={`w-6 h-6 rounded-full border border-gray-400 ${
-                        i === 2 ? 'bg-purple-500 border-purple-500' : i < 2 ? 'border-gray-400 bg-gray-400 bg-opacity-30' : ''
-                      }`}
-                    />
-                  ))}
-                </div>
+              <div className="flex items-center justify-between mt-2">
+                <FrequencyTracker 
+                  frequency="daily"
+                  frequency_count={2}
+                  calendar_color="#7E69AB"
+                  usage_data={[1, 1, 1, 0, 0, 0, 0]}
+                />
                 
                 {/* Edit Button */}
-                <div className="ml-auto">
-                  <Button size="sm" className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0">
-                    <Edit className="w-5 h-5" />
+                <div>
+                  <Button size="sm" className="bg-gray-700 hover:bg-gray-600 rounded-full w-8 h-8 p-0">
+                    <Edit className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
