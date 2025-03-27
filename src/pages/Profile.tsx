@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 const Profile = () => {
   const { user, updateNickname } = useAuth();
@@ -19,6 +19,7 @@ const Profile = () => {
   const [isEditingEmail, setIsEditingEmail] = useState<boolean>(false);
   const [isEditingPassword, setIsEditingPassword] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [role, setRole] = useState<string>('dominant');
 
   useEffect(() => {
     if (user) {
@@ -31,10 +32,15 @@ const Profile = () => {
       
       // Set email
       setEmail(user.email || '');
+      
+      // Set role from user metadata if it exists
+      if (user.user_metadata?.role) {
+        setRole(user.user_metadata.role);
+      }
     }
   }, [user]);
 
-  const handleEditNicknameToggle = () => {
+  const handleEditNickname = () => {
     setIsEditingNickname(!isEditingNickname);
   };
   
@@ -202,6 +208,34 @@ const Profile = () => {
     }
   };
 
+  const handleRoleChange = async (value: string) => {
+    if (!value || value === role) return;
+    
+    setIsLoading(true);
+    try {
+      // Update the user's metadata with the new role
+      const { error } = await supabase.auth.updateUser({
+        data: { role: value }
+      });
+
+      if (error) throw error;
+
+      setRole(value);
+      toast({
+        title: "Role updated",
+        description: `Your role has been updated to ${value}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message || "There was an error updating your role.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="container mx-auto max-w-4xl p-4">
@@ -221,7 +255,7 @@ const Profile = () => {
                 variant="ghost" 
                 size="sm" 
                 className="text-gray-300 hover:text-white"
-                onClick={handleEditNicknameToggle}
+                onClick={handleEditNickname}
               >
                 <Pencil className="h-4 w-4" />
               </Button>
@@ -245,7 +279,7 @@ const Profile = () => {
               </Button>
               <Button 
                 variant="destructive" 
-                onClick={handleEditNicknameToggle}
+                onClick={handleEditNickname}
                 className="text-white"
               >
                 Cancel
@@ -303,7 +337,7 @@ const Profile = () => {
         </div>
         
         {/* Password Box */}
-        <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy">
+        <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy mb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <label className="text-white text-sm">Password:</label>
@@ -376,6 +410,37 @@ const Profile = () => {
               </div>
             </div>
           )}
+        </div>
+        
+        {/* Role Box */}
+        <div className="bg-navy py-2 px-4 rounded-lg border border-light-navy mb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="text-white text-sm">Role:</label>
+              <div className="w-full max-w-xs">
+                <ToggleGroup 
+                  type="single" 
+                  value={role} 
+                  onValueChange={handleRoleChange}
+                  className="bg-light-navy p-1 rounded-md"
+                  disabled={isLoading}
+                >
+                  <ToggleGroupItem 
+                    value="dominant" 
+                    className="w-full data-[state=on]:bg-purple-600 data-[state=on]:text-white"
+                  >
+                    Dominant
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="submissive" 
+                    className="w-full data-[state=on]:bg-purple-600 data-[state=on]:text-white"
+                  >
+                    Submissive
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </AppLayout>
