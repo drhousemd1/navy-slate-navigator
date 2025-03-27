@@ -4,6 +4,7 @@ import AppLayout from '../components/AppLayout';
 import TaskCard from '../components/TaskCard';
 import TaskEditor from '../components/TaskEditor';
 import TasksHeader from '../components/task/TasksHeader';
+import { RewardsProvider } from '../contexts/RewardsContext';
 import { 
   fetchTasks, 
   Task, 
@@ -15,7 +16,7 @@ import {
 } from '../lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 
-const Tasks: React.FC = () => {
+const TasksContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
@@ -161,58 +162,72 @@ const Tasks: React.FC = () => {
   };
 
   return (
-    <AppLayout onAddNewItem={handleNewTask}>
-      <div className="p-4 pt-6">
-        <TasksHeader />
-        
-        {isLoading ? (
-          <div className="text-white">Loading tasks...</div>
-        ) : tasks.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-light-navy mb-4">No tasks found. Create your first task to get started!</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {tasks.map(task => (
-              <TaskCard
-                key={task.id}
-                title={task.title}
-                description={task.description}
-                points={task.points}
-                completed={task.completed}
-                backgroundImage={task.background_image_url}
-                backgroundOpacity={task.background_opacity}
-                focalPointX={task.focal_point_x}
-                focalPointY={task.focal_point_y}
-                frequency={task.frequency}
-                frequency_count={task.frequency_count}
-                usage_data={task.usage_data}
-                icon_url={task.icon_url}
-                icon_name={task.icon_name}
-                priority={task.priority}
-                highlight_effect={task.highlight_effect}
-                title_color={task.title_color}
-                subtext_color={task.subtext_color}
-                calendar_color={task.calendar_color}
-                icon_color={task.icon_color}
-                onEdit={() => handleEditTask(task)}
-                onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
-              />
-            ))}
-          </div>
-        )}
+    <div className="p-4 pt-6">
+      <TasksHeader />
+      
+      {isLoading ? (
+        <div className="text-white">Loading tasks...</div>
+      ) : tasks.length === 0 ? (
+        <div className="text-center py-10">
+          <p className="text-light-navy mb-4">No tasks found. Create your first task to get started!</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {tasks.map(task => (
+            <TaskCard
+              key={task.id}
+              title={task.title}
+              description={task.description}
+              points={task.points}
+              completed={task.completed}
+              backgroundImage={task.background_image_url}
+              backgroundOpacity={task.background_opacity}
+              focalPointX={task.focal_point_x}
+              focalPointY={task.focal_point_y}
+              frequency={task.frequency}
+              frequency_count={task.frequency_count}
+              usage_data={task.usage_data}
+              icon_url={task.icon_url}
+              icon_name={task.icon_name}
+              priority={task.priority}
+              highlight_effect={task.highlight_effect}
+              title_color={task.title_color}
+              subtext_color={task.subtext_color}
+              calendar_color={task.calendar_color}
+              icon_color={task.icon_color}
+              onEdit={() => handleEditTask(task)}
+              onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
+            />
+          ))}
+        </div>
+      )}
 
-        <TaskEditor
-          isOpen={isEditorOpen}
-          onClose={() => {
-            setIsEditorOpen(false);
-            setCurrentTask(null);
-          }}
-          taskData={currentTask || undefined}
-          onSave={handleSaveTask}
-          onDelete={handleDeleteTask}
-        />
-      </div>
+      <TaskEditor
+        isOpen={isEditorOpen}
+        onClose={() => {
+          setIsEditorOpen(false);
+          setCurrentTask(null);
+        }}
+        taskData={currentTask || undefined}
+        onSave={handleSaveTask}
+        onDelete={handleDeleteTask}
+      />
+    </div>
+  );
+};
+
+const Tasks: React.FC = () => {
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  
+  const handleNewTask = () => {
+    setIsEditorOpen(true);
+  };
+  
+  return (
+    <AppLayout onAddNewItem={handleNewTask}>
+      <RewardsProvider>
+        <TasksContent />
+      </RewardsProvider>
     </AppLayout>
   );
 };
