@@ -17,7 +17,7 @@ const PunishmentsHeader: React.FC = () => {
       <h1 className="text-base font-semibold text-white mr-auto">Punishments</h1>
       <div className="flex items-center gap-2">
         <div className="relative">
-          <div className="absolute inset-0 bg-red-600 rounded-md blur-md opacity-70"></div>
+          <div className="absolute inset-0 bg-yellow-100 rounded-md blur-md opacity-90"></div>
           <Button 
             variant="outline" 
             className="relative flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white border-none h-8 px-3 text-sm font-medium rounded-md"
