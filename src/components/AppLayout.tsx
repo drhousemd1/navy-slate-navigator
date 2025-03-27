@@ -22,7 +22,7 @@ interface AppLayoutProps {
 const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, getNickname, getProfileImage } = useAuth();
+  const { user, getNickname, getProfileImage, getUserRole } = useAuth();
 
   // Only show "Add" button for specific routes
   const shouldShowAddButton = 
@@ -43,7 +43,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   
   // For this implementation, we're hardcoding the role types
   // In a real implementation, you would fetch this from your database
-  const userRole = user?.user_metadata?.role || 'Submissive'; // Default to Submissive if not set
+  const userRole = getUserRole(); // Use the getUserRole function from AuthContext
 
   // Determine if we're on the rewards page, tasks page, or punishments page for special styling
   const isRewardsPage = location.pathname === '/rewards';
@@ -68,8 +68,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               </AvatarFallback>
             </Avatar>
             
-            {/* Username and role display */}
-            <div className="ml-2 hidden sm:block">
+            {/* Username and role display - removed hidden class to make it visible on all screens */}
+            <div className="ml-2">
               <p className="text-white text-sm font-medium leading-tight">{nickname}</p>
               <p className="text-gray-400 text-xs leading-tight">{userRole}</p>
             </div>
