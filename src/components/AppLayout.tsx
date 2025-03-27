@@ -3,7 +3,7 @@ import React, { ReactNode } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Plus, Settings } from 'lucide-react';
+import { Plus, Settings, UserCircle2 } from 'lucide-react';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -41,20 +41,25 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 
   return (
     <div className="flex flex-col min-h-screen bg-dark-navy">
-      {/* Top header section with settings icon */}
+      {/* Top header section with account and settings icons */}
       <div className="w-full bg-navy border-b border-light-navy py-2 px-4">
         <div className="max-w-screen-lg mx-auto flex justify-between items-center">
           <div>{/* Left side - empty for now */}</div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Settings className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-navy border border-light-navy text-white z-50">
-              <DropdownMenuItem className="hover:bg-light-navy cursor-pointer" onClick={() => navigate('/encyclopedia')}>
-                Encyclopedia
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-3">
+            {/* Character icon for account/login - currently just visual */}
+            <UserCircle2 className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Settings className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-navy border border-light-navy text-white z-50">
+                <DropdownMenuItem className="hover:bg-light-navy cursor-pointer" onClick={() => navigate('/encyclopedia')}>
+                  Encyclopedia
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
       
