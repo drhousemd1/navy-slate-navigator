@@ -68,7 +68,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               </AvatarFallback>
             </Avatar>
             
-            {/* Username and role display - removed hidden class to make it visible on all screens */}
+            {/* Username and role display */}
             <div className="ml-2">
               <p className="text-white text-sm font-medium leading-tight">{nickname}</p>
               <p className="text-gray-400 text-xs leading-tight">{userRole}</p>
