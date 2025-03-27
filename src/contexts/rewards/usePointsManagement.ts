@@ -2,66 +2,50 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const usePointsManagement = () => {
   const [totalPoints, setTotalPoints] = useState<number>(0);
+  const { user, isAuthenticated } = useAuth();
 
   const fetchTotalPoints = useCallback(async () => {
+    if (!isAuthenticated || !user) {
+      console.log('User not authenticated, returning 0 points');
+      setTotalPoints(0);
+      return;
+    }
+
     try {
-      // Attempt to get user auth data first
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData.user?.id;
+      console.log('Fetching points for authenticated user:', user.id);
       
-      let data;
-      let error;
-      
-      if (userId) {
-        // If authenticated, get points for this user
-        console.log('Fetching points for authenticated user:', userId);
-        const response = await supabase
-          .from('profiles')
-          .select('points')
-          .eq('id', userId)
-          .single();
-          
-        data = response.data;
-        error = response.error;
-      } else {
-        // If not authenticated, get the first profile or any record
-        console.log('No authenticated user, fetching first available profile');
-        const response = await supabase
-          .from('profiles')
-          .select('points, id')
-          .limit(1);
-          
-        data = response.data?.[0];
-        error = response.error;
-      }
-      
-      if (error && error.code === 'PGRST116') {
-        // No data found - either no user or no profiles
-        console.log('No points data found, creating initial profile');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('points')
+        .eq('id', user.id)
+        .single();
         
-        // Generate a random UUID for the profile if no user is authenticated
-        const profileId = userId || crypto.randomUUID();
-        
-        // Create an initial profile with 0 points
-        const { data: newProfileData, error: createError } = await supabase
-          .from('profiles')
-          .insert({ id: profileId, points: 0 })
-          .select()
-          .single();
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Profile doesn't exist yet, create one
+          console.log('No profile found for user, creating one with 0 points');
           
-        if (createError) {
-          console.error('Error creating profile:', createError);
-          setTotalPoints(0);
+          const { data: newProfileData, error: createError } = await supabase
+            .from('profiles')
+            .insert({ id: user.id, points: 0 })
+            .select()
+            .single();
+            
+          if (createError) {
+            console.error('Error creating profile:', createError);
+            setTotalPoints(0);
+            return;
+          }
+          
+          console.log('Created new profile with points:', newProfileData.points);
+          setTotalPoints(newProfileData.points);
           return;
         }
         
-        console.log('Created new profile with points:', newProfileData.points);
-        setTotalPoints(newProfileData.points);
-        return;
-      } else if (error) {
         console.error('Error fetching points:', error);
         setTotalPoints(0);
         return;
@@ -78,71 +62,52 @@ export const usePointsManagement = () => {
       console.error('Error fetching total points:', error);
       setTotalPoints(0);
     }
-  }, []);
+  }, [user, isAuthenticated]);
 
   useEffect(() => {
-    fetchTotalPoints();
-  }, [fetchTotalPoints]);
+    if (isAuthenticated) {
+      fetchTotalPoints();
+    }
+  }, [fetchTotalPoints, isAuthenticated]);
 
   const updatePointsInDatabase = useCallback(async (newPoints: number) => {
+    if (!isAuthenticated || !user) {
+      console.log('User not authenticated, cannot update points');
+      return false;
+    }
+
     try {
-      // First try to get the authenticated user
-      const { data: authData, error: authError } = await supabase.auth.getUser();
+      console.log('Updating points for user:', user.id);
       
-      if (authError || !authData?.user?.id) {
-        console.log('No authenticated user, updating first available profile');
+      // Check if profile exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
         
-        // Get first profile if exists
-        const { data: profiles } = await supabase
+      if (!existingProfile) {
+        // Create a new profile
+        const { error } = await supabase
           .from('profiles')
-          .select('id')
-          .limit(1);
+          .insert({ id: user.id, points: newPoints })
+          .select();
           
-        if (profiles && profiles.length > 0) {
-          // Update the existing profile
-          const { error } = await supabase
-            .from('profiles')
-            .update({ points: newPoints })
-            .eq('id', profiles[0].id);
-          
-          if (error) {
-            console.error('Error updating points without auth:', error);
-            return false;
-          }
-          
-          console.log('Points updated for existing profile:', newPoints);
-          setTotalPoints(newPoints); // Update UI immediately
-          return true;
-        } else {
-          // Create a new profile with a randomly generated UUID
-          const profileId = crypto.randomUUID();
-          
-          // Create a new profile
-          const { data: newProfile, error } = await supabase
-            .from('profiles')
-            .insert({ id: profileId, points: newPoints })
-            .select()
-            .single();
-            
-          if (error) {
-            console.error('Error creating profile:', error);
-            return false;
-          }
-          
-          console.log('Created new profile with points:', newPoints);
-          setTotalPoints(newPoints); // Update UI immediately
-          return true;
+        if (error) {
+          console.error('Error creating profile with points:', error);
+          return false;
         }
+        
+        console.log('Created new profile with points:', newPoints);
+        setTotalPoints(newPoints);
+        return true;
       }
       
-      // We have a user ID, proceed with normal update
-      const userId = authData.user.id;
-      console.log('Updating points for user:', userId);
-      
+      // Update existing profile
       const { error } = await supabase
         .from('profiles')
         .update({ points: newPoints })
-        .eq('id', userId);
+        .eq('id', user.id);
       
       if (error) {
         console.error('Error updating points in database:', error);
@@ -150,13 +115,13 @@ export const usePointsManagement = () => {
       }
       
       console.log('Points updated in database:', newPoints);
-      setTotalPoints(newPoints); // Update UI immediately
+      setTotalPoints(newPoints);
       return true;
     } catch (error) {
       console.error('Error in updatePointsInDatabase:', error);
       return false;
     }
-  }, []);
+  }, [user, isAuthenticated]);
 
   return {
     totalPoints,

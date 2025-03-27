@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -227,54 +228,61 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     if (completed) {
       try {
         const taskPoints = task.points || 0;
+        const { data: authData } = await supabase.auth.getUser();
+        const userId = authData.user?.id;
         
-        // Get current profile points
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, points')
-          .limit(1);
-        
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError);
-          throw profilesError;
-        }
-        
-        if (!profilesData || profilesData.length === 0) {
-          // Create a new profile with points and a random UUID
-          const profileId = crypto.randomUUID();
-          console.log('No profile found, creating one with initial points:', taskPoints);
-          
-          const { error: createError } = await supabase
-            .from('profiles')
-            .insert([{ id: profileId, points: taskPoints }]);
-            
-          if (createError) {
-            console.error('Error creating profile:', createError);
-            throw createError;
-          }
-          
-          toast({
-            title: 'Points Earned',
-            description: `You earned ${taskPoints} points!`,
-            variant: 'default',
-          });
-          
+        if (!userId) {
+          console.log('No authenticated user, skipping points update');
           return true;
         }
         
+        // Get current profile points
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('points')
+          .eq('id', userId)
+          .single();
+        
+        if (profileError) {
+          if (profileError.code === 'PGRST116') {
+            // Profile doesn't exist, create one
+            console.log('No profile found, creating one with initial points:', taskPoints);
+            
+            const { error: createError } = await supabase
+              .from('profiles')
+              .insert([{ id: userId, points: taskPoints }]);
+              
+            if (createError) {
+              console.error('Error creating profile:', createError);
+              return true; // Still return true as the task was completed
+            }
+            
+            toast({
+              title: 'Points Earned',
+              description: `You earned ${taskPoints} points!`,
+              variant: 'default',
+            });
+            
+            return true;
+          }
+          
+          console.error('Error fetching profile:', profileError);
+          return true; // Still return true as the task was completed
+        }
+        
         // Update existing profile
-        const profile = profilesData[0];
-        const newPoints = (profile.points || 0) + taskPoints;
-        console.log('Updating profile points from', profile.points, 'to', newPoints);
+        const currentPoints = profileData?.points || 0;
+        const newPoints = currentPoints + taskPoints;
+        console.log('Updating profile points from', currentPoints, 'to', newPoints);
         
         const { error: pointsError } = await supabase
           .from('profiles')
           .update({ points: newPoints })
-          .eq('id', profile.id);
+          .eq('id', userId);
           
         if (pointsError) {
           console.error('Error updating points:', pointsError);
-          throw pointsError;
+          return true; // Still return true as the task was completed
         }
         
         console.log('Points updated successfully:', newPoints);
