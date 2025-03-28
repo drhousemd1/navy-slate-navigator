@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { LogIn, UserPlus, ArrowLeft } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 type AuthView = "login" | "signup" | "forgot-password";
 
@@ -15,8 +16,24 @@ const Auth: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [debugMode, setDebugMode] = useState(false);
   const { signIn, signUp, isAuthenticated, resetPassword } = useAuth();
   const navigate = useNavigate();
+
+  // Check if a session already exists on component mount
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (data.session) {
+        console.log("Existing session found:", data.session.user.email);
+        navigate('/');
+      } else if (error) {
+        console.error("Error checking session:", error);
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,12 +43,37 @@ const Auth: React.FC = () => {
     try {
       if (authView === "login") {
         console.log("Attempting to sign in with email:", email);
+        
+        // Try direct Supabase auth to debug what's happening
+        try {
+          const { data: directAuthData, error: directAuthError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (directAuthError) {
+            console.error("Direct Supabase auth error:", directAuthError);
+            setLoginError(`Authentication failed: ${directAuthError.message}`);
+            setLoading(false);
+            return;
+          }
+          
+          if (directAuthData.user) {
+            console.log("Login successful via direct Supabase auth:", directAuthData.user.email);
+            navigate('/');
+            return;
+          }
+        } catch (directError) {
+          console.error("Exception during direct Supabase auth:", directError);
+        }
+        
+        // Fallback to using context auth
         const { error } = await signIn(email, password);
         if (error) {
-          console.error("Login error:", error);
+          console.error("Login error from context:", error);
           setLoginError(error.message || "Invalid login credentials. Please check your email and password.");
         } else {
-          console.log("Login successful, navigating to home");
+          console.log("Login successful via context, navigating to home");
           navigate('/');
         }
       } else {
@@ -88,6 +130,18 @@ const Auth: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Toggle debug mode by clicking 5 times on the title
+  const [titleClicks, setTitleClicks] = useState(0);
+  const handleTitleClick = () => {
+    setTitleClicks(prev => {
+      if (prev === 4) {
+        setDebugMode(!debugMode);
+        return 0;
+      }
+      return prev + 1;
+    });
   };
 
   // Redirect if already authenticated
@@ -151,7 +205,10 @@ const Auth: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
       <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
-        <h1 className="text-2xl font-bold text-center text-white">
+        <h1 
+          className="text-2xl font-bold text-center text-white cursor-default"
+          onClick={handleTitleClick}
+        >
           Welcome to the Rewards System
         </h1>
         
@@ -165,6 +222,7 @@ const Auth: React.FC = () => {
               required
               className="bg-navy border-light-navy text-white"
               placeholder="your@email.com"
+              autoComplete="email"
             />
           </div>
           
@@ -178,6 +236,7 @@ const Auth: React.FC = () => {
               className="bg-navy border-light-navy text-white"
               placeholder="********"
               minLength={6}
+              autoComplete={authView === "login" ? "current-password" : "new-password"}
             />
             <div className="text-right">
               <Button 
@@ -194,6 +253,16 @@ const Auth: React.FC = () => {
           {loginError && (
             <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded">
               {loginError}
+            </div>
+          )}
+          
+          {/* Debug information when debug mode is enabled */}
+          {debugMode && (
+            <div className="text-xs text-gray-400 p-2 border border-gray-700 rounded bg-gray-900/50 overflow-auto">
+              <p>Debug mode enabled</p>
+              <p>Email: {email}</p>
+              <p>Auth view: {authView}</p>
+              <p>API URL: {supabase.auth.url}</p>
             </div>
           )}
           

@@ -1,13 +1,15 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { Session, User } from '@supabase/supabase-js';
 
 type UserRole = 'admin' | 'user';
 
 type AuthContextType = {
   isAuthenticated: boolean;
-  user: any | null;
-  session: any | null;
+  user: User | null;
+  session: Session | null;
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
   signUp: (email: string, password: string) => Promise<{ error: any | null; data: any | null }>;
   resetPassword: (email: string) => Promise<{ error: any | null }>;
@@ -28,12 +30,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [user, setUser] = useState<any | null>(null);
-  const [session, setSession] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
+  // This function checks if the user has an admin role
   const checkUserRole = async () => {
     if (!user) {
       setUserRole(null);
@@ -57,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserRole(data.role as UserRole);
         setIsAdmin(data.role === 'admin');
       } else {
+        // Default to user role if no specific role is found
         setUserRole('user');
         setIsAdmin(false);
       }
@@ -65,20 +69,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Set up auth state listener and check for existing session
   useEffect(() => {
+    // CRITICAL: Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log('Auth state changed:', event, currentSession?.user?.email);
+        
+        // Update authentication state synchronously
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setIsAuthenticated(!!currentSession);
+        
+        // Use setTimeout for any Supabase calls to prevent deadlocks
+        if (currentSession?.user) {
+          setTimeout(() => {
+            checkUserRole();
+          }, 0);
+        }
+        
         setLoading(false);
       }
     );
 
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log('Initial session check:', currentSession?.user?.email || 'No session');
+      
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setIsAuthenticated(!!currentSession);
+      
+      if (currentSession?.user) {
+        checkUserRole();
+      }
+      
       setLoading(false);
     });
 
@@ -87,23 +112,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      checkUserRole();
-    } else {
-      setUserRole(null);
-      setIsAdmin(false);
-    }
-  }, [isAuthenticated, user]);
-
+  // Sign in with email and password
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
+        console.error('Sign in error:', error);
         toast({
           title: 'Login failed',
           description: error.message,
@@ -112,6 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error };
       }
       
+      console.log('Sign in successful:', data.user?.email);
       toast({
         title: 'Welcome back!',
         description: 'You have successfully logged in.',
@@ -119,6 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { error: null };
     } catch (error: any) {
+      console.error('Exception during sign in:', error);
       toast({
         title: 'Login failed',
         description: error.message,
@@ -128,6 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Sign up with email and password
   const signUp = async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -136,6 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) {
+        console.error('Sign up error:', error);
         toast({
           title: 'Registration failed',
           description: error.message,
@@ -144,6 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error, data: null };
       }
       
+      console.log('Sign up successful:', data.user?.email);
       toast({
         title: 'Registration successful',
         description: 'Please check your email to verify your account.',
@@ -151,6 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { error: null, data };
     } catch (error: any) {
+      console.error('Exception during sign up:', error);
       toast({
         title: 'Registration failed',
         description: error.message,
@@ -160,6 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Reset password
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -176,6 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error };
       }
       
+      console.log('Password reset email sent to:', email);
       toast({
         title: 'Password reset email sent',
         description: 'Check your email for the password reset link.',
@@ -183,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { error: null };
     } catch (error: any) {
+      console.error('Exception during password reset:', error);
       toast({
         title: 'Password reset failed',
         description: error.message,
@@ -192,6 +219,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Sign out
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -207,6 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: 'You have been successfully logged out.',
       });
     } catch (error: any) {
+      console.error('Sign out error:', error);
       toast({
         title: 'Error signing out',
         description: error.message,
@@ -215,6 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Update user nickname
   const updateNickname = (nickname: string) => {
     if (user) {
       const updatedUser = {
@@ -228,6 +258,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Update user profile image
   const updateProfileImage = (imageUrl: string) => {
     if (user) {
       const updatedUser = {
@@ -241,6 +272,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Get user nickname
   const getNickname = (): string => {
     if (!user) return 'Guest';
     
@@ -255,11 +287,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return 'User';
   };
 
+  // Get user profile image
   const getProfileImage = (): string => {
     if (!user) return '';
     return user.user_metadata?.avatar_url || '';
   };
 
+  // Get user role
   const getUserRole = (): string => {
     if (!user) return 'Submissive'; // Default role with proper capitalization
     
@@ -270,6 +304,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
+  // Update user role
   const updateUserRole = async (role: string) => {
     if (user) {
       try {
@@ -280,6 +315,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         
         if (error) {
+          console.error('Error updating user role:', error);
           toast({
             title: 'Error updating role',
             description: error.message,
@@ -302,6 +338,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: `Your role has been updated to ${role}`,
         });
       } catch (error: any) {
+        console.error('Exception during user role update:', error);
         toast({
           title: 'Error updating role',
           description: error.message,
