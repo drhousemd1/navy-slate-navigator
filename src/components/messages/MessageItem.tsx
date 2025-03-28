@@ -57,8 +57,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
               <p className="text-sm break-words">{message.content}</p>
             )}
             
+            {/* Timestamp moved above image when image exists */}
             {message.image_url && (
-              <div className="mt-2">
+              <span className="text-xxs opacity-70 mt-1 self-end">
+                {formatMessageTime(message.created_at)}
+              </span>
+            )}
+            
+            {message.image_url && (
+              <div className="mt-1">
                 <img
                   src={message.image_url}
                   alt="Message attachment"
@@ -67,9 +74,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </div>
             )}
             
-            <span className="text-xs opacity-70 mt-1 self-end">
-              {formatMessageTime(message.created_at)}
-            </span>
+            {/* Only show timestamp here if there's no image */}
+            {!message.image_url && (
+              <span className="text-xxs opacity-70 mt-1 self-end">
+                {formatMessageTime(message.created_at)}
+              </span>
+            )}
           </div>
         </div>
       </div>

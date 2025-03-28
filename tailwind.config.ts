@@ -19,6 +19,9 @@ export default {
 			}
 		},
 		extend: {
+			fontSize: {
+				'xxs': '0.625rem', // Add extra small text size
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
