@@ -27,53 +27,39 @@ const MessageList: React.FC<MessageListProps> = ({
   const [prevMessageCount, setPrevMessageCount] = useState(0);
   const [initialLoad, setInitialLoad] = useState(true);
   
-  console.log('[MessageList] Rendering with', messages.length, 'messages');
-  
-  // This function handles all scrolling to bottom scenarios
+  // This function handles all scrolling to bottom scenarios with maximum reliability
   const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
-    console.log('[MessageList] Attempting to scroll to bottom with behavior:', behavior);
-    
     if (scrollAreaViewportRef.current) {
       const scrollElement = scrollAreaViewportRef.current;
-      const scrollHeight = scrollElement.scrollHeight;
-      scrollElement.scrollTop = scrollHeight;
-      console.log('[MessageList] Scrolled viewport to bottom:', scrollHeight);
+      scrollElement.scrollTop = scrollElement.scrollHeight;
+      console.log('[MessageList] Scrolled to bottom, height:', scrollElement.scrollHeight);
     } else if (messageEndRef.current) {
       messageEndRef.current.scrollIntoView({ behavior });
-      console.log('[MessageList] Scrolled using messageEndRef');
     }
   };
 
   // Force scroll on initial load
   useEffect(() => {
     if (initialLoad && messages.length > 0) {
-      console.log('[MessageList] Initial load, forcing scroll to bottom');
+      console.log('[MessageList] Initial load with', messages.length, 'messages, scrolling to bottom');
       setInitialLoad(false);
       
-      // Scroll immediately
+      // Use immediate scroll and multiple delayed scrolls for reliability
       scrollToBottom();
-      
-      // Then schedule additional scroll attempts at increasing intervals
-      setTimeout(() => scrollToBottom(), 50);
-      setTimeout(() => scrollToBottom(), 150);
+      setTimeout(() => scrollToBottom(), 100);
       setTimeout(() => scrollToBottom(), 300);
-      setTimeout(() => scrollToBottom(), 500);
     }
   }, [initialLoad, messages.length]);
 
-  // Detect new messages and auto-scroll
+  // Auto-scroll when message count changes (new messages)
   useEffect(() => {
     if (messages.length > prevMessageCount) {
-      console.log('[MessageList] New message detected! Count changed from', 
-                  prevMessageCount, 'to', messages.length);
+      console.log('[MessageList] New messages detected:', messages.length - prevMessageCount, 'messages added');
       
-      // Scroll immediately
+      // Immediate scroll and multiple delayed scrolls
       scrollToBottom('smooth');
-      
-      // Schedule additional scroll attempts
-      setTimeout(() => scrollToBottom('smooth'), 100); 
+      setTimeout(() => scrollToBottom('smooth'), 100);
       setTimeout(() => scrollToBottom('smooth'), 300);
-      setTimeout(() => scrollToBottom('smooth'), 600);
     }
     
     // Always update the previous count
@@ -84,9 +70,16 @@ const MessageList: React.FC<MessageListProps> = ({
   const handleImageLoaded = () => {
     console.log('[MessageList] Image loaded, scrolling to bottom');
     scrollToBottom('smooth');
-    // Try again after a delay in case the first attempt didn't account for the full image height
     setTimeout(() => scrollToBottom('smooth'), 200);
   };
+
+  // Force scroll to bottom when viewport ref is captured
+  useEffect(() => {
+    if (scrollAreaViewportRef.current && messages.length > 0) {
+      console.log('[MessageList] Viewport ref updated, scrolling to bottom');
+      scrollToBottom();
+    }
+  }, [scrollAreaViewportRef.current, messages.length]);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -112,12 +105,11 @@ const MessageList: React.FC<MessageListProps> = ({
             const viewport = node.querySelector('[data-radix-scroll-area-viewport]');
             if (viewport && viewport instanceof HTMLDivElement) {
               scrollAreaViewportRef.current = viewport;
-              console.log('[MessageList] ScrollArea viewport ref captured');
             }
           }
         }}
       >
-        <div className="space-y-4 pb-16">
+        <div className="space-y-4 pb-32">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className="text-gray-400">No messages yet. Send the first one!</p>
@@ -138,10 +130,10 @@ const MessageList: React.FC<MessageListProps> = ({
               );
             })
           )}
-          {/* Add significant space at the bottom to ensure messages aren't hidden behind input */}
+          {/* Increased the height at the bottom for more space */}
           <div 
             ref={messageEndRef} 
-            style={{ height: '120px', width: '100%' }} 
+            style={{ height: '150px', width: '100%' }} 
             id="message-end"
             className="bg-transparent"
           />

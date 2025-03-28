@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Camera, Send, X } from 'lucide-react';
@@ -41,7 +41,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleSendMessage();
     }
   };
@@ -55,7 +56,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   // Clean up the object URL when the component unmounts or when the image file changes
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -87,7 +88,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </div>
       )}
       
-      {/* Fixed message input container at bottom with increased z-index */}
+      {/* Fixed message input container with higher z-index */}
       <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 border-t border-light-navy z-50 shadow-lg">
         <div className="flex items-center gap-2">
           <Button
