@@ -66,21 +66,23 @@ const MessageInput: React.FC<MessageInputProps> = ({
   return (
     <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 z-50 border-t border-light-navy">
       {imageFile && previewUrl && (
-        <div className="mx-auto max-w-[200px] p-2 border border-light-navy rounded-md mb-2 bg-navy h-24 relative">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={clearImage}
-            className="absolute top-1 right-1 h-6 w-6 p-1 text-red-500 hover:text-red-600"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-          <div className="h-full w-full flex items-center justify-center">
-            <img 
-              src={previewUrl} 
-              alt="Image preview" 
-              className="max-h-20 max-w-full object-contain"
-            />
+        <div className="flex justify-start mb-2">
+          <div className="inline-block border border-light-navy rounded-md bg-navy relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={clearImage}
+              className="absolute top-1 right-1 h-6 w-6 p-1 text-red-500 hover:text-red-600"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center justify-center">
+              <img 
+                src={previewUrl} 
+                alt="Image preview" 
+                className="max-h-20 max-w-32 object-contain"
+              />
+            </div>
           </div>
         </div>
       )}
