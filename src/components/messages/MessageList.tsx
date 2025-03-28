@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useLayoutEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -29,7 +28,6 @@ const MessageList: React.FC<MessageListProps> = ({
   
   console.log('[MessageList] Rendering with', messages.length, 'messages');
   
-  // This function handles all scrolling to bottom scenarios
   const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
     console.log('[MessageList] Attempting to scroll to bottom with behavior:', behavior);
     
@@ -44,16 +42,13 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   };
 
-  // Force scroll on initial load
   useEffect(() => {
     if (initialLoad && messages.length > 0) {
       console.log('[MessageList] Initial load, forcing scroll to bottom');
       setInitialLoad(false);
       
-      // Scroll immediately
       scrollToBottom();
       
-      // Then schedule additional scroll attempts at increasing intervals
       setTimeout(() => scrollToBottom(), 50);
       setTimeout(() => scrollToBottom(), 150);
       setTimeout(() => scrollToBottom(), 300);
@@ -61,42 +56,34 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   }, [initialLoad, messages.length]);
 
-  // Detect new messages and auto-scroll
   useEffect(() => {
     if (messages.length > prevMessageCount) {
       console.log('[MessageList] New message detected! Count changed from', 
                   prevMessageCount, 'to', messages.length);
       
-      // Scroll immediately
       scrollToBottom('smooth');
       
-      // Schedule additional scroll attempts
       setTimeout(() => scrollToBottom('smooth'), 100); 
       setTimeout(() => scrollToBottom('smooth'), 300);
       setTimeout(() => scrollToBottom('smooth'), 600);
     }
     
-    // Always update the previous count
     setPrevMessageCount(messages.length);
   }, [messages.length, prevMessageCount]);
 
   useLayoutEffect(() => {
     if (!messageEndRef.current) return;
 
-    // Force scroll to latest message before paint
     messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
 
-    // Force reflow to fix React not rendering the scroll
     messageEndRef.current.style.display = 'none';
     void messageEndRef.current.offsetHeight;
     messageEndRef.current.style.display = '';
   }, [messages]);
 
-  // Handle image load events to trigger re-scrolling
   const handleImageLoaded = () => {
     console.log('[MessageList] Image loaded, scrolling to bottom');
     scrollToBottom('smooth');
-    // Try again after a delay in case the first attempt didn't account for the full image height
     setTimeout(() => scrollToBottom('smooth'), 200);
   };
 
@@ -119,7 +106,6 @@ const MessageList: React.FC<MessageListProps> = ({
       <ScrollArea 
         className="flex-1 px-4 overflow-y-auto" 
         ref={(node) => {
-          // Access the actual viewport div for direct scrolling
           if (node) {
             const viewport = node.querySelector('[data-radix-scroll-area-viewport]');
             if (viewport && viewport instanceof HTMLDivElement) {
@@ -129,7 +115,7 @@ const MessageList: React.FC<MessageListProps> = ({
           }
         }}
       >
-        <div className="space-y-4 pb-16">
+        <div className="space-y-1 pb-1">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className="text-gray-400">No messages yet. Send the first one!</p>
@@ -150,7 +136,6 @@ const MessageList: React.FC<MessageListProps> = ({
               );
             })
           )}
-          {/* Add significant space at the bottom to ensure messages aren't hidden behind input */}
           <div 
             ref={messageEndRef} 
             style={{ height: '120px', width: '100%' }} 
