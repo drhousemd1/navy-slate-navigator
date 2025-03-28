@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -138,6 +139,13 @@ const MessageList: React.FC<MessageListProps> = ({
               <p className="text-gray-400">No messages yet. Send the first one!</p>
             </div>
           ) : (
+            // Add critical log right before mapping to see all messages that should be rendered
+            console.log('[MessageList] About to render messages:', messages.map(m => ({
+              id: m.id,
+              content: m.content,
+              image_url: m.image_url
+            }))),
+            
             messages.map((msg: Message) => {
               // Log each message key during the mapping
               console.log('[MessageList] Rendering message with key:', msg.id);
