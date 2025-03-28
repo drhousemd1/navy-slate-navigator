@@ -50,6 +50,18 @@ const MessageList: React.FC<MessageListProps> = ({
     console.log('[MessageList] Contains images:', containsImages);
   }, [messages]);
 
+  // Log the last message before attempting to scroll to it
+  useEffect(() => {
+    if (messages.length > 0) {
+      const last = messages[messages.length - 1];
+      console.log('[MessageList] Scrolling to last message:', {
+        id: last.id,
+        content: last.content,
+        image_url: last.image_url
+      });
+    }
+  }, [messages]);
+
   // Improved scroll handling for new messages
   useEffect(() => {
     // If message count increased, it means a new message was added
