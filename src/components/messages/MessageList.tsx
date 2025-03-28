@@ -62,57 +62,32 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   }, [messages]);
 
-  // Improved scroll handling for new messages
+  // Simplified scroll handling - always scroll to bottom when messages change
   useEffect(() => {
-    // If message count increased, it means a new message was added
-    const hasNewMessage = messages.length > prevMessageCount;
-    setPrevMessageCount(messages.length);
-    
-    if (hasNewMessage || messages.length === 1) {
-      console.log('[MessageList] New message detected, scrolling to bottom');
-      setShouldScrollToBottom(true);
-    }
-  }, [messages, prevMessageCount]);
-
-  // Separate effect for scrolling to ensure it happens after render
-  useEffect(() => {
-    if (shouldScrollToBottom) {
-      console.log('[MessageList] Executing scroll to bottom');
-      
-      // Use requestAnimationFrame to ensure scrolling happens after render
-      requestAnimationFrame(() => {
-        if (messageEndRef.current) {
-          messageEndRef.current.scrollIntoView({ behavior: 'auto' });
-          console.log('[MessageList] Scrolled to bottom');
-        }
-      });
-      
-      setShouldScrollToBottom(false);
-    }
-  }, [shouldScrollToBottom, messages]);
-
-  // Additional scroll to bottom for images after they load
-  useEffect(() => {
-    if (hasImages && messages.length > 0) {
-      console.log('[MessageList] Has images, will scroll after timeout');
-      const timer = setTimeout(() => {
+    if (messages.length > 0) {
+      console.log('[MessageList] Messages updated, scrolling to bottom');
+      setTimeout(() => {
         if (messageEndRef.current) {
           messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          console.log('[MessageList] Scrolled after image load timeout');
+          console.log('[MessageList] Scrolled to bottom after message update');
         }
-      }, 700); // Increased from 500ms to 700ms to give more time for images to load
-      return () => clearTimeout(timer);
+      }, 100); // Small delay to ensure DOM is updated
     }
-  }, [hasImages, messages]);
+  }, [messages]);
+
+  // Scroll to bottom immediately on component mount
+  useEffect(() => {
+    console.log('[MessageList] Component mounted, scrolling to bottom');
+    if (messageEndRef.current) {
+      messageEndRef.current.scrollIntoView({ behavior: 'auto' });
+    }
+  }, []);
 
   // Handle image load events to trigger re-scrolling
   const handleImageLoaded = () => {
     console.log('[MessageList] Image loaded, scrolling');
     if (messageEndRef.current) {
-      // Use requestAnimationFrame for better timing
-      requestAnimationFrame(() => {
-        messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      });
+      messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -164,8 +139,8 @@ const MessageList: React.FC<MessageListProps> = ({
               );
             })
           )}
-          {/* This div is the target for scrolling to the bottom */}
-          <div ref={messageEndRef} style={{ height: '1px', width: '100%' }} />
+          {/* This div is the target for scrolling to the bottom - increased height for visibility */}
+          <div ref={messageEndRef} style={{ height: '10px', width: '100%' }} />
         </div>
       </ScrollArea>
     </div>
