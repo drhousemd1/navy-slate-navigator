@@ -25,6 +25,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const messageEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [hasImages, setHasImages] = useState(false);
+  const [prevMessageCount, setPrevMessageCount] = useState(0);
   
   // Check if messages contain images
   useEffect(() => {
@@ -32,23 +33,31 @@ const MessageList: React.FC<MessageListProps> = ({
     setHasImages(containsImages);
   }, [messages]);
 
-  // Scroll to bottom when messages change or when images are loaded
+  // Track message count changes to detect new messages
   useEffect(() => {
-    const scrollToBottom = () => {
+    // If message count increased, it means a new message was added
+    const hasNewMessage = messages.length > prevMessageCount;
+    setPrevMessageCount(messages.length);
+    
+    if (hasNewMessage || messages.length === 1) {
+      // Force immediate scroll for new messages
       if (messageEndRef.current) {
-        messageEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
       }
-    };
-    
-    // Immediate scroll for text messages
-    scrollToBottom();
-    
-    // Additional delay for image messages to ensure they're loaded
-    if (hasImages) {
-      const timer = setTimeout(scrollToBottom, 500);
+    }
+  }, [messages, prevMessageCount]);
+
+  // Additional scroll to bottom for images after they load
+  useEffect(() => {
+    if (hasImages && messages.length > 0) {
+      const timer = setTimeout(() => {
+        if (messageEndRef.current) {
+          messageEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      }, 300);
       return () => clearTimeout(timer);
     }
-  }, [messages, hasImages]);
+  }, [hasImages, messages]);
 
   // Handle image load events to trigger re-scrolling
   const handleImageLoaded = () => {

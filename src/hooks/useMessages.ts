@@ -44,12 +44,11 @@ export const useMessages = (partnerId?: string) => {
       setImageFile(null);
     }
     
+    // Wait for the message to be sent and then return the result
     const result = await sendMessageBase(content, receiverId, imageUrl);
     
-    // Force a refetch after sending a message to update the UI
-    setTimeout(() => {
-      refetch();
-    }, 300);
+    // Force a refetch to ensure the UI is updated with the latest message
+    refetch();
     
     return result;
   };

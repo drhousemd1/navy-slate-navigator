@@ -38,8 +38,15 @@ export const useMessageSend = () => {
       
       return data[0];
     },
-    onSuccess: () => {
-      // We don't need to invalidate the query here since we're using real-time updates
+    onSuccess: (newMessage) => {
+      // Invalidate and refetch messages query to ensure UI updates
+      queryClient.invalidateQueries({ queryKey: ['messages', user?.id] });
+      
+      // Manually update the query cache to immediately show the new message
+      queryClient.setQueryData(['messages', user?.id], (oldData: any) => {
+        if (!oldData) return [newMessage];
+        return [...oldData, newMessage];
+      });
     },
     onError: (error) => {
       toast({
@@ -52,7 +59,7 @@ export const useMessageSend = () => {
 
   // Send a message function
   const sendMessage = async (content: string, receiverId: string, imageUrl: string | null = null) => {
-    return sendMessageMutation.mutate({ content, receiverId, imageUrl });
+    return sendMessageMutation.mutateAsync({ content, receiverId, imageUrl });
   };
 
   return {

@@ -69,9 +69,15 @@ const Messages: React.FC = () => {
     
     try {
       const receiverId = partnerId || user.id;
+      const currentMessage = message;
+      setMessage(''); // Clear input immediately for better UX
       
-      await sendMessage(message, receiverId);
-      setMessage('');
+      await sendMessage(currentMessage, receiverId);
+      
+      // Force refresh to ensure message appears
+      setTimeout(() => {
+        refetch();
+      }, 100);
     } catch (err) {
       console.error('Error sending message:', err);
       toast({
