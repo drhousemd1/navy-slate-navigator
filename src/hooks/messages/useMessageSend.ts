@@ -40,13 +40,13 @@ export const useMessageSend = () => {
         throw error;
       }
       
-      // Invalidate queries to force a refresh
+      // Immediately invalidate queries to force a refresh
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       
       return data[0];
     },
     onSuccess: () => {
-      // Invalidate and refetch
+      // Additional invalidation for good measure
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
     onError: (error: any) => {
@@ -60,7 +60,10 @@ export const useMessageSend = () => {
 
   // Send a message function
   const sendMessage = async (content: string, receiverId: string, imageUrl: string | null = null) => {
-    return sendMessageMutation.mutateAsync({ content, receiverId, imageUrl });
+    const result = await sendMessageMutation.mutateAsync({ content, receiverId, imageUrl });
+    // Force an immediate refetch after sending
+    queryClient.invalidateQueries({ queryKey: ['messages'] });
+    return result;
   };
 
   return {

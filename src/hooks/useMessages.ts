@@ -37,21 +37,34 @@ export const useMessages = (partnerId?: string) => {
 
   // Combined send message function that handles image upload if needed
   const sendMessage = async (content: string, receiverId: string) => {
-    let imageUrl = null;
-    
-    if (imageFile) {
-      imageUrl = await uploadImage(imageFile);
-      setImageFile(null);
-    }
-    
-    const result = await sendMessageBase(content, receiverId, imageUrl);
-    
-    // Force a refetch after sending a message to update the UI
-    setTimeout(() => {
+    try {
+      let imageUrl = null;
+      
+      if (imageFile) {
+        console.log('Uploading image file:', imageFile.name);
+        imageUrl = await uploadImage(imageFile);
+        
+        if (!imageUrl) {
+          console.error('Failed to upload image');
+        } else {
+          console.log('Image uploaded successfully:', imageUrl);
+        }
+        setImageFile(null);
+      }
+      
+      // Send the message with the image URL if available
+      const result = await sendMessageBase(content, receiverId, imageUrl);
+      
+      // Force a refetch immediately after sending
       refetch();
-    }, 300);
-    
-    return result;
+      
+      return result;
+    } catch (error) {
+      console.error('Error in sendMessage:', error);
+      // Ensure we still clean up the image file on error
+      setImageFile(null);
+      throw error;
+    }
   };
 
   return {

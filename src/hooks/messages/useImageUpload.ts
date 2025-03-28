@@ -11,7 +11,19 @@ export const useImageUpload = () => {
 
   // Upload image to Supabase storage
   const uploadImage = async (file: File): Promise<string | null> => {
-    if (!user) return null;
+    if (!user) {
+      toast({
+        title: "Authentication error",
+        description: "You must be logged in to upload images",
+        variant: "destructive"
+      });
+      return null;
+    }
+    
+    if (!file) {
+      console.error('No file provided for upload');
+      return null;
+    }
     
     setIsUploading(true);
     
@@ -20,14 +32,14 @@ export const useImageUpload = () => {
       const fileName = `${user.id}-${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
       
-      console.log('Uploading image:', filePath);
+      console.log('Uploading image:', filePath, 'File size:', file.size);
       
       const { error: uploadError, data } = await supabase.storage
         .from('message_images')
         .upload(filePath, file);
       
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        console.error('Upload error details:', uploadError);
         toast({
           title: "Upload failed",
           description: uploadError.message,
@@ -60,7 +72,7 @@ export const useImageUpload = () => {
   useEffect(() => {
     return () => {
       if (imageFile) {
-        // No need to revoke object URLs here as we do it in the component
+        // Clean up handled in component
       }
     };
   }, [imageFile]);
