@@ -1,8 +1,9 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Camera, Send, X } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface MessageInputProps {
   message: string;
@@ -29,7 +30,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
       const file = e.target.files[0];
       
       if (file.size > 5 * 1024 * 1024) {
-        throw new Error("Please select an image smaller than 5MB.");
+        toast({
+          title: "File too large",
+          description: "Please select an image smaller than 5MB.",
+          variant: "destructive"
+        });
+        return;
       }
       
       setImageFile(file);
@@ -55,40 +61,40 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   // Clean up the object URL when the component unmounts or when the image file changes
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
       }
     };
-  }, []);
+  }, [previewUrl]);
 
   return (
     <div className="flex flex-col w-full">
-      {/* Image preview container completely separated from input */}
-      {imageFile && previewUrl && (
-        <div className="fixed bottom-32 left-4 z-50">
-          <div className="inline-flex bg-dark-navy border border-light-navy rounded-md relative">
-            <img 
-              src={previewUrl} 
-              alt="Image preview" 
-              className="max-h-20 object-contain rounded-md"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={clearImage}
-              className="absolute -top-2 -right-2 h-5 w-5 p-0 rounded-full bg-dark-navy"
-            >
-              <X className="h-4 w-4 text-red-500" />
-            </Button>
-          </div>
-        </div>
-      )}
-      
-      {/* Fixed message input container at bottom */}
+      {/* Message input container at bottom */}
       <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 border-t border-light-navy z-40">
+        {/* Image preview rendered ABOVE the input */}
+        {imageFile && previewUrl && (
+          <div className="absolute bottom-full left-4 mb-2 z-50">
+            <div className="inline-flex bg-dark-navy border border-light-navy rounded-md relative">
+              <img 
+                src={previewUrl} 
+                alt="Image preview" 
+                className="max-h-20 object-contain rounded-md"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={clearImage}
+                className="absolute -top-2 -right-2 h-5 w-5 p-0 rounded-full bg-dark-navy"
+              >
+                <X className="h-4 w-4 text-red-500" />
+              </Button>
+            </div>
+          </div>
+        )}
+        
         <div className="flex items-center gap-2">
           <Button
             type="button"

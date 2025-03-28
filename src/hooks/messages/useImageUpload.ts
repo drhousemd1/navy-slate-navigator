@@ -28,7 +28,12 @@ export const useImageUpload = () => {
       
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        throw uploadError;
+        toast({
+          title: "Upload failed",
+          description: uploadError.message,
+          variant: "destructive"
+        });
+        return null;
       }
       
       // Get the public URL
@@ -38,11 +43,11 @@ export const useImageUpload = () => {
       
       console.log('Image uploaded successfully:', publicUrl);
       return publicUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading image:', error);
       toast({
         title: "Error uploading image",
-        description: "Could not upload the image. Please try again.",
+        description: error.message || "Could not upload the image. Please try again.",
         variant: "destructive"
       });
       return null;
