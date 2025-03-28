@@ -64,10 +64,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
   }, []);
 
   return (
-    <div className="relative">
-      {/* Image preview container positioned well above the input */}
+    <div className="flex flex-col w-full">
+      {/* Image preview container completely separated from input */}
       {imageFile && previewUrl && (
-        <div className="fixed bottom-24 left-4 z-50 mb-4">
+        <div className="fixed bottom-32 left-4 z-50">
           <div className="inline-flex bg-dark-navy border border-light-navy rounded-md relative">
             <img 
               src={previewUrl} 
