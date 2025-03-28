@@ -62,6 +62,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Set up auth state listener and check for existing session
   useEffect(() => {
+    console.log('Setting up auth state listener and checking for existing session');
+    
     // CRITICAL: Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {

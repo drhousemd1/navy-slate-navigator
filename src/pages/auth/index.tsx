@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthView } from './types';
 import { LoginSignupView } from './LoginSignupView';
@@ -9,6 +9,14 @@ import { ForgotPasswordView } from './ForgotPasswordView';
 const Auth: React.FC = () => {
   const [authView, setAuthView] = React.useState<AuthView>("login");
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  // Check if there's a view state passed via navigation
+  React.useEffect(() => {
+    if (location.state && location.state.view) {
+      setAuthView(location.state.view as AuthView);
+    }
+  }, [location]);
 
   // Redirect if already authenticated
   if (isAuthenticated) {

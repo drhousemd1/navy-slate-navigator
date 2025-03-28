@@ -5,5 +5,9 @@ redirect_urls = [
   "https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app/auth",
   "https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app/reset-password",
   "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com/auth",
-  "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com/reset-password"
+  "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com/reset-password",
+  "http://localhost:3000/auth",
+  "http://localhost:3000/reset-password",
+  "http://localhost:5173/auth",
+  "http://localhost:5173/reset-password"
 ]
