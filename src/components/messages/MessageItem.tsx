@@ -38,7 +38,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
         <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start max-w-[90%] relative`}>
           {/* Avatar is on the right for sent messages and left for received messages (toward center) */}
           <Avatar className={`h-8 w-8 border border-light-navy ${isSentByMe ? '-ml-3 z-10' : '-mr-3 z-10'}`}>
-            {userProfileImage && isSentByMe ? (
+            {isSentByMe && userProfileImage ? (
               <AvatarImage 
                 src={userProfileImage} 
                 alt={userNickname || "Me"}
