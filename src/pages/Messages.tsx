@@ -11,6 +11,31 @@ import MessageInput from '@/components/messages/MessageInput';
 const Messages: React.FC = () => {
   const { user, getNickname, getProfileImage } = useAuth();
   const [message, setMessage] = useState('');
+  const [partnerId, setPartnerId] = useState<string | undefined>(undefined);
+  
+  // Fetch partner ID on component mount
+  useEffect(() => {
+    const fetchPartnerId = async () => {
+      if (!user) return;
+      
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('linked_partner_id')
+          .eq('id', user.id)
+          .single();
+        
+        // For testing without a partner, use the user's own ID
+        setPartnerId(data?.linked_partner_id || user.id);
+      } catch (err) {
+        console.error('Error fetching partner ID:', err);
+        // Fallback to user's own ID for testing
+        setPartnerId(user.id);
+      }
+    };
+    
+    fetchPartnerId();
+  }, [user]);
   
   const {
     messages,
@@ -31,13 +56,7 @@ const Messages: React.FC = () => {
     if (!user || (!message.trim() && !imageFile)) return;
     
     try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('linked_partner_id')
-        .eq('id', user.id)
-        .single();
-      
-      const receiverId = (data && data.linked_partner_id) ? data.linked_partner_id : user.id;
+      const receiverId = partnerId || user.id;
       
       await sendMessage(message, receiverId);
       setMessage('');

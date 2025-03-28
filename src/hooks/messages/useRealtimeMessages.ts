@@ -12,36 +12,44 @@ export const useRealtimeMessages = (refetch: () => void, getPartnerId: () => Pro
   useEffect(() => {
     if (!user) return;
 
-    // Subscribe to new messages
-    const channel = supabase
-      .channel('public:messages')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `sender_id=eq.${user.id},receiver_id=eq.${user.id}`
-      }, (payload) => {
-        // Add the new message to the messages list if it's relevant
-        
-        // Check if this message is relevant to our conversation
-        getPartnerId().then(partnerIdValue => {
-          if (partnerIdValue && 
-            ((payload.new.sender_id === user.id && payload.new.receiver_id === partnerIdValue) ||
-            (payload.new.sender_id === partnerIdValue && payload.new.receiver_id === user.id))
+    // Get partner ID immediately to set up proper filtering
+    getPartnerId().then(partnerId => {
+      if (!partnerId) return;
+      
+      console.log('Setting up realtime messages subscription for user:', user.id, 'and partner:', partnerId);
+      
+      // Subscribe to new messages with a broader filter that captures all relevant messages
+      const channel = supabase
+        .channel('messages-channel')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        }, (payload) => {
+          console.log('Received new message:', payload);
+          
+          // Check if this message is relevant to our conversation
+          if (payload.new && 
+            ((payload.new.sender_id === user.id && payload.new.receiver_id === partnerId) ||
+            (payload.new.sender_id === partnerId && payload.new.receiver_id === user.id))
           ) {
+            console.log('Message is relevant to this conversation, triggering refetch');
             // Trigger a refetch to get the latest messages
             refetch();
             
             // Check if we need to archive old messages
-            archiveOldMessages(user.id, partnerIdValue);
+            archiveOldMessages(user.id, partnerId);
           }
+        })
+        .subscribe((status) => {
+          console.log('Realtime subscription status:', status);
         });
-      })
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      
+      return () => {
+        console.log('Cleaning up realtime subscription');
+        supabase.removeChannel(channel);
+      };
+    });
   }, [user, refetch, getPartnerId, archiveOldMessages]);
 
   return {};
