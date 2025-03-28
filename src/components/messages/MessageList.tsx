@@ -23,12 +23,16 @@ const MessageList: React.FC<MessageListProps> = ({
   userId
 }) => {
   const messageEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
-    if (messages.length > 0 && !loadingOlder) {
-      messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0) {
+      setTimeout(() => {
+        messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     }
-  }, [messages, loadingOlder]);
+  }, [messages]);
 
   return (
     <div className="flex-1 flex flex-col h-full">
@@ -46,7 +50,7 @@ const MessageList: React.FC<MessageListProps> = ({
         </div>
       )}
       
-      <ScrollArea className="flex-1 px-4">
+      <ScrollArea className="flex-1 px-4" ref={scrollAreaRef}>
         <div className="space-y-4 pb-4">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">

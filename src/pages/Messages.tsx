@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
@@ -12,6 +12,7 @@ const Messages: React.FC = () => {
   const { user, getNickname, getProfileImage } = useAuth();
   const [message, setMessage] = useState('');
   const [partnerId, setPartnerId] = useState<string | undefined>(undefined);
+  const partnerIdRef = useRef<string | undefined>(undefined);
   
   // Fetch partner ID on component mount
   useEffect(() => {
@@ -26,11 +27,14 @@ const Messages: React.FC = () => {
           .single();
         
         // For testing without a partner, use the user's own ID
-        setPartnerId(data?.linked_partner_id || user.id);
+        const newPartnerId = data?.linked_partner_id || user.id;
+        setPartnerId(newPartnerId);
+        partnerIdRef.current = newPartnerId;
       } catch (err) {
         console.error('Error fetching partner ID:', err);
         // Fallback to user's own ID for testing
         setPartnerId(user.id);
+        partnerIdRef.current = user.id;
       }
     };
     

@@ -18,9 +18,12 @@ export const useRealtimeMessages = (refetch: () => void, getPartnerId: () => Pro
       
       console.log('Setting up realtime messages subscription for user:', user.id, 'and partner:', partnerId);
       
+      // Create channel name with unique identifier to prevent conflicts
+      const channelName = `messages-channel-${user.id}-${Date.now()}`;
+      
       // Subscribe to new messages with a broader filter that captures all relevant messages
       const channel = supabase
-        .channel('messages-channel')
+        .channel(channelName)
         .on('postgres_changes', {
           event: 'INSERT',
           schema: 'public',
