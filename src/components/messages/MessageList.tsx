@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useLayoutEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Message } from '@/hooks/useMessages';
@@ -79,6 +79,18 @@ const MessageList: React.FC<MessageListProps> = ({
     // Always update the previous count
     setPrevMessageCount(messages.length);
   }, [messages.length, prevMessageCount]);
+
+  useLayoutEffect(() => {
+    if (!messageEndRef.current) return;
+
+    // Force scroll to latest message before paint
+    messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+
+    // Force reflow to fix React not rendering the scroll
+    messageEndRef.current.style.display = 'none';
+    void messageEndRef.current.offsetHeight;
+    messageEndRef.current.style.display = '';
+  }, [messages]);
 
   // Handle image load events to trigger re-scrolling
   const handleImageLoaded = () => {
