@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useLayoutEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -138,7 +139,7 @@ const MessageList: React.FC<MessageListProps> = ({
           )}
           <div 
             ref={messageEndRef} 
-            style={{ height: '1px', width: '100%' }} 
+            style={{ height: '-15px', width: '100%' }} 
             id="message-end"
             className="bg-transparent"
           />
