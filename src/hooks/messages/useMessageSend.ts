@@ -36,9 +36,11 @@ export const useMessageSend = () => {
         throw error;
       }
       
+      console.log('Message sent successfully:', data[0]);
       return data[0];
     },
     onSuccess: () => {
+      console.log('Message mutation success, invalidating queries...');
       // Only invalidate the query - rely on realtime subscription to update the UI
       // This avoids race conditions between manual cache updates and refetching
       queryClient.invalidateQueries({ queryKey: ['messages', user?.id] });
@@ -54,6 +56,7 @@ export const useMessageSend = () => {
 
   // Send a message function
   const sendMessage = async (content: string, receiverId: string, imageUrl: string | null = null) => {
+    console.log('Sending message:', { content, receiverId, imageUrl });
     return sendMessageMutation.mutateAsync({ content, receiverId, imageUrl });
   };
 

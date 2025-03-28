@@ -10,7 +10,7 @@ export const useRealtimeMessages = (refetch: () => void, getPartnerId: () => Pro
 
   // Create a stable callback for refetching
   const handleNewMessage = useCallback(() => {
-    console.log('New message received, triggering refetch');
+    console.log('New message received via realtime, triggering refetch');
     refetch();
   }, [refetch]);
 
@@ -44,13 +44,19 @@ export const useRealtimeMessages = (refetch: () => void, getPartnerId: () => Pro
             schema: 'public',
             table: 'messages',
             filter: `sender_id=eq.${user.id},receiver_id=eq.${partnerId}`,
-          }, () => handleNewMessage())
+          }, (payload) => {
+            console.log('Realtime: caught outgoing message INSERT:', payload);
+            handleNewMessage();
+          })
           .on('postgres_changes', {
             event: 'INSERT',
             schema: 'public', 
             table: 'messages',
             filter: `sender_id=eq.${partnerId},receiver_id=eq.${user.id}`,
-          }, () => handleNewMessage())
+          }, (payload) => {
+            console.log('Realtime: caught incoming message INSERT:', payload);
+            handleNewMessage();
+          })
           .subscribe((status) => {
             console.log('Realtime subscription status:', status);
             

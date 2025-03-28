@@ -46,11 +46,13 @@ export const useMessagesFetch = () => {
   } = useQuery({
     queryKey: ['messages', user?.id],
     queryFn: async () => {
+      console.log('[QUERY] Refetching messages...');
       const partnerIdValue = await getPartnerId();
       if (!user || !partnerIdValue) {
         return [];
       }
 
+      console.log('[QUERY] Fetching messages between', user.id, 'and', partnerIdValue);
       // Modified query to work with messages to self for testing
       const { data, error } = await supabase
         .from('messages')
@@ -64,6 +66,7 @@ export const useMessagesFetch = () => {
         throw error;
       }
       
+      console.log('[QUERY] Fetched messages count:', data?.length || 0);
       // Return messages in ascending order for display (newest at bottom)
       return [...(data || [])].reverse();
     },

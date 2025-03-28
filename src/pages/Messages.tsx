@@ -58,6 +58,7 @@ const Messages: React.FC = () => {
   // Force a refetch after the component mounts to ensure latest messages
   useEffect(() => {
     if (!isLoading && partnerId) {
+      console.log('Component mounted with partnerId, forcing refetch');
       refetch();
     }
   }, [partnerId, isLoading, refetch]);
@@ -73,18 +74,24 @@ const Messages: React.FC = () => {
       const currentMessage = message;
       setMessage(''); // Clear input immediately for better UX
       
+      console.log('handleSendMessage: Starting message send process');
       let uploadedImageUrl = null;
       
       // Upload the image if one is selected
       if (imageFile) {
+        console.log('handleSendMessage: Uploading image');
         uploadedImageUrl = await uploadImage(imageFile);
         setImageFile(null); // Clear image after upload
+        console.log('handleSendMessage: Image uploaded:', uploadedImageUrl);
       }
       
       // Send the message with the image URL if present
+      console.log('handleSendMessage: Sending message with content:', currentMessage);
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
+      console.log('handleSendMessage: Message sent successfully');
       
       // Force refresh to ensure message appears
+      console.log('handleSendMessage: Forcing refetch after send');
       setTimeout(() => {
         refetch();
       }, 100);
