@@ -26,109 +26,66 @@ const MessageList: React.FC<MessageListProps> = ({
   const scrollAreaViewportRef = useRef<HTMLDivElement>(null);
   const [prevMessageCount, setPrevMessageCount] = useState(0);
   const [initialLoad, setInitialLoad] = useState(true);
-  const [hasNewMessage, setHasNewMessage] = useState(false);
   
   console.log('[MessageList] Rendering with', messages.length, 'messages');
-  if (messages.length > 0) {
-    console.log('[MessageList] Last message ID:', messages[messages.length - 1].id);
-    console.log('[MessageList] Last message content:', messages[messages.length - 1].content);
-  }
+  
+  // This function handles all scrolling to bottom scenarios
+  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+    console.log('[MessageList] Attempting to scroll to bottom with behavior:', behavior);
+    
+    if (scrollAreaViewportRef.current) {
+      const scrollElement = scrollAreaViewportRef.current;
+      const scrollHeight = scrollElement.scrollHeight;
+      scrollElement.scrollTop = scrollHeight;
+      console.log('[MessageList] Scrolled viewport to bottom:', scrollHeight);
+    } else if (messageEndRef.current) {
+      messageEndRef.current.scrollIntoView({ behavior });
+      console.log('[MessageList] Scrolled using messageEndRef');
+    }
+  };
 
-  // Force scroll to bottom on initial load
+  // Force scroll on initial load
   useEffect(() => {
     if (initialLoad && messages.length > 0) {
       console.log('[MessageList] Initial load, forcing scroll to bottom');
       setInitialLoad(false);
       
-      const forceScrollToBottom = () => {
-        if (scrollAreaViewportRef.current) {
-          const scrollElement = scrollAreaViewportRef.current;
-          scrollElement.scrollTop = scrollElement.scrollHeight;
-          console.log('[MessageList] Force scrolled viewport to bottom:', scrollElement.scrollHeight);
-        } else if (messageEndRef.current) {
-          messageEndRef.current.scrollIntoView({ behavior: 'auto' });
-          console.log('[MessageList] Force scrolled using messageEndRef');
-        }
-      };
+      // Scroll immediately
+      scrollToBottom();
       
-      // Try multiple times with increasing delays
-      forceScrollToBottom();
-      setTimeout(forceScrollToBottom, 100);
-      setTimeout(forceScrollToBottom, 300);
-      setTimeout(forceScrollToBottom, 500);
+      // Then schedule additional scroll attempts at increasing intervals
+      setTimeout(() => scrollToBottom(), 50);
+      setTimeout(() => scrollToBottom(), 150);
+      setTimeout(() => scrollToBottom(), 300);
+      setTimeout(() => scrollToBottom(), 500);
     }
   }, [initialLoad, messages.length]);
 
-  // Detect new messages
+  // Detect new messages and auto-scroll
   useEffect(() => {
     if (messages.length > prevMessageCount) {
       console.log('[MessageList] New message detected! Count changed from', 
                   prevMessageCount, 'to', messages.length);
-      setHasNewMessage(true);
-      // Directly attempt to scroll here first
-      if (scrollAreaViewportRef.current) {
-        const scrollElement = scrollAreaViewportRef.current;
-        scrollElement.scrollTop = scrollElement.scrollHeight;
-        console.log('[MessageList] Immediate scroll to bottom on new message:', scrollElement.scrollHeight);
-      }
+      
+      // Scroll immediately
+      scrollToBottom('smooth');
+      
+      // Schedule additional scroll attempts
+      setTimeout(() => scrollToBottom('smooth'), 100); 
+      setTimeout(() => scrollToBottom('smooth'), 300);
+      setTimeout(() => scrollToBottom('smooth'), 600);
     }
     
     // Always update the previous count
     setPrevMessageCount(messages.length);
   }, [messages.length, prevMessageCount]);
 
-  // Handle scrolling for new messages with animation frame for timing
-  useEffect(() => {
-    if (hasNewMessage) {
-      console.log('[MessageList] Handling new message scroll');
-      
-      const scrollToBottom = () => {
-        // Try to scroll the viewport directly first
-        if (scrollAreaViewportRef.current) {
-          const scrollElement = scrollAreaViewportRef.current;
-          scrollElement.scrollTop = scrollElement.scrollHeight;
-          console.log('[MessageList] Scrolled viewport to bottom:', scrollElement.scrollHeight);
-        } 
-        // Fall back to messageEndRef if needed
-        else if (messageEndRef.current) {
-          messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          console.log('[MessageList] Scrolled using messageEndRef');
-        }
-      };
-      
-      // Use requestAnimationFrame to ensure we're in the next paint cycle
-      requestAnimationFrame(() => {
-        scrollToBottom();
-        // Additional attempts with timeouts for reliability
-        setTimeout(scrollToBottom, 50);
-        setTimeout(scrollToBottom, 200);
-        setTimeout(scrollToBottom, 500);
-      });
-      
-      setHasNewMessage(false);
-    }
-  }, [hasNewMessage]);
-
   // Handle image load events to trigger re-scrolling
   const handleImageLoaded = () => {
-    console.log('[MessageList] Image loaded, will scroll to bottom');
-    
-    // Schedule multiple scroll attempts
-    const scrollAfterImageLoad = () => {
-      if (scrollAreaViewportRef.current) {
-        const scrollElement = scrollAreaViewportRef.current;
-        scrollElement.scrollTop = scrollElement.scrollHeight;
-        console.log('[MessageList] Scrolled after image load:', scrollElement.scrollHeight);
-      } else if (messageEndRef.current) {
-        messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        console.log('[MessageList] Scrolled using messageEndRef after image load');
-      }
-    };
-    
-    // Multiple attempts with increasing delays
-    setTimeout(scrollAfterImageLoad, 50);
-    setTimeout(scrollAfterImageLoad, 150);
-    setTimeout(scrollAfterImageLoad, 350);
+    console.log('[MessageList] Image loaded, scrolling to bottom');
+    scrollToBottom('smooth');
+    // Try again after a delay in case the first attempt didn't account for the full image height
+    setTimeout(() => scrollToBottom('smooth'), 200);
   };
 
   return (
@@ -160,7 +117,7 @@ const MessageList: React.FC<MessageListProps> = ({
           }
         }}
       >
-        <div className="space-y-4">
+        <div className="space-y-4 pb-16">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className="text-gray-400">No messages yet. Send the first one!</p>
@@ -184,7 +141,7 @@ const MessageList: React.FC<MessageListProps> = ({
           {/* Add significant space at the bottom to ensure messages aren't hidden behind input */}
           <div 
             ref={messageEndRef} 
-            style={{ height: '70px', width: '100%' }} 
+            style={{ height: '120px', width: '100%' }} 
             id="message-end"
             className="bg-transparent"
           />

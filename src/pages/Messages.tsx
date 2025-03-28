@@ -72,22 +72,18 @@ const Messages: React.FC = () => {
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
       
-      // Force multiple refetches with progressive timeouts to ensure UI is updated
+      // After message is sent, do an immediate refetch
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
       await refetch();
       
-      // After message is sent, use a sequence of refetches with delays
-      const doRefetch = async (delay: number, attempt: number) => {
-        await new Promise(resolve => setTimeout(resolve, delay));
-        console.log(`[Messages] handleSendMessage (${currentMessageCount}): Delayed refetch ${attempt} (${delay}ms)`);
-        await refetch();
-      };
-      
-      // Schedule multiple refetches with increasing delays
-      doRefetch(100, 1);
-      doRefetch(500, 2);
-      doRefetch(1000, 3);
-      doRefetch(2000, 4);
+      // Follow up with additional progressive refetches
+      const delayedRefetches = [50, 200, 500, 1000];
+      for (const delay of delayedRefetches) {
+        setTimeout(async () => {
+          console.log(`[Messages] handleSendMessage (${currentMessageCount}): Delayed refetch (${delay}ms)`);
+          await refetch();
+        }, delay);
+      }
       
     } catch (err) {
       console.error('[Messages] Error sending message:', err);
@@ -155,8 +151,8 @@ const Messages: React.FC = () => {
           )}
         </div>
         
-        {/* Added pb-16 to create space for the fixed input */}
-        <div className="pb-16">
+        {/* Added pb-20 to create more space for the fixed input */}
+        <div className="pb-20">
           <MessageInput
             message={message}
             setMessage={setMessage}
