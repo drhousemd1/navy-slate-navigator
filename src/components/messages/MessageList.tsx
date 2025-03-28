@@ -45,20 +45,25 @@ const MessageList: React.FC<MessageListProps> = ({
 
   // Force initial scroll to bottom when messages first load
   useEffect(() => {
-    if (initialLoad && messages.length > 0) {
-      console.log('[MessageList] Initial load, forcing scroll to bottom');
-      setInitialLoad(false);
+    if (messages.length > 0) {
+      console.log('[MessageList] Messages loaded, forcing scroll to bottom');
       
-      // Try multiple times to ensure scroll happens
-      scrollToBottom();
+      // Try multiple times with different delays to ensure scroll happens
+      const scrollDelays = [0, 50, 150, 300, 500, 800, 1200];
       
-      // Staggered scrolls to account for image loading and rendering delays
-      setTimeout(() => scrollToBottom(), 50);
-      setTimeout(() => scrollToBottom(), 150);
-      setTimeout(() => scrollToBottom(), 300);
-      setTimeout(() => scrollToBottom(), 500);
+      scrollDelays.forEach(delay => {
+        setTimeout(() => {
+          scrollToBottom();
+          
+          // Force a more aggressive scroll directly to the messageEndRef
+          if (messageEndRef.current) {
+            messageEndRef.current.scrollIntoView({ block: 'end' });
+            console.log(`[MessageList] Forced aggressive scroll at ${delay}ms`);
+          }
+        }, delay);
+      });
     }
-  }, [initialLoad, messages.length]);
+  }, [messages.length]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -66,40 +71,67 @@ const MessageList: React.FC<MessageListProps> = ({
       console.log('[MessageList] New message detected! Count changed from', 
                   prevMessageCount, 'to', messages.length);
       
-      // Scroll with smoother behavior for new messages
-      scrollToBottom('smooth');
+      // Multiple aggressive scroll attempts with different delays
+      const scrollDelays = [0, 100, 300, 600, 1000];
       
-      // Multiple attempts to ensure it happens after all rendering
-      setTimeout(() => scrollToBottom('smooth'), 100); 
-      setTimeout(() => scrollToBottom('smooth'), 300);
-      setTimeout(() => scrollToBottom('smooth'), 600);
+      scrollDelays.forEach(delay => {
+        setTimeout(() => {
+          scrollToBottom('smooth');
+          
+          // Force a more aggressive scroll
+          if (messageEndRef.current) {
+            messageEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            console.log(`[MessageList] Forced aggressive scroll for new message at ${delay}ms`);
+          }
+        }, delay);
+      });
     }
     
     setPrevMessageCount(messages.length);
   }, [messages.length, prevMessageCount]);
 
-  // Additional measure to ensure scroll works
+  // Additional measure with useLayoutEffect to ensure scroll works
   useLayoutEffect(() => {
-    if (!messageEndRef.current) return;
-
-    // Force scroll before layout calculations complete
-    messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
-
-    // Force reflow/repaint
-    messageEndRef.current.style.display = 'none';
-    void messageEndRef.current.offsetHeight;
-    messageEndRef.current.style.display = '';
+    if (messages.length > 0 && messageEndRef.current) {
+      // Force scroll before layout calculations complete
+      messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+      console.log('[MessageList] useLayoutEffect forced scroll');
+      
+      // Schedule additional scrolls with small delays to handle any rendering delays
+      setTimeout(() => {
+        if (messageEndRef.current) {
+          messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+        }
+      }, 50);
+      
+      setTimeout(() => {
+        if (messageEndRef.current) {
+          messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+        }
+      }, 200);
+    }
   }, [messages]);
 
   const handleImageLoaded = () => {
     console.log('[MessageList] Image loaded, scrolling to bottom');
+    
+    // Multiple scroll attempts when an image loads
     scrollToBottom('smooth');
-    setTimeout(() => scrollToBottom('smooth'), 200);
+    
+    const imageLoadDelays = [100, 200, 400];
+    imageLoadDelays.forEach(delay => {
+      setTimeout(() => {
+        scrollToBottom('smooth');
+        if (messageEndRef.current) {
+          messageEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      }, delay);
+    });
   };
 
   // Input box is approximately 60px tall, and is positioned at bottom-16 (4rem = 64px from bottom)
   // That means we need to add 60px + 64px = 124px of bottom margin to ensure messages don't get hidden
-  // Adding 2px extra buffer as requested = 126px
+  // Adding 2px extra buffer = 126px
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -152,7 +184,7 @@ const MessageList: React.FC<MessageListProps> = ({
           )}
           <div 
             ref={messageEndRef} 
-            style={{ height: '1px' }} 
+            style={{ height: '1px', marginBottom: '130px' }} 
             id="message-end"
             className="bg-transparent"
           />

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,10 +69,12 @@ const Messages: React.FC = () => {
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
       
+      // More aggressive refetching to ensure new messages appear
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
       await refetch();
       
-      const delayedRefetches = [50, 200, 500, 1000];
+      // Multiple delayed refetches to ensure message appears
+      const delayedRefetches = [50, 150, 300, 500, 1000, 2000];
       for (const delay of delayedRefetches) {
         setTimeout(async () => {
           console.log(`[Messages] handleSendMessage (${currentMessageCount}): Delayed refetch (${delay}ms)`);
