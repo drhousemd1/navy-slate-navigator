@@ -78,9 +78,9 @@ export function useAuthOperations() {
   // Reset password
   const resetPassword = async (email: string) => {
     try {
-      // Get the current site URL - use the production URL directly
-      // This ensures we don't use localhost even in development
-      const siteUrl = "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com";
+      // Get the current site URL - use the current origin
+      // This should work with both preview and production URLs
+      const siteUrl = window.location.origin;
       const redirectUrl = `${siteUrl}/reset-password`;
       
       console.log('Sending password reset to:', email);
