@@ -8,21 +8,26 @@ import { useUserProfile } from './useUserProfile';
 import { useRoleManagement } from './useRoleManagement';
 import { toast } from '@/hooks/use-toast';
 
+// Create context with undefined as initial value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // State variables
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Import auth operations
-  const { signIn, signUp, resetPassword } = useAuthOperations();
+  // Get auth operations
+  const authOperations = useAuthOperations();
+  const { signIn, signUp, resetPassword } = authOperations;
   
-  // Import role management
-  const { userRole, isAdmin, checkUserRole } = useRoleManagement(user);
+  // Get role management
+  const roleManagement = useRoleManagement(user);
+  const { userRole, isAdmin, checkUserRole } = roleManagement;
   
-  // Import user profile operations
+  // Get user profile operations
+  const userProfile = useUserProfile(user, setUser);
   const { 
     updateNickname, 
     getNickname, 
@@ -30,9 +35,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getProfileImage,
     getUserRole,
     updateUserRole
-  } = useUserProfile(user, setUser);
+  } = userProfile;
 
-  // Sign out
+  // Sign out function
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -98,28 +103,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const contextValue: AuthContextType = {
+    isAuthenticated,
+    user,
+    session,
+    signIn,
+    signUp,
+    resetPassword,
+    signOut,
+    loading,
+    isAdmin,
+    userRole,
+    checkUserRole,
+    updateNickname,
+    getNickname,
+    updateProfileImage,
+    getProfileImage,
+    getUserRole,
+    updateUserRole,
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated,
-        user,
-        session,
-        signIn,
-        signUp,
-        resetPassword,
-        signOut,
-        loading,
-        isAdmin,
-        userRole,
-        checkUserRole,
-        updateNickname,
-        getNickname,
-        updateProfileImage,
-        getProfileImage,
-        getUserRole,
-        updateUserRole,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
