@@ -29,8 +29,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
     <div 
       className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}
     >
-      <div className={`flex ${isSentByMe ? 'flex-row-reverse' : 'flex-row'} items-start max-w-[80%] relative`}>
-        <Avatar className={`h-8 w-8 border border-light-navy ${isSentByMe ? '-mr-3 z-10' : '-ml-3 z-10'}`}>
+      <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start max-w-[80%] relative`}>
+        {/* Avatar is now on the right for sent messages and left for received messages (toward center) */}
+        <Avatar className={`h-8 w-8 border border-light-navy ${isSentByMe ? '-ml-3 z-10' : '-mr-3 z-10'}`}>
           <AvatarImage 
             src={isSentByMe ? userProfileImage : undefined} 
             alt={isSentByMe ? userNickname : "Partner"}
@@ -43,8 +44,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
         <div 
           className={`mx-2 p-3 rounded-lg ${
             isSentByMe
-              ? 'bg-cyan-800 text-white rounded-tr-none'
-              : 'bg-navy border border-light-navy text-white rounded-tl-none'
+              ? 'bg-cyan-800 text-white rounded-tl-none'
+              : 'bg-navy border border-light-navy text-white rounded-tr-none'
           }`}
         >
           <div className="flex flex-col">
