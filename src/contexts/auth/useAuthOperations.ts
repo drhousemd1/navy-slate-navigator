@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -80,9 +79,16 @@ export function useAuthOperations() {
     try {
       console.log('Sending password reset to:', email);
       
-      // Simple site URL without any paths - let Supabase handle redirects
-      const siteUrl = window.location.origin;
-      console.log('Using site URL:', siteUrl);
+      // Get the current hostname to determine environment
+      const isLocalhost = window.location.hostname === 'localhost';
+      
+      // Use the appropriate site URL based on environment
+      // In production, use the actual deployed URL
+      const siteUrl = isLocalhost 
+        ? 'http://localhost:3000' 
+        : 'https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com';
+      
+      console.log('Using site URL for password reset:', siteUrl);
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${siteUrl}/reset-password`,
@@ -101,7 +107,7 @@ export function useAuthOperations() {
       console.log('Password reset email sent to:', email);
       toast({
         title: 'Password reset email sent',
-        description: 'Check your email for the password reset link.',
+        description: 'Check your email for the password reset link. Be sure to open the link on the same device/browser where your app is running.',
       });
       
       return { error: null };
