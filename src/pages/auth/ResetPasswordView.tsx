@@ -13,80 +13,91 @@ export const ResetPasswordView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [tokenChecked, setTokenChecked] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Check if we have a valid access token in the URL
+  // Check for access token in URL hash
   useEffect(() => {
     const checkAccessToken = () => {
-      // Check for token in URL fragment
+      console.log('Checking for access token in URL hash...');
+      console.log('Current URL:', window.location.href);
+      console.log('URL hash:', location.hash);
+      
+      // Parse the hash parameters
       const hashParams = new URLSearchParams(location.hash.substring(1));
       const token = hashParams.get('access_token');
       
-      console.log('URL hash:', location.hash);
-      console.log('Access token present:', token ? 'Yes' : 'No');
-      
-      if (!token) {
-        setError('Invalid or missing reset token. Please request a new password reset link.');
-        return;
+      if (token) {
+        console.log('Access token found in URL hash');
+        setAccessToken(token);
+        
+        // Crucial: Set the session with the token to ensure updateUser works
+        supabase.auth.setSession({
+          access_token: token,
+          refresh_token: '',
+        })
+        .then(() => {
+          console.log('Session set with access token');
+        })
+        .catch(err => {
+          console.error('Error setting session:', err);
+          setError('Failed to initialize session with reset token.');
+        });
+      } else {
+        console.log('No access token found in URL hash');
+        setError('No reset token found. Please request a new password reset link.');
       }
       
-      // Valid token found
-      setAccessToken(token);
-      console.log('Access token successfully extracted from URL');
+      setTokenChecked(true);
     };
     
-    // Delay the check slightly to ensure URL is fully processed
-    setTimeout(checkAccessToken, 100);
-  }, [location]);
+    // Run once when component mounts, with slight delay to ensure URL is processed
+    setTimeout(checkAccessToken, 200);
+  }, [location.hash]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     
-    // Validate password
-    if (!newPassword) {
-      setError('Please enter a new password.');
-      setLoading(false);
-      return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
-      setLoading(false);
-      return;
-    }
-    
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      setLoading(false);
-      return;
-    }
-    
     try {
-      if (!accessToken) {
-        throw new Error('Invalid or missing reset token.');
+      // Validate passwords
+      if (!newPassword) {
+        throw new Error('Please enter a new password.');
       }
       
-      console.log('Attempting to update password with valid token...');
+      if (newPassword.length < 6) {
+        throw new Error('Password must be at least 6 characters long.');
+      }
       
-      // Update the user's password using the access token
+      if (newPassword !== confirmPassword) {
+        throw new Error('Passwords do not match.');
+      }
+      
+      console.log('Attempting to update password...');
+      
+      // Update the user's password
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
       
       if (error) {
         console.error('Password update error:', error);
-        throw error;
+        throw new Error(error.message);
       }
       
       console.log('Password updated successfully');
+      
+      // Show success message and redirect
       setSuccess(true);
       toast({
         title: 'Password reset successful',
         description: 'Your password has been reset. You will be redirected to login.',
       });
+      
+      // Sign out the user to clear the temporary session
+      await supabase.auth.signOut();
       
       // Redirect to login after a short delay
       setTimeout(() => {
@@ -100,6 +111,20 @@ export const ResetPasswordView: React.FC = () => {
     }
   };
 
+  // Render loading state while checking for token
+  if (!tokenChecked) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
+        <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
+          <h1 className="text-2xl font-bold text-white">Reset Your Password</h1>
+          <div className="flex items-center justify-center p-4">
+            <div className="text-white">Processing reset link...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
       <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
@@ -108,12 +133,6 @@ export const ResetPasswordView: React.FC = () => {
         {error && (
           <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded">
             {error}
-          </div>
-        )}
-        
-        {!accessToken && !error && (
-          <div className="text-yellow-400 text-sm py-2 px-3 bg-yellow-900/30 border border-yellow-900 rounded">
-            Looking for reset token in URL...
           </div>
         )}
         

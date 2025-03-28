@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -51,8 +50,6 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!isAdmin) {
-    // Still render the component, it will handle the redirect internally
-    // This allows for a more graceful UX with proper messages
     return <>{children}</>;
   }
   
