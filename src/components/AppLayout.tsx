@@ -32,6 +32,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
     location.pathname === '/rules' || 
     location.pathname === '/rewards' || 
     location.pathname === '/punishments';
+    
+  // Don't add bottom padding on messages page
+  const isMessagesPage = location.pathname === '/messages';
 
   const handleAddNewItem = () => {
     if (onAddNewItem) {
@@ -142,7 +145,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
         </div>
       </div>
       
-      <main className="flex-1 pb-24 animate-fade-in">
+      <main className={`flex-1 ${isMessagesPage ? '' : 'pb-24'} animate-fade-in`}>
         {children}
       </main>
       

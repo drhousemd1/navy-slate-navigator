@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,7 +46,7 @@ const Messages: React.FC = () => {
   }, [messages, loadingOlder]);
 
   const handleSendMessage = async () => {
-    if (!user || !message.trim() && !imageFile) return;
+    if (!user || (!message.trim() && !imageFile)) return;
     
     try {
       const { data } = await supabase
@@ -129,13 +130,13 @@ const Messages: React.FC = () => {
 
   return (
     <AppLayout>
-      <div className="h-full flex flex-col">
+      <div className="h-[calc(100vh-4rem)] flex flex-col">
         <div className="bg-navy border-b border-light-navy py-4 px-4">
           <h1 className="text-xl font-semibold text-white">Messages</h1>
           <p className="text-gray-400 text-sm">Chat with your partner</p>
         </div>
         
-        <div className="flex-1 flex flex-col overflow-hidden p-4 pt-0 h-screen">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-400">Loading messages...</p>
@@ -145,7 +146,7 @@ const Messages: React.FC = () => {
               <p className="text-red-400">Error loading messages: {(error as Error).message}</p>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col h-full">
               {messages.length > 0 && (
                 <div className="py-2 flex justify-center">
                   <Button
@@ -160,7 +161,8 @@ const Messages: React.FC = () => {
                 </div>
               )}
               
-              <ScrollArea className="flex-1 pr-4">
+              {/* Scrollable message area */}
+              <ScrollArea className="flex-1 px-4">
                 <div className="space-y-4 pb-4">
                   {messages.length === 0 ? (
                     <div className="flex items-center justify-center h-40">
@@ -225,65 +227,68 @@ const Messages: React.FC = () => {
                   <div ref={messageEndRef} />
                 </div>
               </ScrollArea>
-              
-              {imageFile && (
-                <div className="p-2 border border-light-navy rounded-md mb-2 bg-navy">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-300 truncate">
-                      {imageFile.name}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setImageFile(null)}
-                      className="text-red-400 hover:text-red-300 hover:bg-transparent p-0 h-auto"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex items-center gap-2 pt-2 pb-3">
+            </div>
+          )}
+        </div>
+        
+        {/* Fixed message input bar at the bottom */}
+        <div className="w-full bg-dark-navy px-4 pb-4 pt-2">
+          {imageFile && (
+            <div className="p-2 border border-light-navy rounded-md mb-2 bg-navy">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-300 truncate">
+                  {imageFile.name}
+                </span>
                 <Button
-                  type="button"
-                  size="icon"
-                  variant="outline"
-                  className="shrink-0 border-light-navy hover:bg-light-navy text-gray-300"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setImageFile(null)}
+                  className="text-red-400 hover:text-red-300 hover:bg-transparent p-0 h-auto"
                 >
-                  <Camera className="h-5 w-5" />
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageSelect}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                </Button>
-                
-                <Input
-                  placeholder="Type a message..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="flex-1 bg-navy border-light-navy text-white placeholder:text-gray-500"
-                  disabled={isUploading}
-                />
-                
-                <Button
-                  type="button"
-                  size="icon"
-                  className="bg-cyan-700 shrink-0 hover:bg-cyan-600"
-                  onClick={handleSendMessage}
-                  disabled={(!message.trim() && !imageFile) || isUploading}
-                >
-                  <Send className="h-5 w-5" />
+                  Cancel
                 </Button>
               </div>
             </div>
           )}
+          
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-12 w-12 shrink-0 rounded-full bg-white border-0 hover:bg-gray-200 text-gray-600"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+            >
+              <Camera className="h-6 w-6" />
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageSelect}
+                accept="image/*"
+                className="hidden"
+              />
+            </Button>
+            
+            <Input
+              placeholder="Type a message..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="flex-1 h-12 rounded-full bg-navy border-light-navy text-white placeholder:text-gray-500"
+              disabled={isUploading}
+            />
+            
+            <Button
+              type="button"
+              size="icon"
+              className="h-12 w-12 rounded-full bg-cyan-700 shrink-0 hover:bg-cyan-600"
+              onClick={handleSendMessage}
+              disabled={(!message.trim() && !imageFile) || isUploading}
+            >
+              <Send className="h-6 w-6" />
+            </Button>
+          </div>
         </div>
       </div>
     </AppLayout>
