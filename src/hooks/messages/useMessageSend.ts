@@ -39,14 +39,9 @@ export const useMessageSend = () => {
       return data[0];
     },
     onSuccess: (newMessage) => {
-      // Invalidate and refetch messages query to ensure UI updates
+      // Only invalidate the query - rely on realtime subscription to update the UI
+      // This avoids race conditions between manual cache updates and refetching
       queryClient.invalidateQueries({ queryKey: ['messages', user?.id] });
-      
-      // Manually update the query cache to immediately show the new message
-      queryClient.setQueryData(['messages', user?.id], (oldData: any) => {
-        if (!oldData) return [newMessage];
-        return [...oldData, newMessage];
-      });
     },
     onError: (error) => {
       toast({
