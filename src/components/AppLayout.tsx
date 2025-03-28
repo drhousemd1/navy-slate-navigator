@@ -149,7 +149,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
         {children}
       </main>
       
-      {shouldShowAddButton && (
+      {shouldShowAddButton && !isMessagesPage && (
         <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-40">
           <Button 
             className={`${useCircleButton 

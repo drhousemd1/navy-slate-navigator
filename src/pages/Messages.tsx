@@ -136,7 +136,8 @@ const Messages: React.FC = () => {
           <p className="text-gray-400 text-sm">Chat with your partner</p>
         </div>
         
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Adjusted height to leave room for the input bar and ensure it doesn't go behind nav */}
+        <div className="flex-1 flex flex-col overflow-hidden h-[calc(100vh-10rem)]">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-400">Loading messages...</p>
@@ -231,8 +232,8 @@ const Messages: React.FC = () => {
           )}
         </div>
         
-        {/* Fixed message input bar at the bottom */}
-        <div className="w-full bg-dark-navy px-4 pb-4 pt-2">
+        {/* Fixed message input bar at the bottom - positioned ABOVE the navbar with higher z-index */}
+        <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 z-50 border-t border-light-navy">
           {imageFile && (
             <div className="p-2 border border-light-navy rounded-md mb-2 bg-navy">
               <div className="flex items-center justify-between">
