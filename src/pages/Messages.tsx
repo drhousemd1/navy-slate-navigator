@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
@@ -10,6 +10,7 @@ import MessageInput from '@/components/messages/MessageInput';
 const Messages: React.FC = () => {
   const { user, getNickname, getProfileImage } = useAuth();
   const [message, setMessage] = useState('');
+  const messagesSentRef = useRef(0);
   
   const {
     messages,
@@ -32,7 +33,7 @@ const Messages: React.FC = () => {
       console.log('[Messages] Component mounted with partnerId:', partnerId, ', forcing refetch');
       refetch();
       
-      // Also schedule additional refetches to ensure data is fresh
+      // Schedule additional refetches to ensure data is fresh
       const intervalId = setInterval(() => {
         console.log('[Messages] Scheduled refetch running');
         refetch();
@@ -52,36 +53,41 @@ const Messages: React.FC = () => {
     try {
       const receiverId = partnerId || user.id;
       const currentMessage = message;
+      const currentMessageCount = messagesSentRef.current + 1;
+      messagesSentRef.current = currentMessageCount;
+      
       setMessage(''); // Clear input immediately for better UX
       
-      console.log('[Messages] handleSendMessage: Starting message send process');
+      console.log(`[Messages] handleSendMessage (${currentMessageCount}): Starting message send process`);
       let uploadedImageUrl = null;
       
       if (imageFile) {
-        console.log('[Messages] handleSendMessage: Uploading image');
+        console.log(`[Messages] handleSendMessage (${currentMessageCount}): Uploading image`);
         uploadedImageUrl = await uploadImage(imageFile);
         setImageFile(null); // Clear image after upload
-        console.log('[Messages] handleSendMessage: Image uploaded:', uploadedImageUrl);
+        console.log(`[Messages] handleSendMessage (${currentMessageCount}): Image uploaded:`, uploadedImageUrl);
       }
       
-      console.log('[Messages] handleSendMessage: Sending message with content:', currentMessage);
+      console.log(`[Messages] handleSendMessage (${currentMessageCount}): Sending message with content:`, currentMessage);
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
-      console.log('[Messages] handleSendMessage: Message sent successfully');
+      console.log(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
       
-      // Force multiple refetches to ensure UI is updated
-      console.log('[Messages] handleSendMessage: Initial refetch');
+      // Force multiple refetches with progressive timeouts to ensure UI is updated
+      console.log(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
       await refetch();
       
-      // Schedule additional refetches to ensure UI is updated
-      setTimeout(async () => {
-        console.log('[Messages] handleSendMessage: Delayed refetch 1 (500ms)');
+      // After message is sent, use a sequence of refetches with delays
+      const doRefetch = async (delay: number, attempt: number) => {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        console.log(`[Messages] handleSendMessage (${currentMessageCount}): Delayed refetch ${attempt} (${delay}ms)`);
         await refetch();
-      }, 500);
+      };
       
-      setTimeout(async () => {
-        console.log('[Messages] handleSendMessage: Delayed refetch 2 (1000ms)');
-        await refetch();
-      }, 1000);
+      // Schedule multiple refetches with increasing delays
+      doRefetch(100, 1);
+      doRefetch(500, 2);
+      doRefetch(1000, 3);
+      doRefetch(2000, 4);
       
     } catch (err) {
       console.error('[Messages] Error sending message:', err);
@@ -110,6 +116,15 @@ const Messages: React.FC = () => {
       console.error('[Messages] Error loading older messages:', err);
     }
   };
+
+  // Debug log data validation
+  useEffect(() => {
+    if (messages.length > 0) {
+      console.log(`[Messages] Currently have ${messages.length} messages`);
+      console.log(`[Messages] Last message ID: ${messages[messages.length-1].id}`);
+      console.log(`[Messages] Last message content: ${messages[messages.length-1].content}`);
+    }
+  }, [messages]);
 
   return (
     <AppLayout>

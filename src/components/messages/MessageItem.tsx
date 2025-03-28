@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { Message } from '@/hooks/useMessages';
@@ -19,12 +19,33 @@ const MessageItem: React.FC<MessageItemProps> = ({
   userProfileImage,
   onImageLoad
 }) => {
+  const messageRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  
   // Debug log for rendering
   useEffect(() => {
-    console.log(`[MessageItem] Component mounted for message: ${message.id}`);
+    console.log(`[MessageItem] Component mounted for message: ${message.id}, content: ${message.content?.substring(0, 20)}`);
     return () => {
       console.log(`[MessageItem] Component unmounted for message: ${message.id}`);
     };
+  }, [message.id, message.content]);
+  
+  // Debug log for DOM presence
+  useEffect(() => {
+    if (messageRef.current) {
+      console.log(`[MessageItem] Message ${message.id} is in the DOM`);
+      
+      // Log the position of the message element
+      const rect = messageRef.current.getBoundingClientRect();
+      console.log(`[MessageItem] Message ${message.id} position:`, {
+        top: rect.top,
+        bottom: rect.bottom,
+        height: rect.height,
+        visible: rect.top >= 0 && rect.bottom <= window.innerHeight
+      });
+    } else {
+      console.log(`[MessageItem] Message ${message.id} is NOT in the DOM yet`);
+    }
   }, [message.id]);
   
   const formatMessageTime = (timestamp: string) => {
@@ -41,8 +62,20 @@ const MessageItem: React.FC<MessageItemProps> = ({
     console.log('[MessageItem] ⚠️ Message has no content or image:', message.id);
   }
 
+  // Handle image load with better error handling
+  const handleImageLoad = () => {
+    console.log(`[MessageItem] Image loaded successfully for message: ${message.id}`);
+    if (onImageLoad) {
+      onImageLoad();
+    }
+  };
+
+  const handleImageError = () => {
+    console.error(`[MessageItem] Failed to load image for message: ${message.id}, URL: ${message.image_url}`);
+  };
+
   return (
-    <div className="flex flex-col my-2">
+    <div className="flex flex-col my-2" ref={messageRef}>
       {/* Timestamp above message bubble */}
       <div className={`w-full text-xxs text-white opacity-40 mb-1 ${isSentByMe ? 'text-right pr-4' : 'text-left pl-4'}`}>
         {formatMessageTime(message.created_at)}
@@ -88,16 +121,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
               {message.image_url && (
                 <div className="mt-1">
                   <img
+                    ref={imageRef}
                     src={message.image_url}
                     alt="Message attachment"
                     className="max-w-full rounded-md max-h-60 object-contain"
-                    onLoad={() => {
-                      console.log('[MessageItem] Image loaded for message:', message.id);
-                      onImageLoad?.();
-                    }}
-                    onError={() => {
-                      console.error('[MessageItem] Image failed to load:', message.image_url);
-                    }}
+                    onLoad={handleImageLoad}
+                    onError={handleImageError}
                   />
                 </div>
               )}
