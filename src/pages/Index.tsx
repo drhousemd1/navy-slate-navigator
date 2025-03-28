@@ -25,9 +25,8 @@ const Index: React.FC = () => {
             </div>
           )}
           
-          <h1 className="text-3xl font-semibold text-white mb-4">Welcome</h1>
           <p className="text-nav-inactive">
-            Select an option from the navigation bar below
+            Select an option from the navigation bar below to begin.
           </p>
         </div>
       </div>
