@@ -20,27 +20,6 @@ import Encyclopedia from "./pages/Encyclopedia";
 import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
 
-// Check for access token in URL hash on initial load
-const AuthHashHandler = () => {
-  useEffect(() => {
-    // Check if we have a hash parameter with access_token
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token=')) {
-      console.log('Detected access_token in URL hash, processing...');
-      
-      // The # fragment is not sent to the server, so we need to handle it client-side
-      // Let Supabase handle this as it knows how to parse the hash
-      supabase.auth.getSession();
-      
-      // Then redirect to reset-password which will use the session
-      window.location.href = '/reset-password';
-      return;
-    }
-  }, []);
-  
-  return null;
-};
-
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -116,7 +95,6 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthHashHandler />
         <AuthProvider>
           <Toaster />
           <AppRoutes />

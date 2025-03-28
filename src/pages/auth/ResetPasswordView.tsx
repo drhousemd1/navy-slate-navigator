@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 export const ResetPasswordView: React.FC = () => {
@@ -13,6 +14,8 @@ export const ResetPasswordView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const { updatePassword } = useAuth();
   const navigate = useNavigate();
 
   // Check for active session on component mount
@@ -29,9 +32,11 @@ export const ResetPasswordView: React.FC = () => {
         } else {
           setError('No active session found. The reset link may have expired. Please request a new password reset link.');
         }
+        setCheckingSession(false);
       } catch (err) {
         console.error('Error checking session:', err);
         setError('Failed to verify authentication session. Please try again.');
+        setCheckingSession(false);
       }
     };
     
@@ -59,10 +64,8 @@ export const ResetPasswordView: React.FC = () => {
       
       console.log('Attempting to update password...');
       
-      // Update the user's password
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
+      // Update the user's password using our context function
+      const { error } = await updatePassword(newPassword);
       
       if (error) {
         console.error('Password update error:', error);
@@ -92,6 +95,19 @@ export const ResetPasswordView: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (checkingSession) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
+        <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
+          <h1 className="text-2xl font-bold text-white">Checking your reset link...</h1>
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">

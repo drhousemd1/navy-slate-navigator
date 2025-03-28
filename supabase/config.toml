@@ -2,14 +2,16 @@
 project_id = "ronqvzihpffgowyscgfm"
 site_url = "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com"
 redirect_urls = [
+  "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com",
   "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com/auth",
   "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com/reset-password",
+  "https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app",
   "https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app/auth",
   "https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app/reset-password",
+  "http://localhost:3000",
   "http://localhost:3000/auth",
   "http://localhost:3000/reset-password",
+  "http://localhost:5173",
   "http://localhost:5173/auth",
-  "http://localhost:5173/reset-password",
-  "http://localhost:3000",
-  "http://localhost:5173"
+  "http://localhost:5173/reset-password"
 ]

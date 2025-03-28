@@ -20,7 +20,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Get auth operations
   const authOperations = useAuthOperations();
-  const { signIn, signUp, resetPassword } = authOperations;
+  const { signIn, signUp, resetPassword, updatePassword } = authOperations;
   
   // Get role management
   const roleManagement = useRoleManagement(user);
@@ -112,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signUp,
     resetPassword,
+    updatePassword,
     signOut,
     loading,
     isAdmin,

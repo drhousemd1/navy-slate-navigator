@@ -10,6 +10,7 @@ export interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
   signUp: (email: string, password: string) => Promise<{ error: any | null; data: any | null }>;
   resetPassword: (email: string) => Promise<{ error: any | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
   loading: boolean;
   isAdmin: boolean;

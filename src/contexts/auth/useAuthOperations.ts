@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -77,31 +78,14 @@ export function useAuthOperations() {
   // Reset password
   const resetPassword = async (email: string) => {
     try {
-      // We need to make sure we use a root domain URL without any paths
-      // as Supabase will handle appending the path itself
-      let baseUrl;
-      
-      if (window.location.hostname === 'localhost') {
-        // For localhost, use a direct URL without path
-        baseUrl = window.location.origin; // This gives http://localhost:3000 or http://localhost:5173
-        console.log('Using localhost base URL:', baseUrl);
-      } else if (window.location.hostname.includes('lovable.app')) {
-        // For preview environment
-        baseUrl = 'https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app';
-        console.log('Using preview base URL:', baseUrl);
-      } else {
-        // For production environment
-        baseUrl = 'https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com';
-        console.log('Using production base URL:', baseUrl);
-      }
-      
       console.log('Sending password reset to:', email);
-      console.log('With base URL:', baseUrl);
       
-      // CRITICAL: Don't include any paths here, Supabase will automatically 
-      // redirect to the correct URL after authentication
+      // Simple site URL without any paths - let Supabase handle redirects
+      const siteUrl = window.location.origin;
+      console.log('Using site URL:', siteUrl);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: baseUrl,
+        redirectTo: `${siteUrl}/reset-password`,
       });
       
       if (error) {
@@ -132,9 +116,45 @@ export function useAuthOperations() {
     }
   };
 
+  // Update password (for reset password flow)
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) {
+        console.error('Password update error:', error);
+        toast({
+          title: 'Password update failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return { error };
+      }
+      
+      console.log('Password updated successfully');
+      toast({
+        title: 'Password updated',
+        description: 'Your password has been successfully updated.',
+      });
+      
+      return { error: null };
+    } catch (error: any) {
+      console.error('Exception during password update:', error);
+      toast({
+        title: 'Password update failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return { error };
+    }
+  };
+
   return {
     signIn,
     signUp,
-    resetPassword
+    resetPassword,
+    updatePassword
   };
 }
