@@ -1,5 +1,5 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Camera, Send, X } from 'lucide-react';
@@ -55,7 +55,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   // Clean up the object URL when the component unmounts or when the image file changes
-  useEffect(() => {
+  React.useEffect(() => {
     return () => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -64,10 +64,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
   }, []);
 
   return (
-    <div className="w-full bg-dark-navy border-t border-light-navy py-3 px-4">
-      {/* Image preview container */}
+    <div className="flex flex-col w-full">
+      {/* Image preview container completely separated from input */}
       {imageFile && previewUrl && (
-        <div className="absolute bottom-16 left-4 z-10">
+        <div className="fixed bottom-32 left-4 z-50">
           <div className="inline-flex bg-dark-navy border border-light-navy rounded-md relative">
             <img 
               src={previewUrl} 
@@ -87,44 +87,46 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </div>
       )}
       
-      {/* Message input container */}
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="h-12 w-12 shrink-0 rounded-full bg-white border-0 hover:bg-gray-200 text-gray-600"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-        >
-          <Camera className="h-6 w-6" />
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageSelect}
-            accept="image/*"
-            className="hidden"
+      {/* Fixed message input container - exactly 60px height (h-12 = 3rem = 48px + py-2 (8px) + border (1px) = ~60px) */}
+      <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 border-t border-light-navy z-50 shadow-lg">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-12 w-12 shrink-0 rounded-full bg-white border-0 hover:bg-gray-200 text-gray-600"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+          >
+            <Camera className="h-6 w-6" />
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageSelect}
+              accept="image/*"
+              className="hidden"
+            />
+          </Button>
+          
+          <Input
+            placeholder="Type a message..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            className="flex-1 h-12 rounded-full bg-navy border-light-navy text-white placeholder:text-gray-500"
+            disabled={isUploading}
           />
-        </Button>
-        
-        <Input
-          placeholder="Type a message..."
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          className="flex-1 h-12 rounded-full bg-navy border-light-navy text-white placeholder:text-gray-500"
-          disabled={isUploading}
-        />
-        
-        <Button
-          type="button"
-          size="icon"
-          className="h-12 w-12 rounded-full bg-cyan-700 shrink-0 hover:bg-cyan-600"
-          onClick={handleSendMessage}
-          disabled={(!message.trim() && !imageFile) || isUploading}
-        >
-          <Send className="h-6 w-6" />
-        </Button>
+          
+          <Button
+            type="button"
+            size="icon"
+            className="h-12 w-12 rounded-full bg-cyan-700 shrink-0 hover:bg-cyan-600"
+            onClick={handleSendMessage}
+            disabled={(!message.trim() && !imageFile) || isUploading}
+          >
+            <Send className="h-6 w-6" />
+          </Button>
+        </div>
       </div>
     </div>
   );
