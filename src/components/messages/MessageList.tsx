@@ -28,15 +28,21 @@ const MessageList: React.FC<MessageListProps> = ({
   const [prevMessageCount, setPrevMessageCount] = useState(0);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
   
-  // Add logging to track message updates
+  // Add logging to track message updates with content and image availability
   useEffect(() => {
-    console.log('[MessageList] messages updated:', messages.map(m => m.content));
+    console.log('[MessageList] messages updated:', 
+      messages.map(m => ({ 
+        content: m.content, 
+        hasImage: !!m.image_url 
+      }))
+    );
   }, [messages]);
   
   // Check if messages contain images
   useEffect(() => {
     const containsImages = messages.some(msg => msg.image_url);
     setHasImages(containsImages);
+    console.log('[MessageList] Contains images:', containsImages);
   }, [messages]);
 
   // Improved scroll handling for new messages
@@ -77,7 +83,7 @@ const MessageList: React.FC<MessageListProps> = ({
           messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
           console.log('[MessageList] Scrolled after image load timeout');
         }
-      }, 500); // Increased from 300ms to 500ms to give more time for images to load
+      }, 700); // Increased from 500ms to 700ms to give more time for images to load
       return () => clearTimeout(timer);
     }
   }, [hasImages, messages]);

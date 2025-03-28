@@ -19,6 +19,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
   userProfileImage,
   onImageLoad
 }) => {
+  // Log message data for debugging
+  console.log('[MessageItem] rendering:', {
+    id: message.id,
+    content: message.content,
+    image_url: message.image_url
+  });
+
   const formatMessageTime = (timestamp: string) => {
     try {
       return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
@@ -64,10 +71,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 {isSentByMe ? userNickname : "Partner"}
               </span>
               
+              {/* Only render content paragraph if content exists */}
               {message.content && (
                 <p className="text-sm break-words">{message.content}</p>
               )}
               
+              {/* Only render image if image_url exists */}
               {message.image_url && (
                 <div className="mt-1">
                   <img
