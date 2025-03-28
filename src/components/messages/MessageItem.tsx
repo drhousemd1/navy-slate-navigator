@@ -23,8 +23,19 @@ const MessageItem: React.FC<MessageItemProps> = ({
   console.log('[MessageItem] Rendering', {
     id: message.id,
     content: message.content,
-    image_url: message.image_url
+    image_url: message.image_url,
+    contentLength: message.content?.length
   });
+
+  // Always render the component, even if content is empty but image exists
+  const hasContent = message.content !== undefined && message.content !== null && message.content.trim() !== '';
+  const hasImage = !!message.image_url;
+  
+  // Skip rendering if somehow both content and image are missing (defensive)
+  if (!hasContent && !hasImage) {
+    console.warn('[MessageItem] Message has neither content nor image, id:', message.id);
+    return null;
+  }
 
   const formatMessageTime = (timestamp: string) => {
     try {
@@ -71,14 +82,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 {isSentByMe ? userNickname : "Partner"}
               </span>
               
-              {/* Only render content paragraph if content exists */}
-              {message.content && (
+              {/* Render content paragraph if content exists and is not empty */}
+              {hasContent && (
                 <p className="text-sm break-words">{message.content}</p>
               )}
               
-              {/* Only render image if image_url exists */}
-              {message.image_url && (
-                <div className="mt-1">
+              {/* Render image if image_url exists */}
+              {hasImage && (
+                <div className={`${hasContent ? 'mt-1' : ''}`}>
                   <img
                     src={message.image_url}
                     alt="Message attachment"
