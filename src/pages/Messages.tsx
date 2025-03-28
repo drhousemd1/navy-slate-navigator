@@ -32,10 +32,11 @@ const Messages: React.FC = () => {
       console.log('[Messages] Component mounted with partnerId:', partnerId, ', forcing refetch');
       refetch();
       
+      // More frequent polling for messages
       const intervalId = setInterval(() => {
         console.log('[Messages] Scheduled refetch running');
         refetch();
-      }, 5000);
+      }, 3000); // Reduce from 5000ms to 3000ms
       
       return () => clearInterval(intervalId);
     }
@@ -69,12 +70,12 @@ const Messages: React.FC = () => {
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
       
-      // More aggressive refetching to ensure new messages appear
+      // More aggressive and frequent refetching
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
       await refetch();
       
-      // Multiple delayed refetches to ensure message appears
-      const delayedRefetches = [50, 150, 300, 500, 1000, 2000];
+      // More frequent refetches with shorter delays
+      const delayedRefetches = [10, 50, 100, 200, 300, 500, 800, 1200, 2000];
       for (const delay of delayedRefetches) {
         setTimeout(async () => {
           console.log(`[Messages] handleSendMessage (${currentMessageCount}): Delayed refetch (${delay}ms)`);
