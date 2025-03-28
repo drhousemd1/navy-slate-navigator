@@ -136,7 +136,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             {/* Messaging icon */}
             <MessageSquare 
               className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" 
-              onClick={() => console.log('Messaging clicked')}
+              onClick={() => navigate('/messages')}
             />
           </div>
         </div>
