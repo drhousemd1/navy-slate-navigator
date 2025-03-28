@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -20,11 +20,14 @@ export const useImageUpload = () => {
       const fileName = `${user.id}-${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
       
+      console.log('Uploading image:', filePath);
+      
       const { error: uploadError, data } = await supabase.storage
         .from('message_images')
         .upload(filePath, file);
       
       if (uploadError) {
+        console.error('Upload error:', uploadError);
         throw uploadError;
       }
       
@@ -33,6 +36,7 @@ export const useImageUpload = () => {
         .from('message_images')
         .getPublicUrl(filePath);
       
+      console.log('Image uploaded successfully:', publicUrl);
       return publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -46,6 +50,15 @@ export const useImageUpload = () => {
       setIsUploading(false);
     }
   };
+
+  // Clean up when component unmounts
+  useEffect(() => {
+    return () => {
+      if (imageFile) {
+        // No need to revoke object URLs here as we do it in the component
+      }
+    };
+  }, [imageFile]);
 
   return {
     imageFile,

@@ -9,13 +9,15 @@ interface MessageItemProps {
   isSentByMe: boolean;
   userNickname: string | null;
   userProfileImage: string | null;
+  onImageLoad?: () => void;
 }
 
 const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isSentByMe,
   userNickname,
-  userProfileImage
+  userProfileImage,
+  onImageLoad
 }) => {
   const formatMessageTime = (timestamp: string) => {
     try {
@@ -72,6 +74,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                     src={message.image_url}
                     alt="Message attachment"
                     className="max-w-full rounded-md max-h-60 object-contain"
+                    onLoad={onImageLoad}
                   />
                 </div>
               )}

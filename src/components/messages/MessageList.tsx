@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Message } from '@/hooks/useMessages';
@@ -24,22 +24,38 @@ const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const messageEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-
-  // Improved auto-scroll behavior
+  const [hasImages, setHasImages] = useState(false);
+  
+  // Check if messages contain images
   useEffect(() => {
-    if (messages.length > 0) {
-      // Use a timeout to ensure DOM is updated before scrolling
-      setTimeout(() => {
-        // Make sure the messageEndRef exists before trying to scroll to it
-        if (messageEndRef.current) {
-          messageEndRef.current.scrollIntoView({ 
-            behavior: 'smooth',
-            block: 'end'
-          });
-        }
-      }, 200); // Slightly longer timeout to ensure content is rendered
+    const containsImages = messages.some(msg => msg.image_url);
+    setHasImages(containsImages);
+  }, [messages]);
+
+  // Scroll to bottom when messages change or when images are loaded
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (messageEndRef.current) {
+        messageEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    };
+    
+    // Immediate scroll for text messages
+    scrollToBottom();
+    
+    // Additional delay for image messages to ensure they're loaded
+    if (hasImages) {
+      const timer = setTimeout(scrollToBottom, 500);
+      return () => clearTimeout(timer);
     }
-  }, [messages]); // Run when messages change
+  }, [messages, hasImages]);
+
+  // Handle image load events to trigger re-scrolling
+  const handleImageLoaded = () => {
+    if (messageEndRef.current) {
+      messageEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -74,6 +90,7 @@ const MessageList: React.FC<MessageListProps> = ({
                   isSentByMe={isSentByMe}
                   userNickname={userNickname}
                   userProfileImage={userProfileImage}
+                  onImageLoad={handleImageLoaded}
                 />
               );
             })

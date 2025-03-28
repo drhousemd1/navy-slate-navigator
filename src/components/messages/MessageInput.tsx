@@ -1,8 +1,8 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Camera, Send } from 'lucide-react';
+import { Camera, Send, X } from 'lucide-react';
 
 interface MessageInputProps {
   message: string;
@@ -22,6 +22,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   isUploading
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -32,6 +33,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
       }
       
       setImageFile(file);
+      
+      // Create a preview URL for the selected image
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
     }
   };
 
@@ -41,22 +46,47 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
+  const clearImage = () => {
+    setImageFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  };
+
+  // Clean up the object URL when the component unmounts or when the image file changes
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, []);
+
   return (
     <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 z-50 border-t border-light-navy">
-      {imageFile && (
+      {imageFile && previewUrl && (
         <div className="p-2 border border-light-navy rounded-md mb-2 bg-navy">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-300 truncate">
               {imageFile.name}
             </span>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setImageFile(null)}
+              onClick={clearImage}
               className="text-red-400 hover:text-red-300 hover:bg-transparent p-0 h-auto"
             >
+              <X className="h-4 w-4 mr-1" />
               Cancel
             </Button>
+          </div>
+          <div className="relative max-h-32 overflow-hidden rounded">
+            <img 
+              src={previewUrl} 
+              alt="Image preview" 
+              className="max-h-32 max-w-full object-contain"
+            />
           </div>
         </div>
       )}
