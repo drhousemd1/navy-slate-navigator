@@ -24,34 +24,30 @@ const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const messageEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const [hasImages, setHasImages] = useState(false);
   const [prevMessageCount, setPrevMessageCount] = useState(0);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
   
-  // Add logging to track message updates
-  useEffect(() => {
-    console.log('[MessageList] messages updated:', messages.map(m => m.content));
-  }, [messages]);
-  
   // Check if messages contain images
+  const hasImages = messages.some(msg => msg.image_url);
+  
+  // Debug log for messages updates
   useEffect(() => {
-    const containsImages = messages.some(msg => msg.image_url);
-    setHasImages(containsImages);
+    console.log('[MessageList] Messages updated, count:', messages.length);
   }, [messages]);
 
-  // Improved scroll handling for new messages
+  // Detect new messages and trigger scroll
   useEffect(() => {
     // If message count increased, it means a new message was added
-    const hasNewMessage = messages.length > prevMessageCount;
-    setPrevMessageCount(messages.length);
-    
-    if (hasNewMessage || messages.length === 1) {
-      console.log('[MessageList] New message detected, scrolling to bottom');
+    if (messages.length > prevMessageCount) {
+      console.log('[MessageList] New message detected, will scroll to bottom');
       setShouldScrollToBottom(true);
     }
-  }, [messages, prevMessageCount]);
+    
+    // Always update the previous count
+    setPrevMessageCount(messages.length);
+  }, [messages.length, prevMessageCount]);
 
-  // Separate effect for scrolling to ensure it happens after render
+  // Handle scrolling to bottom when new messages arrive
   useEffect(() => {
     if (shouldScrollToBottom) {
       console.log('[MessageList] Executing scroll to bottom');
@@ -59,39 +55,50 @@ const MessageList: React.FC<MessageListProps> = ({
       // Use requestAnimationFrame to ensure scrolling happens after render
       requestAnimationFrame(() => {
         if (messageEndRef.current) {
-          messageEndRef.current.scrollIntoView({ behavior: 'auto' });
+          messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
           console.log('[MessageList] Scrolled to bottom');
         }
       });
       
+      // Reset the flag
       setShouldScrollToBottom(false);
     }
-  }, [shouldScrollToBottom, messages]);
+  }, [shouldScrollToBottom]);
 
-  // Additional scroll to bottom for images after they load
+  // Additional scroll handling for images after they load
   useEffect(() => {
     if (hasImages && messages.length > 0) {
-      console.log('[MessageList] Has images, will scroll after timeout');
+      console.log('[MessageList] Images detected, setting additional scroll timeout');
       const timer = setTimeout(() => {
         if (messageEndRef.current) {
           messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          console.log('[MessageList] Scrolled after image load timeout');
+          console.log('[MessageList] Scrolled after image delay');
         }
-      }, 500); // Increased from 300ms to 500ms to give more time for images to load
+      }, 500); // Give images time to load
+      
       return () => clearTimeout(timer);
     }
   }, [hasImages, messages]);
 
   // Handle image load events to trigger re-scrolling
   const handleImageLoaded = () => {
-    console.log('[MessageList] Image loaded, scrolling');
-    if (messageEndRef.current) {
-      // Use requestAnimationFrame for better timing
-      requestAnimationFrame(() => {
-        messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      });
-    }
+    console.log('[MessageList] Image loaded, scrolling to bottom');
+    
+    // Use setTimeout to give a small delay after the image loads
+    setTimeout(() => {
+      if (messageEndRef.current) {
+        messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
   };
+
+  // Handle initial scroll (when component mounts or messages first load)
+  useEffect(() => {
+    if (messages.length > 0 && messageEndRef.current) {
+      console.log('[MessageList] Initial loading, scrolling to bottom');
+      messageEndRef.current.scrollIntoView({ behavior: 'auto' });
+    }
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">

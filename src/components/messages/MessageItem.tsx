@@ -19,6 +19,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
   userProfileImage,
   onImageLoad
 }) => {
+  // Debug log for rendering
+  console.log('[MessageItem] Rendering message:', message.id, message.content);
+  
   const formatMessageTime = (timestamp: string) => {
     try {
       return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
@@ -74,7 +77,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
                     src={message.image_url}
                     alt="Message attachment"
                     className="max-w-full rounded-md max-h-60 object-contain"
-                    onLoad={onImageLoad}
+                    onLoad={() => {
+                      console.log('[MessageItem] Image loaded, calling onImageLoad');
+                      onImageLoad?.();
+                    }}
+                    onError={() => {
+                      console.error('[MessageItem] Image failed to load:', message.image_url);
+                    }}
                   />
                 </div>
               )}
