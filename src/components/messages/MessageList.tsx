@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useLayoutEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -42,13 +43,16 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   };
 
+  // Force initial scroll to bottom when messages first load
   useEffect(() => {
     if (initialLoad && messages.length > 0) {
       console.log('[MessageList] Initial load, forcing scroll to bottom');
       setInitialLoad(false);
       
+      // Try multiple times to ensure scroll happens
       scrollToBottom();
       
+      // Staggered scrolls to account for image loading and rendering delays
       setTimeout(() => scrollToBottom(), 50);
       setTimeout(() => scrollToBottom(), 150);
       setTimeout(() => scrollToBottom(), 300);
@@ -56,13 +60,16 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   }, [initialLoad, messages.length]);
 
+  // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (messages.length > prevMessageCount) {
       console.log('[MessageList] New message detected! Count changed from', 
                   prevMessageCount, 'to', messages.length);
       
+      // Scroll with smoother behavior for new messages
       scrollToBottom('smooth');
       
+      // Multiple attempts to ensure it happens after all rendering
       setTimeout(() => scrollToBottom('smooth'), 100); 
       setTimeout(() => scrollToBottom('smooth'), 300);
       setTimeout(() => scrollToBottom('smooth'), 600);
@@ -71,11 +78,14 @@ const MessageList: React.FC<MessageListProps> = ({
     setPrevMessageCount(messages.length);
   }, [messages.length, prevMessageCount]);
 
+  // Additional measure to ensure scroll works
   useLayoutEffect(() => {
     if (!messageEndRef.current) return;
 
+    // Force scroll before layout calculations complete
     messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
 
+    // Force reflow/repaint
     messageEndRef.current.style.display = 'none';
     void messageEndRef.current.offsetHeight;
     messageEndRef.current.style.display = '';
@@ -115,7 +125,7 @@ const MessageList: React.FC<MessageListProps> = ({
           }
         }}
       >
-        <div className="space-y-1 mb-5">
+        <div className="space-y-1 mb-16">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className="text-gray-400">No messages yet. Send the first one!</p>
