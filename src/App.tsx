@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -7,6 +6,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/auth"; // Updated import path
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 
 // Create empty placeholder pages for our navigation
 import Rules from "./pages/Rules";
@@ -76,6 +76,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
+      <Route path="/reset-password" element={<ResetPasswordView />} />
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
