@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Message } from '@/hooks/useMessages';
+import { Message } from '@/hooks/messages/types';
 import MessageItem from './MessageItem';
 
 interface MessageListProps {
@@ -27,6 +27,11 @@ const MessageList: React.FC<MessageListProps> = ({
   const [hasImages, setHasImages] = useState(false);
   const [prevMessageCount, setPrevMessageCount] = useState(0);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+  
+  // Add detailed raw message logging
+  useEffect(() => {
+    console.log('[MessageList] Raw message list:', messages);
+  }, [messages]);
   
   // Add logging to track message updates with content and image availability
   useEffect(() => {
