@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -78,41 +77,31 @@ export function useAuthOperations() {
   // Reset password
   const resetPassword = async (email: string) => {
     try {
-      // Define the base URLs for different environments
-      const productionDomain = "98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com";
-      const previewDomain = "id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app";
+      // We need to make sure we use a root domain URL without any paths
+      // as Supabase will handle appending the path itself
+      let baseUrl;
       
-      // Explicitly use HTTPS for all URLs
-      const productionUrl = `https://${productionDomain}/reset-password`;
-      const previewUrl = `https://${previewDomain}/reset-password`;
-      
-      // Determine current environment
-      const currentUrl = window.location.href;
-      console.log('Current URL for password reset:', currentUrl);
-      
-      // Select the appropriate redirect URL based on environment
-      let redirectTo;
-      if (currentUrl.includes('localhost')) {
-        // Use production URL for local development to avoid localhost issues
-        redirectTo = productionUrl;
-        console.log('Using production URL for localhost reset:', redirectTo);
-      } else if (currentUrl.includes('lovable.app')) {
-        // Use preview URL for preview environment
-        redirectTo = previewUrl;
-        console.log('Using preview URL for reset:', redirectTo);
+      if (window.location.hostname === 'localhost') {
+        // For localhost, use a direct URL without path
+        baseUrl = window.location.origin; // This gives http://localhost:3000 or http://localhost:5173
+        console.log('Using localhost base URL:', baseUrl);
+      } else if (window.location.hostname.includes('lovable.app')) {
+        // For preview environment
+        baseUrl = 'https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app';
+        console.log('Using preview base URL:', baseUrl);
       } else {
-        // Use production URL for production environment
-        redirectTo = productionUrl;
-        console.log('Using production URL for reset:', redirectTo);
+        // For production environment
+        baseUrl = 'https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com';
+        console.log('Using production base URL:', baseUrl);
       }
       
       console.log('Sending password reset to:', email);
-      console.log('With redirect URL:', redirectTo);
+      console.log('With base URL:', baseUrl);
       
-      // IMPORTANT: Make sure the redirectTo URL is an EXACT match to one of the URLs 
-      // configured in the Supabase redirect_urls in config.toml
+      // CRITICAL: Don't include any paths here, Supabase will automatically 
+      // redirect to the correct URL after authentication
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
+        redirectTo: baseUrl,
       });
       
       if (error) {

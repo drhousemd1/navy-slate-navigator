@@ -9,5 +9,7 @@ redirect_urls = [
   "http://localhost:3000/auth",
   "http://localhost:3000/reset-password",
   "http://localhost:5173/auth",
-  "http://localhost:5173/reset-password"
+  "http://localhost:5173/reset-password",
+  "http://localhost:3000",
+  "http://localhost:5173"
 ]

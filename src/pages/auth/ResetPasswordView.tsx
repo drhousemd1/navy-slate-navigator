@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
@@ -12,49 +12,31 @@ export const ResetPasswordView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [tokenChecked, setTokenChecked] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Check for access token in URL hash
+  // Check for active session on component mount
   useEffect(() => {
-    const checkAccessToken = () => {
-      console.log('Checking for access token in URL hash...');
-      console.log('Current URL:', window.location.href);
-      console.log('URL hash:', location.hash);
-      
-      // Parse the hash parameters
-      const hashParams = new URLSearchParams(location.hash.substring(1));
-      const token = hashParams.get('access_token');
-      
-      if (token) {
-        console.log('Access token found in URL hash');
-        setAccessToken(token);
+    console.log('ResetPasswordView mounted, checking for active session...');
+    
+    const checkSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        console.log('Session check result:', data?.session ? 'Active session found' : 'No active session');
         
-        // Crucial: Set the session with the token to ensure updateUser works
-        supabase.auth.setSession({
-          access_token: token,
-          refresh_token: '',
-        })
-        .then(() => {
-          console.log('Session set with access token');
-        })
-        .catch(err => {
-          console.error('Error setting session:', err);
-          setError('Failed to initialize session with reset token.');
-        });
-      } else {
-        console.log('No access token found in URL hash');
-        setError('No reset token found. Please request a new password reset link.');
+        if (data?.session) {
+          setHasSession(true);
+        } else {
+          setError('No active session found. The reset link may have expired. Please request a new password reset link.');
+        }
+      } catch (err) {
+        console.error('Error checking session:', err);
+        setError('Failed to verify authentication session. Please try again.');
       }
-      
-      setTokenChecked(true);
     };
     
-    // Run once when component mounts, with slight delay to ensure URL is processed
-    setTimeout(checkAccessToken, 200);
-  }, [location.hash]);
+    checkSession();
+  }, []);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,20 +93,6 @@ export const ResetPasswordView: React.FC = () => {
     }
   };
 
-  // Render loading state while checking for token
-  if (!tokenChecked) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
-        <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
-          <h1 className="text-2xl font-bold text-white">Reset Your Password</h1>
-          <div className="flex items-center justify-center p-4">
-            <div className="text-white">Processing reset link...</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
       <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
@@ -140,7 +108,7 @@ export const ResetPasswordView: React.FC = () => {
           <div className="text-green-400 text-sm py-2 px-3 bg-green-900/30 border border-green-900 rounded">
             Password reset successful! You will be redirected to the login page shortly.
           </div>
-        ) : accessToken ? (
+        ) : hasSession ? (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div className="space-y-2">
               <label className="text-white text-sm">New Password</label>
