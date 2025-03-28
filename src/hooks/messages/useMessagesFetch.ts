@@ -68,6 +68,8 @@ export const useMessagesFetch = (partnerId?: string) => {
       }
       
       console.log('[QUERY] Fetched messages count:', data?.length || 0);
+      console.log('[QUERY] fetched from Supabase:', data?.map(m => m.content));
+      
       // Return messages in ascending order for display (newest at bottom)
       return [...(data || [])].reverse();
     },

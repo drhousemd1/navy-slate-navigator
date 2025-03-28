@@ -27,6 +27,11 @@ const MessageList: React.FC<MessageListProps> = ({
   const [hasImages, setHasImages] = useState(false);
   const [prevMessageCount, setPrevMessageCount] = useState(0);
   
+  // Add logging to track message updates
+  useEffect(() => {
+    console.log('[MessageList] messages updated:', messages.map(m => m.content));
+  }, [messages]);
+  
   // Check if messages contain images
   useEffect(() => {
     const containsImages = messages.some(msg => msg.image_url);

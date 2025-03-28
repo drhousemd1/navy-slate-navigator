@@ -42,15 +42,14 @@ export const useMessageSend = () => {
     onSuccess: (newMessage) => {
       queryClient.setQueryData(['messages', user?.id], (oldData: any) => {
         if (!oldData) return [newMessage];
-        const exists = oldData.some((msg: any) => msg.id === newMessage.id);
-        if (exists) return oldData;
-        return [...oldData, newMessage];
+        const updated = [...oldData, newMessage]; // force new array
+        return updated;
       });
 
-      // Optionally: delay invalidate to allow DB to catch up
+      // Also force a re-fetch after delay to stay fresh
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['messages', user?.id] });
-      }, 1000); // Give Supabase time to index it
+      }, 1000);
     },
     onError: (error) => {
       toast({
