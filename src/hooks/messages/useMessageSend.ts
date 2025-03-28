@@ -39,11 +39,18 @@ export const useMessageSend = () => {
       console.log('Message sent successfully:', data[0]);
       return data[0];
     },
-    onSuccess: () => {
-      console.log('Message mutation success, invalidating queries...');
-      // Only invalidate the query - rely on realtime subscription to update the UI
-      // This avoids race conditions between manual cache updates and refetching
-      queryClient.invalidateQueries({ queryKey: ['messages', user?.id] });
+    onSuccess: (newMessage) => {
+      queryClient.setQueryData(['messages', user?.id], (oldData: any) => {
+        if (!oldData) return [newMessage];
+        const exists = oldData.some((msg: any) => msg.id === newMessage.id);
+        if (exists) return oldData;
+        return [...oldData, newMessage];
+      });
+
+      // Optionally: delay invalidate to allow DB to catch up
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['messages', user?.id] });
+      }, 1000); // Give Supabase time to index it
     },
     onError: (error) => {
       toast({
