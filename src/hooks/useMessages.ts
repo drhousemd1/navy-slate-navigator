@@ -59,6 +59,11 @@ export const useMessages = (partnerId?: string) => {
         setImageFile(null);
       }
       
+      // Force immediate refetch to ensure UI is updated 
+      setTimeout(() => {
+        refetch();
+      }, 10);
+      
       return result;
     } catch (error) {
       console.error('Error in sendMessage:', error);

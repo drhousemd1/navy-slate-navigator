@@ -43,9 +43,9 @@ export const useMessageSend = () => {
       return data[0];
     },
     onSuccess: (newMessage) => {
-      // Update the query cache with the new message to make it appear immediately
+      // Force an immediate update to the query cache with the new message
       queryClient.setQueryData(['messages', user?.id], (oldData: any[] = []) => {
-        // Add the new message to the end of the array (newest messages at the bottom)
+        if (!oldData) return [newMessage];
         return [...oldData, newMessage];
       });
       

@@ -34,9 +34,13 @@ export const useImageUpload = () => {
       
       console.log('Uploading image:', filePath, 'File size:', file.size);
       
+      // Ensure the bucket exists before attempting to upload
       const { error: uploadError, data } = await supabase.storage
         .from('message_images')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
       
       if (uploadError) {
         console.error('Upload error details:', uploadError);

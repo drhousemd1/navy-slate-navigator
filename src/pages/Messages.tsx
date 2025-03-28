@@ -60,7 +60,7 @@ const Messages: React.FC = () => {
       if (!isLoading && partnerId) {
         refetch();
       }
-    }, 100);
+    }, 50);
     return () => clearTimeout(timer);
   }, [partnerId, isLoading, refetch]);
 
@@ -79,8 +79,11 @@ const Messages: React.FC = () => {
       
       await sendMessage(currentMessage, receiverId);
       
-      // Force a refetch to show the message immediately
-      refetch();
+      // Force multiple refetches with increasing delays to ensure message appears
+      setTimeout(() => refetch(), 10);
+      setTimeout(() => refetch(), 100);
+      setTimeout(() => refetch(), 300);
+      
     } catch (err) {
       console.error('Error sending message:', err);
       toast({
