@@ -36,7 +36,7 @@ const Messages: React.FC = () => {
       const intervalId = setInterval(() => {
         console.log('[Messages] Scheduled refetch running');
         refetch();
-      }, 3000); // Reduce from 5000ms to 3000ms
+      }, 3000);
       
       return () => clearInterval(intervalId);
     }
@@ -70,12 +70,12 @@ const Messages: React.FC = () => {
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
       
-      // More aggressive and frequent refetching
+      // Immediate refetch after sending
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
       await refetch();
       
-      // More frequent refetches with shorter delays
-      const delayedRefetches = [10, 50, 100, 200, 300, 500, 800, 1200, 2000];
+      // Multiple follow-up refetches
+      const delayedRefetches = [100, 300, 600, 1000];
       for (const delay of delayedRefetches) {
         setTimeout(async () => {
           console.log(`[Messages] handleSendMessage (${currentMessageCount}): Delayed refetch (${delay}ms)`);
@@ -111,14 +111,6 @@ const Messages: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (messages.length > 0) {
-      console.log(`[Messages] Currently have ${messages.length} messages`);
-      console.log(`[Messages] Last message ID: ${messages[messages.length-1].id}`);
-      console.log(`[Messages] Last message content: ${messages[messages.length-1].content}`);
-    }
-  }, [messages]);
-
   return (
     <AppLayout>
       <div className="h-[calc(100vh-4rem)] flex flex-col">
@@ -127,7 +119,7 @@ const Messages: React.FC = () => {
           <p className="text-gray-400 text-sm">Chat with your partner</p>
         </div>
         
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col pb-16 overflow-hidden">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-400">Loading messages...</p>
@@ -148,7 +140,7 @@ const Messages: React.FC = () => {
           )}
         </div>
         
-        <div className="pb-0">
+        <div className="fixed bottom-0 left-0 right-0">
           <MessageInput
             message={message}
             setMessage={setMessage}
