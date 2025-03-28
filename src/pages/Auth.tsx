@@ -262,7 +262,7 @@ const Auth: React.FC = () => {
               <p>Debug mode enabled</p>
               <p>Email: {email}</p>
               <p>Auth view: {authView}</p>
-              <p>API URL: {supabase.auth.url}</p>
+              <p>API URL: {import.meta.env.VITE_SUPABASE_URL || "Not set"}</p>
             </div>
           )}
           

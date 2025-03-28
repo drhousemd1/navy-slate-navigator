@@ -1,4 +1,7 @@
 
 project_id = "ronqvzihpffgowyscgfm"
 site_url = "https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app"
-redirect_urls = ["https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app/auth"]
+redirect_urls = [
+  "https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app/auth",
+  "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com/auth"
+]
