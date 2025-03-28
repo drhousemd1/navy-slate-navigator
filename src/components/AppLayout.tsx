@@ -3,7 +3,7 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Plus, Settings } from 'lucide-react';
+import { Plus, MessageSquare } from 'lucide-react';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -133,19 +133,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />
             
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Settings className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-navy border border-light-navy text-white z-50">
-                <DropdownMenuItem className="hover:bg-light-navy cursor-pointer" onClick={() => navigate('/encyclopedia')}>
-                  Encyclopedia
-                </DropdownMenuItem>
-                <DropdownMenuItem className="hover:bg-light-navy cursor-pointer" onClick={() => navigate('/profile')}>
-                  Edit Profile
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Messaging icon */}
+            <MessageSquare 
+              className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" 
+              onClick={() => console.log('Messaging clicked')}
+            />
           </div>
         </div>
       </div>
