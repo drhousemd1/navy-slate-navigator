@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,13 +26,11 @@ const Messages: React.FC = () => {
     partnerId
   } = useMessages();
   
-  // Force refetch on component mount and when partnerId changes
   useEffect(() => {
     if (!isLoading && partnerId) {
       console.log('[Messages] Component mounted with partnerId:', partnerId, ', forcing refetch');
       refetch();
       
-      // Schedule additional refetches to ensure data is fresh
       const intervalId = setInterval(() => {
         console.log('[Messages] Scheduled refetch running');
         refetch();
@@ -46,7 +43,6 @@ const Messages: React.FC = () => {
   const userNickname = getNickname();
   const userProfileImage = getProfileImage();
 
-  // Memoize handleSendMessage to prevent unnecessary recreations
   const handleSendMessage = useCallback(async () => {
     if (!user || (!message.trim() && !imageFile)) return;
     
@@ -56,7 +52,7 @@ const Messages: React.FC = () => {
       const currentMessageCount = messagesSentRef.current + 1;
       messagesSentRef.current = currentMessageCount;
       
-      setMessage(''); // Clear input immediately for better UX
+      setMessage('');
       
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Starting message send process`);
       let uploadedImageUrl = null;
@@ -64,7 +60,7 @@ const Messages: React.FC = () => {
       if (imageFile) {
         console.log(`[Messages] handleSendMessage (${currentMessageCount}): Uploading image`);
         uploadedImageUrl = await uploadImage(imageFile);
-        setImageFile(null); // Clear image after upload
+        setImageFile(null);
         console.log(`[Messages] handleSendMessage (${currentMessageCount}): Image uploaded:`, uploadedImageUrl);
       }
       
@@ -72,11 +68,9 @@ const Messages: React.FC = () => {
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
       
-      // After message is sent, do an immediate refetch
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
       await refetch();
       
-      // Follow up with additional progressive refetches
       const delayedRefetches = [50, 200, 500, 1000];
       for (const delay of delayedRefetches) {
         setTimeout(async () => {
@@ -113,7 +107,6 @@ const Messages: React.FC = () => {
     }
   };
 
-  // Debug log data validation
   useEffect(() => {
     if (messages.length > 0) {
       console.log(`[Messages] Currently have ${messages.length} messages`);
@@ -130,7 +123,7 @@ const Messages: React.FC = () => {
           <p className="text-gray-400 text-sm">Chat with your partner</p>
         </div>
         
-        <div className="flex-1 flex flex-col overflow-hidden h-[calc(100vh-10rem)]">
+        <div className="flex-1 flex flex-col overflow-hidden h-[calc(100vh-10rem)] pb-16">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-400">Loading messages...</p>
@@ -151,7 +144,6 @@ const Messages: React.FC = () => {
           )}
         </div>
         
-        {/* Reduced padding to 0 */}
         <div className="pb-0">
           <MessageInput
             message={message}
