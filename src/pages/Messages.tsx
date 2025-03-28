@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,16 +54,9 @@ const Messages: React.FC = () => {
         .eq('id', user.id)
         .single();
       
-      if (!data || !data.linked_partner_id) {
-        toast({
-          title: "No partner found",
-          description: "You need to link with a partner before sending messages.",
-          variant: "destructive"
-        });
-        return;
-      }
+      const receiverId = (data && data.linked_partner_id) ? data.linked_partner_id : user.id;
       
-      await sendMessage(message, data.linked_partner_id);
+      await sendMessage(message, receiverId);
       setMessage('');
     } catch (err) {
       console.error('Error sending message:', err);
@@ -136,7 +128,6 @@ const Messages: React.FC = () => {
           <p className="text-gray-400 text-sm">Chat with your partner</p>
         </div>
         
-        {/* Adjusted height to leave room for the input bar and ensure it doesn't go behind nav */}
         <div className="flex-1 flex flex-col overflow-hidden h-[calc(100vh-10rem)]">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
@@ -162,7 +153,6 @@ const Messages: React.FC = () => {
                 </div>
               )}
               
-              {/* Scrollable message area */}
               <ScrollArea className="flex-1 px-4">
                 <div className="space-y-4 pb-4">
                   {messages.length === 0 ? (
@@ -232,7 +222,6 @@ const Messages: React.FC = () => {
           )}
         </div>
         
-        {/* Fixed message input bar at the bottom - positioned ABOVE the navbar with higher z-index */}
         <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 z-50 border-t border-light-navy">
           {imageFile && (
             <div className="p-2 border border-light-navy rounded-md mb-2 bg-navy">

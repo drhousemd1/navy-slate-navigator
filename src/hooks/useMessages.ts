@@ -35,17 +35,20 @@ export const useMessages = (partnerId?: string) => {
       
       if (error) {
         console.error('Error getting partner ID:', error);
-        return undefined;
+        // For testing without a partner, return the user's own ID
+        return user.id;
       }
       
-      return data.linked_partner_id;
+      // If no partner is linked, use the user's own ID for testing
+      return data.linked_partner_id || user.id;
     } catch (err) {
       console.error('Error in getPartnerId:', err);
-      return undefined;
+      // Fallback to user's own ID for testing
+      return user.id;
     }
   };
 
-  // Fetch messages between the current user and their partner
+  // Fetch messages between the current user and their partner (or self for testing)
   const {
     data: messages = [],
     isLoading,
@@ -59,7 +62,7 @@ export const useMessages = (partnerId?: string) => {
         return [];
       }
 
-      // Fetch the most recent 25 messages
+      // Modified query to work with messages to self for testing
       const { data, error } = await supabase
         .from('messages')
         .select('*')
