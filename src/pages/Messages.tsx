@@ -50,8 +50,16 @@ const Messages: React.FC = () => {
     imageFile,
     setImageFile,
     isUploading,
-    loadingOlder
+    loadingOlder,
+    refetch
   } = useMessages();
+
+  // Force a refetch after the component mounts to ensure latest messages
+  useEffect(() => {
+    if (!isLoading && partnerId) {
+      refetch();
+    }
+  }, [partnerId, isLoading, refetch]);
 
   const userNickname = getNickname();
   const userProfileImage = getProfileImage();

@@ -44,7 +44,14 @@ export const useMessages = (partnerId?: string) => {
       setImageFile(null);
     }
     
-    return sendMessageBase(content, receiverId, imageUrl);
+    const result = await sendMessageBase(content, receiverId, imageUrl);
+    
+    // Force a refetch after sending a message to update the UI
+    setTimeout(() => {
+      refetch();
+    }, 300);
+    
+    return result;
   };
 
   return {
@@ -56,6 +63,7 @@ export const useMessages = (partnerId?: string) => {
     imageFile,
     setImageFile,
     isUploading,
-    loadingOlder
+    loadingOlder,
+    refetch
   };
 };

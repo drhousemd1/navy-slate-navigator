@@ -25,17 +25,24 @@ const MessageList: React.FC<MessageListProps> = ({
   const messageEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when messages change
+  // Improved auto-scroll behavior
   useEffect(() => {
     if (messages.length > 0) {
+      // Use a timeout to ensure DOM is updated before scrolling
       setTimeout(() => {
-        messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+        // Make sure the messageEndRef exists before trying to scroll to it
+        if (messageEndRef.current) {
+          messageEndRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'end'
+          });
+        }
+      }, 200); // Slightly longer timeout to ensure content is rendered
     }
-  }, [messages]);
+  }, [messages]); // Run when messages change
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
       {messages.length > 0 && (
         <div className="py-2 flex justify-center">
           <Button
@@ -50,7 +57,7 @@ const MessageList: React.FC<MessageListProps> = ({
         </div>
       )}
       
-      <ScrollArea className="flex-1 px-4" ref={scrollAreaRef}>
+      <ScrollArea className="flex-1 px-4 overflow-y-auto" ref={scrollAreaRef}>
         <div className="space-y-4 pb-4">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">
@@ -71,7 +78,8 @@ const MessageList: React.FC<MessageListProps> = ({
               );
             })
           )}
-          <div ref={messageEndRef} />
+          {/* This div is the target for scrolling to the bottom */}
+          <div ref={messageEndRef} style={{ height: '1px', width: '100%' }} />
         </div>
       </ScrollArea>
     </div>
