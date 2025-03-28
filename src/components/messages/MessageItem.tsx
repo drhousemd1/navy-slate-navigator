@@ -24,11 +24,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
   
   // Debug log for rendering
   useEffect(() => {
-    console.log(`[MessageItem] Component mounted for message: ${message.id}, content: ${message.content?.substring(0, 20)}`);
+    console.log(`[MessageItem] Component mounted for message: ${message.id}, content: ${message.content?.substring(0, 20)}, has image: ${!!message.image_url}`);
     return () => {
       console.log(`[MessageItem] Component unmounted for message: ${message.id}`);
     };
-  }, [message.id, message.content]);
+  }, [message.id, message.content, message.image_url]);
   
   // Debug log for DOM presence
   useEffect(() => {
@@ -57,11 +57,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
   };
 
-  // Check if the message has actual content to display
-  if (!message.content && !message.image_url) {
-    console.log('[MessageItem] ⚠️ Message has no content or image:', message.id);
-  }
-
   // Handle image load with better error handling
   const handleImageLoad = () => {
     console.log(`[MessageItem] Image loaded successfully for message: ${message.id}`);
@@ -73,6 +68,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const handleImageError = () => {
     console.error(`[MessageItem] Failed to load image for message: ${message.id}, URL: ${message.image_url}`);
   };
+
+  // Check if message should be rendered - ALWAYS render if there's image or content
+  const hasContent = message.content?.trim() !== '';
+  const hasImage = !!message.image_url;
+  
+  // Log when a message has neither content nor image
+  if (!hasContent && !hasImage) {
+    console.log('[MessageItem] ⚠️ Message has no content or image:', message.id);
+  }
 
   return (
     <div className="flex flex-col my-2" ref={messageRef}>
@@ -114,12 +118,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 {isSentByMe ? userNickname : "Partner"}
               </span>
               
-              {message.content && message.content.trim() !== '' && (
+              {hasContent && (
                 <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
               )}
               
-              {message.image_url && (
-                <div className="mt-1">
+              {hasImage && (
+                <div className={`${hasContent ? 'mt-1' : ''}`}>
                   <img
                     ref={imageRef}
                     src={message.image_url}

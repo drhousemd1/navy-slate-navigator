@@ -11,6 +11,7 @@ const Messages: React.FC = () => {
   const { user, getNickname, getProfileImage } = useAuth();
   const [message, setMessage] = useState('');
   const messagesSentRef = useRef(0);
+  const messageListRef = useRef<{ scrollToBottom: (behavior: ScrollBehavior) => void }>(null);
   
   const {
     messages,
@@ -57,6 +58,7 @@ const Messages: React.FC = () => {
       
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Starting message send process`);
       let uploadedImageUrl = null;
+      const hadImage = !!imageFile;
       
       if (imageFile) {
         console.log(`[Messages] handleSendMessage (${currentMessageCount}): Uploading image`);
@@ -69,9 +71,19 @@ const Messages: React.FC = () => {
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
       
-      // More aggressive refetching to ensure new messages appear
+      // Initial refetch to ensure new messages appear
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
       await refetch();
+      
+      // If message included an image, add a short delay then call scrollToBottom
+      if (hadImage) {
+        setTimeout(() => {
+          if (messageListRef.current) {
+            console.log(`[Messages] handleSendMessage (${currentMessageCount}): Forced scroll after image message`);
+            messageListRef.current.scrollToBottom('auto');
+          }
+        }, 300);
+      }
       
       // Multiple delayed refetches to ensure message appears
       const delayedRefetches = [50, 150, 300, 500, 1000, 2000];
@@ -137,6 +149,7 @@ const Messages: React.FC = () => {
             </div>
           ) : (
             <MessageList
+              ref={messageListRef}
               messages={messages}
               loadingOlder={loadingOlder}
               handleLoadOlderMessages={handleLoadOlderMessages}

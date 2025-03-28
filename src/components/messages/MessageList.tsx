@@ -1,5 +1,5 @@
 
-import React, { useRef, useLayoutEffect } from 'react';
+import React, { useRef, useLayoutEffect, useImperativeHandle, forwardRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MessageItem from './MessageItem';
 import { Button } from '@/components/ui/button';
@@ -14,16 +14,30 @@ interface MessageListProps {
   userId: string | undefined;
 }
 
-const MessageList: React.FC<MessageListProps> = ({
+const MessageList = forwardRef<
+  { scrollToBottom: (behavior: ScrollBehavior) => void },
+  MessageListProps
+>(({
   messages,
   loadingOlder,
   handleLoadOlderMessages,
   userNickname,
   userProfileImage,
   userId
-}) => {
+}, ref) => {
   const messageEndRef = useRef<HTMLDivElement>(null);
 
+  // Expose the scrollToBottom method to parent components
+  useImperativeHandle(ref, () => ({
+    scrollToBottom: (behavior: ScrollBehavior = 'auto') => {
+      if (messageEndRef.current) {
+        console.log('[MessageList] Manual scrollToBottom called with behavior:', behavior);
+        messageEndRef.current.scrollIntoView({ behavior, block: 'end' });
+      }
+    }
+  }));
+
+  // Scroll to bottom when messages load or change
   useLayoutEffect(() => {
     if (messageEndRef.current) {
       messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
@@ -63,9 +77,12 @@ const MessageList: React.FC<MessageListProps> = ({
                   userNickname={userNickname}
                   userProfileImage={userProfileImage}
                   onImageLoad={() => {
-                    if (messageEndRef.current) {
-                      messageEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                    }
+                    // Add a short timeout to ensure layout settles first
+                    setTimeout(() => {
+                      if (messageEndRef.current) {
+                        messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+                      }
+                    }, 100);
                   }}
                 />
               );
@@ -76,6 +93,8 @@ const MessageList: React.FC<MessageListProps> = ({
       </ScrollArea>
     </div>
   );
-};
+});
+
+MessageList.displayName = 'MessageList';
 
 export default MessageList;
