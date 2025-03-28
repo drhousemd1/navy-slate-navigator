@@ -5,13 +5,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Message } from '../messages/types';
 
-export const useMessagesFetch = () => {
+export const useMessagesFetch = (partnerId?: string) => {
   const { user } = useAuth();
   const [oldestMessageDate, setOldestMessageDate] = useState<string | null>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
 
   // Get the current user's partner ID if not provided
   const getPartnerId = async (): Promise<string | undefined> => {
+    if (partnerId) return partnerId;
     if (!user) return undefined;
     
     try {
@@ -44,7 +45,7 @@ export const useMessagesFetch = () => {
     error,
     refetch
   } = useQuery({
-    queryKey: ['messages', user?.id],
+    queryKey: ['messages', user?.id, partnerId],
     queryFn: async () => {
       console.log('[QUERY] Refetching messages...');
       const partnerIdValue = await getPartnerId();

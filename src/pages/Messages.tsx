@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,35 +10,6 @@ import MessageInput from '@/components/messages/MessageInput';
 const Messages: React.FC = () => {
   const { user, getNickname, getProfileImage } = useAuth();
   const [message, setMessage] = useState('');
-  const [partnerId, setPartnerId] = useState<string | undefined>(undefined);
-  const partnerIdRef = useRef<string | undefined>(undefined);
-  
-  // Fetch partner ID on component mount
-  useEffect(() => {
-    const fetchPartnerId = async () => {
-      if (!user) return;
-      
-      try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('linked_partner_id')
-          .eq('id', user.id)
-          .single();
-        
-        // For testing without a partner, use the user's own ID
-        const newPartnerId = data?.linked_partner_id || user.id;
-        setPartnerId(newPartnerId);
-        partnerIdRef.current = newPartnerId;
-      } catch (err) {
-        console.error('Error fetching partner ID:', err);
-        // Fallback to user's own ID for testing
-        setPartnerId(user.id);
-        partnerIdRef.current = user.id;
-      }
-    };
-    
-    fetchPartnerId();
-  }, [user]);
   
   const {
     messages,
@@ -52,13 +22,13 @@ const Messages: React.FC = () => {
     isUploading,
     loadingOlder,
     refetch,
-    uploadImage
+    uploadImage,
+    partnerId
   } = useMessages();
 
-  // Force a refetch after the component mounts to ensure latest messages
   useEffect(() => {
     if (!isLoading && partnerId) {
-      console.log('Component mounted with partnerId, forcing refetch');
+      console.log('Component mounted with partnerId:', partnerId, ', forcing refetch');
       refetch();
     }
   }, [partnerId, isLoading, refetch]);
@@ -77,7 +47,6 @@ const Messages: React.FC = () => {
       console.log('handleSendMessage: Starting message send process');
       let uploadedImageUrl = null;
       
-      // Upload the image if one is selected
       if (imageFile) {
         console.log('handleSendMessage: Uploading image');
         uploadedImageUrl = await uploadImage(imageFile);
@@ -85,12 +54,10 @@ const Messages: React.FC = () => {
         console.log('handleSendMessage: Image uploaded:', uploadedImageUrl);
       }
       
-      // Send the message with the image URL if present
       console.log('handleSendMessage: Sending message with content:', currentMessage);
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
       console.log('handleSendMessage: Message sent successfully');
       
-      // Force immediate refetch instead of using timeout - this ensures messages are immediately visible
       await refetch();
     } catch (err) {
       console.error('Error sending message:', err);

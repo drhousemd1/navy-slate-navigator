@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessagesFetch } from './messages/useMessagesFetch';
@@ -9,8 +9,35 @@ import { useRealtimeMessages } from './messages/useRealtimeMessages';
 
 export type { Message } from './messages/types';
 
-export const useMessages = (partnerId?: string) => {
+export const useMessages = (initialPartnerId?: string) => {
   const { user } = useAuth();
+  const [partnerId, setPartnerId] = useState<string | undefined>(initialPartnerId);
+  
+  // Fetch partner ID if not provided
+  useEffect(() => {
+    const fetchPartnerId = async () => {
+      if (!user || partnerId) return;
+      
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('linked_partner_id')
+          .eq('id', user.id)
+          .single();
+        
+        // For testing without a partner, use the user's own ID
+        const newPartnerId = data?.linked_partner_id || user.id;
+        console.log('Setting partnerId to:', newPartnerId);
+        setPartnerId(newPartnerId);
+      } catch (err) {
+        console.error('Error fetching partner ID:', err);
+        // Fallback to user's own ID for testing
+        setPartnerId(user.id);
+      }
+    };
+    
+    fetchPartnerId();
+  }, [user, partnerId]);
   
   // Import hook functionalities
   const { 
@@ -19,9 +46,8 @@ export const useMessages = (partnerId?: string) => {
     error, 
     loadOlderMessages,
     loadingOlder,
-    getPartnerId,
     refetch
-  } = useMessagesFetch();
+  } = useMessagesFetch(partnerId);
   
   const { 
     imageFile, 
@@ -32,8 +58,13 @@ export const useMessages = (partnerId?: string) => {
   
   const { sendMessage: sendMessageBase } = useMessageSend();
   
-  // Set up realtime subscription
-  useRealtimeMessages(refetch, getPartnerId);
+  // Set up realtime subscription with the stable partnerId
+  useRealtimeMessages(refetch, partnerId);
+
+  // Get partner ID for use in messages page (to avoid duplicate fetching)
+  const getPartnerId = async (): Promise<string | undefined> => {
+    return partnerId;
+  };
 
   // Combined send message function that handles image upload if needed
   const sendMessage = async (content: string, receiverId: string, imageUrl: string | null = null) => {
@@ -41,7 +72,7 @@ export const useMessages = (partnerId?: string) => {
     const result = await sendMessageBase(content, receiverId, imageUrl);
     
     // Force a refetch to ensure the UI is updated with the latest message
-    refetch();
+    await refetch();
     
     return result;
   };
@@ -57,6 +88,8 @@ export const useMessages = (partnerId?: string) => {
     isUploading,
     loadingOlder,
     refetch,
-    uploadImage // Export the uploadImage function
+    uploadImage,
+    partnerId,  // Expose the partnerId directly
+    getPartnerId  // Keep for backward compatibility
   };
 };
