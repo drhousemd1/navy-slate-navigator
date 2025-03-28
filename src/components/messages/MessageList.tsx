@@ -1,5 +1,5 @@
 
-import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
+import React, { useRef, useLayoutEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Message } from '@/hooks/useMessages';
@@ -27,7 +27,7 @@ const MessageList: React.FC<MessageListProps> = ({
   
   console.log('[MessageList] Rendering with', messages.length, 'messages');
   
-  // Scroll to bottom when messages load or change
+  // Scroll to bottom when messages load or change - single clean handler
   useLayoutEffect(() => {
     if (messageEndRef.current) {
       messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
@@ -69,7 +69,7 @@ const MessageList: React.FC<MessageListProps> = ({
           }
         }}
       >
-        <div className="space-y-1 pb-[126px]">
+        <div className="space-y-1">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className="text-gray-400">No messages yet. Send the first one!</p>
@@ -90,7 +90,11 @@ const MessageList: React.FC<MessageListProps> = ({
               );
             })
           )}
-          <div ref={messageEndRef} className="h-1" />
+          <div
+            ref={messageEndRef}
+            className="h-1 scroll-mb-28"
+            style={{ margin: 0, padding: 0 }}
+          />
         </div>
       </ScrollArea>
     </div>
