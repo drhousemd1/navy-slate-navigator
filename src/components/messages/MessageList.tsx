@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -140,6 +139,9 @@ const MessageList: React.FC<MessageListProps> = ({
             </div>
           ) : (
             messages.map((msg: Message) => {
+              // Log each message key during the mapping
+              console.log('[MessageList] Rendering message with key:', msg.id);
+              
               const isSentByMe = msg.sender_id === userId;
               
               return (
