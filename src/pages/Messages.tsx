@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { useMessages } from '@/hooks/useMessages';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,10 +10,7 @@ import MessageInput from '@/components/messages/MessageInput';
 
 const Messages: React.FC = () => {
   const { user, getNickname, getProfileImage } = useAuth();
-  const navigate = useNavigate();
   const [message, setMessage] = useState('');
-  const [oldestMessageDate, setOldestMessageDate] = useState<string | null>(null);
-  const [loadingOlder, setLoadingOlder] = useState(false);
   
   const {
     messages,
@@ -24,17 +20,12 @@ const Messages: React.FC = () => {
     loadOlderMessages,
     imageFile,
     setImageFile,
-    isUploading
+    isUploading,
+    loadingOlder
   } = useMessages();
 
   const userNickname = getNickname();
   const userProfileImage = getProfileImage();
-
-  useEffect(() => {
-    if (messages.length > 0 && !oldestMessageDate) {
-      setOldestMessageDate(messages[0].created_at);
-    }
-  }, [messages]);
 
   const handleSendMessage = async () => {
     if (!user || (!message.trim() && !imageFile)) return;
@@ -61,14 +52,13 @@ const Messages: React.FC = () => {
   };
 
   const handleLoadOlderMessages = async () => {
-    if (!oldestMessageDate || loadingOlder) return;
+    if (messages.length === 0 || loadingOlder) return;
     
-    setLoadingOlder(true);
     try {
-      const olderMessages = await loadOlderMessages(oldestMessageDate);
-      if (olderMessages.length > 0) {
-        setOldestMessageDate(olderMessages[0].created_at);
-      } else {
+      const oldestMessage = messages[0];
+      const olderMessages = await loadOlderMessages(oldestMessage.created_at);
+      
+      if (olderMessages.length === 0) {
         toast({
           title: "No more messages",
           description: "You've reached the beginning of your conversation.",
@@ -76,8 +66,6 @@ const Messages: React.FC = () => {
       }
     } catch (err) {
       console.error('Error loading older messages:', err);
-    } finally {
-      setLoadingOlder(false);
     }
   };
 
