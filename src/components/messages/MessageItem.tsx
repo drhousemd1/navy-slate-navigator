@@ -19,8 +19,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
   userProfileImage,
   onImageLoad
 }) => {
-  // Log message data for debugging
-  console.log('[MessageItem] rendering:', {
+  // Add more detailed message logging
+  console.log('[MessageItem] Rendering', {
     id: message.id,
     content: message.content,
     image_url: message.image_url
