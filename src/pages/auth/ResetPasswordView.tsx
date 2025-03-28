@@ -19,21 +19,25 @@ export const ResetPasswordView: React.FC = () => {
   // Check if we have a valid access token in the URL
   useEffect(() => {
     const checkAccessToken = () => {
-      // The URL will contain a hash fragment with the access token
+      // Check for token in URL fragment
       const hashParams = new URLSearchParams(location.hash.substring(1));
       const token = hashParams.get('access_token');
       
-      console.log('Access token from URL:', token ? '[PRESENT]' : '[NOT PRESENT]');
       console.log('URL hash:', location.hash);
+      console.log('Access token present:', token ? 'Yes' : 'No');
       
       if (!token) {
         setError('Invalid or missing reset token. Please request a new password reset link.');
-      } else {
-        setAccessToken(token);
+        return;
       }
+      
+      // Valid token found
+      setAccessToken(token);
+      console.log('Access token successfully extracted from URL');
     };
     
-    checkAccessToken();
+    // Delay the check slightly to ensure URL is fully processed
+    setTimeout(checkAccessToken, 100);
   }, [location]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -41,6 +45,7 @@ export const ResetPasswordView: React.FC = () => {
     setLoading(true);
     setError(null);
     
+    // Validate password
     if (!newPassword) {
       setError('Please enter a new password.');
       setLoading(false);
@@ -64,7 +69,7 @@ export const ResetPasswordView: React.FC = () => {
         throw new Error('Invalid or missing reset token.');
       }
       
-      console.log('Attempting to update password...');
+      console.log('Attempting to update password with valid token...');
       
       // Update the user's password using the access token
       const { error } = await supabase.auth.updateUser({
@@ -76,7 +81,7 @@ export const ResetPasswordView: React.FC = () => {
         throw error;
       }
       
-      console.log('Password update successful');
+      console.log('Password updated successfully');
       setSuccess(true);
       toast({
         title: 'Password reset successful',

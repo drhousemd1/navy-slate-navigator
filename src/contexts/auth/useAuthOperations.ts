@@ -78,33 +78,31 @@ export function useAuthOperations() {
   // Reset password
   const resetPassword = async (email: string) => {
     try {
-      // Get ALL possible redirect URLs based on current environment
-      const currentOrigin = window.location.origin;
-      
-      // Hardcoded production URL as fallback
+      // For production environments, hardcode the production URL
       const productionUrl = "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com";
+      const previewUrl = "https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app";
       
-      // Determine which URL to use
-      // If we're in preview environment, use the preview URL
-      // If we're in production, use the production URL
-      // If we're in development, use the current origin
-      let siteUrl = currentOrigin;
-      if (currentOrigin.includes('lovable.app')) {
-        // We're in preview
-        siteUrl = currentOrigin;
-      } else if (currentOrigin.includes('localhost')) {
-        // We're in development, but use production URL to avoid localhost issues
-        siteUrl = productionUrl;
+      // Determine the correct redirect URL based on the current environment
+      const currentOrigin = window.location.origin;
+      console.log('Current origin for password reset:', currentOrigin);
+      
+      let redirectUrl;
+      if (currentOrigin.includes('localhost')) {
+        // In local development, use the production URL to avoid CORS issues
+        redirectUrl = `${productionUrl}/reset-password`;
+        console.log('Using production URL for localhost reset:', redirectUrl);
+      } else if (currentOrigin.includes('lovable.app')) {
+        // In preview environment
+        redirectUrl = `${previewUrl}/reset-password`;
+        console.log('Using preview URL for reset:', redirectUrl);
       } else {
-        // We're in production
-        siteUrl = productionUrl;
+        // In production environment
+        redirectUrl = `${productionUrl}/reset-password`;
+        console.log('Using production URL for reset:', redirectUrl);
       }
-      
-      const redirectUrl = `${siteUrl}/reset-password`;
       
       console.log('Sending password reset to:', email);
       console.log('With redirect URL:', redirectUrl);
-      console.log('Current origin:', currentOrigin);
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
