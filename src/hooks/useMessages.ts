@@ -49,20 +49,19 @@ export const useMessages = (partnerId?: string) => {
         } else {
           console.log('Image uploaded successfully:', imageUrl);
         }
-        setImageFile(null);
       }
       
       // Send the message with the image URL if available
       const result = await sendMessageBase(content, receiverId, imageUrl);
       
-      // Force a refetch immediately after sending
-      refetch();
+      // Clear the image file AFTER message is sent successfully
+      if (imageFile) {
+        setImageFile(null);
+      }
       
       return result;
     } catch (error) {
       console.error('Error in sendMessage:', error);
-      // Ensure we still clean up the image file on error
-      setImageFile(null);
       throw error;
     }
   };

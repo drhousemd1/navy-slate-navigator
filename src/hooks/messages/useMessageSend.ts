@@ -40,13 +40,16 @@ export const useMessageSend = () => {
         throw error;
       }
       
-      // Immediately invalidate queries to force a refresh
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
-      
       return data[0];
     },
-    onSuccess: () => {
-      // Additional invalidation for good measure
+    onSuccess: (newMessage) => {
+      // Update the query cache with the new message to make it appear immediately
+      queryClient.setQueryData(['messages', user?.id], (oldData: any[] = []) => {
+        // Add the new message to the end of the array (newest messages at the bottom)
+        return [...oldData, newMessage];
+      });
+      
+      // Also invalidate the query to ensure latest data is fetched
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
     onError: (error: any) => {
@@ -60,10 +63,7 @@ export const useMessageSend = () => {
 
   // Send a message function
   const sendMessage = async (content: string, receiverId: string, imageUrl: string | null = null) => {
-    const result = await sendMessageMutation.mutateAsync({ content, receiverId, imageUrl });
-    // Force an immediate refetch after sending
-    queryClient.invalidateQueries({ queryKey: ['messages'] });
-    return result;
+    return sendMessageMutation.mutateAsync({ content, receiverId, imageUrl });
   };
 
   return {
