@@ -25,60 +25,54 @@ const MessageList: React.FC<MessageListProps> = ({
   const messageEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [prevMessageCount, setPrevMessageCount] = useState(0);
-  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
-  
-  // Check if messages contain images
-  const hasImages = messages.some(msg => msg.image_url);
   
   // Debug log for messages updates
   useEffect(() => {
     console.log('[MessageList] Messages updated, count:', messages.length);
+    if (messages.length > 0) {
+      console.log('[MessageList] Last message:', messages[messages.length - 1]);
+    }
   }, [messages]);
 
-  // Detect new messages and trigger scroll
+  // Detect new messages and scroll to bottom
   useEffect(() => {
     // If message count increased, it means a new message was added
     if (messages.length > prevMessageCount) {
-      console.log('[MessageList] New message detected, will scroll to bottom');
-      setShouldScrollToBottom(true);
+      console.log('[MessageList] New message detected, scrolling to bottom');
+      
+      // Use setTimeout to ensure scrolling happens after render
+      setTimeout(() => {
+        if (messageEndRef.current) {
+          messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
+          console.log('[MessageList] Scrolled to bottom after new message');
+        }
+      }, 100);
     }
     
     // Always update the previous count
     setPrevMessageCount(messages.length);
   }, [messages.length, prevMessageCount]);
 
-  // Handle scrolling to bottom when new messages arrive
+  // Force scroll to bottom on initial load
   useEffect(() => {
-    if (shouldScrollToBottom) {
-      console.log('[MessageList] Executing scroll to bottom');
+    if (messages.length > 0) {
+      console.log('[MessageList] Initial load, forcing scroll to bottom');
       
-      // Use requestAnimationFrame to ensure scrolling happens after render
-      requestAnimationFrame(() => {
-        if (messageEndRef.current) {
-          messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          console.log('[MessageList] Scrolled to bottom');
-        }
-      });
-      
-      // Reset the flag
-      setShouldScrollToBottom(false);
+      // Use both immediate and delayed scrolling for reliability
+      if (messageEndRef.current) {
+        // Immediate scroll without animation
+        messageEndRef.current.scrollIntoView({ behavior: 'auto' });
+        
+        // Also try after a delay to catch any rendering delays
+        setTimeout(() => {
+          if (messageEndRef.current) {
+            messageEndRef.current.scrollIntoView({ behavior: 'auto' });
+            console.log('[MessageList] Forced scroll after delay');
+          }
+        }, 300);
+      }
     }
-  }, [shouldScrollToBottom]);
-
-  // Additional scroll handling for images after they load
-  useEffect(() => {
-    if (hasImages && messages.length > 0) {
-      console.log('[MessageList] Images detected, setting additional scroll timeout');
-      const timer = setTimeout(() => {
-        if (messageEndRef.current) {
-          messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          console.log('[MessageList] Scrolled after image delay');
-        }
-      }, 500); // Give images time to load
-      
-      return () => clearTimeout(timer);
-    }
-  }, [hasImages, messages]);
+  }, []);
 
   // Handle image load events to trigger re-scrolling
   const handleImageLoaded = () => {
@@ -91,14 +85,6 @@ const MessageList: React.FC<MessageListProps> = ({
       }
     }, 100);
   };
-
-  // Handle initial scroll (when component mounts or messages first load)
-  useEffect(() => {
-    if (messages.length > 0 && messageEndRef.current) {
-      console.log('[MessageList] Initial loading, scrolling to bottom');
-      messageEndRef.current.scrollIntoView({ behavior: 'auto' });
-    }
-  }, []);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -124,6 +110,7 @@ const MessageList: React.FC<MessageListProps> = ({
             </div>
           ) : (
             messages.map((msg: Message) => {
+              console.log('[MessageList] Rendering message with ID:', msg.id);
               const isSentByMe = msg.sender_id === userId;
               
               return (
@@ -138,8 +125,12 @@ const MessageList: React.FC<MessageListProps> = ({
               );
             })
           )}
-          {/* This div is the target for scrolling to the bottom */}
-          <div ref={messageEndRef} style={{ height: '1px', width: '100%' }} />
+          {/* This invisible div serves as the target for scrolling to the bottom */}
+          <div 
+            ref={messageEndRef} 
+            style={{ height: '1px', width: '100%' }} 
+            id="message-end"
+          />
         </div>
       </ScrollArea>
     </div>

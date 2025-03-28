@@ -26,8 +26,6 @@ const Messages: React.FC = () => {
     partnerId
   } = useMessages();
   
-  // Removed the duplicate useRealtimeMessages call since it's already in useMessages
-
   useEffect(() => {
     if (!isLoading && partnerId) {
       console.log('Component mounted with partnerId:', partnerId, ', forcing refetch');
@@ -57,10 +55,17 @@ const Messages: React.FC = () => {
       }
       
       console.log('handleSendMessage: Sending message with content:', currentMessage);
-      await sendMessage(currentMessage, receiverId, uploadedImageUrl);
-      console.log('handleSendMessage: Message sent successfully');
+      const sentMessage = await sendMessage(currentMessage, receiverId, uploadedImageUrl);
+      console.log('handleSendMessage: Message sent successfully:', sentMessage);
       
+      // Force a refetch immediately to update the UI
       await refetch();
+      
+      // Force another refetch after a short delay as a backup
+      setTimeout(() => {
+        console.log('handleSendMessage: Executing delayed refetch');
+        refetch();
+      }, 500);
     } catch (err) {
       console.error('Error sending message:', err);
       toast({
