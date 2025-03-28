@@ -9,10 +9,10 @@ const Index: React.FC = () => {
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="text-center p-6 animate-slide-up flex flex-col items-center">
           {/* App Logo */}
-          <div className="mb-6 w-full max-w-[240px] sm:max-w-[320px]">
+          <div className="mb-6 w-full max-w-[320px]">
             <img 
               src={APP_CONFIG.logoUrl} 
-              alt="App Logo" 
+              alt="TaskMaster Logo" 
               className="w-full h-auto object-contain"
               onError={(e) => {
                 console.error('Failed to load logo image');
