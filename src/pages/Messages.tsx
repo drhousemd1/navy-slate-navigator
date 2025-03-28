@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -168,8 +169,8 @@ const Messages: React.FC = () => {
                           key={msg.id} 
                           className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}
                         >
-                          <div className={`flex ${isSentByMe ? 'flex-row-reverse' : 'flex-row'} items-end max-w-[80%]`}>
-                            <Avatar className="h-8 w-8 border border-light-navy">
+                          <div className={`flex ${isSentByMe ? 'flex-row-reverse' : 'flex-row'} items-start max-w-[80%] relative`}>
+                            <Avatar className={`h-8 w-8 border border-light-navy ${isSentByMe ? '-mr-3 z-10' : '-ml-3 z-10'}`}>
                               <AvatarImage 
                                 src={isSentByMe ? userProfileImage : undefined} 
                                 alt={isSentByMe ? userNickname : "Partner"}
@@ -182,8 +183,8 @@ const Messages: React.FC = () => {
                             <div 
                               className={`mx-2 p-3 rounded-lg ${
                                 isSentByMe
-                                  ? 'bg-cyan-800 text-white rounded-br-none'
-                                  : 'bg-navy border border-light-navy text-white rounded-bl-none'
+                                  ? 'bg-cyan-800 text-white rounded-tr-none'
+                                  : 'bg-navy border border-light-navy text-white rounded-tl-none'
                               }`}
                             >
                               <div className="flex flex-col">
