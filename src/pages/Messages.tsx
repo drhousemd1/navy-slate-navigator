@@ -151,8 +151,8 @@ const Messages: React.FC = () => {
           )}
         </div>
         
-        {/* Added pb-20 to create more space for the fixed input */}
-        <div className="pb-20">
+        {/* Reduced padding to 0 */}
+        <div className="pb-0">
           <MessageInput
             message={message}
             setMessage={setMessage}
