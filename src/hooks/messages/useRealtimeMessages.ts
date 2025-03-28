@@ -36,7 +36,7 @@ export const useRealtimeMessages = (refetch: () => void, getPartnerId: () => Pro
           supabase.removeChannel(channelSubscription);
         }
         
-        // Subscribe to message inserts
+        // Subscribe to message inserts with immediate refetch for both incoming and outgoing messages
         channelSubscription = supabase
           .channel(channelName)
           .on('postgres_changes', {
@@ -46,7 +46,8 @@ export const useRealtimeMessages = (refetch: () => void, getPartnerId: () => Pro
             filter: `sender_id=eq.${user.id},receiver_id=eq.${partnerId}`,
           }, (payload) => {
             console.log('Realtime: caught outgoing message INSERT:', payload);
-            handleNewMessage();
+            // Ensure we refetch immediately after catching an outgoing message
+            setTimeout(handleNewMessage, 100);
           })
           .on('postgres_changes', {
             event: 'INSERT',
@@ -55,7 +56,8 @@ export const useRealtimeMessages = (refetch: () => void, getPartnerId: () => Pro
             filter: `sender_id=eq.${partnerId},receiver_id=eq.${user.id}`,
           }, (payload) => {
             console.log('Realtime: caught incoming message INSERT:', payload);
-            handleNewMessage();
+            // Ensure we refetch immediately after catching an incoming message
+            setTimeout(handleNewMessage, 100);
           })
           .subscribe((status) => {
             console.log('Realtime subscription status:', status);

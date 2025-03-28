@@ -90,11 +90,8 @@ const Messages: React.FC = () => {
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
       console.log('handleSendMessage: Message sent successfully');
       
-      // Force refresh to ensure message appears
-      console.log('handleSendMessage: Forcing refetch after send');
-      setTimeout(() => {
-        refetch();
-      }, 100);
+      // Force immediate refetch instead of using timeout - this ensures messages are immediately visible
+      await refetch();
     } catch (err) {
       console.error('Error sending message:', err);
       toast({
