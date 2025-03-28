@@ -8,6 +8,7 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
   const { user } = useAuth();
   const { archiveOldMessages } = useMessageArchive();
   const hasSubscribed = useRef(false);
+  const subscriptionRef = useRef<any>(null);
 
   // Create a stable callback for refetching
   const handleNewMessage = useCallback(() => {
@@ -25,6 +26,13 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
     
     // Create unique channel name to prevent conflicts
     const channelName = `messages-${user.id}-${partnerId}`;
+    
+    // First clean up any existing subscription
+    if (subscriptionRef.current) {
+      console.log('❌ Cleaning up previous subscription before creating new one');
+      supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
+    }
     
     // Subscribe to message inserts with immediate refetch for both incoming and outgoing messages
     const channelSubscription = supabase
@@ -56,11 +64,17 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
         }
       });
     
+    // Store the subscription reference
+    subscriptionRef.current = channelSubscription;
+    
     // Cleanup function
     return () => {
-      console.log('❌ Cleaning up realtime subscription');
-      hasSubscribed.current = false;
-      supabase.removeChannel(channelSubscription);
+      if (subscriptionRef.current) {
+        console.log('❌ Cleaning up realtime subscription');
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+        hasSubscribed.current = false;
+      }
     };
   }, [user?.id, partnerId, handleNewMessage, archiveOldMessages]);
 

@@ -26,6 +26,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [hasImages, setHasImages] = useState(false);
   const [prevMessageCount, setPrevMessageCount] = useState(0);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
   
   // Add logging to track message updates
   useEffect(() => {
@@ -38,36 +39,57 @@ const MessageList: React.FC<MessageListProps> = ({
     setHasImages(containsImages);
   }, [messages]);
 
-  // Track message count changes to detect new messages
+  // Improved scroll handling for new messages
   useEffect(() => {
     // If message count increased, it means a new message was added
     const hasNewMessage = messages.length > prevMessageCount;
     setPrevMessageCount(messages.length);
     
     if (hasNewMessage || messages.length === 1) {
-      // Force immediate scroll for new messages
-      if (messageEndRef.current) {
-        messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
-      }
+      console.log('[MessageList] New message detected, scrolling to bottom');
+      setShouldScrollToBottom(true);
     }
   }, [messages, prevMessageCount]);
+
+  // Separate effect for scrolling to ensure it happens after render
+  useEffect(() => {
+    if (shouldScrollToBottom) {
+      console.log('[MessageList] Executing scroll to bottom');
+      
+      // Use requestAnimationFrame to ensure scrolling happens after render
+      requestAnimationFrame(() => {
+        if (messageEndRef.current) {
+          messageEndRef.current.scrollIntoView({ behavior: 'auto' });
+          console.log('[MessageList] Scrolled to bottom');
+        }
+      });
+      
+      setShouldScrollToBottom(false);
+    }
+  }, [shouldScrollToBottom, messages]);
 
   // Additional scroll to bottom for images after they load
   useEffect(() => {
     if (hasImages && messages.length > 0) {
+      console.log('[MessageList] Has images, will scroll after timeout');
       const timer = setTimeout(() => {
         if (messageEndRef.current) {
-          messageEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
+          console.log('[MessageList] Scrolled after image load timeout');
         }
-      }, 300);
+      }, 500); // Increased from 300ms to 500ms to give more time for images to load
       return () => clearTimeout(timer);
     }
   }, [hasImages, messages]);
 
   // Handle image load events to trigger re-scrolling
   const handleImageLoaded = () => {
+    console.log('[MessageList] Image loaded, scrolling');
     if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      // Use requestAnimationFrame for better timing
+      requestAnimationFrame(() => {
+        messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      });
     }
   };
 

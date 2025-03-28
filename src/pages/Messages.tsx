@@ -6,7 +6,6 @@ import { useMessages } from '@/hooks/useMessages';
 import { toast } from '@/hooks/use-toast';
 import MessageList from '@/components/messages/MessageList';
 import MessageInput from '@/components/messages/MessageInput';
-import { useRealtimeMessages } from '@/hooks/messages/useRealtimeMessages';
 
 const Messages: React.FC = () => {
   const { user, getNickname, getProfileImage } = useAuth();
@@ -26,9 +25,8 @@ const Messages: React.FC = () => {
     uploadImage,
     partnerId
   } = useMessages();
-
-  // Set up realtime subscription separately, passing partnerId directly
-  useRealtimeMessages(refetch, partnerId);
+  
+  // Removed the duplicate useRealtimeMessages call since it's already in useMessages
 
   useEffect(() => {
     if (!isLoading && partnerId) {
