@@ -56,12 +56,9 @@ const Messages: React.FC = () => {
 
   // Force a refetch after the component mounts to ensure latest messages
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isLoading && partnerId) {
-        refetch();
-      }
-    }, 50);
-    return () => clearTimeout(timer);
+    if (!isLoading && partnerId) {
+      refetch();
+    }
   }, [partnerId, isLoading, refetch]);
 
   const userNickname = getNickname();
@@ -72,18 +69,9 @@ const Messages: React.FC = () => {
     
     try {
       const receiverId = partnerId || user.id;
-      const currentMessage = message; // Store the current message value
       
-      // Clear the message input immediately for better UX
+      await sendMessage(message, receiverId);
       setMessage('');
-      
-      await sendMessage(currentMessage, receiverId);
-      
-      // Force multiple refetches with increasing delays to ensure message appears
-      setTimeout(() => refetch(), 10);
-      setTimeout(() => refetch(), 100);
-      setTimeout(() => refetch(), 300);
-      
     } catch (err) {
       console.error('Error sending message:', err);
       toast({

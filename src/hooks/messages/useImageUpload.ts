@@ -11,19 +11,7 @@ export const useImageUpload = () => {
 
   // Upload image to Supabase storage
   const uploadImage = async (file: File): Promise<string | null> => {
-    if (!user) {
-      toast({
-        title: "Authentication error",
-        description: "You must be logged in to upload images",
-        variant: "destructive"
-      });
-      return null;
-    }
-    
-    if (!file) {
-      console.error('No file provided for upload');
-      return null;
-    }
+    if (!user) return null;
     
     setIsUploading(true);
     
@@ -32,24 +20,15 @@ export const useImageUpload = () => {
       const fileName = `${user.id}-${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
       
-      console.log('Uploading image:', filePath, 'File size:', file.size);
+      console.log('Uploading image:', filePath);
       
-      // Ensure the bucket exists before attempting to upload
       const { error: uploadError, data } = await supabase.storage
         .from('message_images')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+        .upload(filePath, file);
       
       if (uploadError) {
-        console.error('Upload error details:', uploadError);
-        toast({
-          title: "Upload failed",
-          description: uploadError.message,
-          variant: "destructive"
-        });
-        return null;
+        console.error('Upload error:', uploadError);
+        throw uploadError;
       }
       
       // Get the public URL
@@ -59,11 +38,11 @@ export const useImageUpload = () => {
       
       console.log('Image uploaded successfully:', publicUrl);
       return publicUrl;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error uploading image:', error);
       toast({
         title: "Error uploading image",
-        description: error.message || "Could not upload the image. Please try again.",
+        description: "Could not upload the image. Please try again.",
         variant: "destructive"
       });
       return null;
@@ -76,7 +55,7 @@ export const useImageUpload = () => {
   useEffect(() => {
     return () => {
       if (imageFile) {
-        // Clean up handled in component
+        // No need to revoke object URLs here as we do it in the component
       }
     };
   }, [imageFile]);

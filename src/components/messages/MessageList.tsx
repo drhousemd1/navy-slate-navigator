@@ -25,7 +25,6 @@ const MessageList: React.FC<MessageListProps> = ({
   const messageEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [hasImages, setHasImages] = useState(false);
-  const [prevMessageCount, setPrevMessageCount] = useState(0);
   
   // Check if messages contain images
   useEffect(() => {
@@ -41,18 +40,15 @@ const MessageList: React.FC<MessageListProps> = ({
       }
     };
     
-    // Scroll to bottom if messages have been added
-    if (messages.length > prevMessageCount) {
-      setPrevMessageCount(messages.length);
-      scrollToBottom();
-    }
+    // Immediate scroll for text messages
+    scrollToBottom();
     
     // Additional delay for image messages to ensure they're loaded
     if (hasImages) {
-      const timer = setTimeout(scrollToBottom, 300);
+      const timer = setTimeout(scrollToBottom, 500);
       return () => clearTimeout(timer);
     }
-  }, [messages, hasImages, prevMessageCount]);
+  }, [messages, hasImages]);
 
   // Handle image load events to trigger re-scrolling
   const handleImageLoaded = () => {

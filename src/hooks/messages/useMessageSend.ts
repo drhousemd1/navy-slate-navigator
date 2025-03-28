@@ -21,18 +21,14 @@ export const useMessageSend = () => {
     }) => {
       if (!user) throw new Error('User not authenticated');
       
-      const messageData = {
-        sender_id: user.id,
-        receiver_id: receiverId,
-        content: content.trim() || null,
-        image_url: imageUrl
-      };
-      
-      console.log('Sending message:', messageData);
-      
       const { data, error } = await supabase
         .from('messages')
-        .insert(messageData)
+        .insert({
+          sender_id: user.id,
+          receiver_id: receiverId,
+          content,
+          image_url: imageUrl
+        })
         .select();
       
       if (error) {
@@ -42,20 +38,13 @@ export const useMessageSend = () => {
       
       return data[0];
     },
-    onSuccess: (newMessage) => {
-      // Force an immediate update to the query cache with the new message
-      queryClient.setQueryData(['messages', user?.id], (oldData: any[] = []) => {
-        if (!oldData) return [newMessage];
-        return [...oldData, newMessage];
-      });
-      
-      // Also invalidate the query to ensure latest data is fetched
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
+    onSuccess: () => {
+      // We don't need to invalidate the query here since we're using real-time updates
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error sending message",
-        description: error.message || "Failed to send message",
+        description: error.message,
         variant: "destructive"
       });
     }
@@ -63,7 +52,7 @@ export const useMessageSend = () => {
 
   // Send a message function
   const sendMessage = async (content: string, receiverId: string, imageUrl: string | null = null) => {
-    return sendMessageMutation.mutateAsync({ content, receiverId, imageUrl });
+    return sendMessageMutation.mutate({ content, receiverId, imageUrl });
   };
 
   return {
