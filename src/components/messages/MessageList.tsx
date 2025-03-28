@@ -129,9 +129,8 @@ const MessageList: React.FC<MessageListProps> = ({
     });
   };
 
-  // Input box is approximately 60px tall, and is positioned at bottom-16 (4rem = 64px from bottom)
-  // That means we need to add 60px + 64px = 124px of bottom margin to ensure messages don't get hidden
-  // Adding 2px extra buffer = 126px
+  // The input box height is 60px and positioned at bottom-16 (64px)
+  // Only need 4-8px of space between last message and input box
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -161,7 +160,7 @@ const MessageList: React.FC<MessageListProps> = ({
           }
         }}
       >
-        <div className="space-y-1 pb-[126px]">
+        <div className="space-y-1 pb-4">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className="text-gray-400">No messages yet. Send the first one!</p>
@@ -184,7 +183,7 @@ const MessageList: React.FC<MessageListProps> = ({
           )}
           <div 
             ref={messageEndRef} 
-            style={{ height: '1px', marginBottom: '130px' }} 
+            style={{ height: '1px', marginBottom: '8px' }} 
             id="message-end"
             className="bg-transparent"
           />
