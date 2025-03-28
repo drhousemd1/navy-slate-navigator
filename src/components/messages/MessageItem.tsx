@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { Message } from '@/hooks/useMessages';
@@ -20,7 +20,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
   onImageLoad
 }) => {
   // Debug log for rendering
-  console.log('[MessageItem] Rendering message:', message.id, message.content);
+  useEffect(() => {
+    console.log(`[MessageItem] Component mounted for message: ${message.id}`);
+    return () => {
+      console.log(`[MessageItem] Component unmounted for message: ${message.id}`);
+    };
+  }, [message.id]);
   
   const formatMessageTime = (timestamp: string) => {
     try {
@@ -45,6 +50,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
       
       <div 
         className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}
+        data-message-id={message.id}
       >
         <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start max-w-[90%] relative`}>
           {/* Avatar */}
@@ -64,7 +70,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
           
           {/* Message bubble */}
           <div 
-            className={`mx-2 p-3 rounded-lg min-w-[180px] ${
+            className={`mx-2 p-3 rounded-lg min-w-[160px] ${
               isSentByMe
                 ? 'bg-cyan-800 text-white rounded-tl-none'
                 : 'bg-navy border border-light-navy text-white rounded-tr-none'
@@ -76,7 +82,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </span>
               
               {message.content && message.content.trim() !== '' && (
-                <p className="text-sm break-words">{message.content}</p>
+                <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
               )}
               
               {message.image_url && (
@@ -86,7 +92,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                     alt="Message attachment"
                     className="max-w-full rounded-md max-h-60 object-contain"
                     onLoad={() => {
-                      console.log('[MessageItem] Image loaded, calling onImageLoad');
+                      console.log('[MessageItem] Image loaded for message:', message.id);
                       onImageLoad?.();
                     }}
                     onError={() => {
