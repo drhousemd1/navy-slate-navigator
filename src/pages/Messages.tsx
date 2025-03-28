@@ -72,12 +72,12 @@ const Messages: React.FC = () => {
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
       
-      // More aggressive refetching strategy after sending a message
+      // After message is sent, do an immediate refetch
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
       await refetch();
       
-      // Multiple progressive refetches to ensure the message appears
-      const delayedRefetches = [100, 300, 600, 1000, 2000];
+      // Follow up with additional progressive refetches
+      const delayedRefetches = [50, 200, 500, 1000];
       for (const delay of delayedRefetches) {
         setTimeout(async () => {
           console.log(`[Messages] handleSendMessage (${currentMessageCount}): Delayed refetch (${delay}ms)`);
@@ -151,8 +151,8 @@ const Messages: React.FC = () => {
           )}
         </div>
         
-        {/* Increased bottom padding for more space below the messages */}
-        <div className="pb-24">
+        {/* Added pb-20 to create more space for the fixed input */}
+        <div className="pb-20">
           <MessageInput
             message={message}
             setMessage={setMessage}
