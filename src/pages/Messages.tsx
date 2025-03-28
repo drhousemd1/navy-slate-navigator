@@ -155,14 +155,17 @@ const Messages: React.FC = () => {
           )}
         </div>
         
-        <MessageInput
-          message={message}
-          setMessage={setMessage}
-          imageFile={imageFile}
-          setImageFile={setImageFile}
-          handleSendMessage={handleSendMessage}
-          isUploading={isUploading}
-        />
+        {/* Added pb-16 to create space for the fixed input */}
+        <div className="pb-16">
+          <MessageInput
+            message={message}
+            setMessage={setMessage}
+            imageFile={imageFile}
+            setImageFile={setImageFile}
+            handleSendMessage={handleSendMessage}
+            isUploading={isUploading}
+          />
+        </div>
       </div>
     </AppLayout>
   );

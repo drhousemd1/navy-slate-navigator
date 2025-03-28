@@ -87,8 +87,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </div>
       )}
       
-      {/* Fixed message input container at bottom */}
-      <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 border-t border-light-navy z-40">
+      {/* Fixed message input container at bottom with increased z-index */}
+      <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 border-t border-light-navy z-50">
         <div className="flex items-center gap-2">
           <Button
             type="button"

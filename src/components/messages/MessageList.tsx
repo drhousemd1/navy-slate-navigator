@@ -160,7 +160,7 @@ const MessageList: React.FC<MessageListProps> = ({
           }
         }}
       >
-        <div className="space-y-4 pb-4">
+        <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className="text-gray-400">No messages yet. Send the first one!</p>
@@ -181,9 +181,10 @@ const MessageList: React.FC<MessageListProps> = ({
               );
             })
           )}
+          {/* Add significant space at the bottom to ensure messages aren't hidden behind input */}
           <div 
             ref={messageEndRef} 
-            style={{ height: '20px', width: '100%' }} 
+            style={{ height: '70px', width: '100%' }} 
             id="message-end"
             className="bg-transparent"
           />
