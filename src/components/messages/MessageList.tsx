@@ -97,6 +97,10 @@ const MessageList: React.FC<MessageListProps> = ({
     setTimeout(() => scrollToBottom('smooth'), 200);
   };
 
+  // Input box is approximately 60px tall, and is positioned at bottom-16 (4rem = 64px from bottom)
+  // That means we need to add 60px + 64px = 124px of bottom margin to ensure messages don't get hidden
+  // Adding 2px extra buffer as requested = 126px
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {messages.length > 0 && (
@@ -125,7 +129,7 @@ const MessageList: React.FC<MessageListProps> = ({
           }
         }}
       >
-        <div className="space-y-1 mb-16">
+        <div className="space-y-1 pb-[126px]">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className="text-gray-400">No messages yet. Send the first one!</p>

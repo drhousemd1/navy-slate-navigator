@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -124,7 +123,7 @@ const Messages: React.FC = () => {
           <p className="text-gray-400 text-sm">Chat with your partner</p>
         </div>
         
-        <div className="flex-1 flex flex-col overflow-hidden h-[calc(100vh-12rem)]">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-400">Loading messages...</p>
