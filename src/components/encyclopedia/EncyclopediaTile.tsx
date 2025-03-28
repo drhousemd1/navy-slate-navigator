@@ -3,15 +3,12 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import HighlightedText from '../task/HighlightedText';
 import EncyclopediaPopupView from './EncyclopediaPopupView';
-import { Edit } from 'lucide-react';
 
 interface EncyclopediaTileProps {
   title: string;
   subtext: string;
   popupText: string;
   imageUrl?: string | null;
-  onEdit?: () => void;
-  showEditIcon?: boolean;
   focalPointX?: number;
   focalPointY?: number;
   opacity?: number;
@@ -43,8 +40,6 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
   subtext, 
   popupText,
   imageUrl,
-  onEdit,
-  showEditIcon = false,
   focalPointX = 50,
   focalPointY = 50,
   opacity = 100,
@@ -90,7 +85,7 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
         {/* Content overlay */}
         <div className="absolute inset-0 z-10 flex flex-col p-4 bg-gradient-to-t from-dark-navy/90 to-transparent">
           
-          {/* Title and edit button */}
+          {/* Title */}
           <div className="flex justify-between items-start">
             <h3 className="text-lg font-semibold mb-1">
               <HighlightedText
@@ -99,19 +94,6 @@ const EncyclopediaTile: React.FC<EncyclopediaTileProps> = ({
                 color={titleColor}
               />
             </h3>
-            
-            {showEditIcon && onEdit && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-                className="text-white hover:text-nav-active p-1 rounded"
-                aria-label={`Edit ${title}`}
-              >
-                <Edit className="h-4 w-4" />
-              </button>
-            )}
           </div>
           
           {/* Description directly below title */}
