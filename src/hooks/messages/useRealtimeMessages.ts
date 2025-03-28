@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessageArchive } from './useMessageArchive';
@@ -7,18 +7,21 @@ import { useMessageArchive } from './useMessageArchive';
 export const useRealtimeMessages = (refetch: () => void, partnerId: string | undefined) => {
   const { user } = useAuth();
   const { archiveOldMessages } = useMessageArchive();
+  const hasSubscribed = useRef(false);
 
   // Create a stable callback for refetching
   const handleNewMessage = useCallback(() => {
-    console.log('New message received via realtime, triggering refetch');
+    console.log('🔁 New message received via realtime, triggering refetch');
     refetch();
   }, [refetch]);
 
   // Set up real-time subscription for new messages
   useEffect(() => {
-    if (!user || !partnerId) return;
+    // Wait until both user and partnerId are fully available and only subscribe once
+    if (!user?.id || !partnerId || hasSubscribed.current) return;
     
-    console.log('Setting up realtime messages subscription for user:', user.id, 'and partner:', partnerId);
+    console.log('📡 Setting up realtime messages subscription for user:', user.id, 'and partner:', partnerId);
+    hasSubscribed.current = true;
     
     // Create unique channel name to prevent conflicts
     const channelName = `messages-${user.id}-${partnerId}`;
@@ -45,7 +48,7 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
         handleNewMessage();
       })
       .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
+        console.log('✅ Realtime subscription status:', status);
         
         // If we're connected, archive old messages
         if (status === 'SUBSCRIBED') {
@@ -55,7 +58,8 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
     
     // Cleanup function
     return () => {
-      console.log('Cleaning up realtime subscription');
+      console.log('❌ Cleaning up realtime subscription');
+      hasSubscribed.current = false;
       supabase.removeChannel(channelSubscription);
     };
   }, [user?.id, partnerId, handleNewMessage, archiveOldMessages]);
