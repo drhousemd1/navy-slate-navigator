@@ -123,7 +123,11 @@ const MessageList: React.FC<MessageListProps> = ({
             
             messages.map((msg: Message) => {
               // Log each message key during the mapping
-              console.log('[MessageList] Rendering message with key:', msg.id);
+              console.log('[map()] trying to render message:', {
+                id: msg.id,
+                content: msg.content,
+                image_url: msg.image_url,
+              });
               
               const isSentByMe = msg.sender_id === userId;
               

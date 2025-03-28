@@ -19,6 +19,17 @@ const MessageItem: React.FC<MessageItemProps> = ({
   userProfileImage,
   onImageLoad
 }) => {
+  if (!message.content && !message.image_url) {
+    console.log('[MessageItem] ⚠️ Skipping message with no content or image:', message.id);
+    return null;
+  }
+
+  console.log('[MessageItem] ✅ Rendering message:', {
+    id: message.id,
+    content: message.content,
+    image_url: message.image_url
+  });
+
   // Add more detailed message logging
   console.log('[MessageItem] Rendering', {
     id: message.id,
