@@ -1,9 +1,9 @@
 
 import React, { useRef, useLayoutEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import MessageItem from './MessageItem';
 import { Button } from '@/components/ui/button';
 import { Message } from '@/hooks/useMessages';
-import MessageItem from './MessageItem';
 
 interface MessageListProps {
   messages: Message[];
@@ -23,23 +23,12 @@ const MessageList: React.FC<MessageListProps> = ({
   userId
 }) => {
   const messageEndRef = useRef<HTMLDivElement>(null);
-  const scrollAreaViewportRef = useRef<HTMLDivElement>(null);
-  
-  console.log('[MessageList] Rendering with', messages.length, 'messages');
-  
-  // Scroll to bottom when messages load or change - single clean handler
+
   useLayoutEffect(() => {
     if (messageEndRef.current) {
       messageEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
     }
   }, [messages]);
-
-  // When an image finishes loading, scroll to bottom again
-  const handleImageLoaded = () => {
-    if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  };
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -56,28 +45,16 @@ const MessageList: React.FC<MessageListProps> = ({
           </Button>
         </div>
       )}
-      
-      <ScrollArea 
-        className="flex-1 px-4 overflow-y-auto pb-0" 
-        ref={(node) => {
-          if (node) {
-            const viewport = node.querySelector('[data-radix-scroll-area-viewport]');
-            if (viewport && viewport instanceof HTMLDivElement) {
-              scrollAreaViewportRef.current = viewport;
-              console.log('[MessageList] ScrollArea viewport ref captured');
-            }
-          }
-        }}
-      >
-        <div className="space-y-1">
+
+      <ScrollArea className="flex-1 px-4 overflow-y-auto pb-[130px]">
+        <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className="text-gray-400">No messages yet. Send the first one!</p>
             </div>
           ) : (
-            messages.map((msg: Message) => {
+            messages.map((msg) => {
               const isSentByMe = msg.sender_id === userId;
-              
               return (
                 <MessageItem
                   key={msg.id}
@@ -85,16 +62,16 @@ const MessageList: React.FC<MessageListProps> = ({
                   isSentByMe={isSentByMe}
                   userNickname={userNickname}
                   userProfileImage={userProfileImage}
-                  onImageLoad={handleImageLoaded}
+                  onImageLoad={() => {
+                    if (messageEndRef.current) {
+                      messageEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    }
+                  }}
                 />
               );
             })
           )}
-          <div
-            ref={messageEndRef}
-            className="h-1 scroll-mb-28"
-            style={{ margin: 0, padding: 0 }}
-          />
+          <div ref={messageEndRef} className="h-1" />
         </div>
       </ScrollArea>
     </div>
