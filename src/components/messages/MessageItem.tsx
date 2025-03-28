@@ -122,16 +122,25 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
               )}
               
-              {hasImage && (
-                <div className={`${hasContent ? 'mt-1' : ''}`}>
-                  <img
-                    ref={imageRef}
-                    src={message.image_url}
-                    alt="Message attachment"
-                    className="max-w-full rounded-md max-h-60 object-contain"
-                    onLoad={handleImageLoad}
-                    onError={handleImageError}
-                  />
+              {message.image_url && (
+                <div className="mt-2">
+                  <a
+                    href={message.image_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-fit max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg"
+                  >
+                    <img
+                      src={message.image_url}
+                      alt="Sent image"
+                      className="rounded-md max-h-60 object-contain border border-light-navy"
+                      onLoad={handleImageLoad}
+                      onError={(e) => {
+                        console.error("Image failed to load:", message.image_url);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </a>
                 </div>
               )}
             </div>
