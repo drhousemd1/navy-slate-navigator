@@ -51,7 +51,8 @@ const Messages: React.FC = () => {
     setImageFile,
     isUploading,
     loadingOlder,
-    refetch
+    refetch,
+    uploadImage
   } = useMessages();
 
   // Force a refetch after the component mounts to ensure latest messages
@@ -72,7 +73,16 @@ const Messages: React.FC = () => {
       const currentMessage = message;
       setMessage(''); // Clear input immediately for better UX
       
-      await sendMessage(currentMessage, receiverId);
+      let uploadedImageUrl = null;
+      
+      // Upload the image if one is selected
+      if (imageFile) {
+        uploadedImageUrl = await uploadImage(imageFile);
+        setImageFile(null); // Clear image after upload
+      }
+      
+      // Send the message with the image URL if present
+      await sendMessage(currentMessage, receiverId, uploadedImageUrl);
       
       // Force refresh to ensure message appears
       setTimeout(() => {

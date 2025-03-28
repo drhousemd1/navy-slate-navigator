@@ -36,14 +36,7 @@ export const useMessages = (partnerId?: string) => {
   useRealtimeMessages(refetch, getPartnerId);
 
   // Combined send message function that handles image upload if needed
-  const sendMessage = async (content: string, receiverId: string) => {
-    let imageUrl = null;
-    
-    if (imageFile) {
-      imageUrl = await uploadImage(imageFile);
-      setImageFile(null);
-    }
-    
+  const sendMessage = async (content: string, receiverId: string, imageUrl: string | null = null) => {
     // Wait for the message to be sent and then return the result
     const result = await sendMessageBase(content, receiverId, imageUrl);
     
@@ -63,6 +56,7 @@ export const useMessages = (partnerId?: string) => {
     setImageFile,
     isUploading,
     loadingOlder,
-    refetch
+    refetch,
+    uploadImage // Export the uploadImage function
   };
 };
