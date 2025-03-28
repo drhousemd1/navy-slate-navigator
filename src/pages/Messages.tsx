@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import MessageList from '@/components/messages/MessageList';
 import MessageInput from '@/components/messages/MessageInput';
+import { useRealtimeMessages } from '@/hooks/messages/useRealtimeMessages';
 
 const Messages: React.FC = () => {
   const { user, getNickname, getProfileImage } = useAuth();
@@ -25,6 +26,9 @@ const Messages: React.FC = () => {
     uploadImage,
     partnerId
   } = useMessages();
+
+  // Set up realtime subscription separately, passing partnerId directly
+  useRealtimeMessages(refetch, partnerId);
 
   useEffect(() => {
     if (!isLoading && partnerId) {
