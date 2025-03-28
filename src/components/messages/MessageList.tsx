@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useLayoutEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -116,7 +115,7 @@ const MessageList: React.FC<MessageListProps> = ({
           }
         }}
       >
-        <div className="space-y-1">
+        <div className="space-y-1 mb-5">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className="text-gray-400">No messages yet. Send the first one!</p>
