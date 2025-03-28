@@ -28,7 +28,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   return (
     <div className="flex flex-col my-2">
       {/* Timestamp above message bubble, aligned to right for sent messages and left for received messages */}
-      <div className={`w-full text-xxs text-white opacity-70 mb-1 ${isSentByMe ? 'text-right pr-4' : 'text-left pl-4'}`}>
+      <div className={`w-full text-xxs text-white opacity-40 mb-1 ${isSentByMe ? 'text-right pr-4' : 'text-left pl-4'}`}>
         {formatMessageTime(message.created_at)}
       </div>
       
