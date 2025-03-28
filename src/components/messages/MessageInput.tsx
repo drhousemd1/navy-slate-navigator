@@ -65,14 +65,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <>
-      {/* Separate container for image preview, positioned above the input area */}
+      {/* Image preview positioned above the text input */}
       {imageFile && previewUrl && (
-        <div className="fixed bottom-[4.5rem] left-4 z-50">
-          <div className="inline-block bg-dark-navy border border-light-navy rounded-md relative">
+        <div className="fixed bottom-[68px] left-4 z-50">
+          <div className="inline-flex bg-dark-navy border border-light-navy rounded-md relative">
             <img 
               src={previewUrl} 
               alt="Image preview" 
-              className="max-h-16 object-contain"
+              className="max-h-20 object-contain rounded-md"
             />
             <Button
               type="button"
@@ -88,7 +88,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
       )}
       
       {/* Fixed message input container at bottom */}
-      <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 z-40 border-t border-light-navy">
+      <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 border-t border-light-navy z-40">
         <div className="flex items-center gap-2">
           <Button
             type="button"
