@@ -50,7 +50,7 @@ export function useAuthForm() {
         passwordLength: formState.password?.trim().length || 0
       });
       
-      const { error, user } = await signIn(formState.email.trim(), formState.password.trim());
+      const { error } = await signIn(formState.email.trim(), formState.password.trim());
       
       if (error) {
         console.error("Login error details:", error);
@@ -69,14 +69,10 @@ export function useAuthForm() {
           loginError: errorMessage,
           loading: false
         });
-      } else if (user) {
-        console.log("Login successful, navigating to home");
-        navigate('/');
       } else {
-        updateFormState({
-          loginError: "An unexpected error occurred. Please try again.",
-          loading: false
-        });
+        console.log("Login successful, navigating to home");
+        // No need to navigate here - the useEffect watching isAuthenticated will handle it
+        // This prevents race conditions
       }
     } catch (error: any) {
       console.error("Authentication error:", error);
@@ -84,6 +80,11 @@ export function useAuthForm() {
         loginError: "An unexpected error occurred. Please try again.",
         loading: false
       });
+    } finally {
+      // If there's no error and we've reached this point, make sure to reset loading
+      if (!formState.loginError) {
+        updateFormState({ loading: false });
+      }
     }
   };
 

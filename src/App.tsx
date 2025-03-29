@@ -8,7 +8,6 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/auth"; // Updated import path
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
-import { supabase } from "./integrations/supabase/client";
 
 // Create empty placeholder pages for our navigation
 import Rules from "./pages/Rules";
@@ -72,7 +71,18 @@ const queryClient = new QueryClient({
   },
 });
 
+// Configure routes with proper nesting to ensure context is available
 const AppRoutes = () => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-navy">
+        <p className="text-white">Loading authentication...</p>
+      </div>
+    );
+  }
+
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />

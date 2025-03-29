@@ -1,3 +1,3 @@
 
-// This file is now a re-export to maintain compatibility with existing imports
-export { AuthProvider, useAuth } from './auth';
+// This file re-exports from the auth folder to maintain backward compatibility
+export { AuthProvider, useAuth } from './auth/AuthContext';
