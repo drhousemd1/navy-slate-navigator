@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
@@ -20,7 +19,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Get auth operations
   const authOperations = useAuthOperations();
-  const { signIn, signUp, resetPassword, updatePassword } = authOperations;
+  const { signIn: authOperationsSignIn, signUp, resetPassword, updatePassword } = authOperations;
+  
+  // Wrap signIn to match expected return type in AuthContextType
+  const signIn = async (email: string, password: string) => {
+    const result = await authOperationsSignIn(email, password);
+    return { error: result.error };
+  };
   
   // Get role management
   const roleManagement = useRoleManagement(user);

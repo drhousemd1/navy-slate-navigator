@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -8,17 +7,22 @@ export function useAuthOperations() {
     try {
       console.log('Attempting to sign in with email:', email);
       
+      if (!email || !password) {
+        console.error('Sign in validation error: Missing email or password');
+        return { error: { message: 'Email and password are required' }, user: null };
+      }
+      
       // Add logging to track what's happening
       console.log('Auth request details:', { email, passwordLength: password?.length || 0 });
       
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: email.trim(),
+        password: password.trim(),
       });
       
       if (error) {
         console.error('Sign in error details:', error);
-        return { error, data: null };
+        return { error, user: null };
       }
       
       console.log('Sign in successful:', data.user?.email);
@@ -27,10 +31,10 @@ export function useAuthOperations() {
         description: 'You have successfully logged in.',
       });
       
-      return { error: null, data };
+      return { error: null, user: data.user };
     } catch (error: any) {
       console.error('Exception during sign in:', error);
-      return { error, data: null };
+      return { error, user: null };
     }
   };
 
