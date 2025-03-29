@@ -35,7 +35,7 @@ export function useAuthForm() {
     try {
       console.log("Attempting to sign in with email:", formState.email);
       
-      const { error, data } = await signIn(formState.email, formState.password);
+      const { error } = await signIn(formState.email, formState.password);
       
       if (error) {
         console.error("Login error:", error);
