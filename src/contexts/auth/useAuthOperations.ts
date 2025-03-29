@@ -8,13 +8,16 @@ export function useAuthOperations() {
     try {
       console.log('Attempting to sign in with email:', email);
       
+      // Add logging to track what's happening
+      console.log('Auth request details:', { email, passwordLength: password?.length || 0 });
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
-        console.error('Sign in error:', error);
+        console.error('Sign in error details:', error);
         return { error, data: null };
       }
       

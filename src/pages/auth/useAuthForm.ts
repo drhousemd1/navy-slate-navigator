@@ -35,12 +35,25 @@ export function useAuthForm() {
     try {
       console.log("Attempting to sign in with email:", formState.email);
       
-      const { error } = await signIn(formState.email, formState.password);
+      // Log auth attempt for debugging
+      console.log("Login attempt details:", {
+        email: formState.email,
+        passwordLength: formState.password?.length || 0
+      });
       
-      if (error) {
-        console.error("Login error:", error);
+      const result = await signIn(formState.email, formState.password);
+      
+      if (result.error) {
+        console.error("Login error details:", result.error);
+        
+        // Provide more specific error messages based on error type
+        let errorMessage = "Invalid login credentials. Please check your email and password.";
+        if (result.error.message && result.error.message.includes("Invalid login")) {
+          errorMessage = "The email or password you entered is incorrect. Please try again.";
+        }
+        
         updateFormState({
-          loginError: error.message || "Invalid login credentials. Please check your email and password.",
+          loginError: errorMessage,
           loading: false
         });
       } else {

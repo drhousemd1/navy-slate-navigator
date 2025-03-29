@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogIn, UserPlus } from 'lucide-react';
+import { LogIn, UserPlus, RefreshCw } from 'lucide-react';
 import { AuthViewProps } from './types';
 import { useAuthForm } from './useAuthForm';
 import { useDebugMode } from './useDebugMode';
@@ -10,6 +10,7 @@ import { useDebugMode } from './useDebugMode';
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
   const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
   const { debugMode, handleTitleClick } = useDebugMode();
+  const [showPassword, setShowPassword] = useState(false);
   
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,16 +51,27 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
           
           <div className="space-y-2">
             <label className="text-white text-sm">Password</label>
-            <Input
-              type="password"
-              value={formState.password}
-              onChange={(e) => updateFormState({ password: e.target.value })}
-              required
-              className="bg-navy border-light-navy text-white"
-              placeholder="********"
-              minLength={6}
-              autoComplete={currentView === "login" ? "current-password" : "new-password"}
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={formState.password}
+                onChange={(e) => updateFormState({ password: e.target.value })}
+                required
+                className="bg-navy border-light-navy text-white pr-10"
+                placeholder="********"
+                minLength={6}
+                autoComplete={currentView === "login" ? "current-password" : "new-password"}
+              />
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 text-gray-400 hover:text-white"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </Button>
+            </div>
             <div className="text-right">
               <Button 
                 type="button" 
@@ -83,8 +95,22 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
             <div className="text-xs text-gray-400 p-2 border border-gray-700 rounded bg-gray-900/50 overflow-auto">
               <p>Debug mode enabled</p>
               <p>Email: {formState.email}</p>
+              <p>Password length: {formState.password?.length || 0}</p>
               <p>Auth view: {currentView}</p>
               <p>API URL: {import.meta.env.VITE_SUPABASE_URL || "Not set"}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 text-xs"
+                onClick={() => {
+                  console.clear();
+                  console.log('Debug console cleared');
+                }}
+              >
+                <RefreshCw className="w-3 h-3 mr-1" />
+                Clear Console
+              </Button>
             </div>
           )}
           
@@ -123,7 +149,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
         </form>
         
         <div className="text-center text-xs text-gray-400 pt-2">
-          <p>Note: If you have trouble signing in, try using a new email to create a fresh account.</p>
+          <p>Note: If you have trouble signing in, try creating a new account with a different email.</p>
         </div>
       </div>
     </div>
