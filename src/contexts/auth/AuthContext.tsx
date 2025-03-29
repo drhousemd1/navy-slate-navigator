@@ -94,7 +94,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(!!currentSession);
       
       if (currentSession?.user) {
-        checkUserRole();
+        setTimeout(() => {
+          checkUserRole();
+        }, 0);
       }
       
       setLoading(false);

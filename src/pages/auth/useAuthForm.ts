@@ -13,23 +13,16 @@ export function useAuthForm() {
     loading: false,
     loginError: null
   });
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Check if a session already exists on component mount
+  // Check if already authenticated
   useEffect(() => {
-    const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (data.session) {
-        console.log("Existing session found:", data.session.user.email);
-        navigate('/');
-      } else if (error) {
-        console.error("Error checking session:", error);
-      }
-    };
-    
-    checkSession();
-  }, [navigate]);
+    if (isAuthenticated) {
+      console.log("User is already authenticated, redirecting to home");
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   const updateFormState = (updates: Partial<AuthFormState>) => {
     setFormState(prevState => ({ ...prevState, ...updates }));
@@ -42,41 +35,19 @@ export function useAuthForm() {
     try {
       console.log("Attempting to sign in with email:", formState.email);
       
-      // Try direct Supabase auth to debug what's happening
-      try {
-        const { data: directAuthData, error: directAuthError } = await supabase.auth.signInWithPassword({
-          email: formState.email,
-          password: formState.password
-        });
-        
-        if (directAuthError) {
-          console.error("Direct Supabase auth error:", directAuthError);
-          updateFormState({ loginError: `Authentication failed: ${directAuthError.message}`, loading: false });
-          return;
-        }
-        
-        if (directAuthData.user) {
-          console.log("Login successful via direct Supabase auth:", directAuthData.user.email);
-          navigate('/');
-          return;
-        }
-      } catch (directError) {
-        console.error("Exception during direct Supabase auth:", directError);
-      }
+      const { error, data } = await signIn(formState.email, formState.password);
       
-      // Fallback to using context auth
-      const { error } = await signIn(formState.email, formState.password);
       if (error) {
-        console.error("Login error from context:", error);
+        console.error("Login error:", error);
         updateFormState({
           loginError: error.message || "Invalid login credentials. Please check your email and password.",
           loading: false
         });
       } else {
-        console.log("Login successful via context, navigating to home");
+        console.log("Login successful, navigating to home");
         navigate('/');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Authentication error:", error);
       updateFormState({
         loginError: "An unexpected error occurred. Please try again.",
@@ -104,9 +75,10 @@ export function useAuthForm() {
           description: "Please check your email for verification instructions.",
         });
         // Return to login view after successful signup
+        updateFormState({ loading: false });
         return "login";
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Authentication error:", error);
       updateFormState({
         loginError: "An unexpected error occurred. Please try again.",
