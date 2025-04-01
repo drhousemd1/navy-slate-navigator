@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -53,7 +54,15 @@ const Rules: React.FC = () => {
           throw error;
         }
         
-        setRules(data as Rule[] || []);
+        // Initialize usage_data if it doesn't exist
+        const rulesWithUsageData = (data as Rule[] || []).map(rule => {
+          if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
+            return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
+          }
+          return rule;
+        });
+        
+        setRules(rulesWithUsageData);
       } catch (err) {
         console.error('Error fetching rules:', err);
         toast({
@@ -77,6 +86,50 @@ const Rules: React.FC = () => {
   const handleEditRule = (rule: Rule) => {
     setCurrentRule(rule);
     setIsEditorOpen(true);
+  };
+
+  const handleRuleBroken = async (rule: Rule) => {
+    try {
+      // Get current day of week (0 = Sunday, 1 = Monday, etc.)
+      const currentDayOfWeek = new Date().getDay();
+      
+      // Create a copy of the usage data and increment the count for today
+      const newUsageData = [...(rule.usage_data || [0, 0, 0, 0, 0, 0, 0])];
+      newUsageData[currentDayOfWeek] = 1; // Mark as broken for today
+      
+      // Update the rule in the database
+      const { data, error } = await supabase
+        .from('rules')
+        .update({
+          usage_data: newUsageData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rule.id)
+        .select();
+        
+      if (error) throw error;
+      
+      // Update the local state
+      setRules(rules.map(r => 
+        r.id === rule.id ? { ...r, usage_data: newUsageData } : r
+      ));
+      
+      toast({
+        title: 'Rule Broken',
+        description: 'This violation has been recorded.',
+      });
+      
+      // Navigate to punishments
+      navigate('/punishments');
+      
+    } catch (err) {
+      console.error('Error updating rule:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to record rule violation. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSaveRule = async (ruleData: Partial<Rule>) => {
@@ -125,6 +178,7 @@ const Rules: React.FC = () => {
           throw new Error('Rule title is required');
         }
         
+        // Initialize a new rule with default values
         const newRule = {
           title: ruleWithoutId.title,
           priority: ruleWithoutId.priority || 'medium',
@@ -138,6 +192,7 @@ const Rules: React.FC = () => {
           focal_point_y: ruleWithoutId.focal_point_y || 50,
           frequency: ruleWithoutId.frequency || 'daily',
           frequency_count: ruleWithoutId.frequency_count || 3,
+          usage_data: [0, 0, 0, 0, 0, 0, 0], // Initialize with 7 days of the week
           ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
           ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
           ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
@@ -215,12 +270,6 @@ const Rules: React.FC = () => {
         ) : rules.length === 0 ? (
           <div className="text-center py-10">
             <p className="text-white mb-4">No rules found. Create your first rule!</p>
-            <Button 
-              className="bg-dark-navy border border-light-navy hover:bg-light-navy text-white rounded-full px-6 py-2 flex items-center"
-              onClick={handleAddRule}
-            >
-              <Plus className="w-5 h-5 mr-2" /> Add Rule
-            </Button>
           </div>
         ) : (
           <div className="space-y-4">
@@ -236,7 +285,7 @@ const Rules: React.FC = () => {
                       variant="destructive"
                       size="sm"
                       className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3"
-                      onClick={() => navigate('/punishments')}
+                      onClick={() => handleRuleBroken(rule)}
                     >
                       Rule Broken
                     </Button>
