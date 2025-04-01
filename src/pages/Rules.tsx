@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -43,7 +42,6 @@ const Rules: React.FC = () => {
   const [rules, setRules] = useState<Rule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch rules from Supabase on component mount
   useEffect(() => {
     const fetchRules = async () => {
       try {
@@ -87,7 +85,6 @@ const Rules: React.FC = () => {
       let result;
       
       if (ruleData.id) {
-        // Update existing rule
         const { data, error } = await supabase
           .from('rules')
           .update({
@@ -116,7 +113,6 @@ const Rules: React.FC = () => {
         if (error) throw error;
         result = data;
         
-        // Update the rules state
         setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result as Rule } : rule));
         
         toast({
@@ -124,24 +120,34 @@ const Rules: React.FC = () => {
           description: 'Rule updated successfully!',
         });
       } else {
-        // Create new rule - let Supabase generate the UUID
-        // Extract id and ensure it's not passed to Supabase
         const { id, ...ruleWithoutId } = ruleData;
         
-        // Make sure title is included and non-optional
         if (!ruleWithoutId.title) {
           throw new Error('Rule title is required');
         }
         
-        // Create the new rule object with required fields
         const newRule = {
-          ...ruleWithoutId,
+          title: ruleWithoutId.title,
+          priority: ruleWithoutId.priority || 'medium',
+          background_opacity: ruleWithoutId.background_opacity || 100,
+          icon_color: ruleWithoutId.icon_color || '#FFFFFF',
+          title_color: ruleWithoutId.title_color || '#FFFFFF',
+          subtext_color: ruleWithoutId.subtext_color || '#FFFFFF',
+          calendar_color: ruleWithoutId.calendar_color || '#9c7abb',
+          highlight_effect: ruleWithoutId.highlight_effect || false,
+          focal_point_x: ruleWithoutId.focal_point_x || 50,
+          focal_point_y: ruleWithoutId.focal_point_y || 50,
+          frequency: ruleWithoutId.frequency || 'daily',
+          frequency_count: ruleWithoutId.frequency_count || 3,
+          ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
+          ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
+          ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
+          ...(ruleWithoutId.icon_name && { icon_name: ruleWithoutId.icon_name }),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           user_id: (await supabase.auth.getUser()).data.user?.id,
         };
         
-        // Insert as a single object, not an array
         const { data, error } = await supabase
           .from('rules')
           .insert(newRule)
@@ -151,7 +157,6 @@ const Rules: React.FC = () => {
         if (error) throw error;
         result = data;
         
-        // Add new rule to the rules state
         setRules([result as Rule, ...rules]);
         
         toast({
@@ -180,7 +185,6 @@ const Rules: React.FC = () => {
       
       if (error) throw error;
       
-      // Remove the deleted rule from the rules state
       setRules(rules.filter(rule => rule.id !== ruleId));
       
       toast({
@@ -227,7 +231,6 @@ const Rules: React.FC = () => {
                 className="bg-dark-navy border-2 border-[#00f0ff] overflow-hidden"
               >
                 <div className="relative p-4">
-                  {/* Card Header Row */}
                   <div className="flex justify-between items-center mb-3">
                     <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
                     <Button
@@ -240,7 +243,6 @@ const Rules: React.FC = () => {
                     </Button>
                   </div>
                   
-                  {/* Main Rule Content */}
                   <div className="mb-4">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center">
@@ -258,7 +260,6 @@ const Rules: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Frequency Tracker and Edit Button */}
                   <div className="flex items-center justify-between mt-2">
                     <FrequencyTracker 
                       frequency={rule.frequency}
@@ -281,7 +282,6 @@ const Rules: React.FC = () => {
           </div>
         )}
         
-        {/* Add Rule Button */}
         {!isLoading && rules.length > 0 && (
           <div className="flex justify-center mt-8">
             <Button 
@@ -294,7 +294,6 @@ const Rules: React.FC = () => {
         )}
       </div>
       
-      {/* Rule Editor Modal */}
       <RuleEditor
         isOpen={isEditorOpen}
         onClose={() => {
