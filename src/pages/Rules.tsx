@@ -10,7 +10,6 @@ import RuleEditor from '../components/RuleEditor';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 
-// Rule data structure
 interface Rule {
   id: string;
   title: string;
@@ -279,17 +278,6 @@ const Rules: React.FC = () => {
                 </div>
               </Card>
             ))}
-          </div>
-        )}
-        
-        {!isLoading && rules.length > 0 && (
-          <div className="flex justify-center mt-8">
-            <Button 
-              className="bg-dark-navy border border-light-navy hover:bg-light-navy text-white rounded-full px-6 py-2 flex items-center"
-              onClick={handleAddRule}
-            >
-              <Plus className="w-5 h-5 mr-2" /> Add Rule
-            </Button>
           </div>
         )}
       </div>
