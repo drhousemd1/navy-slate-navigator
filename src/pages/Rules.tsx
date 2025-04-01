@@ -25,10 +25,10 @@ const Rules: React.FC = () => {
                 <Button
                   variant="destructive"
                   size="sm"
-                  className="bg-red-500 text-white hover:bg-red-600/90 h-7"
-                  onClick={() => console.log("Punish clicked")}
+                  className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3"
+                  onClick={() => console.log("Rule broken clicked")}
                 >
-                  Punish
+                  Rule Broken
                 </Button>
               </div>
               
