@@ -304,7 +304,7 @@ const Rules: React.FC = () => {
                   
                   <div className="mb-4 relative z-10">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
                         <Check className="w-6 h-6 text-white" />
                       </div>
                       <div className="font-bold">
