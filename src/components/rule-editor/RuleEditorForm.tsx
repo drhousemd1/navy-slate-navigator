@@ -8,13 +8,35 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { Task } from '@/lib/taskUtils';
 import ColorPickerField from '../task-editor/ColorPickerField';
 import PrioritySelector from '../task-editor/PrioritySelector';
 import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
+import FrequencySelector from '../task-editor/FrequencySelector';
+import NumberField from '../task-editor/NumberField';
+
+interface Rule {
+  id?: string;
+  title: string;
+  description: string | null;
+  priority: 'low' | 'medium' | 'high';
+  background_image_url?: string | null;
+  background_opacity: number;
+  icon_url?: string | null;
+  icon_name?: string | null;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  icon_color: string;
+  highlight_effect: boolean;
+  focal_point_x: number;
+  focal_point_y: number;
+  frequency: 'daily' | 'weekly';
+  frequency_count: number;
+  usage_data?: number[];
+}
 
 interface RuleFormValues {
   title: string;
@@ -31,10 +53,12 @@ interface RuleFormValues {
   focal_point_x: number;
   focal_point_y: number;
   priority: 'low' | 'medium' | 'high';
+  frequency: 'daily' | 'weekly';
+  frequency_count: number;
 }
 
 interface RuleEditorFormProps {
-  ruleData?: Partial<Task>;
+  ruleData?: Partial<Rule>;
   onSave: (ruleData: any) => void;
   onDelete?: (ruleId: string) => void;
   onCancel: () => void;
@@ -59,14 +83,16 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       background_image_url: ruleData?.background_image_url,
       background_opacity: ruleData?.background_opacity || 100,
       title_color: ruleData?.title_color || '#FFFFFF',
-      subtext_color: ruleData?.subtext_color || '#8E9196',
-      calendar_color: ruleData?.calendar_color || '#7E69AB',
-      icon_color: ruleData?.icon_color || '#9b87f5',
+      subtext_color: ruleData?.subtext_color || '#FFFFFF',
+      calendar_color: ruleData?.calendar_color || '#9c7abb',
+      icon_color: ruleData?.icon_color || '#FFFFFF',
       highlight_effect: ruleData?.highlight_effect || false,
       focal_point_x: ruleData?.focal_point_x || 50,
       focal_point_y: ruleData?.focal_point_y || 50,
       priority: ruleData?.priority || 'medium',
       icon_name: ruleData?.icon_name,
+      frequency: ruleData?.frequency || 'daily',
+      frequency_count: ruleData?.frequency_count || 3,
     },
   });
 
@@ -141,7 +167,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setLoading(true);
     
     try {
-      const ruleToSave: Partial<Task> = {
+      const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
@@ -206,6 +232,19 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <PrioritySelector control={form.control} />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FrequencySelector control={form.control} />
+          
+          <NumberField
+            control={form.control}
+            name="frequency_count"
+            label="Times Per Period"
+            onIncrement={() => form.setValue('frequency_count', (form.getValues('frequency_count') || 0) + 1)}
+            onDecrement={() => form.setValue('frequency_count', Math.max(1, (form.getValues('frequency_count') || 0) - 1))}
+            minValue={1}
+          />
         </div>
         
         <div className="space-y-4">

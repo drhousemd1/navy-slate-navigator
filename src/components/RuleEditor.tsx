@@ -1,13 +1,33 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Task } from '@/lib/taskUtils';
 import RuleEditorForm from './rule-editor/RuleEditorForm';
+
+interface Rule {
+  id?: string;
+  title: string;
+  description: string | null;
+  priority: 'low' | 'medium' | 'high';
+  background_image_url?: string | null;
+  background_opacity: number;
+  icon_url?: string | null;
+  icon_name?: string | null;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  icon_color: string;
+  highlight_effect: boolean;
+  focal_point_x: number;
+  focal_point_y: number;
+  frequency: 'daily' | 'weekly';
+  frequency_count: number;
+  usage_data?: number[];
+}
 
 interface RuleEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  ruleData?: Partial<Task>;
+  ruleData?: Partial<Rule>;
   onSave: (ruleData: any) => void;
   onDelete?: (ruleId: string) => void;
 }
