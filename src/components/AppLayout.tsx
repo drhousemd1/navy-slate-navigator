@@ -94,11 +94,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
     }
   }, [getProfileImage, profileImage]);
 
-  // Determine if we're on the rewards page, tasks page, or punishments page for special styling
+  // Determine if we're on the rewards page, tasks page, punishments page, or rules page for special styling
   const isRewardsPage = location.pathname === '/rewards';
   const isTasksPage = location.pathname === '/tasks';
   const isPunishmentsPage = location.pathname === '/punishments';
-  const useCircleButton = isRewardsPage || isTasksPage || isPunishmentsPage;
+  const isRulesPage = location.pathname === '/rules';
+  const useCircleButton = isRewardsPage || isTasksPage || isPunishmentsPage || isRulesPage;
 
   return (
     <div className="flex flex-col min-h-screen bg-dark-navy">
