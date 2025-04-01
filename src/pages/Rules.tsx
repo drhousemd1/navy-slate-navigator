@@ -57,7 +57,7 @@ const Rules: React.FC = () => {
           throw error;
         }
         
-        setRules(data || []);
+        setRules(data as Rule[] || []);
       } catch (err) {
         console.error('Error fetching rules:', err);
         toast({
@@ -118,7 +118,7 @@ const Rules: React.FC = () => {
         result = data;
         
         // Update the rules state
-        setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result } : rule));
+        setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result as Rule } : rule));
         
         toast({
           title: 'Success',
@@ -131,12 +131,13 @@ const Rules: React.FC = () => {
           ...ruleData,
           id: newRuleId,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          user_id: (await supabase.auth.getUser()).data.user?.id,
         };
         
         const { data, error } = await supabase
           .from('rules')
-          .insert([newRule])
+          .insert([newRule as any])
           .select()
           .single();
           
@@ -144,7 +145,7 @@ const Rules: React.FC = () => {
         result = data;
         
         // Add new rule to the rules state
-        setRules([result, ...rules]);
+        setRules([result as Rule, ...rules]);
         
         toast({
           title: 'Success',
