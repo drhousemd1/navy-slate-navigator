@@ -25,7 +25,7 @@ const PunishmentsHeader: React.FC = () => {
         Random
       </Button>
       <div className="flex items-center gap-2">
-        <Badge className="bg-green-200 text-white font-bold px-3 py-1 flex items-center gap-1">
+        <Badge className="bg-blue-500 text-white font-bold px-3 py-1 flex items-center gap-1">
           <Box className="w-3 h-3" />
           <span>{totalRewardsSupply}</span>
         </Badge>
