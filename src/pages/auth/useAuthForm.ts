@@ -41,18 +41,13 @@ export function useAuthForm() {
         return;
       }
       
-      // Trim inputs before sending
-      const email = formState.email.trim();
-      const password = formState.password.trim();
-      
-      console.log("Attempting to sign in with email:", email);
       console.log("Login attempt details:", {
-        email,
-        passwordLength: password.length
+        email: formState.email,
+        passwordLength: formState.password.length
       });
       
-      // Sign in with trimmed values
-      const { error } = await signIn(email, password);
+      // Sign in with email and password directly
+      const { error } = await signIn(formState.email, formState.password);
       
       // Handle errors with consistent format
       if (error) {
@@ -95,12 +90,16 @@ export function useAuthForm() {
     updateFormState({ loading: true, loginError: null });
 
     try {
-      // Trim inputs before sending
-      const email = formState.email.trim();
-      const password = formState.password.trim();
+      if (!formState.email || !formState.password) {
+        updateFormState({
+          loginError: "Email and password are required",
+          loading: false
+        });
+        return;
+      }
       
-      console.log("Attempting to sign up with email:", email);
-      const { error } = await signUp(email, password);
+      console.log("Attempting to sign up with email:", formState.email);
+      const { error } = await signUp(formState.email, formState.password);
       
       if (error) {
         console.error("Signup error:", error);

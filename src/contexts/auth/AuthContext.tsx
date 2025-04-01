@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
@@ -17,21 +18,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Get auth operations
-  const authOperations = useAuthOperations();
-  const { signIn: authSignIn, signUp, resetPassword, updatePassword } = authOperations;
-  
-  // Wrap signIn to match expected return type in AuthContextType
-  const signIn = async (email: string, password: string) => {
-    try {
-      const result = await authSignIn(email, password);
-      // Keep the error object format consistent for error handling in useAuthForm
-      return { error: result.error };
-    } catch (error) {
-      console.error("Error in signIn wrapper:", error);
-      return { error };
-    }
-  };
+  // Get auth operations - IMPORTANT: we need to directly use the operations
+  const { 
+    signIn, 
+    signUp, 
+    resetPassword, 
+    updatePassword 
+  } = useAuthOperations();
   
   // Get role management
   const roleManagement = useRoleManagement(user);

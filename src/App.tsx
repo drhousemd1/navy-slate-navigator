@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/auth"; // Updated import path
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/auth/AuthContext";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 
 // Create empty placeholder pages for our navigation
@@ -51,7 +51,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!isAdmin) {
-    return <>{children}</>;
+    return <Navigate to="/" />;
   }
   
   return <>{children}</>;
@@ -73,16 +73,6 @@ const queryClient = new QueryClient({
 
 // Configure routes with proper nesting to ensure context is available
 const AppRoutes = () => {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-navy">
-        <p className="text-white">Loading authentication...</p>
-      </div>
-    );
-  }
-
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />

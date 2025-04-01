@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -46,9 +47,17 @@ export function useAuthOperations() {
   // Sign up with email and password
   const signUp = async (email: string, password: string) => {
     try {
+      // Trim inputs before sending
+      const trimmedEmail = email.trim();
+      const trimmedPassword = password.trim();
+      
+      if (!trimmedEmail || !trimmedPassword) {
+        return { error: { message: 'Email and password are required' }, data: null };
+      }
+      
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: trimmedEmail,
+        password: trimmedPassword,
       });
       
       if (error) {
@@ -72,7 +81,13 @@ export function useAuthOperations() {
   // Reset password
   const resetPassword = async (email: string) => {
     try {
-      console.log('Sending password reset to:', email);
+      const trimmedEmail = email.trim();
+      
+      if (!trimmedEmail) {
+        return { error: { message: 'Email is required' } };
+      }
+      
+      console.log('Sending password reset to:', trimmedEmail);
       
       // Get the current hostname to determine environment
       const isLocalhost = window.location.hostname === 'localhost';
@@ -84,7 +99,7 @@ export function useAuthOperations() {
       
       console.log('Using site URL for password reset:', siteUrl);
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
         redirectTo: `${siteUrl}/reset-password`,
       });
       
@@ -93,7 +108,7 @@ export function useAuthOperations() {
         return { error };
       }
       
-      console.log('Password reset email sent to:', email);
+      console.log('Password reset email sent to:', trimmedEmail);
       toast({
         title: 'Password reset email sent',
         description: 'Check your email for the password reset link.',
@@ -109,8 +124,14 @@ export function useAuthOperations() {
   // Update password (for reset password flow)
   const updatePassword = async (newPassword: string) => {
     try {
+      const trimmedPassword = newPassword.trim();
+      
+      if (!trimmedPassword) {
+        return { error: { message: 'New password is required' } };
+      }
+      
       const { error } = await supabase.auth.updateUser({
-        password: newPassword
+        password: trimmedPassword
       });
       
       if (error) {
