@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Edit, Check, Plus } from 'lucide-react';
 import FrequencyTracker from '../components/task/FrequencyTracker';
 import PriorityBadge from '../components/task/PriorityBadge';
+import { useNavigate } from 'react-router-dom';
 
 const Rules: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <AppLayout onAddNewItem={() => console.log("Add new rule")}>
@@ -26,7 +28,7 @@ const Rules: React.FC = () => {
                   variant="destructive"
                   size="sm"
                   className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3"
-                  onClick={() => console.log("Rule broken clicked")}
+                  onClick={() => navigate('/punishments')}
                 >
                   Rule Broken
                 </Button>
