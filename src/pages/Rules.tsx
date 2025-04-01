@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -308,11 +309,13 @@ const Rules: React.FC = () => {
                       <div className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center">
                         <Check className="w-6 h-6 text-white" />
                       </div>
-                      <HighlightedText
-                        text={rule.title}
-                        highlight={rule.highlight_effect}
-                        color={rule.title_color}
-                      />
+                      <div className="font-bold">
+                        <HighlightedText
+                          text={rule.title}
+                          highlight={rule.highlight_effect}
+                          color={rule.title_color}
+                        />
+                      </div>
                     </div>
                     
                     {rule.description && (
