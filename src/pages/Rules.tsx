@@ -45,7 +45,7 @@ const Rules: React.FC = () => {
                   </span>
                 </div>
                 
-                <div className="ml-12 mt-3">
+                <div className="ml-12 mt-1">
                   <span className="text-white">
                     Get a spanking
                   </span>
