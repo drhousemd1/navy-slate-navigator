@@ -308,7 +308,7 @@ const Rules: React.FC = () => {
                       <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
                         <Check className="w-6 h-6 text-white" />
                       </div>
-                      <div className="font-semibold">
+                      <div className="text-xl font-semibold">
                         <HighlightedText
                           text={rule.title}
                           highlight={rule.highlight_effect}
