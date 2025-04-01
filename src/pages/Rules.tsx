@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import RuleEditor from '../components/RuleEditor';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
+import HighlightedText from '../components/task/HighlightedText';
 
 interface Rule {
   id: string;
@@ -269,7 +269,7 @@ const Rules: React.FC = () => {
             {rules.map((rule) => (
               <Card 
                 key={rule.id}
-                className="bg-dark-navy border-2 border-[#00f0ff] overflow-hidden"
+                className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
               >
                 <div className="relative p-4">
                   {/* Background image layer with lower z-index */}
@@ -308,16 +308,20 @@ const Rules: React.FC = () => {
                       <div className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center">
                         <Check className="w-6 h-6 text-white" />
                       </div>
-                      <span className="text-white font-bold">
-                        {rule.title}
-                      </span>
+                      <HighlightedText
+                        text={rule.title}
+                        highlight={rule.highlight_effect}
+                        color={rule.title_color}
+                      />
                     </div>
                     
                     {rule.description && (
                       <div className="ml-[3.25rem]">
-                        <span className="text-white">
-                          {rule.description}
-                        </span>
+                        <HighlightedText
+                          text={rule.description}
+                          highlight={rule.highlight_effect}
+                          color={rule.subtext_color}
+                        />
                       </div>
                     )}
                   </div>

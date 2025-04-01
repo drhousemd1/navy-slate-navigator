@@ -171,6 +171,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         ...values,
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
+        highlight_effect: values.highlight_effect || false, // Ensure highlight_effect is properly set
       };
       
       await onSave(ruleToSave);
