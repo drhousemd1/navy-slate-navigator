@@ -10,7 +10,6 @@ import { useNavigate } from 'react-router-dom';
 import RuleEditor from '../components/RuleEditor';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from 'uuid';
 
 // Rule data structure
 interface Rule {
@@ -125,11 +124,9 @@ const Rules: React.FC = () => {
           description: 'Rule updated successfully!',
         });
       } else {
-        // Create new rule
-        const newRuleId = uuidv4();
+        // Create new rule - let Supabase generate the UUID
         const newRule = {
           ...ruleData,
-          id: newRuleId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           user_id: (await supabase.auth.getUser()).data.user?.id,
