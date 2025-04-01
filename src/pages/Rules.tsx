@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -273,7 +272,6 @@ const Rules: React.FC = () => {
                 className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
               >
                 <div className="relative p-4">
-                  {/* Background image layer with lower z-index */}
                   {rule.background_image_url && (
                     <div 
                       className="absolute inset-0 z-0" 
@@ -286,12 +284,6 @@ const Rules: React.FC = () => {
                     />
                   )}
                   
-                  {/* Only add a light overlay if needed for readability */}
-                  {rule.background_image_url && (
-                    <div className="absolute inset-0 bg-dark-navy/20 z-0"></div>
-                  )}
-                  
-                  {/* Content layers with higher z-index */}
                   <div className="flex justify-between items-center mb-3 relative z-10">
                     <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
                     <Button
