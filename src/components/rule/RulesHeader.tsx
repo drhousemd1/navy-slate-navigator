@@ -7,7 +7,7 @@ import { useRewards } from '@/contexts/RewardsContext';
 
 const RulesHeader: React.FC = () => {
   const [totalRules, setTotalRules] = useState(0);
-  const { totalPoints, refreshPointsFromDatabase } = useRewards();
+  const { totalPoints, totalRewardsSupply, refreshPointsFromDatabase } = useRewards();
 
   // Refresh points when component mounts - exactly like in TasksHeader
   useEffect(() => {
