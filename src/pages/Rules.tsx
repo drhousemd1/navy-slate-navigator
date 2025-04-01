@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -11,6 +10,7 @@ import RuleEditor from '../components/RuleEditor';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import HighlightedText from '../components/task/HighlightedText';
+import RulesHeader from '../components/rule/RulesHeader';
 
 interface Rule {
   id: string;
@@ -261,7 +261,7 @@ const Rules: React.FC = () => {
   return (
     <AppLayout onAddNewItem={handleAddRule}>
       <div className="container mx-auto px-4 py-6">
-        <h1 className="text-base font-semibold text-white mb-6">Rules</h1>
+        <RulesHeader />
         
         {isLoading ? (
           <div className="flex justify-center items-center py-10">
