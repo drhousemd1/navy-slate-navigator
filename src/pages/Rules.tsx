@@ -308,24 +308,26 @@ const Rules: React.FC = () => {
                       <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
                         <Check className="w-6 h-6 text-white" />
                       </div>
-                      <div className="text-xl font-semibold">
-                        <HighlightedText
-                          text={rule.title}
-                          highlight={rule.highlight_effect}
-                          color={rule.title_color}
-                        />
+                      <div className="flex-1 flex flex-col">
+                        <div className="text-xl font-semibold">
+                          <HighlightedText
+                            text={rule.title}
+                            highlight={rule.highlight_effect}
+                            color={rule.title_color}
+                          />
+                        </div>
+                        
+                        {rule.description && (
+                          <div className="text-sm mt-1">
+                            <HighlightedText
+                              text={rule.description}
+                              highlight={rule.highlight_effect}
+                              color={rule.subtext_color}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
-                    
-                    {rule.description && (
-                      <div className="ml-[3.25rem] mt-1">
-                        <HighlightedText
-                          text={rule.description}
-                          highlight={rule.highlight_effect}
-                          color={rule.subtext_color}
-                        />
-                      </div>
-                    )}
                   </div>
                   
                   <div className="flex items-center justify-between mt-2 relative z-10">
