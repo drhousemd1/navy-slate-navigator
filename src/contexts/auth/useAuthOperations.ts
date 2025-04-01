@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -89,13 +88,8 @@ export function useAuthOperations() {
       
       console.log('Sending password reset to:', trimmedEmail);
       
-      // Get the current hostname to determine environment
-      const isLocalhost = window.location.hostname === 'localhost';
-      
-      // Use the appropriate site URL based on environment
-      const siteUrl = isLocalhost 
-        ? 'http://localhost:3000' 
-        : window.location.origin;
+      // Get the current origin instead of hardcoding localhost
+      const siteUrl = window.location.origin;
       
       console.log('Using site URL for password reset:', siteUrl);
       
