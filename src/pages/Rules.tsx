@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import RuleEditor from '../components/RuleEditor';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4 } from 'uuid';
 
 // Rule data structure
 interface Rule {
