@@ -271,6 +271,17 @@ const Rules: React.FC = () => {
                 className="bg-dark-navy border-2 border-[#00f0ff] overflow-hidden"
               >
                 <div className="relative p-4">
+                  {rule.background_image_url && (
+                    <div 
+                      className="absolute inset-0 z-0" 
+                      style={{
+                        backgroundImage: `url(${rule.background_image_url})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
+                        opacity: (rule.background_opacity || 100) / 100
+                      }}
+                    />
+                  )}
                   <div className="flex justify-between items-center mb-3">
                     <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
                     <Button
@@ -283,7 +294,7 @@ const Rules: React.FC = () => {
                     </Button>
                   </div>
                   
-                  <div className="mb-4">
+                  <div className="mb-4 relative z-10">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center">
                         <Check className="w-6 h-6 text-white" />
@@ -302,7 +313,7 @@ const Rules: React.FC = () => {
                     )}
                   </div>
                   
-                  <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center justify-between mt-2 relative z-10">
                     <FrequencyTracker 
                       frequency={rule.frequency}
                       frequency_count={rule.frequency_count}
