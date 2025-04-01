@@ -318,7 +318,7 @@ const Rules: React.FC = () => {
                     </div>
                     
                     {rule.description && (
-                      <div className="ml-[3.25rem]">
+                      <div className="ml-[3.25rem] mt-1">
                         <HighlightedText
                           text={rule.description}
                           highlight={rule.highlight_effect}
