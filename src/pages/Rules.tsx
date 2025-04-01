@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -54,7 +53,6 @@ const Rules: React.FC = () => {
           throw error;
         }
         
-        // Initialize usage_data if it doesn't exist
         const rulesWithUsageData = (data as Rule[] || []).map(rule => {
           if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
             return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
@@ -90,14 +88,11 @@ const Rules: React.FC = () => {
 
   const handleRuleBroken = async (rule: Rule) => {
     try {
-      // Get current day of week (0 = Sunday, 1 = Monday, etc.)
       const currentDayOfWeek = new Date().getDay();
       
-      // Create a copy of the usage data and increment the count for today
       const newUsageData = [...(rule.usage_data || [0, 0, 0, 0, 0, 0, 0])];
-      newUsageData[currentDayOfWeek] = 1; // Mark as broken for today
+      newUsageData[currentDayOfWeek] = 1;
       
-      // Update the rule in the database
       const { data, error } = await supabase
         .from('rules')
         .update({
@@ -109,7 +104,6 @@ const Rules: React.FC = () => {
         
       if (error) throw error;
       
-      // Update the local state
       setRules(rules.map(r => 
         r.id === rule.id ? { ...r, usage_data: newUsageData } : r
       ));
@@ -119,7 +113,6 @@ const Rules: React.FC = () => {
         description: 'This violation has been recorded.',
       });
       
-      // Navigate to punishments
       navigate('/punishments');
       
     } catch (err) {
@@ -178,7 +171,6 @@ const Rules: React.FC = () => {
           throw new Error('Rule title is required');
         }
         
-        // Initialize a new rule with default values
         const newRule = {
           title: ruleWithoutId.title,
           priority: ruleWithoutId.priority || 'medium',
@@ -192,7 +184,7 @@ const Rules: React.FC = () => {
           focal_point_y: ruleWithoutId.focal_point_y || 50,
           frequency: ruleWithoutId.frequency || 'daily',
           frequency_count: ruleWithoutId.frequency_count || 3,
-          usage_data: [0, 0, 0, 0, 0, 0, 0], // Initialize with 7 days of the week
+          usage_data: [0, 0, 0, 0, 0, 0, 0],
           ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
           ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
           ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
@@ -301,11 +293,13 @@ const Rules: React.FC = () => {
                       </span>
                     </div>
                     
-                    <div className="ml-12 mt-1">
-                      <span className="text-white">
-                        {rule.description}
-                      </span>
-                    </div>
+                    {rule.description && (
+                      <div className="ml-[3.25rem]">
+                        <span className="text-white">
+                          {rule.description}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex items-center justify-between mt-2">
