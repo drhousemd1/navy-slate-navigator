@@ -7,7 +7,12 @@ import { useRewards } from '@/contexts/RewardsContext';
 
 const RulesHeader: React.FC = () => {
   const [totalRules, setTotalRules] = useState(0);
-  const { totalPoints } = useRewards();
+  const { totalPoints, refreshPointsFromDatabase } = useRewards();
+
+  // Refresh points when component mounts - exactly like in TasksHeader
+  useEffect(() => {
+    refreshPointsFromDatabase();
+  }, [refreshPointsFromDatabase]);
 
   // Fetch rules count when component mounts
   useEffect(() => {
