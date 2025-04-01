@@ -131,6 +131,8 @@ const Rules: React.FC = () => {
       let result;
       
       if (ruleData.id) {
+        const existingRule = rules.find(rule => rule.id === ruleData.id);
+        
         const { data, error } = await supabase
           .from('rules')
           .update({
@@ -158,6 +160,10 @@ const Rules: React.FC = () => {
           
         if (error) throw error;
         result = data;
+        
+        if (existingRule && existingRule.usage_data) {
+          result.usage_data = existingRule.usage_data;
+        }
         
         setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result as Rule } : rule));
         
