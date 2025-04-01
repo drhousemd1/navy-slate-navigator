@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
 
@@ -33,10 +32,8 @@ export function useAuthForm() {
     updateFormState({ loading: true, loginError: null });
 
     try {
-      console.log("Attempting to sign in with email:", formState.email);
-      
-      // Validate input
-      if (!formState.email.trim() || !formState.password.trim()) {
+      // Validate input first to prevent unnecessary API calls
+      if (!formState.email || !formState.password) {
         updateFormState({
           loginError: "Email and password are required",
           loading: false
@@ -44,18 +41,24 @@ export function useAuthForm() {
         return;
       }
       
-      // Log auth attempt for debugging
+      // Trim inputs before sending
+      const email = formState.email.trim();
+      const password = formState.password.trim();
+      
+      console.log("Attempting to sign in with email:", email);
       console.log("Login attempt details:", {
-        email: formState.email.trim(),
-        passwordLength: formState.password?.trim().length || 0
+        email,
+        passwordLength: password.length
       });
       
-      const { error } = await signIn(formState.email.trim(), formState.password.trim());
+      // Sign in with trimmed values
+      const { error } = await signIn(email, password);
       
+      // Handle errors with consistent format
       if (error) {
         console.error("Login error details:", error);
         
-        // Provide more specific error messages based on error type
+        // Provide specific error message based on error type
         let errorMessage = "Invalid login credentials. Please check your email and password.";
         if (error.message) {
           if (error.message.includes("Invalid login")) {
@@ -70,9 +73,13 @@ export function useAuthForm() {
           loading: false
         });
       } else {
-        console.log("Login successful, navigating to home");
-        // No need to navigate here - the useEffect watching isAuthenticated will handle it
-        // This prevents race conditions
+        console.log("Login successful");
+        // The useEffect watching isAuthenticated will handle navigation
+        // Reset login error and loading state
+        updateFormState({ 
+          loginError: null,
+          loading: false 
+        });
       }
     } catch (error: any) {
       console.error("Authentication error:", error);
@@ -80,11 +87,6 @@ export function useAuthForm() {
         loginError: "An unexpected error occurred. Please try again.",
         loading: false
       });
-    } finally {
-      // If there's no error and we've reached this point, make sure to reset loading
-      if (!formState.loginError) {
-        updateFormState({ loading: false });
-      }
     }
   };
 
@@ -93,8 +95,13 @@ export function useAuthForm() {
     updateFormState({ loading: true, loginError: null });
 
     try {
-      console.log("Attempting to sign up with email:", formState.email);
-      const { error } = await signUp(formState.email, formState.password);
+      // Trim inputs before sending
+      const email = formState.email.trim();
+      const password = formState.password.trim();
+      
+      console.log("Attempting to sign up with email:", email);
+      const { error } = await signUp(email, password);
+      
       if (error) {
         console.error("Signup error:", error);
         updateFormState({

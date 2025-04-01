@@ -19,12 +19,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Get auth operations
   const authOperations = useAuthOperations();
-  const { signIn: authOperationsSignIn, signUp, resetPassword, updatePassword } = authOperations;
+  const { signIn: authSignIn, signUp, resetPassword, updatePassword } = authOperations;
   
   // Wrap signIn to match expected return type in AuthContextType
   const signIn = async (email: string, password: string) => {
-    const result = await authOperationsSignIn(email, password);
-    return { error: result.error };
+    try {
+      const result = await authSignIn(email, password);
+      // Keep the error object format consistent for error handling in useAuthForm
+      return { error: result.error };
+    } catch (error) {
+      console.error("Error in signIn wrapper:", error);
+      return { error };
+    }
   };
   
   // Get role management
@@ -68,11 +74,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Set up auth state listener and check for existing session
   useEffect(() => {
     console.log('Setting up auth state listener and checking for existing session');
+    let mounted = true;
     
-    // CRITICAL: Set up auth state listener FIRST
+    // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log('Auth state changed:', event, currentSession?.user?.email);
+        
+        if (!mounted) return;
         
         // Update authentication state synchronously
         setSession(currentSession);
@@ -90,24 +99,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      console.log('Initial session check:', currentSession?.user?.email || 'No session');
-      
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setIsAuthenticated(!!currentSession);
-      
-      if (currentSession?.user) {
-        setTimeout(() => {
-          checkUserRole();
-        }, 0);
+    // Then check for existing session
+    const checkSession = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        console.log('Initial session check:', currentSession?.user?.email || 'No session');
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setIsAuthenticated(!!currentSession);
+        
+        if (currentSession?.user) {
+          setTimeout(() => {
+            checkUserRole();
+          }, 0);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error("Error checking session:", error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      
-      setLoading(false);
-    });
+    };
+    
+    checkSession();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);

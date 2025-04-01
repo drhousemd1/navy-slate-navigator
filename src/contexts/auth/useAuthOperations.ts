@@ -7,17 +7,22 @@ export function useAuthOperations() {
     try {
       console.log('Attempting to sign in with email:', email);
       
-      if (!email || !password) {
+      // Input validation - ensure values are properly trimmed
+      const trimmedEmail = email.trim();
+      const trimmedPassword = password.trim();
+      
+      if (!trimmedEmail || !trimmedPassword) {
         console.error('Sign in validation error: Missing email or password');
         return { error: { message: 'Email and password are required' }, user: null };
       }
       
-      // Add logging to track what's happening
-      console.log('Auth request details:', { email, passwordLength: password?.length || 0 });
+      // Log auth request details but not the actual password
+      console.log('Auth request details:', { email: trimmedEmail, passwordLength: trimmedPassword.length });
       
+      // Use the trimmed values for authentication
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim(),
+        email: trimmedEmail,
+        password: trimmedPassword,
       });
       
       if (error) {
