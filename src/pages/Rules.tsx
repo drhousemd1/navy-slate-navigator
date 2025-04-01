@@ -40,13 +40,13 @@ const Rules: React.FC = () => {
                   <div className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center">
                     <Check className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-black font-bold">
+                  <span className="text-white font-bold">
                     Spanking
                   </span>
                 </div>
                 
                 <div className="ml-12 mt-3">
-                  <span className="text-gray-700">
+                  <span className="text-white">
                     Get a spanking
                   </span>
                 </div>
