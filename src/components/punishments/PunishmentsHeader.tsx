@@ -14,10 +14,10 @@ const PunishmentsHeader: React.FC = () => {
 
   return (
     <div className="flex items-center mb-6">
-      <h1 className="text-base font-semibold text-white mr-auto">Punishments</h1>
+      <h1 className="text-base font-semibold text-white mr-2">Punishments</h1>
       <Button 
         variant="outline" 
-        className="relative mr-2 flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white border-none h-8 px-3 text-sm font-medium rounded-md"
+        className="relative mr-auto flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white border-none h-8 px-3 text-sm font-medium rounded-md"
         onClick={() => setIsRandomSelectorOpen(true)}
         disabled={punishments.length === 0}
       >
