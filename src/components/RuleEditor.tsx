@@ -22,13 +22,16 @@ interface Rule {
   frequency: 'daily' | 'weekly';
   frequency_count: number;
   usage_data?: number[];
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
 }
 
 interface RuleEditorProps {
   isOpen: boolean;
   onClose: () => void;
   ruleData?: Partial<Rule>;
-  onSave: (ruleData: any) => void;
+  onSave: (ruleData: Partial<Rule>) => void;
   onDelete?: (ruleId: string) => void;
 }
 
@@ -39,7 +42,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   onSave, 
   onDelete 
 }) => {
-  const handleSave = async (formData: any) => {
+  const handleSave = async (formData: Partial<Rule>) => {
     await onSave(formData);
     onClose();
   };
