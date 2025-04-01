@@ -125,8 +125,10 @@ const Rules: React.FC = () => {
         });
       } else {
         // Create new rule - let Supabase generate the UUID
+        const { id, ...ruleWithoutId } = ruleData; // Destructure to ensure id is removed
+        
         const newRule = {
-          ...ruleData,
+          ...ruleWithoutId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           user_id: (await supabase.auth.getUser()).data.user?.id,
@@ -134,7 +136,7 @@ const Rules: React.FC = () => {
         
         const { data, error } = await supabase
           .from('rules')
-          .insert([newRule as any])
+          .insert([newRule])
           .select()
           .single();
           
