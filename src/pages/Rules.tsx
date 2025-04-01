@@ -285,8 +285,10 @@ const Rules: React.FC = () => {
                     />
                   )}
                   
-                  {/* Semi-transparent overlay for better readability when image opacity is high */}
-                  <div className="absolute inset-0 bg-dark-navy/30 z-0"></div>
+                  {/* Only add a light overlay if needed for readability */}
+                  {rule.background_image_url && (
+                    <div className="absolute inset-0 bg-dark-navy/20 z-0"></div>
+                  )}
                   
                   {/* Content layers with higher z-index */}
                   <div className="flex justify-between items-center mb-3 relative z-10">
