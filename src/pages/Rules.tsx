@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -271,6 +272,7 @@ const Rules: React.FC = () => {
                 className="bg-dark-navy border-2 border-[#00f0ff] overflow-hidden"
               >
                 <div className="relative p-4">
+                  {/* Background image layer with lower z-index */}
                   {rule.background_image_url && (
                     <div 
                       className="absolute inset-0 z-0" 
@@ -282,12 +284,17 @@ const Rules: React.FC = () => {
                       }}
                     />
                   )}
-                  <div className="flex justify-between items-center mb-3">
+                  
+                  {/* Semi-transparent overlay for better readability when image opacity is high */}
+                  <div className="absolute inset-0 bg-dark-navy/30 z-0"></div>
+                  
+                  {/* Content layers with higher z-index */}
+                  <div className="flex justify-between items-center mb-3 relative z-10">
                     <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3"
+                      className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
                       onClick={() => handleRuleBroken(rule)}
                     >
                       Rule Broken
