@@ -66,6 +66,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Set up auth state listener and check for existing session
   useEffect(() => {
+    // Skip auth redirects and logic if on the reset-password page
+    if (window.location.pathname === '/reset-password') return;
+    
     console.log('Checking session and setting up auth state listener');
     let mounted = true;
 
