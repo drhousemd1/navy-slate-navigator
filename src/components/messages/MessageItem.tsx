@@ -1,13 +1,14 @@
+
 import React, { useEffect, useRef } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { Message } from '@/hooks/useMessages';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface MessageItemProps {
   message: Message;
   isSentByMe: boolean;
   userNickname: string | null;
-  userProfileImage: string | null;
   onImageLoad?: () => void;
 }
 
@@ -15,9 +16,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isSentByMe,
   userNickname,
-  userProfileImage,
   onImageLoad
 }) => {
+  const { getProfileImage } = useAuth();
+  const userProfileImage = getProfileImage();
   const messageRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   
