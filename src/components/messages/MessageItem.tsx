@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -74,36 +75,34 @@ const MessageItem: React.FC<MessageItemProps> = ({
             )}
           </Avatar>
 
-          <div className={`p-3 rounded-lg max-w-[75vw] ${
+          <div className={`flex flex-col p-3 rounded-lg max-w-[75vw] ${
             isSentByMe
               ? 'bg-cyan-800 text-white rounded-tl-none'
               : 'bg-navy border border-light-navy text-white rounded-tr-none'
           }`}>
-            <div className="flex flex-col">
-              <span className="font-semibold text-xs mb-1">
-                {isSentByMe ? userNickname : 'Partner'}
-              </span>
+            <span className="font-semibold text-xs mb-1">
+              {isSentByMe ? userNickname : 'Partner'}
+            </span>
 
-              {hasContent && (
-                <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
-              )}
+            {hasContent && (
+              <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
+            )}
 
-              {hasImage && (
-                <div className="mt-2 relative group">
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-black bg-opacity-40 rounded-md">
-                    <ZoomIn className="h-8 w-8 text-white" />
-                  </div>
-                  <img
-                    src={message.image_url}
-                    alt="Sent image"
-                    className="rounded-md max-h-60 object-contain border border-light-navy cursor-pointer"
-                    onClick={handleImageClick}
-                    onLoad={onImageLoad}
-                    onError={(e) => e.currentTarget.style.display = 'none'}
-                  />
+            {hasImage && (
+              <div className="mt-2 relative group">
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-black bg-opacity-40 rounded-md">
+                  <ZoomIn className="h-8 w-8 text-white" />
                 </div>
-              )}
-            </div>
+                <img
+                  src={message.image_url}
+                  alt="Sent image"
+                  className="rounded-md max-h-60 object-contain border border-light-navy cursor-pointer"
+                  onClick={handleImageClick}
+                  onLoad={onImageLoad}
+                  onError={(e) => e.currentTarget.style.display = 'none'}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
