@@ -25,6 +25,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const navigate = useNavigate();
   const { user, getNickname, getProfileImage, getUserRole } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [nickname, setNickname] = useState<string>('Guest');
+  const [userRole, setUserRole] = useState<string>('');
 
   // Only show "Add" button for specific routes
   const shouldShowAddButton = 
@@ -42,11 +44,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
     }
   };
   
-  // Get profile image and nickname for the avatar
-  const nickname = getNickname();
-  
-  // Get user role with proper capitalization
-  const userRole = getUserRole();
+  // Load user data - nickname and role
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (user) {
+        const name = await getNickname();
+        const role = await getUserRole();
+        if (name) setNickname(name);
+        if (role) setUserRole(role);
+      }
+    };
+    
+    loadUserData();
+  }, [user, getNickname, getUserRole]);
 
   // Fetch profile directly from Supabase to ensure we get the latest data
   useEffect(() => {
@@ -85,14 +95,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 
   // Use context function as fallback
   useEffect(() => {
-    if (!profileImage) {
-      const contextImage = getProfileImage();
-      if (contextImage) {
-        console.log('Using profile image from context:', contextImage);
-        setProfileImage(contextImage);
+    const loadContextImage = async () => {
+      if (!profileImage && user) {
+        const contextImage = await getProfileImage();
+        if (contextImage) {
+          console.log('Using profile image from context:', contextImage);
+          setProfileImage(contextImage);
+        }
       }
-    }
-  }, [getProfileImage, profileImage]);
+    };
+    
+    loadContextImage();
+  }, [getProfileImage, profileImage, user]);
 
   // Determine if we're on the rewards page, tasks page, punishments page, or rules page for special styling
   const isRewardsPage = location.pathname === '/rewards';

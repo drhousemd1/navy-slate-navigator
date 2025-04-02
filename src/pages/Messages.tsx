@@ -10,6 +10,7 @@ import MessageInput from '@/components/messages/MessageInput';
 const Messages: React.FC = () => {
   const { user, getNickname } = useAuth();
   const [message, setMessage] = useState('');
+  const [userNickname, setUserNickname] = useState('');
   const messagesSentRef = useRef(0);
   const messageListRef = useRef<{ scrollToBottom: (behavior: ScrollBehavior) => void }>(null);
   
@@ -42,7 +43,16 @@ const Messages: React.FC = () => {
     }
   }, [partnerId, isLoading, refetch]);
 
-  const userNickname = getNickname();
+  // Fetch user nickname
+  useEffect(() => {
+    const fetchNickname = async () => {
+      if (user) {
+        const name = await getNickname();
+        setUserNickname(name || 'User');
+      }
+    };
+    fetchNickname();
+  }, [user, getNickname]);
 
   const handleSendMessage = useCallback(async () => {
     if (!user || (!message.trim() && !imageFile)) return;

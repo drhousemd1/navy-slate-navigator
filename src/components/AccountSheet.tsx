@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -18,6 +19,8 @@ const AccountSheet = () => {
   const { user, getNickname, getProfileImage, getUserRole, signOut } = useAuth();
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [nickname, setNickname] = useState<string>('Guest');
+  const [userRole, setUserRole] = useState<string>('Not logged in');
   
   const toggleProfileOptions = () => {
     setShowProfileOptions(!showProfileOptions);
@@ -35,9 +38,20 @@ const AccountSheet = () => {
   const handleEncyclopediaClick = () => {
     navigate('/encyclopedia');
   };
-  
-  const nickname = getNickname();
-  const userRole = getUserRole();
+
+  // Load nickname and user role
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (user) {
+        const name = await getNickname();
+        const role = await getUserRole();
+        if (name) setNickname(name);
+        if (role) setUserRole(role);
+      }
+    };
+    
+    loadUserData();
+  }, [user, getNickname, getUserRole]);
 
   useEffect(() => {
     const fetchProfileImage = async () => {
@@ -73,15 +87,20 @@ const AccountSheet = () => {
     fetchProfileImage();
   }, [user]);
 
+  // Use context function as fallback
   useEffect(() => {
-    if (!profileImage) {
-      const contextImage = getProfileImage();
-      if (contextImage) {
-        console.log('AccountSheet: Using profile image from context:', contextImage);
-        setProfileImage(contextImage);
+    const loadContextImage = async () => {
+      if (!profileImage && user) {
+        const contextImage = await getProfileImage();
+        if (contextImage) {
+          console.log('AccountSheet: Using profile image from context:', contextImage);
+          setProfileImage(contextImage);
+        }
       }
-    }
-  }, [getProfileImage, profileImage]);
+    };
+    
+    loadContextImage();
+  }, [getProfileImage, profileImage, user]);
   
   return (
     <Sheet>
