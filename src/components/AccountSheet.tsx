@@ -8,7 +8,7 @@ import {
   SheetTrigger
 } from '@/components/ui/sheet';
 import { UserCircle2, User, LogOut, BookOpen } from 'lucide-react';
-import { useAuth } from '@/contexts/auth/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,8 +18,6 @@ const AccountSheet = () => {
   const { user, getNickname, getProfileImage, getUserRole, signOut } = useAuth();
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [nickname, setNickname] = useState<string>('Guest');
-  const [userRole, setUserRole] = useState<string>('Not logged in');
   
   const toggleProfileOptions = () => {
     setShowProfileOptions(!showProfileOptions);
@@ -37,19 +35,9 @@ const AccountSheet = () => {
   const handleEncyclopediaClick = () => {
     navigate('/encyclopedia');
   };
-
-  useEffect(() => {
-    const loadUserData = async () => {
-      if (user) {
-        const name = await getNickname();
-        const role = await getUserRole();
-        if (name) setNickname(name);
-        if (role) setUserRole(role);
-      }
-    };
-    
-    loadUserData();
-  }, [user, getNickname, getUserRole]);
+  
+  const nickname = getNickname();
+  const userRole = getUserRole();
 
   useEffect(() => {
     const fetchProfileImage = async () => {
@@ -86,18 +74,14 @@ const AccountSheet = () => {
   }, [user]);
 
   useEffect(() => {
-    const loadContextImage = async () => {
-      if (!profileImage && user) {
-        const contextImage = await getProfileImage();
-        if (contextImage) {
-          console.log('AccountSheet: Using profile image from context:', contextImage);
-          setProfileImage(contextImage);
-        }
+    if (!profileImage) {
+      const contextImage = getProfileImage();
+      if (contextImage) {
+        console.log('AccountSheet: Using profile image from context:', contextImage);
+        setProfileImage(contextImage);
       }
-    };
-    
-    loadContextImage();
-  }, [getProfileImage, profileImage, user]);
+    }
+  }, [getProfileImage, profileImage]);
   
   return (
     <Sheet>

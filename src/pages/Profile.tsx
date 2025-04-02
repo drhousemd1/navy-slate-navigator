@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { useAuth } from '@/contexts/auth/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Pencil, Lock, Copy, Check, Trash2, Unlink2, Camera } from 'lucide-react';

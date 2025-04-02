@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -11,7 +12,7 @@ import {
 } from './ui/dropdown-menu';
 import AccountSheet from './AccountSheet';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { useAuth } from '@/contexts/auth/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AppLayoutProps {
@@ -24,15 +25,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const navigate = useNavigate();
   const { user, getNickname, getProfileImage, getUserRole } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [nickname, setNickname] = useState<string>('Guest');
-  const [userRole, setUserRole] = useState<string>('');
 
+  // Only show "Add" button for specific routes
   const shouldShowAddButton = 
     location.pathname === '/tasks' || 
     location.pathname === '/rules' || 
     location.pathname === '/rewards' || 
     location.pathname === '/punishments';
     
+  // Don't add bottom padding on messages page
   const isMessagesPage = location.pathname === '/messages';
 
   const handleAddNewItem = () => {
@@ -41,19 +42,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
     }
   };
   
-  useEffect(() => {
-    const loadUserData = async () => {
-      if (user) {
-        const name = await getNickname();
-        const role = await getUserRole();
-        if (name) setNickname(name);
-        if (role) setUserRole(role);
-      }
-    };
-    
-    loadUserData();
-  }, [user, getNickname, getUserRole]);
+  // Get profile image and nickname for the avatar
+  const nickname = getNickname();
+  
+  // Get user role with proper capitalization
+  const userRole = getUserRole();
 
+  // Fetch profile directly from Supabase to ensure we get the latest data
   useEffect(() => {
     const fetchProfileImage = async () => {
       if (!user) {
@@ -88,20 +83,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
     fetchProfileImage();
   }, [user]);
 
+  // Use context function as fallback
   useEffect(() => {
-    const loadContextImage = async () => {
-      if (!profileImage && user) {
-        const contextImage = await getProfileImage();
-        if (contextImage) {
-          console.log('Using profile image from context:', contextImage);
-          setProfileImage(contextImage);
-        }
+    if (!profileImage) {
+      const contextImage = getProfileImage();
+      if (contextImage) {
+        console.log('Using profile image from context:', contextImage);
+        setProfileImage(contextImage);
       }
-    };
-    
-    loadContextImage();
-  }, [getProfileImage, profileImage, user]);
+    }
+  }, [getProfileImage, profileImage]);
 
+  // Determine if we're on the rewards page, tasks page, punishments page, or rules page for special styling
   const isRewardsPage = location.pathname === '/rewards';
   const isTasksPage = location.pathname === '/tasks';
   const isPunishmentsPage = location.pathname === '/punishments';
@@ -110,9 +103,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 
   return (
     <div className="flex flex-col min-h-screen bg-dark-navy">
+      {/* Top header section with account and settings icons */}
       <div className="w-full bg-navy border-b border-light-navy py-2 px-4">
         <div className="max-w-screen-lg mx-auto flex justify-between items-center">
           <div className="flex items-center">
+            {/* Left side avatar */}
             <Avatar 
               className="h-7 w-7 cursor-pointer" 
               onClick={() => navigate('/profile')}
@@ -132,14 +127,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               </AvatarFallback>
             </Avatar>
             
+            {/* Username and role display */}
             <div className="ml-2">
               <p className="text-white text-sm font-medium leading-tight">{nickname}</p>
               <p className="text-gray-400 text-xs leading-tight">{userRole}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />
             
+            {/* Messaging icon */}
             <MessageSquare 
               className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" 
               onClick={() => navigate('/messages')}

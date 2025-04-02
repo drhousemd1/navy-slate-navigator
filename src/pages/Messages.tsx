@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { useAuth } from '@/contexts/auth/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
 import { toast } from '@/hooks/use-toast';
 import MessageList from '@/components/messages/MessageList';
@@ -9,7 +10,6 @@ import MessageInput from '@/components/messages/MessageInput';
 const Messages: React.FC = () => {
   const { user, getNickname } = useAuth();
   const [message, setMessage] = useState('');
-  const [userNickname, setUserNickname] = useState('');
   const messagesSentRef = useRef(0);
   const messageListRef = useRef<{ scrollToBottom: (behavior: ScrollBehavior) => void }>(null);
   
@@ -42,16 +42,7 @@ const Messages: React.FC = () => {
     }
   }, [partnerId, isLoading, refetch]);
 
-  // Fetch user nickname
-  useEffect(() => {
-    const fetchNickname = async () => {
-      if (user) {
-        const name = await getNickname();
-        setUserNickname(name || 'User');
-      }
-    };
-    fetchNickname();
-  }, [user, getNickname]);
+  const userNickname = getNickname();
 
   const handleSendMessage = useCallback(async () => {
     if (!user || (!message.trim() && !imageFile)) return;
