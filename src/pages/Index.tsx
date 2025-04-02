@@ -1,10 +1,11 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { APP_CONFIG } from '../config/constants';
+import { useAuth } from '../contexts/auth/AuthContext';
 
 const Index: React.FC = () => {
   const [imageError, setImageError] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   return (
     <AppLayout>
