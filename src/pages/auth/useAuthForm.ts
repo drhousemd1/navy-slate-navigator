@@ -41,31 +41,29 @@ export function useAuthForm() {
         return;
       }
       
+      // Add more client-side validation if needed
+      if (formState.password.length < 6) {
+        updateFormState({
+          loginError: "Password must be at least 6 characters long",
+          loading: false
+        });
+        return;
+      }
+      
       console.log("Login attempt with email:", formState.email);
       
       // Sign in with email and password directly
-      const { error, user } = await signIn(formState.email, formState.password);
+      const { error } = await signIn(formState.email, formState.password);
       
       // Handle errors with consistent format
       if (error) {
         console.error("Login error:", error);
         
-        // Provide specific error message based on error type
-        let errorMessage = "Invalid login credentials. Please check your email and password.";
-        if (error.message) {
-          if (error.message.includes("Invalid login")) {
-            errorMessage = "The email or password you entered is incorrect. Please try again.";
-          } else {
-            errorMessage = error.message;
-          }
-        }
-        
         updateFormState({
-          loginError: errorMessage,
+          loginError: error.message || "Authentication failed. Please check your credentials.",
           loading: false
         });
       } else {
-        console.log("Login successful for user:", user?.email);
         // Reset login error and loading state
         updateFormState({ 
           loginError: null,
@@ -88,9 +86,18 @@ export function useAuthForm() {
     updateFormState({ loading: true, loginError: null });
 
     try {
+      // Validate input
       if (!formState.email || !formState.password) {
         updateFormState({
           loginError: "Email and password are required",
+          loading: false
+        });
+        return;
+      }
+      
+      if (formState.password.length < 6) {
+        updateFormState({
+          loginError: "Password must be at least 6 characters long",
           loading: false
         });
         return;

@@ -13,19 +13,53 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    storage: localStorage
+    storage: localStorage,
+    detectSessionInUrl: true,
+    flowType: 'implicit'
   }
 });
 
-// Debug session persistence
-if (typeof window !== 'undefined') {
-  // Check localStorage on load
-  console.log('localStorage auth session on load:', localStorage.getItem('sb-ronqvzihpffgowyscgfm-auth-token'));
-  
-  // Periodically check for session to debug persistence issues
-  setInterval(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      console.log('Current session check:', data.session ? 'Active' : 'None');
-    });
-  }, 15000);
+// Create a sample test user account for development purposes
+const createTestUser = async () => {
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      const { data: existingUser, error: checkError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .limit(1);
+        
+      // If we already have users, don't create another test user
+      if (!checkError && existingUser && existingUser.length > 0) {
+        return;
+      }
+        
+      // Sign out any existing session
+      await supabase.auth.signOut();
+      
+      // Create test user
+      const testEmail = 'test@example.com';
+      const testPassword = 'password123';
+      
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: testEmail,
+        password: testPassword
+      });
+      
+      if (signUpError) {
+        console.error('Error creating test user:', signUpError);
+      } else {
+        console.log('Test user created for development. Email: test@example.com, Password: password123');
+      }
+    } catch (err) {
+      console.error('Error in createTestUser:', err);
+    } finally {
+      // Make sure we're signed out
+      await supabase.auth.signOut();
+    }
+  }
+};
+
+// Only run in development mode after a short delay
+if (process.env.NODE_ENV === 'development') {
+  setTimeout(createTestUser, 2000);
 }

@@ -64,29 +64,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Fix the auth state handling
+  // Fix the auth state handling to avoid session persistence issues
   useEffect(() => {
     console.log('Setting up auth state listener');
     
-    // First, set up the listener before checking the existing session
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       console.log('Auth state changed:', event, newSession?.user?.email);
       
-      // Set session and user synchronously to avoid race conditions
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-      setIsAuthenticated(!!newSession);
-      setLoading(false);
-      
-      // Defer role checking to avoid auth deadlocks
-      if (newSession?.user) {
-        setTimeout(() => {
-          checkUserRole();
-        }, 0);
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        console.log('User signed in or token refreshed:', newSession?.user?.email);
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        setIsAuthenticated(!!newSession);
+        
+        // Defer role checking to avoid auth deadlocks
+        if (newSession?.user) {
+          setTimeout(() => {
+            checkUserRole();
+          }, 0);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        console.log('User signed out');
+        setSession(null);
+        setUser(null);
+        setIsAuthenticated(false);
       }
+      
+      setLoading(false);
     });
     
-    // Then check for an existing session
+    // Check for an existing session
     const checkExistingSession = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();

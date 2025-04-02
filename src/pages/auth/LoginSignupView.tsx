@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogIn, UserPlus, RefreshCw } from 'lucide-react';
+import { LogIn, UserPlus, RefreshCw, AlertCircle } from 'lucide-react';
 import { AuthViewProps } from './types';
 import { useAuthForm } from './useAuthForm';
 import { useDebugMode } from './useDebugMode';
@@ -85,8 +85,9 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
           </div>
           
           {formState.loginError && (
-            <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded">
-              {formState.loginError}
+            <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{formState.loginError}</span>
             </div>
           )}
           
@@ -148,9 +149,16 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
         </form>
         
         <div className="text-center text-xs text-gray-400 pt-2">
-          <p>Note: If you have trouble signing in, try creating a new account with a different email.</p>
+          <p>
+            Try these credentials: <br />
+            Email: test@example.com <br />
+            Password: password123
+          </p>
+          <p className="mt-2">
+            Note: If you need to create a new account, verification might be enabled in Supabase.
+          </p>
         </div>
       </div>
     </div>
   );
-};
+}
