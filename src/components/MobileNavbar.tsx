@@ -51,7 +51,8 @@ const MobileNavbar: React.FC = () => {
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50">
       <div className="grid grid-cols-5 h-16 px-4">
         {navItems.map((item) => {
-          const isActive = currentPath === item.path;
+          // Compare just the route path without trailing slashes for consistency
+          const isActive = currentPath.replace(/\/$/, '') === item.path.replace(/\/$/, '');
           
           return (
             <Link

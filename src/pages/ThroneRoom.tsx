@@ -13,24 +13,33 @@ import {
   TooltipContent
 } from '@/components/ui/tooltip';
 import { InfoIcon } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 const ThroneRoom: React.FC = () => {
-  const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
+  const { isAdmin, isAuthenticated, loading, checkUserRole, user } = useAuth();
   const navigate = useNavigate();
   const [isRoleChecked, setIsRoleChecked] = useState(false);
 
-  console.log('ThroneRoom rendering: Admin status:', isAdmin, 'Auth status:', isAuthenticated);
+  console.log('ThroneRoom rendering: Admin status:', isAdmin, 'Auth status:', isAuthenticated, 'User:', user?.id);
 
   // Make sure role check runs when authentication is confirmed
   useEffect(() => {
-    if (isAuthenticated && !loading) {
+    if (isAuthenticated && !loading && !isRoleChecked) {
       console.log('ThroneRoom: User authenticated, checking role');
+      
+      // Force role check
       checkUserRole().then(() => {
-        console.log('ThroneRoom: Role check completed');
+        console.log('ThroneRoom: Role check completed, isAdmin:', isAdmin);
         setIsRoleChecked(true);
+        
+        // Show toast with role status for debugging
+        toast({
+          title: `Role Status: ${isAdmin ? 'Admin' : 'Not Admin'}`,
+          description: `User ID: ${user?.id || 'Unknown'}`,
+        });
       });
     }
-  }, [isAuthenticated, loading, checkUserRole]);
+  }, [isAuthenticated, loading, checkUserRole, isAdmin, user, isRoleChecked]);
 
   // Handle unauthenticated users
   useEffect(() => {
@@ -57,6 +66,7 @@ const ThroneRoom: React.FC = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center p-6">
             <h1 className="text-white text-xl mb-2">Throne Room - Loading</h1>
+            <p className="text-nav-inactive mb-4">Checking admin privileges...</p>
             <Skeleton className="h-12 w-48 bg-light-navy/30 rounded mx-auto mb-4" />
             <Skeleton className="h-4 w-64 bg-light-navy/30 rounded mx-auto" />
           </div>
