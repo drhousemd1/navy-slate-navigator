@@ -14,8 +14,6 @@ import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
-import FrequencySelector from '../task-editor/FrequencySelector';
-import NumberField from '../task-editor/NumberField';
 
 interface Rule {
   id?: string;
@@ -233,19 +231,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <PrioritySelector control={form.control} />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FrequencySelector control={form.control} />
-          
-          <NumberField
-            control={form.control}
-            name="frequency_count"
-            label="Times Per Period"
-            onIncrement={() => form.setValue('frequency_count', (form.getValues('frequency_count') || 0) + 1)}
-            onDecrement={() => form.setValue('frequency_count', Math.max(1, (form.getValues('frequency_count') || 0) - 1))}
-            minValue={1}
-          />
         </div>
         
         <div className="space-y-4">
