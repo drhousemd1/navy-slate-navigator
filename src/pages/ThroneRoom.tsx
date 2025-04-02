@@ -56,6 +56,7 @@ const ThroneRoom: React.FC = () => {
       <AppLayout>
         <div className="flex items-center justify-center h-screen">
           <div className="text-center p-6">
+            <h1 className="text-white text-xl mb-2">test</h1>
             <Skeleton className="h-12 w-48 bg-light-navy/30 rounded mx-auto mb-4" />
             <Skeleton className="h-4 w-64 bg-light-navy/30 rounded mx-auto" />
           </div>
@@ -69,6 +70,7 @@ const ThroneRoom: React.FC = () => {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-screen">
+          <h1 className="text-white text-xl mb-2">test</h1>
           <Alert className="max-w-md bg-navy border-light-navy">
             <AlertTitle className="text-white">Authentication Required</AlertTitle>
             <AlertDescription className="text-nav-inactive">
@@ -85,6 +87,7 @@ const ThroneRoom: React.FC = () => {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-screen">
+          <h1 className="text-white text-xl mb-2">test</h1>
           <Alert className="max-w-md bg-navy border-light-navy">
             <AlertTitle className="text-white">Access Restricted</AlertTitle>
             <AlertDescription className="text-nav-inactive">
@@ -102,6 +105,7 @@ const ThroneRoom: React.FC = () => {
       <div className="p-6 space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-white">Admin Throne Room</h1>
+          <h2 className="text-white text-xl">test</h2>
           
           <TooltipProvider>
             <Tooltip>
