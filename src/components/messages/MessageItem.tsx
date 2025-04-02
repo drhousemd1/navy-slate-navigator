@@ -27,6 +27,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [isImageOpen, setIsImageOpen] = useState(false);
   const messageRef = useRef<HTMLDivElement>(null);
   const hasContent = !!message.content;
+  const hasImage = !!message.image_url;
 
   useEffect(() => {
     const fetchAvatar = async () => {
@@ -63,8 +64,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
       </div>
 
       <div className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}>
-        <div className={`flex items-start gap-2 max-w-[90%] ${isSentByMe ? 'flex-row' : 'flex-row-reverse'}`}>
-          <Avatar className="h-8 w-8 border border-light-navy shrink-0">
+        <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start gap-2 max-w-[90%]`}>
+          {/* Avatar */}
+          <Avatar className="h-8 w-8 border border-light-navy">
             {avatarUrl ? (
               <AvatarImage src={avatarUrl} alt={userNickname || 'User'} />
             ) : (
@@ -73,20 +75,23 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </AvatarFallback>
             )}
           </Avatar>
-          <div className={`p-3 rounded-lg min-w-[160px] ${
-            isSentByMe 
-              ? 'bg-cyan-800 text-white rounded-tl-none' 
-              : 'bg-navy border border-light-navy text-white rounded-tr-none'
-          }`}>
+
+          {/* Message bubble */}
+          <div className={`p-3 rounded-lg min-w-[160px] ${isSentByMe ? 'bg-cyan-800 text-white rounded-tl-none' : 'bg-navy border border-light-navy text-white rounded-tr-none'}`}>
             <div className="flex flex-col">
               <span className="font-semibold text-xs mb-1">
                 {isSentByMe ? userNickname : 'Partner'}
               </span>
+
               {hasContent && (
                 <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
               )}
-              {message.image_url && (
+
+              {hasImage && (
                 <div className="mt-2 relative group">
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-black bg-opacity-40 rounded-md">
+                    <ZoomIn className="h-8 w-8 text-white" />
+                  </div>
                   <img
                     src={message.image_url}
                     alt="Sent image"
@@ -102,16 +107,17 @@ const MessageItem: React.FC<MessageItemProps> = ({
         </div>
       </div>
 
-      {message.image_url && (
+      {/* Lightbox Dialog */}
+      {hasImage && (
         <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
-          <DialogContent className="max-w-[90vw] max-h-[90vh] w-auto p-0 bg-black/80 border-none flex items-center justify-center">
-            <div className="relative">
-              <img
-                src={message.image_url}
-                alt="Full image"
-                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+          <DialogContent className="max-w-[90vw] max-h-[90vh] w-auto p-0 bg-transparent border-none">
+            <div className="relative w-full h-full flex items-center justify-center">
+              <img 
+                src={message.image_url} 
+                alt="Full size image" 
+                className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg"
               />
-              <Button
+              <Button 
                 className="absolute top-2 right-2 rounded-full w-8 h-8 p-0 bg-black/50 hover:bg-black/70"
                 variant="ghost"
                 size="icon"
