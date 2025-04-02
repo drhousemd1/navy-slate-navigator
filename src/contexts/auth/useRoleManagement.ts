@@ -29,10 +29,23 @@ export function useRoleManagement(user: User | null) {
 
       if (adminError) {
         console.error('Error checking admin role:', adminError);
+        // Default to user role on error
+        setUserRole('user');
+        setIsAdmin(false);
         return;
       }
 
       console.log('useRoleManagement: User admin check result:', adminCheck);
+      
+      // For debugging, show all available roles for this user
+      const { data: allRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+        
+      if (!rolesError) {
+        console.log('useRoleManagement: All user roles:', allRoles);
+      }
       
       // If admin, set role directly
       if (adminCheck) {

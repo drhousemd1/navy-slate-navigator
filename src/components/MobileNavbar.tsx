@@ -66,13 +66,11 @@ const MobileNavbar: React.FC = () => {
                 {item.icon}
               </div>
               
-              {/* Reserve space for label with consistent height */}
+              {/* Always show the text label, highlighted when active */}
               <div className="h-5 mt-1 overflow-hidden">
-                {isActive && (
-                  <span className="text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block neon-text">
-                    {item.name}
-                  </span>
-                )}
+                <span className={`text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block ${isActive ? 'neon-text' : ''}`}>
+                  {item.name}
+                </span>
               </div>
             </Link>
           );
