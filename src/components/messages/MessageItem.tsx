@@ -26,6 +26,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isImageOpen, setIsImageOpen] = useState(false);
   const messageRef = useRef<HTMLDivElement>(null);
+  const hasContent = !!message.content;
 
   useEffect(() => {
     const fetchAvatar = async () => {
@@ -81,7 +82,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 {isSentByMe ? userNickname : 'Partner'}
               </span>
 
-              {message.content && (
+              {hasContent && (
                 <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
               )}
 
