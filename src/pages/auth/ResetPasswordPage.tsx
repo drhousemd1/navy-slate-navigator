@@ -33,6 +33,12 @@ const ResetPasswordPage: React.FC = () => {
       
       // Set up the session with the access token
       const setSession = async () => {
+        if (!params.get('refresh_token')) {
+          // If there's no refresh token, exit early — Supabase won't set session without it
+          setError('Reset link is invalid or expired. Please request a new one.');
+          return;
+        }
+
         const { error } = await supabase.auth.setSession({
           access_token: token,
           refresh_token: params.get('refresh_token') || '',
