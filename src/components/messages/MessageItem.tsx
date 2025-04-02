@@ -62,8 +62,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
       </div>
 
       <div className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}>
-        <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start max-w-[90%] relative`}>
-          <Avatar className={`h-8 w-8 border border-light-navy ${isSentByMe ? '-ml-3 z-10' : '-mr-3 z-10'}`}>
+        <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start gap-2 max-w-[90%]`}>
+          <Avatar className={`h-8 w-8 border border-light-navy`}>
             {avatarUrl ? (
               <AvatarImage src={avatarUrl} alt={userNickname || 'User'} />
             ) : (
@@ -73,10 +73,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
             )}
           </Avatar>
 
-          <div className={`mx-2 p-3 rounded-lg ${
+          <div className={`p-3 rounded-lg min-w-[160px] ${
             isSentByMe ? 'bg-cyan-800 text-white rounded-tl-none' : 'bg-navy border border-light-navy text-white rounded-tr-none'
           }`}>
-            <div className="flex flex-col items-start space-y-1">
+            <div className="flex flex-col">
               <span className="font-semibold text-xs mb-1">
                 {isSentByMe ? userNickname : 'Partner'}
               </span>
