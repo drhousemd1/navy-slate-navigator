@@ -71,10 +71,12 @@ export const WeeklyMetricsChart = () => {
   useEffect(() => {
     const fetchMetricsData = async () => {
       try {
+        console.log('Fetching metrics data...');
         setLoading(true);
         
         // Initialize data structure with days of the week
         const weekDays = generateWeekDays();
+        console.log('Generated week days:', weekDays);
         const metricsMap = new Map(weekDays.map(day => [day.date, day]));
         
         // Get completed tasks for the week
@@ -84,6 +86,7 @@ export const WeeklyMetricsChart = () => {
           .eq('completed', true);
         
         if (tasksError) throw new Error(`Error fetching tasks: ${tasksError.message}`);
+        console.log('Tasks fetched:', tasksData?.length || 0);
         
         // Count tasks completed by day
         tasksData?.forEach(task => {
@@ -106,15 +109,18 @@ export const WeeklyMetricsChart = () => {
           .eq('used', true);
           
         if (rewardsError) throw new Error(`Error fetching rewards: ${rewardsError.message}`);
+        console.log('Rewards usage fetched:', rewardsData?.length || 0);
         
         // Count rewards used by day
         rewardsData?.forEach(reward => {
-          const usedDate = format(new Date(reward.created_at), 'yyyy-MM-dd');
-          if (metricsMap.has(usedDate)) {
-            const dayData = metricsMap.get(usedDate);
-            if (dayData) {
-              dayData.rewardsUsed += 1;
-              metricsMap.set(usedDate, dayData);
+          if (reward.created_at) {
+            const usedDate = format(new Date(reward.created_at), 'yyyy-MM-dd');
+            if (metricsMap.has(usedDate)) {
+              const dayData = metricsMap.get(usedDate);
+              if (dayData) {
+                dayData.rewardsUsed += 1;
+                metricsMap.set(usedDate, dayData);
+              }
             }
           }
         });
@@ -125,15 +131,18 @@ export const WeeklyMetricsChart = () => {
           .select('applied_date');
           
         if (punishmentsError) throw new Error(`Error fetching punishments: ${punishmentsError.message}`);
+        console.log('Punishments fetched:', punishmentsData?.length || 0);
         
         // Count punishments by day
         punishmentsData?.forEach(punishment => {
-          const appliedDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
-          if (metricsMap.has(appliedDate)) {
-            const dayData = metricsMap.get(appliedDate);
-            if (dayData) {
-              dayData.punishmentsApplied += 1;
-              metricsMap.set(appliedDate, dayData);
+          if (punishment.applied_date) {
+            const appliedDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
+            if (metricsMap.has(appliedDate)) {
+              const dayData = metricsMap.get(appliedDate);
+              if (dayData) {
+                dayData.punishmentsApplied += 1;
+                metricsMap.set(appliedDate, dayData);
+              }
             }
           }
         });
@@ -143,6 +152,7 @@ export const WeeklyMetricsChart = () => {
         
         // Convert map back to array and sort by day number
         const chartData = Array.from(metricsMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
+        console.log('Final chart data:', chartData);
         setData(chartData);
       } catch (err) {
         console.error('Error fetching metrics data:', err);
@@ -158,7 +168,8 @@ export const WeeklyMetricsChart = () => {
   if (loading) {
     return (
       <div className="w-full h-80 bg-navy border border-light-navy rounded-lg p-4">
-        <Skeleton className="w-full h-full bg-light-navy/30" />
+        <p className="text-white text-sm mb-2">Loading metrics data...</p>
+        <Skeleton className="w-full h-[calc(100%-24px)] bg-light-navy/30" />
       </div>
     );
   }
@@ -166,7 +177,28 @@ export const WeeklyMetricsChart = () => {
   if (error) {
     return (
       <div className="w-full bg-navy border border-light-navy rounded-lg p-6 text-center">
-        <p className="text-red-400">Error loading metrics: {error}</p>
+        <p className="text-red-400 mb-1">Error loading metrics: {error}</p>
+        <p className="text-gray-400 text-sm">Please try refreshing the page.</p>
+      </div>
+    );
+  }
+
+  // If we have no data points at all (all zeros), show a message
+  const hasData = data.some(day => 
+    day.tasksCompleted > 0 || 
+    day.rulesViolated > 0 || 
+    day.rewardsUsed > 0 || 
+    day.punishmentsApplied > 0
+  );
+
+  if (!hasData) {
+    return (
+      <div className="w-full bg-navy border border-light-navy rounded-lg p-6">
+        <h3 className="text-lg font-medium text-white mb-4">Weekly Activity Metrics</h3>
+        <div className="flex flex-col items-center justify-center h-60 text-center">
+          <p className="text-gray-400 mb-2">No activity data available for this week</p>
+          <p className="text-sm text-gray-500">Data will appear here as tasks are completed, rewards are used, and punishments are applied</p>
+        </div>
       </div>
     );
   }
