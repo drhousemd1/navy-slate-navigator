@@ -5,6 +5,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { Message } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { X, ZoomIn } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface MessageItemProps {
   message: Message;
@@ -22,6 +25,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const { user } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const messageRef = useRef<HTMLDivElement>(null);
+  const [isImageOpen, setIsImageOpen] = useState(false);
 
   useEffect(() => {
     const fetchAvatar = async () => {
@@ -45,6 +49,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
     } catch {
       return '';
     }
+  };
+
+  const handleImageClick = () => {
+    setIsImageOpen(true);
   };
 
   return (
@@ -72,11 +80,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </span>
               {message.content && <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>}
               {message.image_url && (
-                <div className="mt-2">
+                <div className="mt-2 relative group">
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-black bg-opacity-40 rounded-md">
+                    <ZoomIn className="h-8 w-8 text-white" />
+                  </div>
                   <img
                     src={message.image_url}
                     alt="Sent image"
-                    className="rounded-md max-h-60 object-contain border border-light-navy"
+                    className="rounded-md max-h-60 object-contain border border-light-navy cursor-pointer"
+                    onClick={handleImageClick}
                     onLoad={onImageLoad}
                     onError={(e) => e.currentTarget.style.display = 'none'}
                   />
@@ -86,6 +98,28 @@ const MessageItem: React.FC<MessageItemProps> = ({
           </div>
         </div>
       </div>
+
+      {message.image_url && (
+        <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
+          <DialogContent className="max-w-[90vw] max-h-[90vh] w-auto p-0 bg-transparent border-none">
+            <div className="relative w-full h-full flex items-center justify-center">
+              <img 
+                src={message.image_url} 
+                alt="Full size image" 
+                className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg"
+              />
+              <Button 
+                className="absolute top-2 right-2 rounded-full w-8 h-8 p-0 bg-black/50 hover:bg-black/70"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsImageOpen(false)}
+              >
+                <X className="h-5 w-5 text-white" />
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
