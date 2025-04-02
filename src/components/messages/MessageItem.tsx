@@ -75,7 +75,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
             )}
           </Avatar>
 
-          <div className={`flex flex-col p-3 rounded-lg max-w-[75vw] ${
+          <div className={`flex flex-col p-3 rounded-lg min-w-[250px] max-w-[75vw] ${
             isSentByMe
               ? 'bg-cyan-800 text-white rounded-tl-none'
               : 'bg-navy border border-light-navy text-white rounded-tr-none'
