@@ -47,8 +47,13 @@ export const useMessages = (initialPartnerId?: string) => {
     error, 
     loadOlderMessages,
     loadingOlder,
-    refetch
+    refetch: originalRefetch
   } = useMessagesFetch(partnerId);
+  
+  // Wrap the refetch function to ensure it returns Promise<void>
+  const refetch = async () => {
+    await originalRefetch();
+  };
   
   const { 
     imageFile, 

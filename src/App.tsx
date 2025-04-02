@@ -1,12 +1,12 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import Auth from "./pages/auth"; // Updated import path
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import Auth from "./pages/auth"; 
+import { AuthProvider, useAuth } from "./contexts/auth/AuthContext";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 import { supabase } from "./integrations/supabase/client";
 

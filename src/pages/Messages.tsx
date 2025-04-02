@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
 import { toast } from '@/hooks/use-toast';
 import MessageList from '@/components/messages/MessageList';

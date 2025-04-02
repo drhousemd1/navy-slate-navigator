@@ -12,7 +12,7 @@ import {
 } from './ui/dropdown-menu';
 import AccountSheet from './AccountSheet';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AppLayoutProps {
