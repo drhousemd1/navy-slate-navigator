@@ -15,6 +15,14 @@ export function useAuthForm() {
   const { signIn, signUp, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  // Log auth state changes for debugging
+  useEffect(() => {
+    console.log('Auth state in useAuthForm:', { 
+      isAuthenticated, 
+      authLoading
+    });
+  }, [isAuthenticated, authLoading]);
+
   // Only redirect if we're confident about auth state
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
@@ -64,6 +72,12 @@ export function useAuthForm() {
           loading: false
         });
       } else {
+        // Success case - toast notification
+        toast({
+          title: "Login successful",
+          description: "You have been successfully logged in.",
+        });
+        
         // Reset login error and loading state
         updateFormState({ 
           loginError: null,

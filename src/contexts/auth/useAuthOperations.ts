@@ -30,7 +30,7 @@ export function useAuthOperations() {
       });
       
       if (error) {
-        console.error('Sign in error (full response):', { error, data });
+        console.error('Sign in error:', error);
         
         // More specific error messages
         let errorMsg = error.message;
@@ -43,12 +43,13 @@ export function useAuthOperations() {
       
       console.log('Sign in successful:', data.user?.email);
       
-      // Only toast success if we have user data
-      if (data.user) {
-        toast({
-          title: 'Welcome back!',
-          description: 'You have successfully logged in.',
-        });
+      // Make sure we validate the session before confirming success
+      if (!data.session) {
+        console.error('Sign in produced no session');
+        return { 
+          error: { message: 'Authentication successful but no session was created. Please try again.' },
+          user: data.user 
+        };
       }
       
       return { error: null, user: data.user, session: data.session };
@@ -90,7 +91,7 @@ export function useAuthOperations() {
       console.log('Sign up successful:', data.user?.email);
       toast({
         title: 'Registration successful',
-        description: 'Please check your email to verify your account.',
+        description: data.session ? 'You are now logged in.' : 'Please check your email to verify your account.',
       });
       
       return { error: null, data };

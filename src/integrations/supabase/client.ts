@@ -9,11 +9,12 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Create a properly configured client with explicit session handling
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    storage: localStorage,
+    storage: typeof window !== 'undefined' ? localStorage : undefined,
     detectSessionInUrl: true,
     flowType: 'implicit'
   }
@@ -60,6 +61,6 @@ const createTestUser = async () => {
 };
 
 // Only run in development mode after a short delay
-if (process.env.NODE_ENV === 'development') {
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   setTimeout(createTestUser, 2000);
 }
