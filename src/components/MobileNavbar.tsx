@@ -51,8 +51,7 @@ const MobileNavbar: React.FC = () => {
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50">
       <div className="grid grid-cols-5 h-16 px-4">
         {navItems.map((item) => {
-          // Compare just the route path without trailing slashes for consistency
-          const isActive = currentPath.replace(/\/$/, '') === item.path.replace(/\/$/, '');
+          const isActive = currentPath === item.path;
           
           return (
             <Link
@@ -61,18 +60,19 @@ const MobileNavbar: React.FC = () => {
               className={`flex flex-col items-center justify-center h-full transition-colors duration-200 ${
                 isActive ? 'text-[#00FFF7]' : 'text-nav-inactive'
               }`}
-              aria-current={isActive ? 'page' : undefined}
             >
               {/* Icon always positioned at the same height */}
               <div className={`flex items-center justify-center h-5 ${isActive ? 'neon-icon' : ''}`}>
                 {item.icon}
               </div>
               
-              {/* Always show the text label, highlighted when active */}
+              {/* Reserve space for label with consistent height */}
               <div className="h-5 mt-1 overflow-hidden">
-                <span className={`text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block ${isActive ? 'neon-text' : ''}`}>
-                  {item.name}
-                </span>
+                {isActive && (
+                  <span className="text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block neon-text">
+                    {item.name}
+                  </span>
+                )}
               </div>
             </Link>
           );

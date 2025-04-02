@@ -1,15 +1,14 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/auth"; // Updated import path
-import { AuthProvider } from "./contexts/auth/AuthContext"; // Update to direct import from auth folder
-import { useAuth } from "./contexts/auth/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
-import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+import { supabase } from "./integrations/supabase/client";
 
 // Create empty placeholder pages for our navigation
 import Rules from "./pages/Rules";
@@ -53,7 +52,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!isAdmin) {
-    return <Navigate to="/" />;
+    return <>{children}</>;
   }
   
   return <>{children}</>;
@@ -73,13 +72,11 @@ const queryClient = new QueryClient({
   },
 });
 
-// Configure routes with proper nesting to ensure context is available
 const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* Add new route */}
-      <Route path="/reset-password-view" element={<ResetPasswordView />} /> {/* Rename existing route */}
+      <Route path="/reset-password" element={<ResetPasswordView />} />
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />

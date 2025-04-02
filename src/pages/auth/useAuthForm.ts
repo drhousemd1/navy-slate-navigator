@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
 
@@ -12,24 +13,23 @@ export function useAuthForm() {
     loading: false,
     loginError: null
   });
-  const { signIn, signUp, isAuthenticated, loading: authLoading } = useAuth();
+  const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
-  // Log auth state changes for debugging
+  // Check if a session already exists on component mount
   useEffect(() => {
-    console.log('Auth state in useAuthForm:', { 
-      isAuthenticated, 
-      authLoading
-    });
-  }, [isAuthenticated, authLoading]);
-
-  // Only redirect if we're confident about auth state
-  useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      console.log("User is authenticated, redirecting to home");
-      navigate('/');
-    }
-  }, [isAuthenticated, authLoading, navigate]);
+    const checkSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (data.session) {
+        console.log("Existing session found:", data.session.user.email);
+        navigate('/');
+      } else if (error) {
+        console.error("Error checking session:", error);
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
 
   const updateFormState = (updates: Partial<AuthFormState>) => {
     setFormState(prevState => ({ ...prevState, ...updates }));
@@ -40,53 +40,43 @@ export function useAuthForm() {
     updateFormState({ loading: true, loginError: null });
 
     try {
-      // Validate input first to prevent unnecessary API calls
-      if (!formState.email || !formState.password) {
-        updateFormState({
-          loginError: "Email and password are required",
-          loading: false
+      console.log("Attempting to sign in with email:", formState.email);
+      
+      // Try direct Supabase auth to debug what's happening
+      try {
+        const { data: directAuthData, error: directAuthError } = await supabase.auth.signInWithPassword({
+          email: formState.email,
+          password: formState.password
         });
-        return;
-      }
-      
-      // Add more client-side validation if needed
-      if (formState.password.length < 6) {
-        updateFormState({
-          loginError: "Password must be at least 6 characters long",
-          loading: false
-        });
-        return;
-      }
-      
-      console.log("Login attempt with email:", formState.email);
-      
-      // Sign in with email and password directly
-      const { error } = await signIn(formState.email, formState.password);
-      
-      // Handle errors with consistent format
-      if (error) {
-        console.error("Login error:", error);
         
+        if (directAuthError) {
+          console.error("Direct Supabase auth error:", directAuthError);
+          updateFormState({ loginError: `Authentication failed: ${directAuthError.message}`, loading: false });
+          return;
+        }
+        
+        if (directAuthData.user) {
+          console.log("Login successful via direct Supabase auth:", directAuthData.user.email);
+          navigate('/');
+          return;
+        }
+      } catch (directError) {
+        console.error("Exception during direct Supabase auth:", directError);
+      }
+      
+      // Fallback to using context auth
+      const { error } = await signIn(formState.email, formState.password);
+      if (error) {
+        console.error("Login error from context:", error);
         updateFormState({
-          loginError: error.message || "Authentication failed. Please check your credentials.",
+          loginError: error.message || "Invalid login credentials. Please check your email and password.",
           loading: false
         });
       } else {
-        // Success case - toast notification
-        toast({
-          title: "Login successful",
-          description: "You have been successfully logged in.",
-        });
-        
-        // Reset login error and loading state
-        updateFormState({ 
-          loginError: null,
-          loading: false 
-        });
-        
-        // The useEffect watching isAuthenticated will handle navigation
+        console.log("Login successful via context, navigating to home");
+        navigate('/');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Authentication error:", error);
       updateFormState({
         loginError: "An unexpected error occurred. Please try again.",
@@ -100,26 +90,8 @@ export function useAuthForm() {
     updateFormState({ loading: true, loginError: null });
 
     try {
-      // Validate input
-      if (!formState.email || !formState.password) {
-        updateFormState({
-          loginError: "Email and password are required",
-          loading: false
-        });
-        return;
-      }
-      
-      if (formState.password.length < 6) {
-        updateFormState({
-          loginError: "Password must be at least 6 characters long",
-          loading: false
-        });
-        return;
-      }
-      
       console.log("Attempting to sign up with email:", formState.email);
       const { error } = await signUp(formState.email, formState.password);
-      
       if (error) {
         console.error("Signup error:", error);
         updateFormState({
@@ -132,10 +104,9 @@ export function useAuthForm() {
           description: "Please check your email for verification instructions.",
         });
         // Return to login view after successful signup
-        updateFormState({ loading: false });
         return "login";
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Authentication error:", error);
       updateFormState({
         loginError: "An unexpected error occurred. Please try again.",

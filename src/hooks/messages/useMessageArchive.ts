@@ -2,39 +2,62 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export const useMessageArchive = () => {
-  // Archive messages older than a certain date (e.g., 30 days)
+  // Auto-archive old messages when we exceed 100
   const archiveOldMessages = async (userId: string, partnerId: string) => {
-    try {
-      // This is just a placeholder for future implementation
-      // In a real application, you might:
-      // 1. Move older messages to an archive table
-      // 2. Delete messages older than X days
-      // 3. Or some other archival logic
+    if (!userId || !partnerId) return;
+
+    // Count total messages between the users
+    const { count, error: countError } = await supabase
+      .from('messages')
+      .select('id', { count: 'exact' })
+      .or(`and(sender_id.eq.${userId},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${userId})`);
+    
+    if (countError) {
+      console.error('Error counting messages:', countError);
+      return;
+    }
+    
+    // If we have more than 100 messages, archive the oldest ones
+    if (count && count > 100) {
+      const toArchive = count - 100;
       
-      // For now, just log that we would archive messages
-      console.log('Would archive old messages for conversation between', userId, 'and', partnerId);
+      // Get the oldest messages
+      const { data: oldestMessages, error: fetchError } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${userId},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${userId})`)
+        .order('created_at', { ascending: true })
+        .limit(toArchive);
       
-      // Example: Delete messages older than 30 days
-      /*
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      if (fetchError || !oldestMessages) {
+        console.error('Error fetching oldest messages:', fetchError);
+        return;
+      }
       
-      const { error } = await supabase
+      // Insert into archived_messages
+      const { error: archiveError } = await supabase
+        .from('archived_messages')
+        .insert(oldestMessages);
+      
+      if (archiveError) {
+        console.error('Error archiving messages:', archiveError);
+        return;
+      }
+      
+      // Delete from messages
+      const idsToDelete = oldestMessages.map(m => m.id);
+      const { error: deleteError } = await supabase
         .from('messages')
         .delete()
-        .or(`and(sender_id.eq.${userId},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${userId})`)
-        .lt('created_at', thirtyDaysAgo.toISOString());
+        .in('id', idsToDelete);
       
-      if (error) {
-        console.error('Error archiving old messages:', error);
+      if (deleteError) {
+        console.error('Error deleting archived messages:', deleteError);
       }
-      */
-    } catch (err) {
-      console.error('Error in archiveOldMessages:', err);
     }
   };
 
   return {
-    archiveOldMessages,
+    archiveOldMessages
   };
 };

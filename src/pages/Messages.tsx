@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,10 +7,9 @@ import MessageList from '@/components/messages/MessageList';
 import MessageInput from '@/components/messages/MessageInput';
 
 const Messages: React.FC = () => {
-  const { user, getNickname } = useAuth();
+  const { user, getNickname, getProfileImage } = useAuth();
   const [message, setMessage] = useState('');
   const messagesSentRef = useRef(0);
-  const messageListRef = useRef<{ scrollToBottom: (behavior: ScrollBehavior) => void }>(null);
   
   const {
     messages,
@@ -43,6 +41,7 @@ const Messages: React.FC = () => {
   }, [partnerId, isLoading, refetch]);
 
   const userNickname = getNickname();
+  const userProfileImage = getProfileImage();
 
   const handleSendMessage = useCallback(async () => {
     if (!user || (!message.trim() && !imageFile)) return;
@@ -57,7 +56,6 @@ const Messages: React.FC = () => {
       
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Starting message send process`);
       let uploadedImageUrl = null;
-      const hadImage = !!imageFile;
       
       if (imageFile) {
         console.log(`[Messages] handleSendMessage (${currentMessageCount}): Uploading image`);
@@ -70,22 +68,10 @@ const Messages: React.FC = () => {
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
       
-      // Initial refetch to ensure new messages appear
       console.log(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
       await refetch();
       
-      // If message included an image, add a short delay then call scrollToBottom
-      if (hadImage) {
-        setTimeout(() => {
-          if (messageListRef.current) {
-            console.log(`[Messages] handleSendMessage (${currentMessageCount}): Forced scroll after image message`);
-            messageListRef.current.scrollToBottom('auto');
-          }
-        }, 300);
-      }
-      
-      // Multiple delayed refetches to ensure message appears
-      const delayedRefetches = [50, 150, 300, 500, 1000, 2000];
+      const delayedRefetches = [50, 200, 500, 1000];
       for (const delay of delayedRefetches) {
         setTimeout(async () => {
           console.log(`[Messages] handleSendMessage (${currentMessageCount}): Delayed refetch (${delay}ms)`);
@@ -137,7 +123,7 @@ const Messages: React.FC = () => {
           <p className="text-gray-400 text-sm">Chat with your partner</p>
         </div>
         
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden h-[calc(100vh-10rem)] pb-16">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-400">Loading messages...</p>
@@ -148,11 +134,11 @@ const Messages: React.FC = () => {
             </div>
           ) : (
             <MessageList
-              ref={messageListRef}
               messages={messages}
               loadingOlder={loadingOlder}
               handleLoadOlderMessages={handleLoadOlderMessages}
               userNickname={userNickname}
+              userProfileImage={userProfileImage}
               userId={user?.id}
             />
           )}

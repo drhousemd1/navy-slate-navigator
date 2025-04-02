@@ -33,7 +33,7 @@ const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({
         // If we have specific usage_data, use that to determine if the day is used
         isUsed = usage_data[i] > 0;
       } else if (frequency === 'daily') {
-        // Fallback for daily tasks without usage data
+        // For daily tasks without usage data, use frequency_count as fallback
         isUsed = i < frequency_count;
       } else {
         // For weekly tasks, just use the frequency count
