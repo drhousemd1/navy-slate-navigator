@@ -38,6 +38,7 @@ export function useRoleManagement(user: User | null) {
       if (adminCheck) {
         setUserRole('admin');
         setIsAdmin(true);
+        console.log('useRoleManagement: User is admin');
         return;
       }
       

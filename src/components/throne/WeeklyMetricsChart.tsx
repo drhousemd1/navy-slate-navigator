@@ -147,9 +147,6 @@ export const WeeklyMetricsChart = () => {
           }
         });
         
-        // Since we don't have rules violations data yet, we'll leave it at 0
-        // This can be updated when rules violation tracking is implemented
-        
         // Convert map back to array and sort by day number
         const chartData = Array.from(metricsMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
         console.log('Final chart data:', chartData);

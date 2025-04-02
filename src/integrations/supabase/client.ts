@@ -20,7 +20,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 // Debug session persistence
 if (typeof window !== 'undefined') {
   // Check localStorage on load
-  console.log('localStorage auth session on load:', localStorage.getItem('sb-auth-token'));
+  console.log('localStorage auth session on load:', localStorage.getItem('sb-ronqvzihpffgowyscgfm-auth-token'));
   
   // Periodically check for session to debug persistence issues
   setInterval(() => {
