@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   BookOpenCheck, 
@@ -49,23 +49,15 @@ const navItems: NavItem[] = [
 const MobileNavbar: React.FC = () => {
   const location = useLocation();
   const { isAdmin } = useAuth();
-  const [visibleItems, setVisibleItems] = useState<NavItem[]>([]);
   const currentPath = location.pathname;
-  
-  // Effect to filter items when isAdmin changes
-  useEffect(() => {
-    const filtered = navItems.filter(item => {
-      // Show the item if it's not admin-only or if the user is an admin
-      return !item.adminOnly || (item.adminOnly && isAdmin);
-    });
-    setVisibleItems(filtered);
-    console.log("Admin status:", isAdmin, "Filtered items:", filtered.length);
-  }, [isAdmin]);
 
+  // Filter items based on admin status
+  const displayItems = navItems.filter(item => !item.adminOnly || (item.adminOnly && isAdmin));
+  
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50">
       <div className="grid grid-cols-5 h-16 px-4">
-        {visibleItems.map((item) => {
+        {displayItems.map((item) => {
           const isActive = currentPath === item.path;
           
           return (
