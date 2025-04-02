@@ -10,7 +10,6 @@ interface MessageListProps {
   loadingOlder: boolean;
   handleLoadOlderMessages: () => void;
   userNickname: string | null;
-  userProfileImage: string | null;
   userId: string | undefined;
 }
 
@@ -22,7 +21,6 @@ const MessageList = forwardRef<
   loadingOlder,
   handleLoadOlderMessages,
   userNickname,
-  userProfileImage,
   userId
 }, ref) => {
   const messageEndRef = useRef<HTMLDivElement>(null);
@@ -75,7 +73,6 @@ const MessageList = forwardRef<
                   message={msg}
                   isSentByMe={isSentByMe}
                   userNickname={userNickname}
-                  userProfileImage={userProfileImage}
                   onImageLoad={() => {
                     // Add a short timeout to ensure layout settles first
                     setTimeout(() => {
