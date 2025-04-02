@@ -60,6 +60,10 @@ const MobileNavbar: React.FC = () => {
               className={`flex flex-col items-center justify-center h-full transition-colors duration-200 ${
                 isActive ? 'text-[#00FFF7]' : 'text-nav-inactive'
               }`}
+              onClick={(e) => {
+                // Add console logging for debugging
+                console.log(`Navigating to: ${item.path}`);
+              }}
             >
               {/* Icon always positioned at the same height */}
               <div className={`flex items-center justify-center h-5 ${isActive ? 'neon-icon' : ''}`}>
