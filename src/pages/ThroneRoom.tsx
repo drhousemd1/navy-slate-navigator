@@ -56,7 +56,7 @@ const ThroneRoom: React.FC = () => {
       <AppLayout>
         <div className="flex items-center justify-center h-screen">
           <div className="text-center p-6">
-            <h1 className="text-white text-xl mb-2">test</h1>
+            <h1 className="text-white text-xl mb-2">TEST - THRONE ROOM LOADING STATE</h1>
             <Skeleton className="h-12 w-48 bg-light-navy/30 rounded mx-auto mb-4" />
             <Skeleton className="h-4 w-64 bg-light-navy/30 rounded mx-auto" />
           </div>
@@ -70,13 +70,15 @@ const ThroneRoom: React.FC = () => {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-screen">
-          <h1 className="text-white text-xl mb-2">test</h1>
-          <Alert className="max-w-md bg-navy border-light-navy">
-            <AlertTitle className="text-white">Authentication Required</AlertTitle>
-            <AlertDescription className="text-nav-inactive">
-              Please log in to access this page.
-            </AlertDescription>
-          </Alert>
+          <div className="text-center">
+            <h1 className="text-white text-xl mb-4">TEST - THRONE ROOM UNAUTHENTICATED STATE</h1>
+            <Alert className="max-w-md bg-navy border-light-navy">
+              <AlertTitle className="text-white">Authentication Required</AlertTitle>
+              <AlertDescription className="text-nav-inactive">
+                Please log in to access this page.
+              </AlertDescription>
+            </Alert>
+          </div>
         </div>
       </AppLayout>
     );
@@ -87,13 +89,15 @@ const ThroneRoom: React.FC = () => {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-screen">
-          <h1 className="text-white text-xl mb-2">test</h1>
-          <Alert className="max-w-md bg-navy border-light-navy">
-            <AlertTitle className="text-white">Access Restricted</AlertTitle>
-            <AlertDescription className="text-nav-inactive">
-              Only administrators can access this page.
-            </AlertDescription>
-          </Alert>
+          <div className="text-center">
+            <h1 className="text-white text-xl mb-4">TEST - THRONE ROOM NON-ADMIN STATE</h1>
+            <Alert className="max-w-md bg-navy border-light-navy">
+              <AlertTitle className="text-white">Access Restricted</AlertTitle>
+              <AlertDescription className="text-nav-inactive">
+                Only administrators can access this page.
+              </AlertDescription>
+            </Alert>
+          </div>
         </div>
       </AppLayout>
     );
@@ -105,7 +109,7 @@ const ThroneRoom: React.FC = () => {
       <div className="p-6 space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-white">Admin Throne Room</h1>
-          <h2 className="text-white text-xl">test</h2>
+          <h2 className="text-white text-xl bg-purple-900 p-2 rounded">TEST - THRONE ROOM ADMIN VIEW</h2>
           
           <TooltipProvider>
             <Tooltip>
@@ -131,6 +135,7 @@ const ThroneRoom: React.FC = () => {
             <h2 className="text-xl font-medium text-white mb-3">Admin Privileges</h2>
             <p className="text-nav-inactive">This area is restricted to administrators only.</p>
             <p className="text-green-400 mt-4">Your account has administrator privileges.</p>
+            <p className="text-white bg-purple-900 inline-block p-2 mt-4 rounded">TEST - THRONE ROOM CONTENT</p>
           </div>
         </div>
       </div>
