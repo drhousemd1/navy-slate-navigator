@@ -6,7 +6,7 @@ import { Message } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { X } from 'lucide-react';
+import { X, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface MessageItemProps {
@@ -50,6 +50,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
       return '';
     }
   };
+  
+  const handleImageClick = () => {
+    setIsImageOpen(true);
+  };
 
   return (
     <div className="flex flex-col my-2" ref={messageRef}>
@@ -69,50 +73,59 @@ const MessageItem: React.FC<MessageItemProps> = ({
             )}
           </Avatar>
 
-          <div className={`ml-2 mr-2 p-3 rounded-lg min-w-[160px] ${isSentByMe ? 'bg-cyan-800 text-white rounded-tl-none' : 'bg-navy border border-light-navy text-white rounded-tr-none'}`}>
-            <div className="flex flex-col">
+          <div className={`mx-2 p-3 rounded-lg ${
+            isSentByMe ? 'bg-cyan-800 text-white rounded-tl-none' : 'bg-navy border border-light-navy text-white rounded-tr-none'
+          }`}>
+            <div className="flex flex-col items-start space-y-1">
               <span className="font-semibold text-xs mb-1">
                 {isSentByMe ? userNickname : 'Partner'}
               </span>
+
               {message.content && (
                 <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
               )}
+
               {message.image_url && (
-                <>
+                <div className="mt-2 relative group">
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-black bg-opacity-40 rounded-md">
+                    <ZoomIn className="h-8 w-8 text-white" />
+                  </div>
                   <img
                     src={message.image_url}
                     alt="Sent image"
-                    className="mt-2 rounded-md max-h-60 object-contain border border-light-navy cursor-pointer"
-                    onClick={() => setIsImageOpen(true)}
+                    className="rounded-md max-h-60 object-contain border border-light-navy cursor-pointer"
+                    onClick={handleImageClick}
                     onLoad={onImageLoad}
                     onError={(e) => e.currentTarget.style.display = 'none'}
                   />
-
-                  <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
-                    <DialogContent className="max-w-[90vw] max-h-[90vh] w-auto p-0 bg-black/80 border-none flex items-center justify-center">
-                      <div className="relative">
-                        <img
-                          src={message.image_url}
-                          alt="Full image"
-                          className="max-w-full max-h-[80vh] object-contain rounded-lg"
-                        />
-                        <Button
-                          className="absolute top-2 right-2 rounded-full w-8 h-8 p-0 bg-black/50 hover:bg-black/70"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setIsImageOpen(false)}
-                        >
-                          <X className="h-5 w-5 text-white" />
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </>
+                </div>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {message.image_url && (
+        <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
+          <DialogContent className="max-w-[90vw] max-h-[90vh] w-auto p-0 bg-black/80 border-none flex items-center justify-center">
+            <div className="relative">
+              <img
+                src={message.image_url}
+                alt="Full image"
+                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+              />
+              <Button
+                className="absolute top-2 right-2 rounded-full w-8 h-8 p-0 bg-black/50 hover:bg-black/70"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsImageOpen(false)}
+              >
+                <X className="h-5 w-5 text-white" />
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
