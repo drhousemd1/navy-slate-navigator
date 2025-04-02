@@ -2,8 +2,9 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/auth/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { WeeklyMetricsChart } from '@/components/throne/WeeklyMetricsChart';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin, isAuthenticated, loading } = useAuth();
@@ -45,12 +46,15 @@ const ThroneRoom: React.FC = () => {
 
   return (
     <AppLayout>
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center p-6 animate-slide-up">
-          <h1 className="text-3xl font-semibold text-white mb-4">Admin Throne Room</h1>
-          <p className="text-nav-inactive mb-4">Welcome to the admin control panel</p>
+      <div className="p-6 space-y-6 animate-fade-in">
+        <h1 className="text-2xl font-semibold text-white mb-4">Admin Throne Room</h1>
+        <p className="text-nav-inactive mb-4">Welcome to the admin control panel</p>
+        
+        <div className="space-y-6">
+          {/* Weekly metrics chart */}
+          <WeeklyMetricsChart />
           
-          <div className="bg-navy border border-light-navy rounded-lg p-6 mt-6">
+          <div className="bg-navy border border-light-navy rounded-lg p-6">
             <h2 className="text-xl font-medium text-white mb-3">Admin Actions</h2>
             <p className="text-nav-inactive">This area is restricted to administrators only.</p>
             <p className="text-green-400 mt-4">Your account has administrator privileges.</p>
