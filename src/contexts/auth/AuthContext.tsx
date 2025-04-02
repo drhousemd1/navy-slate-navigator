@@ -18,7 +18,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Get auth operations - IMPORTANT: we need to directly use the operations
+  // Get auth operations
   const { 
     signIn, 
     signUp, 
@@ -44,11 +44,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign out function
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
-      
+      // First clear any state
       setUser(null);
       setSession(null);
       setIsAuthenticated(false);
+      
+      // Then sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Sign out error:', error);
+        throw error;
+      }
+      
+      console.log('Signed out successfully');
       
       toast({
         title: 'Logged out',
@@ -64,59 +73,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Set up auth state listener and check for existing session
+  // Setup authentication state listener
   useEffect(() => {
-    console.log('Checking session and setting up auth state listener');
-    let mounted = true;
-
-    const checkSessionAndSubscribe = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-        if (!mounted) return;
-
-        console.log('Initial session check:', currentSession?.user?.email || 'No session');
-
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setIsAuthenticated(!!currentSession);
-
-        if (currentSession?.user) {
+    console.log('Setting up auth state listener');
+    setLoading(true);
+    
+    // First, setup the auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log(`Auth state change: ${event}`, newSession?.user?.email);
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setSession(newSession);
+        setUser(newSession?.user || null);
+        setIsAuthenticated(!!newSession);
+        
+        if (newSession?.user) {
+          // Use setTimeout to avoid potential auth deadlocks
           setTimeout(() => {
             checkUserRole();
           }, 0);
         }
-
-        setLoading(false);
-
-        // Now attach the auth state listener AFTER the session check
-        supabase.auth.onAuthStateChange((event, newSession) => {
-          console.log('Auth state changed:', event, newSession?.user?.email);
-
-          if (!mounted) return;
-
-          setSession(newSession);
-          setUser(newSession?.user ?? null);
-          setIsAuthenticated(!!newSession);
-
-          if (newSession?.user) {
-            setTimeout(() => {
-              checkUserRole();
-            }, 0);
-          }
-
-          setLoading(false);
-        });
+      } else if (event === 'SIGNED_OUT') {
+        // Clear auth state
+        setSession(null);
+        setUser(null);
+        setIsAuthenticated(false);
+        console.log('User signed out');
+      }
+      
+      setLoading(false);
+    });
+    
+    // Then check for an existing session
+    const initializeAuth = async () => {
+      try {
+        console.log('Initializing auth state');
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          throw error;
+        }
+        
+        console.log('Initial session check:', currentSession?.user?.email || 'No session');
+        
+        if (currentSession) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          setIsAuthenticated(true);
+          
+          // Use setTimeout to avoid potential auth deadlocks
+          setTimeout(() => {
+            checkUserRole();
+          }, 0);
+        }
       } catch (error) {
-        console.error("Error checking session:", error);
-        if (mounted) setLoading(false);
+        console.error('Error initializing auth:', error);
+      } finally {
+        setLoading(false);
       }
     };
-
-    checkSessionAndSubscribe();
-
+    
+    // Initialize auth state
+    initializeAuth();
+    
+    // Clean up the subscription when component unmounts
     return () => {
-      mounted = false;
+      console.log('Cleaning up auth state listener');
+      subscription.unsubscribe();
     };
   }, []);
 

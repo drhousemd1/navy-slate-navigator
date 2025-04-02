@@ -8,13 +8,11 @@ import {
   Skull, 
   Crown
 } from 'lucide-react';
-import { useAuth } from '../contexts/auth/AuthContext'; // Import useAuth
 
 interface NavItem {
   name: string;
   path: string;
   icon: React.ReactNode;
-  adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -42,45 +40,41 @@ const navItems: NavItem[] = [
     name: 'Throne Room',
     path: '/throne-room',
     icon: <Crown className="w-5 h-5" />,
-    adminOnly: true,
   },
 ];
 
 const MobileNavbar: React.FC = () => {
   const location = useLocation();
-  const { isAdmin } = useAuth();
   const currentPath = location.pathname;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50">
       <div className="grid grid-cols-5 h-16 px-4">
-        {navItems
-          .filter(item => !item.adminOnly || (item.adminOnly && isAdmin))
-          .map((item) => {
-            const isActive = currentPath === item.path;
-            
-            return (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={`flex flex-col items-center justify-center h-full transition-colors duration-200 ${
-                  isActive ? 'text-[#00FFF7]' : 'text-nav-inactive'
-                }`}
-              >
-                {/* Icon always positioned at the same height */}
-                <div className={`flex items-center justify-center h-5 ${isActive ? 'neon-icon' : ''}`}>
-                  {item.icon}
-                </div>
-                
-                {/* Reserve space for label with consistent height */}
-                <div className="h-5 mt-1 overflow-hidden">
-                  <span className={`text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block ${isActive ? 'neon-text' : 'opacity-0'}`}>
-                    {item.name}
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
+        {navItems.map((item) => {
+          const isActive = currentPath === item.path;
+          
+          return (
+            <Link
+              key={item.name}
+              to={item.path}
+              className={`flex flex-col items-center justify-center h-full transition-colors duration-200 ${
+                isActive ? 'text-[#00FFF7]' : 'text-nav-inactive'
+              }`}
+            >
+              {/* Icon always positioned at the same height */}
+              <div className={`flex items-center justify-center h-5 ${isActive ? 'neon-icon' : ''}`}>
+                {item.icon}
+              </div>
+              
+              {/* Always show the text label, highlighted when active */}
+              <div className="h-5 mt-1 overflow-hidden">
+                <span className={`text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block ${isActive ? 'neon-text' : ''}`}>
+                  {item.name}
+                </span>
+              </div>
+            </Link>
+          );
+        })}
       </div>
       
       {/* Add a safe area inset for iOS devices */}

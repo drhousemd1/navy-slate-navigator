@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -8,7 +9,7 @@ export function useAuthOperations() {
       console.log('Attempting to sign in with email:', email);
       
       // Input validation - ensure values are properly trimmed
-      const trimmedEmail = email.trim();
+      const trimmedEmail = email.trim().toLowerCase();
       const trimmedPassword = password.trim();
       
       if (!trimmedEmail || !trimmedPassword) {
@@ -19,6 +20,9 @@ export function useAuthOperations() {
       // Log auth request details but not the actual password
       console.log('Auth request details:', { email: trimmedEmail, passwordLength: trimmedPassword.length });
       
+      // Clear any existing sessions - fixes common authentication issues
+      await supabase.auth.signOut();
+      
       // Use the trimmed values for authentication
       const { data, error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
@@ -26,17 +30,29 @@ export function useAuthOperations() {
       });
       
       if (error) {
-        console.error('Sign in error details:', error);
-        return { error, user: null };
+        console.error('Sign in error:', error);
+        
+        // More specific error messages
+        let errorMsg = error.message;
+        if (error.message.includes("invalid login")) {
+          errorMsg = "Incorrect email or password. Please try again.";
+        }
+        
+        return { error: { ...error, message: errorMsg }, user: null };
       }
       
       console.log('Sign in successful:', data.user?.email);
-      toast({
-        title: 'Welcome back!',
-        description: 'You have successfully logged in.',
-      });
       
-      return { error: null, user: data.user };
+      // Make sure we validate the session before confirming success
+      if (!data.session) {
+        console.error('Sign in produced no session');
+        return { 
+          error: { message: 'Authentication successful but no session was created. Please try again.' },
+          user: data.user 
+        };
+      }
+      
+      return { error: null, user: data.user, session: data.session };
     } catch (error: any) {
       console.error('Exception during sign in:', error);
       return { error, user: null };
@@ -47,12 +63,20 @@ export function useAuthOperations() {
   const signUp = async (email: string, password: string) => {
     try {
       // Trim inputs before sending
-      const trimmedEmail = email.trim();
+      const trimmedEmail = email.trim().toLowerCase();
       const trimmedPassword = password.trim();
       
       if (!trimmedEmail || !trimmedPassword) {
         return { error: { message: 'Email and password are required' }, data: null };
       }
+      
+      // Check minimum password length
+      if (trimmedPassword.length < 6) {
+        return { error: { message: 'Password must be at least 6 characters long' }, data: null };
+      }
+      
+      // Clear any existing session first
+      await supabase.auth.signOut();
       
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
@@ -67,7 +91,7 @@ export function useAuthOperations() {
       console.log('Sign up successful:', data.user?.email);
       toast({
         title: 'Registration successful',
-        description: 'Please check your email to verify your account.',
+        description: data.session ? 'You are now logged in.' : 'Please check your email to verify your account.',
       });
       
       return { error: null, data };
@@ -80,7 +104,7 @@ export function useAuthOperations() {
   // Reset password
   const resetPassword = async (email: string) => {
     try {
-      const trimmedEmail = email.trim();
+      const trimmedEmail = email.trim().toLowerCase();
       
       if (!trimmedEmail) {
         return { error: { message: 'Email is required' } };
@@ -122,6 +146,10 @@ export function useAuthOperations() {
       
       if (!trimmedPassword) {
         return { error: { message: 'New password is required' } };
+      }
+      
+      if (trimmedPassword.length < 6) {
+        return { error: { message: 'Password must be at least 6 characters long' } };
       }
       
       const { error } = await supabase.auth.updateUser({

@@ -26,6 +26,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isImageOpen, setIsImageOpen] = useState(false);
   const messageRef = useRef<HTMLDivElement>(null);
+  const hasContent = !!message.content;
+  const hasImage = !!message.image_url;
 
   useEffect(() => {
     const fetchAvatar = async () => {
@@ -62,8 +64,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
       </div>
 
       <div className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}>
-        <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start gap-2 max-w-[90%]`}>
-          <Avatar className={`h-8 w-8 border border-light-navy`}>
+        <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start gap-2`}>
+          <Avatar className="h-8 w-8 border border-light-navy shrink-0">
             {avatarUrl ? (
               <AvatarImage src={avatarUrl} alt={userNickname || 'User'} />
             ) : (
@@ -73,48 +75,48 @@ const MessageItem: React.FC<MessageItemProps> = ({
             )}
           </Avatar>
 
-          <div className={`p-3 rounded-lg min-w-[160px] ${
-            isSentByMe ? 'bg-cyan-800 text-white rounded-tl-none' : 'bg-navy border border-light-navy text-white rounded-tr-none'
+          <div className={`flex flex-col p-3 rounded-lg min-w-[250px] max-w-[75vw] ${
+            isSentByMe
+              ? 'bg-cyan-800 text-white rounded-tl-none'
+              : 'bg-navy border border-light-navy text-white rounded-tr-none'
           }`}>
-            <div className="flex flex-col">
-              <span className="font-semibold text-xs mb-1">
-                {isSentByMe ? userNickname : 'Partner'}
-              </span>
+            <span className="font-semibold text-xs mb-1">
+              {isSentByMe ? userNickname : 'Partner'}
+            </span>
 
-              {message.content && (
-                <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
-              )}
+            {hasContent && (
+              <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
+            )}
 
-              {message.image_url && (
-                <div className="mt-2 relative group">
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-black bg-opacity-40 rounded-md">
-                    <ZoomIn className="h-8 w-8 text-white" />
-                  </div>
-                  <img
-                    src={message.image_url}
-                    alt="Sent image"
-                    className="rounded-md max-h-60 object-contain border border-light-navy cursor-pointer"
-                    onClick={handleImageClick}
-                    onLoad={onImageLoad}
-                    onError={(e) => e.currentTarget.style.display = 'none'}
-                  />
+            {hasImage && (
+              <div className="mt-2 relative group">
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-black bg-opacity-40 rounded-md">
+                  <ZoomIn className="h-8 w-8 text-white" />
                 </div>
-              )}
-            </div>
+                <img
+                  src={message.image_url}
+                  alt="Sent image"
+                  className="rounded-md max-h-60 object-contain border border-light-navy cursor-pointer"
+                  onClick={handleImageClick}
+                  onLoad={onImageLoad}
+                  onError={(e) => e.currentTarget.style.display = 'none'}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {message.image_url && (
+      {hasImage && (
         <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
-          <DialogContent className="max-w-[90vw] max-h-[90vh] w-auto p-0 bg-black/80 border-none flex items-center justify-center">
-            <div className="relative">
-              <img
-                src={message.image_url}
-                alt="Full image"
-                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+          <DialogContent className="max-w-[90vw] max-h-[90vh] w-auto p-0 bg-transparent border-none">
+            <div className="relative w-full h-full flex items-center justify-center">
+              <img 
+                src={message.image_url} 
+                alt="Full size image" 
+                className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg"
               />
-              <Button
+              <Button 
                 className="absolute top-2 right-2 rounded-full w-8 h-8 p-0 bg-black/50 hover:bg-black/70"
                 variant="ghost"
                 size="icon"

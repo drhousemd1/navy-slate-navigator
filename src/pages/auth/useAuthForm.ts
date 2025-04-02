@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
 
@@ -12,16 +12,24 @@ export function useAuthForm() {
     loading: false,
     loginError: null
   });
-  const { signIn, signUp, isAuthenticated } = useAuth();
+  const { signIn, signUp, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Check if already authenticated
+  // Log auth state changes for debugging
   useEffect(() => {
-    if (isAuthenticated) {
-      console.log("User is already authenticated, redirecting to home");
+    console.log('Auth state in useAuthForm:', { 
+      isAuthenticated, 
+      authLoading
+    });
+  }, [isAuthenticated, authLoading]);
+
+  // Only redirect if we're confident about auth state
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      console.log("User is authenticated, redirecting to home");
       navigate('/');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, authLoading, navigate]);
 
   const updateFormState = (updates: Partial<AuthFormState>) => {
     setFormState(prevState => ({ ...prevState, ...updates }));
@@ -41,40 +49,42 @@ export function useAuthForm() {
         return;
       }
       
-      console.log("Login attempt details:", {
-        email: formState.email,
-        passwordLength: formState.password.length
-      });
+      // Add more client-side validation if needed
+      if (formState.password.length < 6) {
+        updateFormState({
+          loginError: "Password must be at least 6 characters long",
+          loading: false
+        });
+        return;
+      }
+      
+      console.log("Login attempt with email:", formState.email);
       
       // Sign in with email and password directly
       const { error } = await signIn(formState.email, formState.password);
       
       // Handle errors with consistent format
       if (error) {
-        console.error("Login error details:", error);
-        
-        // Provide specific error message based on error type
-        let errorMessage = "Invalid login credentials. Please check your email and password.";
-        if (error.message) {
-          if (error.message.includes("Invalid login")) {
-            errorMessage = "The email or password you entered is incorrect. Please try again.";
-          } else {
-            errorMessage = error.message;
-          }
-        }
+        console.error("Login error:", error);
         
         updateFormState({
-          loginError: errorMessage,
+          loginError: error.message || "Authentication failed. Please check your credentials.",
           loading: false
         });
       } else {
-        console.log("Login successful");
-        // The useEffect watching isAuthenticated will handle navigation
+        // Success case - toast notification
+        toast({
+          title: "Login successful",
+          description: "You have been successfully logged in.",
+        });
+        
         // Reset login error and loading state
         updateFormState({ 
           loginError: null,
           loading: false 
         });
+        
+        // The useEffect watching isAuthenticated will handle navigation
       }
     } catch (error: any) {
       console.error("Authentication error:", error);
@@ -90,9 +100,18 @@ export function useAuthForm() {
     updateFormState({ loading: true, loginError: null });
 
     try {
+      // Validate input
       if (!formState.email || !formState.password) {
         updateFormState({
           loginError: "Email and password are required",
+          loading: false
+        });
+        return;
+      }
+      
+      if (formState.password.length < 6) {
+        updateFormState({
+          loginError: "Password must be at least 6 characters long",
           loading: false
         });
         return;
