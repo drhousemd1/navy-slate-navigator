@@ -342,6 +342,78 @@ export type Database = {
         }
         Relationships: []
       }
+      rules: {
+        Row: {
+          background_image_url: string | null
+          background_opacity: number
+          calendar_color: string
+          created_at: string
+          description: string | null
+          focal_point_x: number
+          focal_point_y: number
+          frequency: string
+          frequency_count: number
+          highlight_effect: boolean
+          icon_color: string
+          icon_name: string | null
+          icon_url: string | null
+          id: string
+          priority: string
+          subtext_color: string
+          title: string
+          title_color: string
+          updated_at: string
+          usage_data: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          background_image_url?: string | null
+          background_opacity?: number
+          calendar_color?: string
+          created_at?: string
+          description?: string | null
+          focal_point_x?: number
+          focal_point_y?: number
+          frequency?: string
+          frequency_count?: number
+          highlight_effect?: boolean
+          icon_color?: string
+          icon_name?: string | null
+          icon_url?: string | null
+          id?: string
+          priority?: string
+          subtext_color?: string
+          title: string
+          title_color?: string
+          updated_at?: string
+          usage_data?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          background_image_url?: string | null
+          background_opacity?: number
+          calendar_color?: string
+          created_at?: string
+          description?: string | null
+          focal_point_x?: number
+          focal_point_y?: number
+          frequency?: string
+          frequency_count?: number
+          highlight_effect?: boolean
+          icon_color?: string
+          icon_name?: string | null
+          icon_url?: string | null
+          id?: string
+          priority?: string
+          subtext_color?: string
+          title?: string
+          title_color?: string
+          updated_at?: string
+          usage_data?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           background_image_url: string | null

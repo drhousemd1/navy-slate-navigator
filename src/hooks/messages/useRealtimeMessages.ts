@@ -1,82 +1,59 @@
-
-import { useEffect, useCallback, useRef } from 'react';
+// Update import path for the auth hook
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useMessageArchive } from './useMessageArchive';
+import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth/AuthContext';
 
-export const useRealtimeMessages = (refetch: () => void, partnerId: string | undefined) => {
+export const useRealtimeMessages = (refetch: () => Promise<void>, partnerId?: string) => {
   const { user } = useAuth();
-  const { archiveOldMessages } = useMessageArchive();
-  const hasSubscribed = useRef(false);
-  const subscriptionRef = useRef<any>(null);
 
-  // Create a stable callback for refetching
-  const handleNewMessage = useCallback(() => {
-    console.log('🔁 New message received via realtime, triggering refetch');
-    refetch();
-  }, [refetch]);
-
-  // Set up real-time subscription for new messages
   useEffect(() => {
-    // Wait until both user and partnerId are fully available and only subscribe once
-    if (!user?.id || !partnerId || hasSubscribed.current) return;
-    
-    console.log('📡 Setting up realtime messages subscription for user:', user.id, 'and partner:', partnerId);
-    hasSubscribed.current = true;
-    
-    // Create unique channel name to prevent conflicts
-    const channelName = `messages-${user.id}-${partnerId}`;
-    
-    // First clean up any existing subscription
-    if (subscriptionRef.current) {
-      console.log('❌ Cleaning up previous subscription before creating new one');
-      supabase.removeChannel(subscriptionRef.current);
-      subscriptionRef.current = null;
+    if (!user || !partnerId) {
+      console.log('[useRealtimeMessages] User or partnerId not available, skipping realtime setup.');
+      return;
     }
-    
-    // Subscribe to message inserts with immediate refetch for both incoming and outgoing messages
-    const channelSubscription = supabase
-      .channel(channelName)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `sender_id=eq.${user.id},receiver_id=eq.${partnerId}`,
-      }, (payload) => {
-        console.log('Realtime: caught outgoing message INSERT:', payload);
-        handleNewMessage();
-      })
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public', 
-        table: 'messages',
-        filter: `sender_id=eq.${partnerId},receiver_id=eq.${user.id}`,
-      }, (payload) => {
-        console.log('Realtime: caught incoming message INSERT:', payload);
-        handleNewMessage();
-      })
-      .subscribe((status) => {
-        console.log('✅ Realtime subscription status:', status);
-        
-        // If we're connected, archive old messages
-        if (status === 'SUBSCRIBED') {
-          archiveOldMessages(user.id, partnerId);
-        }
-      });
-    
-    // Store the subscription reference
-    subscriptionRef.current = channelSubscription;
-    
-    // Cleanup function
-    return () => {
-      if (subscriptionRef.current) {
-        console.log('❌ Cleaning up realtime subscription');
-        supabase.removeChannel(subscriptionRef.current);
-        subscriptionRef.current = null;
-        hasSubscribed.current = false;
-      }
-    };
-  }, [user?.id, partnerId, handleNewMessage, archiveOldMessages]);
 
-  return {};
+    console.log(`[useRealtimeMessages] Setting up realtime subscription for partnerId: ${partnerId}`);
+
+    const channel = supabase
+      .channel(`messages:${user.id}:${partnerId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${partnerId},receiver_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('[useRealtimeMessages] Received new message (sender -> you):', payload);
+          toast({
+            title: 'New Message',
+            description: 'You have a new message from your partner!',
+          });
+          refetch();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${user.id},receiver_id=eq.${partnerId}`
+        },
+        (payload) => {
+          console.log('[useRealtimeMessages] Received new message (you -> sender):', payload);
+          refetch();
+        }
+      )
+      .subscribe((status) => {
+        console.log(`[useRealtimeMessages] Subscription status: ${status}`);
+      });
+
+    return () => {
+      console.log('[useRealtimeMessages] Unsubscribing from realtime messages');
+      supabase.removeChannel(channel);
+    };
+  }, [user, partnerId, refetch]);
 };

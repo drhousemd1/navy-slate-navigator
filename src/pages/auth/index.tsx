@@ -1,7 +1,8 @@
 
+// Update import path for the auth hook
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { AuthView } from './types';
 import { LoginSignupView } from './LoginSignupView';
 import { ForgotPasswordView } from './ForgotPasswordView';

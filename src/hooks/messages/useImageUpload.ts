@@ -1,7 +1,7 @@
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 export const useImageUpload = () => {
@@ -17,7 +17,7 @@ export const useImageUpload = () => {
     
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+      const fileName = `${user.id}-${uuidv4()}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
       
       console.log('Uploading image:', filePath);

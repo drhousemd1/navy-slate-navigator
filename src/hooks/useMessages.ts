@@ -1,6 +1,7 @@
 
+// Update import path for the auth hook
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessagesFetch } from './messages/useMessagesFetch';
 import { useMessageSend } from './messages/useMessageSend';

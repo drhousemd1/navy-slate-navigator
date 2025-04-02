@@ -1,8 +1,8 @@
-
-import React, { useEffect, useRef } from 'react';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Message } from '@/hooks/useMessages';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Message } from '@/hooks/messages/types';
+import { useAuth } from '@/contexts/auth/AuthContext';
 
 interface MessageItemProps {
   message: Message;
@@ -22,7 +22,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const messageRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   
-  // Debug log for rendering
   useEffect(() => {
     console.log(`[MessageItem] Component mounted for message: ${message.id}, content: ${message.content?.substring(0, 20)}`);
     return () => {
@@ -30,12 +29,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
     };
   }, [message.id, message.content]);
   
-  // Debug log for DOM presence
   useEffect(() => {
     if (messageRef.current) {
       console.log(`[MessageItem] Message ${message.id} is in the DOM`);
       
-      // Log the position of the message element
       const rect = messageRef.current.getBoundingClientRect();
       console.log(`[MessageItem] Message ${message.id} position:`, {
         top: rect.top,
@@ -57,12 +54,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
   };
 
-  // Check if the message has actual content to display
   if (!message.content && !message.image_url) {
     console.log('[MessageItem] ⚠️ Message has no content or image:', message.id);
   }
 
-  // Handle image load with better error handling
   const handleImageLoad = () => {
     console.log(`[MessageItem] Image loaded successfully for message: ${message.id}`);
     if (onImageLoad) {
@@ -76,7 +71,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   return (
     <div className="flex flex-col my-2" ref={messageRef}>
-      {/* Timestamp above message bubble */}
       <div className={`w-full text-xxs text-white opacity-40 mb-1 ${isSentByMe ? 'text-right pr-4' : 'text-left pl-4'}`}>
         {formatMessageTime(message.created_at)}
       </div>
@@ -86,7 +80,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
         data-message-id={message.id}
       >
         <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start max-w-[90%] relative`}>
-          {/* Avatar */}
           <Avatar className={`h-8 w-8 border border-light-navy ${isSentByMe ? '-ml-3 z-10' : '-mr-3 z-10'}`}>
             {isSentByMe && userProfileImage ? (
               <AvatarImage 
@@ -101,7 +94,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
             )}
           </Avatar>
           
-          {/* Message bubble */}
           <div 
             className={`mx-2 p-3 rounded-lg min-w-[160px] ${
               isSentByMe
