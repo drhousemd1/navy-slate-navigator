@@ -69,15 +69,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
             )}
           </Avatar>
 
-          <div className={`mx-2 p-3 rounded-lg min-w-[160px] ${isSentByMe ? 'bg-cyan-800 text-white rounded-tl-none' : 'bg-navy border border-light-navy text-white rounded-tr-none'}`}>
+          <div className={`ml-2 mr-2 p-3 rounded-lg min-w-[160px] ${isSentByMe ? 'bg-cyan-800 text-white rounded-tl-none' : 'bg-navy border border-light-navy text-white rounded-tr-none'}`}>
             <div className="flex flex-col">
               <span className="font-semibold text-xs mb-1">
                 {isSentByMe ? userNickname : 'Partner'}
               </span>
               {message.content && (
-                <p className="text-sm break-words whitespace-pre-wrap">
-                  {message.content}
-                </p>
+                <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
               )}
               {message.image_url && (
                 <>
