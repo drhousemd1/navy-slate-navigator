@@ -16,3 +16,16 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage
   }
 });
+
+// Debug session persistence
+if (typeof window !== 'undefined') {
+  // Check localStorage on load
+  console.log('localStorage auth session on load:', localStorage.getItem('sb-auth-token'));
+  
+  // Periodically check for session to debug persistence issues
+  setInterval(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      console.log('Current session check:', data.session ? 'Active' : 'None');
+    });
+  }, 15000);
+}

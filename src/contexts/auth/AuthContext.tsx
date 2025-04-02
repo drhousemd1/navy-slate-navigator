@@ -18,7 +18,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Get auth operations - IMPORTANT: we need to directly use the operations
+  // Get auth operations
   const { 
     signIn, 
     signUp, 
@@ -64,69 +64,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Set up auth state listener and check for existing session
+  // Fix the auth state handling
   useEffect(() => {
-    // Skip auth redirects and logic if on the reset-password page
-    if (window.location.pathname === '/reset-password') return;
+    console.log('Setting up auth state listener');
     
-    console.log('Checking session and setting up auth state listener');
-    let mounted = true;
-
-    const checkSessionAndSubscribe = async () => {
+    // First, set up the listener before checking the existing session
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('Auth state changed:', event, newSession?.user?.email);
+      
+      // Set session and user synchronously to avoid race conditions
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+      setIsAuthenticated(!!newSession);
+      setLoading(false);
+      
+      // Defer role checking to avoid auth deadlocks
+      if (newSession?.user) {
+        setTimeout(() => {
+          checkUserRole();
+        }, 0);
+      }
+    });
+    
+    // Then check for an existing session
+    const checkExistingSession = async () => {
       try {
-        // Check if current path is the reset password page
-        // If it is, we don't want to redirect based on auth state
-        const isResetPasswordPage = window.location.pathname === '/reset-password';
-        
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-        if (!mounted) return;
-
         console.log('Initial session check:', currentSession?.user?.email || 'No session');
-
+        
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setIsAuthenticated(!!currentSession);
-
-        if (currentSession?.user && !isResetPasswordPage) {
+        
+        if (currentSession?.user) {
           setTimeout(() => {
             checkUserRole();
           }, 0);
         }
-
-        setLoading(false);
-
-        // Now attach the auth state listener AFTER the session check
-        supabase.auth.onAuthStateChange((event, newSession) => {
-          console.log('Auth state changed:', event, newSession?.user?.email);
-
-          if (!mounted) return;
-
-          // Check again if we're on the reset password page
-          const isResetPasswordPage = window.location.pathname === '/reset-password';
-          
-          setSession(newSession);
-          setUser(newSession?.user ?? null);
-          setIsAuthenticated(!!newSession);
-
-          if (newSession?.user && !isResetPasswordPage) {
-            setTimeout(() => {
-              checkUserRole();
-            }, 0);
-          }
-
-          setLoading(false);
-        });
       } catch (error) {
-        console.error("Error checking session:", error);
-        if (mounted) setLoading(false);
+        console.error('Error checking session:', error);
+      } finally {
+        setLoading(false);
       }
     };
-
-    checkSessionAndSubscribe();
-
+    
+    checkExistingSession();
+    
+    // Clean up subscription when component unmounts
     return () => {
-      mounted = false;
+      subscription.unsubscribe();
     };
   }, []);
 

@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -17,26 +17,41 @@ import { InfoIcon } from 'lucide-react';
 const ThroneRoom: React.FC = () => {
   const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
   const navigate = useNavigate();
+  const [isRoleChecked, setIsRoleChecked] = useState(false);
 
-  // Make sure role check runs when the component mounts
+  // Make sure role check runs when authentication is confirmed
   useEffect(() => {
     if (isAuthenticated && !loading) {
-      console.log('ThroneRoom: Checking user role');
-      checkUserRole();
+      console.log('ThroneRoom: User authenticated, checking role');
+      checkUserRole().then(() => {
+        console.log('ThroneRoom: Role check completed');
+        setIsRoleChecked(true);
+      });
     }
   }, [isAuthenticated, loading, checkUserRole]);
 
-  // Redirect non-admin users after auth check is complete
+  // Handle unauthenticated users
   useEffect(() => {
-    if (!loading && isAuthenticated && !isAdmin) {
-      console.log('ThroneRoom: User is not admin, redirecting');
+    // Only redirect if we know for sure user isn't authenticated (not when still loading)
+    if (!loading && !isAuthenticated) {
+      console.log('ThroneRoom: User is not authenticated, redirecting to login');
+      navigate('/auth');
+    }
+  }, [isAuthenticated, loading, navigate]);
+
+  // Handle non-admin users
+  useEffect(() => {
+    // Only redirect if we've checked roles and confirmed user isn't admin
+    if (isRoleChecked && isAuthenticated && !isAdmin) {
+      console.log('ThroneRoom: User is not admin, redirecting to home');
       navigate('/');
     }
-  }, [isAdmin, isAuthenticated, loading, navigate]);
+  }, [isAdmin, isAuthenticated, isRoleChecked, navigate]);
 
-  console.log('ThroneRoom: Rendering with isAdmin:', isAdmin, 'isAuthenticated:', isAuthenticated, 'loading:', loading);
+  console.log('ThroneRoom: Rendering with isAdmin:', isAdmin, 'isAuthenticated:', isAuthenticated, 'loading:', loading, 'roleChecked:', isRoleChecked);
 
-  if (loading) {
+  // Show loading state while checking authentication or roles
+  if (loading || (isAuthenticated && !isRoleChecked)) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-screen">
@@ -49,6 +64,7 @@ const ThroneRoom: React.FC = () => {
     );
   }
 
+  // Handle unauthenticated case
   if (!isAuthenticated) {
     return (
       <AppLayout>
@@ -64,6 +80,7 @@ const ThroneRoom: React.FC = () => {
     );
   }
 
+  // Handle non-admin users
   if (!isAdmin) {
     return (
       <AppLayout>
@@ -79,6 +96,7 @@ const ThroneRoom: React.FC = () => {
     );
   }
 
+  // Show admin content for authenticated admin users
   return (
     <AppLayout>
       <div className="p-6 space-y-6 animate-fade-in">

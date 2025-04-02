@@ -12,16 +12,16 @@ export function useAuthForm() {
     loading: false,
     loginError: null
   });
-  const { signIn, signUp, isAuthenticated } = useAuth();
+  const { signIn, signUp, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Check if already authenticated
+  // Only redirect if we're confident about auth state
   useEffect(() => {
-    if (isAuthenticated) {
-      console.log("User is already authenticated, redirecting to home");
+    if (isAuthenticated && !authLoading) {
+      console.log("User is authenticated, redirecting to home");
       navigate('/');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, authLoading, navigate]);
 
   const updateFormState = (updates: Partial<AuthFormState>) => {
     setFormState(prevState => ({ ...prevState, ...updates }));
@@ -41,17 +41,14 @@ export function useAuthForm() {
         return;
       }
       
-      console.log("Login attempt details:", {
-        email: formState.email,
-        passwordLength: formState.password.length
-      });
+      console.log("Login attempt with email:", formState.email);
       
       // Sign in with email and password directly
-      const { error } = await signIn(formState.email, formState.password);
+      const { error, user } = await signIn(formState.email, formState.password);
       
       // Handle errors with consistent format
       if (error) {
-        console.error("Login error details:", error);
+        console.error("Login error:", error);
         
         // Provide specific error message based on error type
         let errorMessage = "Invalid login credentials. Please check your email and password.";
@@ -68,13 +65,14 @@ export function useAuthForm() {
           loading: false
         });
       } else {
-        console.log("Login successful");
-        // The useEffect watching isAuthenticated will handle navigation
+        console.log("Login successful for user:", user?.email);
         // Reset login error and loading state
         updateFormState({ 
           loginError: null,
           loading: false 
         });
+        
+        // The useEffect watching isAuthenticated will handle navigation
       }
     } catch (error: any) {
       console.error("Authentication error:", error);
