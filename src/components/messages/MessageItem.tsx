@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -64,9 +63,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
       </div>
 
       <div className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}>
-        <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start gap-2 max-w-[90%]`}>
-          {/* Avatar */}
-          <Avatar className="h-8 w-8 border border-light-navy">
+        <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start gap-2`}>
+          <Avatar className="h-8 w-8 border border-light-navy shrink-0">
             {avatarUrl ? (
               <AvatarImage src={avatarUrl} alt={userNickname || 'User'} />
             ) : (
@@ -76,8 +74,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
             )}
           </Avatar>
 
-          {/* Message bubble */}
-          <div className={`p-3 rounded-lg min-w-[160px] ${isSentByMe ? 'bg-cyan-800 text-white rounded-tl-none' : 'bg-navy border border-light-navy text-white rounded-tr-none'}`}>
+          <div className={`p-3 rounded-lg max-w-[75vw] ${
+            isSentByMe
+              ? 'bg-cyan-800 text-white rounded-tl-none'
+              : 'bg-navy border border-light-navy text-white rounded-tr-none'
+          }`}>
             <div className="flex flex-col">
               <span className="font-semibold text-xs mb-1">
                 {isSentByMe ? userNickname : 'Partner'}
@@ -107,7 +108,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
         </div>
       </div>
 
-      {/* Lightbox Dialog */}
       {hasImage && (
         <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
           <DialogContent className="max-w-[90vw] max-h-[90vh] w-auto p-0 bg-transparent border-none">
