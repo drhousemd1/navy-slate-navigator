@@ -1,6 +1,4 @@
 
-// Fix: MessageItem.tsx - Display correct avatars for both users
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -21,7 +19,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   userNickname,
   onImageLoad
 }) => {
-  const { user, getProfileImage } = useAuth();
+  const { user } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const messageRef = useRef<HTMLDivElement>(null);
 
@@ -30,12 +28,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
       const targetUserId = isSentByMe ? user?.id : message.sender_id;
       const { data, error } = await supabase
         .from('profiles')
-        .select('profile_image_url')
+        .select('avatar_url')
         .eq('id', targetUserId)
         .single();
 
-      if (!error && data?.profile_image_url) {
-        setAvatarUrl(data.profile_image_url);
+      if (!error && data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
       }
     };
     fetchAvatar();
