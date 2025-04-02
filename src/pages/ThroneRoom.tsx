@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/auth/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const ThroneRoom: React.FC = () => {
@@ -21,13 +21,15 @@ const ThroneRoom: React.FC = () => {
       <AppLayout>
         <div className="flex items-center justify-center h-screen">
           <div className="text-center p-6">
-            <p className="text-white">Loading...</p>
+            <p className="text-white">Loading the Throne Room...</p>
           </div>
         </div>
       </AppLayout>
     );
   }
 
+  // Show access denied message within the page rather than redirecting
+  // This ensures the page is mounted and the navigation item is active
   if (!isAdmin) {
     return (
       <AppLayout>

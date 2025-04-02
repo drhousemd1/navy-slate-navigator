@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -51,10 +50,6 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/auth" />;
   }
   
-  if (!isAdmin) {
-    return <Navigate to="/" />;
-  }
-  
   return <>{children}</>;
 };
 
@@ -77,8 +72,8 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* Add new route */}
-      <Route path="/reset-password-view" element={<ResetPasswordView />} /> {/* Rename existing route */}
+      <Route path="/reset-password" element={<ResetPasswordPage />} /> 
+      <Route path="/reset-password-view" element={<ResetPasswordView />} /> 
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
