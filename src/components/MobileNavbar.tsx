@@ -37,7 +37,7 @@ const navItems: NavItem[] = [
     icon: <Skull className="w-5 h-5" />,
   },
   {
-    name: 'Admin',
+    name: 'Throne Room',
     path: '/throne-room',
     icon: <Crown className="w-5 h-5" />,
   },
