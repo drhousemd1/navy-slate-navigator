@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +13,6 @@ const ResetPasswordPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const { updatePassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
