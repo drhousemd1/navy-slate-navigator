@@ -71,6 +71,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const checkSessionAndSubscribe = async () => {
       try {
+        // Check if current path is the reset password page
+        // If it is, we don't want to redirect based on auth state
+        const isResetPasswordPage = window.location.pathname === '/reset-password';
+        
         const { data: { session: currentSession } } = await supabase.auth.getSession();
 
         if (!mounted) return;
@@ -81,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(currentSession?.user ?? null);
         setIsAuthenticated(!!currentSession);
 
-        if (currentSession?.user) {
+        if (currentSession?.user && !isResetPasswordPage) {
           setTimeout(() => {
             checkUserRole();
           }, 0);
@@ -95,11 +99,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (!mounted) return;
 
+          // Check again if we're on the reset password page
+          const isResetPasswordPage = window.location.pathname === '/reset-password';
+          
           setSession(newSession);
           setUser(newSession?.user ?? null);
           setIsAuthenticated(!!newSession);
 
-          if (newSession?.user) {
+          if (newSession?.user && !isResetPasswordPage) {
             setTimeout(() => {
               checkUserRole();
             }, 0);
