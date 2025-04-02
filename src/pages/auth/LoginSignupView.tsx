@@ -123,7 +123,6 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
               if (currentView !== "login") {
                 e.preventDefault();
                 onViewChange("login");
-                return;
               }
             }}
           >

@@ -26,7 +26,7 @@ export function useAuthOperations() {
       });
       
       if (error) {
-        console.error('Sign in error details:', error);
+        console.error('Sign in error (full response):', { error, data });
         return { error, user: null };
       }
       
