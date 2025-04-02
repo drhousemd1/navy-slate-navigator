@@ -25,7 +25,7 @@ const RewardContent: React.FC<RewardContentProps> = ({
   return (
     <div className="flex items-start mb-auto">
       <div className="mr-4 flex-shrink-0">
-        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00f0ff' }}>
+        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-green-200">
           <TaskIcon 
             icon_name={iconName} 
             icon_color={iconColor} 

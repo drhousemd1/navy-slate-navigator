@@ -18,9 +18,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Get auth operations
-  const authOperations = useAuthOperations();
-  const { signIn, signUp, resetPassword, updatePassword } = authOperations;
+  // Get auth operations - IMPORTANT: we need to directly use the operations
+  const { 
+    signIn, 
+    signUp, 
+    resetPassword, 
+    updatePassword 
+  } = useAuthOperations();
   
   // Get role management
   const roleManagement = useRoleManagement(user);
@@ -62,46 +66,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Set up auth state listener and check for existing session
   useEffect(() => {
-    console.log('Setting up auth state listener and checking for existing session');
-    
-    // CRITICAL: Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        console.log('Auth state changed:', event, currentSession?.user?.email);
-        
-        // Update authentication state synchronously
+    console.log('Checking session and setting up auth state listener');
+    let mounted = true;
+
+    const checkSessionAndSubscribe = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+        if (!mounted) return;
+
+        console.log('Initial session check:', currentSession?.user?.email || 'No session');
+
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setIsAuthenticated(!!currentSession);
-        
-        // Use setTimeout for any Supabase calls to prevent deadlocks
+
         if (currentSession?.user) {
           setTimeout(() => {
             checkUserRole();
           }, 0);
         }
-        
-        setLoading(false);
-      }
-    );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      console.log('Initial session check:', currentSession?.user?.email || 'No session');
-      
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setIsAuthenticated(!!currentSession);
-      
-      if (currentSession?.user) {
-        checkUserRole();
+        setLoading(false);
+
+        // Now attach the auth state listener AFTER the session check
+        supabase.auth.onAuthStateChange((event, newSession) => {
+          console.log('Auth state changed:', event, newSession?.user?.email);
+
+          if (!mounted) return;
+
+          setSession(newSession);
+          setUser(newSession?.user ?? null);
+          setIsAuthenticated(!!newSession);
+
+          if (newSession?.user) {
+            setTimeout(() => {
+              checkUserRole();
+            }, 0);
+          }
+
+          setLoading(false);
+        });
+      } catch (error) {
+        console.error("Error checking session:", error);
+        if (mounted) setLoading(false);
       }
-      
-      setLoading(false);
-    });
+    };
+
+    checkSessionAndSubscribe();
 
     return () => {
-      subscription.unsubscribe();
+      mounted = false;
     };
   }, []);
 

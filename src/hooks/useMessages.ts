@@ -1,7 +1,6 @@
 
-// Update import path for the auth hook
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/auth/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessagesFetch } from './messages/useMessagesFetch';
 import { useMessageSend } from './messages/useMessageSend';
@@ -47,13 +46,8 @@ export const useMessages = (initialPartnerId?: string) => {
     error, 
     loadOlderMessages,
     loadingOlder,
-    refetch: originalRefetch
+    refetch
   } = useMessagesFetch(partnerId);
-  
-  // Wrap the refetch function to ensure it returns Promise<void>
-  const refetch = async () => {
-    await originalRefetch();
-  };
   
   const { 
     imageFile, 

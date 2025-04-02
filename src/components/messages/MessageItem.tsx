@@ -1,15 +1,18 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Message } from '@/hooks/messages/types';
-import { useAuth } from '@/contexts/auth/AuthContext';
+import { Message } from '@/hooks/useMessages';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { X, ZoomIn } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface MessageItemProps {
   message: Message;
   isSentByMe: boolean;
   userNickname: string | null;
-  userProfileImage: string | null;
   onImageLoad?: () => void;
 }
 
@@ -17,57 +20,39 @@ const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isSentByMe,
   userNickname,
-  userProfileImage,
   onImageLoad
 }) => {
+  const { user } = useAuth();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isImageOpen, setIsImageOpen] = useState(false);
   const messageRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  
+
   useEffect(() => {
-    console.log(`[MessageItem] Component mounted for message: ${message.id}, content: ${message.content?.substring(0, 20)}`);
-    return () => {
-      console.log(`[MessageItem] Component unmounted for message: ${message.id}`);
+    const fetchAvatar = async () => {
+      const targetUserId = isSentByMe ? user?.id : message.sender_id;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', targetUserId)
+        .single();
+
+      if (!error && data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+      }
     };
-  }, [message.id, message.content]);
-  
-  useEffect(() => {
-    if (messageRef.current) {
-      console.log(`[MessageItem] Message ${message.id} is in the DOM`);
-      
-      const rect = messageRef.current.getBoundingClientRect();
-      console.log(`[MessageItem] Message ${message.id} position:`, {
-        top: rect.top,
-        bottom: rect.bottom,
-        height: rect.height,
-        visible: rect.top >= 0 && rect.bottom <= window.innerHeight
-      });
-    } else {
-      console.log(`[MessageItem] Message ${message.id} is NOT in the DOM yet`);
-    }
-  }, [message.id]);
-  
+    fetchAvatar();
+  }, [isSentByMe, user?.id, message.sender_id]);
+
   const formatMessageTime = (timestamp: string) => {
     try {
       return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
-    } catch (error) {
-      console.error('[MessageItem] Error formatting time:', error);
+    } catch {
       return '';
     }
   };
-
-  if (!message.content && !message.image_url) {
-    console.log('[MessageItem] ⚠️ Message has no content or image:', message.id);
-  }
-
-  const handleImageLoad = () => {
-    console.log(`[MessageItem] Image loaded successfully for message: ${message.id}`);
-    if (onImageLoad) {
-      onImageLoad();
-    }
-  };
-
-  const handleImageError = () => {
-    console.error(`[MessageItem] Failed to load image for message: ${message.id}, URL: ${message.image_url}`);
+  
+  const handleImageClick = () => {
+    setIsImageOpen(true);
   };
 
   return (
@@ -75,51 +60,43 @@ const MessageItem: React.FC<MessageItemProps> = ({
       <div className={`w-full text-xxs text-white opacity-40 mb-1 ${isSentByMe ? 'text-right pr-4' : 'text-left pl-4'}`}>
         {formatMessageTime(message.created_at)}
       </div>
-      
-      <div 
-        className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}
-        data-message-id={message.id}
-      >
-        <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start max-w-[90%] relative`}>
-          <Avatar className={`h-8 w-8 border border-light-navy ${isSentByMe ? '-ml-3 z-10' : '-mr-3 z-10'}`}>
-            {isSentByMe && userProfileImage ? (
-              <AvatarImage 
-                src={userProfileImage} 
-                alt={userNickname || "Me"}
-                onError={() => console.error('[MessageItem] Failed to load avatar image')}
-              />
+
+      <div className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}>
+        <div className={`flex ${isSentByMe ? 'flex-row' : 'flex-row-reverse'} items-start gap-2 max-w-[90%]`}>
+          <Avatar className={`h-8 w-8 border border-light-navy`}>
+            {avatarUrl ? (
+              <AvatarImage src={avatarUrl} alt={userNickname || 'User'} />
             ) : (
               <AvatarFallback className="bg-light-navy text-nav-active text-xs">
-                {isSentByMe ? (userNickname?.charAt(0) || "M").toUpperCase() : "P"}
+                {(userNickname?.charAt(0) || 'U').toUpperCase()}
               </AvatarFallback>
             )}
           </Avatar>
-          
-          <div 
-            className={`mx-2 p-3 rounded-lg min-w-[160px] ${
-              isSentByMe
-                ? 'bg-cyan-800 text-white rounded-tl-none'
-                : 'bg-navy border border-light-navy text-white rounded-tr-none'
-            }`}
-          >
+
+          <div className={`p-3 rounded-lg min-w-[160px] ${
+            isSentByMe ? 'bg-cyan-800 text-white rounded-tl-none' : 'bg-navy border border-light-navy text-white rounded-tr-none'
+          }`}>
             <div className="flex flex-col">
               <span className="font-semibold text-xs mb-1">
-                {isSentByMe ? userNickname : "Partner"}
+                {isSentByMe ? userNickname : 'Partner'}
               </span>
-              
-              {message.content && message.content.trim() !== '' && (
+
+              {message.content && (
                 <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
               )}
-              
+
               {message.image_url && (
-                <div className="mt-1">
+                <div className="mt-2 relative group">
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-black bg-opacity-40 rounded-md">
+                    <ZoomIn className="h-8 w-8 text-white" />
+                  </div>
                   <img
-                    ref={imageRef}
                     src={message.image_url}
-                    alt="Message attachment"
-                    className="max-w-full rounded-md max-h-60 object-contain"
-                    onLoad={handleImageLoad}
-                    onError={handleImageError}
+                    alt="Sent image"
+                    className="rounded-md max-h-60 object-contain border border-light-navy cursor-pointer"
+                    onClick={handleImageClick}
+                    onLoad={onImageLoad}
+                    onError={(e) => e.currentTarget.style.display = 'none'}
                   />
                 </div>
               )}
@@ -127,6 +104,28 @@ const MessageItem: React.FC<MessageItemProps> = ({
           </div>
         </div>
       </div>
+
+      {message.image_url && (
+        <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
+          <DialogContent className="max-w-[90vw] max-h-[90vh] w-auto p-0 bg-black/80 border-none flex items-center justify-center">
+            <div className="relative">
+              <img
+                src={message.image_url}
+                alt="Full image"
+                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+              />
+              <Button
+                className="absolute top-2 right-2 rounded-full w-8 h-8 p-0 bg-black/50 hover:bg-black/70"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsImageOpen(false)}
+              >
+                <X className="h-5 w-5 text-white" />
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

@@ -1,7 +1,6 @@
 
-// Update import path for the auth hook
 import { useState } from 'react';
-import { useAuth } from '@/contexts/auth/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 export function useForgotPassword() {
