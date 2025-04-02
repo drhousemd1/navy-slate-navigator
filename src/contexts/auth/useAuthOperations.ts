@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -19,9 +18,6 @@ export function useAuthOperations() {
       
       // Log auth request details but not the actual password
       console.log('Auth request details:', { email: trimmedEmail, passwordLength: trimmedPassword.length });
-      
-      // Clear any existing sessions - fixes common authentication issues
-      await supabase.auth.signOut();
       
       // Use the trimmed values for authentication
       const { data, error } = await supabase.auth.signInWithPassword({
