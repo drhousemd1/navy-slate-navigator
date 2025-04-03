@@ -90,22 +90,51 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         console.log('Generated week days:', weekDays);
         const metricsMap = new Map(weekDays.map(day => [day.date, day]));
         
-        // Fetch task completion history instead of completed tasks
-        // This counts each completion event, not just fully completed tasks
-        const { data: taskHistoryData, error: taskHistoryError } = await supabase
-          .from('tasks')
-          .select('last_completed_date');
-        
-        if (taskHistoryError) {
-          console.error('Error fetching task history:', taskHistoryError.message);
-          setError('Failed to load task history data');
-        } else {
-          console.log('Task completions fetched:', taskHistoryData?.length || 0, taskHistoryData);
+        // Query task_history table for individual task completions
+        const { data: taskCompletions, error: taskCompletionsError } = await supabase
+          .from('task_history')
+          .select('created_at')
+          .eq('completed', true);
           
-          taskHistoryData?.forEach(entry => {
-            if (entry.last_completed_date) {
+        if (taskCompletionsError) {
+          console.error('Error fetching task completions:', taskCompletionsError.message);
+          setError('Failed to load task completions data');
+          
+          // Fallback to the original approach if task_history doesn't exist
+          console.log('Falling back to tasks table for completion data');
+          const { data: tasksData, error: tasksError } = await supabase
+            .from('tasks')
+            .select('last_completed_date');
+            
+          if (tasksError) {
+            console.error('Error in fallback task fetch:', tasksError.message);
+          } else {
+            console.log('Fallback tasks fetched:', tasksData?.length || 0);
+            tasksData?.forEach(task => {
+              if (task.last_completed_date) {
+                try {
+                  const completedDate = format(parseISO(task.last_completed_date), 'yyyy-MM-dd');
+                  if (metricsMap.has(completedDate)) {
+                    const dayData = metricsMap.get(completedDate);
+                    if (dayData) {
+                      dayData.tasksCompleted += 1;
+                      metricsMap.set(completedDate, dayData);
+                    }
+                  }
+                } catch (dateError) {
+                  console.error('Error parsing task completion date:', dateError);
+                }
+              }
+            });
+          }
+        } else {
+          console.log('Task completions fetched:', taskCompletions?.length || 0);
+          
+          // Count each individual completion as one completed task
+          taskCompletions?.forEach(completion => {
+            if (completion.created_at) {
               try {
-                const completedDate = format(parseISO(entry.last_completed_date), 'yyyy-MM-dd');
+                const completedDate = format(new Date(completion.created_at), 'yyyy-MM-dd');
                 if (metricsMap.has(completedDate)) {
                   const dayData = metricsMap.get(completedDate);
                   if (dayData) {
