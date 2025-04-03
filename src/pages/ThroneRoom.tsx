@@ -46,16 +46,22 @@ const ThroneRoom: React.FC = () => {
                   <WeeklyMetricsChart />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-6 px-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mt-6 px-6">
                   <div className="bg-light-navy rounded-lg px-3 py-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-cyan-400 text-sm">Tasks Completed:</span>
+                      <span className="text-sky-400 text-sm">Tasks Completed:</span>
                       <span className="text-sm font-bold text-white">24</span>
                     </div>
                   </div>
                   <div className="bg-light-navy rounded-lg px-3 py-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-green-400 text-sm">Rewards Given:</span>
+                      <span className="text-orange-500 text-sm">Rules Broken:</span>
+                      <span className="text-sm font-bold text-white">5</span>
+                    </div>
+                  </div>
+                  <div className="bg-light-navy rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-purple-400 text-sm">Rewards Used:</span>
                       <span className="text-sm font-bold text-white">7</span>
                     </div>
                   </div>
