@@ -97,27 +97,28 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           .eq('completed', true);
         
         if (tasksError) {
-          throw new Error(`Failed to load tasks: ${tasksError.message}`);
-        }
+          console.error('Error fetching tasks:', tasksError.message);
+          setError('Failed to load tasks data');
+        } else {
+          console.log('Tasks fetched:', tasksData?.length || 0, tasksData);
           
-        console.log('Tasks fetched:', tasksData?.length || 0, tasksData);
-        
-        tasksData?.forEach(task => {
-          if (task.last_completed_date) {
-            try {
-              const completedDate = format(parseISO(task.last_completed_date), 'yyyy-MM-dd');
-              if (metricsMap.has(completedDate)) {
-                const dayData = metricsMap.get(completedDate);
-                if (dayData) {
-                  dayData.tasksCompleted += 1;
-                  metricsMap.set(completedDate, dayData);
+          tasksData?.forEach(task => {
+            if (task.last_completed_date) {
+              try {
+                const completedDate = format(parseISO(task.last_completed_date), 'yyyy-MM-dd');
+                if (metricsMap.has(completedDate)) {
+                  const dayData = metricsMap.get(completedDate);
+                  if (dayData) {
+                    dayData.tasksCompleted += 1;
+                    metricsMap.set(completedDate, dayData);
+                  }
                 }
+              } catch (dateError) {
+                console.error('Error parsing task date:', dateError);
               }
-            } catch (dateError) {
-              console.error('Error parsing task date:', dateError);
             }
-          }
-        });
+          });
+        }
         
         // For rules violations, we'll try to estimate from rules data (since rule_violations table doesn't exist)
         // In a real app, you might want to create this table or use another approach
@@ -129,27 +130,28 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           .select('created_at');
           
         if (rewardsError) {
-          throw new Error(`Failed to load rewards usage: ${rewardsError.message}`);
-        }
-        
-        console.log('Rewards usage fetched:', rewardsData?.length || 0, rewardsData);
-        
-        rewardsData?.forEach(reward => {
-          if (reward.created_at) {
-            try {
-              const usedDate = format(new Date(reward.created_at), 'yyyy-MM-dd');
-              if (metricsMap.has(usedDate)) {
-                const dayData = metricsMap.get(usedDate);
-                if (dayData) {
-                  dayData.rewardsUsed += 1;
-                  metricsMap.set(usedDate, dayData);
+          console.error('Error fetching rewards usage:', rewardsError.message);
+          setError(prev => prev || 'Failed to load rewards data');
+        } else {
+          console.log('Rewards usage fetched:', rewardsData?.length || 0, rewardsData);
+          
+          rewardsData?.forEach(reward => {
+            if (reward.created_at) {
+              try {
+                const usedDate = format(new Date(reward.created_at), 'yyyy-MM-dd');
+                if (metricsMap.has(usedDate)) {
+                  const dayData = metricsMap.get(usedDate);
+                  if (dayData) {
+                    dayData.rewardsUsed += 1;
+                    metricsMap.set(usedDate, dayData);
+                  }
                 }
+              } catch (dateError) {
+                console.error('Error parsing reward date:', dateError);
               }
-            } catch (dateError) {
-              console.error('Error parsing reward date:', dateError);
             }
-          }
-        });
+          });
+        }
         
         // Fetch punishment data
         const { data: punishmentsData, error: punishmentsError } = await supabase
@@ -157,27 +159,28 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           .select('applied_date');
           
         if (punishmentsError) {
-          throw new Error(`Failed to load punishments: ${punishmentsError.message}`);
-        }
+          console.error('Error fetching punishments:', punishmentsError.message);
+          setError(prev => prev || 'Failed to load punishments data');
+        } else {
+          console.log('Punishments fetched:', punishmentsData?.length || 0, punishmentsData);
           
-        console.log('Punishments fetched:', punishmentsData?.length || 0, punishmentsData);
-        
-        punishmentsData?.forEach(punishment => {
-          if (punishment.applied_date) {
-            try {
-              const appliedDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
-              if (metricsMap.has(appliedDate)) {
-                const dayData = metricsMap.get(appliedDate);
-                if (dayData) {
-                  dayData.punishmentsApplied += 1;
-                  metricsMap.set(appliedDate, dayData);
+          punishmentsData?.forEach(punishment => {
+            if (punishment.applied_date) {
+              try {
+                const appliedDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
+                if (metricsMap.has(appliedDate)) {
+                  const dayData = metricsMap.get(appliedDate);
+                  if (dayData) {
+                    dayData.punishmentsApplied += 1;
+                    metricsMap.set(appliedDate, dayData);
+                  }
                 }
+              } catch (dateError) {
+                console.error('Error parsing punishment date:', dateError);
               }
-            } catch (dateError) {
-              console.error('Error parsing punishment date:', dateError);
             }
-          }
-        });
+          });
+        }
         
         const chartData = Array.from(metricsMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
         console.log('Final chart data:', chartData);
@@ -198,11 +201,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         }
         
         setData(chartData);
-        setLoading(false);
+        
       } catch (err) {
         console.error('Error in fetchMetricsData:', err);
         setError(err instanceof Error ? err.message : 'Failed to load metrics data');
-        setLoading(false);
         
         // Even if there's an error, try to initialize with empty data
         const emptyData = generateWeekDays();
@@ -217,6 +219,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             punishmentsApplied: 0
           });
         }
+      } finally {
+        // Always ensure loading state is set to false at the end
+        setLoading(false);
       }
     };
 
