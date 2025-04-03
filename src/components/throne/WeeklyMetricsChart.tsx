@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
@@ -89,22 +90,22 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         console.log('Generated week days:', weekDays);
         const metricsMap = new Map(weekDays.map(day => [day.date, day]));
         
-        // Fetch completed tasks
-        const { data: tasksData, error: tasksError } = await supabase
+        // Fetch task completion history instead of completed tasks
+        // This counts each completion event, not just fully completed tasks
+        const { data: taskHistoryData, error: taskHistoryError } = await supabase
           .from('tasks')
-          .select('last_completed_date')
-          .eq('completed', true);
+          .select('last_completed_date');
         
-        if (tasksError) {
-          console.error('Error fetching tasks:', tasksError.message);
-          setError('Failed to load tasks data');
+        if (taskHistoryError) {
+          console.error('Error fetching task history:', taskHistoryError.message);
+          setError('Failed to load task history data');
         } else {
-          console.log('Tasks fetched:', tasksData?.length || 0, tasksData);
+          console.log('Task completions fetched:', taskHistoryData?.length || 0, taskHistoryData);
           
-          tasksData?.forEach(task => {
-            if (task.last_completed_date) {
+          taskHistoryData?.forEach(entry => {
+            if (entry.last_completed_date) {
               try {
-                const completedDate = format(parseISO(task.last_completed_date), 'yyyy-MM-dd');
+                const completedDate = format(parseISO(entry.last_completed_date), 'yyyy-MM-dd');
                 if (metricsMap.has(completedDate)) {
                   const dayData = metricsMap.get(completedDate);
                   if (dayData) {
@@ -113,7 +114,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
                   }
                 }
               } catch (dateError) {
-                console.error('Error parsing task date:', dateError);
+                console.error('Error parsing task completion date:', dateError);
               }
             }
           });
@@ -190,12 +191,13 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         
         console.log('Summary metrics:', summaryMetrics);
         
+        // Ensure we're setting data and passing summary to parent
+        setData(chartData);
+        
         // Pass summary data to parent component if callback provided
         if (onDataLoaded) {
           onDataLoaded(summaryMetrics);
         }
-        
-        setData(chartData);
         
       } catch (err) {
         console.error('Error in fetchMetricsData:', err);
@@ -223,6 +225,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     fetchMetricsData();
   }, [onDataLoaded]);
 
+  // Add debugging to verify data right before rendering
+  useEffect(() => {
+    console.log('Chart data to render:', data);
+    console.log('Loading state:', loading);
+  }, [data, loading]);
+
   if (loading) {
     return (
       <div className="w-full h-80 bg-navy border border-light-navy rounded-lg p-4">
@@ -240,6 +248,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
       </div>
     );
   }
+
+  // Ensure data is available for rendering
+  console.log('Final render data:', data);
 
   return (
     <div className="w-full bg-navy border border-light-navy rounded-lg">
