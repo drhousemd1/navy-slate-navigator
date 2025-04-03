@@ -238,7 +238,7 @@ export const WeeklyMetricsChart = () => {
             margin={{
               top: 5,
               right: 5,
-              left: 0,
+              left: -20,
               bottom: 5,
             }}
           >
