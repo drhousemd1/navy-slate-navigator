@@ -42,6 +42,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   
+  // Add debugging for admin route
+  console.log('AdminRoute check - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin, 'loading:', loading);
+  
   if (loading) {
     return <div className="flex items-center justify-center h-screen bg-navy">
       <p className="text-white">Loading...</p>
@@ -49,13 +52,16 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!isAuthenticated) {
+    console.log('AdminRoute - User not authenticated, redirecting to /auth');
     return <Navigate to="/auth" />;
   }
   
   if (!isAdmin) {
+    console.log('AdminRoute - User not admin, redirecting to /');
     return <Navigate to="/" />;
   }
   
+  console.log('AdminRoute - User is admin, showing protected content');
   return <>{children}</>;
 };
 
@@ -95,6 +101,11 @@ const AppRoutes = () => {
 };
 
 const App = () => {
+  // Add debugging for react-router to help troubleshoot
+  React.useEffect(() => {
+    console.log('App component initialized. React Router ready.');
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
