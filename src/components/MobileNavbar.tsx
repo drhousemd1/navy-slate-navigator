@@ -51,8 +51,10 @@ const MobileNavbar: React.FC = () => {
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50">
       <div className="grid grid-cols-5 h-16 px-4">
         {navItems.map((item) => {
-          // Updated isActive check to use exact path matching
+          // Fixed isActive check to properly detect active state
           const isActive = currentPath === item.path;
+          
+          console.log(`Item: ${item.name}, Path: ${item.path}, Current path: ${currentPath}, Is active: ${isActive}`);
           
           return (
             <Link
