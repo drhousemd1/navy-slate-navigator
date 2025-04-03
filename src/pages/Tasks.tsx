@@ -150,16 +150,13 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       const success = await updateTaskCompletion(taskId, completed);
       
       if (success) {
-        // Make sure to invalidate both queries to refresh the UI
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
         
-        // Refresh points from database after task completion
         if (completed) {
           const task = tasks.find(t => t.id === taskId);
           const points = task?.points || 0;
           console.log(`Task completed, earned ${points} points`);
           
-          // Refresh points immediately from the database
           await refreshPointsFromDatabase();
         }
       }

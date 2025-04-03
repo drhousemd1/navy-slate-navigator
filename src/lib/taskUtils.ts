@@ -209,6 +209,28 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     if (completed) {
       const dayOfWeek = getCurrentDayOfWeek();
       usage_data[dayOfWeek] = (usage_data[dayOfWeek] || 0) + 1;
+      
+      // Get the current user id
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData.user?.id;
+      
+      if (userId) {
+        // Record this completion in the task_completion_history table
+        const { error: historyError } = await supabase
+          .from('task_completion_history')
+          .insert({
+            task_id: id,
+            user_id: userId,
+            // completed_at defaults to now() in the database
+          });
+        
+        if (historyError) {
+          console.error('Error recording task completion history:', historyError);
+          // Continue despite the error to maintain existing functionality
+        } else {
+          console.log('Task completion recorded in history');
+        }
+      }
     }
     
     const dayOfWeek = getCurrentDayOfWeek();

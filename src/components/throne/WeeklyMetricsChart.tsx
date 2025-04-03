@@ -12,7 +12,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, startOfWeek, addDays, parseISO } from 'date-fns';
+import { format, startOfWeek, addDays, parseISO, subDays } from 'date-fns';
 
 interface MetricsData {
   day: string;
@@ -24,14 +24,16 @@ interface MetricsData {
   punishmentsApplied: number;
 }
 
+interface WeeklyMetricsSummary {
+  tasksCompleted: number;
+  rulesViolated: number;
+  rewardsUsed: number;
+  punishmentsApplied: number;
+}
+
 interface WeeklyMetricsChartProps {
   hideTitle?: boolean;
-  onDataLoaded?: (summaryData: {
-    tasksCompleted: number;
-    rulesViolated: number;
-    rewardsUsed: number;
-    punishmentsApplied: number;
-  }) => void;
+  onDataLoaded?: (summaryData: WeeklyMetricsSummary) => void;
 }
 
 const chartConfig = {
@@ -88,21 +90,26 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const weekDays = generateWeekDays();
         console.log('Generated week days:', weekDays);
         const metricsMap = new Map(weekDays.map(day => [day.date, day]));
+
+        const today = new Date();
+        const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+        const weekStartStr = weekStart.toISOString();
         
-        const { data: tasksData, error: tasksError } = await supabase
-          .from('tasks')
-          .select('last_completed_date');
+        const { data: taskCompletionData, error: taskCompletionError } = await supabase
+          .from('task_completion_history')
+          .select('completed_at')
+          .gte('completed_at', weekStartStr);
           
-        if (tasksError) {
-          console.error('Error fetching tasks:', tasksError.message);
+        if (taskCompletionError) {
+          console.error('Error fetching task completion history:', taskCompletionError.message);
           setError('Failed to load task completion data');
         } else {
-          console.log('Tasks fetched:', tasksData?.length || 0);
+          console.log('Task completions fetched:', taskCompletionData?.length || 0);
           
-          tasksData?.forEach(task => {
-            if (task.last_completed_date) {
+          taskCompletionData?.forEach(completion => {
+            if (completion.completed_at) {
               try {
-                const completedDate = format(parseISO(task.last_completed_date), 'yyyy-MM-dd');
+                const completedDate = format(parseISO(completion.completed_at), 'yyyy-MM-dd');
                 if (metricsMap.has(completedDate)) {
                   const dayData = metricsMap.get(completedDate);
                   if (dayData) {
