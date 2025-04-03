@@ -6,7 +6,6 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  Legend, 
   ResponsiveContainer, 
   CartesianGrid 
 } from 'recharts';
@@ -255,7 +254,6 @@ export const WeeklyMetricsChart = () => {
             <ChartTooltip
               content={<ChartTooltipContent />}
             />
-            <Legend />
             <Bar 
               dataKey="tasksCompleted" 
               name="Tasks Completed" 
@@ -283,6 +281,14 @@ export const WeeklyMetricsChart = () => {
           </BarChart>
         </ResponsiveContainer>
       </ChartContainer>
+
+      {/* Custom legend without squares, with colored text */}
+      <div className="flex justify-center gap-5 pb-3 text-sm text-white/90 px-2 flex-nowrap whitespace-nowrap overflow-x-auto">
+        <span style={{ color: chartConfig.tasksCompleted.color }}>Tasks Completed</span>
+        <span style={{ color: chartConfig.rulesViolated.color }}>Rules Broken</span>
+        <span style={{ color: chartConfig.rewardsUsed.color }}>Rewards Used</span>
+        <span style={{ color: chartConfig.punishmentsApplied.color }}>Punishments</span>
+      </div>
     </div>
   );
 };
