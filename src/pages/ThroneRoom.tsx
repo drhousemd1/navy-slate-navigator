@@ -24,14 +24,9 @@ const ThroneRoom: React.FC = () => {
         </p>
         
         <div className="space-y-6">
-          {/* Dashboard section */}
+          {/* Dashboard section - removed title */}
           <Card className="bg-navy border border-light-navy">
-            <CardHeader className="border-b border-light-navy">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-white text-lg">Dashboard Overview</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4 px-0">
+            <CardContent className="pt-6 px-0">
               {/* Weekly metrics chart with responsive container */}
               <div className="w-full">
                 <WeeklyMetricsChart />
