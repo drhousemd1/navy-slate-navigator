@@ -51,10 +51,10 @@ const MobileNavbar: React.FC = () => {
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50">
       <div className="grid grid-cols-5 h-16 px-4">
         {navItems.map((item) => {
-          // Fixed isActive check to properly detect active state
+          // Fix for route matching - compare just the currentPath with item.path
           const isActive = currentPath === item.path;
           
-          console.log(`Item: ${item.name}, Path: ${item.path}, Current path: ${currentPath}, Is active: ${isActive}`);
+          console.log(`Clicked ${item.name}: Path: ${item.path}, Current: ${currentPath}, Active: ${isActive}`);
           
           return (
             <Link
@@ -63,9 +63,9 @@ const MobileNavbar: React.FC = () => {
               className={`flex flex-col items-center justify-center h-full transition-colors duration-200 ${
                 isActive ? 'text-[#00FFF7]' : 'text-nav-inactive'
               }`}
-              onClick={(e) => {
-                // Enhanced console logging for debugging
-                console.log(`Clicking navigation to: ${item.path}, current path: ${currentPath}`);
+              onClick={() => {
+                // Enhanced logging for debugging navigation clicks
+                console.log(`Navigation clicked: ${item.name} to ${item.path}`);
               }}
             >
               {/* Icon always positioned at the same height */}
