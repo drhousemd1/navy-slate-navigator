@@ -120,9 +120,33 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // Note: There is no rule_violations table, so we mock this data
-        // or use another approach to get rule violations
-        console.log('Note: rule_violations table does not exist, using mock data');
+        // Temporary workaround: use tasks with `was_flagged: true` as proxy for rule violations
+        const { data: flaggedTasks, error: flaggedError } = await supabase
+          .from('tasks')
+          .select('last_completed_date, was_flagged')
+          .eq('was_flagged', true);
+
+        if (flaggedError) {
+          console.error('Error fetching rule violation fallback:', flaggedError.message);
+          setError(prev => prev || 'Failed to load rule violation data');
+        } else {
+          flaggedTasks?.forEach(task => {
+            if (task.last_completed_date) {
+              try {
+                const flaggedDate = format(parseISO(task.last_completed_date), 'yyyy-MM-dd');
+                if (metricsMap.has(flaggedDate)) {
+                  const dayData = metricsMap.get(flaggedDate);
+                  if (dayData) {
+                    dayData.rulesViolated += 1;
+                    metricsMap.set(flaggedDate, dayData);
+                  }
+                }
+              } catch (dateError) {
+                console.error('Error parsing violation date:', dateError);
+              }
+            }
+          });
+        }
         
         // Fetch reward usage/redemption data
         const { data: rewardsData, error: rewardsError } = await supabase
