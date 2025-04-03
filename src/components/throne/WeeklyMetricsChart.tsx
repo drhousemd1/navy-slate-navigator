@@ -24,6 +24,10 @@ interface MetricsData {
   punishmentsApplied: number;
 }
 
+interface WeeklyMetricsChartProps {
+  hideTitle?: boolean;
+}
+
 const chartConfig = {
   tasksCompleted: {
     color: '#0EA5E9', // sky blue
@@ -43,7 +47,7 @@ const chartConfig = {
   }
 };
 
-export const WeeklyMetricsChart = () => {
+export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ hideTitle = false }) => {
   const [data, setData] = useState<MetricsData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -222,7 +226,7 @@ export const WeeklyMetricsChart = () => {
 
   return (
     <div className="w-full bg-navy border border-light-navy rounded-lg">
-      <h3 className="text-lg font-medium text-white px-4 pt-4 mb-4">Weekly Activity Metrics</h3>
+      {!hideTitle && <h3 className="text-lg font-medium text-white px-4 pt-4 mb-4">Weekly Activity Metrics</h3>}
       {error && (
         <div className="mb-4 px-3 py-2 bg-red-900/30 border border-red-900/50 rounded text-sm text-red-300 mx-4">
           Note: Some data couldn't be loaded. Showing available metrics.
