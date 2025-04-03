@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
@@ -17,6 +18,7 @@ import { format, startOfWeek, addDays, parseISO } from 'date-fns';
 interface MetricsData {
   day: string;
   dayNumber: number;
+  date: string;
   tasksCompleted: number;
   rulesViolated: number;
   rewardsUsed: number;
@@ -44,7 +46,7 @@ const chartConfig = {
   },
   rewardsUsed: {
     color: '#9b87f5', // primary purple
-    label: 'Rewards Redeemed'  // Updated label for clarity
+    label: 'Rewards Redeemed'
   },
   punishmentsApplied: {
     color: '#ea384c', // red
@@ -88,6 +90,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         console.log('Generated week days:', weekDays);
         const metricsMap = new Map(weekDays.map(day => [day.date, day]));
         
+        // Fetch completed tasks
         const { data: tasksData, error: tasksError } = await supabase
           .from('tasks')
           .select('last_completed_date')
@@ -117,14 +120,14 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // Update to fetch reward_usage data for actual redeemed rewards
+        // Fetch reward usage/redemption data
         const { data: rewardsData, error: rewardsError } = await supabase
           .from('reward_usage')
           .select('created_at');
           
         if (rewardsError) {
           console.error('Error fetching rewards usage:', rewardsError.message);
-          setError('Failed to load metrics data');
+          setError(prev => prev || 'Failed to load some metrics data');
         } else {
           console.log('Rewards usage fetched:', rewardsData?.length || 0, rewardsData);
           
@@ -146,13 +149,14 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
+        // Fetch punishment data
         const { data: punishmentsData, error: punishmentsError } = await supabase
           .from('punishment_history')
           .select('applied_date');
           
         if (punishmentsError) {
           console.error('Error fetching punishments:', punishmentsError.message);
-          setError('Failed to load metrics data');
+          setError(prev => prev || 'Failed to load some metrics data');
         } else {
           console.log('Punishments fetched:', punishmentsData?.length || 0, punishmentsData);
           
@@ -185,47 +189,33 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           punishmentsApplied: chartData.reduce((sum, day) => sum + day.punishmentsApplied, 0)
         };
         
+        console.log('Summary metrics:', summaryMetrics);
+        
         // Pass summary data to parent component if callback provided
         if (onDataLoaded) {
           onDataLoaded(summaryMetrics);
         }
         
-        const hasRealData = chartData.some(day => 
-          day.tasksCompleted > 0 || 
-          day.rulesViolated > 0 || 
-          day.rewardsUsed > 0 || 
-          day.punishmentsApplied > 0
-        );
-        
-        // Only add sample data if no real data exists and we're not providing summary to parent
-        if (!hasRealData && !onDataLoaded) {
-          console.log('No data found, adding sample data for demonstration');
-          chartData[1].tasksCompleted = 3;  // Monday
-          chartData[2].tasksCompleted = 2;  // Tuesday
-          chartData[3].rewardsUsed = 1;     // Wednesday
-          chartData[4].punishmentsApplied = 1; // Thursday
-          chartData[5].tasksCompleted = 4;  // Friday
-          chartData[6].rewardsUsed = 2;     // Saturday
-        }
-        
         setData(chartData);
-      } catch (err) {
-        console.error('Error fetching metrics data:', err);
-        setError('Failed to load metrics data');
-        
-        const sampleData = generateWeekDays();
-        // Only add sample data if we're not providing summary to parent
-        if (!onDataLoaded) {
-          sampleData[1].tasksCompleted = 3;  // Monday
-          sampleData[2].tasksCompleted = 2;  // Tuesday
-          sampleData[3].rewardsUsed = 1;     // Wednesday
-          sampleData[4].punishmentsApplied = 1; // Thursday
-          sampleData[5].tasksCompleted = 4;  // Friday
-          sampleData[6].rewardsUsed = 2;     // Saturday
-        }
-        setData(sampleData);
-      } finally {
         setLoading(false);
+      } catch (err) {
+        console.error('Error in fetchMetricsData:', err);
+        setError('Failed to load metrics data');
+        setLoading(false);
+        
+        // Even if there's an error, try to initialize with empty data
+        const emptyData = generateWeekDays();
+        setData(emptyData);
+        
+        // Still provide the empty summary to parent
+        if (onDataLoaded) {
+          onDataLoaded({
+            tasksCompleted: 0,
+            rulesViolated: 0,
+            rewardsUsed: 0,
+            punishmentsApplied: 0
+          });
+        }
       }
     };
 

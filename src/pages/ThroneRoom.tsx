@@ -29,10 +29,13 @@ const ThroneRoom: React.FC = () => {
     rewardsUsed: 0,
     punishmentsApplied: 0
   });
+  const [chartError, setChartError] = useState<string | null>(null);
+  const [chartLoading, setChartLoading] = useState<boolean>(true);
 
   const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
     console.log('Metrics data loaded with summary:', summaryData);
     setMetricsSummary(summaryData);
+    setChartLoading(false);
   };
 
   return (
