@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
@@ -6,10 +7,11 @@ import {
   YAxis, 
   Tooltip, 
   ResponsiveContainer, 
-  CartesianGrid 
+  CartesianGrid,
+  Legend
 } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
 
@@ -226,7 +228,10 @@ export const WeeklyMetricsChart = () => {
           Note: Some data couldn't be loaded. Showing available metrics.
         </div>
       )}
-      <div className="w-full h-80 pl-0">
+      <ChartContainer 
+        className="w-full h-80 pl-0"
+        config={chartConfig}
+      >
         <ResponsiveContainer width="100%" height={300}>
           <BarChart
             data={data}
@@ -247,9 +252,7 @@ export const WeeklyMetricsChart = () => {
               stroke="#8E9196"
               tick={{ fill: '#D1D5DB' }}
             />
-            <ChartTooltip
-              content={<ChartTooltipContent />}
-            />
+            <ChartTooltip />
             <Bar 
               dataKey="tasksCompleted" 
               name="Tasks Completed" 
@@ -276,21 +279,21 @@ export const WeeklyMetricsChart = () => {
             />
           </BarChart>
         </ResponsiveContainer>
+      </ChartContainer>
 
-        <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
-            Tasks Completed
-          </span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesViolated.color }}>
-            Rules Broken
-          </span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsUsed.color }}>
-            Rewards Used
-          </span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishmentsApplied.color }}>
-            Punishments
-          </span>
-        </div>
+      <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
+        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
+          Tasks Completed
+        </span>
+        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesViolated.color }}>
+          Rules Broken
+        </span>
+        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsUsed.color }}>
+          Rewards Used
+        </span>
+        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishmentsApplied.color }}>
+          Punishments
+        </span>
       </div>
     </div>
   );
