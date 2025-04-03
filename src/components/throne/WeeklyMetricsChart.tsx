@@ -120,8 +120,8 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // For rules violations, we'll try to estimate from rules data (since rule_violations table doesn't exist)
-        // In a real app, you might want to create this table or use another approach
+        // Note: There is no rule_violations table, so we mock this data
+        // or use another approach to get rule violations
         console.log('Note: rule_violations table does not exist, using mock data');
         
         // Fetch reward usage/redemption data
