@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
@@ -26,6 +25,12 @@ interface MetricsData {
 
 interface WeeklyMetricsChartProps {
   hideTitle?: boolean;
+  onDataLoaded?: (summaryData: {
+    tasksCompleted: number;
+    rulesViolated: number;
+    rewardsUsed: number;
+    punishmentsApplied: number;
+  }) => void;
 }
 
 const chartConfig = {
@@ -47,7 +52,10 @@ const chartConfig = {
   }
 };
 
-export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ hideTitle = false }) => {
+export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ 
+  hideTitle = false,
+  onDataLoaded 
+}) => {
   const [data, setData] = useState<MetricsData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -169,6 +177,19 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ hideTitl
         const chartData = Array.from(metricsMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
         console.log('Final chart data:', chartData);
         
+        // Calculate summary metrics from real data
+        const summaryMetrics = {
+          tasksCompleted: chartData.reduce((sum, day) => sum + day.tasksCompleted, 0),
+          rulesViolated: chartData.reduce((sum, day) => sum + day.rulesViolated, 0),
+          rewardsUsed: chartData.reduce((sum, day) => sum + day.rewardsUsed, 0),
+          punishmentsApplied: chartData.reduce((sum, day) => sum + day.punishmentsApplied, 0)
+        };
+        
+        // Pass summary data to parent component if callback provided
+        if (onDataLoaded) {
+          onDataLoaded(summaryMetrics);
+        }
+        
         const hasRealData = chartData.some(day => 
           day.tasksCompleted > 0 || 
           day.rulesViolated > 0 || 
@@ -176,7 +197,8 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ hideTitl
           day.punishmentsApplied > 0
         );
         
-        if (!hasRealData) {
+        // Only add sample data if no real data exists and we're not providing summary to parent
+        if (!hasRealData && !onDataLoaded) {
           console.log('No data found, adding sample data for demonstration');
           chartData[1].tasksCompleted = 3;  // Monday
           chartData[2].tasksCompleted = 2;  // Tuesday
@@ -192,12 +214,15 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ hideTitl
         setError('Failed to load metrics data');
         
         const sampleData = generateWeekDays();
-        sampleData[1].tasksCompleted = 3;  // Monday
-        sampleData[2].tasksCompleted = 2;  // Tuesday
-        sampleData[3].rewardsUsed = 1;     // Wednesday
-        sampleData[4].punishmentsApplied = 1; // Thursday
-        sampleData[5].tasksCompleted = 4;  // Friday
-        sampleData[6].rewardsUsed = 2;     // Saturday
+        // Only add sample data if we're not providing summary to parent
+        if (!onDataLoaded) {
+          sampleData[1].tasksCompleted = 3;  // Monday
+          sampleData[2].tasksCompleted = 2;  // Tuesday
+          sampleData[3].rewardsUsed = 1;     // Wednesday
+          sampleData[4].punishmentsApplied = 1; // Thursday
+          sampleData[5].tasksCompleted = 4;  // Friday
+          sampleData[6].rewardsUsed = 2;     // Saturday
+        }
         setData(sampleData);
       } finally {
         setLoading(false);
@@ -205,7 +230,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ hideTitl
     };
 
     fetchMetricsData();
-  }, []);
+  }, [onDataLoaded]);
 
   if (loading) {
     return (
@@ -303,4 +328,3 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ hideTitl
     </div>
   );
 };
-
