@@ -46,18 +46,24 @@ const ThroneRoom: React.FC = () => {
                   <WeeklyMetricsChart />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 px-6">
-                  <div className="bg-light-navy rounded-lg p-4">
-                    <div className="text-cyan-400 text-sm mb-1">Tasks Completed</div>
-                    <div className="text-2xl font-bold text-white">24</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-6 px-6">
+                  <div className="bg-light-navy rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-cyan-400 text-sm">Tasks Completed:</span>
+                      <span className="text-sm font-bold text-white">24</span>
+                    </div>
                   </div>
-                  <div className="bg-light-navy rounded-lg p-4">
-                    <div className="text-green-400 text-sm mb-1">Rewards Given</div>
-                    <div className="text-2xl font-bold text-white">7</div>
+                  <div className="bg-light-navy rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-green-400 text-sm">Rewards Given:</span>
+                      <span className="text-sm font-bold text-white">7</span>
+                    </div>
                   </div>
-                  <div className="bg-light-navy rounded-lg p-4">
-                    <div className="text-red-400 text-sm mb-1">Punishments</div>
-                    <div className="text-2xl font-bold text-white">3</div>
+                  <div className="bg-light-navy rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-red-400 text-sm">Punishments:</span>
+                      <span className="text-sm font-bold text-white">3</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
