@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -15,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
-  const [showDashboardStats, setShowDashboardStats] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
 
   return (
@@ -31,52 +29,44 @@ const ThroneRoom: React.FC = () => {
             <CardHeader className="border-b border-light-navy">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-white text-lg">Dashboard Overview</CardTitle>
-                <button 
-                  onClick={() => setShowDashboardStats(!showDashboardStats)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  {showDashboardStats ? <ChevronUp /> : <ChevronDown />}
-                </button>
               </div>
             </CardHeader>
-            {showDashboardStats && (
-              <CardContent className="pt-4 px-0">
-                {/* Weekly metrics chart with responsive container */}
-                <div className="w-full">
-                  <WeeklyMetricsChart />
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mt-6 px-6">
-                  <div className="bg-light-navy rounded-lg px-3 py-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sky-400 text-sm">Tasks Completed:</span>
-                      <span className="text-sm font-bold text-white">24</span>
-                    </div>
-                  </div>
-                  <div className="bg-light-navy rounded-lg px-3 py-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-orange-500 text-sm">Rules Broken:</span>
-                      <span className="text-sm font-bold text-white">5</span>
-                    </div>
-                  </div>
-                  <div className="bg-light-navy rounded-lg px-3 py-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-purple-400 text-sm">Rewards Used:</span>
-                      <span className="text-sm font-bold text-white">7</span>
-                    </div>
-                  </div>
-                  <div className="bg-light-navy rounded-lg px-3 py-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-red-400 text-sm">Punishments:</span>
-                      <span className="text-sm font-bold text-white">3</span>
-                    </div>
+            <CardContent className="pt-4 px-0">
+              {/* Weekly metrics chart with responsive container */}
+              <div className="w-full">
+                <WeeklyMetricsChart />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mt-6 px-6">
+                <div className="bg-light-navy rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sky-400 text-sm">Tasks Completed:</span>
+                    <span className="text-sm font-bold text-white">24</span>
                   </div>
                 </div>
-              </CardContent>
-            )}
+                <div className="bg-light-navy rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-orange-500 text-sm">Rules Broken:</span>
+                    <span className="text-sm font-bold text-white">5</span>
+                  </div>
+                </div>
+                <div className="bg-light-navy rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-purple-400 text-sm">Rewards Used:</span>
+                    <span className="text-sm font-bold text-white">7</span>
+                  </div>
+                </div>
+                <div className="bg-light-navy rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-red-400 text-sm">Punishments:</span>
+                    <span className="text-sm font-bold text-white">3</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
           </Card>
           
-          {/* Settings section */}
+          {/* Settings section - keeping this dropdown toggle intact */}
           <Card className="bg-navy border border-light-navy">
             <CardHeader className="border-b border-light-navy">
               <div className="flex justify-between items-center">
