@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
@@ -227,10 +226,7 @@ export const WeeklyMetricsChart = () => {
           Note: Some data couldn't be loaded. Showing available metrics.
         </div>
       )}
-      <ChartContainer 
-        className="w-full h-80 pl-0"
-        config={chartConfig}
-      >
+      <div className="w-full h-80 pl-0">
         <ResponsiveContainer width="100%" height={300}>
           <BarChart
             data={data}
@@ -281,22 +277,21 @@ export const WeeklyMetricsChart = () => {
           </BarChart>
         </ResponsiveContainer>
 
-        {/* Custom Legend rendered inside the chart container */}
-        <div className="flex flex-wrap justify-center items-center gap-x-4 py-2 px-2 text-xs">
-          <span className="whitespace-nowrap truncate" style={{ color: chartConfig.tasksCompleted.color }}>
+        <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
             Tasks Completed
           </span>
-          <span className="whitespace-nowrap truncate" style={{ color: chartConfig.rulesViolated.color }}>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesViolated.color }}>
             Rules Broken
           </span>
-          <span className="whitespace-nowrap truncate" style={{ color: chartConfig.rewardsUsed.color }}>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsUsed.color }}>
             Rewards Used
           </span>
-          <span className="whitespace-nowrap truncate" style={{ color: chartConfig.punishmentsApplied.color }}>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishmentsApplied.color }}>
             Punishments
           </span>
         </div>
-      </ChartContainer>
+      </div>
     </div>
   );
 };
