@@ -242,10 +242,10 @@ export const WeeklyMetricsChart = () => {
         </div>
       )}
       <ChartContainer 
-        className="h-80"
+        className="w-full min-w-0 h-80"
         config={chartConfig}
       >
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={300}>
           <BarChart
             data={data}
             margin={{
