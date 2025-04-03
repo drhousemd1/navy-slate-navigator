@@ -1,6 +1,6 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { AuthContextType } from './types';
 import { useAuthOperations } from './useAuthOperations';
@@ -17,6 +17,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [authInitialized, setAuthInitialized] = useState<boolean>(false);
 
   // Get auth operations
   const { 
@@ -41,16 +42,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateUserRole
   } = userProfile;
 
-  // Sign out function
-  const signOut = async () => {
+  // Sign out function with improved error handling
+  const signOut = useCallback(async () => {
     try {
-      // First clear any state
+      console.log('Signing out user...');
+      setLoading(true);
+      
+      // First clear local state
       setUser(null);
       setSession(null);
       setIsAuthenticated(false);
       
-      // Then sign out from Supabase
-      const { error } = await supabase.auth.signOut();
+      // Then sign out from Supabase with global scope to clear all sessions
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
       
       if (error) {
         console.error('Sign out error:', error);
@@ -58,7 +62,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       console.log('Signed out successfully');
-      
       toast({
         title: 'Logged out',
         description: 'You have been successfully logged out.',
@@ -70,50 +73,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error.message,
         variant: 'destructive',
       });
+      
+      // Try force clearing auth state in case of error
+      await clearAuthState();
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
+  
+  // Handle session recovery error
+  const handleSessionRecoveryFailure = useCallback(async () => {
+    console.warn("Session recovery failed, clearing auth state and starting fresh");
+    await clearAuthState();
+    setUser(null);
+    setSession(null);
+    setIsAuthenticated(false);
+    setLoading(false);
+  }, []);
 
-  // Setup authentication state listener
+  // Setup authentication state listener - significantly improved
   useEffect(() => {
+    if (authInitialized) return;
     console.log('Setting up auth state listener');
     setLoading(true);
     
-    // First, setup the auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      console.log(`Auth state change: ${event}`, newSession?.user?.email);
-      
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        setSession(newSession);
-        setUser(newSession?.user || null);
-        setIsAuthenticated(!!newSession);
-        
-        if (newSession?.user) {
-          // Use setTimeout to avoid potential auth deadlocks
-          setTimeout(() => {
-            checkUserRole();
-          }, 0);
-        }
-      } else if (event === 'SIGNED_OUT') {
-        // Clear auth state
-        setSession(null);
-        setUser(null);
-        setIsAuthenticated(false);
-        console.log('User signed out');
-      }
-      
-      setLoading(false);
-    });
-    
-    // Then check for an existing session
-    const initializeAuth = async () => {
+    // First, get current session without relying on event listeners
+    const getCurrentSession = async () => {
       try {
-        console.log('Initializing auth state');
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-        
+        const { data, error } = await supabase.auth.getSession();
         if (error) {
-          throw error;
+          console.error('Error getting session:', error);
+          handleSessionRecoveryFailure();
+          return;
         }
         
+        const currentSession = data?.session;
         console.log('Initial session check:', currentSession?.user?.email || 'No session');
         
         if (currentSession) {
@@ -121,27 +115,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(currentSession.user);
           setIsAuthenticated(true);
           
-          // Use setTimeout to avoid potential auth deadlocks
+          // Defer role check to prevent auth state deadlocks
+          setTimeout(() => {
+            checkUserRole();
+          }, 0);
+        } else {
+          // No session found, ensure auth state is clean
+          setUser(null);
+          setSession(null);
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        handleSessionRecoveryFailure();
+      } finally {
+        setLoading(false);
+        setAuthInitialized(true);
+      }
+    };
+    
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log(`Auth state change: ${event}`, newSession?.user?.email);
+      
+      // Use consistent pattern for all events
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        console.log(`Auth event: ${event}`, newSession?.user?.email);
+        setSession(newSession);
+        setUser(newSession?.user || null);
+        setIsAuthenticated(!!newSession);
+        
+        if (newSession?.user) {
+          // Defer role check to prevent auth state deadlocks
           setTimeout(() => {
             checkUserRole();
           }, 0);
         }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        setLoading(false);
+      } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        // Clear auth state
+        console.log(`Auth event: ${event}`);
+        setSession(null);
+        setUser(null);
+        setIsAuthenticated(false);
       }
-    };
+      
+      setLoading(false);
+      setAuthInitialized(true);
+    });
     
     // Initialize auth state
-    initializeAuth();
+    getCurrentSession();
     
     // Clean up the subscription when component unmounts
     return () => {
       console.log('Cleaning up auth state listener');
       subscription.unsubscribe();
     };
-  }, []);
+  }, [authInitialized, checkUserRole, handleSessionRecoveryFailure]);
 
   const contextValue: AuthContextType = {
     isAuthenticated,

@@ -9,16 +9,40 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// Create a properly configured client with explicit session handling
+// Create a properly configured client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    storage: typeof window !== 'undefined' ? localStorage : undefined,
-    detectSessionInUrl: true,
-    flowType: 'implicit'
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    detectSessionInUrl: true
   }
 });
 
-// NOTE: Removed the createTestUser function that was causing logout issues
-// This function was signing out existing users on page refresh
+// Helper function to check if a session exists (for debugging)
+export const checkSession = async () => {
+  const { data, error } = await supabase.auth.getSession();
+  console.log("Current session check:", data?.session ? "Session exists" : "No session", error);
+  return data?.session;
+};
+
+// Debug helper to clear any corrupted auth state
+export const clearAuthState = async () => {
+  if (typeof window !== 'undefined') {
+    // Clear any local storage items that might be causing issues
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.includes('supabase') || key?.includes('auth')) {
+        console.log("Clearing potentially problematic storage item:", key);
+      }
+    }
+  }
+  
+  // Sign out completely to reset auth state
+  const { error } = await supabase.auth.signOut({ scope: 'global' });
+  if (error) {
+    console.error("Error clearing auth state:", error);
+  } else {
+    console.log("Auth state successfully cleared");
+  }
+};

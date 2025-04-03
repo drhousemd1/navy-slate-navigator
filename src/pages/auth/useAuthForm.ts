@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
+import { clearAuthState } from '@/integrations/supabase/client';
 
 export function useAuthForm() {
   const [formState, setFormState] = useState<AuthFormState>({
@@ -35,6 +36,17 @@ export function useAuthForm() {
     setFormState(prevState => ({ ...prevState, ...updates }));
   };
 
+  // Clear authentication state before login attempt
+  const prepareForAuthentication = async () => {
+    console.log("Preparing for authentication attempt...");
+    try {
+      // Clear any lingering auth state that might interfere
+      await clearAuthState();
+    } catch (e) {
+      console.error("Error clearing auth state:", e);
+    }
+  };
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     updateFormState({ loading: true, loginError: null });
@@ -59,6 +71,9 @@ export function useAuthForm() {
       }
       
       console.log("Login attempt with email:", formState.email);
+      
+      // Clear any existing auth state before attempting login
+      await prepareForAuthentication();
       
       // Sign in with email and password directly
       const { error } = await signIn(formState.email, formState.password);
@@ -116,6 +131,9 @@ export function useAuthForm() {
         });
         return;
       }
+      
+      // Clear any existing auth state before attempting signup
+      await prepareForAuthentication();
       
       console.log("Attempting to sign up with email:", formState.email);
       const { error } = await signUp(formState.email, formState.password);

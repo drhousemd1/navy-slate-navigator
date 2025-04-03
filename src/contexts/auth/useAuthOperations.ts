@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export function useAuthOperations() {
@@ -17,13 +17,21 @@ export function useAuthOperations() {
         return { error: { message: 'Email and password are required' }, user: null };
       }
       
-      // Log auth request details but not the actual password
-      console.log('Auth request details:', { email: trimmedEmail, passwordLength: trimmedPassword.length });
+      // Clear any existing sessions to prevent conflicts
+      console.log('Clearing any existing auth state before sign in');
+      await clearAuthState();
       
-      // Clear any existing sessions - fixes common authentication issues
-      await supabase.auth.signOut();
+      // Try with explicit token refresh before signin
+      try {
+        console.log('Refreshing auth state before sign in attempt');
+        await supabase.auth.refreshSession();
+      } catch (refreshError) {
+        // Ignore refresh errors, just proceed with sign-in
+        console.log('Session refresh not available (expected for new sign-ins)');
+      }
       
       // Use the trimmed values for authentication
+      console.log('Making authentication request');
       const { data, error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: trimmedPassword,
@@ -59,7 +67,7 @@ export function useAuthOperations() {
     }
   };
 
-  // Sign up with email and password
+  // Sign up with email and password - with improved error handling
   const signUp = async (email: string, password: string) => {
     try {
       // Trim inputs before sending
@@ -76,11 +84,14 @@ export function useAuthOperations() {
       }
       
       // Clear any existing session first
-      await supabase.auth.signOut();
+      await clearAuthState();
       
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
         password: trimmedPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth`
+        }
       });
       
       if (error) {
@@ -101,7 +112,7 @@ export function useAuthOperations() {
     }
   };
 
-  // Reset password
+  // Reset password with improved error messaging
   const resetPassword = async (email: string) => {
     try {
       const trimmedEmail = email.trim().toLowerCase();
@@ -112,9 +123,8 @@ export function useAuthOperations() {
       
       console.log('Sending password reset to:', trimmedEmail);
       
-      // Get the current origin instead of hardcoding localhost
+      // Get the current origin for the redirect
       const siteUrl = window.location.origin;
-      
       console.log('Using site URL for password reset:', siteUrl);
       
       const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
@@ -139,7 +149,7 @@ export function useAuthOperations() {
     }
   };
 
-  // Update password (for reset password flow)
+  // Update password with improved validation
   const updatePassword = async (newPassword: string) => {
     try {
       const trimmedPassword = newPassword.trim();
