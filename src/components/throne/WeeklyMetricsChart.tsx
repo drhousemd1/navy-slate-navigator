@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
@@ -115,34 +114,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
                 }
               } catch (dateError) {
                 console.error('Error parsing task date:', dateError);
-              }
-            }
-          });
-        }
-        
-        // Temporary workaround: use tasks with `was_flagged: true` as proxy for rule violations
-        const { data: flaggedTasks, error: flaggedError } = await supabase
-          .from('tasks')
-          .select('last_completed_date, was_flagged')
-          .eq('was_flagged', true);
-
-        if (flaggedError) {
-          console.error('Error fetching rule violation fallback:', flaggedError.message);
-          setError(prev => prev || 'Failed to load rule violation data');
-        } else {
-          flaggedTasks?.forEach(task => {
-            if (task.last_completed_date) {
-              try {
-                const flaggedDate = format(parseISO(task.last_completed_date), 'yyyy-MM-dd');
-                if (metricsMap.has(flaggedDate)) {
-                  const dayData = metricsMap.get(flaggedDate);
-                  if (dayData) {
-                    dayData.rulesViolated += 1;
-                    metricsMap.set(flaggedDate, dayData);
-                  }
-                }
-              } catch (dateError) {
-                console.error('Error parsing violation date:', dateError);
               }
             }
           });
