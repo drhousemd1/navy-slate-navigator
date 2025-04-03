@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
@@ -90,51 +89,20 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         console.log('Generated week days:', weekDays);
         const metricsMap = new Map(weekDays.map(day => [day.date, day]));
         
-        // Query task_history table for individual task completions
-        const { data: taskCompletions, error: taskCompletionsError } = await supabase
-          .from('task_history')
-          .select('created_at')
-          .eq('completed', true);
+        const { data: tasksData, error: tasksError } = await supabase
+          .from('tasks')
+          .select('last_completed_date');
           
-        if (taskCompletionsError) {
-          console.error('Error fetching task completions:', taskCompletionsError.message);
-          setError('Failed to load task completions data');
-          
-          // Fallback to the original approach if task_history doesn't exist
-          console.log('Falling back to tasks table for completion data');
-          const { data: tasksData, error: tasksError } = await supabase
-            .from('tasks')
-            .select('last_completed_date');
-            
-          if (tasksError) {
-            console.error('Error in fallback task fetch:', tasksError.message);
-          } else {
-            console.log('Fallback tasks fetched:', tasksData?.length || 0);
-            tasksData?.forEach(task => {
-              if (task.last_completed_date) {
-                try {
-                  const completedDate = format(parseISO(task.last_completed_date), 'yyyy-MM-dd');
-                  if (metricsMap.has(completedDate)) {
-                    const dayData = metricsMap.get(completedDate);
-                    if (dayData) {
-                      dayData.tasksCompleted += 1;
-                      metricsMap.set(completedDate, dayData);
-                    }
-                  }
-                } catch (dateError) {
-                  console.error('Error parsing task completion date:', dateError);
-                }
-              }
-            });
-          }
+        if (tasksError) {
+          console.error('Error fetching tasks:', tasksError.message);
+          setError('Failed to load task completion data');
         } else {
-          console.log('Task completions fetched:', taskCompletions?.length || 0);
+          console.log('Tasks fetched:', tasksData?.length || 0);
           
-          // Count each individual completion as one completed task
-          taskCompletions?.forEach(completion => {
-            if (completion.created_at) {
+          tasksData?.forEach(task => {
+            if (task.last_completed_date) {
               try {
-                const completedDate = format(new Date(completion.created_at), 'yyyy-MM-dd');
+                const completedDate = format(parseISO(task.last_completed_date), 'yyyy-MM-dd');
                 if (metricsMap.has(completedDate)) {
                   const dayData = metricsMap.get(completedDate);
                   if (dayData) {
@@ -149,7 +117,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // Fetch reward usage/redemption data
         const { data: rewardsData, error: rewardsError } = await supabase
           .from('reward_usage')
           .select('created_at');
@@ -178,7 +145,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // Fetch punishment data
         const { data: punishmentsData, error: punishmentsError } = await supabase
           .from('punishment_history')
           .select('applied_date');
@@ -210,7 +176,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const chartData = Array.from(metricsMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
         console.log('Final chart data:', chartData);
         
-        // Calculate summary metrics from real data
         const summaryMetrics = {
           tasksCompleted: chartData.reduce((sum, day) => sum + day.tasksCompleted, 0),
           rulesViolated: chartData.reduce((sum, day) => sum + day.rulesViolated, 0),
@@ -218,12 +183,8 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           punishmentsApplied: chartData.reduce((sum, day) => sum + day.punishmentsApplied, 0)
         };
         
-        console.log('Summary metrics:', summaryMetrics);
-        
-        // Ensure we're setting data and passing summary to parent
         setData(chartData);
         
-        // Pass summary data to parent component if callback provided
         if (onDataLoaded) {
           onDataLoaded(summaryMetrics);
         }
@@ -232,11 +193,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         console.error('Error in fetchMetricsData:', err);
         setError(err instanceof Error ? err.message : 'Failed to load metrics data');
         
-        // Even if there's an error, try to initialize with empty data
         const emptyData = generateWeekDays();
         setData(emptyData);
         
-        // Still provide the empty summary to parent
         if (onDataLoaded) {
           onDataLoaded({
             tasksCompleted: 0,
@@ -246,7 +205,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
       } finally {
-        // Always ensure loading state is set to false at the end
         setLoading(false);
       }
     };
@@ -254,7 +212,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     fetchMetricsData();
   }, [onDataLoaded]);
 
-  // Add debugging to verify data right before rendering
   useEffect(() => {
     console.log('Chart data to render:', data);
     console.log('Loading state:', loading);
@@ -278,7 +235,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     );
   }
 
-  // Ensure data is available for rendering
   console.log('Final render data:', data);
 
   return (
