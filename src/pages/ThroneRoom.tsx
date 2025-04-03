@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/tooltip';
 import { InfoIcon, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
@@ -22,11 +21,6 @@ const ThroneRoom: React.FC = () => {
   return (
     <AppLayout>
       <div className="p-6 space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-white">Admin Throne Room</h1>
-          <Badge className="bg-purple-700 hover:bg-purple-800 py-1.5">Admin Area</Badge>
-        </div>
-        
         <p className="text-nav-inactive">
           Welcome to your command center where you can track activities and manage your domain
         </p>
@@ -47,8 +41,12 @@ const ThroneRoom: React.FC = () => {
             </CardHeader>
             {showDashboardStats && (
               <CardContent className="pt-4">
-                {/* Weekly metrics chart */}
-                <WeeklyMetricsChart />
+                {/* Weekly metrics chart with container for mobile responsiveness */}
+                <div className="min-w-0 overflow-x-auto pb-4">
+                  <div className="w-full min-w-[400px]">
+                    <WeeklyMetricsChart />
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                   <div className="bg-light-navy rounded-lg p-4">
