@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
@@ -95,10 +96,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const weekStart = startOfWeek(today, { weekStartsOn: 0 });
         const weekStartStr = weekStart.toISOString();
         
+        // Use raw SQL query to get task completion history
         const { data: taskCompletionData, error: taskCompletionError } = await supabase
-          .from('task_completion_history')
-          .select('completed_at')
-          .gte('completed_at', weekStartStr);
+          .rpc('get_task_completions_for_week', { week_start: weekStartStr });
           
         if (taskCompletionError) {
           console.error('Error fetching task completion history:', taskCompletionError.message);
@@ -106,14 +106,14 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         } else {
           console.log('Task completions fetched:', taskCompletionData?.length || 0);
           
-          taskCompletionData?.forEach(completion => {
-            if (completion.completed_at) {
+          taskCompletionData?.forEach((completion: any) => {
+            if (completion.completion_date) {
               try {
-                const completedDate = format(parseISO(completion.completed_at), 'yyyy-MM-dd');
+                const completedDate = format(new Date(completion.completion_date), 'yyyy-MM-dd');
                 if (metricsMap.has(completedDate)) {
                   const dayData = metricsMap.get(completedDate);
                   if (dayData) {
-                    dayData.tasksCompleted += 1;
+                    dayData.tasksCompleted = completion.completion_count;
                     metricsMap.set(completedDate, dayData);
                   }
                 }

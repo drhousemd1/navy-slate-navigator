@@ -215,14 +215,11 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
       const userId = authData.user?.id;
       
       if (userId) {
-        // Record this completion in the task_completion_history table
-        const { error: historyError } = await supabase
-          .from('task_completion_history')
-          .insert({
-            task_id: id,
-            user_id: userId,
-            // completed_at defaults to now() in the database
-          });
+        // Record this completion in the task_completion_history table using RPC
+        const { error: historyError } = await supabase.rpc('record_task_completion', {
+          task_id_param: id,
+          user_id_param: userId
+        });
         
         if (historyError) {
           console.error('Error recording task completion history:', historyError);
