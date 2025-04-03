@@ -1,7 +1,10 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthOperations } from './useAuthOperations';
+import { useUserProfile } from './useUserProfile';
 
 // Define the types for the context
 interface AuthContextType {
@@ -13,10 +16,14 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<any>;
   signUp: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<any>;
+  updatePassword: (newPassword: string) => Promise<any>;
   getNickname: () => string | null;
-	getProfileImage: () => string | null;
+  getProfileImage: () => string | null;
   getUserRole: () => string;
   checkUserRole: () => Promise<void>;
+  updateNickname: (nickname: string) => void;
+  updateProfileImage: (imageUrl: string) => void;
 }
 
 // Create the context with a default value
@@ -30,6 +37,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
+  
+  // Import auth operations
+  const { signIn: authSignIn, signUp: authSignUp, resetPassword: authResetPassword, updatePassword: authUpdatePassword } = useAuthOperations();
+  
+  // Import user profile functions
+  const { updateNickname: profileUpdateNickname, getNickname, updateProfileImage: profileUpdateProfileImage, getProfileImage, getUserRole } = useUserProfile(user, setUser);
 
   // Sign-in function
   const signIn = async (email: string, password: string) => {
@@ -97,28 +110,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw error;
     }
   };
-  
-  // Function to get the nickname from user metadata
-  const getNickname = () => {
-    return user?.user_metadata?.nickname || null;
-  };
-  
-	// Function to get the profile image from user metadata
-	const getProfileImage = () => {
-		return user?.user_metadata?.avatar_url || null;
-	};
-
-  // Function to get the user role from user metadata
-  const getUserRole = () => {
-    const role = user?.user_metadata?.role;
-    if (role === 'admin') {
-      return 'Administrator';
-    } else if (role === 'user') {
-      return 'User';
-    } else {
-      return 'Unknown Role';
-    }
-  };
 
   // Function to check user role
   const checkUserRole = async () => {
@@ -142,6 +133,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Wrapper functions to expose the imported functions
+  const resetPassword = (email: string) => authResetPassword(email);
+  const updatePassword = (newPassword: string) => authUpdatePassword(newPassword);
+  const updateNickname = (nickname: string) => profileUpdateNickname(nickname);
+  const updateProfileImage = (imageUrl: string) => profileUpdateProfileImage(imageUrl);
+
   // Set up the auth state change listener
   useEffect(() => {
     // Set up the auth state change listener first
@@ -150,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Auth state change event:', event);
         
         // Fix the comparison to include proper event types
-        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        if (event === 'SIGNED_OUT') {
           setUser(null);
           setSession(null);
           setIsAuthenticated(false);
@@ -205,10 +202,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signUp,
     signOut,
+    resetPassword,
+    updatePassword,
     getNickname,
-		getProfileImage,
+    getProfileImage,
     getUserRole,
     checkUserRole,
+    updateNickname,
+    updateProfileImage,
   };
 
   return (
