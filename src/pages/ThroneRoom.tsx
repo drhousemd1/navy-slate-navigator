@@ -40,13 +40,13 @@ const ThroneRoom: React.FC = () => {
               </div>
             </CardHeader>
             {showDashboardStats && (
-              <CardContent className="pt-4">
+              <CardContent className="pt-4 px-0">
                 {/* Weekly metrics chart with responsive container */}
                 <div className="w-full">
                   <WeeklyMetricsChart />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 px-6">
                   <div className="bg-light-navy rounded-lg p-4">
                     <div className="text-cyan-400 text-sm mb-1">Tasks Completed</div>
                     <div className="text-2xl font-bold text-white">24</div>

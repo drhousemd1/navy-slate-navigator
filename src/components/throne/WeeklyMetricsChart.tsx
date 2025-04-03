@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
@@ -228,7 +229,7 @@ export const WeeklyMetricsChart = () => {
         </div>
       )}
       <ChartContainer 
-        className="w-full h-80"
+        className="w-full h-80 pl-0"
         config={chartConfig}
       >
         <ResponsiveContainer width="100%" height={300}>
