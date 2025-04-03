@@ -280,15 +280,23 @@ export const WeeklyMetricsChart = () => {
             />
           </BarChart>
         </ResponsiveContainer>
-      </ChartContainer>
 
-      {/* Custom legend without squares, with colored text */}
-      <div className="flex justify-center gap-5 pb-3 text-sm text-white/90 px-2 flex-nowrap whitespace-nowrap overflow-x-auto">
-        <span style={{ color: chartConfig.tasksCompleted.color }}>Tasks Completed</span>
-        <span style={{ color: chartConfig.rulesViolated.color }}>Rules Broken</span>
-        <span style={{ color: chartConfig.rewardsUsed.color }}>Rewards Used</span>
-        <span style={{ color: chartConfig.punishmentsApplied.color }}>Punishments</span>
-      </div>
+        {/* Custom Legend rendered inside the chart container */}
+        <div className="flex flex-wrap justify-center items-center gap-x-4 py-2 px-2 text-xs">
+          <span className="whitespace-nowrap truncate" style={{ color: chartConfig.tasksCompleted.color }}>
+            Tasks Completed
+          </span>
+          <span className="whitespace-nowrap truncate" style={{ color: chartConfig.rulesViolated.color }}>
+            Rules Broken
+          </span>
+          <span className="whitespace-nowrap truncate" style={{ color: chartConfig.rewardsUsed.color }}>
+            Rewards Used
+          </span>
+          <span className="whitespace-nowrap truncate" style={{ color: chartConfig.punishmentsApplied.color }}>
+            Punishments
+          </span>
+        </div>
+      </ChartContainer>
     </div>
   );
 };
