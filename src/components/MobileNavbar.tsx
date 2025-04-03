@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   BookOpenCheck, 
@@ -46,21 +46,13 @@ const navItems: NavItem[] = [
 const MobileNavbar: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
-  
-  // Debug the current location on every render
-  useEffect(() => {
-    console.log('MobileNavbar mounted/updated, current location:', location);
-    console.log('Current path:', currentPath);
-  }, [location, currentPath]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50">
       <div className="grid grid-cols-5 h-16 px-4">
         {navItems.map((item) => {
-          // CRITICAL FIX: Correctly determine if the current path matches this nav item
+          // Simple direct path comparison
           const isActive = currentPath === item.path;
-          
-          console.log(`Nav item check: ${item.name} - Path: ${item.path}, Current: ${currentPath}, Active: ${isActive}`);
           
           return (
             <Link
@@ -69,13 +61,6 @@ const MobileNavbar: React.FC = () => {
               className={`flex flex-col items-center justify-center h-full transition-colors duration-200 ${
                 isActive ? 'text-[#00FFF7]' : 'text-nav-inactive'
               }`}
-              onClick={() => {
-                // Enhanced debugging for navigation clicks
-                console.log(`CLICKED NAV ITEM: ${item.name}`);
-                console.log(`Navigating to: ${item.path}`);
-                console.log(`Current path before navigation: ${currentPath}`);
-                console.log(`isActive value: ${isActive}`);
-              }}
             >
               {/* Icon always positioned at the same height */}
               <div className={`flex items-center justify-center h-5 ${isActive ? 'neon-icon' : ''}`}>
