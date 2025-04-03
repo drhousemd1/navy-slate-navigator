@@ -91,7 +91,7 @@ const AppRoutes = () => {
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
       <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
       <Route path="/punishments" element={<ProtectedRoute><Punishments /></ProtectedRoute>} />
-      <Route path="/throne-room" element={<ThroneRoom />} /> {/* Temporarily removed AdminRoute wrapper */}
+      <Route path="/throne-room" element={<ThroneRoom />} />
       <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
