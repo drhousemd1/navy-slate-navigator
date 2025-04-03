@@ -53,7 +53,7 @@ const ThroneRoom: React.FC = () => {
                 </div>
                 <div className="bg-light-navy rounded-lg px-3 py-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-purple-400 text-sm">Rewards Used:</span>
+                    <span className="text-purple-400 text-sm">Rewards Redeemed:</span>
                     <span className="text-sm font-bold text-white">7</span>
                   </div>
                 </div>
@@ -129,3 +129,4 @@ const ThroneRoom: React.FC = () => {
 };
 
 export default ThroneRoom;
+

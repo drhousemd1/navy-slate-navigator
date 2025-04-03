@@ -39,7 +39,7 @@ const chartConfig = {
   },
   rewardsUsed: {
     color: '#9b87f5', // primary purple
-    label: 'Rewards Used'
+    label: 'Rewards Redeemed'  // Updated label for clarity
   },
   punishmentsApplied: {
     color: '#ea384c', // red
@@ -109,12 +109,13 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ hideTitl
           });
         }
         
+        // Update to fetch reward_usage data for actual redeemed rewards
         const { data: rewardsData, error: rewardsError } = await supabase
           .from('reward_usage')
           .select('created_at');
           
         if (rewardsError) {
-          console.error('Error fetching rewards:', rewardsError.message);
+          console.error('Error fetching rewards usage:', rewardsError.message);
           setError('Failed to load metrics data');
         } else {
           console.log('Rewards usage fetched:', rewardsData?.length || 0, rewardsData);
@@ -271,7 +272,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ hideTitl
             />
             <Bar 
               dataKey="rewardsUsed" 
-              name="Rewards Used" 
+              name="Rewards Redeemed" 
               fill={chartConfig.rewardsUsed.color} 
               radius={[4, 4, 0, 0]} 
             />
@@ -293,7 +294,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ hideTitl
           Rules Broken
         </span>
         <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsUsed.color }}>
-          Rewards Used
+          Rewards Redeemed
         </span>
         <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishmentsApplied.color }}>
           Punishments
@@ -302,3 +303,4 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ hideTitl
     </div>
   );
 };
+
