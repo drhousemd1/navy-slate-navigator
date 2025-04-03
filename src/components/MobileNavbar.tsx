@@ -51,6 +51,7 @@ const MobileNavbar: React.FC = () => {
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50">
       <div className="grid grid-cols-5 h-16 px-4">
         {navItems.map((item) => {
+          // Updated isActive check to use exact path matching
           const isActive = currentPath === item.path;
           
           return (
@@ -62,7 +63,7 @@ const MobileNavbar: React.FC = () => {
               }`}
               onClick={(e) => {
                 // Enhanced console logging for debugging
-                console.log(`Clicking navigation to: ${item.path}`);
+                console.log(`Clicking navigation to: ${item.path}, current path: ${currentPath}`);
               }}
             >
               {/* Icon always positioned at the same height */}
