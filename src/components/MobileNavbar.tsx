@@ -61,8 +61,8 @@ const MobileNavbar: React.FC = () => {
                 isActive ? 'text-[#00FFF7]' : 'text-nav-inactive'
               }`}
               onClick={(e) => {
-                // Add console logging for debugging
-                console.log(`Navigating to: ${item.path}`);
+                // Enhanced console logging for debugging
+                console.log(`Clicking navigation to: ${item.path}`);
               }}
             >
               {/* Icon always positioned at the same height */}

@@ -1,68 +1,128 @@
 
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { WeeklyMetricsChart } from '@/components/throne/WeeklyMetricsChart';
-import { Skeleton } from '@/components/ui/skeleton';
 import { 
   TooltipProvider, 
   Tooltip,
   TooltipTrigger,
   TooltipContent
 } from '@/components/ui/tooltip';
-import { InfoIcon } from 'lucide-react';
+import { InfoIcon, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
-  const navigate = useNavigate();
-  const [isRoleChecked, setIsRoleChecked] = useState(false);
+  const [showDashboardStats, setShowDashboardStats] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
-  console.log('ThroneRoom rendering: Admin status:', isAdmin, 'Auth status:', isAuthenticated);
-
-  // Make sure role check runs when authentication is confirmed
-  useEffect(() => {
-    if (isAuthenticated && !loading) {
-      console.log('ThroneRoom: User authenticated, checking role');
-      checkUserRole().then(() => {
-        console.log('ThroneRoom: Role check completed');
-        setIsRoleChecked(true);
-      });
-    }
-  }, [isAuthenticated, loading, checkUserRole]);
-
-  // TEMPORARY - ALWAYS SHOW CONTENT FOR DEBUGGING
   return (
     <AppLayout>
       <div className="p-6 space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-white">Admin Throne Room</h1>
-          <div className="bg-red-500 text-white font-bold px-4 py-2 rounded-lg text-xl">
-            THRONE ROOM TEST CONTENT
-          </div>
+          <Badge className="bg-purple-700 hover:bg-purple-800 py-1.5">Admin Area</Badge>
         </div>
         
-        <div className="bg-green-700 text-white p-4 rounded-lg mb-6">
-          <p>Debug Info:</p>
-          <p>isAdmin: {String(isAdmin)}</p>
-          <p>isAuthenticated: {String(isAuthenticated)}</p>
-          <p>loading: {String(loading)}</p>
-          <p>roleChecked: {String(isRoleChecked)}</p>
-        </div>
-        
-        <p className="text-nav-inactive mb-4">Welcome to your command center where you can track activities and manage your domain</p>
+        <p className="text-nav-inactive">
+          Welcome to your command center where you can track activities and manage your domain
+        </p>
         
         <div className="space-y-6">
-          {/* Weekly metrics chart */}
-          <WeeklyMetricsChart />
+          {/* Dashboard section */}
+          <Card className="bg-navy border border-light-navy">
+            <CardHeader className="border-b border-light-navy">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-white text-lg">Dashboard Overview</CardTitle>
+                <button 
+                  onClick={() => setShowDashboardStats(!showDashboardStats)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  {showDashboardStats ? <ChevronUp /> : <ChevronDown />}
+                </button>
+              </div>
+            </CardHeader>
+            {showDashboardStats && (
+              <CardContent className="pt-4">
+                {/* Weekly metrics chart */}
+                <WeeklyMetricsChart />
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                  <div className="bg-light-navy rounded-lg p-4">
+                    <div className="text-cyan-400 text-sm mb-1">Tasks Completed</div>
+                    <div className="text-2xl font-bold text-white">24</div>
+                  </div>
+                  <div className="bg-light-navy rounded-lg p-4">
+                    <div className="text-green-400 text-sm mb-1">Rewards Given</div>
+                    <div className="text-2xl font-bold text-white">7</div>
+                  </div>
+                  <div className="bg-light-navy rounded-lg p-4">
+                    <div className="text-red-400 text-sm mb-1">Punishments</div>
+                    <div className="text-2xl font-bold text-white">3</div>
+                  </div>
+                </div>
+              </CardContent>
+            )}
+          </Card>
           
-          <div className="bg-navy border border-light-navy rounded-lg p-6">
-            <h2 className="text-xl font-medium text-white mb-3">Admin Privileges</h2>
-            <p className="text-nav-inactive">This area is restricted to administrators only.</p>
-            <p className="text-green-400 mt-4">Your account has administrator privileges.</p>
-            <p className="text-white bg-purple-900 inline-block p-2 mt-4 rounded">TEST - THRONE ROOM CONTENT</p>
-          </div>
+          {/* Settings section */}
+          <Card className="bg-navy border border-light-navy">
+            <CardHeader className="border-b border-light-navy">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <CardTitle className="text-white text-lg">Admin Settings</CardTitle>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <InfoIcon className="h-4 w-4 text-gray-400 ml-2 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="w-80">Configure global settings for your domain</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <button 
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  {showSettings ? <ChevronUp /> : <ChevronDown />}
+                </button>
+              </div>
+            </CardHeader>
+            {showSettings && (
+              <CardContent className="pt-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-white">Access Control</h3>
+                      <p className="text-sm text-nav-inactive">Manage user roles and permissions</p>
+                    </div>
+                    <Settings2 className="text-cyan-400 h-5 w-5" />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-white">Global Rules</h3>
+                      <p className="text-sm text-nav-inactive">Define system-wide rule settings</p>
+                    </div>
+                    <Settings2 className="text-cyan-400 h-5 w-5" />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-white">Notifications</h3>
+                      <p className="text-sm text-nav-inactive">Configure notification preferences</p>
+                    </div>
+                    <Settings2 className="text-cyan-400 h-5 w-5" />
+                  </div>
+                </div>
+              </CardContent>
+            )}
+          </Card>
         </div>
       </div>
     </AppLayout>

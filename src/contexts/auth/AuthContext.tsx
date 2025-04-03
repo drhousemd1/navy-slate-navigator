@@ -1,210 +1,228 @@
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase, clearAuthState } from '@/integrations/supabase/client';
-import { Session, User } from '@supabase/supabase-js';
-import { AuthContextType } from './types';
-import { useAuthOperations } from './useAuthOperations';
-import { useUserProfile } from './useUserProfile';
-import { useRoleManagement } from './useRoleManagement';
-import { toast } from '@/hooks/use-toast';
+// Define the types for the context
+interface AuthContextType {
+  user: any | null;
+  session: Session | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<any>;
+  signUp: (email: string, password: string) => Promise<any>;
+  signOut: () => Promise<void>;
+  getNickname: () => string | null;
+	getProfileImage: () => string | null;
+  getUserRole: () => string;
+  checkUserRole: () => Promise<void>;
+}
 
-// Create context with undefined as initial value
+// Create the context with a default value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// AuthProvider component that wraps the app and provides the auth context
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // State variables
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [authInitialized, setAuthInitialized] = useState<boolean>(false);
+  const navigate = useNavigate();
 
-  // Get auth operations
-  const { 
-    signIn, 
-    signUp, 
-    resetPassword, 
-    updatePassword 
-  } = useAuthOperations();
-  
-  // Get role management
-  const roleManagement = useRoleManagement(user);
-  const { userRole, isAdmin, checkUserRole } = roleManagement;
-  
-  // Get user profile operations
-  const userProfile = useUserProfile(user, setUser);
-  const { 
-    updateNickname, 
-    getNickname, 
-    updateProfileImage, 
-    getProfileImage,
-    getUserRole,
-    updateUserRole
-  } = userProfile;
-
-  // Sign out function with improved error handling
-  const signOut = useCallback(async () => {
+  // Sign-in function
+  const signIn = async (email: string, password: string) => {
     try {
-      console.log('Signing out user...');
-      setLoading(true);
-      
-      // First clear local state
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('Sign-in error:', error);
+        throw error;
+      }
+
+      setUser(data.user);
+      setSession(data.session);
+      setIsAuthenticated(true);
+      return { user: data.user, session: data.session };
+    } catch (error: any) {
+      console.error('Sign-in failed:', error);
+      throw error;
+    }
+  };
+
+  // Sign-up function
+  const signUp = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('Sign-up error:', error);
+        throw error;
+      }
+
+      setUser(data.user);
+      setSession(data.session);
+      setIsAuthenticated(true);
+      return { user: data.user, session: data.session };
+    } catch (error: any) {
+      console.error('Sign-up failed:', error);
+      throw error;
+    }
+  };
+
+  // Sign-out function
+  const signOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error('Sign-out error:', error);
+        throw error;
+      }
+
       setUser(null);
       setSession(null);
       setIsAuthenticated(false);
-      
-      // Then sign out from Supabase with global scope to clear all sessions
-      const { error } = await supabase.auth.signOut({ scope: 'global' });
-      
-      if (error) {
-        console.error('Sign out error:', error);
-        throw error;
-      }
-      
-      console.log('Signed out successfully');
-      toast({
-        title: 'Logged out',
-        description: 'You have been successfully logged out.',
-      });
+      setIsAdmin(false);
+      navigate('/auth');
     } catch (error: any) {
-      console.error('Sign out error:', error);
-      toast({
-        title: 'Error signing out',
-        description: error.message,
-        variant: 'destructive',
-      });
-      
-      // Try force clearing auth state in case of error
-      await clearAuthState();
-    } finally {
-      setLoading(false);
+      console.error('Sign-out failed:', error);
+      throw error;
     }
-  }, []);
+  };
   
-  // Handle session recovery error
-  const handleSessionRecoveryFailure = useCallback(async () => {
-    console.warn("Session recovery failed, clearing auth state and starting fresh");
-    await clearAuthState();
-    setUser(null);
-    setSession(null);
-    setIsAuthenticated(false);
-    setLoading(false);
-  }, []);
+  // Function to get the nickname from user metadata
+  const getNickname = () => {
+    return user?.user_metadata?.nickname || null;
+  };
+  
+	// Function to get the profile image from user metadata
+	const getProfileImage = () => {
+		return user?.user_metadata?.avatar_url || null;
+	};
 
-  // Setup authentication state listener - significantly improved
-  useEffect(() => {
-    if (authInitialized) return;
-    console.log('Setting up auth state listener');
-    setLoading(true);
-    
-    // First, get current session without relying on event listeners
-    const getCurrentSession = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error getting session:', error);
-          handleSessionRecoveryFailure();
+  // Function to get the user role from user metadata
+  const getUserRole = () => {
+    const role = user?.user_metadata?.role;
+    if (role === 'admin') {
+      return 'Administrator';
+    } else if (role === 'user') {
+      return 'User';
+    } else {
+      return 'Unknown Role';
+    }
+  };
+
+  // Function to check user role
+  const checkUserRole = async () => {
+    try {
+      if (user) {
+        // Fetch the latest user data to ensure metadata is up-to-date
+        const { data: updatedUser, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          console.error("Error fetching updated user data:", userError);
           return;
         }
         
-        const currentSession = data?.session;
-        console.log('Initial session check:', currentSession?.user?.email || 'No session');
+        const role = updatedUser.user?.user_metadata?.role;
+        setIsAdmin(role === 'admin');
+      } else {
+        setIsAdmin(false);
+      }
+    } catch (error) {
+      console.error("Error checking user role:", error);
+      setIsAdmin(false);
+    }
+  };
+
+  // Set up the auth state change listener
+  useEffect(() => {
+    // Set up the auth state change listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, newSession) => {
+        console.log('Auth state change event:', event);
         
-        if (currentSession) {
-          setSession(currentSession);
-          setUser(currentSession.user);
-          setIsAuthenticated(true);
-          
-          // Defer role check to prevent auth state deadlocks
-          setTimeout(() => {
-            checkUserRole();
-          }, 0);
-        } else {
-          // No session found, ensure auth state is clean
+        // Fix the comparison to include proper event types
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
           setUser(null);
           setSession(null);
           setIsAuthenticated(false);
+          setLoading(false);
+        } else if (newSession) {
+          setUser(newSession.user);
+          setSession(newSession);
+          setIsAuthenticated(true);
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        handleSessionRecoveryFailure();
-      } finally {
-        setLoading(false);
-        setAuthInitialized(true);
-      }
-    };
-    
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      console.log(`Auth state change: ${event}`, newSession?.user?.email);
-      
-      // Use consistent pattern for all events
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        console.log(`Auth event: ${event}`, newSession?.user?.email);
-        setSession(newSession);
-        setUser(newSession?.user || null);
-        setIsAuthenticated(!!newSession);
         
-        if (newSession?.user) {
-          // Defer role check to prevent auth state deadlocks
-          setTimeout(() => {
-            checkUserRole();
-          }, 0);
+        // Specifically handle password recovery event
+        if (event === 'PASSWORD_RECOVERY') {
+          console.log('Password recovery event detected');
         }
-      } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-        // Clear auth state
-        console.log(`Auth event: ${event}`);
-        setSession(null);
-        setUser(null);
-        setIsAuthenticated(false);
       }
-      
-      setLoading(false);
-      setAuthInitialized(true);
-    });
-    
-    // Initialize auth state
-    getCurrentSession();
-    
-    // Clean up the subscription when component unmounts
-    return () => {
-      console.log('Cleaning up auth state listener');
-      subscription.unsubscribe();
-    };
-  }, [authInitialized, checkUserRole, handleSessionRecoveryFailure]);
+    );
 
-  const contextValue: AuthContextType = {
-    isAuthenticated,
+    // Initial load of auth state
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session) {
+          setUser(session.user);
+          setSession(session);
+          setIsAuthenticated(true);
+        }
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error("Error getting session:", error);
+        setLoading(false);
+      });
+
+    // Check user role on initial load and when user changes
+    if (isAuthenticated && user) {
+      checkUserRole();
+    }
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [navigate]);
+
+  // Provide the auth context value
+  const value: AuthContextType = {
     user,
     session,
+    isAuthenticated,
+    isAdmin,
+    loading,
     signIn,
     signUp,
-    resetPassword,
-    updatePassword,
     signOut,
-    loading,
-    isAdmin,
-    userRole,
-    checkUserRole,
-    updateNickname,
     getNickname,
-    updateProfileImage,
-    getProfileImage,
+		getProfileImage,
     getUserRole,
-    updateUserRole,
+    checkUserRole,
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
+// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
