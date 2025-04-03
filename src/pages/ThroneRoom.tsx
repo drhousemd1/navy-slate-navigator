@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -25,15 +24,20 @@ const ThroneRoom: React.FC = () => {
         </p>
         
         <div className="space-y-6">
-          {/* Dashboard section - removed title and fixed spacing */}
+          {/* Dashboard section */}
           <Card className="bg-navy border border-light-navy">
-            <CardContent className="p-6">
+            <CardHeader className="border-b border-light-navy">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-white text-lg">Dashboard Overview</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4 px-0">
               {/* Weekly metrics chart with responsive container */}
               <div className="w-full">
                 <WeeklyMetricsChart />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mt-6 px-6">
                 <div className="bg-light-navy rounded-lg px-3 py-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sky-400 text-sm">Tasks Completed:</span>
