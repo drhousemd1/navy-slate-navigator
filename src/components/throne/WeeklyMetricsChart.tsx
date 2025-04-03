@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
@@ -24,7 +23,6 @@ interface MetricsData {
   punishmentsApplied: number;
 }
 
-// Configuration for chart colors and labels
 const chartConfig = {
   tasksCompleted: {
     color: '#0EA5E9', // sky blue
@@ -49,10 +47,9 @@ export const WeeklyMetricsChart = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Generate day labels for the current week
   const generateWeekDays = () => {
     const today = new Date();
-    const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Starting from Sunday
+    const weekStart = startOfWeek(today, { weekStartsOn: 0 });
     
     return Array.from({ length: 7 }).map((_, index) => {
       const date = addDays(weekStart, index);
@@ -74,12 +71,10 @@ export const WeeklyMetricsChart = () => {
         console.log('Fetching metrics data...');
         setLoading(true);
         
-        // Initialize data structure with days of the week
         const weekDays = generateWeekDays();
         console.log('Generated week days:', weekDays);
         const metricsMap = new Map(weekDays.map(day => [day.date, day]));
         
-        // Get completed tasks for the week
         const { data: tasksData, error: tasksError } = await supabase
           .from('tasks')
           .select('last_completed_date')
@@ -87,11 +82,10 @@ export const WeeklyMetricsChart = () => {
         
         if (tasksError) {
           console.error('Error fetching tasks:', tasksError.message);
-          // Don't throw, just continue - we'll handle this error gracefully
+          setError('Failed to load metrics data');
         } else {
           console.log('Tasks fetched:', tasksData?.length || 0, tasksData);
           
-          // Count tasks completed by day
           tasksData?.forEach(task => {
             if (task.last_completed_date) {
               try {
@@ -110,18 +104,16 @@ export const WeeklyMetricsChart = () => {
           });
         }
         
-        // Get rewards usage data
         const { data: rewardsData, error: rewardsError } = await supabase
           .from('reward_usage')
           .select('created_at');
           
         if (rewardsError) {
           console.error('Error fetching rewards:', rewardsError.message);
-          // Don't throw, just continue
+          setError('Failed to load metrics data');
         } else {
           console.log('Rewards usage fetched:', rewardsData?.length || 0, rewardsData);
           
-          // Count rewards used by day
           rewardsData?.forEach(reward => {
             if (reward.created_at) {
               try {
@@ -140,18 +132,16 @@ export const WeeklyMetricsChart = () => {
           });
         }
         
-        // Get punishment history data
         const { data: punishmentsData, error: punishmentsError } = await supabase
           .from('punishment_history')
           .select('applied_date');
           
         if (punishmentsError) {
           console.error('Error fetching punishments:', punishmentsError.message);
-          // Don't throw, just continue
+          setError('Failed to load metrics data');
         } else {
           console.log('Punishments fetched:', punishmentsData?.length || 0, punishmentsData);
           
-          // Count punishments by day
           punishmentsData?.forEach(punishment => {
             if (punishment.applied_date) {
               try {
@@ -170,11 +160,9 @@ export const WeeklyMetricsChart = () => {
           });
         }
         
-        // Convert map back to array and sort by day number
         const chartData = Array.from(metricsMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
         console.log('Final chart data:', chartData);
         
-        // Add sample data to make the chart useful even if there's no data
         const hasRealData = chartData.some(day => 
           day.tasksCompleted > 0 || 
           day.rulesViolated > 0 || 
@@ -184,7 +172,6 @@ export const WeeklyMetricsChart = () => {
         
         if (!hasRealData) {
           console.log('No data found, adding sample data for demonstration');
-          // Add some sample data to show the chart works
           chartData[1].tasksCompleted = 3;  // Monday
           chartData[2].tasksCompleted = 2;  // Tuesday
           chartData[3].rewardsUsed = 1;     // Wednesday
@@ -198,7 +185,6 @@ export const WeeklyMetricsChart = () => {
         console.error('Error fetching metrics data:', err);
         setError('Failed to load metrics data');
         
-        // Create sample data so we always show something
         const sampleData = generateWeekDays();
         sampleData[1].tasksCompleted = 3;  // Monday
         sampleData[2].tasksCompleted = 2;  // Tuesday
@@ -234,15 +220,15 @@ export const WeeklyMetricsChart = () => {
   }
 
   return (
-    <div className="w-full bg-navy border border-light-navy rounded-lg p-4">
-      <h3 className="text-lg font-medium text-white mb-4">Weekly Activity Metrics</h3>
+    <div className="w-full bg-navy border border-light-navy rounded-lg">
+      <h3 className="text-lg font-medium text-white px-4 pt-4 mb-4">Weekly Activity Metrics</h3>
       {error && (
-        <div className="mb-4 px-3 py-2 bg-red-900/30 border border-red-900/50 rounded text-sm text-red-300">
+        <div className="mb-4 px-3 py-2 bg-red-900/30 border border-red-900/50 rounded text-sm text-red-300 mx-4">
           Note: Some data couldn't be loaded. Showing available metrics.
         </div>
       )}
       <ChartContainer 
-        className="w-full min-w-0 h-80"
+        className="w-full h-80"
         config={chartConfig}
       >
         <ResponsiveContainer width="100%" height={300}>
@@ -250,8 +236,8 @@ export const WeeklyMetricsChart = () => {
             data={data}
             margin={{
               top: 5,
-              right: 30,
-              left: 20,
+              right: 5,
+              left: 0,
               bottom: 5,
             }}
           >

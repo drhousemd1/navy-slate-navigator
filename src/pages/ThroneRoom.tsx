@@ -42,7 +42,7 @@ const ThroneRoom: React.FC = () => {
             {showDashboardStats && (
               <CardContent className="pt-4">
                 {/* Weekly metrics chart with responsive container */}
-                <div className="w-full min-w-0 max-w-full">
+                <div className="w-full">
                   <WeeklyMetricsChart />
                 </div>
                 
