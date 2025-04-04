@@ -8,8 +8,10 @@ const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface ChartData {
   name: string;
-  tasks: number;
-  rules: number;
+  tasksCompleted: number;
+  rulesViolated: number;
+  rewardsUsed: number;
+  punishmentsApplied: number;
   day: number;
   date: string;
   isToday: boolean;
@@ -18,6 +20,16 @@ interface ChartData {
 interface TaskCompletionData {
   completion_date: string;
   completion_count: number;
+}
+
+interface WeeklyMetricsChartProps {
+  hideTitle?: boolean;
+  onDataLoaded?: (summary: {
+    tasksCompleted: number;
+    rulesViolated: number;
+    rewardsUsed: number;
+    punishmentsApplied: number;
+  }) => void;
 }
 
 const CustomTooltip = ({
@@ -30,15 +42,41 @@ const CustomTooltip = ({
       <div className="bg-navy p-3 border border-light-navy rounded shadow-lg">
         <p className="text-white font-bold">{label}</p>
         <div className="mt-2">
-          {payload.map((entry) => (
-            <p
-              key={entry.name}
-              className="text-sm"
-              style={{ color: entry.color }}
-            >
-              {entry.name}: {entry.value} {entry.name === 'Tasks' ? 'completed' : 'violations'}
-            </p>
-          ))}
+          {payload.map((entry) => {
+            let label = '';
+            let suffix = '';
+            
+            switch(entry.name) {
+              case 'tasksCompleted':
+                label = 'Tasks';
+                suffix = 'completed';
+                break;
+              case 'rulesViolated':
+                label = 'Rule Violations';
+                suffix = '';
+                break;
+              case 'rewardsUsed':
+                label = 'Rewards';
+                suffix = 'used';
+                break;
+              case 'punishmentsApplied':
+                label = 'Punishments';
+                suffix = 'applied';
+                break;
+              default:
+                label = entry.name || '';
+            }
+            
+            return (
+              <p
+                key={entry.name}
+                className="text-sm"
+                style={{ color: entry.color }}
+              >
+                {label}: {entry.value} {suffix}
+              </p>
+            );
+          })}
         </div>
       </div>
     );
@@ -47,7 +85,10 @@ const CustomTooltip = ({
   return null;
 };
 
-const WeeklyMetricsChart: React.FC = () => {
+const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ 
+  hideTitle = false,
+  onDataLoaded
+}) => {
   const [data, setData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,77 +103,144 @@ const WeeklyMetricsChart: React.FC = () => {
         const date = addDays(weekStart, i);
         return {
           name: DAYS_OF_WEEK[i],
-          tasks: 0,
-          rules: 0,
+          tasksCompleted: 0,
+          rulesViolated: 0,
+          rewardsUsed: 0,
+          punishmentsApplied: 0,
           day: i,
           date: format(date, 'yyyy-MM-dd'),
           isToday: isToday(date),
         };
       });
+      
+      console.log('Generated week days:', initialData);
 
       // Fetch task completions for the week
-      const { data: taskCompletions, error: taskError } = await supabase.rpc(
-        'get_task_completions_for_week',
-        { week_start: weekStart.toISOString() }
-      );
+      try {
+        const { data: taskCompletions, error: taskError } = await supabase.rpc(
+          'get_task_completions_for_week',
+          { week_start: weekStart.toISOString() }
+        );
 
-      if (taskError) {
-        console.error('Error fetching task completions:', taskError);
-      }
-
-      // Process task completions
-      if (taskCompletions) {
-        (taskCompletions as TaskCompletionData[]).forEach(item => {
-          const dateObj = new Date(item.completion_date);
-          const dayOfWeek = dateObj.getDay();
-          const dayData = initialData.find(d => d.day === dayOfWeek);
-          if (dayData) {
-            dayData.tasks = Number(item.completion_count);
-          }
-        });
+        if (taskError) {
+          console.error('Error fetching task completion history:', taskError);
+        } else if (taskCompletions) {
+          (taskCompletions as TaskCompletionData[]).forEach(item => {
+            const dateObj = new Date(item.completion_date);
+            const dayOfWeek = dateObj.getDay();
+            const dayData = initialData.find(d => d.day === dayOfWeek);
+            if (dayData) {
+              dayData.tasksCompleted = Number(item.completion_count);
+            }
+          });
+          console.log('Task completions fetched:', taskCompletions.length);
+        }
+      } catch (error) {
+        console.error('Error fetching task completions:', error);
       }
 
       // Fetch rule violations for the week
-      const weekNumber = format(today, 'yyyy-ww');
-      const { data: ruleViolations, error: ruleError } = await supabase
-        .from('rule_violations')
-        .select('day_of_week, count')
-        .eq('week_number', weekNumber)
-        .select();
+      try {
+        const weekNumber = format(today, 'yyyy-ww');
+        const { data: ruleViolations, error: ruleError } = await supabase
+          .from('rule_violations')
+          .select('*')
+          .eq('week_number', weekNumber);
 
-      if (ruleError) {
-        console.error('Error fetching rule violations:', ruleError);
+        if (ruleError) {
+          console.error('Error fetching rule violations:', ruleError);
+        } else if (ruleViolations) {
+          ruleViolations.forEach(violation => {
+            const dayOfWeek = violation.day_of_week;
+            const dayData = initialData.find(d => d.day === dayOfWeek);
+            if (dayData) {
+              dayData.rulesViolated += 1;
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching rule violations:', error);
       }
 
-      // Process rule violations
-      if (ruleViolations) {
-        // Group violations by day of week and count them
-        const violationsByDay: Record<number, number> = {};
+      // Fetch rewards usage for the week
+      try {
+        const weekStart = startOfWeek(today).toISOString();
+        const weekEnd = addDays(weekStart, 7).toISOString();
         
-        ruleViolations.forEach(violation => {
-          const dayOfWeek = violation.day_of_week;
-          violationsByDay[dayOfWeek] = (violationsByDay[dayOfWeek] || 0) + 1;
-        });
-        
-        // Update the chart data with the violation counts
-        Object.entries(violationsByDay).forEach(([day, count]) => {
-          const dayIndex = parseInt(day);
-          const dayData = initialData.find(d => d.day === dayIndex);
-          if (dayData) {
-            dayData.rules = count as number;
-          }
-        });
+        const { data: rewardsUsage, error: rewardsError } = await supabase
+          .from('reward_uses')
+          .select('*')
+          .gte('used_at', weekStart)
+          .lt('used_at', weekEnd);
+          
+        if (rewardsError) {
+          console.error('Error fetching rewards usage:', rewardsError);
+        } else if (rewardsUsage) {
+          rewardsUsage.forEach(usage => {
+            const usageDate = new Date(usage.used_at);
+            const dayOfWeek = usageDate.getDay();
+            const dayData = initialData.find(d => d.day === dayOfWeek);
+            if (dayData) {
+              dayData.rewardsUsed += 1;
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching rewards usage:', error);
       }
 
+      // Fetch punishments applied for the week
+      try {
+        const weekStart = startOfWeek(today).toISOString();
+        const weekEnd = addDays(weekStart, 7).toISOString();
+        
+        const { data: punishments, error: punishmentsError } = await supabase
+          .from('punishment_history')
+          .select('*')
+          .gte('applied_at', weekStart)
+          .lt('applied_at', weekEnd);
+          
+        if (punishmentsError) {
+          console.error('Error fetching punishments:', punishmentsError);
+        } else if (punishments) {
+          punishments.forEach(punishment => {
+            const punishmentDate = new Date(punishment.applied_at);
+            const dayOfWeek = punishmentDate.getDay();
+            const dayData = initialData.find(d => d.day === dayOfWeek);
+            if (dayData) {
+              dayData.punishmentsApplied += 1;
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching punishments:', error);
+      }
+
+      console.log('Chart data to render:', initialData);
       setData(initialData);
+      
+      // Calculate totals for the week to pass to parent component
+      if (onDataLoaded) {
+        const weeklyTotals = {
+          tasksCompleted: initialData.reduce((sum, day) => sum + day.tasksCompleted, 0),
+          rulesViolated: initialData.reduce((sum, day) => sum + day.rulesViolated, 0),
+          rewardsUsed: initialData.reduce((sum, day) => sum + day.rewardsUsed, 0),
+          punishmentsApplied: initialData.reduce((sum, day) => sum + day.punishmentsApplied, 0)
+        };
+        onDataLoaded(weeklyTotals);
+      }
+      
+      console.log('Final chart data:', initialData);
     } catch (error) {
       console.error('Error preparing chart data:', error);
     } finally {
+      console.log('Loading state:', false);
       setLoading(false);
     }
-  }, []);
+  }, [onDataLoaded]);
 
   useEffect(() => {
+    console.log('Fetching metrics data...');
     prepareChartData();
   }, [prepareChartData]);
 
@@ -161,15 +269,27 @@ const WeeklyMetricsChart: React.FC = () => {
             />
             <Tooltip content={<CustomTooltip />} />
             <Bar
-              dataKey="tasks"
+              dataKey="tasksCompleted"
               name="Tasks"
               fill="#4ADE80"
               radius={[4, 4, 0, 0]}
             />
             <Bar
-              dataKey="rules"
+              dataKey="rulesViolated"
               name="Rule Violations"
               fill="#F87171"
+              radius={[4, 4, 0, 0]}
+            />
+            <Bar
+              dataKey="rewardsUsed"
+              name="Rewards"
+              fill="#A78BFA"
+              radius={[4, 4, 0, 0]}
+            />
+            <Bar
+              dataKey="punishmentsApplied"
+              name="Punishments"
+              fill="#FB7185"
               radius={[4, 4, 0, 0]}
             />
           </BarChart>

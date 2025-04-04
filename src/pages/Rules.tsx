@@ -21,7 +21,7 @@ interface Rule {
   title_color?: string;
   subtext_color?: string;
   calendar_color?: string;
-  highlight_effect?: string | boolean;
+  highlight_effect?: boolean;
   background_image_url?: string;
   background_opacity?: number;
   focal_point_x?: number;
@@ -67,7 +67,7 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         title_color: rule.title_color,
         subtext_color: rule.subtext_color,
         calendar_color: rule.calendar_color,
-        highlight_effect: rule.highlight_effect,
+        highlight_effect: Boolean(rule.highlight_effect),
         background_image_url: rule.background_image_url,
         background_opacity: rule.background_opacity,
         focal_point_x: rule.focal_point_x,
@@ -122,7 +122,7 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         // Create new rule
         const { error } = await supabase
           .from('rules')
-          .insert(formattedRuleData);
+          .insert([formattedRuleData]);
 
         if (error) throw error;
 
@@ -186,7 +186,7 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
       
       const { error } = await supabase
         .from('rule_violations')
-        .insert(violationData);
+        .insert([violationData]);
       
       if (error) throw error;
       

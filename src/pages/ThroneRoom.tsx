@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { WeeklyMetricsChart } from '@/components/throne/WeeklyMetricsChart';
+import WeeklyMetricsChart from '@/components/throne/WeeklyMetricsChart';
 import { 
   TooltipProvider, 
   Tooltip,
