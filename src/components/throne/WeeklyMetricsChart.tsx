@@ -48,7 +48,10 @@ interface RewardUsageData {
 
 interface RuleViolationData {
   violation_date: string;
-  violation_count: number;
+  rule_id: string | null;
+  day_of_week: number;
+  week_number: string;
+  id: string;
 }
 
 const chartConfig = {
@@ -141,41 +144,47 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // Fetch rule violations data
-        const { data: ruleViolationsData, error: ruleViolationsError } = await supabase
-          .from('rule_violations')
-          .select('violation_date')
-          .gte('violation_date', weekStartStr);
-          
-        if (ruleViolationsError) {
-          console.error('Error fetching rule violations:', ruleViolationsError.message);
-          setError(prev => prev || 'Failed to load rule violations data');
-        } else if (ruleViolationsData && ruleViolationsData.length > 0) {
-          console.log('Rule violations fetched:', ruleViolationsData.length, ruleViolationsData);
-          
-          // Group violations by date
-          const violationsByDate = ruleViolationsData.reduce((acc, violation) => {
-            if (violation.violation_date) {
-              try {
-                const violationDate = format(new Date(violation.violation_date), 'yyyy-MM-dd');
-                acc[violationDate] = (acc[violationDate] || 0) + 1;
-              } catch (dateError) {
-                console.error('Error parsing violation date:', dateError);
+        // Fetch rule violations data from the rules_violation table
+        try {
+          const { data: ruleViolationsData, error: ruleViolationsError } = await supabase
+            .from('rule_violations')
+            .select('*')
+            .gte('violation_date', weekStartStr);
+            
+          if (ruleViolationsError) {
+            console.error('Error fetching rule violations:', ruleViolationsError.message);
+            setError(prev => prev || 'Failed to load rule violations data');
+          } else if (ruleViolationsData && ruleViolationsData.length > 0) {
+            console.log('Rule violations fetched:', ruleViolationsData.length, ruleViolationsData);
+            
+            // Group violations by date
+            const violationsByDate: Record<string, number> = {};
+            
+            ruleViolationsData.forEach((violation: RuleViolationData) => {
+              if (violation.violation_date) {
+                try {
+                  const violationDate = format(new Date(violation.violation_date), 'yyyy-MM-dd');
+                  violationsByDate[violationDate] = (violationsByDate[violationDate] || 0) + 1;
+                } catch (dateError) {
+                  console.error('Error parsing violation date:', dateError);
+                }
               }
-            }
-            return acc;
-          }, {} as Record<string, number>);
-          
-          // Update metricsMap with violation counts
-          Object.entries(violationsByDate).forEach(([date, count]) => {
-            if (metricsMap.has(date)) {
-              const dayData = metricsMap.get(date);
-              if (dayData) {
-                dayData.rulesViolated = count;
-                metricsMap.set(date, dayData);
+            });
+            
+            // Update metricsMap with violation counts
+            Object.entries(violationsByDate).forEach(([date, count]) => {
+              if (metricsMap.has(date)) {
+                const dayData = metricsMap.get(date);
+                if (dayData) {
+                  dayData.rulesViolated = count;
+                  metricsMap.set(date, dayData);
+                }
               }
-            }
-          });
+            });
+          }
+        } catch (violationErr) {
+          console.error('Error processing rule violations:', violationErr);
+          setError(prev => prev || 'Error processing rule violations data');
         }
         
         // Fetch reward usage data

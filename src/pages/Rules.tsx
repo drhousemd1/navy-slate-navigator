@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -35,6 +36,13 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+}
+
+interface RuleViolation {
+  rule_id: string;
+  violation_date: string;
+  day_of_week: number;
+  week_number: string;
 }
 
 const Rules: React.FC = () => {
@@ -108,14 +116,17 @@ const Rules: React.FC = () => {
       if (error) throw error;
       
       const today = new Date();
+      // Insert into rule_violations table
+      const violation: RuleViolation = {
+        rule_id: rule.id,
+        violation_date: today.toISOString(),
+        day_of_week: currentDayOfWeek,
+        week_number: `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`
+      };
+      
       const { error: violationError } = await supabase
         .from('rule_violations')
-        .insert({
-          rule_id: rule.id,
-          violation_date: today.toISOString(),
-          day_of_week: currentDayOfWeek,
-          week_number: `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`
-        });
+        .insert([violation]);
         
       if (violationError) {
         console.error('Error recording rule violation:', violationError);
