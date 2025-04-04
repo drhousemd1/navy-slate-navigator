@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -108,6 +109,8 @@ const Rules: React.FC = () => {
       if (error) throw error;
       
       const today = new Date();
+      
+      // Insert into the rule_violations table
       const { error: violationError } = await supabase
         .from('rule_violations')
         .insert({
@@ -119,6 +122,11 @@ const Rules: React.FC = () => {
         
       if (violationError) {
         console.error('Error recording rule violation:', violationError);
+        toast({
+          title: 'Warning',
+          description: 'Rule marked as broken, but analytics may not be updated.',
+          variant: 'destructive',
+        });
       } else {
         console.log('Rule violation recorded successfully');
       }

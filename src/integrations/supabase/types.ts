@@ -342,6 +342,38 @@ export type Database = {
         }
         Relationships: []
       }
+      rule_violations: {
+        Row: {
+          day_of_week: number
+          id: string
+          rule_id: string | null
+          violation_date: string
+          week_number: string
+        }
+        Insert: {
+          day_of_week: number
+          id?: string
+          rule_id?: string | null
+          violation_date?: string
+          week_number: string
+        }
+        Update: {
+          day_of_week?: number
+          id?: string
+          rule_id?: string | null
+          violation_date?: string
+          week_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_violations_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rules: {
         Row: {
           background_image_url: string | null
