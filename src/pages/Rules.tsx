@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -7,7 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import RulesList from '@/components/rules/RulesList';
 import RulesHeader from '@/components/rules/RulesHeader';
-import RuleEditor from '@/components/rules/RuleEditor';
+import RuleEditor from '@/components/RuleEditor';
 
 // Define a type for rules that matches the database schema
 interface Rule {
@@ -29,7 +30,7 @@ interface Rule {
   focal_point_x?: number;
   focal_point_y?: number;
   priority: string;
-  points?: number;
+  points: number; // Updated to be required
 }
 
 // Define a rule violation data structure

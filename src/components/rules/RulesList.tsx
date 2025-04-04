@@ -24,7 +24,7 @@ interface Rule {
   focal_point_x?: number;
   focal_point_y?: number;
   priority: string;
-  points?: number;
+  points: number; // Updated to be required
 }
 
 interface RulesListProps {

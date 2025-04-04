@@ -33,7 +33,7 @@ interface Rule {
   frequency: 'daily' | 'weekly';
   frequency_count: number;
   usage_data?: number[];
-  points?: number;
+  points: number;
 }
 
 interface RuleFormValues {
@@ -53,7 +53,7 @@ interface RuleFormValues {
   priority: 'low' | 'medium' | 'high';
   frequency: 'daily' | 'weekly';
   frequency_count: number;
-  points?: number;
+  points: number;
 }
 
 interface RuleEditorFormProps {

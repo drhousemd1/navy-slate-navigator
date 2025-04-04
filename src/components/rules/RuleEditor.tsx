@@ -14,7 +14,7 @@ interface Rule {
   id: string;
   title: string;
   description: string;
-  points: number; // Changed from points_value to points
+  points: number; // Updated to be required
   created_at: string;
   icon_name?: string;
   icon_color?: string;
