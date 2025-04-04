@@ -7,7 +7,7 @@ interface Rule {
   id?: string;
   title: string;
   description: string | null;
-  priority: 'low' | 'medium' | 'high'; // Match the type in Rules.tsx
+  priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
   background_opacity: number;
   icon_url?: string | null;
@@ -25,7 +25,7 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
-  points: number; // Required
+  points: number;
 }
 
 interface RuleEditorProps {

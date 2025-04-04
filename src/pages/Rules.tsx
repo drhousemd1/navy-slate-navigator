@@ -15,7 +15,7 @@ interface Rule {
   id: string;
   title: string;
   description: string | null;
-  frequency: string;
+  frequency: 'daily' | 'weekly';
   frequency_count: number;
   created_at: string;
   updated_at: string;
@@ -71,8 +71,9 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
       const formattedRules = (data || []).map(rule => ({
         ...rule,
         // Ensure required properties are present and with correct types
-        points: rule.points || 0, // Default to 0 if missing
+        points: typeof rule.points === 'number' ? rule.points : 0, // Default to 0 if missing or not a number
         priority: (rule.priority || 'medium') as 'low' | 'medium' | 'high', // Cast to allowed values with default
+        frequency: (rule.frequency || 'daily') as 'daily' | 'weekly', // Ensure frequency is the correct type
       }));
 
       setRules(formattedRules);
@@ -105,12 +106,12 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         title: ruleData.title || 'Untitled Rule',
         highlight_effect: Boolean(ruleData.highlight_effect),
         priority: (ruleData.priority || 'medium') as 'low' | 'medium' | 'high',
-        frequency: ruleData.frequency || 'daily',
+        frequency: (ruleData.frequency || 'daily') as 'daily' | 'weekly',
         frequency_count: ruleData.frequency_count || 3,
         background_opacity: ruleData.background_opacity || 100,
         focal_point_x: ruleData.focal_point_x || 50,
         focal_point_y: ruleData.focal_point_y || 50,
-        points: ruleData.points || 0
+        points: typeof ruleData.points === 'number' ? ruleData.points : 0
       };
 
       if (currentRule?.id) {

@@ -92,7 +92,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       icon_name: ruleData?.icon_name,
       frequency: ruleData?.frequency || 'daily',
       frequency_count: ruleData?.frequency_count || 3,
-      points: ruleData?.points,
+      points: ruleData?.points || 0,
     },
   });
 
@@ -172,7 +172,9 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
         highlight_effect: values.highlight_effect || false,
-        points: values.points,
+        points: values.points || 0,
+        frequency: values.frequency as 'daily' | 'weekly',
+        priority: values.priority as 'low' | 'medium' | 'high',
       };
       
       await onSave(ruleToSave);

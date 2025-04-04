@@ -4,12 +4,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertOctagon, Edit2 } from 'lucide-react';
 
-// Match the Rule interface from Rules.tsx
 interface Rule {
   id: string;
   title: string;
   description: string | null;
-  frequency: string;
+  frequency: 'daily' | 'weekly';
   frequency_count: number;
   created_at: string;
   updated_at: string;
@@ -23,8 +22,8 @@ interface Rule {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  priority: 'low' | 'medium' | 'high'; // Match the type in Rules.tsx
-  points: number; // Required
+  priority: 'low' | 'medium' | 'high';
+  points: number;
 }
 
 interface RulesListProps {
