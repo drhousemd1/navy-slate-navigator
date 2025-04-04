@@ -38,13 +38,6 @@ interface Rule {
   user_id?: string;
 }
 
-interface RuleViolation {
-  rule_id: string;
-  violation_date: string;
-  day_of_week: number;
-  week_number: string;
-}
-
 const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -116,20 +109,24 @@ const Rules: React.FC = () => {
       if (error) throw error;
       
       const today = new Date();
-      // Insert into rule_violations table
-      const violation: RuleViolation = {
-        rule_id: rule.id,
-        violation_date: today.toISOString(),
-        day_of_week: currentDayOfWeek,
-        week_number: `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`
-      };
       
+      // Insert into the rule_violations table
       const { error: violationError } = await supabase
         .from('rule_violations')
-        .insert([violation]);
+        .insert({
+          rule_id: rule.id,
+          violation_date: today.toISOString(),
+          day_of_week: currentDayOfWeek,
+          week_number: `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`
+        });
         
       if (violationError) {
         console.error('Error recording rule violation:', violationError);
+        toast({
+          title: 'Warning',
+          description: 'Rule marked as broken, but analytics may not be updated.',
+          variant: 'destructive',
+        });
       } else {
         console.log('Rule violation recorded successfully');
       }

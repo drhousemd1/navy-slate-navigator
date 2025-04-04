@@ -16,11 +16,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     persistSession: true,
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     detectSessionInUrl: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
   }
 });
 

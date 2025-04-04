@@ -14,7 +14,7 @@ import { InfoIcon, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useLocation } from 'react-router-dom';
 
 interface WeeklyMetricsSummary {
   tasksCompleted: number;
@@ -35,28 +35,17 @@ const ThroneRoom: React.FC = () => {
   const [chartError, setChartError] = useState<string | null>(null);
   const [chartLoading, setChartLoading] = useState<boolean>(true);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const location = useLocation();
   
   const { rewards } = useRewards();
 
-  // Listen for rule violations in real-time to update the counter immediately
+  // Refresh when we navigate to this page
   useEffect(() => {
-    const channel = supabase
-      .channel('public:rule_violations')
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'rule_violations' }, 
-        () => {
-          console.log('New rule violation detected, refreshing metrics');
-          setRefreshTrigger(prev => prev + 1);
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    console.log('Location changed or component mounted, refreshing metrics chart');
+    setRefreshTrigger(prev => prev + 1);
+  }, [location.pathname]);
 
-  // Set up a refresh mechanism for when a rule is broken or we navigate back to this page
+  // Set up a refresh mechanism for when a rule is broken or a reward is used
   useEffect(() => {
     setRefreshTrigger(prev => prev + 1);
   }, [rewards]);
