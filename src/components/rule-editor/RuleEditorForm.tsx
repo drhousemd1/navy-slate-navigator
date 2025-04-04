@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -34,6 +33,7 @@ interface Rule {
   frequency: 'daily' | 'weekly';
   frequency_count: number;
   usage_data?: number[];
+  points?: number;
 }
 
 interface RuleFormValues {
@@ -53,6 +53,7 @@ interface RuleFormValues {
   priority: 'low' | 'medium' | 'high';
   frequency: 'daily' | 'weekly';
   frequency_count: number;
+  points?: number;
 }
 
 interface RuleEditorFormProps {
@@ -91,6 +92,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       icon_name: ruleData?.icon_name,
       frequency: ruleData?.frequency || 'daily',
       frequency_count: ruleData?.frequency_count || 3,
+      points: ruleData?.points,
     },
   });
 
@@ -169,7 +171,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         ...values,
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
-        highlight_effect: values.highlight_effect || false, // Ensure highlight_effect is properly set
+        highlight_effect: values.highlight_effect || false,
+        points: values.points,
       };
       
       await onSave(ruleToSave);

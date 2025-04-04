@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -67,7 +66,6 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         throw error;
       }
 
-      // Transform data with proper typing
       setRules(data || []);
     } catch (error) {
       console.error('Error fetching rules:', error);
@@ -93,10 +91,8 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
 
   const handleSaveRule = async (ruleData: Partial<Rule>) => {
     try {
-      // Ensure we're sending data that matches the database schema
       const formattedRuleData = {
         ...ruleData,
-        // Set default values for required fields if they're missing
         title: ruleData.title || 'Untitled Rule',
         highlight_effect: Boolean(ruleData.highlight_effect),
         priority: ruleData.priority || 'medium',
@@ -104,11 +100,11 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         frequency_count: ruleData.frequency_count || 3,
         background_opacity: ruleData.background_opacity || 100,
         focal_point_x: ruleData.focal_point_x || 50,
-        focal_point_y: ruleData.focal_point_y || 50
+        focal_point_y: ruleData.focal_point_y || 50,
+        points: ruleData.points || 0
       };
 
       if (currentRule?.id) {
-        // Update existing rule
         const { error } = await supabase
           .from('rules')
           .update(formattedRuleData)
@@ -121,7 +117,6 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
           description: "Rule updated successfully",
         });
       } else {
-        // Create new rule
         const { error } = await supabase
           .from('rules')
           .insert([formattedRuleData]);
@@ -198,7 +193,6 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         variant: "destructive",
       });
       
-      // Refresh the points display
       refetchRewards();
     } catch (error) {
       console.error('Error recording rule violation:', error);

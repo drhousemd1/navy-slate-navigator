@@ -14,7 +14,7 @@ interface Rule {
   id: string;
   title: string;
   description: string;
-  points_value: number;
+  points: number; // Changed from points_value to points
   created_at: string;
   icon_name?: string;
   icon_color?: string;
@@ -49,7 +49,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
     defaultValues: {
       title: ruleData?.title || '',
       description: ruleData?.description || '',
-      points_value: ruleData?.points_value || 10,
+      points: ruleData?.points || 10,
       icon_name: ruleData?.icon_name || '',
       title_color: ruleData?.title_color || '#FFFFFF',
       subtext_color: ruleData?.subtext_color || '#D1D5DB',
@@ -71,7 +71,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
       form.reset({
         title: ruleData.title || '',
         description: ruleData.description || '',
-        points_value: ruleData.points_value || 10,
+        points: ruleData.points || 10,
         icon_name: ruleData.icon_name || '',
         title_color: ruleData.title_color || '#FFFFFF',
         subtext_color: ruleData.subtext_color || '#D1D5DB',
@@ -90,7 +90,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
       form.reset({
         title: '',
         description: '',
-        points_value: 10,
+        points: 10,
         icon_name: '',
         title_color: '#FFFFFF',
         subtext_color: '#D1D5DB',
@@ -174,7 +174,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
 
               <FormField
                 control={form.control}
-                name="points_value"
+                name="points"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-white">Points Value</FormLabel>

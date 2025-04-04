@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import RuleEditorForm from './rule-editor/RuleEditorForm';
@@ -25,6 +24,7 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  points?: number; // Changed from points_value to points
 }
 
 interface RuleEditorProps {
