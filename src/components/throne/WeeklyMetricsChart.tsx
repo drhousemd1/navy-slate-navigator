@@ -167,17 +167,19 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const weekStart = startOfWeek(today).toISOString();
         const weekEnd = addDays(weekStart, 7).toISOString();
         
+        // Changed from 'reward_uses' to 'reward_usage' to match the database schema
         const { data: rewardsUsage, error: rewardsError } = await supabase
-          .from('reward_uses')
+          .from('reward_usage')
           .select('*')
-          .gte('used_at', weekStart)
-          .lt('used_at', weekEnd);
+          .gte('created_at', weekStart)
+          .lt('created_at', weekEnd);
           
         if (rewardsError) {
           console.error('Error fetching rewards usage:', rewardsError);
         } else if (rewardsUsage) {
           rewardsUsage.forEach(usage => {
-            const usageDate = new Date(usage.used_at);
+            // Using created_at instead of used_at as per schema
+            const usageDate = new Date(usage.created_at);
             const dayOfWeek = usageDate.getDay();
             const dayData = initialData.find(d => d.day === dayOfWeek);
             if (dayData) {
@@ -197,14 +199,15 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const { data: punishments, error: punishmentsError } = await supabase
           .from('punishment_history')
           .select('*')
-          .gte('applied_at', weekStart)
-          .lt('applied_at', weekEnd);
+          .gte('applied_date', weekStart)
+          .lt('applied_date', weekEnd);
           
         if (punishmentsError) {
           console.error('Error fetching punishments:', punishmentsError);
         } else if (punishments) {
           punishments.forEach(punishment => {
-            const punishmentDate = new Date(punishment.applied_at);
+            // Using applied_date instead of applied_at as per schema
+            const punishmentDate = new Date(punishment.applied_date);
             const dayOfWeek = punishmentDate.getDay();
             const dayData = initialData.find(d => d.day === dayOfWeek);
             if (dayData) {

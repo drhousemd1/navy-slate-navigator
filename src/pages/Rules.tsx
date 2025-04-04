@@ -10,22 +10,34 @@ import RulesList from '@/components/rules/RulesList';
 import RulesHeader from '@/components/rules/RulesHeader';
 import RuleEditor from '@/components/rules/RuleEditor';
 
+// Define a type for rules that matches the database schema
 interface Rule {
   id: string;
   title: string;
-  description: string;
-  points_value: number;
+  description: string | null;
+  frequency: string;
+  frequency_count: number;
   created_at: string;
-  icon_name?: string;
+  updated_at: string;
+  icon_name?: string | null;
   icon_color?: string;
   title_color?: string;
   subtext_color?: string;
   calendar_color?: string;
   highlight_effect?: boolean;
-  background_image_url?: string;
+  background_image_url?: string | null;
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
+  priority: string;
+  points?: number;
+}
+
+// Define a rule violation data structure
+interface RuleViolationData {
+  rule_id: string;
+  day_of_week: number;
+  week_number: string;
 }
 
 interface RulesContentProps {
@@ -55,26 +67,8 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         throw error;
       }
 
-      // Transform data to match Rule interface if needed
-      const transformedRules: Rule[] = (data || []).map(rule => ({
-        id: rule.id,
-        title: rule.title,
-        description: rule.description || '',
-        points_value: rule.points_value || 10, // Fallback to 10 if not set
-        created_at: rule.created_at,
-        icon_name: rule.icon_name,
-        icon_color: rule.icon_color,
-        title_color: rule.title_color,
-        subtext_color: rule.subtext_color,
-        calendar_color: rule.calendar_color,
-        highlight_effect: Boolean(rule.highlight_effect),
-        background_image_url: rule.background_image_url,
-        background_opacity: rule.background_opacity,
-        focal_point_x: rule.focal_point_x,
-        focal_point_y: rule.focal_point_y
-      }));
-
-      setRules(transformedRules);
+      // Transform data with proper typing
+      setRules(data || []);
     } catch (error) {
       console.error('Error fetching rules:', error);
       toast({
@@ -99,10 +93,18 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
 
   const handleSaveRule = async (ruleData: Partial<Rule>) => {
     try {
-      // Ensure highlight_effect is a boolean before sending to database
+      // Ensure we're sending data that matches the database schema
       const formattedRuleData = {
         ...ruleData,
-        highlight_effect: Boolean(ruleData.highlight_effect)
+        // Set default values for required fields if they're missing
+        title: ruleData.title || 'Untitled Rule',
+        highlight_effect: Boolean(ruleData.highlight_effect),
+        priority: ruleData.priority || 'medium',
+        frequency: ruleData.frequency || 'daily',
+        frequency_count: ruleData.frequency_count || 3,
+        background_opacity: ruleData.background_opacity || 100,
+        focal_point_x: ruleData.focal_point_x || 50,
+        focal_point_y: ruleData.focal_point_y || 50
       };
 
       if (currentRule?.id) {
@@ -178,7 +180,7 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
       const dayOfWeek = today.getDay();
       const weekNumber = format(today, 'yyyy-ww');
       
-      const violationData = {
+      const violationData: RuleViolationData = {
         rule_id: ruleId,
         day_of_week: dayOfWeek,
         week_number: weekNumber
