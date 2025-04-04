@@ -6,7 +6,7 @@ export function useAuthOperations() {
   // Sign in with email and password
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Attempting to sign in with email:', email);
+      console.log('Starting sign in process for email:', email);
       
       // Input validation - ensure values are properly trimmed
       const trimmedEmail = email.trim().toLowerCase();
@@ -31,7 +31,7 @@ export function useAuthOperations() {
       }
       
       // Use the trimmed values for authentication
-      console.log('Making authentication request');
+      console.log('Making authentication request with:', { email: trimmedEmail });
       const { data, error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: trimmedPassword,
@@ -50,6 +50,7 @@ export function useAuthOperations() {
       }
       
       console.log('Sign in successful:', data.user?.email);
+      console.log('Session data:', data.session ? 'Session exists' : 'No session');
       
       // Make sure we validate the session before confirming success
       if (!data.session) {
