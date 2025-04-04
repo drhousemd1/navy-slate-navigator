@@ -107,6 +107,22 @@ const Rules: React.FC = () => {
         
       if (error) throw error;
       
+      const today = new Date();
+      const { error: violationError } = await supabase
+        .from('rule_violations')
+        .insert({
+          rule_id: rule.id,
+          violation_date: today.toISOString(),
+          day_of_week: currentDayOfWeek,
+          week_number: `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`
+        });
+        
+      if (violationError) {
+        console.error('Error recording rule violation:', violationError);
+      } else {
+        console.log('Rule violation recorded successfully');
+      }
+      
       setRules(rules.map(r => 
         r.id === rule.id ? { ...r, usage_data: newUsageData } : r
       ));
