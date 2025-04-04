@@ -46,10 +46,6 @@ interface RewardUsageData {
   created_at: string;
 }
 
-interface RuleViolationData {
-  violation_date: string;
-}
-
 const chartConfig = {
   tasksCompleted: {
     color: '#0EA5E9', // sky blue
@@ -140,11 +136,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // Fetch rule violations data - fixed to handle the new rule_violations table
+        // Fetch rule violations data - Using string literal for table name to avoid type issues
         try {
-          const { data: ruleViolationsData, error: ruleViolationsError } = await supabase
+          // Using the "any" type to bypass TypeScript restrictions
+          const { data: ruleViolationsData, error: ruleViolationsError } = await (supabase as any)
             .from('rule_violations')
-            .select('violation_date')
+            .select('*')
             .gte('violation_date', weekStartStr);
             
           if (ruleViolationsError) {
@@ -154,7 +151,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             console.log('Rule violations fetched:', ruleViolationsData.length, ruleViolationsData);
             
             // Group violations by date
-            const violationsByDate = ruleViolationsData.reduce((acc, violation) => {
+            const violationsByDate = ruleViolationsData.reduce((acc: Record<string, number>, violation: any) => {
               if (violation.violation_date) {
                 try {
                   const violationDate = format(new Date(violation.violation_date), 'yyyy-MM-dd');
@@ -164,7 +161,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
                 }
               }
               return acc;
-            }, {} as Record<string, number>);
+            }, {});
             
             // Update metricsMap with violation counts
             Object.entries(violationsByDate).forEach(([date, count]) => {
@@ -212,6 +209,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
+        // Fetch punishment data
         const { data: punishmentsData, error: punishmentsError } = await supabase
           .from('punishment_history')
           .select('applied_date')
