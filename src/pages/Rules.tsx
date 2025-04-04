@@ -68,15 +68,16 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
       }
 
       // Map the database data to ensure it matches our Rule interface
-      const formattedRules = (data || []).map(rule => ({
+      // Add default values for potentially missing fields
+      const formattedRules = data ? data.map(rule => ({
         ...rule,
-        // Ensure required properties are present and with correct types
-        points: typeof rule.points === 'number' ? rule.points : 0, // Default to 0 if missing or not a number
-        priority: (rule.priority || 'medium') as 'low' | 'medium' | 'high', // Cast to allowed values with default
-        frequency: (rule.frequency || 'daily') as 'daily' | 'weekly', // Ensure frequency is the correct type
-      }));
+        // Add points with a default value if not present
+        points: 0, // Default to 0 since database might not have this field yet
+        priority: (rule.priority || 'medium') as 'low' | 'medium' | 'high',
+        frequency: (rule.frequency || 'daily') as 'daily' | 'weekly',
+      })) : [];
 
-      setRules(formattedRules);
+      setRules(formattedRules as Rule[]);
     } catch (error) {
       console.error('Error fetching rules:', error);
       toast({
@@ -111,7 +112,7 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         background_opacity: ruleData.background_opacity || 100,
         focal_point_x: ruleData.focal_point_x || 50,
         focal_point_y: ruleData.focal_point_y || 50,
-        points: typeof ruleData.points === 'number' ? ruleData.points : 0
+        points: ruleData.points ?? 0 // Use nullish coalescing for default
       };
 
       if (currentRule?.id) {
