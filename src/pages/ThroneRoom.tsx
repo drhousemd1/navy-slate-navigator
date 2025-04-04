@@ -14,6 +14,7 @@ import { InfoIcon, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface WeeklyMetricsSummary {
   tasksCompleted: number;
@@ -36,6 +37,24 @@ const ThroneRoom: React.FC = () => {
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   
   const { rewards } = useRewards();
+
+  // Listen for rule violations in real-time to update the counter immediately
+  useEffect(() => {
+    const channel = supabase
+      .channel('public:rule_violations')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'rule_violations' }, 
+        () => {
+          console.log('New rule violation detected, refreshing metrics');
+          setRefreshTrigger(prev => prev + 1);
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Set up a refresh mechanism for when a rule is broken or we navigate back to this page
   useEffect(() => {
