@@ -547,12 +547,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_task_completions_for_week: {
+        Args: {
+          week_start: string
+        }
+        Returns: {
+          completion_date: string
+          completion_count: number
+        }[]
+      }
       has_role: {
         Args: {
           requested_user_id: string
           requested_role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      record_task_completion: {
+        Args: {
+          task_id_param: string
+          user_id_param: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -194,7 +193,6 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     
     const task = taskData as Task;
     
-    // Check if we can complete the task
     if (completed && !canCompleteTask(task)) {
       toast({
         title: 'Maximum completions reached',
@@ -210,12 +208,10 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
       const dayOfWeek = getCurrentDayOfWeek();
       usage_data[dayOfWeek] = (usage_data[dayOfWeek] || 0) + 1;
       
-      // Get the current user id
       const { data: authData } = await supabase.auth.getUser();
       const userId = authData.user?.id;
       
       if (userId) {
-        // Record this completion in the task_completion_history table using RPC
         const { error: historyError } = await supabase.rpc('record_task_completion', {
           task_id_param: id,
           user_id_param: userId
@@ -223,7 +219,6 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         
         if (historyError) {
           console.error('Error recording task completion history:', historyError);
-          // Continue despite the error to maintain existing functionality
         } else {
           console.log('Task completion recorded in history');
         }
@@ -255,7 +250,6 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           return true;
         }
         
-        // Get current profile points
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('points')
@@ -264,7 +258,6 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         
         if (profileError) {
           if (profileError.code === 'PGRST116') {
-            // Profile doesn't exist, create one
             console.log('No profile found, creating one with initial points:', taskPoints);
             
             const { error: createError } = await supabase
@@ -273,7 +266,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
               
             if (createError) {
               console.error('Error creating profile:', createError);
-              return true; // Still return true as the task was completed
+              return true;
             }
             
             toast({
@@ -286,10 +279,9 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           }
           
           console.error('Error fetching profile:', profileError);
-          return true; // Still return true as the task was completed
+          return true;
         }
         
-        // Update existing profile
         const currentPoints = profileData?.points || 0;
         const newPoints = currentPoints + taskPoints;
         console.log('Updating profile points from', currentPoints, 'to', newPoints);
@@ -301,7 +293,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           
         if (pointsError) {
           console.error('Error updating points:', pointsError);
-          return true; // Still return true as the task was completed
+          return true;
         }
         
         console.log('Points updated successfully:', newPoints);
