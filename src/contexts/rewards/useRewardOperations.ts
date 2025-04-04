@@ -268,6 +268,26 @@ export const useRewardOperations = () => {
       if (success) {
         console.log("Reward used successfully");
         
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0-6, where 0 is Sunday
+        const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
+        
+        const { error: usageError } = await supabase
+          .from('reward_usage')
+          .insert({
+            reward_id: reward.id,
+            day_of_week: dayOfWeek,
+            week_number: weekNumber,
+            used: true,
+            created_at: new Date().toISOString()
+          });
+          
+        if (usageError) {
+          console.error("Error recording reward usage:", usageError);
+        } else {
+          console.log("Reward usage recorded successfully");
+        }
+        
         const updatedRewards = [...rewards];
         updatedRewards[rewardIndex] = { ...reward, supply: updatedSupply };
         setRewards(updatedRewards);

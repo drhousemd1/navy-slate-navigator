@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -12,6 +11,7 @@ import {
 } from '@/components/ui/tooltip';
 import { InfoIcon, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRewards } from '@/contexts/RewardsContext';
 
 interface WeeklyMetricsSummary {
   tasksCompleted: number;
@@ -31,6 +31,13 @@ const ThroneRoom: React.FC = () => {
   });
   const [chartError, setChartError] = useState<string | null>(null);
   const [chartLoading, setChartLoading] = useState<boolean>(true);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  
+  const { rewards } = useRewards();
+
+  useEffect(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, [rewards]);
 
   const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
     console.log('Metrics data loaded with summary:', summaryData);
@@ -59,6 +66,7 @@ const ThroneRoom: React.FC = () => {
                 <WeeklyMetricsChart 
                   hideTitle={true} 
                   onDataLoaded={handleMetricsDataLoaded}
+                  key={`metrics-chart-${refreshTrigger}`}
                 />
               </div>
               
@@ -91,7 +99,6 @@ const ThroneRoom: React.FC = () => {
             </CardContent>
           </Card>
           
-          {/* Settings section - keeping this dropdown toggle intact */}
           <Card className="bg-navy border border-light-navy">
             <CardHeader className="border-b border-light-navy">
               <div className="flex justify-between items-center">

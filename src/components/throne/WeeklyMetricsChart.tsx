@@ -42,6 +42,10 @@ interface TaskCompletionData {
   completion_count: number;
 }
 
+interface RewardUsageData {
+  created_at: string;
+}
+
 const chartConfig = {
   tasksCompleted: {
     color: '#0EA5E9', // sky blue
@@ -132,17 +136,19 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
+        // Fetch reward usage data
         const { data: rewardsData, error: rewardsError } = await supabase
           .from('reward_usage')
-          .select('created_at');
+          .select('created_at')
+          .gte('created_at', weekStartStr);
           
         if (rewardsError) {
           console.error('Error fetching rewards usage:', rewardsError.message);
           setError(prev => prev || 'Failed to load rewards data');
-        } else {
-          console.log('Rewards usage fetched:', rewardsData?.length || 0, rewardsData);
+        } else if (rewardsData) {
+          console.log('Rewards usage fetched:', rewardsData.length || 0, rewardsData);
           
-          rewardsData?.forEach(reward => {
+          rewardsData.forEach((reward: RewardUsageData) => {
             if (reward.created_at) {
               try {
                 const usedDate = format(new Date(reward.created_at), 'yyyy-MM-dd');
@@ -162,7 +168,8 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         
         const { data: punishmentsData, error: punishmentsError } = await supabase
           .from('punishment_history')
-          .select('applied_date');
+          .select('applied_date')
+          .gte('applied_date', weekStartStr);
           
         if (punishmentsError) {
           console.error('Error fetching punishments:', punishmentsError.message);
