@@ -72,7 +72,7 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
       const formattedRules = data ? data.map(rule => ({
         ...rule,
         // Add points with a default value if not present
-        points: 0, // Default to 0 since database might not have this field yet
+        points: rule.points || 0, // Default to 0 if not present
         priority: (rule.priority || 'medium') as 'low' | 'medium' | 'high',
         frequency: (rule.frequency || 'daily') as 'daily' | 'weekly',
       })) : [];

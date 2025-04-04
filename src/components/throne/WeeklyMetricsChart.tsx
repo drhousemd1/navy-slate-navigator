@@ -91,10 +91,13 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
 }) => {
   const [data, setData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const prepareChartData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
+      
       const today = new Date();
       const weekStart = startOfWeek(today);
       
@@ -124,19 +127,28 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
 
         if (taskError) {
           console.error('Error fetching task completion history:', taskError);
+          setError('Failed to load task data');
         } else if (taskCompletions) {
-          (taskCompletions as TaskCompletionData[]).forEach(item => {
-            const dateObj = new Date(item.completion_date);
-            const dayOfWeek = dateObj.getDay();
-            const dayData = initialData.find(d => d.day === dayOfWeek);
-            if (dayData) {
-              dayData.tasksCompleted = Number(item.completion_count);
-            }
-          });
-          console.log('Task completions fetched:', taskCompletions.length);
+          console.log('Raw task completions:', taskCompletions);
+          
+          // Make sure taskCompletions is an array before iterating
+          if (Array.isArray(taskCompletions)) {
+            taskCompletions.forEach((item: TaskCompletionData) => {
+              const dateObj = new Date(item.completion_date);
+              const dayOfWeek = dateObj.getDay();
+              const dayData = initialData.find(d => d.day === dayOfWeek);
+              if (dayData) {
+                dayData.tasksCompleted = Number(item.completion_count);
+              }
+            });
+            console.log('Task completions fetched:', taskCompletions.length);
+          } else {
+            console.warn('Task completions is not an array:', taskCompletions);
+          }
         }
       } catch (error) {
         console.error('Error fetching task completions:', error);
+        setError('Failed to load task data');
       }
 
       // Fetch rule violations for the week
@@ -167,7 +179,6 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const weekStart = startOfWeek(today).toISOString();
         const weekEnd = addDays(weekStart, 7).toISOString();
         
-        // Changed from 'reward_uses' to 'reward_usage' to match the database schema
         const { data: rewardsUsage, error: rewardsError } = await supabase
           .from('reward_usage')
           .select('*')
@@ -178,7 +189,6 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           console.error('Error fetching rewards usage:', rewardsError);
         } else if (rewardsUsage) {
           rewardsUsage.forEach(usage => {
-            // Using created_at instead of used_at as per schema
             const usageDate = new Date(usage.created_at);
             const dayOfWeek = usageDate.getDay();
             const dayData = initialData.find(d => d.day === dayOfWeek);
@@ -206,7 +216,6 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           console.error('Error fetching punishments:', punishmentsError);
         } else if (punishments) {
           punishments.forEach(punishment => {
-            // Using applied_date instead of applied_at as per schema
             const punishmentDate = new Date(punishment.applied_date);
             const dayOfWeek = punishmentDate.getDay();
             const dayData = initialData.find(d => d.day === dayOfWeek);
@@ -234,10 +243,14 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
       }
       
       console.log('Final chart data:', initialData);
+      
+      // Set data and finish loading regardless of any individual data fetch issues
+      setData(initialData);
     } catch (error) {
       console.error('Error preparing chart data:', error);
+      setError('Failed to load chart data');
     } finally {
-      console.log('Loading state:', false);
+      console.log('Setting loading to false');
       setLoading(false);
     }
   }, [onDataLoaded]);
@@ -247,13 +260,21 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     prepareChartData();
   }, [prepareChartData]);
 
+  if (error) {
+    return (
+      <div className="h-64 mt-6 flex items-center justify-center">
+        <p className="text-red-400 text-center">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-64 mt-6">
       {loading ? (
         <div className="flex items-center justify-center h-full">
           <p className="text-white text-center">Loading activity data...</p>
         </div>
-      ) : (
+      ) : data.length > 0 ? (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
@@ -297,6 +318,10 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             />
           </BarChart>
         </ResponsiveContainer>
+      ) : (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-white text-center">No activity data for this week</p>
+        </div>
       )}
     </div>
   );
