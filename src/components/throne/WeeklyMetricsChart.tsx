@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
@@ -10,7 +9,7 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
-import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { ChartTooltip } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, startOfWeek, addDays } from 'date-fns';
 
@@ -63,7 +62,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Generate an array with the days of the current week
   const generateWeekDays = () => {
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Start week on Sunday
@@ -88,19 +86,15 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         setLoading(true);
         setError(null);
         
-        // Initialize the week days
         const weekDays = generateWeekDays();
         console.log('Week days generated:', weekDays);
         
-        // Create a map for easy access to each day's data
         const metricsMap = new Map(weekDays.map(day => [day.date, { ...day }]));
         
-        // Get the start of the current week for our date range queries
         const today = new Date();
         const weekStart = startOfWeek(today, { weekStartsOn: 0 });
         const weekStartISOString = weekStart.toISOString();
         
-        // 1. Fetch task completions
         const { data: taskCompletions, error: taskError } = await supabase
           .rpc('get_task_completions_for_week', { 
             week_start: weekStartISOString 
@@ -112,7 +106,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         } else if (taskCompletions) {
           console.log('Task completions fetched:', taskCompletions);
           
-          // Update the metricsMap with task completion data
           taskCompletions.forEach((completion: { completion_date: string, completion_count: number }) => {
             try {
               const completionDate = format(new Date(completion.completion_date), 'yyyy-MM-dd');
@@ -129,7 +122,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // 2. Fetch rule violations
         const { data: ruleViolations, error: violationsError } = await supabase
           .from('rule_violations')
           .select('violation_date')
@@ -140,7 +132,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         } else if (ruleViolations && ruleViolations.length > 0) {
           console.log('Rule violations fetched:', ruleViolations);
           
-          // Group violations by date
           const violationsByDate: Record<string, number> = {};
           
           ruleViolations.forEach(violation => {
@@ -152,7 +143,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             }
           });
           
-          // Update metricsMap with violation counts
           Object.entries(violationsByDate).forEach(([date, count]) => {
             if (metricsMap.has(date)) {
               const dayData = metricsMap.get(date);
@@ -164,7 +154,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // 3. Fetch rewards usage
         const { data: rewardsUsage, error: rewardsError } = await supabase
           .from('reward_usage')
           .select('created_at')
@@ -175,7 +164,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         } else if (rewardsUsage) {
           console.log('Rewards usage fetched:', rewardsUsage);
           
-          // Update metricsMap with rewards usage
           rewardsUsage.forEach(usage => {
             try {
               const usageDate = format(new Date(usage.created_at), 'yyyy-MM-dd');
@@ -192,7 +180,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // 4. Fetch punishments
         const { data: punishmentsApplied, error: punishmentsError } = await supabase
           .from('punishment_history')
           .select('applied_date')
@@ -203,7 +190,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         } else if (punishmentsApplied) {
           console.log('Punishments fetched:', punishmentsApplied);
           
-          // Update metricsMap with punishments
           punishmentsApplied.forEach(punishment => {
             try {
               const punishmentDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
@@ -220,11 +206,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // Convert the map back to an array and sort by day number
         const chartData = Array.from(metricsMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
         console.log('Final chart data:', chartData);
         
-        // Calculate summary metrics
         const summaryMetrics = {
           tasksCompleted: chartData.reduce((sum, day) => sum + day.tasksCompleted, 0),
           rulesViolated: chartData.reduce((sum, day) => sum + day.rulesViolated, 0),
@@ -232,19 +216,15 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           punishmentsApplied: chartData.reduce((sum, day) => sum + day.punishmentsApplied, 0)
         };
         
-        // Update state with the processed data
         setData(chartData);
         
-        // Notify parent component if callback is provided
         if (onDataLoaded) {
           onDataLoaded(summaryMetrics);
         }
-        
       } catch (error) {
         console.error('Error fetching metrics data:', error);
         setError('Failed to load metrics data');
         
-        // Return empty data in case of error
         if (onDataLoaded) {
           onDataLoaded({
             tasksCompleted: 0,
@@ -283,10 +263,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     <div className="w-full bg-navy border border-light-navy rounded-lg">
       {!hideTitle && <h3 className="text-lg font-medium text-white px-4 pt-4 mb-4">Weekly Activity Metrics</h3>}
       
-      <ChartContainer 
-        className="w-full h-80 pl-0"
-        config={chartConfig}
-      >
+      <div className="w-full h-80 px-4">
         <ResponsiveContainer width="100%" height={300}>
           <BarChart
             data={data}
@@ -334,7 +311,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             />
           </BarChart>
         </ResponsiveContainer>
-      </ChartContainer>
+      </div>
 
       <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
         <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
