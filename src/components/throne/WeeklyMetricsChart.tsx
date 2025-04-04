@@ -47,11 +47,11 @@ interface RewardUsageData {
 }
 
 interface RuleViolationData {
-  violation_date: string;
+  id: string;
   rule_id: string | null;
+  violation_date: string;
   day_of_week: number;
   week_number: string;
-  id: string;
 }
 
 const chartConfig = {
@@ -144,7 +144,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
         
-        // Fetch rule violations data from the rules_violation table
+        // Fetch rule violations data safely
         try {
           const { data: ruleViolationsData, error: ruleViolationsError } = await supabase
             .from('rule_violations')
