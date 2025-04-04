@@ -21,7 +21,7 @@ interface Rule {
   title_color?: string;
   subtext_color?: string;
   calendar_color?: string;
-  highlight_effect?: boolean | string;
+  highlight_effect?: string | boolean;
   background_image_url?: string;
   background_opacity?: number;
   focal_point_x?: number;
@@ -60,7 +60,7 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         id: rule.id,
         title: rule.title,
         description: rule.description || '',
-        points_value: rule.points || 10, // Fallback to 10 if not set
+        points_value: rule.points_value || 10, // Fallback to 10 if not set
         created_at: rule.created_at,
         icon_name: rule.icon_name,
         icon_color: rule.icon_color,

@@ -15,7 +15,7 @@ interface Rule {
   title_color?: string;
   subtext_color?: string;
   calendar_color?: string;
-  highlight_effect?: string;
+  highlight_effect?: string | boolean;
   background_image_url?: string;
   background_opacity?: number;
   focal_point_x?: number;
