@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -20,7 +21,7 @@ interface Rule {
   title_color?: string;
   subtext_color?: string;
   calendar_color?: string;
-  highlight_effect?: string;
+  highlight_effect?: boolean | string;
   background_image_url?: string;
   background_opacity?: number;
   focal_point_x?: number;
@@ -54,7 +55,26 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         throw error;
       }
 
-      setRules(data || []);
+      // Transform data to match Rule interface if needed
+      const transformedRules: Rule[] = (data || []).map(rule => ({
+        id: rule.id,
+        title: rule.title,
+        description: rule.description || '',
+        points_value: rule.points || 10, // Fallback to 10 if not set
+        created_at: rule.created_at,
+        icon_name: rule.icon_name,
+        icon_color: rule.icon_color,
+        title_color: rule.title_color,
+        subtext_color: rule.subtext_color,
+        calendar_color: rule.calendar_color,
+        highlight_effect: rule.highlight_effect,
+        background_image_url: rule.background_image_url,
+        background_opacity: rule.background_opacity,
+        focal_point_x: rule.focal_point_x,
+        focal_point_y: rule.focal_point_y
+      }));
+
+      setRules(transformedRules);
     } catch (error) {
       console.error('Error fetching rules:', error);
       toast({
@@ -79,11 +99,17 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
 
   const handleSaveRule = async (ruleData: Partial<Rule>) => {
     try {
+      // Ensure highlight_effect is a boolean before sending to database
+      const formattedRuleData = {
+        ...ruleData,
+        highlight_effect: Boolean(ruleData.highlight_effect)
+      };
+
       if (currentRule?.id) {
         // Update existing rule
         const { error } = await supabase
           .from('rules')
-          .update(ruleData)
+          .update(formattedRuleData)
           .eq('id', currentRule.id);
 
         if (error) throw error;
@@ -96,7 +122,7 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         // Create new rule
         const { error } = await supabase
           .from('rules')
-          .insert(ruleData);
+          .insert(formattedRuleData);
 
         if (error) throw error;
 
@@ -158,8 +184,7 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         week_number: weekNumber
       };
       
-      // Use 'as any' to bypass TypeScript restrictions
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('rule_violations')
         .insert(violationData);
       

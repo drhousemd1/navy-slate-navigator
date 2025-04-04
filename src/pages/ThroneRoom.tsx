@@ -39,35 +39,17 @@ const ThroneRoom: React.FC = () => {
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   const location = useLocation();
   
-  const { rewards } = useRewards();
-  const { punishmentHistory } = usePunishments();
+  const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
+    console.log('Metrics data loaded with summary:', summaryData);
+    setMetricsSummary(summaryData);
+    setChartLoading(false);
+  };
 
   // Refresh when we navigate to this page
   useEffect(() => {
     console.log('Location changed or component mounted, refreshing metrics chart');
     setRefreshTrigger(prev => prev + 1);
   }, [location.pathname]);
-
-  // Set up a refresh mechanism for when a rule is broken or a reward is used
-  useEffect(() => {
-    console.log('Rewards or punishments changed, refreshing metrics chart');
-    setRefreshTrigger(prev => prev + 1);
-  }, [rewards, punishmentHistory]);
-
-  // Set up a refresh interval for the metrics chart
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshTrigger(prev => prev + 1);
-    }, 60000); // Refresh every minute
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
-    console.log('Metrics data loaded with summary:', summaryData);
-    setMetricsSummary(summaryData);
-    setChartLoading(false);
-  };
 
   return (
     <AppLayout>
