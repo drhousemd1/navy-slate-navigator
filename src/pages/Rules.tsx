@@ -29,8 +29,8 @@ interface Rule {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  priority: string;
-  points: number; // Updated to be required
+  priority: 'low' | 'medium' | 'high'; // Restrict to valid values
+  points: number; // Required
 }
 
 // Define a rule violation data structure
@@ -48,7 +48,7 @@ interface RulesContentProps {
 const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentRule, setCurrentRule] = useState<Rule | null>(null);
+  const [currentRule, setCurrentRule] = useState<Partial<Rule> | null>(null);
   const { refetchRewards } = useRewards();
 
   useEffect(() => {
@@ -67,7 +67,15 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         throw error;
       }
 
-      setRules(data || []);
+      // Map the database data to ensure it matches our Rule interface
+      const formattedRules = (data || []).map(rule => ({
+        ...rule,
+        // Ensure required properties are present and with correct types
+        points: rule.points || 0, // Default to 0 if missing
+        priority: (rule.priority || 'medium') as 'low' | 'medium' | 'high', // Cast to allowed values with default
+      }));
+
+      setRules(formattedRules);
     } catch (error) {
       console.error('Error fetching rules:', error);
       toast({
@@ -96,7 +104,7 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         ...ruleData,
         title: ruleData.title || 'Untitled Rule',
         highlight_effect: Boolean(ruleData.highlight_effect),
-        priority: ruleData.priority || 'medium',
+        priority: (ruleData.priority || 'medium') as 'low' | 'medium' | 'high',
         frequency: ruleData.frequency || 'daily',
         frequency_count: ruleData.frequency_count || 3,
         background_opacity: ruleData.background_opacity || 100,
@@ -221,7 +229,7 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         onClose={() => setIsEditorOpen(false)}
         ruleData={currentRule}
         onSave={handleSaveRule}
-        onDelete={currentRule ? () => handleDeleteRule(currentRule.id) : undefined}
+        onDelete={currentRule?.id ? handleDeleteRule : undefined}
       />
     </div>
   );

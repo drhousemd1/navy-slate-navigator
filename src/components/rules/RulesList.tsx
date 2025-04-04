@@ -23,8 +23,8 @@ interface Rule {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  priority: string;
-  points: number; // Updated to be required
+  priority: 'low' | 'medium' | 'high'; // Match the type in Rules.tsx
+  points: number; // Required
 }
 
 interface RulesListProps {
