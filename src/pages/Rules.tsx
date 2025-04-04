@@ -29,7 +29,7 @@ interface Rule {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  priority: 'low' | 'medium' | 'high'; // Restrict to valid values
+  priority: 'low' | 'medium' | 'high';
   points: number; // Required
 }
 
@@ -71,8 +71,8 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
       // Add default values for potentially missing fields
       const formattedRules = data ? data.map(rule => ({
         ...rule,
-        // Add points with a default value if not present
-        points: rule.points || 0, // Default to 0 if not present
+        // Explicitly add points with a default value if not present
+        points: rule.points !== undefined ? rule.points : 0,
         priority: (rule.priority || 'medium') as 'low' | 'medium' | 'high',
         frequency: (rule.frequency || 'daily') as 'daily' | 'weekly',
       })) : [];
@@ -112,7 +112,8 @@ const RulesContent: React.FC<RulesContentProps> = ({ isEditorOpen, setIsEditorOp
         background_opacity: ruleData.background_opacity || 100,
         focal_point_x: ruleData.focal_point_x || 50,
         focal_point_y: ruleData.focal_point_y || 50,
-        points: ruleData.points ?? 0 // Use nullish coalescing for default
+        // Use nullish coalescing to default to 0 if points is undefined or null
+        points: ruleData.points ?? 0
       };
 
       if (currentRule?.id) {
