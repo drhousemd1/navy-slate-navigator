@@ -37,6 +37,11 @@ interface WeeklyMetricsChartProps {
   onDataLoaded?: (summaryData: WeeklyMetricsSummary) => void;
 }
 
+interface TaskCompletionData {
+  completion_date: string;
+  completion_count: number;
+}
+
 const chartConfig = {
   tasksCompleted: {
     color: '#0EA5E9', // sky blue
@@ -96,17 +101,20 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const weekStart = startOfWeek(today, { weekStartsOn: 0 });
         const weekStartStr = weekStart.toISOString();
         
-        // Use raw SQL query to get task completion history
+        // Use RPC with type assertion to fix TypeScript error
         const { data: taskCompletionData, error: taskCompletionError } = await supabase
-          .rpc('get_task_completions_for_week', { week_start: weekStartStr });
+          .rpc('get_task_completions_for_week', { week_start: weekStartStr }) as unknown as { 
+            data: TaskCompletionData[] | null; 
+            error: Error | null 
+          };
           
         if (taskCompletionError) {
           console.error('Error fetching task completion history:', taskCompletionError.message);
           setError('Failed to load task completion data');
-        } else {
-          console.log('Task completions fetched:', taskCompletionData?.length || 0);
+        } else if (taskCompletionData) {
+          console.log('Task completions fetched:', taskCompletionData.length || 0);
           
-          taskCompletionData?.forEach((completion: any) => {
+          taskCompletionData.forEach((completion: TaskCompletionData) => {
             if (completion.completion_date) {
               try {
                 const completedDate = format(new Date(completion.completion_date), 'yyyy-MM-dd');

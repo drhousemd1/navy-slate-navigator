@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -212,10 +213,11 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
       const userId = authData.user?.id;
       
       if (userId) {
+        // Use type assertion to fix TypeScript error
         const { error: historyError } = await supabase.rpc('record_task_completion', {
           task_id_param: id,
           user_id_param: userId
-        });
+        }) as unknown as { error: Error | null };
         
         if (historyError) {
           console.error('Error recording task completion history:', historyError);
