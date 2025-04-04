@@ -82,6 +82,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
 
   useEffect(() => {
     const fetchMetricsData = async () => {
+      console.log("fetching...");
       try {
         setLoading(true);
         setError(null);
@@ -99,6 +100,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           .rpc('get_task_completions_for_week', { 
             week_start: weekStartISOString 
           });
+        console.log("taskCompletions:", taskCompletions, "error:", taskError);
 
         if (taskError) {
           console.error('Error fetching task completions:', taskError.message);
@@ -126,6 +128,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           .from('rule_violations')
           .select('violation_date')
           .gte('violation_date', weekStartISOString);
+        console.log("ruleViolations:", ruleViolations, "error:", violationsError);
           
         if (violationsError) {
           console.error('Error fetching rule violations:', violationsError.message);
@@ -158,6 +161,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           .from('reward_usage')
           .select('created_at')
           .gte('created_at', weekStartISOString);
+        console.log("rewardsUsage:", rewardsUsage, "error:", rewardsError);
           
         if (rewardsError) {
           console.error('Error fetching rewards usage:', rewardsError.message);
@@ -184,6 +188,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           .from('punishment_history')
           .select('applied_date')
           .gte('applied_date', weekStartISOString);
+        console.log("punishmentsApplied:", punishmentsApplied, "error:", punishmentsError);
           
         if (punishmentsError) {
           console.error('Error fetching punishments:', punishmentsError.message);
@@ -234,6 +239,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
       } finally {
+        console.log("Fetching completed, setting loading to false");
         setLoading(false);
       }
     };
