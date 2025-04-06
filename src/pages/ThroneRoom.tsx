@@ -110,7 +110,7 @@ const ThroneRoomCard: React.FC<{
           setVisibleImage(next);        // promote new image
           setTransitionImage(null);     // remove transition layer
           setIsTransitioning(false);
-        }, 700); // matches CSS fade duration
+        }, 2000); // Updated to 2 seconds for slower crossfade
         
         return () => clearTimeout(timeout);
       });
@@ -208,7 +208,7 @@ const ThroneRoomCard: React.FC<{
             alt=""
             className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
             style={{ 
-              transition: 'opacity 0.7s ease-in-out',
+              transition: 'opacity 2s ease-in-out', /* Updated to 2s transition */
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
               opacity: (cardData.background_opacity || 100) / 100
             }}
@@ -225,7 +225,7 @@ const ThroneRoomCard: React.FC<{
               isTransitioning ? 'opacity-100' : 'opacity-0'
             }`}
             style={{ 
-              transition: 'opacity 0.7s ease-in-out',
+              transition: 'opacity 2s ease-in-out', /* Updated to 2s transition */
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
               opacity: isTransitioning ? (cardData.background_opacity || 100) / 100 : 0
             }}
