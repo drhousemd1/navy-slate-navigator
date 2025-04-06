@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Upload } from 'lucide-react';
 import { Control, UseFormSetValue } from 'react-hook-form';
+import ImageFocalPointControl from '@/components/encyclopedia/image/ImageFocalPointControl';
 
 interface BackgroundImageSelectorProps {
   control: Control<any>;
@@ -25,7 +26,10 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
 }) => {
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: initialPosition?.x ?? 50, y: initialPosition?.y ?? 50 });
+  const [position, setPosition] = useState({ 
+    x: initialPosition?.x ?? 50, 
+    y: initialPosition?.y ?? 50 
+  });
   
   // Safely initialize opacity - default to 100 if no value is available
   const [opacity, setOpacity] = useState<number>(100);
@@ -75,7 +79,11 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     const rect = imageContainerRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
     const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+    
+    // Update position state
     setPosition({ x, y });
+    
+    // Also update form values immediately to persist changes
     setValue('focal_point_x', Math.round(x));
     setValue('focal_point_y', Math.round(y));
   };
@@ -96,12 +104,14 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) updatePosition(e.clientX, e.clientY);
     };
+    
     const handleTouchMove = (e: TouchEvent) => {
       if (isDragging && e.touches.length > 0) {
         e.preventDefault();
         updatePosition(e.touches[0].clientX, e.touches[0].clientY);
       }
     };
+    
     const stopDragging = () => setIsDragging(false);
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -132,45 +142,15 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
             <div 
               ref={imageContainerRef}
               className="relative w-full h-48 rounded-lg overflow-hidden"
-              role="button"
-              tabIndex={0}
-              aria-label="Drag to adjust focal point"
-              onMouseDown={handleMouseDown}
-              onTouchStart={handleTouchStart}
             >
-              <img 
-                src={imagePreview} 
-                alt="Background preview" 
-                className="w-full h-full object-cover"
-                style={{ 
-                  opacity: opacity / 100,
-                  objectPosition: `${position.x}% ${position.y}%`
-                }}
+              <ImageFocalPointControl
+                imagePreview={imagePreview}
+                position={position}
+                opacity={opacity}
+                isDragging={isDragging}
+                onMouseDown={handleMouseDown}
+                onTouchStart={handleTouchStart}
               />
-              <div 
-                className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors duration-200"
-                style={{ 
-                  cursor: 'crosshair',
-                  pointerEvents: 'auto', 
-                  touchAction: 'none',
-                  zIndex: 10,
-                }}
-              >
-                <div 
-                  className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg"
-                  style={{ 
-                    left: `${position.x}%`, 
-                    top: `${position.y}%`,
-                    animation: isDragging ? 'none' : 'pulse 2s infinite',
-                    boxShadow: isDragging ? '0 0 0 4px rgba(126, 105, 171, 0.5)' : '',
-                    zIndex: 20,
-                    pointerEvents: 'none' 
-                  }}
-                />
-                <span className="text-sm text-white bg-black/70 px-3 py-2 rounded-full shadow-md pointer-events-none">
-                  Click and drag to adjust focal point
-                </span>
-              </div>
             </div>
             <Button 
               type="button"

@@ -19,15 +19,7 @@ const ImageFocalPointControl: React.FC<ImageFocalPointControlProps> = ({
   onTouchStart
 }) => {
   return (
-    <div 
-      id="focal-point-container"
-      className="relative w-full h-48 rounded-lg overflow-hidden"
-      role="button"
-      tabIndex={0}
-      aria-label="Drag to adjust focal point"
-      onMouseDown={onMouseDown}
-      onTouchStart={onTouchStart}
-    >
+    <>
       <img 
         src={imagePreview} 
         alt="Background preview" 
@@ -45,6 +37,8 @@ const ImageFocalPointControl: React.FC<ImageFocalPointControlProps> = ({
           touchAction: 'none',
           zIndex: 10,
         }}
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
       >
         <div 
           className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg"
@@ -61,7 +55,7 @@ const ImageFocalPointControl: React.FC<ImageFocalPointControlProps> = ({
           Click and drag to adjust focal point
         </span>
       </div>
-    </div>
+    </>
   );
 };
 

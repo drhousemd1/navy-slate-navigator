@@ -317,8 +317,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                   control={form.control}
                   imagePreview={imagePreview}
                   initialPosition={{ 
-                    x: cardData?.focal_point_x || 50, 
-                    y: cardData?.focal_point_y || 50 
+                    x: form.getValues('focal_point_x'), 
+                    y: form.getValues('focal_point_y') 
                   }}
                   onRemoveImage={handleRemoveImage}
                   onImageUpload={handleImageUpload}
