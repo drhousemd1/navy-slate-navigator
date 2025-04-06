@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { format, subDays, startOfWeek, parseISO } from 'date-fns';
+import { format, startOfWeek, parseISO, addDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
@@ -58,8 +58,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   // Helper functions
   const generateWeekDays = (): string[] => {
     const today = new Date();
-    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-    return [...Array(7)].map((_, i) => format(subDays(today, 6 - i), 'yyyy-MM-dd'));
+    const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // 0 = Sunday
+    return [...Array(7)].map((_, i) =>
+      format(addDays(weekStart, i), 'yyyy-MM-dd')
+    );
   };
 
   const formatDate = (dateString: string): string => {
