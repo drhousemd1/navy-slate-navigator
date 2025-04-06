@@ -120,19 +120,25 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         hasBackgroundImageUrl: Boolean(cardData.background_image_url)
       });
       
+      const newImageSlots = [null, null, null, null, null];
+      
       if (Array.isArray(cardData.background_images) && cardData.background_images.length > 0) {
-        const newImageSlots = [...imageSlots];
+        console.log("Loading background_images into slots:", cardData.background_images);
         cardData.background_images.forEach((img, index) => {
-          if (index < newImageSlots.length) {
+          if (index < newImageSlots.length && img) {
+            console.log(`Setting slot ${index} to image:`, img.substring(0, 50) + '...');
             newImageSlots[index] = img;
           }
         });
-        setImageSlots(newImageSlots);
       } else if (cardData.background_image_url) {
-        const newImageSlots = [...imageSlots];
+        console.log("Loading single background_image_url into slot 0:", 
+          cardData.background_image_url.substring(0, 50) + '...');
         newImageSlots[0] = cardData.background_image_url;
-        setImageSlots(newImageSlots);
       }
+      
+      setImageSlots(newImageSlots);
+      console.log("Final image slots after initialization:", 
+        newImageSlots.map(s => s ? `[Image: ${s.substring(0, 20)}...]` : 'null'));
     }
   }, [isOpen, cardData, form]);
   
@@ -239,6 +245,24 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       console.log("Saving card data:", data);
       console.log("Current image slots:", imageSlots);
       
+      const validImageSlots = imageSlots.map(slot => {
+        if (!slot) return null;
+        
+        if (typeof slot !== 'string' || slot.trim() === '') {
+          console.warn("Found invalid image slot:", slot);
+          return null;
+        }
+        
+        if (!slot.startsWith('data:image') && !slot.startsWith('http')) {
+          console.warn("Image slot doesn't start with expected prefix:", slot.substring(0, 20));
+        }
+        
+        return slot;
+      });
+      
+      console.log("Valid image slots:", validImageSlots.map((s, i) => 
+        s ? `[${i}: Valid ${s.substring(0, 20)}...]` : `[${i}: null]`));
+      
       const updatedData = {
         ...data,
         background_image_url: imagePreview || undefined,
@@ -246,39 +270,70 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         iconName: selectedIconName || undefined,
         focal_point_x: form.getValues('focal_point_x'),
         focal_point_y: form.getValues('focal_point_y'),
-        background_images: imageSlots.filter(Boolean),
+        background_images: validImageSlots.filter(Boolean),
       };
       
-      console.log("Transformed updatedData:", updatedData);
+      console.log("Transformed updatedData:", {
+        ...updatedData,
+        background_images: updatedData.background_images?.length 
+          ? `[${updatedData.background_images.length} images]` 
+          : []
+      });
       console.log("background_images being saved:", updatedData.background_images);
       
-      const existingCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
-      console.log("Existing cards before update:", existingCards);
-      
-      const cardIndex = existingCards.findIndex((card: ThroneRoomCardData) => card.id === updatedData.id);
-      
-      if (cardIndex >= 0) {
-        existingCards[cardIndex] = updatedData;
-      } else {
-        existingCards.push(updatedData);
+      try {
+        const existingCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
+        console.log("Existing cards before update:", 
+          existingCards.map((c: ThroneRoomCardData) => ({ id: c.id, title: c.title })));
+        
+        const cardIndex = existingCards.findIndex((card: ThroneRoomCardData) => card.id === updatedData.id);
+        console.log(`Card index in existing cards: ${cardIndex} (id: ${updatedData.id})`);
+        
+        if (cardIndex >= 0) {
+          existingCards[cardIndex] = updatedData;
+          console.log(`Updated existing card at index ${cardIndex}`);
+        } else {
+          existingCards.push(updatedData);
+          console.log(`Added new card with id ${updatedData.id}`);
+        }
+        
+        const cardsJson = JSON.stringify(existingCards);
+        console.log(`Size of cards data to save: ${cardsJson.length} characters`);
+        
+        if (cardsJson.length > 4000000) {
+          console.error("Warning: localStorage size limit approaching");
+          toast({
+            title: "Warning",
+            description: "The data size is very large and may exceed storage limits.",
+            variant: "destructive"
+          });
+        }
+        
+        localStorage.setItem('throneRoomCards', cardsJson);
+        console.log("Cards after update:", JSON.parse(localStorage.getItem('throneRoomCards') || '[]')
+          .map((c: ThroneRoomCardData) => ({ id: c.id, title: c.title })));
+        
+        await onSave(updatedData);
+        
+        toast({
+          title: "Success",
+          description: "Card settings saved successfully",
+        });
+        
+        onClose();
+      } catch (storageError) {
+        console.error('Error with localStorage operations:', storageError);
+        toast({
+          title: "Storage Error",
+          description: `Failed to save to localStorage: ${storageError.message}`,
+          variant: "destructive"
+        });
       }
-      
-      localStorage.setItem('throneRoomCards', JSON.stringify(existingCards));
-      console.log("Cards after update:", JSON.parse(localStorage.getItem('throneRoomCards') || '[]'));
-      
-      await onSave(updatedData);
-      
-      toast({
-        title: "Success",
-        description: "Card settings saved successfully",
-      });
-      
-      onClose();
     } catch (error) {
       console.error('Error saving throne room card:', error);
       toast({
         title: "Error",
-        description: "Failed to save card settings",
+        description: `Failed to save card settings: ${error.message}`,
         variant: "destructive"
       });
     } finally {
