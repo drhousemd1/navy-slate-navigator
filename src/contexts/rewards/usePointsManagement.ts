@@ -79,38 +79,39 @@ export const usePointsManagement = () => {
     try {
       console.log('Updating points for user:', user.id, 'to', newPoints);
       
-      // Check if profile exists
-      const { data: existingProfile } = await supabase
+      // First check if the profile exists with a more reliable method
+      const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('id')
-        .eq('id', user.id)
-        .single();
-        
-      if (!existingProfile) {
-        // Create a new profile
-        const { error } = await supabase
-          .from('profiles')
-          .insert({ id: user.id, points: newPoints });
-          
-        if (error) {
-          console.error('Error creating profile with points:', error);
-          return false;
-        }
-        
-        console.log('Created new profile with points:', newPoints);
-        setTotalPoints(newPoints);
-        return true;
-      }
-      
-      // Update existing profile
-      const { error } = await supabase
-        .from('profiles')
-        .update({ points: newPoints })
         .eq('id', user.id);
       
-      if (error) {
-        console.error('Error updating points in database:', error);
-        throw error;
+      if (fetchError) {
+        console.error('Error checking if profile exists:', fetchError);
+        return false;
+      }
+      
+      // If profile exists, update it, otherwise create it
+      if (existingProfile && existingProfile.length > 0) {
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ points: newPoints })
+          .eq('id', user.id);
+        
+        if (updateError) {
+          console.error('Error updating points in database:', updateError);
+          throw updateError;
+        }
+      } else {
+        // Create new profile
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({ id: user.id, points: newPoints });
+        
+        if (insertError) {
+          console.error('Error creating profile with points:', insertError);
+          return false;
+        }
       }
       
       console.log('Points updated in database:', newPoints);
