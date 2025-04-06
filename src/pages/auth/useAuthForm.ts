@@ -8,8 +8,8 @@ import { clearAuthState, createDemoUser } from '@/integrations/supabase/client';
 
 export function useAuthForm() {
   const [formState, setFormState] = useState<AuthFormState>({
-    email: '',
-    password: '',
+    email: 'demo@example.com', // Pre-fill with demo email
+    password: 'demo123456',    // Pre-fill with demo password
     loading: false,
     loginError: null
   });
@@ -37,7 +37,15 @@ export function useAuthForm() {
     const initializeDemoUser = async () => {
       try {
         console.log("Initializing demo user...");
-        await createDemoUser();
+        const response = await createDemoUser();
+        console.log("Demo user initialization response:", response);
+        if (response && response.credentials) {
+          // Update form with credentials from response
+          updateFormState({
+            email: response.credentials.email,
+            password: response.credentials.password
+          });
+        }
       } catch (error) {
         console.error("Error initializing demo user:", error);
       }

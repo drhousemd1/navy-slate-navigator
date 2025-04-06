@@ -59,11 +59,29 @@ export const createDemoUser = async () => {
       }
     });
     
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response from create-demo-user:', response.status, errorText);
+      throw new Error(`Failed to create demo user: ${response.status} ${errorText}`);
+    }
+    
     const data = await response.json();
     console.log('Create demo user response:', data);
+    
+    // If successful, display credentials information
+    if (data.success) {
+      toast?.({
+        title: "Demo Login Available",
+        description: `You can use the demo credentials to log in: demo@example.com / demo123456`,
+      });
+    }
+    
     return data;
   } catch (error) {
     console.error('Error creating demo user:', error);
     return { success: false, error };
   }
 };
+
+// Add toast import
+import { toast } from '@/hooks/use-toast';

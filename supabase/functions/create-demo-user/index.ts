@@ -8,7 +8,17 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 
 console.log("Hello from create-demo-user function!")
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+  
   try {
     // Create a Supabase client with the service role key
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -28,18 +38,18 @@ serve(async (req) => {
     const demoPassword = 'demo123456';
 
     // First check if the user already exists
-    const { data: existingUsers, error: lookupError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', await getUserIdByEmail(supabase, demoEmail));
+    const { data: existingUser, error: lookupError } = await supabase.auth.admin.getUserByEmail(demoEmail);
 
     // If the user doesn't exist, create them
-    if (lookupError || !existingUsers || existingUsers.length === 0) {
+    if (lookupError || !existingUser) {
+      console.log('Demo user does not exist, creating...');
+      
       // Create the user with the admin API
       const { data: userData, error: userError } = await supabase.auth.admin.createUser({
         email: demoEmail,
         password: demoPassword,
-        email_confirm: true,  // Auto-confirm the email
+        email_confirm: true,
+        user_metadata: { role: 'user' }
       });
 
       if (userError) {
@@ -48,23 +58,25 @@ serve(async (req) => {
       }
 
       console.log('Demo user created successfully:', userData.user.id);
-
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: 'Demo user created successfully',
-          userId: userData.user.id 
+          userId: userData.user.id,
+          credentials: { email: demoEmail, password: demoPassword }
         }),
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else {
       console.log('Demo user already exists');
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Demo user already exists'
+          message: 'Demo user already exists',
+          credentials: { email: demoEmail, password: demoPassword }
         }),
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
   } catch (error) {
@@ -76,26 +88,8 @@ serve(async (req) => {
       }),
       { 
         status: 500,
-        headers: { 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
   }
 });
-
-// Helper function to get user ID by email
-async function getUserIdByEmail(supabase, email: string): Promise<string | null> {
-  try {
-    const { data, error } = await supabase.auth.admin.listUsers();
-    
-    if (error) {
-      console.error('Error fetching users:', error);
-      return null;
-    }
-    
-    const user = data.users.find(u => u.email === email);
-    return user?.id || null;
-  } catch (error) {
-    console.error('Error in getUserIdByEmail:', error);
-    return null;
-  }
-}
