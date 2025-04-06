@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { format, subDays, startOfWeek } from 'date-fns';
+import { format, subDays, startOfWeek, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
@@ -55,26 +55,69 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper functions
+  const generateWeekDays = (): string[] => {
+    const today = new Date();
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    return [...Array(7)].map((_, i) => format(subDays(today, 6 - i), 'yyyy-MM-dd'));
+  };
+
+  const formatDate = (dateString: string): string => {
+    return format(parseISO(dateString), 'yyyy-MM-dd');
+  };
+
+  const fetchMetricsData = async (
+    table: string, 
+    dateColumn: string,
+    userId?: string
+  ) => {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const formattedWeekStart = format(weekStart, 'yyyy-MM-dd');
+
+    let query = supabase
+      .from(table)
+      .select(dateColumn)
+      .gte(dateColumn, formattedWeekStart);
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error(`[Table] ${table} query failed:`, error.message);
+      return [];
+    }
+    
+    return data.map((entry: any) => ({
+      date: entry[dateColumn]
+    }));
+  };
+
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const today = new Date();
-        const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-        const weekDates = [...Array(7)].map((_, i) => format(subDays(today, 6 - i), 'yyyy-MM-dd'));
-        const metricsMap = new Map(weekDates.map(date => [date, {
-          date,
-          tasksCompleted: 0,
-          rulesViolated: 0,
-          rewardsUsed: 0,
-          punishmentsApplied: 0,
-        }]));
+        const days = generateWeekDays();
+        const metricsMap = new Map<string, MetricsData>();
+
+        // Initialize metrics map with 0s
+        days.forEach((date) => {
+          metricsMap.set(date, {
+            date,
+            tasksCompleted: 0,
+            rulesViolated: 0,
+            rewardsUsed: 0,
+            punishmentsApplied: 0,
+          });
+        });
 
         // Task completions via RPC
         const { data: taskData, error: taskError } = await supabase
-          .rpc('get_task_completions_for_week', { week_start: format(weekStart, 'yyyy-MM-dd') });
+          .rpc('get_task_completions_for_week', { week_start: format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd') });
 
         if (taskError) {
           console.error('[RPC] get_task_completions_for_week failed:', taskError.message);
@@ -89,7 +132,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const { data: ruleData, error: ruleError } = await supabase
           .from('rule_violations')
           .select('violation_date')
-          .gte('violation_date', format(weekStart, 'yyyy-MM-dd'));
+          .gte('violation_date', format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'));
 
         if (ruleError) {
           console.error('[Table] rule_violations failed:', ruleError.message);
@@ -105,7 +148,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const { data: rewardData, error: rewardError } = await supabase
           .from('reward_usage') // Updated to match the correct table name
           .select('created_at')
-          .gte('created_at', format(weekStart, 'yyyy-MM-dd'));
+          .gte('created_at', format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'));
 
         if (rewardError) {
           console.error('[Table] reward_usage failed:', rewardError.message);
@@ -121,7 +164,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const { data: punishmentData, error: punishmentError } = await supabase
           .from('punishment_history') // Updated to match the correct table name
           .select('applied_date')
-          .gte('applied_date', format(weekStart, 'yyyy-MM-dd'));
+          .gte('applied_date', format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'));
 
         if (punishmentError) {
           console.error('[Table] punishment_history failed:', punishmentError.message);
