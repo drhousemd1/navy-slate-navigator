@@ -23,13 +23,22 @@ const ThroneRoomCard: React.FC<{
   icon?: React.ReactNode;
 }> = ({ title, description, icon }) => {
   return (
-    <div className="rounded-lg border border-light-navy p-4 shadow-md bg-navy flex items-center space-x-4 my-4">
-      {icon}
-      <div>
-        <h3 className="text-lg font-bold text-white">{title}</h3>
-        <p className="text-sm text-nav-inactive">{description}</p>
+    <Card className="bg-navy border border-light-navy overflow-hidden relative">
+      <div className="p-4 md:p-6">
+        <div className="flex items-start">
+          <div className="mr-4 flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
+              {icon}
+            </div>
+          </div>
+          
+          <div className="flex-1">
+            <h3 className="text-xl font-semibold text-white">{title}</h3>
+            <p className="text-sm text-nav-inactive mt-1">{description}</p>
+          </div>
+        </div>
       </div>
-    </div>
+    </Card>
   );
 };
 
@@ -94,7 +103,7 @@ const ThroneRoom: React.FC = () => {
           <ThroneRoomCard
             title="Royal Duty"
             description="Complete daily tasks before sunset."
-            icon={<Skull className="text-red-500 w-6 h-6" />}
+            icon={<Skull className="text-white w-6 h-6" />}
           />
           
           <div className="space-y-6">
