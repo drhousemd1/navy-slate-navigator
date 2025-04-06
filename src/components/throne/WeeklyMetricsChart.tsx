@@ -161,7 +161,16 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
             <XAxis 
-              dataKey="date" 
+              dataKey="date"
+              tickFormatter={(dateStr: string) =>
+                format(new Date(dateStr), "EEE") // Sun, Mon, Tue, etc
+              }
+              interval={0} // show all days
+              domain={[
+                format(startOfWeek(new Date(), { weekStartsOn: 0 }), "yyyy-MM-dd"),
+                format(endOfWeek(new Date(), { weekStartsOn: 0 }), "yyyy-MM-dd"),
+              ]}
+              scale="time"
               stroke="#8E9196"
               tick={{ fill: '#D1D5DB' }}
             />
