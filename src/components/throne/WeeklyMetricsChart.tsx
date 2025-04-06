@@ -11,16 +11,16 @@ import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 interface MetricsData {
   date: string;
   tasksCompleted: number;
-  rulesBroken: number;       
-  rewardsRedeemed: number;   
-  punishments: number;       
+  rulesBroken: number;
+  rewardsRedeemed: number;
+  punishments: number;
 }
 
 interface WeeklyMetricsSummary {
   tasksCompleted: number;
-  rulesBroken: number;       
-  rewardsRedeemed: number;   
-  punishments: number;       
+  rulesBroken: number;
+  rewardsRedeemed: number;
+  punishments: number;
 }
 
 interface WeeklyMetricsChartProps {
@@ -30,19 +30,19 @@ interface WeeklyMetricsChartProps {
 
 const chartConfig = {
   tasksCompleted: {
-    color: '#0EA5E9', // sky blue
+    color: '#0EA5E9',
     label: 'Tasks Completed'
   },
   rulesBroken: {
-    color: '#F97316', // bright orange
+    color: '#F97316',
     label: 'Rules Broken'
   },
   rewardsRedeemed: {
-    color: '#9b87f5', // primary purple
+    color: '#9b87f5',
     label: 'Rewards Redeemed'
   },
   punishments: {
-    color: '#ea384c', // red
+    color: '#ea384c',
     label: 'Punishments'
   }
 };
@@ -81,11 +81,13 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           metricsMap.set(date, {
             date,
             tasksCompleted: 0,
-            rulesBroken: 0,          
-            rewardsRedeemed: 0,      
-            punishments: 0           
+            rulesBroken: 0,
+            rewardsRedeemed: 0,
+            punishments: 0
           });
         });
+
+        console.log("[METRICS MAP KEYS]", Array.from(metricsMap.keys()));
 
         // Task completions via RPC since this is already implemented in the database
         const { data: taskData, error: taskError } = await supabase
@@ -93,13 +95,16 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             week_start: format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd') 
           });
 
+        console.log("[TASK FETCH RESULT]", taskData);
+
         if (taskError) {
           console.error('[RPC] get_task_completions_for_week failed:', taskError.message);
         } else {
           taskData?.forEach((entry) => {
             const raw = entry.completion_date;
             const formatted = formatDate(raw);
-            console.log("[TASK]", { raw, formatted, matched: metricsMap.has(formatted) });
+            const exists = metricsMap.has(formatted);
+            console.log("[TASK]", { raw, formatted, exists });
             const day = metricsMap.get(formatted);
             if (day) day.tasksCompleted = entry.completion_count || 0;
           });
@@ -111,15 +116,18 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           .select('violation_date')
           .gte('violation_date', format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd'));
 
+        console.log("[RULE FETCH RESULT]", ruleData);
+
         if (ruleError) {
           console.error('[Table] rule_violations failed:', ruleError.message);
         } else {
           ruleData?.forEach((entry) => {
             const raw = entry.violation_date;
             const formatted = formatDate(raw);
-            console.log("[RULE]", { raw, formatted, matched: metricsMap.has(formatted) });
+            const exists = metricsMap.has(formatted);
+            console.log("[RULE]", { raw, formatted, exists });
             const day = metricsMap.get(formatted);
-            if (day) day.rulesBroken += 1;  
+            if (day) day.rulesBroken += 1;
           });
         }
 
@@ -129,15 +137,18 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           .select('created_at')
           .gte('created_at', format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd'));
 
+        console.log("[REWARD FETCH RESULT]", rewardData);
+
         if (rewardError) {
           console.error('[Table] reward_usage failed:', rewardError.message);
         } else {
           rewardData?.forEach((entry) => {
             const raw = entry.created_at;
             const formatted = formatDate(raw);
-            console.log("[REWARD]", { raw, formatted, matched: metricsMap.has(formatted) });
+            const exists = metricsMap.has(formatted);
+            console.log("[REWARD]", { raw, formatted, exists });
             const day = metricsMap.get(formatted);
-            if (day) day.rewardsRedeemed += 1;  
+            if (day) day.rewardsRedeemed += 1;
           });
         }
 
@@ -147,19 +158,24 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           .select('applied_date')
           .gte('applied_date', format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd'));
 
+        console.log("[PUNISHMENT FETCH RESULT]", punishmentData);
+
         if (punishmentError) {
           console.error('[Table] punishment_history failed:', punishmentError.message);
         } else {
           punishmentData?.forEach((entry) => {
             const raw = entry.applied_date;
             const formatted = formatDate(raw);
-            console.log("[PUNISHMENT]", { raw, formatted, matched: metricsMap.has(formatted) });
+            const exists = metricsMap.has(formatted);
+            console.log("[PUNISHMENT]", { raw, formatted, exists });
             const day = metricsMap.get(formatted);
-            if (day) day.punishments += 1;  
+            if (day) day.punishments += 1;
           });
         }
 
         const finalData = Array.from(metricsMap.values());
+        console.log("[FINAL METRICS DATA]", finalData);
+        
         setData(finalData);
         
         // Calculate summary for callback
@@ -170,6 +186,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             rewardsRedeemed: finalData.reduce((sum, item) => sum + item.rewardsRedeemed, 0),
             punishments: finalData.reduce((sum, item) => sum + item.punishments, 0)
           };
+          console.log("[SUMMARY METRICS]", summary);
           onDataLoaded(summary);
         }
       } catch (err: any) {
