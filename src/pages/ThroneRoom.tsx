@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -18,14 +19,18 @@ import { Button } from '@/components/ui/button';
 import ThroneRoomEditModal, { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
 import { toast } from '@/hooks/use-toast';
 import FrequencyTracker from '@/components/task/FrequencyTracker';
+import PriorityBadge from '@/components/task/PriorityBadge';
+import PointsBadge from '@/components/task/PointsBadge';
 
 const ThroneRoomCard: React.FC<{
   title: string;
   description: string;
   icon?: React.ReactNode;
   id: string;
+  priority?: 'low' | 'medium' | 'high';
+  points?: number;
   onDelete?: (id: string) => void;
-}> = ({ title, description, icon, id, onDelete }) => {
+}> = ({ title, description, icon, id, priority = 'medium', points = 5, onDelete }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [cardData, setCardData] = useState<ThroneRoomCardData>({
     id,
@@ -36,7 +41,8 @@ const ThroneRoomCard: React.FC<{
     title_color: '#FFFFFF',
     subtext_color: '#8E9196',
     calendar_color: '#7E69AB',
-    highlight_effect: false
+    highlight_effect: false,
+    priority: priority
   });
 
   const handleOpenEditModal = () => {
@@ -71,44 +77,52 @@ const ThroneRoomCard: React.FC<{
 
   return (
     <>
-      <Card className="overflow-hidden border border-light-navy bg-navy">
-        <div className="p-4" style={{
-          backgroundImage: cardData.background_image_url ? `url(${cardData.background_image_url})` : 'none',
-          backgroundSize: 'cover',
-          backgroundPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
-          position: 'relative'
-        }}>
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mr-4">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center" 
-                   style={{ 
-                     backgroundColor: cardData.calendar_color || '#7E69AB',
-                     color: cardData.icon_color || '#FFFFFF'
-                   }}>
+      <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
+        {cardData.background_image_url && (
+          <div 
+            className="absolute inset-0 w-full h-full z-0"
+            style={{
+              backgroundImage: `url(${cardData.background_image_url})`,
+              backgroundSize: 'cover',
+              backgroundPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
+              opacity: (cardData.background_opacity || 100) / 100,
+            }}
+          />
+        )}
+
+        <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
+          <div className="flex justify-between items-start mb-3">
+            <PriorityBadge priority={cardData.priority || priority} />
+            
+            <div className="flex items-center gap-2">
+              <PointsBadge points={points} />
+            </div>
+          </div>
+          
+          <div className="flex items-start mb-auto">
+            <div className="mr-4 flex-shrink-0">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00f0ff' }}>
                 {icon}
               </div>
             </div>
             
             <div className="flex-1 flex flex-col">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-xl font-semibold" 
-                    style={{ 
-                      color: cardData.title_color || '#FFFFFF',
-                      backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
-                      padding: cardData.highlight_effect ? '0 4px' : '0',
-                      borderRadius: cardData.highlight_effect ? '4px' : '0'
-                    }}>
-                  {cardData.title}
-                </h3>
-              </div>
+              <h3 className="text-xl font-semibold" 
+                  style={{ 
+                    color: cardData.title_color || '#FFFFFF',
+                    backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
+                    padding: cardData.highlight_effect ? '0 4px' : '0',
+                    borderRadius: cardData.highlight_effect ? '4px' : '0'
+                  }}>
+                {cardData.title}
+              </h3>
               
               <p className="text-sm mt-1" 
                  style={{ 
                    color: cardData.subtext_color || '#8E9196',
                    backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
                    padding: cardData.highlight_effect ? '0 4px' : '0',
-                   borderRadius: cardData.highlight_effect ? '4px' : '0',
-                   display: 'inline-block'
+                   borderRadius: cardData.highlight_effect ? '4px' : '0'
                  }}>
                 {cardData.description}
               </p>
@@ -125,9 +139,9 @@ const ThroneRoomCard: React.FC<{
             
             <Button
               variant="ghost"
-              size="sm"
-              className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
+              size="icon"
               onClick={handleOpenEditModal}
+              className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -151,25 +165,33 @@ const throneRoomCards = [
     id: "royal-duty",
     title: "Royal Duty",
     description: "Complete daily tasks before sunset.",
-    icon: <Skull className="text-white w-6 h-6" />
+    icon: <Skull className="text-white w-6 h-6" />,
+    priority: "medium" as const,
+    points: 5
   },
   {
     id: "kingdom-status",
     title: "Kingdom Status",
     description: "Monitor your kingdom's prosperity.",
-    icon: <Crown className="text-white w-6 h-6" />
+    icon: <Crown className="text-white w-6 h-6" />,
+    priority: "high" as const,
+    points: 10
   },
   {
     id: "realm-defense",
     title: "Realm Defense",
     description: "Protect your boundaries from invaders.",
-    icon: <Swords className="text-white w-6 h-6" />
+    icon: <Swords className="text-white w-6 h-6" />,
+    priority: "low" as const,
+    points: 3
   },
   {
     id: "royal-achievements",
     title: "Royal Achievements",
     description: "View your earned honors and merits.",
-    icon: <Award className="text-white w-6 h-6" />
+    icon: <Award className="text-white w-6 h-6" />,
+    priority: "medium" as const,
+    points: 7
   }
 ];
 
@@ -242,6 +264,8 @@ const ThroneRoom: React.FC = () => {
                 title={card.title}
                 description={card.description}
                 icon={card.icon}
+                priority={card.priority}
+                points={card.points}
                 onDelete={handleDeleteThroneCard}
               />
             ))}

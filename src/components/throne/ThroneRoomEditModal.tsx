@@ -17,6 +17,7 @@ import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, Loader2 } from 'lucide-react';
 import DeleteTaskDialog from '@/components/task-editor/DeleteTaskDialog';
+import PrioritySelector from '@/components/task-editor/PrioritySelector';
 
 export interface ThroneRoomCardData {
   id: string;
@@ -33,6 +34,8 @@ export interface ThroneRoomCardData {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
+  priority?: 'low' | 'medium' | 'high';
+  points?: number;
 }
 
 const formSchema = z.object({
@@ -48,6 +51,8 @@ const formSchema = z.object({
   background_opacity: z.number().min(0).max(100).optional(),
   focal_point_x: z.number().optional(),
   focal_point_y: z.number().optional(),
+  priority: z.enum(['low', 'medium', 'high']).optional(),
+  points: z.number().optional(),
 });
 
 interface ThroneRoomEditModalProps {
@@ -86,6 +91,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       background_opacity: cardData.background_opacity || 100,
       focal_point_x: cardData.focal_point_x || 50,
       focal_point_y: cardData.focal_point_y || 50,
+      priority: cardData.priority || 'medium',
+      points: cardData.points || 5,
     }
   });
 
@@ -104,6 +111,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         background_opacity: cardData.background_opacity || 100,
         focal_point_x: cardData.focal_point_x || 50,
         focal_point_y: cardData.focal_point_y || 50,
+        priority: cardData.priority || 'medium',
+        points: cardData.points || 5,
       });
       
       setImagePreview(cardData.background_image_url || null);
@@ -257,6 +266,44 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                   )}
                 />
                 
+                {/* Priority Selector */}
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Priority</FormLabel>
+                      <FormControl>
+                        <PrioritySelector
+                          value={field.value || 'medium'}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Points Field */}
+                <FormField
+                  control={form.control}
+                  name="points"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Points</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min={0}
+                          placeholder="Points value" 
+                          className="bg-dark-navy border-light-navy text-white" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
                 {/* Icon Section */}
                 <div className="space-y-4">
                   <FormLabel className="text-white text-lg">Card Icon</FormLabel>
@@ -362,7 +409,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
               <Button 
                 variant="outline" 
                 onClick={onClose} 
-                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                className="border-red-600 bg-red-600 hover:bg-red-700 text-white"
               >
                 Cancel
               </Button>
