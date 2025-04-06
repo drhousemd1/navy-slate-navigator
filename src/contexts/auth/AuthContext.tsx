@@ -89,6 +89,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       console.log("AuthContext: signOut called");
+      
+      // Clear auth state first
+      await clearAuthState();
+      
       const { error } = await supabase.auth.signOut();
 
       if (error) {
@@ -101,7 +105,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setIsAuthenticated(false);
       setIsAdmin(false);
+      
+      // Force navigation to auth page
       navigate('/auth');
+      
+      // Force reload the page to clear any cached state
+      window.location.reload();
     } catch (error: any) {
       console.error('Sign-out failed:', error);
       throw error;
@@ -151,6 +160,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(null);
           setIsAuthenticated(false);
           setLoading(false);
+          
+          // Force reload the page on sign out to clear any cached state
           navigate('/auth');
         } else if (newSession) {
           console.log("Auth state: User session detected");
@@ -191,16 +202,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAuthenticated(true);
         } else {
           console.log("No existing session found");
-          // Clear any corrupted auth state if no valid session is found
-          clearAuthState();
         }
         setLoading(false);
       })
       .catch(error => {
         console.error("Error getting session:", error);
         setLoading(false);
-        // Clear auth state on error
-        clearAuthState();
       });
 
     // Check user role when user changes

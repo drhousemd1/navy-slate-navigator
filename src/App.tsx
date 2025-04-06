@@ -10,7 +10,6 @@ import { AuthProvider } from "./contexts/auth/AuthContext";
 import { useAuth } from "./contexts/auth/AuthContext";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
-import { clearAuthState } from "./integrations/supabase/client";
 
 // Create empty placeholder pages for our navigation
 import Rules from "./pages/Rules";
@@ -25,13 +24,6 @@ import Messages from "./pages/Messages";
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
-  
-  useEffect(() => {
-    // If not authenticated and not loading, clear auth state
-    if (!isAuthenticated && !loading) {
-      clearAuthState();
-    }
-  }, [isAuthenticated, loading]);
   
   if (loading) {
     return <div className="flex items-center justify-center h-screen bg-navy">

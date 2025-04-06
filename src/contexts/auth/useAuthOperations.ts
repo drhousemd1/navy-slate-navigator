@@ -1,5 +1,5 @@
 
-import { supabase, clearAuthState } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export function useAuthOperations() {
@@ -16,10 +16,6 @@ export function useAuthOperations() {
         console.error('Sign in validation error: Missing email or password');
         return { error: { message: 'Email and password are required' }, user: null };
       }
-      
-      // Clear any existing sessions to prevent conflicts
-      console.log('Clearing any existing auth state before sign in');
-      await clearAuthState();
       
       // Use the trimmed values for authentication
       console.log('Making authentication request with:', { email: trimmedEmail });
@@ -74,9 +70,6 @@ export function useAuthOperations() {
       if (trimmedPassword.length < 6) {
         return { error: { message: 'Password must be at least 6 characters long' }, data: null };
       }
-      
-      // Clear any existing session first
-      await clearAuthState();
       
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,

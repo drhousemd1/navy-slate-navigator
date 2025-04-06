@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LogIn, AlertCircle, RefreshCw } from 'lucide-react';
 import { AuthViewProps } from './types';
 import { useAuthForm } from './useAuthForm';
 import { useDebugMode } from './useDebugMode';
-import { supabase, clearAuthState } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
@@ -15,29 +15,11 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
-  // Clear any existing auth state on component mount
-  useEffect(() => {
-    const initAuth = async () => {
-      await clearAuthState();
-      
-      // Set the login credentials
-      updateFormState({ 
-        email: 'towenhall@gmail.com', 
-        password: 'LocaMocha2025!'
-      });
-    };
-    
-    initAuth();
-  }, []);
-  
   // Direct login function
   const directLogin = async () => {
     try {
       setIsLoggingIn(true);
       updateFormState({ loginError: null });
-      
-      // Clear previous sessions and errors
-      await clearAuthState();
       
       console.log("Attempting login with:", {
         email: formState.email,
@@ -179,11 +161,10 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 onClick={() => {
                   console.clear();
                   console.log('Debug console cleared');
-                  clearAuthState();
                 }}
               >
                 <RefreshCw className="w-3 h-3 mr-1" />
-                Clear Auth State
+                Clear Console
               </Button>
             </div>
           )}
@@ -197,11 +178,19 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
             {isLoggingIn || formState.loading ? 'Signing In...' : 'Sign In'}
           </Button>
           
-          <div className="text-center text-xs text-gray-400 pt-2">
-            <p>Admin account credentials are pre-filled for your convenience.</p>
-            <p>Email: towenhall@gmail.com</p>
-            <p>Password: LocaMocha2025!</p>
-          </div>
+          {currentView === "login" && (
+            <p className="text-center text-sm text-gray-400 pt-2">
+              Don't have an account?{" "}
+              <Button 
+                type="button" 
+                variant="link" 
+                className="text-blue-400 hover:text-blue-300 p-0"
+                onClick={() => onViewChange("signup")}
+              >
+                Sign up
+              </Button>
+            </p>
+          )}
         </form>
       </div>
     </div>

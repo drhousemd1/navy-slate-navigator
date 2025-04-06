@@ -36,17 +36,6 @@ export function useAuthForm() {
     setFormState(prevState => ({ ...prevState, ...updates }));
   };
 
-  // Clear authentication state before login attempt
-  const prepareForAuthentication = async () => {
-    console.log("Preparing for authentication attempt...");
-    try {
-      // Clear any lingering auth state that might interfere
-      await clearAuthState();
-    } catch (e) {
-      console.error("Error clearing auth state:", e);
-    }
-  };
-
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     updateFormState({ loading: true, loginError: null });
@@ -63,15 +52,15 @@ export function useAuthForm() {
       
       console.log("Login attempt with email:", formState.email);
       
-      // Clear any existing auth state before attempting login
-      await prepareForAuthentication();
-      
       // Sign in with email and password directly
       const { error } = await signIn(formState.email, formState.password);
       
       // Handle errors with consistent format
       if (error) {
         console.error("Login error:", error);
+        
+        // Clear auth state only after failed login attempts
+        await clearAuthState();
         
         updateFormState({
           loginError: error.message || "Authentication failed. Please check your credentials.",
@@ -94,6 +83,10 @@ export function useAuthForm() {
       }
     } catch (error: any) {
       console.error("Authentication error:", error);
+      
+      // Clear auth state on error
+      await clearAuthState();
+      
       updateFormState({
         loginError: "An unexpected error occurred. Please try again.",
         loading: false
@@ -101,7 +94,7 @@ export function useAuthForm() {
     }
   };
 
-  const handleSignupSubmit = async (e: React.FormEvent) => {
+  const handleSignupSubmit = async (e: React.FormEvent): Promise<"login" | null> => {
     e.preventDefault();
     updateFormState({ loading: true, loginError: null });
 
@@ -112,7 +105,7 @@ export function useAuthForm() {
           loginError: "Email and password are required",
           loading: false
         });
-        return;
+        return null;
       }
       
       if (formState.password.length < 6) {
@@ -120,11 +113,8 @@ export function useAuthForm() {
           loginError: "Password must be at least 6 characters long",
           loading: false
         });
-        return;
+        return null;
       }
-      
-      // Clear any existing auth state before attempting signup
-      await prepareForAuthentication();
       
       console.log("Attempting to sign up with email:", formState.email);
       const { error } = await signUp(formState.email, formState.password);
@@ -135,6 +125,7 @@ export function useAuthForm() {
           loginError: error.message || "Error creating account. This email may already be in use.",
           loading: false
         });
+        return null;
       } else {
         toast({
           title: "Account created",
