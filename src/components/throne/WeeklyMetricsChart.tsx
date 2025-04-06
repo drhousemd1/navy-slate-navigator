@@ -1,7 +1,8 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, Legend
 } from 'recharts';
 import { 
   format, 
@@ -55,6 +56,17 @@ const chartConfig = {
   }
 };
 
+// Hardcoded activity data
+const activityData = [
+  { date: '2025-04-01', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 },
+  { date: '2025-04-05', tasksCompleted: 2, rulesBroken: 1, rewardsRedeemed: 0, punishments: 0 },
+  { date: '2025-04-10', tasksCompleted: 1, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
+  { date: '2025-04-15', tasksCompleted: 4, rulesBroken: 0, rewardsRedeemed: 0, punishments: 1 },
+  { date: '2025-04-20', tasksCompleted: 0, rulesBroken: 2, rewardsRedeemed: 0, punishments: 2 },
+  { date: '2025-04-25', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
+  { date: '2025-04-28', tasksCompleted: 2, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
+];
+
 // Hardcoded weekly activity data
 const weeklyActivityData = [
   { name: 'Tasks Completed', value: 2 },
@@ -88,6 +100,41 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
 
   // Get the week dates once for XAxis ticks
   const weekDates = useMemo(() => generateWeekDays(), []);
+
+  // Generate monthly metrics data
+  const getCurrentMonthMetrics = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // zero-based
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const base = Array.from({ length: daysInMonth }, (_, i) => {
+      const date = new Date(year, month, i + 1);
+      return {
+        date: `${date.getMonth() + 1}/${date.getDate()}`,
+        tasksCompleted: 0,
+        rulesBroken: 0,
+        rewardsRedeemed: 0,
+        punishments: 0,
+      };
+    });
+
+    activityData.forEach((entry) => {
+      const entryDate = new Date(entry.date);
+      const label = `${entryDate.getMonth() + 1}/${entryDate.getDate()}`;
+      const target = base.find((d) => d.date === label);
+      if (target) {
+        target.tasksCompleted += entry.tasksCompleted || 0;
+        target.rulesBroken += entry.rulesBroken || 0;
+        target.rewardsRedeemed += entry.rewardsRedeemed || 0;
+        target.punishments += entry.punishments || 0;
+      }
+    });
+
+    return base;
+  };
+
+  const monthlyMetrics = useMemo(() => getCurrentMonthMetrics(), []);
 
   useEffect(() => {
     const loadHardcodedData = () => {
@@ -153,8 +200,61 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
   );
 
-  // Memoize the chart to prevent unnecessary re-renders
-  const memoizedChart = useMemo(() => {
+  // Monthly metrics chart
+  const monthlyChart = useMemo(() => {
+    return (
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-white mb-2">Monthly Activity</h2>
+        <ResponsiveContainer width="100%" height={250}>
+          <LineChart data={monthlyMetrics}>
+            <XAxis
+              dataKey="date"
+              tick={{ fill: '#CBD5E0', fontSize: 12 }}
+              interval={4}
+            />
+            <YAxis tick={{ fill: '#CBD5E0', fontSize: 12 }} />
+            <Tooltip />
+            <Legend />
+            <Line
+              type="monotone"
+              dataKey="tasksCompleted"
+              stroke="#38bdf8"
+              strokeWidth={2}
+              name="Tasks Completed"
+              dot={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="rulesBroken"
+              stroke="#f97316"
+              strokeWidth={2}
+              name="Rules Broken"
+              dot={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="rewardsRedeemed"
+              stroke="#a78bfa"
+              strokeWidth={2}
+              name="Rewards Redeemed"
+              dot={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="punishments"
+              stroke="#ef4444"
+              strokeWidth={2}
+              name="Punishments"
+              dot={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }, [monthlyMetrics]);
+
+  // Memoize the weekly chart to prevent unnecessary re-renders
+  const weeklyChart = useMemo(() => {
     return (
       <ChartContainer 
         className="w-full h-full"
@@ -220,16 +320,23 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           {error}
         </div>
       )}
-      <div className="w-full h-64 px-4 pb-4">
+      <div className="w-full px-4 pb-4">
         {loading && (
-          <Skeleton className="w-full h-full bg-light-navy/30" />
+          <Skeleton className="w-full h-64 bg-light-navy/30" />
         )}
-        {!loading && !hasContent && (
-          <div className="flex items-center justify-center h-full text-white text-sm">
-            No activity data to display for this week.
-          </div>
+        {!loading && (
+          <>
+            {monthlyChart}
+            <div className="h-64">
+              {!hasContent && (
+                <div className="flex items-center justify-center h-full text-white text-sm">
+                  No activity data to display for this week.
+                </div>
+              )}
+              {hasContent && weeklyChart}
+            </div>
+          </>
         )}
-        {!loading && hasContent && memoizedChart}
       </div>
 
       <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
