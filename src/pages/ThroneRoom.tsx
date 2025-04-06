@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -16,25 +15,41 @@ import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
 
-// Card component for Throne Room page
+// Card component for Throne Room page - styled to match the rewards/tasks cards
 const ThroneRoomCard: React.FC<{
   title: string;
   description: string;
   icon?: React.ReactNode;
 }> = ({ title, description, icon }) => {
   return (
-    <Card className="bg-navy border border-light-navy overflow-hidden relative">
-      <div className="p-4 md:p-6">
-        <div className="flex items-start">
-          <div className="mr-4 flex-shrink-0">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-              {icon}
-            </div>
+    <Card className="overflow-hidden border border-light-navy bg-navy">
+      <div className="flex p-4">
+        {/* Left side - Icon circle */}
+        <div className="flex-shrink-0 mr-4">
+          <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center">
+            {icon}
+          </div>
+        </div>
+        
+        {/* Right side - Content */}
+        <div className="flex-1">
+          <div className="flex flex-col">
+            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <p className="text-sm text-nav-inactive mt-1">{description}</p>
           </div>
           
-          <div className="flex-1">
-            <h3 className="text-xl font-semibold text-white">{title}</h3>
-            <p className="text-sm text-nav-inactive mt-1">{description}</p>
+          {/* Bottom actions section */}
+          <div className="flex justify-between items-center mt-3">
+            <div className="flex space-x-2 items-center">
+              <span className="text-xs bg-light-navy text-nav-active px-2 py-0.5 rounded">Activity</span>
+              <span className="text-xs text-orange-400">8 days ago</span>
+            </div>
+            
+            <div>
+              <button className="text-xs bg-nav-active text-white px-3 py-1 rounded-md hover:bg-opacity-80">
+                View
+              </button>
+            </div>
           </div>
         </div>
       </div>
