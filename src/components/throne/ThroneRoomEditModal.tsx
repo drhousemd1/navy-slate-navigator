@@ -56,7 +56,14 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   });
   const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
-  const [carouselTimer, setCarouselTimer] = useState<number>(5);
+  const [carouselTimer, setCarouselTimer] = useState<number>(() => {
+    const stored = localStorage.getItem("throneRoom_carouselTimer");
+    return stored ? parseInt(stored, 10) : 5;
+  });
+  
+  useEffect(() => {
+    localStorage.setItem("throneRoom_carouselTimer", String(carouselTimer));
+  }, [carouselTimer]);
   
   const form = useForm<ThroneRoomCardData>({
     defaultValues: {
