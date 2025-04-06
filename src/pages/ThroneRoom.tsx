@@ -17,6 +17,7 @@ import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import ThroneRoomEditModal, { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
 import { toast } from '@/hooks/use-toast';
+import FrequencyTracker from '@/components/task/FrequencyTracker';
 
 const ThroneRoomCard: React.FC<{
   title: string;
@@ -66,28 +67,20 @@ const ThroneRoomCard: React.FC<{
     }
   };
 
+  const usageData = [1, 0, 1, 0, 0, 0, 0];
+
   return (
     <>
       <Card className="overflow-hidden border border-light-navy bg-navy">
-        <div className="flex p-4" style={{
+        <div className="p-4" style={{
           backgroundImage: cardData.background_image_url ? `url(${cardData.background_image_url})` : 'none',
           backgroundSize: 'cover',
           backgroundPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
           position: 'relative'
         }}>
-          {cardData.background_image_url && (
-            <div 
-              className="absolute inset-0" 
-              style={{ 
-                backgroundColor: 'rgba(0,0,0,0.4)',
-                opacity: (cardData.background_opacity || 100) / 100
-              }}
-            />
-          )}
-          
-          <div className="flex w-full relative z-10">
+          <div className="flex items-start">
             <div className="flex-shrink-0 mr-4">
-              <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center" 
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" 
                    style={{ 
                      backgroundColor: cardData.calendar_color || '#7E69AB',
                      color: cardData.icon_color || '#FFFFFF'
@@ -96,9 +89,9 @@ const ThroneRoomCard: React.FC<{
               </div>
             </div>
             
-            <div className="flex-1">
+            <div className="flex-1 flex flex-col">
               <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-semibold" 
+                <h3 className="text-xl font-semibold" 
                     style={{ 
                       color: cardData.title_color || '#FFFFFF',
                       backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
@@ -107,13 +100,6 @@ const ThroneRoomCard: React.FC<{
                     }}>
                   {cardData.title}
                 </h3>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-xs bg-nav-active text-white px-3 py-1 rounded-md hover:bg-opacity-80"
-                >
-                  View
-                </Button>
               </div>
               
               <p className="text-sm mt-1" 
@@ -126,24 +112,25 @@ const ThroneRoomCard: React.FC<{
                  }}>
                 {cardData.description}
               </p>
-              
-              <div className="flex justify-between items-center mt-3">
-                <div className="flex space-x-2 items-center">
-                  <span className="text-xs bg-light-navy text-nav-active px-2 py-0.5 rounded">Activity</span>
-                  <span className="text-xs text-orange-400">8 days ago</span>
-                </div>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-cyan-400 hover:text-cyan-300 p-1"
-                  onClick={handleOpenEditModal}
-                >
-                  <Pencil className="h-4 w-4" />
-                  <span className="sr-only">Edit</span>
-                </Button>
-              </div>
             </div>
+          </div>
+          
+          <div className="flex items-center justify-between mt-4">
+            <FrequencyTracker 
+              frequency="weekly" 
+              frequency_count={2} 
+              calendar_color={cardData.calendar_color || '#7E69AB'}
+              usage_data={usageData}
+            />
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
+              onClick={handleOpenEditModal}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </Card>
