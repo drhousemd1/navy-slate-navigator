@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -161,6 +161,56 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     d.tasksCompleted || d.rulesViolated || d.rewardsUsed || d.punishmentsApplied
   );
 
+  // Memoize the chart to prevent unnecessary re-renders
+  const memoizedChart = useMemo(() => {
+    return (
+      <ChartContainer 
+        className="w-full h-full"
+        config={chartConfig}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
+            <XAxis 
+              dataKey="date" 
+              stroke="#8E9196"
+              tick={{ fill: '#D1D5DB' }}
+            />
+            <YAxis 
+              stroke="#8E9196"
+              tick={{ fill: '#D1D5DB' }}
+            />
+            <ChartTooltip />
+            <Bar 
+              dataKey="tasksCompleted" 
+              name="Tasks Completed" 
+              fill={chartConfig.tasksCompleted.color} 
+              radius={[4, 4, 0, 0]} 
+            />
+            <Bar 
+              dataKey="rulesViolated" 
+              name="Rules Broken" 
+              fill={chartConfig.rulesViolated.color} 
+              radius={[4, 4, 0, 0]} 
+            />
+            <Bar 
+              dataKey="rewardsUsed" 
+              name="Rewards Redeemed" 
+              fill={chartConfig.rewardsUsed.color} 
+              radius={[4, 4, 0, 0]} 
+            />
+            <Bar 
+              dataKey="punishmentsApplied" 
+              name="Punishments" 
+              fill={chartConfig.punishmentsApplied.color} 
+              radius={[4, 4, 0, 0]} 
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartContainer>
+    );
+  }, [data]);
+
   return (
     <div className="w-full bg-navy border border-light-navy rounded-lg">
       {!hideTitle && <h3 className="text-lg font-medium text-white px-4 pt-4 mb-4">Weekly Activity Metrics</h3>}
@@ -178,52 +228,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             No activity data to display for this week.
           </div>
         )}
-        {!loading && hasContent && (
-          <ChartContainer 
-            className="w-full h-full"
-            config={chartConfig}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#8E9196"
-                  tick={{ fill: '#D1D5DB' }}
-                />
-                <YAxis 
-                  stroke="#8E9196"
-                  tick={{ fill: '#D1D5DB' }}
-                />
-                <ChartTooltip />
-                <Bar 
-                  dataKey="tasksCompleted" 
-                  name="Tasks Completed" 
-                  fill={chartConfig.tasksCompleted.color} 
-                  radius={[4, 4, 0, 0]} 
-                />
-                <Bar 
-                  dataKey="rulesViolated" 
-                  name="Rules Broken" 
-                  fill={chartConfig.rulesViolated.color} 
-                  radius={[4, 4, 0, 0]} 
-                />
-                <Bar 
-                  dataKey="rewardsUsed" 
-                  name="Rewards Redeemed" 
-                  fill={chartConfig.rewardsUsed.color} 
-                  radius={[4, 4, 0, 0]} 
-                />
-                <Bar 
-                  dataKey="punishmentsApplied" 
-                  name="Punishments" 
-                  fill={chartConfig.punishmentsApplied.color} 
-                  radius={[4, 4, 0, 0]} 
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        )}
+        {!loading && hasContent && memoizedChart}
       </div>
 
       <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
