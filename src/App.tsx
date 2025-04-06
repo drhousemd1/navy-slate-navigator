@@ -1,15 +1,16 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/auth"; 
-import { AuthProvider } from "./contexts/auth/AuthContext"; // Use direct import
-import { useAuth } from "./contexts/auth/AuthContext"; // Use direct import
+import { AuthProvider } from "./contexts/auth/AuthContext";
+import { useAuth } from "./contexts/auth/AuthContext";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+import { clearAuthState } from "./integrations/supabase/client";
 
 // Create empty placeholder pages for our navigation
 import Rules from "./pages/Rules";
@@ -24,6 +25,13 @@ import Messages from "./pages/Messages";
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
+  
+  useEffect(() => {
+    // If not authenticated and not loading, clear auth state
+    if (!isAuthenticated && !loading) {
+      clearAuthState();
+    }
+  }, [isAuthenticated, loading]);
   
   if (loading) {
     return <div className="flex items-center justify-center h-screen bg-navy">
@@ -84,8 +92,8 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* Add new route */}
-      <Route path="/reset-password-view" element={<ResetPasswordView />} /> {/* Rename existing route */}
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/reset-password-view" element={<ResetPasswordView />} />
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/AuthContext'; 
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
-import { clearAuthState, verifyAdminUser } from '@/integrations/supabase/client';
+import { clearAuthState } from '@/integrations/supabase/client';
 
 export function useAuthForm() {
   const [formState, setFormState] = useState<AuthFormState>({
@@ -31,20 +31,6 @@ export function useAuthForm() {
       navigate('/');
     }
   }, [isAuthenticated, authLoading, navigate]);
-
-  // Verify admin user when the component loads
-  useEffect(() => {
-    const initializeAdminUser = async () => {
-      try {
-        console.log("Verifying admin account exists and is ready...");
-        await verifyAdminUser();
-      } catch (error) {
-        console.error("Error verifying admin account:", error);
-      }
-    };
-    
-    initializeAdminUser();
-  }, []);
 
   const updateFormState = (updates: Partial<AuthFormState>) => {
     setFormState(prevState => ({ ...prevState, ...updates }));

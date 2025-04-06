@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { useAuthOperations } from './useAuthOperations';
 import { useUserProfile } from './useUserProfile';
 
@@ -151,12 +151,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(null);
           setIsAuthenticated(false);
           setLoading(false);
+          navigate('/auth');
         } else if (newSession) {
           console.log("Auth state: User session detected");
           setUser(newSession.user);
           setSession(newSession);
           setIsAuthenticated(true);
           setLoading(false);
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log("Auth state: Token refreshed");
+          if (newSession) {
+            setUser(newSession.user);
+            setSession(newSession);
+            setIsAuthenticated(true);
+          }
+        } else if (event === 'USER_UPDATED') {
+          console.log("Auth state: User updated");
+          if (newSession) {
+            setUser(newSession.user);
+            setSession(newSession);
+          }
         }
         
         // Specifically handle password recovery event
@@ -177,15 +191,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAuthenticated(true);
         } else {
           console.log("No existing session found");
+          // Clear any corrupted auth state if no valid session is found
+          clearAuthState();
         }
         setLoading(false);
       })
       .catch(error => {
         console.error("Error getting session:", error);
         setLoading(false);
+        // Clear auth state on error
+        clearAuthState();
       });
 
-    // Check user role on initial load and when user changes
+    // Check user role when user changes
     if (isAuthenticated && user) {
       checkUserRole();
     }

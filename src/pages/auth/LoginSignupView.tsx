@@ -2,44 +2,35 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogIn, UserPlus, RefreshCw, AlertCircle } from 'lucide-react';
+import { LogIn, AlertCircle, RefreshCw } from 'lucide-react';
 import { AuthViewProps } from './types';
 import { useAuthForm } from './useAuthForm';
 import { useDebugMode } from './useDebugMode';
-import { supabase, clearAuthState, verifyAdminUser } from '@/integrations/supabase/client';
+import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
-  const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
+  const { formState, updateFormState, handleLoginSubmit } = useAuthForm();
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
-  // Automatically set admin credentials on load and verify admin account
+  // Clear any existing auth state on component mount
   useEffect(() => {
     const initAuth = async () => {
-      // Clear any existing sessions to prevent conflicts
       await clearAuthState();
       
-      // Set admin credentials
+      // Set the login credentials
       updateFormState({ 
         email: 'towenhall@gmail.com', 
         password: 'LocaMocha2025!'
       });
-      
-      // Verify admin account exists and is ready
-      try {
-        const result = await verifyAdminUser();
-        console.log('Admin verification result:', result);
-      } catch (error) {
-        console.error('Error verifying admin account:', error);
-      }
     };
     
     initAuth();
   }, []);
   
-  // Direct login function to bypass the complex auth flow
+  // Direct login function
   const directLogin = async () => {
     try {
       setIsLoggingIn(true);
@@ -48,7 +39,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       // Clear previous sessions and errors
       await clearAuthState();
       
-      console.log("Attempting direct login with:", {
+      console.log("Attempting login with:", {
         email: formState.email,
         passwordLength: formState.password?.length || 0
       });
@@ -60,37 +51,20 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       });
       
       if (error) {
-        console.error("Direct login error:", error);
+        console.error("Login error:", error);
         
-        // Display a more user-friendly error message
+        // Display a user-friendly error message
         let errorMessage = "Authentication failed. Please check your credentials.";
         if (error.message.includes("Invalid login credentials")) {
-          errorMessage = "Invalid email or password. The admin account may need to be reset.";
+          errorMessage = "Invalid email or password. Please try again.";
         }
         
         updateFormState({ loginError: errorMessage });
-        
-        // Attempt to fix admin account if login fails
-        try {
-          console.log("Attempting to fix admin account...");
-          const fixResult = await verifyAdminUser();
-          console.log("Admin fix attempt result:", fixResult);
-          
-          if (fixResult && fixResult.adminVerified) {
-            toast({
-              title: "Admin account verified",
-              description: "Please try logging in again. The account has been reset.",
-            });
-          }
-        } catch (fixError) {
-          console.error("Error fixing admin account:", fixError);
-        }
-        
         return;
       }
       
       if (data && data.user) {
-        console.log("Direct login successful:", data.user.email);
+        console.log("Login successful:", data.user.email);
         toast({
           title: "Login successful",
           description: "You have been successfully logged in.",
@@ -102,7 +76,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
         });
       }
     } catch (error) {
-      console.error("Exception during direct login:", error);
+      console.error("Exception during login:", error);
       updateFormState({ 
         loginError: error.message || "An unexpected error occurred. Please try again."
       });
@@ -117,7 +91,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
     if (currentView === "login") {
       directLogin();
     } else {
-      const result = await handleSignupSubmit(e);
+      const result = await handleLoginSubmit(e);
       if (result === "login") {
         onViewChange("login");
       }
@@ -202,21 +176,14 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 variant="outline"
                 size="sm"
                 className="mt-2 text-xs"
-                onClick={async () => {
+                onClick={() => {
                   console.clear();
                   console.log('Debug console cleared');
-                  
-                  // Debug - test connection to admin function
-                  try {
-                    const result = await verifyAdminUser();
-                    console.log('Manual admin verification result:', result);
-                  } catch (error) {
-                    console.error('Error verifying admin in debug mode:', error);
-                  }
+                  clearAuthState();
                 }}
               >
                 <RefreshCw className="w-3 h-3 mr-1" />
-                Test Admin Account
+                Clear Auth State
               </Button>
             </div>
           )}
