@@ -77,14 +77,14 @@ export const verifyAdminUser = async () => {
         title: "Admin Account Ready",
         description: `Your admin account (${data.credentials.admin.email}) is confirmed and ready to use.`,
       });
-      return true;
+      return data;
     } else if (!data.adminVerified) {
       toast?.({
         title: "Admin Account Issue",
         description: `Admin account not found. Please contact support.`,
         variant: "destructive"
       });
-      return false;
+      return data;
     }
     
     return data;

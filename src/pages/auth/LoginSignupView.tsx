@@ -6,7 +6,7 @@ import { LogIn, UserPlus, RefreshCw, AlertCircle } from 'lucide-react';
 import { AuthViewProps } from './types';
 import { useAuthForm } from './useAuthForm';
 import { useDebugMode } from './useDebugMode';
-import { supabase, clearAuthState } from '@/integrations/supabase/client';
+import { supabase, clearAuthState, verifyAdminUser } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
@@ -15,25 +15,38 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
-  // Automatically set admin credentials on load
+  // Automatically set admin credentials on load and verify admin account
   useEffect(() => {
-    updateFormState({ 
-      email: 'towenhall@gmail.com', 
-      password: 'LocaMocha2025!'
-    });
+    const initAuth = async () => {
+      // Clear any existing sessions to prevent conflicts
+      await clearAuthState();
+      
+      // Set admin credentials
+      updateFormState({ 
+        email: 'towenhall@gmail.com', 
+        password: 'LocaMocha2025!'
+      });
+      
+      // Verify admin account exists and is ready
+      try {
+        const result = await verifyAdminUser();
+        console.log('Admin verification result:', result);
+      } catch (error) {
+        console.error('Error verifying admin account:', error);
+      }
+    };
     
-    // Clear any existing sessions to prevent conflicts
-    clearAuthState();
+    initAuth();
   }, []);
   
   // Direct login function to bypass the complex auth flow
   const directLogin = async () => {
     try {
       setIsLoggingIn(true);
+      updateFormState({ loginError: null });
       
       // Clear previous sessions and errors
       await clearAuthState();
-      updateFormState({ loginError: null });
       
       console.log("Attempting direct login with:", {
         email: formState.email,
@@ -48,9 +61,31 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       
       if (error) {
         console.error("Direct login error:", error);
-        updateFormState({ 
-          loginError: error.message || "Authentication failed. Please check your credentials."
-        });
+        
+        // Display a more user-friendly error message
+        let errorMessage = "Authentication failed. Please check your credentials.";
+        if (error.message.includes("Invalid login credentials")) {
+          errorMessage = "Invalid email or password. The admin account may need to be reset.";
+        }
+        
+        updateFormState({ loginError: errorMessage });
+        
+        // Attempt to fix admin account if login fails
+        try {
+          console.log("Attempting to fix admin account...");
+          const fixResult = await verifyAdminUser();
+          console.log("Admin fix attempt result:", fixResult);
+          
+          if (fixResult && fixResult.adminVerified) {
+            toast({
+              title: "Admin account verified",
+              description: "Please try logging in again. The account has been reset.",
+            });
+          }
+        } catch (fixError) {
+          console.error("Error fixing admin account:", fixError);
+        }
+        
         return;
       }
       
@@ -167,13 +202,21 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 variant="outline"
                 size="sm"
                 className="mt-2 text-xs"
-                onClick={() => {
+                onClick={async () => {
                   console.clear();
                   console.log('Debug console cleared');
+                  
+                  // Debug - test connection to admin function
+                  try {
+                    const result = await verifyAdminUser();
+                    console.log('Manual admin verification result:', result);
+                  } catch (error) {
+                    console.error('Error verifying admin in debug mode:', error);
+                  }
                 }}
               >
                 <RefreshCw className="w-3 h-3 mr-1" />
-                Clear Console
+                Test Admin Account
               </Button>
             </div>
           )}

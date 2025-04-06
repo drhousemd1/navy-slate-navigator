@@ -41,7 +41,9 @@ serve(async (req) => {
     console.log("Checking if admin user exists with email:", adminEmail);
     
     // Use listUsers to find the admin user
-    const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
+    const { data: usersData, error: listError } = await supabase.auth.admin.listUsers({
+      perPage: 1000 // Ensure we get enough users to find the admin
+    });
     
     if (listError) {
       console.error('Error listing users:', listError);
@@ -56,45 +58,65 @@ serve(async (req) => {
         }
       );
     }
-    
+
     // Find admin user in the list
+    console.log(`Found ${usersData.users.length} users, searching for admin email: ${adminEmail}`);
     const adminUser = usersData.users.find(user => user.email === adminEmail);
     let adminVerified = false;
-    
-    // If admin user exists - attempt to force confirm email if needed
+
     if (adminUser) {
-      console.log(`Admin user found: ${adminUser.id}`);
+      console.log(`Admin user found with ID: ${adminUser.id}`);
       adminVerified = true;
       
-      // Ensure admin account is confirmed
-      if (!adminUser.email_confirmed_at) {
-        console.log('Admin email not confirmed, confirming now...');
-        const { error: updateError } = await supabase.auth.admin.updateUserById(
-          adminUser.id,
-          { email_confirmed: true }
-        );
-        
-        if (updateError) {
-          console.error('Error confirming admin email:', updateError);
-        } else {
-          console.log('Admin email confirmed successfully');
-        }
-      }
-      
-      // Reset admin password to known value (helps when password is forgotten)
-      console.log('Resetting admin password to known value...');
-      const { error: resetError } = await supabase.auth.admin.updateUserById(
+      // Force update password regardless of current state
+      console.log('Resetting admin password to ensure it is correct...');
+      const { error: passwordError } = await supabase.auth.admin.updateUserById(
         adminUser.id,
         { password: adminPassword }
       );
       
-      if (resetError) {
-        console.error('Error resetting admin password:', resetError);
+      if (passwordError) {
+        console.error('Error updating admin password:', passwordError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: `Error updating admin password: ${passwordError.message}`
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      console.log('Admin password successfully reset');
+
+      // Force email confirmation
+      if (!adminUser.email_confirmed_at) {
+        console.log('Admin email not confirmed, confirming now...');
+        const { error: confirmError } = await supabase.auth.admin.updateUserById(
+          adminUser.id,
+          { email_confirmed: true }
+        );
+        
+        if (confirmError) {
+          console.error('Error confirming admin email:', confirmError);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: `Error confirming admin email: ${confirmError.message}`
+            }),
+            { 
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
+        console.log('Admin email confirmed successfully');
       } else {
-        console.log('Admin password reset successfully');
+        console.log('Admin email already confirmed');
       }
     } else {
-      // Create admin user since it doesn't exist yet
+      // If admin user doesn't exist, create it
       console.log('Admin user not found, creating now...');
       const { data: newAdmin, error: createError } = await supabase.auth.admin.createUser({
         email: adminEmail,
@@ -104,9 +126,36 @@ serve(async (req) => {
       
       if (createError) {
         console.error('Error creating admin user:', createError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: `Error creating admin user: ${createError.message}`
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      console.log('Admin user created successfully:', newAdmin?.user?.id);
+      adminVerified = true;
+    }
+
+    // Verify the user one more time
+    if (adminVerified) {
+      console.log('Verifying admin user is ready for login...');
+      const { data: verifyData, error: verifyError } = await supabase.auth.admin.getUserById(
+        adminUser?.id || ''
+      );
+      
+      if (verifyError) {
+        console.error('Error verifying admin user:', verifyError);
       } else {
-        console.log('Admin user created successfully:', newAdmin?.user?.id);
-        adminVerified = true;
+        console.log('Admin user verification:', 
+          verifyData?.user ? 
+          `User found, email confirmed: ${!!verifyData.user.email_confirmed_at}` : 
+          'User not found'
+        );
       }
     }
 
@@ -127,7 +176,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        message: error.message || 'An error occurred' 
+        message: error.message || 'An error occurred',
+        stack: error.stack || 'No stack trace available'
       }),
       { 
         status: 500,
