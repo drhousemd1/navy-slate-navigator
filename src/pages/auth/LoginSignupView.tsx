@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LogIn, UserPlus, RefreshCw, AlertCircle } from 'lucide-react';
@@ -11,6 +11,11 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
   const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
+  
+  useEffect(() => {
+    // Auto-fill the admin credentials on component mount
+    fillAdminCredentials();
+  }, []);
   
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

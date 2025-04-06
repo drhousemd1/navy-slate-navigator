@@ -53,6 +53,9 @@ export const createDemoUser = async () => {
   try {
     console.log("Making request to create-demo-user edge function");
     
+    // Clear local storage first to avoid any conflicts
+    await clearAuthState();
+    
     const response = await fetch(`${SUPABASE_URL}/functions/v1/create-demo-user`, {
       method: 'POST',
       headers: {

@@ -41,11 +41,17 @@ serve(async (req) => {
     const adminEmail = 'towenhall@gmail.com';
     const adminPassword = 'LocaMocha2025!';
 
-    // First check if the demo user already exists
-    const { data: demoUserData, error: demoUserError } = await supabase.auth.admin.listUsers();
+    // First check if the users exist by trying to sign them in
+    const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
     
-    const demoUserExists = demoUserData?.users.some(user => user.email === demoEmail);
-    const adminUserExists = demoUserData?.users.some(user => user.email === adminEmail);
+    if (listError) {
+      console.error('Error checking existing users:', listError);
+      throw new Error(`Failed to check existing users: ${listError.message}`);
+    }
+    
+    // Check if users exist in the list
+    const demoUserExists = existingUsers.users.some(user => user.email === demoEmail);
+    const adminUserExists = existingUsers.users.some(user => user.email === adminEmail);
     
     console.log('User check - Demo user exists:', demoUserExists);
     console.log('User check - Admin user exists:', adminUserExists);
@@ -89,10 +95,6 @@ serve(async (req) => {
       } else {
         console.log('Admin user created successfully:', adminData.user.id);
         adminCreated = true;
-        
-        // If we successfully created the admin user, let's also assign the admin role
-        // Here we would typically insert a record in a user_roles table or similar
-        // This depends on how your roles are implemented in the database
       }
     }
 
