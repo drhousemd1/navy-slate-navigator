@@ -163,8 +163,6 @@ const ThroneRoomCard: React.FC<{
     });
   };
 
-  const usageData = [1, 0, 1, 0, 0, 0, 0];
-
   const renderCardIcon = () => {
     if (cardData.icon_url) {
       return (
@@ -191,25 +189,33 @@ const ThroneRoomCard: React.FC<{
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
-        <div 
-          className="absolute inset-0 w-full h-full z-0 transition-opacity duration-700"
-          style={{
-            backgroundImage: `url(${currentImage || ''})`,
-            backgroundSize: 'cover',
-            backgroundPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
-            opacity: isCrossfading ? 0 : (cardData.background_opacity || 100) / 100,
-          }}
-        />
+        {currentImage && (
+          <img
+            src={currentImage}
+            alt=""
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
+              isCrossfading ? 'opacity-0' : 'opacity-100'
+            }`}
+            style={{
+              objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
+              opacity: isCrossfading ? 0 : (cardData.background_opacity || 100) / 100,
+            }}
+          />
+        )}
         
-        <div 
-          className="absolute inset-0 w-full h-full z-1 transition-opacity duration-700"
-          style={{
-            backgroundImage: `url(${nextImage || ''})`,
-            backgroundSize: 'cover',
-            backgroundPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
-            opacity: isCrossfading ? (cardData.background_opacity || 100) / 100 : 0,
-          }}
-        />
+        {nextImage && (
+          <img
+            src={nextImage}
+            alt=""
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
+              isCrossfading ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{
+              objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
+              opacity: isCrossfading ? (cardData.background_opacity || 100) / 100 : 0,
+            }}
+          />
+        )}
 
         <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
           <div className="flex justify-between items-start mb-3">
