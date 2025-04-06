@@ -296,6 +296,21 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                 )}
               />
               
+              <FormField
+                control={form.control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Priority</FormLabel>
+                    <FormControl>
+                      <PrioritySelector 
+                        control={form.control}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
               <div className="space-y-4">
                 <FormLabel className="text-white text-lg">Background Image</FormLabel>
                 <BackgroundImageSelector
@@ -337,22 +352,6 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                   />
                 </div>
               </div>
-              
-              <FormField
-                control={form.control}
-                name="priority"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Priority</FormLabel>
-                    <FormControl>
-                      <PrioritySelector 
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
               
               <div className="space-y-4">
                 <div className="text-white font-medium text-sm">Colors</div>
