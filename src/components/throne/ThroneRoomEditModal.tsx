@@ -15,8 +15,7 @@ import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { findIconComponent } from '@/components/task-editor/icons/iconUtils';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 import DeleteTaskDialog from '@/components/task-editor/DeleteTaskDialog';
 
 export interface ThroneRoomCardData {
@@ -70,6 +69,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -111,30 +111,43 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     }
   }, [isOpen, cardData, form]);
 
-  const handleSave = (values: any) => {
-    if (!values.title.trim()) {
+  const handleSave = async (values: any) => {
+    setLoading(true);
+    
+    try {
+      if (!values.title.trim()) {
+        toast({
+          title: "Error",
+          description: "Title cannot be empty",
+          variant: "destructive"
+        });
+        return;
+      }
+  
+      const updatedData = {
+        ...cardData,
+        ...values,
+        icon_name: selectedIconName,
+      };
+      
+      await onSave(updatedData);
+      
+      toast({
+        title: "Success",
+        description: "Card updated successfully",
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error('Error saving card:', error);
       toast({
         title: "Error",
-        description: "Title cannot be empty",
-        variant: "destructive"
+        description: "Failed to save card. Please try again.",
+        variant: "destructive",
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    const updatedData = {
-      ...cardData,
-      ...values,
-      icon_name: selectedIconName,
-    };
-    
-    onSave(updatedData);
-    
-    toast({
-      title: "Success",
-      description: "Card updated successfully",
-    });
-    
-    onClose();
   };
 
   const handleDelete = () => {
@@ -144,6 +157,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         title: "Card deleted",
         description: "The card has been successfully deleted",
       });
+      setIsDeleteDialogOpen(false);
       onClose();
     }
   };
@@ -352,8 +366,17 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
               >
                 Cancel
               </Button>
-              <Button type="button" onClick={form.handleSubmit(handleSave)}>
-                Save Changes
+              <Button 
+                type="button" 
+                onClick={form.handleSubmit(handleSave)}
+                disabled={loading}
+                className="bg-nav-active text-white hover:bg-nav-active/80"
+              >
+                {loading ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                ) : (
+                  'Save Changes'
+                )}
               </Button>
             </div>
           </DialogFooter>

@@ -30,7 +30,12 @@ const ThroneRoomCard: React.FC<{
     id,
     title,
     description,
-    iconName: '' // We'll keep the icon as a React node for simplicity
+    iconName: '',
+    icon_color: '#FFFFFF',
+    title_color: '#FFFFFF',
+    subtext_color: '#8E9196',
+    calendar_color: '#7E69AB',
+    highlight_effect: false
   });
 
   const handleOpenEditModal = () => {
@@ -42,6 +47,7 @@ const ThroneRoomCard: React.FC<{
   };
 
   const handleSaveCard = (updatedData: ThroneRoomCardData) => {
+    console.log("Saving updated card data:", updatedData);
     setCardData(updatedData);
     toast({
       title: "Card Updated",
@@ -63,73 +69,85 @@ const ThroneRoomCard: React.FC<{
   return (
     <>
       <Card className="overflow-hidden border border-light-navy bg-navy">
-        <div className="flex p-4">
-          {/* Left side - Icon circle */}
-          <div className="flex-shrink-0 mr-4">
-            <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center" 
-                 style={{ 
-                   backgroundColor: cardData.calendar_color || '#7E69AB',
-                   color: cardData.icon_color || '#FFFFFF'
-                 }}>
-              {icon}
-            </div>
-          </div>
+        <div className="flex p-4" style={{
+          backgroundImage: cardData.background_image_url ? `url(${cardData.background_image_url})` : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
+          position: 'relative'
+        }}>
+          {cardData.background_image_url && (
+            <div 
+              className="absolute inset-0" 
+              style={{ 
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                opacity: (cardData.background_opacity || 100) / 100
+              }}
+            />
+          )}
           
-          {/* Right side - Content */}
-          <div className="flex-1">
-            {/* Top section with title and view button */}
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-semibold" 
-                  style={{ 
-                    color: cardData.title_color || '#FFFFFF',
-                    backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
-                    padding: cardData.highlight_effect ? '0 4px' : '0',
-                    borderRadius: cardData.highlight_effect ? '4px' : '0'
-                  }}>
-                {cardData.title}
-              </h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-xs bg-nav-active text-white px-3 py-1 rounded-md hover:bg-opacity-80"
-              >
-                View
-              </Button>
+          <div className="flex w-full relative z-10">
+            <div className="flex-shrink-0 mr-4">
+              <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center" 
+                   style={{ 
+                     backgroundColor: cardData.calendar_color || '#7E69AB',
+                     color: cardData.icon_color || '#FFFFFF'
+                   }}>
+                {icon}
+              </div>
             </div>
             
-            <p className="text-sm mt-1" 
-               style={{ 
-                 color: cardData.subtext_color || '#8E9196',
-                 backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
-                 padding: cardData.highlight_effect ? '0 4px' : '0',
-                 borderRadius: cardData.highlight_effect ? '4px' : '0',
-                 display: 'inline-block'
-               }}>
-              {cardData.description}
-            </p>
-            
-            {/* Bottom actions section */}
-            <div className="flex justify-between items-center mt-3">
-              <div className="flex space-x-2 items-center">
-                <span className="text-xs bg-light-navy text-nav-active px-2 py-0.5 rounded">Activity</span>
-                <span className="text-xs text-orange-400">8 days ago</span>
+            <div className="flex-1">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-semibold" 
+                    style={{ 
+                      color: cardData.title_color || '#FFFFFF',
+                      backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
+                      padding: cardData.highlight_effect ? '0 4px' : '0',
+                      borderRadius: cardData.highlight_effect ? '4px' : '0'
+                    }}>
+                  {cardData.title}
+                </h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs bg-nav-active text-white px-3 py-1 rounded-md hover:bg-opacity-80"
+                >
+                  View
+                </Button>
               </div>
               
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-cyan-400 hover:text-cyan-300 p-1"
-                onClick={handleOpenEditModal}
-              >
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edit</span>
-              </Button>
+              <p className="text-sm mt-1" 
+                 style={{ 
+                   color: cardData.subtext_color || '#8E9196',
+                   backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
+                   padding: cardData.highlight_effect ? '0 4px' : '0',
+                   borderRadius: cardData.highlight_effect ? '4px' : '0',
+                   display: 'inline-block'
+                 }}>
+                {cardData.description}
+              </p>
+              
+              <div className="flex justify-between items-center mt-3">
+                <div className="flex space-x-2 items-center">
+                  <span className="text-xs bg-light-navy text-nav-active px-2 py-0.5 rounded">Activity</span>
+                  <span className="text-xs text-orange-400">8 days ago</span>
+                </div>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-cyan-400 hover:text-cyan-300 p-1"
+                  onClick={handleOpenEditModal}
+                >
+                  <Pencil className="h-4 w-4" />
+                  <span className="sr-only">Edit</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </Card>
       
-      {/* Edit Modal */}
       <ThroneRoomEditModal 
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}
