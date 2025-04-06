@@ -16,6 +16,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { Card } from '@/components/ui/card';
 
 interface MetricsData {
   date: string;
@@ -203,53 +204,80 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   // Monthly metrics chart
   const monthlyChart = useMemo(() => {
     return (
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-white mb-2">Monthly Activity</h2>
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={monthlyMetrics}>
-            <XAxis
-              dataKey="date"
-              tick={{ fill: '#CBD5E0', fontSize: 12 }}
-              interval={4}
-            />
-            <YAxis tick={{ fill: '#CBD5E0', fontSize: 12 }} />
-            <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="tasksCompleted"
-              stroke="#38bdf8"
-              strokeWidth={2}
-              name="Tasks Completed"
-              dot={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="rulesBroken"
-              stroke="#f97316"
-              strokeWidth={2}
-              name="Rules Broken"
-              dot={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="rewardsRedeemed"
-              stroke="#a78bfa"
-              strokeWidth={2}
-              name="Rewards Redeemed"
-              dot={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="punishments"
-              stroke="#ef4444"
-              strokeWidth={2}
-              name="Punishments"
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <Card className="bg-navy border border-light-navy rounded-lg mb-6">
+        <div className="p-4">
+          <h2 className="text-lg font-semibold text-white mb-2">Monthly Activity</h2>
+          
+          {/* Scrollable Chart Container */}
+          <div className="overflow-x-auto hide-scrollbar -mx-4 px-4 relative">
+            {/* Left/right fade shadows for scroll cue */}
+            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
+            
+            <div className="min-w-[900px]">
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={monthlyMetrics}>
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fill: '#CBD5E0', fontSize: 12 }}
+                    interval={0}
+                  />
+                  <YAxis tick={{ fill: '#CBD5E0', fontSize: 12 }} />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="tasksCompleted"
+                    stroke="#38bdf8"
+                    strokeWidth={2}
+                    name="Tasks Completed"
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="rulesBroken"
+                    stroke="#f97316"
+                    strokeWidth={2}
+                    name="Rules Broken"
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="rewardsRedeemed"
+                    stroke="#a78bfa"
+                    strokeWidth={2}
+                    name="Rewards Redeemed"
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="punishments"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    name="Punishments"
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          
+          {/* Monthly chart legend */}
+          <div className="flex justify-between items-center flex-wrap mt-2 gap-4">
+            <span className="text-xs whitespace-nowrap" style={{ color: "#38bdf8" }}>
+              Tasks Completed
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: "#f97316" }}>
+              Rules Broken
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: "#a78bfa" }}>
+              Rewards Redeemed
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: "#ef4444" }}>
+              Punishments
+            </span>
+          </div>
+        </div>
+      </Card>
     );
   }, [monthlyMetrics]);
 

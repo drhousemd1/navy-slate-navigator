@@ -141,4 +141,14 @@
     -webkit-box-decoration-break: clone;
     line-height: 1.6;
   }
+  
+  /* Hide scrollbar utility */
+  .hide-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 }
