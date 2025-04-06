@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -49,7 +48,7 @@ const ThroneRoomCard: React.FC<{
   const [visibleImage, setVisibleImage] = useState<string | null>(null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [usageData, setUsageData] = useState<number[]>([1, 0, 1, 0, 0, 0, 0]); // Default usage data for FrequencyTracker
+  const [usageData, setUsageData] = useState<number[]>([1, 0, 1, 0, 0, 0, 0]);
 
   useEffect(() => {
     const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
@@ -83,7 +82,6 @@ const ThroneRoomCard: React.FC<{
         setVisibleImage(imageArray[0]);
       }
       
-      // If the card has usage data, use it
       if (Array.isArray(savedCard.usage_data) && savedCard.usage_data.length > 0) {
         setUsageData(savedCard.usage_data);
       }
@@ -101,21 +99,20 @@ const ThroneRoomCard: React.FC<{
     
     preload.onload = () => {
       setTransitionImage(next);
-      setIsTransitioning(false); // reset first
+      setIsTransitioning(false);
       
-      // Let browser paint transitionImage first
       requestAnimationFrame(() => {
         setTimeout(() => {
-          setIsTransitioning(true); // Now trigger fade
+          setIsTransitioning(true);
           
           const timeout = setTimeout(() => {
-            setVisibleImage(next);        // promote new image
-            setTransitionImage(null);     // remove transition layer
+            setVisibleImage(next);
+            setTransitionImage(null);
             setIsTransitioning(false);
-          }, 2000); // 2 seconds for slower crossfade
+          }, 2000);
           
           return () => clearTimeout(timeout);
-        }, 0); // delay 1 event loop cycle
+        }, 0);
       });
     };
   }, [globalCarouselIndex, images, visibleImage]);
@@ -156,7 +153,6 @@ const ThroneRoomCard: React.FC<{
       setTransitionImage(null);
     }
     
-    // Save usage data if it exists
     if (Array.isArray(updatedData.usage_data) && updatedData.usage_data.length > 0) {
       setUsageData(updatedData.usage_data);
     }
@@ -204,14 +200,13 @@ const ThroneRoomCard: React.FC<{
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
-        {/* Always-on base image */}
         {visibleImage && (
           <img
             src={visibleImage}
             alt=""
             className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
             style={{ 
-              transition: 'opacity 2s ease-in-out', /* 2s transition */
+              transition: 'opacity 2s ease-in-out',
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
               opacity: (cardData.background_opacity || 100) / 100
             }}
@@ -219,7 +214,6 @@ const ThroneRoomCard: React.FC<{
           />
         )}
 
-        {/* Fading-in transition image */}
         {transitionImage && (
           <img
             src={transitionImage}
@@ -228,7 +222,7 @@ const ThroneRoomCard: React.FC<{
               isTransitioning ? 'opacity-100' : 'opacity-0'
             }`}
             style={{ 
-              transition: 'opacity 2s ease-in-out', /* 2s transition */
+              transition: 'opacity 2s ease-in-out',
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
               opacity: isTransitioning ? (cardData.background_opacity || 100) / 100 : 0
             }}
@@ -342,9 +336,9 @@ const defaultThroneRoomCards = [
 
 interface WeeklyMetricsSummary {
   tasksCompleted: number;
-  rulesViolated: number;
-  rewardsUsed: number;
-  punishmentsApplied: number;
+  rulesBroken: number;
+  rewardsRedeemed: number;
+  punishments: number;
 }
 
 const ThroneRoom: React.FC = () => {
@@ -352,9 +346,9 @@ const ThroneRoom: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [metricsSummary, setMetricsSummary] = useState<WeeklyMetricsSummary>({
     tasksCompleted: 0,
-    rulesViolated: 0,
-    rewardsUsed: 0,
-    punishmentsApplied: 0
+    rulesBroken: 0,
+    rewardsRedeemed: 0,
+    punishments: 0
   });
   const [chartError, setChartError] = useState<string | null>(null);
   const [chartLoading, setChartLoading] = useState<boolean>(true);
@@ -446,19 +440,19 @@ const ThroneRoom: React.FC = () => {
                   <div className="bg-light-navy rounded-lg px-3 py-2">
                     <div className="flex items-center justify-between">
                       <span className="text-orange-500 text-sm">Rules Broken:</span>
-                      <span className="text-sm font-bold text-white">{metricsSummary.rulesViolated}</span>
+                      <span className="text-sm font-bold text-white">{metricsSummary.rulesBroken}</span>
                     </div>
                   </div>
                   <div className="bg-light-navy rounded-lg px-3 py-2">
                     <div className="flex items-center justify-between">
                       <span className="text-purple-400 text-sm">Rewards Redeemed:</span>
-                      <span className="text-sm font-bold text-white">{metricsSummary.rewardsUsed}</span>
+                      <span className="text-sm font-bold text-white">{metricsSummary.rewardsRedeemed}</span>
                     </div>
                   </div>
                   <div className="bg-light-navy rounded-lg px-3 py-2">
                     <div className="flex items-center justify-between">
                       <span className="text-red-400 text-sm">Punishments:</span>
-                      <span className="text-sm font-bold text-white">{metricsSummary.punishmentsApplied}</span>
+                      <span className="text-sm font-bold text-white">{metricsSummary.punishments}</span>
                     </div>
                   </div>
                 </div>

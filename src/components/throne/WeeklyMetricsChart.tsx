@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -10,16 +11,16 @@ import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 interface MetricsData {
   date: string;
   tasksCompleted: number;
-  rulesViolated: number;
-  rewardsUsed: number;
-  punishmentsApplied: number;
+  rulesBroken: number;       // renamed from rulesViolated
+  rewardsRedeemed: number;   // renamed from rewardsUsed
+  punishments: number;       // renamed from punishmentsApplied
 }
 
 interface WeeklyMetricsSummary {
   tasksCompleted: number;
-  rulesViolated: number;
-  rewardsUsed: number;
-  punishmentsApplied: number;
+  rulesBroken: number;       // renamed from rulesViolated
+  rewardsRedeemed: number;   // renamed from rewardsUsed
+  punishments: number;       // renamed from punishmentsApplied
 }
 
 interface WeeklyMetricsChartProps {
@@ -32,15 +33,15 @@ const chartConfig = {
     color: '#0EA5E9', // sky blue
     label: 'Tasks Completed'
   },
-  rulesViolated: {
+  rulesBroken: {
     color: '#F97316', // bright orange
     label: 'Rules Broken'
   },
-  rewardsUsed: {
+  rewardsRedeemed: {
     color: '#9b87f5', // primary purple
     label: 'Rewards Redeemed'
   },
-  punishmentsApplied: {
+  punishments: {
     color: '#ea384c', // red
     label: 'Punishments'
   }
@@ -80,9 +81,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           metricsMap.set(date, {
             date,
             tasksCompleted: 0,
-            rulesViolated: 0,
-            rewardsUsed: 0,
-            punishmentsApplied: 0,
+            rulesBroken: 0,          // renamed from rulesViolated
+            rewardsRedeemed: 0,      // renamed from rewardsUsed
+            punishments: 0           // renamed from punishmentsApplied
           });
         });
 
@@ -118,7 +119,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             const formatted = formatDate(raw);
             console.log("[RULE]", { raw, formatted, matched: metricsMap.has(formatted) });
             const day = metricsMap.get(formatted);
-            if (day) day.rulesViolated += 1;
+            if (day) day.rulesBroken += 1;  // renamed from rulesViolated
           });
         }
 
@@ -136,7 +137,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             const formatted = formatDate(raw);
             console.log("[REWARD]", { raw, formatted, matched: metricsMap.has(formatted) });
             const day = metricsMap.get(formatted);
-            if (day) day.rewardsUsed += 1;
+            if (day) day.rewardsRedeemed += 1;  // renamed from rewardsUsed
           });
         }
 
@@ -154,7 +155,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             const formatted = formatDate(raw);
             console.log("[PUNISHMENT]", { raw, formatted, matched: metricsMap.has(formatted) });
             const day = metricsMap.get(formatted);
-            if (day) day.punishmentsApplied += 1;
+            if (day) day.punishments += 1;  // renamed from punishmentsApplied
           });
         }
 
@@ -165,9 +166,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         if (onDataLoaded) {
           const summary: WeeklyMetricsSummary = {
             tasksCompleted: finalData.reduce((sum, item) => sum + item.tasksCompleted, 0),
-            rulesViolated: finalData.reduce((sum, item) => sum + item.rulesViolated, 0),
-            rewardsUsed: finalData.reduce((sum, item) => sum + item.rewardsUsed, 0),
-            punishmentsApplied: finalData.reduce((sum, item) => sum + item.punishmentsApplied, 0)
+            rulesBroken: finalData.reduce((sum, item) => sum + item.rulesBroken, 0),
+            rewardsRedeemed: finalData.reduce((sum, item) => sum + item.rewardsRedeemed, 0),
+            punishments: finalData.reduce((sum, item) => sum + item.punishments, 0)
           };
           onDataLoaded(summary);
         }
@@ -183,7 +184,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   }, [onDataLoaded]);
 
   const hasContent = data.some(d =>
-    d.tasksCompleted || d.rulesViolated || d.rewardsUsed || d.punishmentsApplied
+    d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
   );
 
   // Memoize the chart to prevent unnecessary re-renders
@@ -213,21 +214,21 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               radius={[4, 4, 0, 0]} 
             />
             <Bar 
-              dataKey="rulesViolated" 
+              dataKey="rulesBroken" 
               name="Rules Broken" 
-              fill={chartConfig.rulesViolated.color} 
+              fill={chartConfig.rulesBroken.color} 
               radius={[4, 4, 0, 0]} 
             />
             <Bar 
-              dataKey="rewardsUsed" 
+              dataKey="rewardsRedeemed" 
               name="Rewards Redeemed" 
-              fill={chartConfig.rewardsUsed.color} 
+              fill={chartConfig.rewardsRedeemed.color} 
               radius={[4, 4, 0, 0]} 
             />
             <Bar 
-              dataKey="punishmentsApplied" 
+              dataKey="punishments" 
               name="Punishments" 
-              fill={chartConfig.punishmentsApplied.color} 
+              fill={chartConfig.punishments.color} 
               radius={[4, 4, 0, 0]} 
             />
           </BarChart>
@@ -260,13 +261,13 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
           Tasks Completed
         </span>
-        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesViolated.color }}>
+        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
           Rules Broken
         </span>
-        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsUsed.color }}>
+        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
           Rewards Redeemed
         </span>
-        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishmentsApplied.color }}>
+        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
           Punishments
         </span>
       </div>
