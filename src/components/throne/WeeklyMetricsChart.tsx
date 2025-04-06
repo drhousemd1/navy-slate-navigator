@@ -9,7 +9,8 @@ import {
   endOfWeek, 
   parseISO, 
   formatISO, 
-  eachDayOfInterval 
+  eachDayOfInterval,
+  addDays 
 } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -72,11 +73,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
 
   // Helper functions
   const generateWeekDays = (): string[] => {
-    const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
-    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 0 });
-    
-    const weekDates = eachDayOfInterval({ start: weekStart, end: weekEnd }).map(date =>
-      format(date, 'yyyy-MM-dd')
+    const today = new Date();
+    const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 0 }); // Sunday as start
+    const weekDates = Array.from({ length: 7 }, (_, i) =>
+      format(addDays(startOfCurrentWeek, i), 'yyyy-MM-dd')
     );
     
     return weekDates;
@@ -86,13 +86,16 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     return format(parseISO(dateString), 'yyyy-MM-dd');
   };
 
+  // Get the week dates once for XAxis ticks
+  const weekDates = useMemo(() => generateWeekDays(), []);
+
   useEffect(() => {
     const loadHardcodedData = () => {
       try {
         setLoading(true);
         setError(null);
 
-        const days = generateWeekDays();
+        const days = weekDates;
         const metricsMap = new Map<string, MetricsData>();
 
         // Initialize data for each day
@@ -144,7 +147,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     };
 
     loadHardcodedData();
-  }, [onDataLoaded]);
+  }, [onDataLoaded, weekDates]);
 
   const hasContent = data.some(d =>
     d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
@@ -162,15 +165,15 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
             <XAxis 
               dataKey="date"
-              tickFormatter={(dateStr: string) =>
-                format(new Date(dateStr), "EEE") // Sun, Mon, Tue, etc
-              }
+              ticks={weekDates}
+              tickFormatter={(date) => {
+                try {
+                  return format(new Date(date), 'EEE'); // Format as 'Sun', 'Mon', etc.
+                } catch {
+                  return date;
+                }
+              }}
               interval={0} // show all days
-              domain={[
-                format(startOfWeek(new Date(), { weekStartsOn: 0 }), "yyyy-MM-dd"),
-                format(endOfWeek(new Date(), { weekStartsOn: 0 }), "yyyy-MM-dd"),
-              ]}
-              scale="time"
               stroke="#8E9196"
               tick={{ fill: '#D1D5DB' }}
             />
@@ -207,7 +210,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         </ResponsiveContainer>
       </ChartContainer>
     );
-  }, [data]);
+  }, [data, weekDates]);
 
   return (
     <div className="w-full bg-navy border border-light-navy rounded-lg">
