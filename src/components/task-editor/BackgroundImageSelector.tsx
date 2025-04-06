@@ -40,13 +40,23 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   // This useEffect is modified to safely set the opacity value from the form
   useEffect(() => {
     try {
-      // Watch for changes to the form value
-      const formValue = control._getWatch?.('background_opacity') || 
-                        control._formValues?.background_opacity;
-                        
-      if (typeof formValue === 'number') {
-        console.log("Setting opacity from form value:", formValue);
-        setOpacity(formValue);
+      // Get background_opacity from form values safely
+      let formOpacity: number | undefined;
+      
+      // First check if we can access via _getWatch method
+      if (control._getWatch && typeof control._getWatch === 'function') {
+        formOpacity = control._getWatch('background_opacity');
+      }
+      
+      // Then try to access via _formValues if available
+      if (formOpacity === undefined && control._formValues) {
+        formOpacity = control._formValues.background_opacity;
+      }
+      
+      // If we have a valid opacity value from the form, use it
+      if (typeof formOpacity === 'number') {
+        console.log("Setting opacity from form value:", formOpacity);
+        setOpacity(formOpacity);
       } else if (imagePreview) {
         // Only set default if we have an image but no opacity value
         console.log("Setting default opacity for new image to 100");
@@ -105,7 +115,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', stopDragging);
     };
-  }, [isDragging]);
+  }, [isDragging, setValue]);
 
   const handleOpacityChange = (values: number[]) => {
     const opacityValue = values[0];

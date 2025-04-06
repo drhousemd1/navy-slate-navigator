@@ -10,7 +10,7 @@ import { useForm } from 'react-hook-form';
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import PrioritySelector from '@/components/task-editor/PrioritySelector';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -19,7 +19,7 @@ export interface ThroneRoomCardData {
   title: string;
   description: string;
   iconName?: string;
-  background_image_url?: string;
+  background_image_url?: string | null;
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
@@ -119,6 +119,30 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     setImagePreview(null);
     form.setValue('background_image_url', '');
   };
+
+  // Handle delete card
+  const handleDeleteCard = () => {
+    try {
+      // Remove from localStorage
+      const existingCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
+      const updatedCards = existingCards.filter((card: ThroneRoomCardData) => card.id !== cardData.id);
+      localStorage.setItem('throneRoomCards', JSON.stringify(updatedCards));
+      
+      toast({
+        title: "Card Deleted",
+        description: "The throne room card has been deleted",
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error('Error deleting throne room card:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete card",
+        variant: "destructive"
+      });
+    }
+  };
   
   // Save the card data
   const onSubmit = async (data: ThroneRoomCardData) => {
@@ -211,6 +235,15 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                 )}
               />
               
+              <BackgroundImageSelector
+                imagePreview={imagePreview}
+                onImageUpload={handleImageUpload}
+                onRemoveImage={handleRemoveImage}
+                control={form.control}
+                setValue={form.setValue}
+                initialPosition={position}
+              />
+              
               <FormField
                 control={form.control}
                 name="priority"
@@ -219,7 +252,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                     <FormLabel className="text-white">Priority</FormLabel>
                     <FormControl>
                       <PrioritySelector 
-                        defaultValue={field.value}
+                        value={field.value}
                         onValueChange={field.onChange}
                       />
                     </FormControl>
@@ -276,40 +309,43 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                   </FormItem>
                 )}
               />
-              
-              <BackgroundImageSelector
-                imagePreview={imagePreview}
-                onImageUpload={handleImageUpload}
-                onRemoveImage={handleRemoveImage}
-                control={form.control}
-                setValue={form.setValue}
-                initialPosition={position}
-              />
             </div>
             
-            <DialogFooter>
+            <DialogFooter className="flex justify-between items-center pt-4">
               <Button 
                 type="button" 
-                variant="outline" 
-                onClick={onClose} 
-                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                variant="destructive" 
+                onClick={handleDeleteCard} 
+                className="mr-auto"
               >
-                Cancel
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Card
               </Button>
-              <Button 
-                type="submit"
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </Button>
+              
+              <div className="flex space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={onClose} 
+                  className="bg-transparent border border-slate-600 text-white hover:bg-slate-800"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>
