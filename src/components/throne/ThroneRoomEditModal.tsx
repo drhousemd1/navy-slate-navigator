@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -215,12 +214,11 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       updatedSlots[selectedBoxIndex] = null;
       setImageSlots(updatedSlots);
       
-      // Clear preview and reset selection
+      // Clear preview but keep the selected box highlighted
       setImagePreview(null);
-      setSelectedBoxIndex(null);
       form.setValue('background_image_url', '');
       
-      console.log(`Removed image from slot ${selectedBoxIndex}, cleared preview`);
+      console.log(`Removed image from slot ${selectedBoxIndex}, cleared preview but kept selection`);
     } else {
       console.log('No slot selected for removal');
     }
