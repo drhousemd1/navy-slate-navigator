@@ -114,6 +114,12 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         y: cardData.focal_point_y || 50 
       });
       
+      console.log("Initializing image slots from card data:", {
+        hasBackgroundImages: Array.isArray(cardData.background_images),
+        backgroundImagesCount: Array.isArray(cardData.background_images) ? cardData.background_images.length : 0,
+        hasBackgroundImageUrl: Boolean(cardData.background_image_url)
+      });
+      
       if (Array.isArray(cardData.background_images) && cardData.background_images.length > 0) {
         const newImageSlots = [...imageSlots];
         cardData.background_images.forEach((img, index) => {
@@ -231,6 +237,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     try {
       setIsSaving(true);
       console.log("Saving card data:", data);
+      console.log("Current image slots:", imageSlots);
       
       const updatedData = {
         ...data,
@@ -242,7 +249,12 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         background_images: imageSlots.filter(Boolean),
       };
       
+      console.log("Transformed updatedData:", updatedData);
+      console.log("background_images being saved:", updatedData.background_images);
+      
       const existingCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
+      console.log("Existing cards before update:", existingCards);
+      
       const cardIndex = existingCards.findIndex((card: ThroneRoomCardData) => card.id === updatedData.id);
       
       if (cardIndex >= 0) {
@@ -252,6 +264,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       }
       
       localStorage.setItem('throneRoomCards', JSON.stringify(existingCards));
+      console.log("Cards after update:", JSON.parse(localStorage.getItem('throneRoomCards') || '[]'));
       
       await onSave(updatedData);
       

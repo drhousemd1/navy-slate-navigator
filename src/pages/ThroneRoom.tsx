@@ -52,6 +52,12 @@ const ThroneRoomCard: React.FC<{
     
     if (savedCard) {
       console.log("Loading saved card data for", id, savedCard);
+      console.log("Card background images:", {
+        hasBackgroundImages: Array.isArray(savedCard.background_images),
+        backgroundImagesCount: Array.isArray(savedCard.background_images) ? savedCard.background_images.length : 0,
+        hasBackgroundImageUrl: Boolean(savedCard.background_image_url)
+      });
+      
       setCardData({
         ...savedCard,
         title: savedCard.title || title,
@@ -60,8 +66,11 @@ const ThroneRoomCard: React.FC<{
       });
       
       if (Array.isArray(savedCard.background_images)) {
-        setCarouselImages(savedCard.background_images.filter(Boolean));
+        const validImages = savedCard.background_images.filter(Boolean);
+        console.log("Setting carousel images from background_images array:", validImages);
+        setCarouselImages(validImages);
       } else if (typeof savedCard.background_image_url === 'string') {
+        console.log("Setting carousel images from background_image_url:", savedCard.background_image_url);
         setCarouselImages([savedCard.background_image_url]);
       }
     }
@@ -91,13 +100,23 @@ const ThroneRoomCard: React.FC<{
 
   const handleSaveCard = (updatedData: ThroneRoomCardData) => {
     console.log("Saving updated card data:", updatedData);
+    console.log("Card background images:", {
+      hasBackgroundImages: Array.isArray(updatedData.background_images),
+      backgroundImagesCount: Array.isArray(updatedData.background_images) ? updatedData.background_images.length : 0,
+      hasBackgroundImageUrl: Boolean(updatedData.background_image_url)
+    });
+    
     setCardData(updatedData);
     
     if (Array.isArray(updatedData.background_images)) {
-      setCarouselImages(updatedData.background_images.filter(Boolean));
+      const validImages = updatedData.background_images.filter(Boolean);
+      console.log("Setting carousel images from updatedData.background_images:", validImages);
+      setCarouselImages(validImages);
     } else if (typeof updatedData.background_image_url === 'string') {
+      console.log("Setting carousel images from updatedData.background_image_url:", updatedData.background_image_url);
       setCarouselImages([updatedData.background_image_url]);
     } else {
+      console.log("No valid image sources found, clearing carousel images");
       setCarouselImages([]);
     }
     
