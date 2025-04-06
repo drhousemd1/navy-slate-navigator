@@ -1,23 +1,14 @@
 
 import React, { useEffect, useState } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  ResponsiveContainer, 
-  CartesianGrid,
-  Legend
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
+import { format, subDays, startOfWeek } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, startOfWeek, addDays, parseISO, subDays } from 'date-fns';
+import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 
 interface MetricsData {
-  day: string;
-  dayNumber: number;
   date: string;
   tasksCompleted: number;
   rulesViolated: number;
@@ -35,19 +26,6 @@ interface WeeklyMetricsSummary {
 interface WeeklyMetricsChartProps {
   hideTitle?: boolean;
   onDataLoaded?: (summaryData: WeeklyMetricsSummary) => void;
-}
-
-interface TaskCompletionData {
-  completion_date: string;
-  completion_count: number;
-}
-
-interface RewardUsageData {
-  created_at: string;
-}
-
-interface RuleViolationData {
-  violation_date: string;
 }
 
 const chartConfig = {
@@ -74,320 +52,179 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   onDataLoaded 
 }) => {
   const [data, setData] = useState<MetricsData[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const generateWeekDays = () => {
-    const today = new Date();
-    const weekStart = startOfWeek(today, { weekStartsOn: 0 });
-    
-    return Array.from({ length: 7 }).map((_, index) => {
-      const date = addDays(weekStart, index);
-      return {
-        day: format(date, 'EEE'),
-        dayNumber: index,
-        date: format(date, 'yyyy-MM-dd'),
-        tasksCompleted: 0,
-        rulesViolated: 0,
-        rewardsUsed: 0,
-        punishmentsApplied: 0
-      };
-    });
-  };
-
   useEffect(() => {
-    const fetchMetricsData = async () => {
+    const fetchMetrics = async () => {
       try {
-        console.log('Fetching metrics data...');
         setLoading(true);
-        
-        // Initialize with empty week data structure
-        const weekDays = generateWeekDays();
-        console.log('Generated week days:', weekDays);
-        const metricsMap = new Map(weekDays.map(day => [day.date, day]));
+        setError(null);
 
         const today = new Date();
-        const weekStart = startOfWeek(today, { weekStartsOn: 0 });
-        const weekStartStr = weekStart.toISOString();
-        
-        // Safe fetch for task completions with error handling
-        try {
-          const { data: taskCompletionData, error: taskCompletionError } = await supabase
-            .rpc('get_task_completions_for_week', { week_start: weekStartStr }) as unknown as { 
-              data: TaskCompletionData[] | null; 
-              error: Error | null 
-            };
-            
-          if (taskCompletionError) {
-            console.error('Error fetching task completion history:', taskCompletionError.message);
-            setError('Failed to load task completion data');
-          } else if (taskCompletionData) {
-            console.log('Task completions fetched:', taskCompletionData.length || 0);
-            
-            taskCompletionData.forEach((completion: TaskCompletionData) => {
-              if (completion.completion_date) {
-                try {
-                  const completedDate = format(new Date(completion.completion_date), 'yyyy-MM-dd');
-                  if (metricsMap.has(completedDate)) {
-                    const dayData = metricsMap.get(completedDate);
-                    if (dayData) {
-                      dayData.tasksCompleted = completion.completion_count;
-                      metricsMap.set(completedDate, dayData);
-                    }
-                  }
-                } catch (dateError) {
-                  console.error('Error parsing task completion date:', dateError);
-                }
-              }
-            });
-          }
-        } catch (taskError) {
-          console.error('Error in task completions section:', taskError);
-          setError(prev => prev || 'Error processing task data');
-        }
-        
-        // Safe fetch for rule violations with error handling
-        try {
-          const { data: ruleViolationsData, error: ruleViolationsError } = await supabase
-            .from('rule_violations')
-            .select('violation_date')
-            .gte('violation_date', weekStartStr);
-            
-          if (ruleViolationsError) {
-            console.error('Error fetching rule violations:', ruleViolationsError.message);
-            setError(prev => prev || 'Failed to load rule violations data');
-          } else if (ruleViolationsData && ruleViolationsData.length > 0) {
-            console.log('Rule violations fetched:', ruleViolationsData.length, ruleViolationsData);
-            
-            // Group violations by date
-            const violationsByDate = ruleViolationsData.reduce((acc, violation) => {
-              if (violation.violation_date) {
-                try {
-                  const violationDate = format(new Date(violation.violation_date), 'yyyy-MM-dd');
-                  acc[violationDate] = (acc[violationDate] || 0) + 1;
-                } catch (dateError) {
-                  console.error('Error parsing violation date:', dateError);
-                }
-              }
-              return acc;
-            }, {} as Record<string, number>);
-            
-            // Update metricsMap with violation counts
-            Object.entries(violationsByDate).forEach(([date, count]) => {
-              if (metricsMap.has(date)) {
-                const dayData = metricsMap.get(date);
-                if (dayData) {
-                  dayData.rulesViolated = count;
-                  metricsMap.set(date, dayData);
-                }
-              }
-            });
-          }
-        } catch (ruleError) {
-          console.error('Error in rule violations section:', ruleError);
-          setError(prev => prev || 'Error processing rule violations');
-        }
-        
-        // Safe fetch for reward usage with error handling
-        try {
-          const { data: rewardsData, error: rewardsError } = await supabase
-            .from('reward_usage')
-            .select('created_at')
-            .gte('created_at', weekStartStr);
-            
-          if (rewardsError) {
-            console.error('Error fetching rewards usage:', rewardsError.message);
-            setError(prev => prev || 'Failed to load rewards data');
-          } else if (rewardsData) {
-            console.log('Rewards usage fetched:', rewardsData.length || 0, rewardsData);
-            
-            rewardsData.forEach((reward: RewardUsageData) => {
-              if (reward.created_at) {
-                try {
-                  const usedDate = format(new Date(reward.created_at), 'yyyy-MM-dd');
-                  if (metricsMap.has(usedDate)) {
-                    const dayData = metricsMap.get(usedDate);
-                    if (dayData) {
-                      dayData.rewardsUsed += 1;
-                      metricsMap.set(usedDate, dayData);
-                    }
-                  }
-                } catch (dateError) {
-                  console.error('Error parsing reward date:', dateError);
-                }
-              }
-            });
-          }
-        } catch (rewardError) {
-          console.error('Error in rewards section:', rewardError);
-          setError(prev => prev || 'Error processing rewards data');
-        }
-        
-        // Safe fetch for punishments with error handling
-        try {
-          const { data: punishmentsData, error: punishmentsError } = await supabase
-            .from('punishment_history')
-            .select('applied_date')
-            .gte('applied_date', weekStartStr);
-            
-          if (punishmentsError) {
-            console.error('Error fetching punishments:', punishmentsError.message);
-            setError(prev => prev || 'Failed to load punishments data');
-          } else {
-            console.log('Punishments fetched:', punishmentsData?.length || 0, punishmentsData);
-            
-            punishmentsData?.forEach(punishment => {
-              if (punishment.applied_date) {
-                try {
-                  const appliedDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
-                  if (metricsMap.has(appliedDate)) {
-                    const dayData = metricsMap.get(appliedDate);
-                    if (dayData) {
-                      dayData.punishmentsApplied += 1;
-                      metricsMap.set(appliedDate, dayData);
-                    }
-                  }
-                } catch (dateError) {
-                  console.error('Error parsing punishment date:', dateError);
-                }
-              }
-            });
-          }
-        } catch (punishmentError) {
-          console.error('Error in punishments section:', punishmentError);
-          setError(prev => prev || 'Error processing punishments data');
-        }
-        
-        // Sort data by day number to ensure proper ordering
-        const chartData = Array.from(metricsMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
-        console.log('Final chart data:', chartData);
-        
-        // Calculate summary metrics for the week
-        const summaryMetrics = {
-          tasksCompleted: chartData.reduce((sum, day) => sum + day.tasksCompleted, 0),
-          rulesViolated: chartData.reduce((sum, day) => sum + day.rulesViolated, 0),
-          rewardsUsed: chartData.reduce((sum, day) => sum + day.rewardsUsed, 0),
-          punishmentsApplied: chartData.reduce((sum, day) => sum + day.punishmentsApplied, 0)
-        };
-        
-        // Update state with the processed data
-        setData(chartData);
-        
-        // Call the callback if provided
-        if (onDataLoaded) {
-          onDataLoaded(summaryMetrics);
-        }
-        
-      } catch (err) {
-        console.error('Error in fetchMetricsData:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load metrics data');
-        
-        // Still provide empty data structure on error
-        const emptyData = generateWeekDays();
-        setData(emptyData);
-        
-        // Call the callback with zeros if provided
-        if (onDataLoaded) {
-          onDataLoaded({
-            tasksCompleted: 0,
-            rulesViolated: 0,
-            rewardsUsed: 0,
-            punishmentsApplied: 0
+        const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+        const weekDates = [...Array(7)].map((_, i) => format(subDays(today, 6 - i), 'yyyy-MM-dd'));
+        const metricsMap = new Map(weekDates.map(date => [date, {
+          date,
+          tasksCompleted: 0,
+          rulesViolated: 0,
+          rewardsUsed: 0,
+          punishmentsApplied: 0,
+        }]));
+
+        // Task completions via RPC
+        const { data: taskData, error: taskError } = await supabase
+          .rpc('get_task_completions_for_week', { week_start: format(weekStart, 'yyyy-MM-dd') });
+
+        if (taskError) {
+          console.error('[RPC] get_task_completions_for_week failed:', taskError.message);
+        } else {
+          taskData?.forEach((entry: any) => {
+            const item = metricsMap.get(entry.completion_date);
+            if (item) item.tasksCompleted = entry.completion_count || 0;
           });
         }
+
+        // Rule violations
+        const { data: ruleData, error: ruleError } = await supabase
+          .from('rule_violations')
+          .select('violation_date')
+          .gte('violation_date', format(weekStart, 'yyyy-MM-dd'));
+
+        if (ruleError) {
+          console.error('[Table] rule_violations failed:', ruleError.message);
+        } else {
+          ruleData?.forEach((entry: any) => {
+            const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
+            const item = metricsMap.get(date);
+            if (item) item.rulesViolated += 1;
+          });
+        }
+
+        // Reward uses
+        const { data: rewardData, error: rewardError } = await supabase
+          .from('reward_usage') // Updated to match the correct table name
+          .select('created_at')
+          .gte('created_at', format(weekStart, 'yyyy-MM-dd'));
+
+        if (rewardError) {
+          console.error('[Table] reward_usage failed:', rewardError.message);
+        } else {
+          rewardData?.forEach((entry: any) => {
+            const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
+            const item = metricsMap.get(date);
+            if (item) item.rewardsUsed += 1;
+          });
+        }
+
+        // Punishments
+        const { data: punishmentData, error: punishmentError } = await supabase
+          .from('punishment_history') // Updated to match the correct table name
+          .select('applied_date')
+          .gte('applied_date', format(weekStart, 'yyyy-MM-dd'));
+
+        if (punishmentError) {
+          console.error('[Table] punishment_history failed:', punishmentError.message);
+        } else {
+          punishmentData?.forEach((entry: any) => {
+            const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
+            const item = metricsMap.get(date);
+            if (item) item.punishmentsApplied += 1;
+          });
+        }
+
+        const finalData = Array.from(metricsMap.values());
+        setData(finalData);
+        
+        // Calculate summary for callback
+        if (onDataLoaded) {
+          const summary: WeeklyMetricsSummary = {
+            tasksCompleted: finalData.reduce((sum, item) => sum + item.tasksCompleted, 0),
+            rulesViolated: finalData.reduce((sum, item) => sum + item.rulesViolated, 0),
+            rewardsUsed: finalData.reduce((sum, item) => sum + item.rewardsUsed, 0),
+            punishmentsApplied: finalData.reduce((sum, item) => sum + item.punishmentsApplied, 0)
+          };
+          onDataLoaded(summary);
+        }
+      } catch (err: any) {
+        console.error('[Chart error]', err);
+        setError('Unexpected chart error');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMetricsData();
+    fetchMetrics();
   }, [onDataLoaded]);
 
-  useEffect(() => {
-    console.log('Chart data to render:', data);
-    console.log('Loading state:', loading);
-  }, [data, loading]);
-
-  if (loading) {
-    return (
-      <div className="w-full h-80 bg-navy border border-light-navy rounded-lg p-4">
-        <p className="text-white text-sm mb-2">Loading metrics data...</p>
-        <Skeleton className="w-full h-[calc(100%-24px)] bg-light-navy/30" />
-      </div>
-    );
-  }
-
-  if (error && data.length === 0) {
-    return (
-      <div className="w-full bg-navy border border-light-navy rounded-lg p-6 text-center">
-        <p className="text-red-400 mb-1">Error loading metrics: {error}</p>
-        <p className="text-gray-400 text-sm">Please try refreshing the page.</p>
-      </div>
-    );
-  }
-
-  console.log('Final render data:', data);
+  const hasContent = data.some(d =>
+    d.tasksCompleted || d.rulesViolated || d.rewardsUsed || d.punishmentsApplied
+  );
 
   return (
     <div className="w-full bg-navy border border-light-navy rounded-lg">
       {!hideTitle && <h3 className="text-lg font-medium text-white px-4 pt-4 mb-4">Weekly Activity Metrics</h3>}
       {error && (
         <div className="mb-4 px-3 py-2 bg-red-900/30 border border-red-900/50 rounded text-sm text-red-300 mx-4">
-          Note: Some data couldn't be loaded. Showing available metrics.
+          {error}
         </div>
       )}
-      <ChartContainer 
-        className="w-full h-80 pl-0"
-        config={chartConfig}
-      >
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart
-            data={data}
-            margin={{
-              top: 5,
-              right: 5,
-              left: -20,
-              bottom: 5,
-            }}
+      <div className="w-full h-64 px-4 pb-4">
+        {loading && (
+          <Skeleton className="w-full h-full bg-light-navy/30" />
+        )}
+        {!loading && !hasContent && (
+          <div className="flex items-center justify-center h-full text-white text-sm">
+            No activity data to display for this week.
+          </div>
+        )}
+        {!loading && hasContent && (
+          <ChartContainer 
+            className="w-full h-full"
+            config={chartConfig}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
-            <XAxis 
-              dataKey="day"
-              stroke="#8E9196"
-              tick={{ fill: '#D1D5DB' }}
-            />
-            <YAxis 
-              stroke="#8E9196"
-              tick={{ fill: '#D1D5DB' }}
-            />
-            <ChartTooltip />
-            <Bar 
-              dataKey="tasksCompleted" 
-              name="Tasks Completed" 
-              fill={chartConfig.tasksCompleted.color} 
-              radius={[4, 4, 0, 0]} 
-            />
-            <Bar 
-              dataKey="rulesViolated" 
-              name="Rules Broken" 
-              fill={chartConfig.rulesViolated.color} 
-              radius={[4, 4, 0, 0]} 
-            />
-            <Bar 
-              dataKey="rewardsUsed" 
-              name="Rewards Redeemed" 
-              fill={chartConfig.rewardsUsed.color} 
-              radius={[4, 4, 0, 0]} 
-            />
-            <Bar 
-              dataKey="punishmentsApplied" 
-              name="Punishments" 
-              fill={chartConfig.punishmentsApplied.color} 
-              radius={[4, 4, 0, 0]} 
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartContainer>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#8E9196"
+                  tick={{ fill: '#D1D5DB' }}
+                />
+                <YAxis 
+                  stroke="#8E9196"
+                  tick={{ fill: '#D1D5DB' }}
+                />
+                <ChartTooltip />
+                <Bar 
+                  dataKey="tasksCompleted" 
+                  name="Tasks Completed" 
+                  fill={chartConfig.tasksCompleted.color} 
+                  radius={[4, 4, 0, 0]} 
+                />
+                <Bar 
+                  dataKey="rulesViolated" 
+                  name="Rules Broken" 
+                  fill={chartConfig.rulesViolated.color} 
+                  radius={[4, 4, 0, 0]} 
+                />
+                <Bar 
+                  dataKey="rewardsUsed" 
+                  name="Rewards Redeemed" 
+                  fill={chartConfig.rewardsUsed.color} 
+                  radius={[4, 4, 0, 0]} 
+                />
+                <Bar 
+                  dataKey="punishmentsApplied" 
+                  name="Punishments" 
+                  fill={chartConfig.punishmentsApplied.color} 
+                  radius={[4, 4, 0, 0]} 
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        )}
+      </div>
 
       <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
         <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
