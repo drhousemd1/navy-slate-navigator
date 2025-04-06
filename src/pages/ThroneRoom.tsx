@@ -9,55 +9,86 @@ import {
   TooltipTrigger,
   TooltipContent
 } from '@/components/ui/tooltip';
-import { InfoIcon, ChevronDown, ChevronUp, Settings2, Skull, Crown, Swords, Award } from 'lucide-react';
+import { InfoIcon, ChevronDown, ChevronUp, Settings2, Skull, Crown, Swords, Award, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
+import PunishmentEditor from '@/components/PunishmentEditor';
+import { PunishmentData } from '@/contexts/PunishmentsContext';
 
-// Card component for Throne Room page - styled to match the rewards/tasks cards
 const ThroneRoomCard: React.FC<{
   title: string;
   description: string;
   icon?: React.ReactNode;
 }> = ({ title, description, icon }) => {
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  
+  const mockPunishmentData: PunishmentData = {
+    id: `throne-${title.toLowerCase().replace(/\s+/g, '-')}`,
+    title: title,
+    description: description,
+    points: 10,
+    icon_name: "crown",
+    icon_color: "#9b87f5"
+  };
+  
+  const handleEdit = () => {
+    setIsEditorOpen(true);
+  };
+  
+  const handleSave = async (data: PunishmentData) => {
+    console.log('Saving throne room card:', data);
+    return Promise.resolve();
+  };
+
   return (
-    <Card className="overflow-hidden border border-light-navy bg-navy">
+    <Card className="overflow-hidden border border-light-navy bg-navy relative">
       <div className="flex p-4">
-        {/* Left side - Icon circle */}
         <div className="flex-shrink-0 mr-4">
           <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center">
             {icon}
           </div>
         </div>
         
-        {/* Right side - Content */}
         <div className="flex-1">
-          <div className="flex flex-col">
-            <h3 className="text-lg font-semibold text-white">{title}</h3>
-            <p className="text-sm text-nav-inactive mt-1">{description}</p>
+          <div className="flex justify-between items-start">
+            <div className="flex flex-col">
+              <h3 className="text-lg font-semibold text-white">{title}</h3>
+              <p className="text-sm text-nav-inactive mt-1">{description}</p>
+            </div>
+            
+            <button className="text-xs bg-nav-active text-white px-3 py-1 rounded-md hover:bg-opacity-80">
+              View
+            </button>
           </div>
           
-          {/* Bottom actions section */}
           <div className="flex justify-between items-center mt-3">
             <div className="flex space-x-2 items-center">
               <span className="text-xs bg-light-navy text-nav-active px-2 py-0.5 rounded">Activity</span>
               <span className="text-xs text-orange-400">8 days ago</span>
             </div>
             
-            <div>
-              <button className="text-xs bg-nav-active text-white px-3 py-1 rounded-md hover:bg-opacity-80">
-                View
-              </button>
-            </div>
+            <button 
+              onClick={handleEdit}
+              className="text-xs bg-light-navy text-nav-active p-2 rounded-full hover:bg-opacity-80"
+            >
+              <Edit className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
+      
+      <PunishmentEditor
+        isOpen={isEditorOpen}
+        onClose={() => setIsEditorOpen(false)}
+        punishmentData={mockPunishmentData}
+        onSave={handleSave}
+      />
     </Card>
   );
 };
 
-// Add more cards to showcase the layout
 const throneRoomCards = [
   {
     title: "Royal Duty",
@@ -104,22 +135,19 @@ const ThroneRoom: React.FC = () => {
   
   const { rewards } = useRewards();
 
-  // Refresh when we navigate to this page
   useEffect(() => {
     console.log('Location changed or component mounted, refreshing metrics chart');
     setRefreshTrigger(prev => prev + 1);
   }, [location.pathname]);
 
-  // Set up a refresh mechanism for when a rule is broken or a reward is used
   useEffect(() => {
     setRefreshTrigger(prev => prev + 1);
   }, [rewards]);
 
-  // Set up a refresh interval for the metrics chart
   useEffect(() => {
     const interval = setInterval(() => {
       setRefreshTrigger(prev => prev + 1);
-    }, 60000); // Refresh every minute
+    }, 60000);
     
     return () => clearInterval(interval);
   }, []);
@@ -138,7 +166,6 @@ const ThroneRoom: React.FC = () => {
             Welcome to your command center where you can track activities and manage your domain
           </p>
           
-          {/* Display all the card examples in a responsive grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {throneRoomCards.map((card, index) => (
               <ThroneRoomCard
@@ -151,7 +178,6 @@ const ThroneRoom: React.FC = () => {
           </div>
           
           <div className="space-y-6">
-            {/* Dashboard section */}
             <Card className="bg-navy border border-light-navy">
               <CardHeader className="border-b border-light-navy">
                 <div className="flex justify-between items-center">
@@ -159,7 +185,6 @@ const ThroneRoom: React.FC = () => {
                 </div>
               </CardHeader>
               <CardContent className="pt-4 px-0">
-                {/* Weekly metrics chart with responsive container */}
                 <div className="w-full">
                   <WeeklyMetricsChart 
                     hideTitle={true} 
