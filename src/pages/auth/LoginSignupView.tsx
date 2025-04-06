@@ -10,7 +10,7 @@ import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
-  const { formState, updateFormState, handleLoginSubmit } = useAuthForm();
+  const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -91,7 +91,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
     if (currentView === "login") {
       directLogin();
     } else {
-      const result = await handleLoginSubmit(e);
+      const result = await handleSignupSubmit(e);
       if (result === "login") {
         onViewChange("login");
       }
