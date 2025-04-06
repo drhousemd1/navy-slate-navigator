@@ -14,6 +14,7 @@ import IconSelector from '@/components/task-editor/IconSelector';
 import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { findIconComponent } from '@/components/task-editor/icons/iconUtils';
 
 export interface ThroneRoomCardData {
@@ -182,143 +183,145 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-navy border border-light-navy text-white max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="bg-navy border border-light-navy text-white max-w-2xl max-h-[90vh] overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6">
           <DialogTitle className="text-white">Edit Throne Room Card</DialogTitle>
         </DialogHeader>
         
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
-            {/* Basic Details */}
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white">Title</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Card title" 
-                      className="bg-dark-navy border-light-navy text-white" 
-                      {...field} 
+        <ScrollArea className="max-h-[calc(90vh-120px)] overflow-y-auto px-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+              {/* Basic Details */}
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Title</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Card title" 
+                        className="bg-dark-navy border-light-navy text-white" 
+                        {...field} 
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Card description" 
+                        className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
+                        {...field} 
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              {/* Icon Section */}
+              <div className="space-y-4">
+                <FormLabel className="text-white text-lg">Card Icon</FormLabel>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
+                    <IconSelector
+                      selectedIconName={selectedIconName}
+                      iconPreview={iconPreview}
+                      iconColor={form.watch('icon_color')}
+                      onSelectIcon={handleIconSelect}
+                      onUploadIcon={handleIconUpload}
+                      onRemoveIcon={handleRemoveIcon}
                     />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white">Description</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Card description" 
-                      className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
-                      {...field} 
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            {/* Icon Section */}
-            <div className="space-y-4">
-              <FormLabel className="text-white text-lg">Card Icon</FormLabel>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
-                  <IconSelector
+                  </div>
+                  
+                  <PredefinedIconsGrid
                     selectedIconName={selectedIconName}
-                    iconPreview={iconPreview}
                     iconColor={form.watch('icon_color')}
                     onSelectIcon={handleIconSelect}
-                    onUploadIcon={handleIconUpload}
-                    onRemoveIcon={handleRemoveIcon}
                   />
                 </div>
-                
-                <PredefinedIconsGrid
-                  selectedIconName={selectedIconName}
-                  iconColor={form.watch('icon_color')}
-                  onSelectIcon={handleIconSelect}
+              </div>
+              
+              {/* Background Image */}
+              <div className="space-y-4">
+                <FormLabel className="text-white text-lg">Background Image</FormLabel>
+                <BackgroundImageSelector
+                  control={form.control}
+                  imagePreview={imagePreview}
+                  initialPosition={{ 
+                    x: cardData.focal_point_x || 50, 
+                    y: cardData.focal_point_y || 50 
+                  }}
+                  onRemoveImage={handleRemoveImage}
+                  onImageUpload={handleImageUpload}
+                  setValue={form.setValue}
                 />
               </div>
-            </div>
-            
-            {/* Background Image */}
-            <div className="space-y-4">
-              <FormLabel className="text-white text-lg">Background Image</FormLabel>
-              <BackgroundImageSelector
+              
+              {/* Color Settings */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <ColorPickerField 
+                  control={form.control} 
+                  name="title_color" 
+                  label="Title Color" 
+                />
+                
+                <ColorPickerField 
+                  control={form.control} 
+                  name="subtext_color" 
+                  label="Subtext Color" 
+                />
+                
+                <ColorPickerField 
+                  control={form.control} 
+                  name="calendar_color" 
+                  label="Calendar Color" 
+                />
+                
+                <ColorPickerField 
+                  control={form.control} 
+                  name="icon_color" 
+                  label="Icon Color" 
+                />
+              </div>
+              
+              <FormField
                 control={form.control}
-                imagePreview={imagePreview}
-                initialPosition={{ 
-                  x: cardData.focal_point_x || 50, 
-                  y: cardData.focal_point_y || 50 
-                }}
-                onRemoveImage={handleRemoveImage}
-                onImageUpload={handleImageUpload}
-                setValue={form.setValue}
+                name="highlight_effect"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-white">Highlight Effect</FormLabel>
+                      <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-            </div>
-            
-            {/* Color Settings */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <ColorPickerField 
-                control={form.control} 
-                name="title_color" 
-                label="Title Color" 
-              />
-              
-              <ColorPickerField 
-                control={form.control} 
-                name="subtext_color" 
-                label="Subtext Color" 
-              />
-              
-              <ColorPickerField 
-                control={form.control} 
-                name="calendar_color" 
-                label="Calendar Color" 
-              />
-              
-              <ColorPickerField 
-                control={form.control} 
-                name="icon_color" 
-                label="Icon Color" 
-              />
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="highlight_effect"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-white">Highlight Effect</FormLabel>
-                    <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={onClose} className="border-light-navy">
-                Cancel
-              </Button>
-              <Button type="submit">
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            </form>
+          </Form>
+        </ScrollArea>
+          
+        <DialogFooter className="px-6 py-4 border-t border-light-navy mt-4">
+          <Button variant="outline" onClick={onClose} className="border-light-navy">
+            Cancel
+          </Button>
+          <Button type="button" onClick={form.handleSubmit(handleSave)}>
+            Save Changes
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
