@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -56,7 +55,6 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     y: cardData?.focal_point_y || 50 
   });
   
-  // Initialize the form with default values
   const form = useForm<ThroneRoomCardData>({
     defaultValues: {
       id: cardData?.id || '',
@@ -77,7 +75,6 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     }
   });
   
-  // When modal opens or cardData changes, reset form values
   useEffect(() => {
     if (isOpen && cardData) {
       console.log("Modal opened with card data:", cardData);
@@ -108,7 +105,6 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     }
   }, [isOpen, cardData, form]);
   
-  // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -123,13 +119,11 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     }
   };
   
-  // Handle image removal
   const handleRemoveImage = () => {
     setImagePreview(null);
     form.setValue('background_image_url', '');
   };
 
-  // Handle icon upload
   const handleIconUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -153,7 +147,6 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     input.click();
   };
 
-  // Handle icon selection
   const handleIconSelect = (iconName: string) => {
     if (iconName.startsWith('custom:')) {
       const iconUrl = iconName.substring(7);
@@ -179,10 +172,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     }
   };
 
-  // Handle delete card
   const handleDeleteCard = () => {
     try {
-      // Remove from localStorage
       const existingCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
       const updatedCards = existingCards.filter((card: ThroneRoomCardData) => card.id !== cardData.id);
       localStorage.setItem('throneRoomCards', JSON.stringify(updatedCards));
@@ -203,7 +194,6 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     }
   };
   
-  // Save the card data
   const onSubmit = async (data: ThroneRoomCardData) => {
     try {
       setIsSaving(true);
@@ -218,8 +208,6 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         focal_point_y: form.getValues('focal_point_y'),
       };
       
-      // Persist the data in localStorage for demo purposes
-      // In a real app, this would be saved to a database
       const existingCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
       const cardIndex = existingCards.findIndex((card: ThroneRoomCardData) => card.id === updatedData.id);
       
@@ -231,7 +219,6 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       
       localStorage.setItem('throneRoomCards', JSON.stringify(existingCards));
       
-      // Call the onSave callback with the updated data
       await onSave(updatedData);
       
       toast({
@@ -313,6 +300,14 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
               
               <div className="space-y-4">
                 <FormLabel className="text-white text-lg">Background Image</FormLabel>
+                <div className="flex space-x-2 mb-4">
+                  {[...Array(5)].map((_, index) => (
+                    <div
+                      key={index}
+                      className="w-12 h-12 rounded-md bg-dark-navy border border-light-navy hover:border-white cursor-pointer"
+                    />
+                  ))}
+                </div>
                 <BackgroundImageSelector
                   control={form.control}
                   imagePreview={imagePreview}
