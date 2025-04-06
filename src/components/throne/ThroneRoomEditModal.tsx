@@ -144,19 +144,65 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || selectedBoxIndex === null) return;
-
+    if (!file) return;
+    
+    // If no box selected, auto-select the first empty slot
+    let targetIndex = selectedBoxIndex;
+    if (targetIndex === null) {
+      const firstEmpty = imageSlots.findIndex((slot) => !slot);
+      if (firstEmpty === -1) {
+        // All slots are full, select the first one
+        targetIndex = 0;
+      } else {
+        targetIndex = firstEmpty;
+      }
+      setSelectedBoxIndex(targetIndex);
+      console.log(`Auto-selected box index ${targetIndex} since none was selected`);
+    }
+    
     const reader = new FileReader();
     reader.onloadend = () => {
-      const base64String = reader.result as string;
-      const updatedSlots = [...imageSlots];
-      updatedSlots[selectedBoxIndex] = base64String;
-      setImageSlots(updatedSlots);
-      setImagePreview(base64String);
-      form.setValue('background_image_url', base64String);
-      form.setValue('background_opacity', 100);
+      try {
+        const base64String = reader.result as string;
+        console.log(`Image loaded, size: ${Math.round(base64String.length / 1024)}KB`);
+        
+        const updatedSlots = [...imageSlots];
+        updatedSlots[targetIndex!] = base64String;
+        setImageSlots(updatedSlots);
+        setImagePreview(base64String);
+        form.setValue('background_image_url', base64String);
+        form.setValue('background_opacity', 100);
+        
+        console.log(`Updated image slot ${targetIndex} and set as preview`);
+      } catch (error) {
+        console.error("Error processing uploaded image:", error);
+        toast({
+          title: "Image Error",
+          description: "There was a problem processing the uploaded image",
+          variant: "destructive"
+        });
+      }
     };
-    reader.readAsDataURL(file);
+    
+    reader.onerror = (error) => {
+      console.error("FileReader error:", error);
+      toast({
+        title: "Upload Error",
+        description: "Failed to read the image file",
+        variant: "destructive"
+      });
+    };
+    
+    try {
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Error reading file as data URL:", error);
+      toast({
+        title: "File Error",
+        description: "Failed to read the image file",
+        variant: "destructive"
+      });
+    }
   };
   
   const handleRemoveImage = () => {
@@ -164,9 +210,16 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       const updatedSlots = [...imageSlots];
       updatedSlots[selectedBoxIndex] = null;
       setImageSlots(updatedSlots);
+      
+      // Set preview to the next available image
+      const nextImage = updatedSlots.find(slot => slot !== null);
+      setImagePreview(nextImage || null);
+      form.setValue('background_image_url', nextImage || '');
+      
+      console.log(`Removed image from slot ${selectedBoxIndex}, next preview:`, nextImage ? 'found' : 'none');
+    } else {
+      console.log('No slot selected for removal');
     }
-    setImagePreview(null);
-    form.setValue('background_image_url', '');
   };
 
   const handleIconUpload = () => {
@@ -243,51 +296,51 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     try {
       setIsSaving(true);
       console.log("Saving card data:", data);
-      console.log("Current image slots:", imageSlots);
+      console.log("Current image slots:", imageSlots.map((s, i) => 
+        s ? `[${i}: ${s.substring(0, 20)}...]` : `[${i}: null]`));
       
-      const validImageSlots = imageSlots.map(slot => {
-        if (!slot) return null;
-        
-        if (typeof slot !== 'string' || slot.trim() === '') {
-          console.warn("Found invalid image slot:", slot);
-          return null;
-        }
-        
-        if (!slot.startsWith('data:image') && !slot.startsWith('http')) {
-          console.warn("Image slot doesn't start with expected prefix:", slot.substring(0, 20));
-        }
-        
-        return slot;
-      });
+      // Validate image slots before saving
+      const validImageSlots = imageSlots
+        .filter(slot => typeof slot === 'string' && slot.trim() !== '')
+        .map(slot => {
+          // Additional validation to ensure it's a valid data URL or image URL
+          if (!slot) return null;
+          try {
+            if (slot.startsWith('data:image') || slot.startsWith('http')) {
+              return slot;
+            } else {
+              console.warn("Invalid image data in slot:", slot.substring(0, 30));
+              return null;
+            }
+          } catch (e) {
+            console.error("Error validating image slot:", e);
+            return null;
+          }
+        })
+        .filter(Boolean) as string[];
       
-      console.log("Valid image slots:", validImageSlots.map((s, i) => 
-        s ? `[${i}: Valid ${s.substring(0, 20)}...]` : `[${i}: null]`));
+      console.log(`Found ${validImageSlots.length} valid image slots after validation`);
       
       const updatedData = {
         ...data,
         background_image_url: imagePreview || undefined,
         icon_url: iconPreview || undefined,
         iconName: selectedIconName || undefined,
-        focal_point_x: form.getValues('focal_point_x'),
-        focal_point_y: form.getValues('focal_point_y'),
-        background_images: validImageSlots.filter(Boolean),
+        focal_point_x: position.x,
+        focal_point_y: position.y,
+        background_images: validImageSlots,
       };
       
-      console.log("Transformed updatedData:", {
-        ...updatedData,
-        background_images: updatedData.background_images?.length 
-          ? `[${updatedData.background_images.length} images]` 
-          : []
+      console.log("Transformed data ready for save:", {
+        id: updatedData.id,
+        title: updatedData.title,
+        imageCount: updatedData.background_images?.length || 0,
+        hasBackgroundImageUrl: Boolean(updatedData.background_image_url)
       });
-      console.log("background_images being saved:", updatedData.background_images);
       
       try {
         const existingCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
-        console.log("Existing cards before update:", 
-          existingCards.map((c: ThroneRoomCardData) => ({ id: c.id, title: c.title })));
-        
         const cardIndex = existingCards.findIndex((card: ThroneRoomCardData) => card.id === updatedData.id);
-        console.log(`Card index in existing cards: ${cardIndex} (id: ${updatedData.id})`);
         
         if (cardIndex >= 0) {
           existingCards[cardIndex] = updatedData;
@@ -297,21 +350,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
           console.log(`Added new card with id ${updatedData.id}`);
         }
         
-        const cardsJson = JSON.stringify(existingCards);
-        console.log(`Size of cards data to save: ${cardsJson.length} characters`);
-        
-        if (cardsJson.length > 4000000) {
-          console.error("Warning: localStorage size limit approaching");
-          toast({
-            title: "Warning",
-            description: "The data size is very large and may exceed storage limits.",
-            variant: "destructive"
-          });
-        }
-        
-        localStorage.setItem('throneRoomCards', cardsJson);
-        console.log("Cards after update:", JSON.parse(localStorage.getItem('throneRoomCards') || '[]')
-          .map((c: ThroneRoomCardData) => ({ id: c.id, title: c.title })));
+        localStorage.setItem('throneRoomCards', JSON.stringify(existingCards));
+        console.log("Successfully saved to localStorage");
         
         await onSave(updatedData);
         
@@ -333,7 +373,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       console.error('Error saving throne room card:', error);
       toast({
         title: "Error",
-        description: `Failed to save card settings: ${error.message}`,
+        description: `Failed to save card settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
@@ -404,7 +444,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                 <FormLabel className="text-white text-lg">Background Image</FormLabel>
                 <div className="flex flex-row items-end space-x-6 mb-4">
                   <div className="flex space-x-2">
-                    {imageSlots.map((_, index) => (
+                    {imageSlots.map((imageUrl, index) => (
                       <div
                         key={index}
                         onClick={() => {
@@ -417,11 +457,15 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                             : 'bg-dark-navy border border-light-navy hover:border-white'}
                         `}
                       >
-                        {imageSlots[index] && (
+                        {imageUrl && (
                           <img
-                            src={imageSlots[index] || ''}
+                            src={imageUrl}
                             alt={`Image ${index + 1}`}
                             className="w-full h-full object-cover rounded-md"
+                            onError={(e) => {
+                              console.error(`Error loading image in slot ${index}`);
+                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMjJDMTcuNTIyOCAyMiAyMiAxNy41MjI4IDIyIDEyQzIyIDYuNDc3MTUgMTcuNTIyOCAyIDIgNi40NzcxNSAyIDIgNi40NzcxNSAyIDEyQzIgMTcuNTIyOCA2LjQ3NzE1IDIyIDEyIDIyWiIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTE1IDlMOSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTkgOUwxNSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
+                            }}
                           />
                         )}
                       </div>
@@ -464,10 +508,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                 <BackgroundImageSelector
                   control={form.control}
                   imagePreview={imagePreview}
-                  initialPosition={{ 
-                    x: form.getValues('focal_point_x'), 
-                    y: form.getValues('focal_point_y') 
-                  }}
+                  initialPosition={position}
                   onRemoveImage={handleRemoveImage}
                   onImageUpload={handleImageUpload}
                   setValue={form.setValue}
