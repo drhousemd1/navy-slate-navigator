@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -29,8 +28,7 @@ const ThroneRoomCard: React.FC<{
   id: string;
   priority?: 'low' | 'medium' | 'high';
   points?: number;
-  onDelete?: (id: string) => void;
-}> = ({ title, description, icon, id, priority = 'medium', points = 5, onDelete }) => {
+}> = ({ title, description, icon, id, priority = 'medium', points = 5 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [cardData, setCardData] = useState<ThroneRoomCardData>({
     id,
@@ -60,17 +58,6 @@ const ThroneRoomCard: React.FC<{
       title: "Card Updated",
       description: "The throne room card has been updated successfully",
     });
-  };
-  
-  const handleDeleteCard = (id: string) => {
-    if (onDelete) {
-      onDelete(id);
-    } else {
-      toast({
-        title: "Delete feature disabled",
-        description: "This is a demo card and cannot be deleted",
-      });
-    }
   };
 
   const usageData = [1, 0, 1, 0, 0, 0, 0];
@@ -154,7 +141,6 @@ const ThroneRoomCard: React.FC<{
         onClose={handleCloseEditModal}
         cardData={cardData}
         onSave={handleSaveCard}
-        onDelete={handleDeleteCard}
       />
     </>
   );
@@ -235,13 +221,6 @@ const ThroneRoom: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleDeleteThroneCard = (id: string) => {
-    toast({
-      title: "Card deleted",
-      description: `Card ${id} has been deleted`,
-    });
-  };
-
   const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
     console.log('Metrics data loaded with summary:', summaryData);
     setMetricsSummary(summaryData);
@@ -266,7 +245,6 @@ const ThroneRoom: React.FC = () => {
                 icon={card.icon}
                 priority={card.priority}
                 points={card.points}
-                onDelete={handleDeleteThroneCard}
               />
             ))}
           </div>
