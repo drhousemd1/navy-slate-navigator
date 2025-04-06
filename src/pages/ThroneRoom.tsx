@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -19,13 +18,13 @@ import { Button } from '@/components/ui/button';
 import ThroneRoomEditModal, { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
 import { toast } from '@/hooks/use-toast';
 
-// Card component for Throne Room page - styled to match the rewards/tasks cards
 const ThroneRoomCard: React.FC<{
   title: string;
   description: string;
   icon?: React.ReactNode;
   id: string;
-}> = ({ title, description, icon, id }) => {
+  onDelete?: (id: string) => void;
+}> = ({ title, description, icon, id, onDelete }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [cardData, setCardData] = useState<ThroneRoomCardData>({
     id,
@@ -49,6 +48,17 @@ const ThroneRoomCard: React.FC<{
       description: "The throne room card has been updated successfully",
     });
   };
+  
+  const handleDeleteCard = (id: string) => {
+    if (onDelete) {
+      onDelete(id);
+    } else {
+      toast({
+        title: "Delete feature disabled",
+        description: "This is a demo card and cannot be deleted",
+      });
+    }
+  };
 
   return (
     <>
@@ -56,7 +66,11 @@ const ThroneRoomCard: React.FC<{
         <div className="flex p-4">
           {/* Left side - Icon circle */}
           <div className="flex-shrink-0 mr-4">
-            <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center" 
+                 style={{ 
+                   backgroundColor: cardData.calendar_color || '#7E69AB',
+                   color: cardData.icon_color || '#FFFFFF'
+                 }}>
               {icon}
             </div>
           </div>
@@ -65,7 +79,15 @@ const ThroneRoomCard: React.FC<{
           <div className="flex-1">
             {/* Top section with title and view button */}
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-semibold text-white">{cardData.title}</h3>
+              <h3 className="text-lg font-semibold" 
+                  style={{ 
+                    color: cardData.title_color || '#FFFFFF',
+                    backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
+                    padding: cardData.highlight_effect ? '0 4px' : '0',
+                    borderRadius: cardData.highlight_effect ? '4px' : '0'
+                  }}>
+                {cardData.title}
+              </h3>
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -75,7 +97,16 @@ const ThroneRoomCard: React.FC<{
               </Button>
             </div>
             
-            <p className="text-sm text-nav-inactive mt-1">{cardData.description}</p>
+            <p className="text-sm mt-1" 
+               style={{ 
+                 color: cardData.subtext_color || '#8E9196',
+                 backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
+                 padding: cardData.highlight_effect ? '0 4px' : '0',
+                 borderRadius: cardData.highlight_effect ? '4px' : '0',
+                 display: 'inline-block'
+               }}>
+              {cardData.description}
+            </p>
             
             {/* Bottom actions section */}
             <div className="flex justify-between items-center mt-3">
@@ -104,12 +135,12 @@ const ThroneRoomCard: React.FC<{
         onClose={handleCloseEditModal}
         cardData={cardData}
         onSave={handleSaveCard}
+        onDelete={handleDeleteCard}
       />
     </>
   );
 };
 
-// Add more cards to showcase the layout
 const throneRoomCards = [
   {
     id: "royal-duty",
@@ -160,18 +191,15 @@ const ThroneRoom: React.FC = () => {
   
   const { rewards } = useRewards();
 
-  // Refresh when we navigate to this page
   useEffect(() => {
     console.log('Location changed or component mounted, refreshing metrics chart');
     setRefreshTrigger(prev => prev + 1);
   }, [location.pathname]);
 
-  // Set up a refresh mechanism for when a rule is broken or a reward is used
   useEffect(() => {
     setRefreshTrigger(prev => prev + 1);
   }, [rewards]);
 
-  // Set up a refresh interval for the metrics chart
   useEffect(() => {
     const interval = setInterval(() => {
       setRefreshTrigger(prev => prev + 1);
@@ -179,6 +207,13 @@ const ThroneRoom: React.FC = () => {
     
     return () => clearInterval(interval);
   }, []);
+
+  const handleDeleteThroneCard = (id: string) => {
+    toast({
+      title: "Card deleted",
+      description: `Card ${id} has been deleted`,
+    });
+  };
 
   const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
     console.log('Metrics data loaded with summary:', summaryData);
@@ -194,7 +229,6 @@ const ThroneRoom: React.FC = () => {
             Welcome to your command center where you can track activities and manage your domain
           </p>
           
-          {/* Display all the card examples in a responsive grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {throneRoomCards.map((card, index) => (
               <ThroneRoomCard
@@ -203,12 +237,12 @@ const ThroneRoom: React.FC = () => {
                 title={card.title}
                 description={card.description}
                 icon={card.icon}
+                onDelete={handleDeleteThroneCard}
               />
             ))}
           </div>
           
           <div className="space-y-6">
-            {/* Dashboard section */}
             <Card className="bg-navy border border-light-navy">
               <CardHeader className="border-b border-light-navy">
                 <div className="flex justify-between items-center">
@@ -216,7 +250,6 @@ const ThroneRoom: React.FC = () => {
                 </div>
               </CardHeader>
               <CardContent className="pt-4 px-0">
-                {/* Weekly metrics chart with responsive container */}
                 <div className="w-full">
                   <WeeklyMetricsChart 
                     hideTitle={true} 
