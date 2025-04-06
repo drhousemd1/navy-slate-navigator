@@ -54,6 +54,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     x: cardData?.focal_point_x || 50, 
     y: cardData?.focal_point_y || 50 
   });
+  const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
   
   const form = useForm<ThroneRoomCardData>({
     defaultValues: {
@@ -304,7 +305,12 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                   {[...Array(5)].map((_, index) => (
                     <div
                       key={index}
-                      className="w-12 h-12 rounded-md bg-dark-navy border border-light-navy hover:border-white cursor-pointer"
+                      onClick={() => setSelectedBoxIndex(index)}
+                      className={`w-12 h-12 rounded-md cursor-pointer transition-all
+                        ${selectedBoxIndex === index 
+                          ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]' 
+                          : 'bg-dark-navy border border-light-navy hover:border-white'}
+                      `}
                     />
                   ))}
                 </div>
