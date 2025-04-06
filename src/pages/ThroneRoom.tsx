@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -48,6 +49,7 @@ const ThroneRoomCard: React.FC<{
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   const [nextImage, setNextImage] = useState<string | null>(null);
   const [isCrossfading, setIsCrossfading] = useState(false);
+  const [usageData, setUsageData] = useState<number[]>([1, 0, 1, 0, 0, 0, 0]); // Default usage data for FrequencyTracker
 
   useEffect(() => {
     const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
@@ -80,6 +82,11 @@ const ThroneRoomCard: React.FC<{
       if (imageArray.length > 0) {
         setCurrentImage(imageArray[0]);
         setNextImage(imageArray[0]);
+      }
+      
+      // If the card has usage data, use it
+      if (Array.isArray(savedCard.usage_data) && savedCard.usage_data.length > 0) {
+        setUsageData(savedCard.usage_data);
       }
     }
   }, [id, title, description, priority]);
@@ -144,6 +151,11 @@ const ThroneRoomCard: React.FC<{
       console.log("No valid image sources found, clearing images");
       setCurrentImage(null);
       setNextImage(null);
+    }
+    
+    // Save usage data if it exists
+    if (Array.isArray(updatedData.usage_data) && updatedData.usage_data.length > 0) {
+      setUsageData(updatedData.usage_data);
     }
     
     const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
