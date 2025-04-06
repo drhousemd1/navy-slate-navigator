@@ -27,12 +27,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: initialPosition?.x ?? 50, y: initialPosition?.y ?? 50 });
   
-  // Use the form's control to get the current background_opacity value
-  const [opacity, setOpacity] = useState<number>(() => {
-    // Start with the value from the form if it exists, otherwise default to 100
-    const formValue = control._formValues?.background_opacity;
-    return typeof formValue === 'number' ? formValue : 100;
-  });
+  // Safely initialize opacity - default to 100 if control._formValues is not available
+  const [opacity, setOpacity] = useState<number>(100);
 
   // Initialize with defaults or existing values
   useEffect(() => {
@@ -41,19 +37,25 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     }
   }, [initialPosition]);
 
-  // This useEffect is modified to set the opacity value from the form if available
+  // This useEffect is modified to safely set the opacity value from the form if available
   useEffect(() => {
-    const formOpacity = control._formValues?.background_opacity;
-    if (typeof formOpacity === 'number') {
-      console.log("Setting opacity from form value:", formOpacity);
-      setOpacity(formOpacity);
-    } else if (imagePreview && !formOpacity) {
-      // Only set default if we have an image but no opacity value
-      console.log("Setting default opacity for new image to 100");
-      setValue('background_opacity', 100);
+    try {
+      const formOpacity = control?._formValues?.background_opacity;
+      if (typeof formOpacity === 'number') {
+        console.log("Setting opacity from form value:", formOpacity);
+        setOpacity(formOpacity);
+      } else if (imagePreview) {
+        // Only set default if we have an image but no opacity value
+        console.log("Setting default opacity for new image to 100");
+        setValue('background_opacity', 100);
+        setOpacity(100);
+      }
+    } catch (error) {
+      console.error("Error setting opacity:", error);
+      // Fallback to default if there's an error
       setOpacity(100);
     }
-  }, [control._formValues?.background_opacity, imagePreview, setValue]);
+  }, [control, imagePreview, setValue]);
 
   const updatePosition = (clientX: number, clientY: number) => {
     if (!imageContainerRef.current) return;

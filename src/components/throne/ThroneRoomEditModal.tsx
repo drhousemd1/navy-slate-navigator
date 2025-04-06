@@ -191,7 +191,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                     <FormLabel className="text-white">Priority</FormLabel>
                     <FormControl>
                       <PrioritySelector 
-                        defaultValue={field.value}
+                        value={field.value}
                         onValueChange={field.onChange}
                       />
                     </FormControl>
@@ -253,10 +253,9 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                 imagePreview={imagePreview}
                 onImageUpload={handleImageUpload}
                 onRemoveImage={handleRemoveImage}
-                opacity={form.watch('background_opacity') || 100}
-                onOpacityChange={(value) => form.setValue('background_opacity', value)}
-                position={position}
-                onPositionChange={handleUpdatePosition}
+                control={form.control}
+                setValue={form.setValue}
+                initialPosition={position}
               />
             </div>
             

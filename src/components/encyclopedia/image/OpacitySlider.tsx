@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Slider } from "@/components/ui/slider";
 import { Control } from 'react-hook-form';
@@ -12,9 +12,6 @@ interface OpacitySliderProps {
 }
 
 const OpacitySlider: React.FC<OpacitySliderProps> = ({ control, name, label }) => {
-  // Get the current form values
-  const value = control._formValues?.[name] || 100;
-  
   return (
     <FormField
       control={control}
