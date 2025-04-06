@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -311,7 +312,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
               
               <div className="space-y-4">
                 <FormLabel className="text-white text-lg">Background Image</FormLabel>
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex items-start space-x-6 mb-4">
+                  {/* Left: 5 image slots */}
                   <div className="flex space-x-2">
                     {imageSlots.map((_, index) => (
                       <div
@@ -337,7 +339,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                     ))}
                   </div>
 
-                  <div className="flex flex-col items-end space-y-1 text-right">
+                  {/* Right: Carousel Timer (immediately after thumbnails, still left aligned) */}
+                  <div className="flex flex-col space-y-1">
                     <span className="text-sm text-cyan-300 font-medium leading-tight">
                       Carousel Timer
                     </span>
