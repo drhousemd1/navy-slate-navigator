@@ -22,6 +22,7 @@ export interface ThroneRoomCardData {
   iconName?: string;
   icon_url?: string;
   background_image_url?: string | null;
+  background_images?: string[];
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
@@ -112,6 +113,20 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         x: cardData.focal_point_x || 50, 
         y: cardData.focal_point_y || 50 
       });
+      
+      if (Array.isArray(cardData.background_images) && cardData.background_images.length > 0) {
+        const newImageSlots = [...imageSlots];
+        cardData.background_images.forEach((img, index) => {
+          if (index < newImageSlots.length) {
+            newImageSlots[index] = img;
+          }
+        });
+        setImageSlots(newImageSlots);
+      } else if (cardData.background_image_url) {
+        const newImageSlots = [...imageSlots];
+        newImageSlots[0] = cardData.background_image_url;
+        setImageSlots(newImageSlots);
+      }
     }
   }, [isOpen, cardData, form]);
   
@@ -224,6 +239,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         iconName: selectedIconName || undefined,
         focal_point_x: form.getValues('focal_point_x'),
         focal_point_y: form.getValues('focal_point_y'),
+        background_images: imageSlots.filter(Boolean),
       };
       
       const existingCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');

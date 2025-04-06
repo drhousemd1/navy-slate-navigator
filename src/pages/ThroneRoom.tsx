@@ -43,8 +43,9 @@ const ThroneRoomCard: React.FC<{
     highlight_effect: false,
     priority: priority
   });
+  const [carouselImages, setCarouselImages] = useState<string[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Load saved card data from localStorage on component mount
   useEffect(() => {
     const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
     const savedCard = savedCards.find((card: ThroneRoomCardData) => card.id === id);
@@ -53,13 +54,32 @@ const ThroneRoomCard: React.FC<{
       console.log("Loading saved card data for", id, savedCard);
       setCardData({
         ...savedCard,
-        // Ensure these required fields have sensible defaults
         title: savedCard.title || title,
         description: savedCard.description || description,
         priority: savedCard.priority || priority
       });
+      
+      if (Array.isArray(savedCard.background_images)) {
+        setCarouselImages(savedCard.background_images.filter(Boolean));
+      } else if (typeof savedCard.background_image_url === 'string') {
+        setCarouselImages([savedCard.background_image_url]);
+      }
     }
   }, [id, title, description, priority]);
+
+  useEffect(() => {
+    if (carouselImages.length <= 1) return;
+    
+    const carouselTimerValue = Number(localStorage.getItem("throneRoom_carouselTimer")) || 5;
+    
+    const interval = setInterval(() => {
+      setCurrentImageIndex(prev => 
+        prev === carouselImages.length - 1 ? 0 : prev + 1
+      );
+    }, carouselTimerValue * 1000);
+    
+    return () => clearInterval(interval);
+  }, [carouselImages]);
 
   const handleOpenEditModal = () => {
     setIsEditModalOpen(true);
@@ -73,7 +93,14 @@ const ThroneRoomCard: React.FC<{
     console.log("Saving updated card data:", updatedData);
     setCardData(updatedData);
     
-    // Save to localStorage
+    if (Array.isArray(updatedData.background_images)) {
+      setCarouselImages(updatedData.background_images.filter(Boolean));
+    } else if (typeof updatedData.background_image_url === 'string') {
+      setCarouselImages([updatedData.background_image_url]);
+    } else {
+      setCarouselImages([]);
+    }
+    
     const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
     const cardIndex = savedCards.findIndex((card: ThroneRoomCardData) => card.id === id);
     
@@ -93,10 +120,8 @@ const ThroneRoomCard: React.FC<{
 
   const usageData = [1, 0, 1, 0, 0, 0, 0];
 
-  // Render card icon based on stored data
   const renderCardIcon = () => {
     if (cardData.icon_url) {
-      // Custom uploaded icon
       return (
         <img 
           src={cardData.icon_url} 
@@ -106,7 +131,6 @@ const ThroneRoomCard: React.FC<{
         />
       );
     } else if (cardData.iconName) {
-      // Predefined icon
       return (
         <TaskIcon 
           icon_name={cardData.iconName} 
@@ -115,7 +139,6 @@ const ThroneRoomCard: React.FC<{
         />
       );
     } else {
-      // Default icon from props
       return icon;
     }
   };
@@ -123,11 +146,11 @@ const ThroneRoomCard: React.FC<{
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
-        {cardData.background_image_url && (
+        {(carouselImages.length > 0) && (
           <div 
             className="absolute inset-0 w-full h-full z-0"
             style={{
-              backgroundImage: `url(${cardData.background_image_url})`,
+              backgroundImage: `url(${carouselImages[currentImageIndex]})`,
               backgroundSize: 'cover',
               backgroundPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
               opacity: (cardData.background_opacity || 100) / 100,
@@ -204,7 +227,6 @@ const ThroneRoomCard: React.FC<{
   );
 };
 
-// Default throne room cards config
 const defaultThroneRoomCards = [
   {
     id: "royal-duty",
