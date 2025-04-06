@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LogIn, UserPlus, RefreshCw, AlertCircle } from 'lucide-react';
@@ -12,6 +12,14 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
   
+  // Automatically set admin credentials on load
+  useEffect(() => {
+    updateFormState({ 
+      email: 'towenhall@gmail.com', 
+      password: 'LocaMocha2025!'
+    });
+  }, []);
+  
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -23,22 +31,6 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
         onViewChange("login");
       }
     }
-  };
-
-  // Helper function to fill admin credentials
-  const fillAdminCredentials = () => {
-    updateFormState({ 
-      email: 'towenhall@gmail.com', 
-      password: 'LocaMocha2025!'
-    });
-  };
-
-  // Helper function to fill demo credentials
-  const fillDemoCredentials = () => {
-    updateFormState({ 
-      email: 'demo@example.com', 
-      password: 'demo123456'
-    });
   };
 
   return (
@@ -114,7 +106,6 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
               <p>Email: {formState.email}</p>
               <p>Password length: {formState.password?.length || 0}</p>
               <p>Auth view: {currentView}</p>
-              <p>API URL: {import.meta.env.VITE_SUPABASE_URL || "Not set"}</p>
               <Button
                 type="button"
                 variant="outline"
@@ -131,67 +122,21 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
             </div>
           )}
           
-          {/* Login Button */}
           <Button 
-            type="submit" 
+            type="submit"
             className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center" 
             disabled={formState.loading}
-            onClick={(e) => {
-              if (currentView !== "login") {
-                e.preventDefault();
-                onViewChange("login");
-              }
-            }}
           >
             <LogIn className="w-4 h-4 mr-2" />
-            {formState.loading && currentView === "login" ? 'Signing In...' : 'Sign In'}
+            {formState.loading ? 'Signing In...' : 'Sign In'}
           </Button>
           
-          {/* Create Account Button */}
-          <Button 
-            type={currentView === "signup" ? "submit" : "button"}
-            className="w-full bg-green-600 hover:bg-green-700 flex items-center justify-center" 
-            disabled={formState.loading}
-            onClick={(e) => {
-              if (currentView !== "signup") {
-                e.preventDefault();
-                onViewChange("signup");
-              }
-            }}
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            {formState.loading && currentView === "signup" ? 'Creating Account...' : 'Create Account'}
-          </Button>
-        </form>
-        
-        <div className="text-center text-xs text-gray-400 pt-2">
-          <div className="flex flex-col items-center justify-center space-y-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm"
-              className="text-sm bg-amber-800/20 hover:bg-amber-800/30 border-amber-800/40"
-              onClick={fillAdminCredentials}
-            >
-              Use admin account
-              <span className="ml-2 text-xs opacity-70">(towenhall@gmail.com)</span>
-            </Button>
-            
-            <Button 
-              type="button" 
-              variant="outline"
-              size="sm" 
-              className="text-xs text-gray-400 hover:text-gray-300"
-              onClick={fillDemoCredentials}
-            >
-              Use demo account instead
-            </Button>
+          <div className="text-center text-xs text-gray-400 pt-2">
+            <p>Admin account credentials are pre-filled for your convenience.</p>
+            <p>Email: towenhall@gmail.com</p>
+            <p>Password: LocaMocha2025!</p>
           </div>
-          
-          <p className="mt-2">
-            Note: Click the buttons above to automatically fill in login credentials.
-          </p>
-        </div>
+        </form>
       </div>
     </div>
   );

@@ -83,7 +83,7 @@ export const verifyAdminUser = async () => {
     } else if (!data.adminVerified) {
       toast?.({
         title: "Admin Account Issue",
-        description: `There was a problem with the admin account. Please contact support.`,
+        description: `Admin account not found. Please contact support.`,
         variant: "destructive"
       });
       return false;
