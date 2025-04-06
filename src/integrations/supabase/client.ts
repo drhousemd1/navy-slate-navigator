@@ -48,10 +48,10 @@ export const clearAuthState = async () => {
   }
 };
 
-// Function to call our Edge Function to create a demo user and admin user
-export const createDemoUser = async () => {
+// Function to verify admin account exists and is ready
+export const verifyAdminUser = async () => {
   try {
-    console.log("Making request to create-demo-user edge function");
+    console.log("Verifying admin account is ready for login");
     
     // Clear local storage first to avoid any conflicts
     await clearAuthState();
@@ -67,23 +67,36 @@ export const createDemoUser = async () => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Error response from create-demo-user:', response.status, errorText);
-      throw new Error(`Failed to create users: ${response.status} ${errorText}`);
+      throw new Error(`Failed to verify admin account: ${response.status} ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('Create users response:', data);
+    console.log('Admin verification response:', data);
     
     // If successful, display credentials information
-    if (data.success) {
+    if (data.success && data.adminVerified) {
       toast?.({
-        title: "Test Accounts Available",
-        description: `You can use either the demo credentials (demo@example.com / demo123456) or admin credentials (towenhall@gmail.com / LocaMocha2025!) to log in.`,
+        title: "Admin Account Ready",
+        description: `Your admin account (${data.credentials.admin.email}) is confirmed and ready to use.`,
       });
+      return true;
+    } else if (!data.adminVerified) {
+      toast?.({
+        title: "Admin Account Issue",
+        description: `There was a problem with the admin account. Please contact support.`,
+        variant: "destructive"
+      });
+      return false;
     }
     
     return data;
   } catch (error) {
-    console.error('Error creating users:', error);
+    console.error('Error verifying admin account:', error);
+    toast?.({
+      title: "Verification Error",
+      description: `Failed to verify admin account: ${error.message}`,
+      variant: "destructive"
+    });
     return { success: false, error };
   }
 };

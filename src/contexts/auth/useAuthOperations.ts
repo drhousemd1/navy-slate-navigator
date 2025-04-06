@@ -1,5 +1,4 @@
-
-import { supabase, clearAuthState } from '@/integrations/supabase/client';
+import { supabase, clearAuthState, verifyAdminUser } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export function useAuthOperations() {
@@ -17,18 +16,15 @@ export function useAuthOperations() {
         return { error: { message: 'Email and password are required' }, user: null };
       }
       
+      // For admin account, let's verify it first
+      if (trimmedEmail === 'towenhall@gmail.com') {
+        console.log('Admin login detected, verifying account status first...');
+        await verifyAdminUser();
+      }
+      
       // Clear any existing sessions to prevent conflicts
       console.log('Clearing any existing auth state before sign in');
       await clearAuthState();
-      
-      // Try with explicit token refresh before signin
-      try {
-        console.log('Refreshing auth state before sign in attempt');
-        await supabase.auth.refreshSession();
-      } catch (refreshError) {
-        // Ignore refresh errors, just proceed with sign-in
-        console.log('Session refresh not available (expected for new sign-ins)');
-      }
       
       // Use the trimmed values for authentication
       console.log('Making authentication request with:', { email: trimmedEmail });

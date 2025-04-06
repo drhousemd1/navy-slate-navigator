@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LogIn, UserPlus, RefreshCw, AlertCircle } from 'lucide-react';
@@ -11,11 +11,6 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
   const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
-  
-  useEffect(() => {
-    // Auto-fill the admin credentials on component mount
-    fillAdminCredentials();
-  }, []);
   
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,19 +25,19 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
     }
   };
 
-  // Helper function to fill demo credentials
-  const fillDemoCredentials = () => {
-    updateFormState({ 
-      email: 'demo@example.com', 
-      password: 'demo123456'
-    });
-  };
-
   // Helper function to fill admin credentials
   const fillAdminCredentials = () => {
     updateFormState({ 
       email: 'towenhall@gmail.com', 
       password: 'LocaMocha2025!'
+    });
+  };
+
+  // Helper function to fill demo credentials
+  const fillDemoCredentials = () => {
+    updateFormState({ 
+      email: 'demo@example.com', 
+      password: 'demo123456'
     });
   };
 
@@ -136,7 +131,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
             </div>
           )}
           
-          {/* Sign In Button */}
+          {/* Login Button */}
           <Button 
             type="submit" 
             className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center" 
@@ -170,28 +165,31 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
         </form>
         
         <div className="text-center text-xs text-gray-400 pt-2">
-          <div className="flex justify-center space-x-4">
+          <div className="flex flex-col items-center justify-center space-y-2">
             <Button 
               type="button" 
-              variant="link" 
-              className="text-xs text-blue-400 hover:text-blue-300 p-0"
-              onClick={fillDemoCredentials}
+              variant="outline" 
+              size="sm"
+              className="text-sm bg-amber-800/20 hover:bg-amber-800/30 border-amber-800/40"
+              onClick={fillAdminCredentials}
             >
-              Use demo account
+              Use admin account
+              <span className="ml-2 text-xs opacity-70">(towenhall@gmail.com)</span>
             </Button>
             
             <Button 
               type="button" 
-              variant="link" 
-              className="text-xs text-green-400 hover:text-green-300 p-0"
-              onClick={fillAdminCredentials}
+              variant="outline"
+              size="sm" 
+              className="text-xs text-gray-400 hover:text-gray-300"
+              onClick={fillDemoCredentials}
             >
-              Use admin account
+              Use demo account instead
             </Button>
           </div>
           
           <p className="mt-2">
-            Note: You can also sign up to create a new account.
+            Note: Click the buttons above to automatically fill in login credentials.
           </p>
         </div>
       </div>

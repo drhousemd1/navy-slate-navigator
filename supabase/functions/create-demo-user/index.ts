@@ -33,80 +33,88 @@ serve(async (req) => {
       supabaseServiceKey
     );
 
-    // Demo user credentials
-    const demoEmail = 'demo@example.com';
-    const demoPassword = 'demo123456';
-    
-    // Admin user credentials - create this user if it doesn't exist
+    // Set credentials - DO NOT CREATE NEW USERS
     const adminEmail = 'towenhall@gmail.com';
     const adminPassword = 'LocaMocha2025!';
+    const demoEmail = 'demo@example.com';
+    const demoPassword = 'demo123456';
 
-    // First check if the users exist by trying to sign them in
-    const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
+    // Instead of creating users, just verify they exist
+    const { data: adminData, error: adminError } = await supabase.auth.admin.getUserByEmail(adminEmail);
     
-    if (listError) {
-      console.error('Error checking existing users:', listError);
-      throw new Error(`Failed to check existing users: ${listError.message}`);
+    if (adminError) {
+      console.error('Error checking admin user:', adminError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: `Error verifying admin user: ${adminError.message}`
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
     
-    // Check if users exist in the list
-    const demoUserExists = existingUsers.users.some(user => user.email === demoEmail);
-    const adminUserExists = existingUsers.users.some(user => user.email === adminEmail);
+    if (!adminData.user) {
+      console.error('Admin user not found in database');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Admin user not found. Please contact support.'
+        }),
+        { 
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
     
-    console.log('User check - Demo user exists:', demoUserExists);
-    console.log('User check - Admin user exists:', adminUserExists);
+    console.log(`Admin user verified: ${adminData.user.id}`);
     
-    // Create both users if they don't exist
-    let demoCreated = false;
-    let adminCreated = false;
-    
-    // Create demo user if needed
-    if (!demoUserExists) {
-      console.log('Creating demo user...');
+    // Ensure the admin account is confirmed
+    if (!adminData.user.email_confirmed_at) {
+      console.log('Admin email not confirmed, confirming now...');
+      const { error: confirmError } = await supabase.auth.admin.updateUserById(
+        adminData.user.id,
+        { email_confirmed: true }
+      );
       
-      const { data: demoData, error: demoError } = await supabase.auth.admin.createUser({
-        email: demoEmail,
-        password: demoPassword,
-        email_confirm: true,
-        user_metadata: { role: 'user' }
-      });
-
-      if (demoError) {
-        console.error('Error creating demo user:', demoError);
+      if (confirmError) {
+        console.error('Error confirming admin email:', confirmError);
       } else {
-        console.log('Demo user created successfully:', demoData.user.id);
-        demoCreated = true;
+        console.log('Admin email confirmed successfully');
       }
     }
     
-    // Create admin user if needed
-    if (!adminUserExists) {
-      console.log('Creating admin user...');
+    // Check if demo user exists (lower priority)
+    const { data: demoData, error: demoError } = await supabase.auth.admin.getUserByEmail(demoEmail);
+    let demoExists = false;
+    
+    if (!demoError && demoData.user) {
+      demoExists = true;
+      console.log(`Demo user exists: ${demoData.user.id}`);
       
-      const { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
-        email: adminEmail,
-        password: adminPassword,
-        email_confirm: true,
-        user_metadata: { role: 'admin' }
-      });
-
-      if (adminError) {
-        console.error('Error creating admin user:', adminError);
-      } else {
-        console.log('Admin user created successfully:', adminData.user.id);
-        adminCreated = true;
+      // Ensure demo email is confirmed
+      if (!demoData.user.email_confirmed_at) {
+        await supabase.auth.admin.updateUserById(
+          demoData.user.id,
+          { email_confirmed: true }
+        );
       }
     }
 
+    // Return the credentials info without creating new users
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Users prepared successfully',
-        demoUserExists: demoUserExists || demoCreated,
-        adminUserExists: adminUserExists || adminCreated,
+        message: 'User verification successful',
+        adminVerified: !!adminData.user,
+        demoVerified: demoExists,
+        adminId: adminData.user?.id,
         credentials: { 
-          demo: { email: demoEmail, password: demoPassword },
-          admin: { email: adminEmail, password: adminPassword }
+          admin: { email: adminEmail, password: adminPassword },
+          demo: { email: demoEmail, password: demoPassword }
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

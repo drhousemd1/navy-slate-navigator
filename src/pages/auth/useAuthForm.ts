@@ -1,14 +1,15 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/AuthContext'; 
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
-import { clearAuthState, createDemoUser } from '@/integrations/supabase/client';
+import { clearAuthState, verifyAdminUser } from '@/integrations/supabase/client';
 
 export function useAuthForm() {
   const [formState, setFormState] = useState<AuthFormState>({
-    email: '', // No longer pre-fill with demo email
-    password: '', // No longer pre-fill with demo password
+    email: '', 
+    password: '', 
     loading: false,
     loginError: null
   });
@@ -31,18 +32,18 @@ export function useAuthForm() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  // Initialize demo user when the component loads, but don't pre-fill form
+  // Verify admin user when the component loads
   useEffect(() => {
-    const initializeDemoUser = async () => {
+    const initializeAdminUser = async () => {
       try {
-        console.log("Initializing demo user...");
-        await createDemoUser();
+        console.log("Verifying admin account exists and is ready...");
+        await verifyAdminUser();
       } catch (error) {
-        console.error("Error initializing demo user:", error);
+        console.error("Error verifying admin account:", error);
       }
     };
     
-    initializeDemoUser();
+    initializeAdminUser();
   }, []);
 
   const updateFormState = (updates: Partial<AuthFormState>) => {
