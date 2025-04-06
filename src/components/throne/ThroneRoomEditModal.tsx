@@ -6,12 +6,13 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } fr
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import PrioritySelector from '@/components/task-editor/PrioritySelector';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 import { Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ThroneRoomCardData {
   id: string;
@@ -50,6 +51,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     y: cardData?.focal_point_y || 50 
   });
   
+  // Initialize the form with default values
   const form = useForm<ThroneRoomCardData>({
     defaultValues: {
       id: cardData?.id || '',
@@ -69,8 +71,10 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     }
   });
   
+  // When modal opens or cardData changes, reset form values
   useEffect(() => {
     if (isOpen && cardData) {
+      console.log("Modal opened with card data:", cardData);
       form.reset({
         id: cardData.id,
         title: cardData.title,
@@ -95,6 +99,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     }
   }, [isOpen, cardData, form]);
   
+  // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -103,40 +108,63 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         const base64String = reader.result as string;
         setImagePreview(base64String);
         form.setValue('background_image_url', base64String);
+        form.setValue('background_opacity', 100);
       };
       reader.readAsDataURL(file);
     }
   };
   
+  // Handle image removal
   const handleRemoveImage = () => {
     setImagePreview(null);
     form.setValue('background_image_url', '');
   };
   
+  // Save the card data
   const onSubmit = async (data: ThroneRoomCardData) => {
     try {
       setIsSaving(true);
+      console.log("Saving card data:", data);
       
       const updatedData = {
         ...data,
         background_image_url: imagePreview || undefined,
-        focal_point_x: position.x,
-        focal_point_y: position.y,
+        focal_point_x: form.getValues('focal_point_x'),
+        focal_point_y: form.getValues('focal_point_y'),
       };
       
+      // Persist the data in localStorage for demo purposes
+      // In a real app, this would be saved to a database
+      const existingCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
+      const cardIndex = existingCards.findIndex((card: ThroneRoomCardData) => card.id === updatedData.id);
+      
+      if (cardIndex >= 0) {
+        existingCards[cardIndex] = updatedData;
+      } else {
+        existingCards.push(updatedData);
+      }
+      
+      localStorage.setItem('throneRoomCards', JSON.stringify(existingCards));
+      
+      // Call the onSave callback with the updated data
       await onSave(updatedData);
+      
+      toast({
+        title: "Success",
+        description: "Card settings saved successfully",
+      });
+      
       onClose();
     } catch (error) {
       console.error('Error saving throne room card:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save card settings",
+        variant: "destructive"
+      });
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleUpdatePosition = (x: number, y: number) => {
-    setPosition({ x, y });
-    form.setValue('focal_point_x', x);
-    form.setValue('focal_point_y', y);
   };
 
   return (
@@ -191,7 +219,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                     <FormLabel className="text-white">Priority</FormLabel>
                     <FormControl>
                       <PrioritySelector 
-                        value={field.value}
+                        defaultValue={field.value}
                         onValueChange={field.onChange}
                       />
                     </FormControl>

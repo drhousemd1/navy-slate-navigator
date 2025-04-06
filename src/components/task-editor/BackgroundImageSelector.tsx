@@ -27,7 +27,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: initialPosition?.x ?? 50, y: initialPosition?.y ?? 50 });
   
-  // Safely initialize opacity - default to 100 if control._formValues is not available
+  // Safely initialize opacity - default to 100 if no value is available
   const [opacity, setOpacity] = useState<number>(100);
 
   // Initialize with defaults or existing values
@@ -37,13 +37,16 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     }
   }, [initialPosition]);
 
-  // This useEffect is modified to safely set the opacity value from the form if available
+  // This useEffect is modified to safely set the opacity value from the form
   useEffect(() => {
     try {
-      const formOpacity = control?._formValues?.background_opacity;
-      if (typeof formOpacity === 'number') {
-        console.log("Setting opacity from form value:", formOpacity);
-        setOpacity(formOpacity);
+      // Watch for changes to the form value
+      const formValue = control._getWatch?.('background_opacity') || 
+                        control._formValues?.background_opacity;
+                        
+      if (typeof formValue === 'number') {
+        console.log("Setting opacity from form value:", formValue);
+        setOpacity(formValue);
       } else if (imagePreview) {
         // Only set default if we have an image but no opacity value
         console.log("Setting default opacity for new image to 100");
@@ -185,7 +188,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
         <FormField
           control={control}
           name="background_opacity"
-          render={() => (
+          render={({ field }) => (
             <FormItem className="space-y-2">
               <FormLabel className="text-white">Image Opacity ({opacity}%)</FormLabel>
               <FormControl>

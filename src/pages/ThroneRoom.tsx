@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -43,6 +44,23 @@ const ThroneRoomCard: React.FC<{
     priority: priority
   });
 
+  // Load saved card data from localStorage on component mount
+  useEffect(() => {
+    const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
+    const savedCard = savedCards.find((card: ThroneRoomCardData) => card.id === id);
+    
+    if (savedCard) {
+      console.log("Loading saved card data for", id, savedCard);
+      setCardData({
+        ...savedCard,
+        // Ensure these required fields have sensible defaults
+        title: savedCard.title || title,
+        description: savedCard.description || description,
+        priority: savedCard.priority || priority
+      });
+    }
+  }, [id, title, description, priority]);
+
   const handleOpenEditModal = () => {
     setIsEditModalOpen(true);
   };
@@ -54,6 +72,19 @@ const ThroneRoomCard: React.FC<{
   const handleSaveCard = (updatedData: ThroneRoomCardData) => {
     console.log("Saving updated card data:", updatedData);
     setCardData(updatedData);
+    
+    // Save to localStorage
+    const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
+    const cardIndex = savedCards.findIndex((card: ThroneRoomCardData) => card.id === id);
+    
+    if (cardIndex >= 0) {
+      savedCards[cardIndex] = updatedData;
+    } else {
+      savedCards.push(updatedData);
+    }
+    
+    localStorage.setItem('throneRoomCards', JSON.stringify(savedCards));
+    
     toast({
       title: "Card Updated",
       description: "The throne room card has been updated successfully",
@@ -146,7 +177,8 @@ const ThroneRoomCard: React.FC<{
   );
 };
 
-const throneRoomCards = [
+// Default throne room cards config
+const defaultThroneRoomCards = [
   {
     id: "royal-duty",
     title: "Royal Duty",
@@ -236,7 +268,7 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {throneRoomCards.map((card, index) => (
+            {defaultThroneRoomCards.map((card, index) => (
               <ThroneRoomCard
                 key={index}
                 id={card.id}
