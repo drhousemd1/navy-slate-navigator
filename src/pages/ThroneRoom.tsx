@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -48,6 +49,7 @@ const ThroneRoomCard: React.FC<{
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   const [nextImage, setNextImage] = useState<string | null>(null);
   const [isCrossfading, setIsCrossfading] = useState(false);
+  const [initializedImages, setInitializedImages] = useState(false);
 
   useEffect(() => {
     const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
@@ -68,19 +70,32 @@ const ThroneRoomCard: React.FC<{
         priority: savedCard.priority || priority
       });
       
+      let validImages: string[] = [];
+      
       if (Array.isArray(savedCard.background_images)) {
-        const validImages = savedCard.background_images.filter(Boolean);
+        validImages = savedCard.background_images.filter(Boolean);
         console.log("Setting carousel images from background_images array:", validImages);
-        setCarouselImages(validImages);
       } else if (typeof savedCard.background_image_url === 'string') {
         console.log("Setting carousel images from background_image_url:", savedCard.background_image_url);
-        setCarouselImages([savedCard.background_image_url]);
+        validImages = [savedCard.background_image_url];
+      }
+      
+      if (validImages.length > 0) {
+        setCarouselImages(validImages);
+        // Initialize both images to the first image on load for smooth first transition
+        const firstImage = validImages[0];
+        setCurrentImage(firstImage);
+        setNextImage(firstImage);
+        setInitializedImages(true);
       }
     }
   }, [id, title, description, priority]);
 
   useEffect(() => {
     if (carouselImages.length === 0) return;
+    
+    // Skip if images haven't been initialized yet
+    if (!initializedImages) return;
     
     const imageIndex = globalCarouselIndex % carouselImages.length;
     const newImage = carouselImages[imageIndex];
@@ -96,7 +111,7 @@ const ThroneRoomCard: React.FC<{
       
       return () => clearTimeout(timer);
     }
-  }, [globalCarouselIndex, carouselImages, currentImage]);
+  }, [globalCarouselIndex, carouselImages, currentImage, initializedImages]);
 
   const handleOpenEditModal = () => {
     setIsEditModalOpen(true);
@@ -116,27 +131,31 @@ const ThroneRoomCard: React.FC<{
     
     setCardData(updatedData);
     
+    let validImages: string[] = [];
+    
     if (Array.isArray(updatedData.background_images)) {
-      const validImages = updatedData.background_images.filter(Boolean);
+      validImages = updatedData.background_images.filter(Boolean);
       console.log("Setting carousel images from updatedData.background_images:", validImages);
-      setCarouselImages(validImages);
-      
-      if (validImages.length > 0) {
-        setCurrentImage(validImages[0]);
-        setNextImage(null);
-        setIsCrossfading(false);
-      }
     } else if (typeof updatedData.background_image_url === 'string') {
       console.log("Setting carousel images from updatedData.background_image_url:", updatedData.background_image_url);
-      setCarouselImages([updatedData.background_image_url]);
-      setCurrentImage(updatedData.background_image_url);
-      setNextImage(null);
+      validImages = [updatedData.background_image_url];
+    }
+    
+    if (validImages.length > 0) {
+      setCarouselImages(validImages);
+      
+      // Initialize both current and next to the first image for smooth transitions
+      const firstImage = validImages[0];
+      setCurrentImage(firstImage);
+      setNextImage(firstImage);
       setIsCrossfading(false);
+      setInitializedImages(true);
     } else {
       console.log("No valid image sources found, clearing carousel images");
       setCarouselImages([]);
       setCurrentImage(null);
       setNextImage(null);
+      setInitializedImages(false);
     }
     
     const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
@@ -196,14 +215,14 @@ const ThroneRoomCard: React.FC<{
           />
         )}
         
-        {nextImage && isCrossfading && (
+        {nextImage && (
           <div 
             className="absolute inset-0 w-full h-full z-1 transition-opacity duration-700"
             style={{
               backgroundImage: `url(${nextImage})`,
               backgroundSize: 'cover',
               backgroundPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
-              opacity: (cardData.background_opacity || 100) / 100,
+              opacity: isCrossfading ? (cardData.background_opacity || 100) / 100 : 0,
             }}
           />
         )}
