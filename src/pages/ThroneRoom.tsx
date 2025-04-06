@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -80,7 +81,6 @@ const ThroneRoomCard: React.FC<{
       
       if (imageArray.length > 0) {
         setVisibleImage(imageArray[0]);
-        setTransitionImage(imageArray[0]);
       }
       
       // If the card has usage data, use it
@@ -91,24 +91,29 @@ const ThroneRoomCard: React.FC<{
   }, [id, title, description, priority]);
 
   useEffect(() => {
-    if (images.length === 0) return;
+    if (!images.length || !visibleImage) return;
     
     const next = images[globalCarouselIndex % images.length];
-    if (next === visibleImage || !next) return;
+    if (next === visibleImage) return;
     
     const preload = new Image();
     preload.src = next;
     
     preload.onload = () => {
       setTransitionImage(next);
-      setIsTransitioning(true);
+      setIsTransitioning(false); // reset first
       
-      const timeout = setTimeout(() => {
-        setVisibleImage(next);      // promote the transition image
-        setIsTransitioning(false);  // reset transition state
-      }, 700); // match transition CSS
-      
-      return () => clearTimeout(timeout);
+      requestAnimationFrame(() => {
+        setIsTransitioning(true); // triggers fade-in after frame is painted
+        
+        const timeout = setTimeout(() => {
+          setVisibleImage(next);        // promote new image
+          setTransitionImage(null);     // remove transition layer
+          setIsTransitioning(false);
+        }, 700); // matches CSS fade duration
+        
+        return () => clearTimeout(timeout);
+      });
     };
   }, [globalCarouselIndex, images, visibleImage]);
 
@@ -142,8 +147,6 @@ const ThroneRoomCard: React.FC<{
     if (imageArray.length > 0) {
       const firstImage = imageArray[0];
       setVisibleImage(firstImage);
-      setTransitionImage(firstImage);
-      setIsTransitioning(false);
     } else {
       console.log("No valid image sources found, clearing images");
       setVisibleImage(null);
@@ -198,40 +201,39 @@ const ThroneRoomCard: React.FC<{
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
-        {/* Base Layer (always showing current visible image) */}
+        {/* Always-on base image */}
         {visibleImage && (
           <img
             src={visibleImage}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out opacity-100"
-            style={{
+            className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
+            style={{ 
+              transition: 'opacity 0.7s ease-in-out',
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
-              opacity: (cardData.background_opacity || 100) / 100,
-              zIndex: 0
+              opacity: (cardData.background_opacity || 100) / 100
             }}
             draggable={false}
           />
         )}
 
-        {/* Transition Layer (fades in over base) */}
-        {transitionImage && transitionImage !== visibleImage && (
+        {/* Fading-in transition image */}
+        {transitionImage && (
           <img
             src={transitionImage}
             alt=""
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
+            className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
               isTransitioning ? 'opacity-100' : 'opacity-0'
             }`}
-            style={{
+            style={{ 
+              transition: 'opacity 0.7s ease-in-out',
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
-              opacity: isTransitioning ? (cardData.background_opacity || 100) / 100 : 0,
-              zIndex: 1,
-              pointerEvents: 'none'
+              opacity: isTransitioning ? (cardData.background_opacity || 100) / 100 : 0
             }}
             draggable={false}
           />
         )}
 
-        <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
+        <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
           <div className="flex justify-between items-start mb-3">
             <PriorityBadge priority={cardData.priority || priority} />
             
