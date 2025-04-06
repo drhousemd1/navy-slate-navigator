@@ -56,6 +56,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   });
   const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
+  const [carouselTimer, setCarouselTimer] = useState<number>(5);
   
   const form = useForm<ThroneRoomCardData>({
     defaultValues: {
@@ -310,29 +311,66 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
               
               <div className="space-y-4">
                 <FormLabel className="text-white text-lg">Background Image</FormLabel>
-                <div className="flex space-x-2 mb-4">
-                  {imageSlots.map((imageSlot, index) => (
-                    <div
-                      key={index}
-                      onClick={() => {
-                        setSelectedBoxIndex(index);
-                        setImagePreview(imageSlots[index]);
-                      }}
-                      className={`w-12 h-12 rounded-md cursor-pointer transition-all
-                        ${selectedBoxIndex === index 
-                          ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]' 
-                          : 'bg-dark-navy border border-light-navy hover:border-white'}
-                      `}
-                    >
-                      {imageSlots[index] && (
-                        <img
-                          src={imageSlots[index] || ''}
-                          alt={`Image ${index + 1}`}
-                          className="w-full h-full object-cover rounded-md"
-                        />
-                      )}
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex space-x-2">
+                    {imageSlots.map((_, index) => (
+                      <div
+                        key={index}
+                        onClick={() => {
+                          setSelectedBoxIndex(index);
+                          setImagePreview(imageSlots[index]);
+                        }}
+                        className={`w-12 h-12 rounded-md cursor-pointer transition-all
+                          ${selectedBoxIndex === index
+                            ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
+                            : 'bg-dark-navy border border-light-navy hover:border-white'}
+                        `}
+                      >
+                        {imageSlots[index] && (
+                          <img
+                            src={imageSlots[index] || ''}
+                            alt={`Image ${index + 1}`}
+                            className="w-full h-full object-cover rounded-md"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <div className="flex flex-col text-right">
+                      <span className="text-sm text-cyan-300 font-medium leading-tight">
+                        Carousel Timer
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        (Setting will be applied to all cards on the page)
+                      </span>
                     </div>
-                  ))}
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCarouselTimer((prev) => Math.max(1, prev - 1))}
+                      className="px-3 py-1 text-white border-light-navy"
+                    >
+                      –
+                    </Button>
+
+                    <div className="w-10 text-center text-white">{carouselTimer}</div>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCarouselTimer((prev) => prev + 1)}
+                      className="px-3 py-1 text-white border-light-navy"
+                    >
+                      +
+                    </Button>
+
+                    <span className="text-sm text-slate-400">(s)</span>
+                  </div>
                 </div>
                 <BackgroundImageSelector
                   control={form.control}
