@@ -19,19 +19,20 @@ export interface ThroneRoomCardData {
   id: string;
   title: string;
   description: string;
-  iconName?: string;
+  iconName: string;
   icon_url?: string;
-  background_image_url?: string | null;
+  icon_color: string;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  background_image_url?: string;
   background_images?: string[];
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  icon_color?: string;
-  title_color?: string;
-  subtext_color?: string;
-  calendar_color?: string;
-  highlight_effect?: boolean;
-  priority?: 'low' | 'medium' | 'high';
+  highlight_effect: boolean;
+  priority: 'low' | 'medium' | 'high';
+  usage_data?: number[];
 }
 
 interface ThroneRoomEditModalProps {
@@ -73,16 +74,17 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       description: cardData?.description || '',
       iconName: cardData?.iconName || '',
       icon_url: cardData?.icon_url || '',
-      background_image_url: cardData?.background_image_url || '',
-      background_opacity: cardData?.background_opacity || 100,
-      focal_point_x: cardData?.focal_point_x || 50,
-      focal_point_y: cardData?.focal_point_y || 50,
       icon_color: cardData?.icon_color || '#FFFFFF',
       title_color: cardData?.title_color || '#FFFFFF',
       subtext_color: cardData?.subtext_color || '#8E9196',
       calendar_color: cardData?.calendar_color || '#7E69AB',
+      background_image_url: cardData?.background_image_url || '',
+      background_opacity: cardData?.background_opacity || 100,
+      focal_point_x: cardData?.focal_point_x || 50,
+      focal_point_y: cardData?.focal_point_y || 50,
       highlight_effect: cardData?.highlight_effect || false,
       priority: cardData?.priority || 'medium',
+      usage_data: cardData?.usage_data || []
     }
   });
   
@@ -95,16 +97,17 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         description: cardData.description,
         iconName: cardData.iconName || '',
         icon_url: cardData.icon_url || '',
-        background_image_url: cardData.background_image_url || '',
-        background_opacity: cardData.background_opacity || 100,
-        focal_point_x: cardData.focal_point_x || 50,
-        focal_point_y: cardData.focal_point_y || 50,
         icon_color: cardData.icon_color || '#FFFFFF',
         title_color: cardData.title_color || '#FFFFFF',
         subtext_color: cardData.subtext_color || '#8E9196',
         calendar_color: cardData.calendar_color || '#7E69AB',
+        background_image_url: cardData.background_image_url || '',
+        background_opacity: cardData.background_opacity || 100,
+        focal_point_x: cardData.focal_point_x || 50,
+        focal_point_y: cardData.focal_point_y || 50,
         highlight_effect: cardData.highlight_effect || false,
         priority: cardData.priority || 'medium',
+        usage_data: cardData.usage_data || []
       });
       setImagePreview(cardData.background_image_url || null);
       setIconPreview(cardData.icon_url || null);

@@ -46,9 +46,9 @@ const ThroneRoomCard: React.FC<{
     priority: priority
   });
   const [images, setImages] = useState<string[]>([]);
-  const [currentImage, setCurrentImage] = useState<string | null>(null);
-  const [nextImage, setNextImage] = useState<string | null>(null);
-  const [isCrossfading, setIsCrossfading] = useState(false);
+  const [visibleImage, setVisibleImage] = useState<string | null>(null);
+  const [transitionImage, setTransitionImage] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [usageData, setUsageData] = useState<number[]>([1, 0, 1, 0, 0, 0, 0]); // Default usage data for FrequencyTracker
 
   useEffect(() => {
@@ -80,8 +80,8 @@ const ThroneRoomCard: React.FC<{
       setImages(imageArray);
       
       if (imageArray.length > 0) {
-        setCurrentImage(imageArray[0]);
-        setNextImage(imageArray[0]);
+        setVisibleImage(imageArray[0]);
+        setTransitionImage(imageArray[0]);
       }
       
       // If the card has usage data, use it
@@ -92,28 +92,26 @@ const ThroneRoomCard: React.FC<{
   }, [id, title, description, priority]);
 
   useEffect(() => {
-    if (!images.length) return;
+    if (images.length === 0) return;
     
-    const imageIndex = globalCarouselIndex % images.length;
-    const nextImageUrl = images[imageIndex];
+    const next = images[globalCarouselIndex % images.length];
+    if (next === visibleImage || !next) return;
     
-    if (nextImageUrl === currentImage) return;
+    const preload = new Image();
+    preload.src = next;
     
-    const preloadImg = new Image();
-    preloadImg.src = nextImageUrl;
-    
-    preloadImg.onload = () => {
-      setNextImage(nextImageUrl);
-      setIsCrossfading(true);
+    preload.onload = () => {
+      setTransitionImage(next);
+      setIsTransitioning(true);
       
-      const timer = setTimeout(() => {
-        setCurrentImage(nextImageUrl);
-        setIsCrossfading(false);
-      }, 700);
+      const timeout = setTimeout(() => {
+        setVisibleImage(next);      // promote the transition image
+        setIsTransitioning(false);  // reset transition state
+      }, 700); // match transition CSS
       
-      return () => clearTimeout(timer);
+      return () => clearTimeout(timeout);
     };
-  }, [globalCarouselIndex, images, currentImage]);
+  }, [globalCarouselIndex, images, visibleImage]);
 
   const handleOpenEditModal = () => {
     setIsEditModalOpen(true);
@@ -144,13 +142,13 @@ const ThroneRoomCard: React.FC<{
     
     if (imageArray.length > 0) {
       const firstImage = imageArray[0];
-      setCurrentImage(firstImage);
-      setNextImage(firstImage);
-      setIsCrossfading(false);
+      setVisibleImage(firstImage);
+      setTransitionImage(firstImage);
+      setIsTransitioning(false);
     } else {
       console.log("No valid image sources found, clearing images");
-      setCurrentImage(null);
-      setNextImage(null);
+      setVisibleImage(null);
+      setTransitionImage(null);
     }
     
     // Save usage data if it exists
@@ -201,30 +199,32 @@ const ThroneRoomCard: React.FC<{
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
-        {currentImage && (
+        {/* Base Layer (always showing current visible image) */}
+        {visibleImage && (
           <img
-            src={currentImage}
+            src={visibleImage}
             alt=""
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
-              isCrossfading ? 'opacity-0' : 'opacity-100'
-            }`}
+            className="absolute inset-0 w-full h-full object-cover opacity-100 transition-opacity duration-700 ease-in-out"
             style={{
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
-              opacity: isCrossfading ? 0 : (cardData.background_opacity || 100) / 100,
+              opacity: (cardData.background_opacity || 100) / 100,
+              zIndex: 0
             }}
           />
         )}
-        
-        {nextImage && (
+
+        {/* Transition Layer (fades in over base) */}
+        {transitionImage && transitionImage !== visibleImage && (
           <img
-            src={nextImage}
+            src={transitionImage}
             alt=""
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
-              isCrossfading ? 'opacity-100' : 'opacity-0'
+              isTransitioning ? 'opacity-100' : 'opacity-0'
             }`}
             style={{
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
-              opacity: isCrossfading ? (cardData.background_opacity || 100) / 100 : 0,
+              opacity: isTransitioning ? (cardData.background_opacity || 100) / 100 : 0,
+              zIndex: 1
             }}
           />
         )}
