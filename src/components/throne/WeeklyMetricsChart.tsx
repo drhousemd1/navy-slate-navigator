@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -89,12 +88,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
 
         console.log("[METRICS MAP KEYS]", Array.from(metricsMap.keys()));
 
-        // Task completions via RPC since this is already implemented in the database
-        const { data: taskData, error: taskError } = await supabase
-          .rpc('get_task_completions_for_week', { 
-            week_start: format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd') 
-          });
-
+        // Task completions via RPC - using hardcoded old date for testing
+        const { data: taskData, error: taskError } = await supabase.rpc('get_task_completions_for_week', {
+          week_start: '2024-01-01' // use hardcoded old date for test if needed
+        });
         console.log("[TASK FETCH RESULT]", taskData);
 
         if (taskError) {
@@ -110,12 +107,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
 
-        // Rule violations
+        // Rule violations - no date filter
         const { data: ruleData, error: ruleError } = await supabase
           .from('rule_violations')
-          .select('violation_date')
-          .gte('violation_date', format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd'));
-
+          .select('violation_date');
         console.log("[RULE FETCH RESULT]", ruleData);
 
         if (ruleError) {
@@ -131,12 +126,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
 
-        // Reward uses - using the correct table name from the database
+        // Reward uses - no date filter
         const { data: rewardData, error: rewardError } = await supabase
           .from('reward_usage')
-          .select('created_at')
-          .gte('created_at', format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd'));
-
+          .select('created_at');
         console.log("[REWARD FETCH RESULT]", rewardData);
 
         if (rewardError) {
@@ -152,12 +145,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
 
-        // Punishments - using the correct table name from the database
+        // Punishments - no date filter
         const { data: punishmentData, error: punishmentError } = await supabase
           .from('punishment_history')
-          .select('applied_date')
-          .gte('applied_date', format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd'));
-
+          .select('applied_date');
         console.log("[PUNISHMENT FETCH RESULT]", punishmentData);
 
         if (punishmentError) {
