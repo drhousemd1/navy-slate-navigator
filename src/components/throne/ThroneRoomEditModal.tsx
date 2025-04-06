@@ -54,6 +54,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     x: cardData?.focal_point_x || 50, 
     y: cardData?.focal_point_y || 50 
   });
+  const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
   
   const form = useForm<ThroneRoomCardData>({
@@ -108,19 +109,27 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setImagePreview(base64String);
-        form.setValue('background_image_url', base64String);
-        form.setValue('background_opacity', 100);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file || selectedBoxIndex === null) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      const updatedSlots = [...imageSlots];
+      updatedSlots[selectedBoxIndex] = base64String;
+      setImageSlots(updatedSlots);
+      setImagePreview(base64String);
+      form.setValue('background_image_url', base64String);
+      form.setValue('background_opacity', 100);
+    };
+    reader.readAsDataURL(file);
   };
   
   const handleRemoveImage = () => {
+    if (selectedBoxIndex !== null) {
+      const updatedSlots = [...imageSlots];
+      updatedSlots[selectedBoxIndex] = null;
+      setImageSlots(updatedSlots);
+    }
     setImagePreview(null);
     form.setValue('background_image_url', '');
   };
@@ -302,16 +311,27 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
               <div className="space-y-4">
                 <FormLabel className="text-white text-lg">Background Image</FormLabel>
                 <div className="flex space-x-2 mb-4">
-                  {[...Array(5)].map((_, index) => (
+                  {imageSlots.map((imageSlot, index) => (
                     <div
                       key={index}
-                      onClick={() => setSelectedBoxIndex(index)}
+                      onClick={() => {
+                        setSelectedBoxIndex(index);
+                        setImagePreview(imageSlots[index]);
+                      }}
                       className={`w-12 h-12 rounded-md cursor-pointer transition-all
                         ${selectedBoxIndex === index 
                           ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]' 
                           : 'bg-dark-navy border border-light-navy hover:border-white'}
                       `}
-                    />
+                    >
+                      {imageSlots[index] && (
+                        <img
+                          src={imageSlots[index] || ''}
+                          alt={`Image ${index + 1}`}
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                      )}
+                    </div>
                   ))}
                 </div>
                 <BackgroundImageSelector
