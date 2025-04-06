@@ -47,6 +47,14 @@ const chartConfig = {
   }
 };
 
+// Hardcoded weekly activity data
+const weeklyActivityData = [
+  { name: 'Tasks Completed', value: 2 },
+  { name: 'Rules Broken', value: 0 },
+  { name: 'Rewards Redeemed', value: 1 },
+  { name: 'Punishments', value: 3 },
+];
+
 export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ 
   hideTitle = false,
   onDataLoaded 
@@ -69,7 +77,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   };
 
   useEffect(() => {
-    const fetchMetrics = async () => {
+    const loadHardcodedData = () => {
       try {
         setLoading(true);
         setError(null);
@@ -77,6 +85,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const days = generateWeekDays();
         const metricsMap = new Map<string, MetricsData>();
 
+        // Initialize data for each day
         days.forEach((date) => {
           metricsMap.set(date, {
             date,
@@ -87,89 +96,17 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         });
 
-        console.log("[METRICS MAP KEYS]", Array.from(metricsMap.keys()));
-
-        // Task completions via RPC - using last week's start date
-        const lastWeekStart = format(startOfWeek(addDays(new Date(), -7), { weekStartsOn: 0 }), 'yyyy-MM-dd');
-        const { data: taskData, error: taskError } = await supabase.rpc('get_task_completions_for_week', {
-          week_start: lastWeekStart
-        });
-        console.log("[TASK FETCH RESULT]", taskData);
-
-        if (taskError) {
-          console.error('[RPC] get_task_completions_for_week failed:', taskError.message);
-        } else {
-          taskData?.forEach((entry) => {
-            const raw = entry.completion_date;
-            const formatted = formatDate(raw);
-            const exists = metricsMap.has(formatted);
-            console.log("[TASK]", { raw, formatted, exists });
-            const day = metricsMap.get(formatted);
-            if (day) day.tasksCompleted = entry.completion_count || 0;
-          });
-        }
-
-        // Rule violations
-        const { data: ruleData, error: ruleError } = await supabase
-          .from('rule_violations')
-          .select('violation_date')
-          .gte('violation_date', lastWeekStart)
-          .lt('violation_date', format(addDays(parseISO(lastWeekStart), 7), 'yyyy-MM-dd'));
-        console.log("[RULE FETCH RESULT]", ruleData);
-
-        if (ruleError) {
-          console.error('[Table] rule_violations failed:', ruleError.message);
-        } else {
-          ruleData?.forEach((entry) => {
-            const raw = entry.violation_date;
-            const formatted = formatDate(raw);
-            const exists = metricsMap.has(formatted);
-            console.log("[RULE]", { raw, formatted, exists });
-            const day = metricsMap.get(formatted);
-            if (day) day.rulesBroken += 1;
-          });
-        }
-
-        // Reward uses
-        const { data: rewardData, error: rewardError } = await supabase
-          .from('reward_usage')
-          .select('created_at')
-          .gte('created_at', lastWeekStart)
-          .lt('created_at', format(addDays(parseISO(lastWeekStart), 7), 'yyyy-MM-dd'));
-        console.log("[REWARD FETCH RESULT]", rewardData);
-
-        if (rewardError) {
-          console.error('[Table] reward_usage failed:', rewardError.message);
-        } else {
-          rewardData?.forEach((entry) => {
-            const raw = entry.created_at;
-            const formatted = formatDate(raw);
-            const exists = metricsMap.has(formatted);
-            console.log("[REWARD]", { raw, formatted, exists });
-            const day = metricsMap.get(formatted);
-            if (day) day.rewardsRedeemed += 1;
-          });
-        }
-
-        // Punishments
-        const { data: punishmentData, error: punishmentError } = await supabase
-          .from('punishment_history')
-          .select('applied_date')
-          .gte('applied_date', lastWeekStart)
-          .lt('applied_date', format(addDays(parseISO(lastWeekStart), 7), 'yyyy-MM-dd'));
-        console.log("[PUNISHMENT FETCH RESULT]", punishmentData);
-
-        if (punishmentError) {
-          console.error('[Table] punishment_history failed:', punishmentError.message);
-        } else {
-          punishmentData?.forEach((entry) => {
-            const raw = entry.applied_date;
-            const formatted = formatDate(raw);
-            const exists = metricsMap.has(formatted);
-            console.log("[PUNISHMENT]", { raw, formatted, exists });
-            const day = metricsMap.get(formatted);
-            if (day) day.punishments += 1;
-          });
+        // Use hardcoded data instead of fetching from Supabase
+        // Distribute values across the week
+        const dayIndex = 2; // Wednesday
+        const dateKey = days[dayIndex];
+        const dayData = metricsMap.get(dateKey);
+        
+        if (dayData) {
+          dayData.tasksCompleted = weeklyActivityData[0].value;
+          dayData.rulesBroken = weeklyActivityData[1].value;
+          dayData.rewardsRedeemed = weeklyActivityData[2].value;
+          dayData.punishments = weeklyActivityData[3].value;
         }
 
         const finalData = Array.from(metricsMap.values());
@@ -180,10 +117,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         // Calculate summary for callback
         if (onDataLoaded) {
           const summary: WeeklyMetricsSummary = {
-            tasksCompleted: finalData.reduce((sum, item) => sum + item.tasksCompleted, 0),
-            rulesBroken: finalData.reduce((sum, item) => sum + item.rulesBroken, 0),
-            rewardsRedeemed: finalData.reduce((sum, item) => sum + item.rewardsRedeemed, 0),
-            punishments: finalData.reduce((sum, item) => sum + item.punishments, 0)
+            tasksCompleted: weeklyActivityData[0].value,
+            rulesBroken: weeklyActivityData[1].value,
+            rewardsRedeemed: weeklyActivityData[2].value,
+            punishments: weeklyActivityData[3].value
           };
           console.log("[SUMMARY METRICS]", summary);
           onDataLoaded(summary);
@@ -196,7 +133,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
       }
     };
 
-    fetchMetrics();
+    loadHardcodedData();
   }, [onDataLoaded]);
 
   const hasContent = data.some(d =>
