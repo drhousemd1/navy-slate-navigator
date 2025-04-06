@@ -10,11 +10,28 @@ import {
   TooltipTrigger,
   TooltipContent
 } from '@/components/ui/tooltip';
-import { InfoIcon, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
+import { InfoIcon, ChevronDown, ChevronUp, Settings2, Skull } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
+
+// Card component for Throne Room page
+const ThroneRoomCard: React.FC<{
+  title: string;
+  description: string;
+  icon?: React.ReactNode;
+}> = ({ title, description, icon }) => {
+  return (
+    <div className="rounded-lg border border-light-navy p-4 shadow-md bg-navy flex items-center space-x-4 my-4">
+      {icon}
+      <div>
+        <h3 className="text-lg font-bold text-white">{title}</h3>
+        <p className="text-sm text-nav-inactive">{description}</p>
+      </div>
+    </div>
+  );
+};
 
 interface WeeklyMetricsSummary {
   tasksCompleted: number;
@@ -72,6 +89,13 @@ const ThroneRoom: React.FC = () => {
           <p className="text-nav-inactive">
             Welcome to your command center where you can track activities and manage your domain
           </p>
+          
+          {/* Test Sub-Tile Card */}
+          <ThroneRoomCard
+            title="Royal Duty"
+            description="Complete daily tasks before sunset."
+            icon={<Skull className="text-red-500 w-6 h-6" />}
+          />
           
           <div className="space-y-6">
             {/* Dashboard section */}
