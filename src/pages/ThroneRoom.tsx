@@ -3,6 +3,7 @@ import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { WeeklyMetricsChart } from '@/components/throne/WeeklyMetricsChart';
+import { MonthlyMetricsChart } from '@/components/throne/MonthlyMetricsChart';
 import { 
   TooltipProvider, 
   Tooltip,
@@ -415,6 +416,8 @@ const ThroneRoom: React.FC = () => {
           </div>
           
           <div className="space-y-6">
+            <MonthlyMetricsChart hideTitle={false} />
+            
             <Card className="bg-navy border border-light-navy">
               <CardHeader className="border-b border-light-navy">
                 <div className="flex justify-between items-center">
