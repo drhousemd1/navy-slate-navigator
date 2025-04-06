@@ -10,7 +10,7 @@ import {
   TooltipTrigger,
   TooltipContent
 } from '@/components/ui/tooltip';
-import { InfoIcon, ChevronDown, ChevronUp, Settings2, Skull } from 'lucide-react';
+import { InfoIcon, ChevronDown, ChevronUp, Settings2, Skull, Crown, Swords, Award } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
@@ -41,6 +41,30 @@ const ThroneRoomCard: React.FC<{
     </Card>
   );
 };
+
+// Add more cards to showcase the layout
+const throneRoomCards = [
+  {
+    title: "Royal Duty",
+    description: "Complete daily tasks before sunset.",
+    icon: <Skull className="text-white w-6 h-6" />
+  },
+  {
+    title: "Kingdom Status",
+    description: "Monitor your kingdom's prosperity.",
+    icon: <Crown className="text-white w-6 h-6" />
+  },
+  {
+    title: "Realm Defense",
+    description: "Protect your boundaries from invaders.",
+    icon: <Swords className="text-white w-6 h-6" />
+  },
+  {
+    title: "Royal Achievements",
+    description: "View your earned honors and merits.",
+    icon: <Award className="text-white w-6 h-6" />
+  }
+];
 
 interface WeeklyMetricsSummary {
   tasksCompleted: number;
@@ -99,12 +123,17 @@ const ThroneRoom: React.FC = () => {
             Welcome to your command center where you can track activities and manage your domain
           </p>
           
-          {/* Test Sub-Tile Card */}
-          <ThroneRoomCard
-            title="Royal Duty"
-            description="Complete daily tasks before sunset."
-            icon={<Skull className="text-white w-6 h-6" />}
-          />
+          {/* Display all the card examples in a responsive grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {throneRoomCards.map((card, index) => (
+              <ThroneRoomCard
+                key={index}
+                title={card.title}
+                description={card.description}
+                icon={card.icon}
+              />
+            ))}
+          </div>
           
           <div className="space-y-6">
             {/* Dashboard section */}
