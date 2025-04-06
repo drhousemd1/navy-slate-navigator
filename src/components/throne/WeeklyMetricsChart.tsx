@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -96,9 +95,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         if (taskError) {
           console.error('[RPC] get_task_completions_for_week failed:', taskError.message);
         } else {
-          taskData?.forEach((entry: any) => {
-            const item = metricsMap.get(entry.completion_date);
-            if (item) item.tasksCompleted = entry.completion_count || 0;
+          taskData?.forEach((entry) => {
+            const raw = entry.completion_date;
+            const formatted = formatDate(raw);
+            console.log("[TASK]", { raw, formatted, matched: metricsMap.has(formatted) });
+            const day = metricsMap.get(formatted);
+            if (day) day.tasksCompleted = entry.completion_count || 0;
           });
         }
 
@@ -111,10 +113,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         if (ruleError) {
           console.error('[Table] rule_violations failed:', ruleError.message);
         } else {
-          ruleData?.forEach((entry: any) => {
-            const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
-            const item = metricsMap.get(date);
-            if (item) item.rulesViolated += 1;
+          ruleData?.forEach((entry) => {
+            const raw = entry.violation_date;
+            const formatted = formatDate(raw);
+            console.log("[RULE]", { raw, formatted, matched: metricsMap.has(formatted) });
+            const day = metricsMap.get(formatted);
+            if (day) day.rulesViolated += 1;
           });
         }
 
@@ -127,10 +131,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         if (rewardError) {
           console.error('[Table] reward_usage failed:', rewardError.message);
         } else {
-          rewardData?.forEach((entry: any) => {
-            const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
-            const item = metricsMap.get(date);
-            if (item) item.rewardsUsed += 1;
+          rewardData?.forEach((entry) => {
+            const raw = entry.created_at;
+            const formatted = formatDate(raw);
+            console.log("[REWARD]", { raw, formatted, matched: metricsMap.has(formatted) });
+            const day = metricsMap.get(formatted);
+            if (day) day.rewardsUsed += 1;
           });
         }
 
@@ -143,10 +149,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         if (punishmentError) {
           console.error('[Table] punishment_history failed:', punishmentError.message);
         } else {
-          punishmentData?.forEach((entry: any) => {
-            const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
-            const item = metricsMap.get(date);
-            if (item) item.punishmentsApplied += 1;
+          punishmentData?.forEach((entry) => {
+            const raw = entry.applied_date;
+            const formatted = formatDate(raw);
+            console.log("[PUNISHMENT]", { raw, formatted, matched: metricsMap.has(formatted) });
+            const day = metricsMap.get(formatted);
+            if (day) day.punishmentsApplied += 1;
           });
         }
 
