@@ -6,11 +6,14 @@ import { LogIn, UserPlus, RefreshCw, AlertCircle } from 'lucide-react';
 import { AuthViewProps } from './types';
 import { useAuthForm } from './useAuthForm';
 import { useDebugMode } from './useDebugMode';
+import { supabase, clearAuthState } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
   const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // Automatically set admin credentials on load
   useEffect(() => {
@@ -18,13 +21,66 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       email: 'towenhall@gmail.com', 
       password: 'LocaMocha2025!'
     });
+    
+    // Clear any existing sessions to prevent conflicts
+    clearAuthState();
   }, []);
+  
+  // Direct login function to bypass the complex auth flow
+  const directLogin = async () => {
+    try {
+      setIsLoggingIn(true);
+      
+      // Clear previous sessions and errors
+      await clearAuthState();
+      updateFormState({ loginError: null });
+      
+      console.log("Attempting direct login with:", {
+        email: formState.email,
+        passwordLength: formState.password?.length || 0
+      });
+      
+      // Direct call to Supabase auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formState.email,
+        password: formState.password,
+      });
+      
+      if (error) {
+        console.error("Direct login error:", error);
+        updateFormState({ 
+          loginError: error.message || "Authentication failed. Please check your credentials."
+        });
+        return;
+      }
+      
+      if (data && data.user) {
+        console.log("Direct login successful:", data.user.email);
+        toast({
+          title: "Login successful",
+          description: "You have been successfully logged in.",
+        });
+        // Navigation will happen automatically via AuthContext
+      } else {
+        updateFormState({ 
+          loginError: "Login succeeded but no user data returned."
+        });
+      }
+    } catch (error) {
+      console.error("Exception during direct login:", error);
+      updateFormState({ 
+        loginError: error.message || "An unexpected error occurred. Please try again."
+      });
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
   
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (currentView === "login") {
-      await handleLoginSubmit(e);
+      directLogin();
     } else {
       const result = await handleSignupSubmit(e);
       if (result === "login") {
@@ -125,10 +181,10 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
           <Button 
             type="submit"
             className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center" 
-            disabled={formState.loading}
+            disabled={isLoggingIn || formState.loading}
           >
             <LogIn className="w-4 h-4 mr-2" />
-            {formState.loading ? 'Signing In...' : 'Sign In'}
+            {isLoggingIn || formState.loading ? 'Signing In...' : 'Sign In'}
           </Button>
           
           <div className="text-center text-xs text-gray-400 pt-2">

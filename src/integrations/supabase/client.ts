@@ -53,9 +53,7 @@ export const verifyAdminUser = async () => {
   try {
     console.log("Verifying admin account is ready for login");
     
-    // Clear local storage first to avoid any conflicts
-    await clearAuthState();
-    
+    // This function will only be called once per page load
     const response = await fetch(`${SUPABASE_URL}/functions/v1/create-demo-user`, {
       method: 'POST',
       headers: {

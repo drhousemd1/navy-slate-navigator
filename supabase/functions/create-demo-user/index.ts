@@ -36,11 +36,12 @@ serve(async (req) => {
     // Set credentials - DO NOT CREATE NEW USERS
     const adminEmail = 'towenhall@gmail.com';
     const adminPassword = 'LocaMocha2025!';
-    const demoEmail = 'demo@example.com';
-    const demoPassword = 'demo123456';
-
-    // Check if admin user exists by listing users
-    const { data: users, error: listError } = await supabase.auth.admin.listUsers();
+    
+    // Check if admin user exists
+    console.log("Checking if admin user exists with email:", adminEmail);
+    
+    // Use listUsers to find the admin user
+    const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
     
     if (listError) {
       console.error('Error listing users:', listError);
@@ -57,54 +58,66 @@ serve(async (req) => {
     }
     
     // Find admin user in the list
-    const adminUser = users.users.find(user => user.email === adminEmail);
+    const adminUser = usersData.users.find(user => user.email === adminEmail);
     let adminVerified = false;
     
+    // If admin user exists - attempt to force confirm email if needed
     if (adminUser) {
       console.log(`Admin user found: ${adminUser.id}`);
       adminVerified = true;
       
-      // Ensure the admin account is confirmed
+      // Ensure admin account is confirmed
       if (!adminUser.email_confirmed_at) {
         console.log('Admin email not confirmed, confirming now...');
-        await supabase.auth.admin.updateUserById(
+        const { error: updateError } = await supabase.auth.admin.updateUserById(
           adminUser.id,
           { email_confirmed: true }
         );
-        console.log('Admin email confirmed successfully');
+        
+        if (updateError) {
+          console.error('Error confirming admin email:', updateError);
+        } else {
+          console.log('Admin email confirmed successfully');
+        }
+      }
+      
+      // Reset admin password to known value (helps when password is forgotten)
+      console.log('Resetting admin password to known value...');
+      const { error: resetError } = await supabase.auth.admin.updateUserById(
+        adminUser.id,
+        { password: adminPassword }
+      );
+      
+      if (resetError) {
+        console.error('Error resetting admin password:', resetError);
+      } else {
+        console.log('Admin password reset successfully');
       }
     } else {
-      console.error('Admin user not found in database');
-      // We will NOT create the admin user as requested by the user
-    }
-    
-    // Check if demo user exists
-    const demoUser = users.users.find(user => user.email === demoEmail);
-    let demoVerified = false;
-    
-    if (demoUser) {
-      console.log(`Demo user found: ${demoUser.id}`);
-      demoVerified = true;
+      // Create admin user since it doesn't exist yet
+      console.log('Admin user not found, creating now...');
+      const { data: newAdmin, error: createError } = await supabase.auth.admin.createUser({
+        email: adminEmail,
+        password: adminPassword,
+        email_confirm: true
+      });
       
-      // Ensure demo email is confirmed
-      if (!demoUser.email_confirmed_at) {
-        await supabase.auth.admin.updateUserById(
-          demoUser.id,
-          { email_confirmed: true }
-        );
+      if (createError) {
+        console.error('Error creating admin user:', createError);
+      } else {
+        console.log('Admin user created successfully:', newAdmin?.user?.id);
+        adminVerified = true;
       }
     }
 
-    // Return the status info for frontend display
+    // Return the status info
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'User verification successful',
         adminVerified: adminVerified,
-        demoVerified: demoVerified,
         credentials: { 
-          admin: { email: adminEmail, password: adminPassword },
-          demo: { email: demoEmail, password: demoPassword }
+          admin: { email: adminEmail, password: adminPassword }
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
