@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -50,7 +49,6 @@ const ThroneRoomCard: React.FC<{
   const [nextImage, setNextImage] = useState<string | null>(null);
   const [isCrossfading, setIsCrossfading] = useState(false);
 
-  // Load card data from localStorage
   useEffect(() => {
     const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
     const savedCard = savedCards.find((card: ThroneRoomCardData) => card.id === id);
@@ -81,7 +79,6 @@ const ThroneRoomCard: React.FC<{
     }
   }, [id, title, description, priority]);
 
-  // Handle image crossfade effect
   useEffect(() => {
     if (carouselImages.length === 0) return;
     
@@ -124,7 +121,6 @@ const ThroneRoomCard: React.FC<{
       console.log("Setting carousel images from updatedData.background_images:", validImages);
       setCarouselImages(validImages);
       
-      // Reset the currently displayed image when new images are set
       if (validImages.length > 0) {
         setCurrentImage(validImages[0]);
         setNextImage(null);
@@ -195,14 +191,14 @@ const ThroneRoomCard: React.FC<{
               backgroundImage: `url(${currentImage})`,
               backgroundSize: 'cover',
               backgroundPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
-              opacity: (cardData.background_opacity || 100) / 100,
+              opacity: isCrossfading ? 0 : (cardData.background_opacity || 100) / 100,
             }}
           />
         )}
         
         {nextImage && isCrossfading && (
           <div 
-            className="absolute inset-0 w-full h-full z-1 transition-opacity duration-700 opacity-0"
+            className="absolute inset-0 w-full h-full z-1 transition-opacity duration-700"
             style={{
               backgroundImage: `url(${nextImage})`,
               backgroundSize: 'cover',
@@ -341,7 +337,6 @@ const ThroneRoom: React.FC = () => {
   
   const { rewards } = useRewards();
 
-  // Global carousel timer
   useEffect(() => {
     const stored = parseInt(localStorage.getItem('throneRoom_carouselTimer') || '5', 10);
     const interval = setInterval(() => {
