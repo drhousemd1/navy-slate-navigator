@@ -101,6 +101,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         console.log('Fetching metrics data...');
         setLoading(true);
         
+        // Initialize with empty week data structure
         const weekDays = generateWeekDays();
         console.log('Generated week days:', weekDays);
         const metricsMap = new Map(weekDays.map(day => [day.date, day]));
@@ -109,38 +110,43 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const weekStart = startOfWeek(today, { weekStartsOn: 0 });
         const weekStartStr = weekStart.toISOString();
         
-        // Use RPC with type assertion to fix TypeScript error
-        const { data: taskCompletionData, error: taskCompletionError } = await supabase
-          .rpc('get_task_completions_for_week', { week_start: weekStartStr }) as unknown as { 
-            data: TaskCompletionData[] | null; 
-            error: Error | null 
-          };
-          
-        if (taskCompletionError) {
-          console.error('Error fetching task completion history:', taskCompletionError.message);
-          setError('Failed to load task completion data');
-        } else if (taskCompletionData) {
-          console.log('Task completions fetched:', taskCompletionData.length || 0);
-          
-          taskCompletionData.forEach((completion: TaskCompletionData) => {
-            if (completion.completion_date) {
-              try {
-                const completedDate = format(new Date(completion.completion_date), 'yyyy-MM-dd');
-                if (metricsMap.has(completedDate)) {
-                  const dayData = metricsMap.get(completedDate);
-                  if (dayData) {
-                    dayData.tasksCompleted = completion.completion_count;
-                    metricsMap.set(completedDate, dayData);
+        // Safe fetch for task completions with error handling
+        try {
+          const { data: taskCompletionData, error: taskCompletionError } = await supabase
+            .rpc('get_task_completions_for_week', { week_start: weekStartStr }) as unknown as { 
+              data: TaskCompletionData[] | null; 
+              error: Error | null 
+            };
+            
+          if (taskCompletionError) {
+            console.error('Error fetching task completion history:', taskCompletionError.message);
+            setError('Failed to load task completion data');
+          } else if (taskCompletionData) {
+            console.log('Task completions fetched:', taskCompletionData.length || 0);
+            
+            taskCompletionData.forEach((completion: TaskCompletionData) => {
+              if (completion.completion_date) {
+                try {
+                  const completedDate = format(new Date(completion.completion_date), 'yyyy-MM-dd');
+                  if (metricsMap.has(completedDate)) {
+                    const dayData = metricsMap.get(completedDate);
+                    if (dayData) {
+                      dayData.tasksCompleted = completion.completion_count;
+                      metricsMap.set(completedDate, dayData);
+                    }
                   }
+                } catch (dateError) {
+                  console.error('Error parsing task completion date:', dateError);
                 }
-              } catch (dateError) {
-                console.error('Error parsing task completion date:', dateError);
               }
-            }
-          });
+            });
+          }
+        } catch (taskError) {
+          console.error('Error in task completions section:', taskError);
+          setError(prev => prev || 'Error processing task data');
         }
         
-        // Fetch rule violations data - fixed to handle the new rule_violations table
+        // Safe fetch for rule violations with error handling
         try {
           const { data: ruleViolationsData, error: ruleViolationsError } = await supabase
             .from('rule_violations')
@@ -182,68 +188,81 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           setError(prev => prev || 'Error processing rule violations');
         }
         
-        // Fetch reward usage data
-        const { data: rewardsData, error: rewardsError } = await supabase
-          .from('reward_usage')
-          .select('created_at')
-          .gte('created_at', weekStartStr);
-          
-        if (rewardsError) {
-          console.error('Error fetching rewards usage:', rewardsError.message);
-          setError(prev => prev || 'Failed to load rewards data');
-        } else if (rewardsData) {
-          console.log('Rewards usage fetched:', rewardsData.length || 0, rewardsData);
-          
-          rewardsData.forEach((reward: RewardUsageData) => {
-            if (reward.created_at) {
-              try {
-                const usedDate = format(new Date(reward.created_at), 'yyyy-MM-dd');
-                if (metricsMap.has(usedDate)) {
-                  const dayData = metricsMap.get(usedDate);
-                  if (dayData) {
-                    dayData.rewardsUsed += 1;
-                    metricsMap.set(usedDate, dayData);
+        // Safe fetch for reward usage with error handling
+        try {
+          const { data: rewardsData, error: rewardsError } = await supabase
+            .from('reward_usage')
+            .select('created_at')
+            .gte('created_at', weekStartStr);
+            
+          if (rewardsError) {
+            console.error('Error fetching rewards usage:', rewardsError.message);
+            setError(prev => prev || 'Failed to load rewards data');
+          } else if (rewardsData) {
+            console.log('Rewards usage fetched:', rewardsData.length || 0, rewardsData);
+            
+            rewardsData.forEach((reward: RewardUsageData) => {
+              if (reward.created_at) {
+                try {
+                  const usedDate = format(new Date(reward.created_at), 'yyyy-MM-dd');
+                  if (metricsMap.has(usedDate)) {
+                    const dayData = metricsMap.get(usedDate);
+                    if (dayData) {
+                      dayData.rewardsUsed += 1;
+                      metricsMap.set(usedDate, dayData);
+                    }
                   }
+                } catch (dateError) {
+                  console.error('Error parsing reward date:', dateError);
                 }
-              } catch (dateError) {
-                console.error('Error parsing reward date:', dateError);
               }
-            }
-          });
+            });
+          }
+        } catch (rewardError) {
+          console.error('Error in rewards section:', rewardError);
+          setError(prev => prev || 'Error processing rewards data');
         }
         
-        const { data: punishmentsData, error: punishmentsError } = await supabase
-          .from('punishment_history')
-          .select('applied_date')
-          .gte('applied_date', weekStartStr);
-          
-        if (punishmentsError) {
-          console.error('Error fetching punishments:', punishmentsError.message);
-          setError(prev => prev || 'Failed to load punishments data');
-        } else {
-          console.log('Punishments fetched:', punishmentsData?.length || 0, punishmentsData);
-          
-          punishmentsData?.forEach(punishment => {
-            if (punishment.applied_date) {
-              try {
-                const appliedDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
-                if (metricsMap.has(appliedDate)) {
-                  const dayData = metricsMap.get(appliedDate);
-                  if (dayData) {
-                    dayData.punishmentsApplied += 1;
-                    metricsMap.set(appliedDate, dayData);
+        // Safe fetch for punishments with error handling
+        try {
+          const { data: punishmentsData, error: punishmentsError } = await supabase
+            .from('punishment_history')
+            .select('applied_date')
+            .gte('applied_date', weekStartStr);
+            
+          if (punishmentsError) {
+            console.error('Error fetching punishments:', punishmentsError.message);
+            setError(prev => prev || 'Failed to load punishments data');
+          } else {
+            console.log('Punishments fetched:', punishmentsData?.length || 0, punishmentsData);
+            
+            punishmentsData?.forEach(punishment => {
+              if (punishment.applied_date) {
+                try {
+                  const appliedDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
+                  if (metricsMap.has(appliedDate)) {
+                    const dayData = metricsMap.get(appliedDate);
+                    if (dayData) {
+                      dayData.punishmentsApplied += 1;
+                      metricsMap.set(appliedDate, dayData);
+                    }
                   }
+                } catch (dateError) {
+                  console.error('Error parsing punishment date:', dateError);
                 }
-              } catch (dateError) {
-                console.error('Error parsing punishment date:', dateError);
               }
-            }
-          });
+            });
+          }
+        } catch (punishmentError) {
+          console.error('Error in punishments section:', punishmentError);
+          setError(prev => prev || 'Error processing punishments data');
         }
         
+        // Sort data by day number to ensure proper ordering
         const chartData = Array.from(metricsMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
         console.log('Final chart data:', chartData);
         
+        // Calculate summary metrics for the week
         const summaryMetrics = {
           tasksCompleted: chartData.reduce((sum, day) => sum + day.tasksCompleted, 0),
           rulesViolated: chartData.reduce((sum, day) => sum + day.rulesViolated, 0),
@@ -251,8 +270,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           punishmentsApplied: chartData.reduce((sum, day) => sum + day.punishmentsApplied, 0)
         };
         
+        // Update state with the processed data
         setData(chartData);
         
+        // Call the callback if provided
         if (onDataLoaded) {
           onDataLoaded(summaryMetrics);
         }
@@ -261,9 +282,11 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         console.error('Error in fetchMetricsData:', err);
         setError(err instanceof Error ? err.message : 'Failed to load metrics data');
         
+        // Still provide empty data structure on error
         const emptyData = generateWeekDays();
         setData(emptyData);
         
+        // Call the callback with zeros if provided
         if (onDataLoaded) {
           onDataLoaded({
             tasksCompleted: 0,
