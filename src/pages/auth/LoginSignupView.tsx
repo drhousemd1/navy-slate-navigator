@@ -25,6 +25,14 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
     }
   };
 
+  // Helper function to fill test credentials
+  const fillTestCredentials = () => {
+    updateFormState({ 
+      email: 'demo@example.com', 
+      password: 'demo123456'
+    });
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
       <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
@@ -150,12 +158,20 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
         
         <div className="text-center text-xs text-gray-400 pt-2">
           <p>
-            Try these credentials: <br />
-            Email: test@example.com <br />
-            Password: password123
+            <Button 
+              type="button" 
+              variant="link" 
+              className="text-xs text-blue-400 hover:text-blue-300 p-0"
+              onClick={fillTestCredentials}
+            >
+              Fill test credentials
+            </Button>
+            <br />
+            Email: demo@example.com <br />
+            Password: demo123456
           </p>
           <p className="mt-2">
-            Note: If you need to create a new account, verification might be enabled in Supabase.
+            Note: You can also sign up to create a new account.
           </p>
         </div>
       </div>

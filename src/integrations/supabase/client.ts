@@ -14,8 +14,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined
   }
 });
 
@@ -34,6 +34,7 @@ export const clearAuthState = async () => {
       const key = localStorage.key(i);
       if (key?.includes('supabase') || key?.includes('auth')) {
         console.log("Clearing potentially problematic storage item:", key);
+        localStorage.removeItem(key);
       }
     }
   }
@@ -44,5 +45,25 @@ export const clearAuthState = async () => {
     console.error("Error clearing auth state:", error);
   } else {
     console.log("Auth state successfully cleared");
+  }
+};
+
+// Function to call our Edge Function to create a demo user
+export const createDemoUser = async () => {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/create-demo-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+      }
+    });
+    
+    const data = await response.json();
+    console.log('Create demo user response:', data);
+    return data;
+  } catch (error) {
+    console.error('Error creating demo user:', error);
+    return { success: false, error };
   }
 };

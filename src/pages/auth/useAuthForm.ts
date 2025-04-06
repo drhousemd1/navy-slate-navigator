@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext'; // Updated import path
+import { useAuth } from '@/contexts/auth/AuthContext'; // Use direct import 
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
-import { clearAuthState } from '@/integrations/supabase/client';
+import { clearAuthState, createDemoUser } from '@/integrations/supabase/client';
 
 export function useAuthForm() {
   const [formState, setFormState] = useState<AuthFormState>({
@@ -31,6 +31,20 @@ export function useAuthForm() {
       navigate('/');
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  // Initialize demo user when the component loads
+  useEffect(() => {
+    const initializeDemoUser = async () => {
+      try {
+        console.log("Initializing demo user...");
+        await createDemoUser();
+      } catch (error) {
+        console.error("Error initializing demo user:", error);
+      }
+    };
+    
+    initializeDemoUser();
+  }, []);
 
   const updateFormState = (updates: Partial<AuthFormState>) => {
     setFormState(prevState => ({ ...prevState, ...updates }));
