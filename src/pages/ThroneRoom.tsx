@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -204,12 +203,13 @@ const ThroneRoomCard: React.FC<{
           <img
             src={visibleImage}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-100 transition-opacity duration-700 ease-in-out"
+            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out opacity-100"
             style={{
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
               opacity: (cardData.background_opacity || 100) / 100,
               zIndex: 0
             }}
+            draggable={false}
           />
         )}
 
@@ -224,8 +224,10 @@ const ThroneRoomCard: React.FC<{
             style={{
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
               opacity: isTransitioning ? (cardData.background_opacity || 100) / 100 : 0,
-              zIndex: 1
+              zIndex: 1,
+              pointerEvents: 'none'
             }}
+            draggable={false}
           />
         )}
 
