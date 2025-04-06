@@ -103,16 +103,19 @@ const ThroneRoomCard: React.FC<{
       setTransitionImage(next);
       setIsTransitioning(false); // reset first
       
+      // Let browser paint transitionImage first
       requestAnimationFrame(() => {
-        setIsTransitioning(true); // triggers fade-in after frame is painted
-        
-        const timeout = setTimeout(() => {
-          setVisibleImage(next);        // promote new image
-          setTransitionImage(null);     // remove transition layer
-          setIsTransitioning(false);
-        }, 2000); // Updated to 2 seconds for slower crossfade
-        
-        return () => clearTimeout(timeout);
+        setTimeout(() => {
+          setIsTransitioning(true); // Now trigger fade
+          
+          const timeout = setTimeout(() => {
+            setVisibleImage(next);        // promote new image
+            setTransitionImage(null);     // remove transition layer
+            setIsTransitioning(false);
+          }, 2000); // 2 seconds for slower crossfade
+          
+          return () => clearTimeout(timeout);
+        }, 0); // delay 1 event loop cycle
       });
     };
   }, [globalCarouselIndex, images, visibleImage]);
@@ -208,7 +211,7 @@ const ThroneRoomCard: React.FC<{
             alt=""
             className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
             style={{ 
-              transition: 'opacity 2s ease-in-out', /* Updated to 2s transition */
+              transition: 'opacity 2s ease-in-out', /* 2s transition */
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
               opacity: (cardData.background_opacity || 100) / 100
             }}
@@ -225,7 +228,7 @@ const ThroneRoomCard: React.FC<{
               isTransitioning ? 'opacity-100' : 'opacity-0'
             }`}
             style={{ 
-              transition: 'opacity 2s ease-in-out', /* Updated to 2s transition */
+              transition: 'opacity 2s ease-in-out', /* 2s transition */
               objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
               opacity: isTransitioning ? (cardData.background_opacity || 100) / 100 : 0
             }}
