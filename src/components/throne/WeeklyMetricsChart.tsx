@@ -216,7 +216,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             
             <div className="min-w-[900px]">
               <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={monthlyMetrics}>
+                <BarChart data={monthlyMetrics}>
                   <XAxis
                     dataKey="date"
                     tick={{ fill: '#CBD5E0', fontSize: 12 }}
@@ -224,39 +224,31 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
                   />
                   <YAxis tick={{ fill: '#CBD5E0', fontSize: 12 }} />
                   <Tooltip />
-                  <Line
-                    type="monotone"
+                  <Bar
                     dataKey="tasksCompleted"
-                    stroke="#38bdf8"
-                    strokeWidth={2}
+                    fill="#38bdf8"
                     name="Tasks Completed"
-                    dot={false}
+                    radius={[4, 4, 0, 0]}
                   />
-                  <Line
-                    type="monotone"
+                  <Bar
                     dataKey="rulesBroken"
-                    stroke="#f97316"
-                    strokeWidth={2}
+                    fill="#f97316"
                     name="Rules Broken"
-                    dot={false}
+                    radius={[4, 4, 0, 0]}
                   />
-                  <Line
-                    type="monotone"
+                  <Bar
                     dataKey="rewardsRedeemed"
-                    stroke="#a78bfa"
-                    strokeWidth={2}
+                    fill="#a78bfa"
                     name="Rewards Redeemed"
-                    dot={false}
+                    radius={[4, 4, 0, 0]}
                   />
-                  <Line
-                    type="monotone"
+                  <Bar
                     dataKey="punishments"
-                    stroke="#ef4444"
-                    strokeWidth={2}
+                    fill="#ef4444"
                     name="Punishments"
-                    dot={false}
+                    radius={[4, 4, 0, 0]}
                   />
-                </LineChart>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
