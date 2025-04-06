@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -57,9 +58,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   // Helper functions
   const generateWeekDays = (): string[] => {
     const today = new Date();
-    const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // 0 = Sunday
+    const lastWeekStart = startOfWeek(addDays(today, -7), { weekStartsOn: 0 });
     return [...Array(7)].map((_, i) =>
-      format(addDays(weekStart, i), 'yyyy-MM-dd')
+      format(addDays(lastWeekStart, i), 'yyyy-MM-dd')
     );
   };
 
@@ -88,9 +89,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
 
         console.log("[METRICS MAP KEYS]", Array.from(metricsMap.keys()));
 
-        // Task completions via RPC - using hardcoded old date for testing
+        // Task completions via RPC - using last week's start date
+        const lastWeekStart = format(startOfWeek(addDays(new Date(), -7), { weekStartsOn: 0 }), 'yyyy-MM-dd');
         const { data: taskData, error: taskError } = await supabase.rpc('get_task_completions_for_week', {
-          week_start: '2024-01-01' // use hardcoded old date for test if needed
+          week_start: lastWeekStart
         });
         console.log("[TASK FETCH RESULT]", taskData);
 
@@ -107,10 +109,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
 
-        // Rule violations - no date filter
+        // Rule violations
         const { data: ruleData, error: ruleError } = await supabase
           .from('rule_violations')
-          .select('violation_date');
+          .select('violation_date')
+          .gte('violation_date', lastWeekStart)
+          .lt('violation_date', format(addDays(parseISO(lastWeekStart), 7), 'yyyy-MM-dd'));
         console.log("[RULE FETCH RESULT]", ruleData);
 
         if (ruleError) {
@@ -126,10 +130,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
 
-        // Reward uses - no date filter
+        // Reward uses
         const { data: rewardData, error: rewardError } = await supabase
           .from('reward_usage')
-          .select('created_at');
+          .select('created_at')
+          .gte('created_at', lastWeekStart)
+          .lt('created_at', format(addDays(parseISO(lastWeekStart), 7), 'yyyy-MM-dd'));
         console.log("[REWARD FETCH RESULT]", rewardData);
 
         if (rewardError) {
@@ -145,10 +151,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         }
 
-        // Punishments - no date filter
+        // Punishments
         const { data: punishmentData, error: punishmentError } = await supabase
           .from('punishment_history')
-          .select('applied_date');
+          .select('applied_date')
+          .gte('applied_date', lastWeekStart)
+          .lt('applied_date', format(addDays(parseISO(lastWeekStart), 7), 'yyyy-MM-dd'));
         console.log("[PUNISHMENT FETCH RESULT]", punishmentData);
 
         if (punishmentError) {
