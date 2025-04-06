@@ -362,7 +362,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
               <Button 
                 variant="outline" 
                 onClick={onClose} 
-                className="border-light-navy text-white hover:bg-light-navy"
+                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
               >
                 Cancel
               </Button>
