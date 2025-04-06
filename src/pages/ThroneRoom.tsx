@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -21,6 +20,7 @@ import { toast } from '@/hooks/use-toast';
 import FrequencyTracker from '@/components/task/FrequencyTracker';
 import PriorityBadge from '@/components/task/PriorityBadge';
 import PointsBadge from '@/components/task/PointsBadge';
+import TaskIcon from '@/components/task/TaskIcon';
 
 const ThroneRoomCard: React.FC<{
   title: string;
@@ -93,6 +93,33 @@ const ThroneRoomCard: React.FC<{
 
   const usageData = [1, 0, 1, 0, 0, 0, 0];
 
+  // Render card icon based on stored data
+  const renderCardIcon = () => {
+    if (cardData.icon_url) {
+      // Custom uploaded icon
+      return (
+        <img 
+          src={cardData.icon_url} 
+          alt="Card icon" 
+          className="w-6 h-6 object-contain"
+          style={{ color: cardData.icon_color }}
+        />
+      );
+    } else if (cardData.iconName) {
+      // Predefined icon
+      return (
+        <TaskIcon 
+          icon_name={cardData.iconName} 
+          icon_color={cardData.icon_color || '#FFFFFF'}
+          className="w-6 h-6"
+        />
+      );
+    } else {
+      // Default icon from props
+      return icon;
+    }
+  };
+
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
@@ -120,7 +147,7 @@ const ThroneRoomCard: React.FC<{
           <div className="flex items-start mb-auto">
             <div className="mr-4 flex-shrink-0">
               <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00f0ff' }}>
-                {icon}
+                {renderCardIcon()}
               </div>
             </div>
             

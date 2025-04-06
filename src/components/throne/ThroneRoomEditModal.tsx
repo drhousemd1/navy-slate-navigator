@@ -10,6 +10,8 @@ import { useForm } from 'react-hook-form';
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import PrioritySelector from '@/components/task-editor/PrioritySelector';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
+import IconSelector from '@/components/task-editor/IconSelector';
+import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
 import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +21,7 @@ export interface ThroneRoomCardData {
   title: string;
   description: string;
   iconName?: string;
+  icon_url?: string;
   background_image_url?: string | null;
   background_opacity?: number;
   focal_point_x?: number;
@@ -46,6 +49,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
 }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(cardData?.background_image_url || null);
+  const [iconPreview, setIconPreview] = useState<string | null>(cardData?.icon_url || null);
+  const [selectedIconName, setSelectedIconName] = useState<string | null>(cardData?.iconName || null);
   const [position, setPosition] = useState({ 
     x: cardData?.focal_point_x || 50, 
     y: cardData?.focal_point_y || 50 
@@ -58,6 +63,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       title: cardData?.title || '',
       description: cardData?.description || '',
       iconName: cardData?.iconName || '',
+      icon_url: cardData?.icon_url || '',
       background_image_url: cardData?.background_image_url || '',
       background_opacity: cardData?.background_opacity || 100,
       focal_point_x: cardData?.focal_point_x || 50,
@@ -80,6 +86,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         title: cardData.title,
         description: cardData.description,
         iconName: cardData.iconName || '',
+        icon_url: cardData.icon_url || '',
         background_image_url: cardData.background_image_url || '',
         background_opacity: cardData.background_opacity || 100,
         focal_point_x: cardData.focal_point_x || 50,
@@ -92,6 +99,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         priority: cardData.priority || 'medium',
       });
       setImagePreview(cardData.background_image_url || null);
+      setIconPreview(cardData.icon_url || null);
+      setSelectedIconName(cardData.iconName || null);
       setPosition({ 
         x: cardData.focal_point_x || 50, 
         y: cardData.focal_point_y || 50 
@@ -118,6 +127,56 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   const handleRemoveImage = () => {
     setImagePreview(null);
     form.setValue('background_image_url', '');
+  };
+
+  // Handle icon upload
+  const handleIconUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      if (e.target instanceof HTMLInputElement && e.target.files) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64String = reader.result as string;
+            setIconPreview(base64String);
+            setSelectedIconName(null);
+            form.setValue('icon_url', base64String);
+            form.setValue('iconName', undefined);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    };
+    input.click();
+  };
+
+  // Handle icon selection
+  const handleIconSelect = (iconName: string) => {
+    if (iconName.startsWith('custom:')) {
+      const iconUrl = iconName.substring(7);
+      setIconPreview(iconUrl);
+      setSelectedIconName(null);
+      form.setValue('icon_url', iconUrl);
+      form.setValue('iconName', undefined);
+      
+      toast({
+        title: "Custom icon selected",
+        description: "Custom icon has been applied to the card",
+      });
+    } else {
+      setSelectedIconName(iconName);
+      setIconPreview(null);
+      form.setValue('iconName', iconName);
+      form.setValue('icon_url', undefined);
+      
+      toast({
+        title: "Icon selected",
+        description: `${iconName} icon selected`,
+      });
+    }
   };
 
   // Handle delete card
@@ -153,6 +212,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       const updatedData = {
         ...data,
         background_image_url: imagePreview || undefined,
+        icon_url: iconPreview || undefined,
+        iconName: selectedIconName || undefined,
         focal_point_x: form.getValues('focal_point_x'),
         focal_point_y: form.getValues('focal_point_y'),
       };
@@ -235,14 +296,47 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                 )}
               />
               
-              <BackgroundImageSelector
-                imagePreview={imagePreview}
-                onImageUpload={handleImageUpload}
-                onRemoveImage={handleRemoveImage}
-                control={form.control}
-                setValue={form.setValue}
-                initialPosition={position}
-              />
+              <div className="space-y-4">
+                <FormLabel className="text-white text-lg">Background Image</FormLabel>
+                <BackgroundImageSelector
+                  control={form.control}
+                  imagePreview={imagePreview}
+                  initialPosition={{ 
+                    x: cardData?.focal_point_x || 50, 
+                    y: cardData?.focal_point_y || 50 
+                  }}
+                  onRemoveImage={handleRemoveImage}
+                  onImageUpload={handleImageUpload}
+                  setValue={form.setValue}
+                />
+              </div>
+              
+              <div className="space-y-4">
+                <FormLabel className="text-white text-lg">Card Icon</FormLabel>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
+                    <IconSelector
+                      selectedIconName={selectedIconName}
+                      iconPreview={iconPreview}
+                      iconColor={form.watch('icon_color')}
+                      onSelectIcon={handleIconSelect}
+                      onUploadIcon={handleIconUpload}
+                      onRemoveIcon={() => {
+                        setIconPreview(null);
+                        setSelectedIconName(null);
+                        form.setValue('icon_url', undefined);
+                        form.setValue('iconName', undefined);
+                      }}
+                    />
+                  </div>
+                  
+                  <PredefinedIconsGrid
+                    selectedIconName={selectedIconName}
+                    iconColor={form.watch('icon_color')}
+                    onSelectIcon={handleIconSelect}
+                  />
+                </div>
+              </div>
               
               <FormField
                 control={form.control}
