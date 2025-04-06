@@ -337,39 +337,37 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                     ))}
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <div className="flex flex-col text-right">
-                      <span className="text-sm text-cyan-300 font-medium leading-tight">
-                        Carousel Timer
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        (Setting will be applied to all cards on the page)
-                      </span>
+                  <div className="flex flex-col items-end space-y-1 text-right">
+                    <span className="text-sm text-cyan-300 font-medium leading-tight">
+                      Carousel Timer
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      (Settings will be applied to all cards)
+                    </span>
+
+                    <div className="flex items-center space-x-2 pt-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => setCarouselTimer((prev) => Math.max(1, prev - 1))}
+                        className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
+                      >
+                        –
+                      </Button>
+
+                      <div className="w-10 text-center text-white">{carouselTimer}</div>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => setCarouselTimer((prev) => prev + 1)}
+                        className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
+                      >
+                        +
+                      </Button>
+
+                      <span className="text-sm text-slate-400">(s)</span>
                     </div>
-
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setCarouselTimer((prev) => Math.max(1, prev - 1))}
-                      className="px-3 py-1 text-white border-light-navy"
-                    >
-                      –
-                    </Button>
-
-                    <div className="w-10 text-center text-white">{carouselTimer}</div>
-
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setCarouselTimer((prev) => prev + 1)}
-                      className="px-3 py-1 text-white border-light-navy"
-                    >
-                      +
-                    </Button>
-
-                    <span className="text-sm text-slate-400">(s)</span>
                   </div>
                 </div>
                 <BackgroundImageSelector
