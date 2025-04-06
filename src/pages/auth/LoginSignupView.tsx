@@ -25,11 +25,19 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
     }
   };
 
-  // Helper function to fill test credentials
-  const fillTestCredentials = () => {
+  // Helper function to fill demo credentials
+  const fillDemoCredentials = () => {
     updateFormState({ 
       email: 'demo@example.com', 
       password: 'demo123456'
+    });
+  };
+
+  // Helper function to fill admin credentials
+  const fillAdminCredentials = () => {
+    updateFormState({ 
+      email: 'towenhall@gmail.com', 
+      password: 'LocaMocha2025!'
     });
   };
 
@@ -157,19 +165,26 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
         </form>
         
         <div className="text-center text-xs text-gray-400 pt-2">
-          <p>
+          <div className="flex justify-center space-x-4">
             <Button 
               type="button" 
               variant="link" 
               className="text-xs text-blue-400 hover:text-blue-300 p-0"
-              onClick={fillTestCredentials}
+              onClick={fillDemoCredentials}
             >
-              Fill test credentials
+              Use demo account
             </Button>
-            <br />
-            Email: demo@example.com <br />
-            Password: demo123456
-          </p>
+            
+            <Button 
+              type="button" 
+              variant="link" 
+              className="text-xs text-green-400 hover:text-green-300 p-0"
+              onClick={fillAdminCredentials}
+            >
+              Use admin account
+            </Button>
+          </div>
+          
           <p className="mt-2">
             Note: You can also sign up to create a new account.
           </p>

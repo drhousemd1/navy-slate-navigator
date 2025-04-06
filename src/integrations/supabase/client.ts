@@ -48,9 +48,11 @@ export const clearAuthState = async () => {
   }
 };
 
-// Function to call our Edge Function to create a demo user
+// Function to call our Edge Function to create a demo user and admin user
 export const createDemoUser = async () => {
   try {
+    console.log("Making request to create-demo-user edge function");
+    
     const response = await fetch(`${SUPABASE_URL}/functions/v1/create-demo-user`, {
       method: 'POST',
       headers: {
@@ -62,23 +64,23 @@ export const createDemoUser = async () => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Error response from create-demo-user:', response.status, errorText);
-      throw new Error(`Failed to create demo user: ${response.status} ${errorText}`);
+      throw new Error(`Failed to create users: ${response.status} ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('Create demo user response:', data);
+    console.log('Create users response:', data);
     
     // If successful, display credentials information
     if (data.success) {
       toast?.({
-        title: "Demo Login Available",
-        description: `You can use the demo credentials to log in: demo@example.com / demo123456`,
+        title: "Test Accounts Available",
+        description: `You can use either the demo credentials (demo@example.com / demo123456) or admin credentials (towenhall@gmail.com / LocaMocha2025!) to log in.`,
       });
     }
     
     return data;
   } catch (error) {
-    console.error('Error creating demo user:', error);
+    console.error('Error creating users:', error);
     return { success: false, error };
   }
 };

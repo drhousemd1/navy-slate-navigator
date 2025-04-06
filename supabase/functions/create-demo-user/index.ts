@@ -36,49 +36,79 @@ serve(async (req) => {
     // Demo user credentials
     const demoEmail = 'demo@example.com';
     const demoPassword = 'demo123456';
+    
+    // Admin user credentials - create this user if it doesn't exist
+    const adminEmail = 'towenhall@gmail.com';
+    const adminPassword = 'LocaMocha2025!';
 
-    // First check if the user already exists
-    const { data: existingUser, error: lookupError } = await supabase.auth.admin.getUserByEmail(demoEmail);
-
-    // If the user doesn't exist, create them
-    if (lookupError || !existingUser) {
-      console.log('Demo user does not exist, creating...');
+    // First check if the demo user already exists
+    const { data: demoUserData, error: demoUserError } = await supabase.auth.admin.listUsers();
+    
+    const demoUserExists = demoUserData?.users.some(user => user.email === demoEmail);
+    const adminUserExists = demoUserData?.users.some(user => user.email === adminEmail);
+    
+    console.log('User check - Demo user exists:', demoUserExists);
+    console.log('User check - Admin user exists:', adminUserExists);
+    
+    // Create both users if they don't exist
+    let demoCreated = false;
+    let adminCreated = false;
+    
+    // Create demo user if needed
+    if (!demoUserExists) {
+      console.log('Creating demo user...');
       
-      // Create the user with the admin API
-      const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+      const { data: demoData, error: demoError } = await supabase.auth.admin.createUser({
         email: demoEmail,
         password: demoPassword,
         email_confirm: true,
         user_metadata: { role: 'user' }
       });
 
-      if (userError) {
-        console.error('Error creating user:', userError);
-        throw userError;
+      if (demoError) {
+        console.error('Error creating demo user:', demoError);
+      } else {
+        console.log('Demo user created successfully:', demoData.user.id);
+        demoCreated = true;
       }
-
-      console.log('Demo user created successfully:', userData.user.id);
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Demo user created successfully',
-          userId: userData.user.id,
-          credentials: { email: demoEmail, password: demoPassword }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } else {
-      console.log('Demo user already exists');
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Demo user already exists',
-          credentials: { email: demoEmail, password: demoPassword }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
+    
+    // Create admin user if needed
+    if (!adminUserExists) {
+      console.log('Creating admin user...');
+      
+      const { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
+        email: adminEmail,
+        password: adminPassword,
+        email_confirm: true,
+        user_metadata: { role: 'admin' }
+      });
+
+      if (adminError) {
+        console.error('Error creating admin user:', adminError);
+      } else {
+        console.log('Admin user created successfully:', adminData.user.id);
+        adminCreated = true;
+        
+        // If we successfully created the admin user, let's also assign the admin role
+        // Here we would typically insert a record in a user_roles table or similar
+        // This depends on how your roles are implemented in the database
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: 'Users prepared successfully',
+        demoUserExists: demoUserExists || demoCreated,
+        adminUserExists: adminUserExists || adminCreated,
+        credentials: { 
+          demo: { email: demoEmail, password: demoPassword },
+          admin: { email: adminEmail, password: adminPassword }
+        }
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error('Error in create-demo-user function:', error);
     return new Response(

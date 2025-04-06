@@ -1,15 +1,14 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth/AuthContext'; // Use direct import 
+import { useAuth } from '@/contexts/auth/AuthContext'; 
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
 import { clearAuthState, createDemoUser } from '@/integrations/supabase/client';
 
 export function useAuthForm() {
   const [formState, setFormState] = useState<AuthFormState>({
-    email: 'demo@example.com', // Pre-fill with demo email
-    password: 'demo123456',    // Pre-fill with demo password
+    email: '', // No longer pre-fill with demo email
+    password: '', // No longer pre-fill with demo password
     loading: false,
     loginError: null
   });
@@ -32,20 +31,12 @@ export function useAuthForm() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  // Initialize demo user when the component loads
+  // Initialize demo user when the component loads, but don't pre-fill form
   useEffect(() => {
     const initializeDemoUser = async () => {
       try {
         console.log("Initializing demo user...");
-        const response = await createDemoUser();
-        console.log("Demo user initialization response:", response);
-        if (response && response.credentials) {
-          // Update form with credentials from response
-          updateFormState({
-            email: response.credentials.email,
-            password: response.credentials.password
-          });
-        }
+        await createDemoUser();
       } catch (error) {
         console.error("Error initializing demo user:", error);
       }
@@ -78,15 +69,6 @@ export function useAuthForm() {
       if (!formState.email || !formState.password) {
         updateFormState({
           loginError: "Email and password are required",
-          loading: false
-        });
-        return;
-      }
-      
-      // Add more client-side validation if needed
-      if (formState.password.length < 6) {
-        updateFormState({
-          loginError: "Password must be at least 6 characters long",
           loading: false
         });
         return;
