@@ -312,8 +312,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
               
               <div className="space-y-4">
                 <FormLabel className="text-white text-lg">Background Image</FormLabel>
-                <div className="flex items-start space-x-6 mb-4">
-                  {/* Left: 5 image slots */}
+                <div className="flex flex-row items-end space-x-6 mb-4">
+                  {/* Left: Image thumbnails */}
                   <div className="flex space-x-2">
                     {imageSlots.map((_, index) => (
                       <div
@@ -339,8 +339,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                     ))}
                   </div>
 
-                  {/* Right: Carousel Timer (immediately after thumbnails, still left aligned) */}
-                  <div className="flex flex-col space-y-1">
+                  {/* Right: Carousel Timer - bottom aligned with thumbnails */}
+                  <div className="flex flex-col items-start space-y-1">
                     <span className="text-sm text-cyan-300 font-medium leading-tight">
                       Carousel Timer
                     </span>
@@ -348,7 +348,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                       (Settings will be applied to all cards)
                     </span>
 
-                    <div className="flex items-center space-x-2 pt-1">
+                    <div className="flex items-center space-x-2">
                       <Button
                         type="button"
                         size="sm"
