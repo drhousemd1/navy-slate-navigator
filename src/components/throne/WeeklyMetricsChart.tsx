@@ -264,17 +264,11 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   }, [data, weekDates]);
 
   return (
-    <Card className="bg-navy border border-light-navy">
-      <CardHeader className="border-b-0 border-light-navy">
-        <CardTitle className="text-white text-lg">Weekly Activity</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-4 px-0">
-        {error && (
-          <div className="mb-4 px-3 py-2 bg-red-900/30 border border-red-900/50 rounded text-sm text-red-300 mx-4">
-            {error}
-          </div>
-        )}
-        <div className="w-full px-4 pb-4">
+    <Card className="bg-navy border border-light-navy rounded-lg mb-6">
+      <div className="p-4">
+        <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
+        
+        <div className="w-full">
           {loading && (
             <Skeleton className="w-full h-64 bg-light-navy/30" />
           )}
@@ -290,7 +284,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           )}
         </div>
 
-        <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
+        <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
           <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
             Tasks Completed
           </span>
@@ -304,7 +298,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             Punishments
           </span>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 };
