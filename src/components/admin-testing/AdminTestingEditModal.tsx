@@ -345,10 +345,14 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         background_images: validImageSlots.length > 0 ? validImageSlots : imagePreview ? [imagePreview] : [],
       };
       
+      const backgroundImagesLength = Array.isArray(updatedData.background_images) 
+        ? updatedData.background_images.length 
+        : 0;
+      
       console.log("Transformed data ready for save:", {
         id: updatedData.id,
         title: updatedData.title,
-        imageCount: updatedData.background_images?.length || 0,
+        imageCount: backgroundImagesLength,
         hasBackgroundImageUrl: Boolean(updatedData.background_image_url),
         backgroundImageUrlPreview: updatedData.background_image_url ? 
           (typeof updatedData.background_image_url === 'string' ? 

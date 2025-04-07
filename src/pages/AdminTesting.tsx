@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -69,7 +70,8 @@ const AdminTesting = () => {
             calendar_color: card.calendar_color || '#7E69AB',
             icon_color: card.icon_color || '#FFFFFF',
             highlight_effect: card.highlight_effect || false,
-            usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0]
+            usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0],
+            background_images: Array.isArray(card.background_images) ? card.background_images : []
           })) as AdminTestingCardData[];
           
           setCards(formattedCards);
@@ -137,7 +139,7 @@ const AdminTesting = () => {
         ...data,
         priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
         points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
-        background_images: supabaseData.background_images || []
+        background_images: Array.isArray(supabaseData.background_images) ? supabaseData.background_images : []
       } as AdminTestingCardData;
       
       setCards(prevCards => [...prevCards, formattedCard]);

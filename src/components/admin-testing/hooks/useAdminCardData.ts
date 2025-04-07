@@ -112,8 +112,12 @@ export const useAdminCardData = ({
             // Ensure points is a number with fallback to default
             points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
             priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
-            background_images: supabaseData.background_images || [],
-            usage_data: supabaseData.usage_data || [1, 2, 0, 3, 1, 0, 2]
+            background_images: Array.isArray(supabaseData.background_images) 
+              ? supabaseData.background_images 
+              : [],
+            usage_data: Array.isArray(supabaseData.usage_data) 
+              ? supabaseData.usage_data 
+              : [1, 2, 0, 3, 1, 0, 2]
           };
           
           setCardData({
@@ -191,7 +195,7 @@ export const useAdminCardData = ({
         .upsert({
           ...newCardData,
           // Explicitly add points to ensure it's included in the upsert
-          points: newCardData.points || 0
+          points: typeof newCardData.points === 'number' ? newCardData.points : 0
         }, { 
           onConflict: 'id',
           ignoreDuplicates: false 
