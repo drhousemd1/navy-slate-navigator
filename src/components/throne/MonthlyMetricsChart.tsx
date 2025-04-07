@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps
@@ -173,11 +174,14 @@ const MonthlyMetricsChart: React.FC = () => {
     if (!chartContainerRef.current) return;
     
     const container = chartContainerRef.current;
-    const barWidth = 40;
-    const scrollTo = (index * barWidth) - (container.clientWidth / 2) + barWidth;
+    const barWidth = 40; // or whatever your current bar width is
+    
+    // Center the clicked bar
+    const scrollCenter =
+      (index * barWidth + barWidth / 2) - container.clientWidth / 2;
     
     container.scrollTo({
-      left: Math.max(scrollTo, 0),
+      left: Math.max(scrollCenter, 0),
       behavior: 'smooth'
     });
   };
@@ -195,7 +199,11 @@ const MonthlyMetricsChart: React.FC = () => {
         <div style={{ width: data.length * 40, height: "100%" }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
-              <CartesianGrid strokeDasharray="0" stroke="#1A1F2C" />
+              <CartesianGrid 
+                strokeDasharray="0" 
+                stroke="#1A1F2C" 
+                strokeZIndex={0}
+              />
               <XAxis 
                 dataKey="date"
                 tickFormatter={(date) => {
@@ -215,9 +223,9 @@ const MonthlyMetricsChart: React.FC = () => {
               />
               <Tooltip 
                 cursor={false}
+                wrapperStyle={{ zIndex: 9999, marginLeft: '40px' }}
                 contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
                 offset={50}
-                wrapperStyle={{ marginLeft: '40px' }}
                 formatter={(value, name) => [value, name]}
                 labelFormatter={(label) => {
                   try {
@@ -234,7 +242,6 @@ const MonthlyMetricsChart: React.FC = () => {
                 radius={[4, 4, 0, 0]} 
                 onClick={handleBarClick}
                 isAnimationActive={false}
-                activeOpacity={1}
               />
               <Bar 
                 dataKey="rulesBroken" 
@@ -243,7 +250,6 @@ const MonthlyMetricsChart: React.FC = () => {
                 radius={[4, 4, 0, 0]} 
                 onClick={handleBarClick}
                 isAnimationActive={false}
-                activeOpacity={1}
               />
               <Bar 
                 dataKey="rewardsRedeemed" 
@@ -252,7 +258,6 @@ const MonthlyMetricsChart: React.FC = () => {
                 radius={[4, 4, 0, 0]} 
                 onClick={handleBarClick}
                 isAnimationActive={false}
-                activeOpacity={1}
               />
               <Bar 
                 dataKey="punishments" 
@@ -261,7 +266,6 @@ const MonthlyMetricsChart: React.FC = () => {
                 radius={[4, 4, 0, 0]} 
                 onClick={handleBarClick}
                 isAnimationActive={false}
-                activeOpacity={1}
               />
             </BarChart>
           </ResponsiveContainer>
