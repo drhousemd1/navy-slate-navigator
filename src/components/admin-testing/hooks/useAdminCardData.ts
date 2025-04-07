@@ -30,7 +30,7 @@ interface SupabaseCardData {
   title: string;
   description: string | null;
   priority: string | null;
-  points?: number | null;  // Mark as optional and nullable
+  points: number | null;  // Ensure points is included as a property
   background_image_url: string | null;
   background_images: Json | null;
   background_opacity: number | null;
@@ -88,6 +88,8 @@ export const useAdminCardData = ({
     const fetchCardData = async () => {
       try {
         setIsLoading(true);
+        console.log("Fetching card data with ID:", id);
+        
         const { data, error } = await supabase
           .from('admin_testing_cards')
           .select('*')
@@ -97,12 +99,16 @@ export const useAdminCardData = ({
         if (error) {
           if (error.code !== 'PGRST116') { // Not found is not a critical error
             console.error('Error fetching card data:', error);
+          } else {
+            console.log("Card not found in database, using default values");
           }
           // If not found in Supabase, use the default state
           return;
         }
         
         if (data) {
+          console.log("Card data retrieved from Supabase:", data);
+          
           // Cast data to our helper type to handle type conversions
           const supabaseData = data as SupabaseCardData;
           
@@ -119,6 +125,8 @@ export const useAdminCardData = ({
               ? supabaseData.usage_data 
               : [1, 2, 0, 3, 1, 0, 2]
           };
+          
+          console.log("Transformed card data:", savedCard);
           
           setCardData({
             ...cardData,
@@ -140,7 +148,8 @@ export const useAdminCardData = ({
           if (imageArray.length === 0 && savedCard.background_image_url) {
             imageArray = [savedCard.background_image_url];
           }
-              
+          
+          console.log("Setting images array:", imageArray);
           setImages(imageArray);
         }
       } catch (error) {
@@ -164,12 +173,17 @@ export const useAdminCardData = ({
         initialImages.push(background_image_url);
       }
       
-      setImages(initialImages);
+      if (initialImages.length > 0) {
+        console.log("Initializing images from props:", initialImages);
+        setImages(initialImages);
+      }
     }
   }, [isLoading, background_images, background_image_url, images.length]);
 
   const handleSaveCard = async (updatedCard: AdminTestingCardData) => {
     try {
+      console.log("Saving card to Supabase:", updatedCard);
+      
       // Make sure we have the complete updated data
       const newCardData = {
         ...cardData,
@@ -211,6 +225,7 @@ export const useAdminCardData = ({
         return;
       }
       
+      console.log("Card saved successfully");
       toast({
         title: "Success",
         description: "Card saved successfully",

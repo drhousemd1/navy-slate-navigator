@@ -43,6 +43,19 @@ const AdminTesting = () => {
     const fetchCards = async () => {
       try {
         setIsLoading(true);
+        console.log("Fetching cards from Supabase...");
+        
+        // Check if the supabase client is properly initialized
+        if (!supabase) {
+          console.error("Supabase client is not initialized!");
+          toast({
+            title: "Error",
+            description: "Database connection is not available",
+            variant: "destructive"
+          });
+          return;
+        }
+
         const { data, error } = await supabase
           .from('admin_testing_cards')
           .select('*');
@@ -56,6 +69,8 @@ const AdminTesting = () => {
           });
           return;
         }
+        
+        console.log("Received data from Supabase:", data);
         
         if (data && data.length > 0) {
           const formattedCards = data.map((card: SupabaseCardData) => ({
@@ -74,7 +89,12 @@ const AdminTesting = () => {
             background_images: Array.isArray(card.background_images) ? card.background_images : []
           })) as AdminTestingCardData[];
           
+          console.log("Formatted cards:", formattedCards);
           setCards(formattedCards);
+        } else {
+          console.log("No cards found in the database, creating a default card");
+          // If no cards are found, create a default one
+          handleAddCard();
         }
       } catch (error) {
         console.error('Error in fetchCards:', error);
@@ -115,6 +135,8 @@ const AdminTesting = () => {
     };
     
     try {
+      console.log("Adding new card to Supabase:", newCard);
+      
       const { data, error } = await supabase
         .from('admin_testing_cards')
         .insert({
@@ -133,6 +155,8 @@ const AdminTesting = () => {
         });
         return;
       }
+      
+      console.log("Card added successfully:", data);
       
       const supabaseData = data as SupabaseCardData;
       const formattedCard = {
@@ -186,6 +210,10 @@ const AdminTesting = () => {
         
         {isLoading ? (
           <div className="text-center text-white p-8">Loading cards...</div>
+        ) : cards.length === 0 ? (
+          <div className="text-center text-white p-8">
+            <p>No cards found. Click the "Add New Card" button to create one.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {cards.map(card => (
