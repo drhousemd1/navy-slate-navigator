@@ -14,10 +14,35 @@ import { Button } from '@/components/ui/button';
 import AdminTestingCardEditModal from '@/components/admin-testing/AdminTestingCardEditModal';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+import { PostgrestResponse } from '@supabase/supabase-js';
 
 // Define a type specifically for the admin testing cards
 interface AdminTestingCardData extends ThroneRoomCardData {
   // Additional fields specific to admin testing cards can be added here
+}
+
+// Define the structure of the data returned from Supabase
+interface AdminTestingCardRow {
+  id: string;
+  title: string;
+  description: string | null;
+  icon_name: string | null;
+  icon_url: string | null;
+  icon_color: string | null;
+  title_color: string | null;
+  subtext_color: string | null;
+  calendar_color: string | null;
+  background_image_url: string | null;
+  background_images: any | null;
+  background_opacity: number | null;
+  focal_point_x: number | null;
+  focal_point_y: number | null;
+  highlight_effect: boolean | null;
+  priority: string | null;
+  usage_data: number[] | null;
+  created_at: string | null;
+  updated_at: string | null;
+  user_id: string | null;
 }
 
 const AdminTesting = () => {
@@ -36,11 +61,11 @@ const AdminTesting = () => {
       setIsLoading(true);
       console.log("AdminTesting: Fetching cards from Supabase");
       
-      // Using type casting to avoid TypeScript errors with the table name
-      const { data, error } = await supabase
-        .from('admin_testing_cards' as any)
+      // Using the any type to avoid TypeScript errors
+      const { data, error }: PostgrestResponse<AdminTestingCardRow> = await supabase
+        .from('admin_testing_cards')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as PostgrestResponse<AdminTestingCardRow>;
       
       if (error) {
         console.error("Error fetching admin testing cards:", error);
@@ -68,7 +93,7 @@ const AdminTesting = () => {
           highlight_effect: card.highlight_effect || false,
           priority: card.priority || 'medium',
           usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0]
-        }));
+        })) as AdminTestingCardData[];
         
         setAdminTestingCards(formattedData);
       } else {
@@ -179,8 +204,20 @@ const AdminTesting = () => {
       // Save to Supabase
       for (const card of initialCards) {
         const { error } = await supabase
-          .from('admin_testing_cards' as any)
-          .insert([card]);
+          .from('admin_testing_cards')
+          .insert([{
+            id: card.id,
+            title: card.title,
+            description: card.description,
+            icon_name: card.iconName,
+            icon_color: card.icon_color,
+            title_color: card.title_color,
+            subtext_color: card.subtext_color,
+            calendar_color: card.calendar_color,
+            highlight_effect: card.highlight_effect,
+            priority: card.priority,
+            usage_data: card.usage_data
+          }]);
           
         if (error) {
           console.error("Error inserting default card:", error);
@@ -212,7 +249,7 @@ const AdminTesting = () => {
       
       // Update in Supabase
       const { error } = await supabase
-        .from('admin_testing_cards' as any)
+        .from('admin_testing_cards')
         .upsert({
           id: updatedData.id,
           title: updatedData.title,
@@ -271,7 +308,7 @@ const AdminTesting = () => {
       
       // Delete from Supabase
       const { error } = await supabase
-        .from('admin_testing_cards' as any)
+        .from('admin_testing_cards')
         .delete()
         .eq('id', cardId);
       
@@ -321,7 +358,7 @@ const AdminTesting = () => {
 
       // Insert into Supabase
       const { error } = await supabase
-        .from('admin_testing_cards' as any)
+        .from('admin_testing_cards')
         .insert([{
           id: newCard.id,
           title: newCard.title,
@@ -380,7 +417,7 @@ const AdminTesting = () => {
       
       // Update in Supabase
       const { error } = await supabase
-        .from('admin_testing_cards' as any)
+        .from('admin_testing_cards')
         .update({ 
           usage_data: usageData,
           updated_at: new Date().toISOString()
@@ -490,7 +527,7 @@ const AdminTesting = () => {
                     <CardFooter 
                       calendarColor={card.calendar_color || '#7E69AB'}
                       usageData={card.usage_data || [0, 0, 0, 0, 0, 0, 0]}
-                      onEditClick={(e) => {
+                      onEditClick={(e: React.MouseEvent) => {
                         e.stopPropagation(); // Prevent card click event
                         setSelectedCard(card);
                         setIsEditModalOpen(true);
