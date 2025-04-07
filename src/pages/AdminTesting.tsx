@@ -1,514 +1,335 @@
-import React, { useState, useEffect } from 'react';
-import AppLayout from '@/components/AppLayout';
-import { Card } from '@/components/ui/card';
-import { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
-import { defaultThroneRoomCards } from '@/components/throne/defaultThroneRoomCards';
-import { toast } from '@/components/ui/use-toast';
-import { Separator } from '@/components/ui/separator';
+
+import React, { useEffect, useState } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import AdminTestingCardEditModal from '@/components/admin-testing/AdminTestingCardEditModal';
-import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
-import { PostgrestResponse } from '@supabase/supabase-js';
-import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
+import { Input } from '@/components/ui/input';
+import { Trash2, Pencil } from 'lucide-react';
+import AppLayout from '@/components/AppLayout';
 
-interface AdminTestingCardData extends ThroneRoomCardData {
-  // Additional fields specific to admin testing cards can be added here
-}
-
-interface AdminTestingCardRow {
+interface AdminCardData {
   id: string;
   title: string;
-  description: string | null;
-  icon_name: string | null;
-  icon_url: string | null;
-  icon_color: string | null;
-  title_color: string | null;
-  subtext_color: string | null;
-  calendar_color: string | null;
-  background_image_url: string | null;
-  background_images: any | null;
-  background_opacity: number | null;
-  focal_point_x: number | null;
-  focal_point_y: number | null;
-  highlight_effect: boolean | null;
-  priority: string | null;
-  usage_data: number[] | null;
-  created_at: string | null;
-  updated_at: string | null;
-  user_id: string | null;
+  description: string;
+  background_images: string[];
+  focal_point_x?: number;
+  focal_point_y?: number;
+  background_opacity?: number;
 }
 
 const AdminTesting = () => {
-  const [adminTestingCards, setAdminTestingCards] = useState<AdminTestingCardData[]>([]);
+  const [cards, setCards] = useState<AdminCardData[]>([]);
+  const [editingCard, setEditingCard] = useState<AdminCardData | null>(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const [selectedCard, setSelectedCard] = useState<AdminTestingCardData | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [carouselTimer, setCarouselTimer] = useState(5);
-  
-  const ADMIN_TESTING_STORAGE_KEY = 'adminTestingCards';
-
-  const fetchCards = async () => {
-    try {
-      setIsLoading(true);
-      console.log("AdminTesting: Fetching cards from Supabase");
-      
-      const { data, error }: PostgrestResponse<AdminTestingCardRow> = await supabase
-        .from('admin_testing_cards')
-        .select('*')
-        .order('created_at', { ascending: false }) as PostgrestResponse<AdminTestingCardRow>;
-      
-      if (error) {
-        console.error("Error fetching admin testing cards:", error);
-        throw error;
-      }
-      
-      if (data && data.length > 0) {
-        console.log("AdminTesting: Loaded cards from Supabase:", data);
-        const formattedData = data.map(card => ({
-          id: card.id,
-          title: card.title || 'Untitled Card',
-          description: card.description || 'No description',
-          iconName: card.icon_name || '',
-          icon_url: card.icon_url || undefined,
-          icon_color: card.icon_color || '#FFFFFF',
-          title_color: card.title_color || '#FFFFFF',
-          subtext_color: card.subtext_color || '#8E9196',
-          calendar_color: card.calendar_color || '#7E69AB',
-          background_image_url: card.background_image_url || undefined,
-          background_images: card.background_images || undefined,
-          background_opacity: card.background_opacity || 100,
-          focal_point_x: card.focal_point_x || 50,
-          focal_point_y: card.focal_point_y || 50,
-          highlight_effect: card.highlight_effect || false,
-          priority: card.priority || 'medium',
-          usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0]
-        })) as AdminTestingCardData[];
-        
-        setAdminTestingCards(formattedData);
-      } else {
-        console.log("AdminTesting: No cards found in Supabase, initializing with defaults");
-        initializeDefaultCards();
-      }
-    } catch (error) {
-      console.error("Error fetching admin testing cards:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load cards. Loading default cards instead.",
-        variant: "destructive"
-      });
-      
-      const saved = localStorage.getItem(ADMIN_TESTING_STORAGE_KEY);
-      if (saved) {
-        try {
-          const parsedCards = JSON.parse(saved);
-          if (Array.isArray(parsedCards) && parsedCards.length > 0) {
-            setAdminTestingCards(parsedCards);
-          } else {
-            initializeDefaultCards();
-          }
-        } catch (err) {
-          initializeDefaultCards();
-        }
-      } else {
-        initializeDefaultCards();
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [carouselTimer, setCarouselTimer] = useState(3); // seconds
+  const [activeSlot, setActiveSlot] = useState<number | null>(null);
 
   useEffect(() => {
-    console.log("AdminTesting: Component mounted");
-    
-    toast({
-      title: "Admin Testing Page",
-      description: "Admin testing page has been loaded",
-    });
-    
-    const storedTimer = parseInt(localStorage.getItem(`${ADMIN_TESTING_STORAGE_KEY}_carouselTimer`) || '5', 10);
-    if (!isNaN(storedTimer)) {
-      setCarouselTimer(storedTimer);
+    const saved = localStorage.getItem('adminTestingCards');
+    if (saved) {
+      try {
+        const parsedCards = JSON.parse(saved);
+        setCards(parsedCards);
+      } catch (error) {
+        console.error("Error loading cards from localStorage:", error);
+        // Initialize with sample card if parsing fails
+        createSampleCard();
+      }
+    } else {
+      // Add a sample card if none exist
+      createSampleCard();
     }
-    
-    fetchCards();
-    
-    const channel = supabase
-      .channel('admin-testing-changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'admin_testing_cards' 
-        }, 
-        (payload) => {
-          console.log("Realtime update received:", payload);
-          fetchCards();
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
+  const createSampleCard = () => {
+    const sampleCard: AdminCardData = {
+      id: `card-${Date.now()}`,
+      title: 'Sample Card',
+      description: 'This is a sample card. Click Edit to customize it.',
+      background_images: ['', '', '', '', ''],
+      focal_point_x: 50,
+      focal_point_y: 50,
+      background_opacity: 0.8
+    };
+    
+    setCards([sampleCard]);
+  };
+
   useEffect(() => {
-    if (isLoading) return;
-    
-    localStorage.setItem(`${ADMIN_TESTING_STORAGE_KEY}_carouselTimer`, carouselTimer.toString());
-    
+    localStorage.setItem('adminTestingCards', JSON.stringify(cards));
+  }, [cards]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
-      setCarouselIndex((prev) => {
-        if (adminTestingCards.length <= 1) return prev;
-        return (prev + 1) % adminTestingCards.length;
-      });
+      setCarouselIndex((i) => i + 1);
     }, carouselTimer * 1000);
-    
     return () => clearInterval(interval);
-  }, [isLoading, carouselTimer, adminTestingCards.length]);
+  }, [carouselTimer]);
 
-  const initializeDefaultCards = async () => {
-    try {
-      console.log("AdminTesting: Initializing with default cards");
-      const initialCards = defaultThroneRoomCards.map(card => ({
-        id: card.id,
-        title: card.title || 'Untitled Card',
-        description: card.description || 'No description',
-        iconName: '',
-        icon_color: '#FFFFFF',
-        title_color: '#FFFFFF',
-        subtext_color: '#8E9196',
-        calendar_color: '#7E69AB',
-        highlight_effect: false,
-        priority: card.priority || 'medium',
-        usage_data: [0, 0, 0, 0, 0, 0, 0]
-      })) as AdminTestingCardData[];
-      
-      console.log("AdminTesting: Setting initial cards:", initialCards);
-      
-      for (const card of initialCards) {
-        const { error } = await supabase
-          .from('admin_testing_cards')
-          .insert([{
-            id: card.id,
-            title: card.title,
-            description: card.description,
-            icon_name: card.iconName,
-            icon_color: card.icon_color,
-            title_color: card.title_color,
-            subtext_color: card.subtext_color,
-            calendar_color: card.calendar_color,
-            highlight_effect: card.highlight_effect,
-            priority: card.priority,
-            usage_data: card.usage_data
-          }]);
-          
-        if (error) {
-          console.error("Error inserting default card:", error);
-        }
-      }
-      
-      localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(initialCards));
-      
-      setAdminTestingCards(initialCards);
-    } catch (error) {
-      console.error("AdminTesting: Error initializing default cards:", error);
-      toast({
-        title: "Error",
-        description: "Failed to initialize default cards.",
-        variant: "destructive"
-      });
+  const updateCard = (updated: AdminCardData) => {
+    setCards((prev) =>
+      prev.map((c) => (c.id === updated.id ? updated : c))
+    );
+  };
+
+  const deleteCard = (id: string) => {
+    setCards((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const addNewCard = () => {
+    const newCard: AdminCardData = {
+      id: `card-${Date.now()}`,
+      title: 'New Card',
+      description: 'Add your description here',
+      background_images: ['', '', '', '', ''],
+      focal_point_x: 50,
+      focal_point_y: 50,
+      background_opacity: 0.8
+    };
+    
+    setCards((prev) => [...prev, newCard]);
+    setEditingCard(newCard);
+    setActiveSlot(0);
+  };
+
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    card: AdminCardData
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file || activeSlot === null) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const newImages = [...card.background_images];
+      newImages[activeSlot] = reader.result as string;
+      updateCard({ ...card, background_images: newImages });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = (card: AdminCardData, slot: number) => {
+    const newImages = [...card.background_images];
+    newImages[slot] = '';
+    updateCard({ ...card, background_images: newImages });
+  };
+
+  const getVisibleImage = (card: AdminCardData) => {
+    const filled = card.background_images.filter(Boolean);
+    if (filled.length === 0) return null;
+    const idx = carouselIndex % filled.length;
+    return filled[idx];
+  };
+
+  const handleTitleChange = (value: string) => {
+    if (editingCard) {
+      updateCard({ ...editingCard, title: value });
     }
   };
 
-  const handleSaveCard = async (updatedData: AdminTestingCardData) => {
-    try {
-      console.log("AdminTesting: Saving card", updatedData);
-      
-      if (!updatedData.title) {
-        throw new Error("Card title is required");
-      }
-      
-      const iconName = updatedData.iconName || null;
-      const iconUrl = updatedData.icon_url || null;
-      
-      let backgroundImageUrl = updatedData.background_image_url || null;
-      let backgroundImages = updatedData.background_images || null;
-      
-      const dataForSupabase = {
-        id: updatedData.id,
-        title: updatedData.title,
-        description: updatedData.description,
-        icon_name: iconName,
-        icon_url: iconUrl,
-        icon_color: updatedData.icon_color,
-        title_color: updatedData.title_color,
-        subtext_color: updatedData.subtext_color,
-        calendar_color: updatedData.calendar_color,
-        background_image_url: backgroundImageUrl,
-        background_images: backgroundImages,
-        background_opacity: updatedData.background_opacity || 100,
-        focal_point_x: updatedData.focal_point_x || 50,
-        focal_point_y: updatedData.focal_point_y || 50,
-        highlight_effect: updatedData.highlight_effect || false,
-        priority: updatedData.priority || 'medium',
-        usage_data: updatedData.usage_data || [0, 0, 0, 0, 0, 0, 0],
-        updated_at: new Date().toISOString()
-      };
-      
-      const { error } = await supabase
-        .from('admin_testing_cards')
-        .upsert(dataForSupabase);
-      
-      if (error) {
-        console.error("Supabase error:", error);
-        throw error;
-      }
-      
-      const index = adminTestingCards.findIndex(c => c.id === updatedData.id);
-      if (index >= 0) {
-        const newArr = [...adminTestingCards];
-        newArr[index] = updatedData;
-        setAdminTestingCards(newArr);
-        localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
-      }
-      
-      toast({
-        title: "Card Updated",
-        description: "The admin testing card has been updated successfully",
-      });
-      
-      setIsEditModalOpen(false);
-      setSelectedCard(null);
-    } catch (error) {
-      console.error("Error saving admin testing card:", error);
-      toast({
-        title: "Error",
-        description: `Failed to save card: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive"
-      });
+  const handleDescriptionChange = (value: string) => {
+    if (editingCard) {
+      updateCard({ ...editingCard, description: value });
     }
   };
 
-  const handleDeleteCard = async (cardId: string) => {
-    try {
-      console.log("AdminTesting: Deleting card", cardId);
-      
-      const { error } = await supabase
-        .from('admin_testing_cards')
-        .delete()
-        .eq('id', cardId);
-      
-      if (error) {
-        throw error;
+  const handleOpacityChange = (value: string) => {
+    if (editingCard) {
+      const opacity = parseFloat(value);
+      if (!isNaN(opacity) && opacity >= 0 && opacity <= 1) {
+        updateCard({ ...editingCard, background_opacity: opacity });
       }
-      
-      const newArr = adminTestingCards.filter(card => card.id !== cardId);
-      setAdminTestingCards(newArr);
-      
-      localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
-      
-      setIsEditModalOpen(false);
-      
-      toast({
-        title: "Card Deleted",
-        description: "The admin testing card has been deleted successfully",
-      });
-    } catch (error) {
-      console.error("Error deleting admin testing card:", error);
-      toast({
-        title: "Error",
-        description: `Failed to delete card: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive"
-      });
     }
   };
-
-  const handleAddCard = async () => {
-    try {
-      const newId = `card-${Date.now()}`;
-      const newCard: AdminTestingCardData = {
-        id: newId,
-        title: 'New Card',
-        description: 'This is a new card description',
-        iconName: '',
-        icon_color: '#FFFFFF',
-        title_color: '#FFFFFF',
-        subtext_color: '#8E9196',
-        calendar_color: '#7E69AB',
-        highlight_effect: false,
-        priority: 'medium',
-        usage_data: [0, 0, 0, 0, 0, 0, 0]
-      };
-
-      const { error } = await supabase
-        .from('admin_testing_cards')
-        .insert([{
-          id: newCard.id,
-          title: newCard.title,
-          description: newCard.description,
-          icon_name: newCard.iconName,
-          icon_color: newCard.icon_color,
-          title_color: newCard.title_color,
-          subtext_color: newCard.subtext_color,
-          calendar_color: newCard.calendar_color,
-          highlight_effect: newCard.highlight_effect,
-          priority: newCard.priority,
-          usage_data: newCard.usage_data
-        }]);
-      
-      if (error) {
-        throw error;
-      }
-      
-      setAdminTestingCards(prev => {
-        const newArr = [...prev, newCard];
-        localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
-        return newArr;
-      });
-
-      toast({
-        title: "Card Added",
-        description: "A new card has been added successfully",
-      });
-      
-      setSelectedCard(newCard);
-      setIsEditModalOpen(true);
-    } catch (error) {
-      console.error("Error adding admin testing card:", error);
-      toast({
-        title: "Error",
-        description: `Failed to add card: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const updateCardUsage = async (card: AdminTestingCardData) => {
-    try {
-      const dayOfWeek = new Date().getDay();
-      const usageData = [...(card.usage_data || [0, 0, 0, 0, 0, 0, 0])];
-      usageData[dayOfWeek] = (usageData[dayOfWeek] || 0) + 1;
-      
-      const { error } = await supabase
-        .from('admin_testing_cards')
-        .update({ 
-          usage_data: usageData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', card.id);
-      
-      if (error) {
-        throw error;
-      }
-      
-      const updatedCards = adminTestingCards.map(c => {
-        if (c.id === card.id) {
-          return { ...c, usage_data: usageData };
-        }
-        return c;
-      });
-      
-      setAdminTestingCards(updatedCards);
-      
-      localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(updatedCards));
-      
-      toast({
-        title: "Usage Recorded",
-        description: "Card usage has been recorded for today",
-      });
-    } catch (error) {
-      console.error("Error updating card usage:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update card usage",
-        variant: "destructive"
-      });
-    }
-  };
-
-  console.log("AdminTesting: Rendering with cards:", adminTestingCards);
 
   return (
     <AppLayout>
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold text-white mb-6">TESTING PAGE - ADMIN TESTING PANEL</h1>
-        
-        <div className="bg-red-500 text-white p-6 mb-6 rounded-lg">
-          <h2 className="text-3xl font-bold">THIS IS THE ADMIN TESTING PAGE</h2>
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-white text-2xl font-bold">Admin Testing Page</h1>
+          <div className="flex items-center space-x-2">
+            <span className="text-white">Carousel Timer</span>
+            <Button
+              onClick={() => setCarouselTimer((t) => Math.max(t - 1, 1))}
+              className="bg-slate-700 px-2"
+            >
+              -
+            </Button>
+            <span className="text-white">{carouselTimer}s</span>
+            <Button
+              onClick={() => setCarouselTimer((t) => t + 1)}
+              className="bg-slate-700 px-2"
+            >
+              +
+            </Button>
+          </div>
         </div>
-        
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-white">Admin Testing Cards</h2>
-          <Button 
-            className="bg-green-500 hover:bg-green-600 text-white"
-            onClick={handleAddCard}
-          >
-            Add Card
+
+        <div className="flex justify-end mb-4">
+          <Button onClick={addNewCard} className="bg-green-600 hover:bg-green-700">
+            Add New Card
           </Button>
         </div>
-        
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64 bg-navy rounded-lg">
-            <Loader2 className="h-8 w-8 text-white animate-spin mr-2" />
-            <p className="text-white text-xl">Loading admin testing cards...</p>
-          </div>
-        ) : adminTestingCards.length === 0 ? (
-          <div className="flex items-center justify-center h-64 bg-navy rounded-lg">
-            <p className="text-white text-xl">No cards available. Please initialize default cards.</p>
-            <button 
-              className="ml-4 px-4 py-2 bg-blue-500 text-white rounded-md"
-              onClick={initializeDefaultCards}
-            >
-              Load Default Cards
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {adminTestingCards.map((card) => {
-              const IconComponent = defaultThroneRoomCards.find(defaultCard => defaultCard.id === card.id)?.icon;
-              card.IconComponent = IconComponent;
-              
-              return (
-                <AdminTestingCard 
-                  key={card.id}
-                  card={card}
-                  onEdit={(updatedCard) => {
-                    console.log("Setting selected card:", updatedCard);
-                    setSelectedCard({...updatedCard});
-                    setIsEditModalOpen(true);
-                    updateCardUsage(updatedCard);
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {cards.map((card) => {
+            const currentImage = getVisibleImage(card);
+            return (
+              <div
+                key={card.id}
+                className="relative bg-navy border border-light-navy rounded-lg overflow-hidden shadow"
+              >
+                <div
+                  className="h-40 bg-cover bg-center transition-opacity duration-1000"
+                  style={{
+                    backgroundImage: currentImage ? `url(${currentImage})` : 'none',
+                    opacity: currentImage ? card.background_opacity ?? 0.8 : 0.3,
+                    backgroundPosition: `${card.focal_point_x ?? 50}% ${card.focal_point_y ?? 50}%`,
                   }}
-                />
-              );
-            })}
-          </div>
-        )}
-        
-        <Separator className="my-6 bg-gray-600" />
-        <h2 className="text-xl font-bold text-white mb-6">Section 2</h2>
-        
-        <Separator className="my-6 bg-gray-600" />
-        <h2 className="text-xl font-bold text-white mb-6">Section 3</h2>
+                >
+                  {!currentImage && (
+                    <div className="flex h-full items-center justify-center text-white opacity-50">
+                      No Image
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 space-y-2">
+                  <h2 className="text-white text-lg font-bold">{card.title}</h2>
+                  <p className="text-white text-sm">{card.description}</p>
+                  <div className="flex justify-end space-x-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingCard(card);
+                        setActiveSlot(0);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteCard(card.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <Dialog open={!!editingCard} onOpenChange={(open) => !open && setEditingCard(null)}>
+          <DialogContent className="bg-navy border border-light-navy text-white max-w-2xl">
+            {editingCard && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold">Edit Card</h2>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Title</label>
+                  <Input 
+                    value={editingCard.title}
+                    onChange={(e) => handleTitleChange(e.target.value)}
+                    className="bg-dark-navy border-slate-600 text-white"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <Input 
+                    value={editingCard.description}
+                    onChange={(e) => handleDescriptionChange(e.target.value)}
+                    className="bg-dark-navy border-slate-600 text-white"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Background Opacity ({editingCard.background_opacity ?? 0.8})</label>
+                  <Input 
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={editingCard.background_opacity ?? 0.8}
+                    onChange={(e) => handleOpacityChange(e.target.value)}
+                    className="bg-dark-navy border-slate-600"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-5 gap-2">
+                  {Array(5)
+                    .fill(0)
+                    .map((_, i) => {
+                      const thumb = editingCard.background_images[i];
+                      return (
+                        <div
+                          key={i}
+                          onClick={() => {
+                            setActiveSlot(i);
+                          }}
+                          className={`h-16 w-full border-2 ${
+                            activeSlot === i
+                              ? 'border-yellow-300 shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
+                              : 'border-slate-600'
+                          } bg-slate-800 flex items-center justify-center cursor-pointer`}
+                        >
+                          {thumb ? (
+                            <img src={thumb} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-xs text-white opacity-40">Empty</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+
+                <div
+                  className="h-40 bg-dark-navy flex items-center justify-center border border-slate-600 cursor-pointer"
+                  onClick={() => {
+                    if (activeSlot !== null) {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.onchange = (e) =>
+                        handleImageUpload(
+                          e as unknown as React.ChangeEvent<HTMLInputElement>,
+                          editingCard
+                        );
+                      input.click();
+                    }
+                  }}
+                >
+                  {activeSlot === null ||
+                  !editingCard.background_images[activeSlot] ? (
+                    <span className="text-white opacity-50">Click to upload image</span>
+                  ) : (
+                    <img
+                      src={editingCard.background_images[activeSlot]}
+                      className="h-full object-contain"
+                      alt="Selected image"
+                    />
+                  )}
+                </div>
+
+                {activeSlot !== null &&
+                  editingCard.background_images[activeSlot] && (
+                    <Button
+                      variant="destructive"
+                      onClick={() =>
+                        handleRemoveImage(editingCard, activeSlot)
+                      }
+                    >
+                      Remove Image
+                    </Button>
+                  )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
-      
-      {selectedCard && (
-        <AdminTestingCardEditModal
-          isOpen={isEditModalOpen}
-          cardData={selectedCard}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setSelectedCard(null);
-          }}
-          onSave={handleSaveCard}
-          onDelete={handleDeleteCard}
-          localStorageKey={ADMIN_TESTING_STORAGE_KEY}
-          carouselTimer={carouselTimer}
-          onCarouselTimerChange={setCarouselTimer}
-        />
-      )}
     </AppLayout>
   );
 };
