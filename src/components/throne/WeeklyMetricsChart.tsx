@@ -2,16 +2,21 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, Legend
 } from 'recharts';
 import { 
   format, 
   startOfWeek, 
+  endOfWeek, 
   parseISO, 
+  formatISO, 
+  eachDayOfInterval,
   addDays 
 } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { Card } from '@/components/ui/card';
 
 interface MetricsData {
   date: string;
@@ -97,6 +102,41 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   // Get the week dates once for XAxis ticks
   const weekDates = useMemo(() => generateWeekDays(), []);
 
+  // Generate monthly metrics data
+  const getCurrentMonthMetrics = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // zero-based
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const base = Array.from({ length: daysInMonth }, (_, i) => {
+      const date = new Date(year, month, i + 1);
+      return {
+        date: `${date.getMonth() + 1}/${date.getDate()}`,
+        tasksCompleted: 0,
+        rulesBroken: 0,
+        rewardsRedeemed: 0,
+        punishments: 0,
+      };
+    });
+
+    activityData.forEach((entry) => {
+      const entryDate = new Date(entry.date);
+      const label = `${entryDate.getMonth() + 1}/${entryDate.getDate()}`;
+      const target = base.find((d) => d.date === label);
+      if (target) {
+        target.tasksCompleted += entry.tasksCompleted || 0;
+        target.rulesBroken += entry.rulesBroken || 0;
+        target.rewardsRedeemed += entry.rewardsRedeemed || 0;
+        target.punishments += entry.punishments || 0;
+      }
+    });
+
+    return base;
+  };
+
+  const monthlyMetrics = useMemo(() => getCurrentMonthMetrics(), []);
+
   useEffect(() => {
     const loadHardcodedData = () => {
       try {
@@ -160,6 +200,78 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   const hasContent = data.some(d =>
     d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
   );
+
+  // Monthly metrics chart
+  const monthlyChart = useMemo(() => {
+    return (
+      <Card className="bg-navy border border-light-navy rounded-lg mb-6">
+        <div className="p-4">
+          <h2 className="text-lg font-semibold text-white mb-2">Monthly Activity</h2>
+          
+          {/* Scrollable Chart Container */}
+          <div className="overflow-x-auto hide-scrollbar -mx-4 px-4 relative">
+            {/* Left/right fade shadows for scroll cue */}
+            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
+            
+            <div className="min-w-[900px]">
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={monthlyMetrics}>
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fill: '#CBD5E0', fontSize: 12 }}
+                    interval={0}
+                  />
+                  <YAxis tick={{ fill: '#CBD5E0', fontSize: 12 }} />
+                  <Tooltip />
+                  <Bar
+                    dataKey="tasksCompleted"
+                    fill="#38bdf8"
+                    name="Tasks Completed"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="rulesBroken"
+                    fill="#f97316"
+                    name="Rules Broken"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="rewardsRedeemed"
+                    fill="#a78bfa"
+                    name="Rewards Redeemed"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="punishments"
+                    fill="#ef4444"
+                    name="Punishments"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          
+          {/* Monthly chart legend */}
+          <div className="flex justify-between items-center flex-wrap mt-2 gap-4">
+            <span className="text-xs whitespace-nowrap" style={{ color: "#38bdf8" }}>
+              Tasks Completed
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: "#f97316" }}>
+              Rules Broken
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: "#a78bfa" }}>
+              Rewards Redeemed
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: "#ef4444" }}>
+              Punishments
+            </span>
+          </div>
+        </div>
+      </Card>
+    );
+  }, [monthlyMetrics]);
 
   // Memoize the weekly chart to prevent unnecessary re-renders
   const weeklyChart = useMemo(() => {
@@ -233,14 +345,17 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           <Skeleton className="w-full h-64 bg-light-navy/30" />
         )}
         {!loading && (
-          <div className="h-64">
-            {!hasContent && (
-              <div className="flex items-center justify-center h-full text-white text-sm">
-                No activity data to display for this week.
-              </div>
-            )}
-            {hasContent && weeklyChart}
-          </div>
+          <>
+            {monthlyChart}
+            <div className="h-64">
+              {!hasContent && (
+                <div className="flex items-center justify-center h-full text-white text-sm">
+                  No activity data to display for this week.
+                </div>
+              )}
+              {hasContent && weeklyChart}
+            </div>
+          </>
         )}
       </div>
 
