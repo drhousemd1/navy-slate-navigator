@@ -1,255 +1,524 @@
-import { useEffect, useRef, useState } from "react";
-import { Bar } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Tooltip,
-  Title,
-  Legend,
-} from "chart.js";
-import { useAuth } from '../contexts/auth/AuthContext';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
-import { Card } from "@/components/ui/card";
-import { supabase } from '@/integrations/supabase/client';
-import { getWeekDates, getCurrentMonthDates } from "@/utils/dateUtils";
-import { format } from "date-fns";
+import { useAuth } from '../contexts/auth/AuthContext';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { WeeklyMetricsChart } from '@/components/throne/WeeklyMetricsChart';
+import { MonthlyMetricsChart } from '@/components/throne/MonthlyMetricsChart';
+import { 
+  TooltipProvider, 
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent
+} from '@/components/ui/tooltip';
+import { InfoIcon, ChevronDown, ChevronUp, Settings2, Skull, Crown, Swords, Award, Pencil } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRewards } from '@/contexts/RewardsContext';
+import { RewardsProvider } from '@/contexts/RewardsContext';
+import { useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import ThroneRoomEditModal, { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
+import { toast } from '@/hooks/use-toast';
+import FrequencyTracker from '@/components/task/FrequencyTracker';
+import PriorityBadge from '@/components/task/PriorityBadge';
+import PointsBadge from '@/components/task/PointsBadge';
+import TaskIcon from '@/components/task/TaskIcon';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Title, Legend);
-
-// Constants
-const barColors = {
-  tasks: "#1DA1F2",
-  rules: "#F39C12",
-  rewards: "#9B59B6",
-  punishments: "#E74C3C",
-};
-
-// Tooltip Plugin
-const customTooltip = {
-  enabled: false,
-  external: function (context: any) {
-    const tooltipModel = context.tooltip;
-    const chart = context.chart;
-    let tooltipEl = document.getElementById("chartjs-tooltip");
-
-    if (!tooltipEl) {
-      tooltipEl = document.createElement("div");
-      tooltipEl.id = "chartjs-tooltip";
-      tooltipEl.style.position = "absolute";
-      tooltipEl.style.pointerEvents = "none";
-      tooltipEl.style.color = "#fff";
-      tooltipEl.style.fontSize = "0.75rem";
-      tooltipEl.style.whiteSpace = "pre-line";
-      tooltipEl.style.textAlign = "left";
-      tooltipEl.style.background = "transparent";
-      tooltipEl.style.border = "none";
-      chart.canvas.parentNode.appendChild(tooltipEl);
-    }
-
-    if (tooltipModel.opacity === 0) {
-      tooltipEl.style.opacity = "0";
-      return;
-    }
-
-    if (tooltipModel.body) {
-      const date = tooltipModel.title?.[0] || "";
-      const lines = tooltipModel.body.map((b: any) => b.lines).flat();
-      tooltipEl.innerHTML = `${date}\n${lines.join("\n")}`;
-    }
-
-    const position = chart.canvas.getBoundingClientRect();
-    tooltipEl.style.opacity = "1";
-    tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 10 + "px";
-    tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY + "px";
-  },
-};
-
-// Helper: Empty data for each day
-const initMetricMap = (dates: string[]) =>
-  Object.fromEntries(
-    dates.map((d) => [d, { tasks: 0, rules: 0, rewards: 0, punishments: 0 }])
-  );
-
-// Main Component
-const ThroneRoom: React.FC = () => {
-  const { user } = useAuth();
-  const [weeklyData, setWeeklyData] = useState<any>(null);
-  const [monthlyData, setMonthlyData] = useState<any>(null);
-  const chartRef = useRef<any>(null);
+const ThroneRoomCard: React.FC<{
+  title: string;
+  description: string;
+  icon?: React.ReactNode;
+  id: string;
+  priority?: 'low' | 'medium' | 'high';
+  points?: number;
+  globalCarouselIndex: number;
+}> = ({ title, description, icon, id, priority = 'medium', points = 5, globalCarouselIndex }) => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [cardData, setCardData] = useState<ThroneRoomCardData>({
+    id,
+    title,
+    description,
+    iconName: '',
+    icon_color: '#FFFFFF',
+    title_color: '#FFFFFF',
+    subtext_color: '#8E9196',
+    calendar_color: '#7E69AB',
+    highlight_effect: false,
+    priority: priority
+  });
+  const [images, setImages] = useState<string[]>([]);
+  const [visibleImage, setVisibleImage] = useState<string | null>(null);
+  const [transitionImage, setTransitionImage] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [usageData, setUsageData] = useState<number[]>([1, 0, 1, 0, 0, 0, 0]);
 
   useEffect(() => {
-    if (user) {
-      fetchMetrics();
-    }
-  }, [user]);
-
-  const fetchMetrics = async () => {
-    const { data: taskData } = await supabase
-      .from("task_completion_history")
-      .select("*");
-
-    const { data: ruleData } = await supabase
-      .from("rule_violations")
-      .select("*");
-
-    const { data: rewardData } = await supabase
-      .from("reward_usage")
-      .select("*");
-
-    const { data: punishmentData } = await supabase
-      .from("punishment_history")
-      .select("*");
-
-    const weeklyDates = getWeekDates();
-    const monthlyDates = getCurrentMonthDates();
-    const weekMap = initMetricMap(weeklyDates);
-    const monthMap = initMetricMap(monthlyDates);
-
-    for (const entry of taskData || []) {
-      const date = format(new Date(entry.completed_at), "yyyy-MM-dd");
-      if (weekMap[date]) weekMap[date].tasks++;
-      if (monthMap[date]) monthMap[date].tasks++;
-    }
+    const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
+    const savedCard = savedCards.find((card: ThroneRoomCardData) => card.id === id);
     
-    for (const entry of ruleData || []) {
-      const date = format(new Date(entry.violation_date), "yyyy-MM-dd");
-      if (weekMap[date]) weekMap[date].rules++;
-      if (monthMap[date]) monthMap[date].rules++;
+    if (savedCard) {
+      console.log("Loading saved card data for", id, savedCard);
+      console.log("Card background images:", {
+        hasBackgroundImages: Array.isArray(savedCard.background_images),
+        backgroundImagesCount: Array.isArray(savedCard.background_images) ? savedCard.background_images.length : 0,
+        hasBackgroundImageUrl: Boolean(savedCard.background_image_url)
+      });
+      
+      setCardData({
+        ...savedCard,
+        title: savedCard.title || title,
+        description: savedCard.description || description,
+        priority: savedCard.priority || priority
+      });
+      
+      const imageArray = Array.isArray(savedCard.background_images)
+        ? savedCard.background_images.filter(Boolean)
+        : savedCard.background_image_url
+          ? [savedCard.background_image_url]
+          : [];
+      
+      console.log("Setting image array:", imageArray);
+      setImages(imageArray);
+      
+      if (imageArray.length > 0) {
+        setVisibleImage(imageArray[0]);
+      }
+      
+      if (Array.isArray(savedCard.usage_data) && savedCard.usage_data.length > 0) {
+        setUsageData(savedCard.usage_data);
+      }
     }
-    
-    for (const entry of rewardData || []) {
-      // Fix: Use created_at instead of redeemed_at since it doesn't exist
-      const date = format(new Date(entry.created_at), "yyyy-MM-dd");
-      if (weekMap[date]) weekMap[date].rewards++;
-      if (monthMap[date]) monthMap[date].rewards++;
-    }
-    
-    for (const entry of punishmentData || []) {
-      // Fix: Use applied_date instead of applied_at
-      const date = format(new Date(entry.applied_date), "yyyy-MM-dd");
-      if (weekMap[date]) weekMap[date].punishments++;
-      if (monthMap[date]) monthMap[date].punishments++;
-    }
+  }, [id, title, description, priority]);
 
-    setWeeklyData(weekMap);
-    setMonthlyData(monthMap);
-  };
-
-  const renderChart = (dataSet: any, labels: string[], type: "weekly" | "monthly") => {
-    return {
-      labels,
-      datasets: [
-        {
-          label: "Tasks Completed",
-          data: labels.map((d) => dataSet?.[d]?.tasks || 0),
-          backgroundColor: barColors.tasks,
-        },
-        {
-          label: "Rules Broken",
-          data: labels.map((d) => dataSet?.[d]?.rules || 0),
-          backgroundColor: barColors.rules,
-        },
-        {
-          label: "Rewards Redeemed",
-          data: labels.map((d) => dataSet?.[d]?.rewards || 0),
-          backgroundColor: barColors.rewards,
-        },
-        {
-          label: "Punishments",
-          data: labels.map((d) => dataSet?.[d]?.punishments || 0),
-          backgroundColor: barColors.punishments,
-        },
-      ],
+  useEffect(() => {
+    if (!images.length || !visibleImage) return;
+    
+    const next = images[globalCarouselIndex % images.length];
+    if (next === visibleImage) return;
+    
+    const preload = new Image();
+    preload.src = next;
+    
+    preload.onload = () => {
+      setTransitionImage(next);
+      setIsTransitioning(false);
+      
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setIsTransitioning(true);
+          
+          const timeout = setTimeout(() => {
+            setVisibleImage(next);
+            setTransitionImage(null);
+            setIsTransitioning(false);
+          }, 2000);
+          
+          return () => clearTimeout(timeout);
+        }, 0);
+      });
     };
+  }, [globalCarouselIndex, images, visibleImage]);
+
+  const handleOpenEditModal = () => {
+    setIsEditModalOpen(true);
   };
 
-  const options = {
-    responsive: true,
-    interaction: { mode: "index" as const, intersect: false },
-    plugins: { tooltip: customTooltip },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: { stepSize: 1, color: "#fff" },
-        min: 0,
-        max: 5,
-        grid: { color: "rgba(255,255,255,0.1)" },
-      },
-      x: {
-        ticks: { color: "#fff" },
-        grid: { color: "rgba(255,255,255,0.05)" },
-      },
-    },
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
   };
 
-  const weeklyLabels = Object.keys(weeklyData || {});
-  const monthlyLabels = Object.keys(monthlyData || {});
+  const handleSaveCard = (updatedData: ThroneRoomCardData) => {
+    console.log("Saving updated card data:", updatedData);
+    console.log("Card background images:", {
+      hasBackgroundImages: Array.isArray(updatedData.background_images),
+      backgroundImagesCount: Array.isArray(updatedData.background_images) ? updatedData.background_images.length : 0,
+      hasBackgroundImageUrl: Boolean(updatedData.background_image_url)
+    });
+    
+    setCardData(updatedData);
+    
+    const imageArray = Array.isArray(updatedData.background_images)
+      ? updatedData.background_images.filter(Boolean)
+      : updatedData.background_image_url
+        ? [updatedData.background_image_url]
+        : [];
+    
+    console.log("Updated image array:", imageArray);
+    setImages(imageArray);
+    
+    if (imageArray.length > 0) {
+      const firstImage = imageArray[0];
+      setVisibleImage(firstImage);
+    } else {
+      console.log("No valid image sources found, clearing images");
+      setVisibleImage(null);
+      setTransitionImage(null);
+    }
+    
+    if (Array.isArray(updatedData.usage_data) && updatedData.usage_data.length > 0) {
+      setUsageData(updatedData.usage_data);
+    }
+    
+    const savedCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
+    const cardIndex = savedCards.findIndex((card: ThroneRoomCardData) => card.id === id);
+    
+    if (cardIndex >= 0) {
+      savedCards[cardIndex] = updatedData;
+    } else {
+      savedCards.push(updatedData);
+    }
+    
+    localStorage.setItem('throneRoomCards', JSON.stringify(savedCards));
+    
+    toast({
+      title: "Card Updated",
+      description: "The throne room card has been updated successfully",
+    });
+  };
+
+  const renderCardIcon = () => {
+    if (cardData.icon_url) {
+      return (
+        <img 
+          src={cardData.icon_url} 
+          alt="Card icon" 
+          className="w-6 h-6 object-contain"
+          style={{ color: cardData.icon_color }}
+        />
+      );
+    } else if (cardData.iconName) {
+      return (
+        <TaskIcon 
+          icon_name={cardData.iconName} 
+          icon_color={cardData.icon_color || '#FFFFFF'}
+          className="w-6 h-6"
+        />
+      );
+    } else {
+      return icon;
+    }
+  };
+
+  return (
+    <>
+      <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
+        {visibleImage && (
+          <img
+            src={visibleImage}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
+            style={{ 
+              transition: 'opacity 2s ease-in-out',
+              objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
+              opacity: (cardData.background_opacity || 100) / 100
+            }}
+            draggable={false}
+          />
+        )}
+
+        {transitionImage && (
+          <img
+            src={transitionImage}
+            alt=""
+            className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
+              isTransitioning ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{ 
+              transition: 'opacity 2s ease-in-out',
+              objectPosition: `${cardData.focal_point_x || 50}% ${cardData.focal_point_y || 50}%`,
+              opacity: isTransitioning ? (cardData.background_opacity || 100) / 100 : 0
+            }}
+            draggable={false}
+          />
+        )}
+
+        <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
+          <div className="flex justify-between items-start mb-3">
+            <PriorityBadge priority={cardData.priority || priority} />
+            
+            <div className="flex items-center gap-2">
+              <PointsBadge points={points} />
+            </div>
+          </div>
+          
+          <div className="flex items-start mb-auto">
+            <div className="mr-4 flex-shrink-0">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00f0ff' }}>
+                {renderCardIcon()}
+              </div>
+            </div>
+            
+            <div className="flex-1 flex flex-col">
+              <h3 className="text-xl font-semibold" 
+                  style={{ 
+                    color: cardData.title_color || '#FFFFFF',
+                    backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
+                    padding: cardData.highlight_effect ? '0 4px' : '0',
+                    borderRadius: cardData.highlight_effect ? '4px' : '0'
+                  }}>
+                {cardData.title}
+              </h3>
+              
+              <p className="text-sm mt-1" 
+                 style={{ 
+                   color: cardData.subtext_color || '#8E9196',
+                   backgroundColor: cardData.highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
+                   padding: cardData.highlight_effect ? '0 4px' : '0',
+                   borderRadius: cardData.highlight_effect ? '4px' : '0'
+                 }}>
+                {cardData.description}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between mt-4">
+            <FrequencyTracker 
+              frequency="weekly" 
+              frequency_count={2} 
+              calendar_color={cardData.calendar_color || '#7E69AB'}
+              usage_data={usageData}
+            />
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleOpenEditModal}
+              className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </Card>
+      
+      <ThroneRoomEditModal 
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        cardData={cardData}
+        onSave={handleSaveCard}
+      />
+    </>
+  );
+};
+
+const defaultThroneRoomCards = [
+  {
+    id: "royal-duty",
+    title: "Royal Duty",
+    description: "Complete daily tasks before sunset.",
+    icon: <Skull className="text-white w-6 h-6" />,
+    priority: "medium" as const,
+    points: 5
+  },
+  {
+    id: "kingdom-status",
+    title: "Kingdom Status",
+    description: "Monitor your kingdom's prosperity.",
+    icon: <Crown className="text-white w-6 h-6" />,
+    priority: "high" as const,
+    points: 10
+  },
+  {
+    id: "realm-defense",
+    title: "Realm Defense",
+    description: "Protect your boundaries from invaders.",
+    icon: <Swords className="text-white w-6 h-6" />,
+    priority: "low" as const,
+    points: 3
+  },
+  {
+    id: "royal-achievements",
+    title: "Royal Achievements",
+    description: "View your earned honors and merits.",
+    icon: <Award className="text-white w-6 h-6" />,
+    priority: "medium" as const,
+    points: 7
+  }
+];
+
+interface WeeklyMetricsSummary {
+  tasksCompleted: number;
+  rulesBroken: number;
+  rewardsRedeemed: number;
+  punishments: number;
+}
+
+const ThroneRoom: React.FC = () => {
+  const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
+  const [showSettings, setShowSettings] = useState(false);
+  const [metricsSummary, setMetricsSummary] = useState<WeeklyMetricsSummary>({
+    tasksCompleted: 0,
+    rulesBroken: 0,
+    rewardsRedeemed: 0,
+    punishments: 0
+  });
+  const [chartError, setChartError] = useState<string | null>(null);
+  const [chartLoading, setChartLoading] = useState<boolean>(true);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const location = useLocation();
+  
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  
+  const { rewards } = useRewards();
+
+  useEffect(() => {
+    const stored = parseInt(localStorage.getItem('throneRoom_carouselTimer') || '5', 10);
+    const interval = setInterval(() => {
+      setCarouselIndex((prev) => prev + 1);
+    }, (isNaN(stored) ? 5 : stored) * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    console.log('Location changed or component mounted, refreshing metrics chart');
+    setRefreshTrigger(prev => prev + 1);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, [rewards]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
+    console.log('Metrics data loaded with summary:', summaryData);
+    setMetricsSummary(summaryData);
+    setChartLoading(false);
+  };
 
   return (
     <AppLayout>
-      <div className="p-4 space-y-6 animate-fade-in">
-        <p className="text-nav-inactive mb-4">
-          Welcome to your command center where you can track activities and manage your domain
-        </p>
-        
-        {/* MONTHLY */}
-        <Card title="Monthly Activity">
-          <div className="overflow-x-auto px-2 pb-2">
-            <Bar
-              ref={chartRef}
-              options={options}
-              data={renderChart(monthlyData, monthlyLabels, "monthly")}
-            />
+      <RewardsProvider>
+        <div className="p-6 space-y-6 animate-fade-in">
+          <p className="text-nav-inactive">
+            Welcome to your command center where you can track activities and manage your domain
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {defaultThroneRoomCards.map((card, index) => (
+              <ThroneRoomCard
+                key={index}
+                id={card.id}
+                title={card.title}
+                description={card.description}
+                icon={card.icon}
+                priority={card.priority}
+                points={card.points}
+                globalCarouselIndex={carouselIndex}
+              />
+            ))}
           </div>
-          <div className="flex justify-around text-sm mt-2 text-white/90">
-            <span className="text-cyan-400">Tasks Completed</span>
-            <span className="text-orange-400">Rules Broken</span>
-            <span className="text-purple-400">Rewards Redeemed</span>
-            <span className="text-red-400">Punishments</span>
+          
+          <div className="space-y-6">
+            <MonthlyMetricsChart hideTitle={false} />
+            
+            <Card className="bg-navy border border-light-navy">
+              <CardHeader className="border-b border-light-navy">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-white text-lg">Weekly Activity</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4 px-0">
+                <div className="w-full">
+                  <WeeklyMetricsChart 
+                    hideTitle={true} 
+                    onDataLoaded={handleMetricsDataLoaded}
+                    key={`metrics-chart-${refreshTrigger}`}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mt-6 px-6">
+                  <div className="bg-light-navy rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sky-400 text-sm">Tasks Completed:</span>
+                      <span className="text-sm font-bold text-white">{metricsSummary.tasksCompleted}</span>
+                    </div>
+                  </div>
+                  <div className="bg-light-navy rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-orange-500 text-sm">Rules Broken:</span>
+                      <span className="text-sm font-bold text-white">{metricsSummary.rulesBroken}</span>
+                    </div>
+                  </div>
+                  <div className="bg-light-navy rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-purple-400 text-sm">Rewards Redeemed:</span>
+                      <span className="text-sm font-bold text-white">{metricsSummary.rewardsRedeemed}</span>
+                    </div>
+                  </div>
+                  <div className="bg-light-navy rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-red-400 text-sm">Punishments:</span>
+                      <span className="text-sm font-bold text-white">{metricsSummary.punishments}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-navy border border-light-navy">
+              <CardHeader className="border-b border-light-navy">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <CardTitle className="text-white text-lg">Admin Settings</CardTitle>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <InfoIcon className="h-4 w-4 text-gray-400 ml-2 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="w-80">Configure global settings for your domain</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <button 
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    {showSettings ? <ChevronUp /> : <ChevronDown />}
+                  </button>
+                </div>
+              </CardHeader>
+              {showSettings && (
+                <CardContent className="pt-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-white">Access Control</h3>
+                        <p className="text-sm text-nav-inactive">Manage user roles and permissions</p>
+                      </div>
+                      <Settings2 className="text-cyan-400 h-5 w-5" />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-white">Global Rules</h3>
+                        <p className="text-sm text-nav-inactive">Define system-wide rule settings</p>
+                      </div>
+                      <Settings2 className="text-cyan-400 h-5 w-5" />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-white">Notifications</h3>
+                        <p className="text-sm text-nav-inactive">Configure notification preferences</p>
+                      </div>
+                      <Settings2 className="text-cyan-400 h-5 w-5" />
+                    </div>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
           </div>
-        </Card>
-
-        {/* WEEKLY */}
-        <Card title="Weekly Activity">
-          <div className="px-2 pb-2">
-            <Bar
-              ref={chartRef}
-              options={options}
-              data={renderChart(weeklyData, weeklyLabels, "weekly")}
-            />
-          </div>
-          <div className="flex justify-around text-sm mt-2 text-white/90">
-            <span className="text-cyan-400">Tasks Completed</span>
-            <span className="text-orange-400">Rules Broken</span>
-            <span className="text-purple-400">Rewards Redeemed</span>
-            <span className="text-red-400">Punishments</span>
-          </div>
-        </Card>
-
-        {/* TILES */}
-        <Card title="Activity Summary">
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between px-4 py-2 bg-light-navy rounded-md text-cyan-400">
-              <span>Tasks Completed:</span>
-              <span>{weeklyData?.[weeklyLabels[weeklyLabels.length - 1]]?.tasks || 0}</span>
-            </div>
-            <div className="flex justify-between px-4 py-2 bg-light-navy rounded-md text-orange-400">
-              <span>Rules Broken:</span>
-              <span>{weeklyData?.[weeklyLabels[weeklyLabels.length - 1]]?.rules || 0}</span>
-            </div>
-            <div className="flex justify-between px-4 py-2 bg-light-navy rounded-md text-purple-400">
-              <span>Rewards Redeemed:</span>
-              <span>{weeklyData?.[weeklyLabels[weeklyLabels.length - 1]]?.rewards || 0}</span>
-            </div>
-            <div className="flex justify-between px-4 py-2 bg-light-navy rounded-md text-red-400">
-              <span>Punishments:</span>
-              <span>{weeklyData?.[weeklyLabels[weeklyLabels.length - 1]]?.punishments || 0}</span>
-            </div>
-          </div>
-        </Card>
-      </div>
+        </div>
+      </RewardsProvider>
     </AppLayout>
   );
 };

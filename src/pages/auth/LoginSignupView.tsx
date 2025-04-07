@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,24 +10,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
-  let authFormHook;
-  try {
-    authFormHook = useAuthForm();
-  } catch (error) {
-    console.error("Error initializing auth form hook:", error);
-    authFormHook = {
-      formState: { email: '', password: '', loading: false, loginError: null },
-      updateFormState: () => {},
-      handleLoginSubmit: () => {},
-      handleSignupSubmit: () => Promise.resolve(null)
-    };
-  }
-  
-  const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = authFormHook;
+  const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
+  // Direct login function
   const directLogin = async () => {
     try {
       setIsLoggingIn(true);
@@ -37,6 +26,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
         passwordLength: formState.password?.length || 0
       });
       
+      // Direct call to Supabase auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formState.email,
         password: formState.password,
@@ -45,6 +35,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       if (error) {
         console.error("Login error:", error);
         
+        // Display a user-friendly error message
         let errorMessage = "Authentication failed. Please check your credentials.";
         if (error.message.includes("Invalid login credentials")) {
           errorMessage = "Invalid email or password. Please try again.";
@@ -60,6 +51,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
           title: "Login successful",
           description: "You have been successfully logged in.",
         });
+        // Navigation will happen automatically via AuthContext
       } else {
         updateFormState({ 
           loginError: "Login succeeded but no user data returned."
@@ -154,6 +146,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
             </div>
           )}
           
+          {/* Debug information when debug mode is enabled */}
           {debugMode && (
             <div className="text-xs text-gray-400 p-2 border border-gray-700 rounded bg-gray-900/50 overflow-auto">
               <p>Debug mode enabled</p>
@@ -202,4 +195,4 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       </div>
     </div>
   );
-};
+}
