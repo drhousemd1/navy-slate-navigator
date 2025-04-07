@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form } from '@/components/ui/form';
@@ -300,6 +301,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
       
       console.log(`Found ${validImageSlots.length} valid image slots after validation`);
       
+      // Ensure background_image_url is set to the current imagePreview
       const updatedData = {
         ...data,
         background_image_url: imagePreview || '',
@@ -307,7 +309,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         iconName: selectedIconName || '',
         focal_point_x: position.x,
         focal_point_y: position.y,
-        background_images: validImageSlots,
+        background_images: validImageSlots.length > 0 ? validImageSlots : [imagePreview].filter(Boolean) as string[],
       };
       
       console.log("Transformed data ready for save:", {

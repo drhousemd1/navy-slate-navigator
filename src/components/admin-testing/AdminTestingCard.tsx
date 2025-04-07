@@ -57,6 +57,12 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     fallbackIcon: null
   });
 
+  const handleSaveAndUpdate = (updated: AdminTestingCardData) => {
+    console.log("Saving updated card data:", updated);
+    handleSaveCard(updated);
+    onUpdate(updated);
+  };
+
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
@@ -96,10 +102,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         cardData={cardData}
-        onSave={(updated) => {
-          handleSaveCard(updated);
-          onUpdate(updated);
-        }}
+        onSave={handleSaveAndUpdate}
         onDelete={(id) => {
           // Handle deletion if needed
         }}

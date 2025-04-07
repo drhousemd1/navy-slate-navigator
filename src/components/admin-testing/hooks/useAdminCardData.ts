@@ -69,8 +69,10 @@ export const useAdminCardData = ({
         
         // Set images from background_images or single background_image_url
         if (parsedData.background_images && parsedData.background_images.length > 0) {
+          console.log("Setting images from background_images:", parsedData.background_images.length);
           setImages(parsedData.background_images.filter(Boolean));
         } else if (parsedData.background_image_url) {
+          console.log("Setting single image from background_image_url");
           setImages([parsedData.background_image_url]);
         }
       } catch (error) {
@@ -86,21 +88,33 @@ export const useAdminCardData = ({
         initialImages.push(background_image_url);
       }
       
+      console.log("Initial images set from props:", initialImages.length);
       setImages(initialImages);
     }
   }, [id]);
 
   const handleSaveCard = (updatedCard: AdminTestingCardData) => {
+    console.log("Saving card data:", {
+      ...updatedCard,
+      hasBackgroundImageUrl: Boolean(updatedCard.background_image_url),
+      hasBackgroundImages: Array.isArray(updatedCard.background_images) && updatedCard.background_images.length > 0
+    });
+    
     setCardData(updatedCard);
     
-    // Update images array if needed
+    // Update images array based on updated card data
+    let newImages: string[] = [];
+    
     if (updatedCard.background_images && updatedCard.background_images.length > 0) {
-      setImages(updatedCard.background_images.filter(Boolean));
+      console.log("Setting images from updated background_images array:", updatedCard.background_images.length);
+      newImages = updatedCard.background_images.filter(Boolean);
     } else if (updatedCard.background_image_url) {
-      setImages([updatedCard.background_image_url]);
-    } else {
-      setImages([]);
+      console.log("Setting single image from updated background_image_url");
+      newImages = [updatedCard.background_image_url];
     }
+    
+    console.log("Updated images array:", newImages.length > 0 ? `${newImages.length} images` : "empty");
+    setImages(newImages);
     
     // Save to localStorage
     const storageKey = `adminTestingCard_${id}`;
