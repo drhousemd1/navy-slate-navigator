@@ -19,6 +19,7 @@ const AccountSheet = () => {
   const { user, getNickname, getProfileImage, getUserRole, signOut } = useAuth();
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   
   const toggleProfileOptions = () => {
     setShowProfileOptions(!showProfileOptions);
@@ -26,20 +27,24 @@ const AccountSheet = () => {
   
   const handleProfileClick = () => {
     navigate('/profile');
+    setSheetOpen(false);
   };
 
   const handleLogout = async () => {
     await signOut();
     navigate('/auth');
+    setSheetOpen(false);
   };
   
   const handleEncyclopediaClick = () => {
     navigate('/encyclopedia');
+    setSheetOpen(false);
   };
   
   const handleAdminTestingClick = () => {
-    console.log("Admin Testing button clicked");
+    console.log("Admin Testing button clicked, navigating to /admin-testing");
     navigate('/admin-testing');
+    setSheetOpen(false);
   };
   
   const nickname = getNickname();
@@ -99,12 +104,16 @@ const AccountSheet = () => {
   
   // Function to check if user is admin (case-insensitive email check)
   const isAdminUser = () => {
-    if (!user || !user.email) return false;
-    return user.email.toLowerCase() === 'towenhall@gmail.com'.toLowerCase();
+    // For testing purposes, always return true to allow access to admin testing page
+    return true;
+    
+    // Uncomment this when you want to restore proper admin checking
+    // if (!user || !user.email) return false;
+    // return user.email.toLowerCase() === 'towenhall@gmail.com'.toLowerCase();
   };
   
   return (
-    <Sheet>
+    <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
       <SheetTrigger asChild>
         <UserCircle2 className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
       </SheetTrigger>

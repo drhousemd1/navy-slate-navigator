@@ -8,32 +8,65 @@ import { renderCardIcon } from '@/components/throne/utils/renderCardIcon';
 import CardHeader from '@/components/throne/card/CardHeader';
 import CardContent from '@/components/throne/card/CardContent';
 import CardFooter from '@/components/throne/card/CardFooter';
+import { toast } from '@/components/ui/use-toast';
 
 const AdminTesting = () => {
   const [adminTestingCards, setAdminTestingCards] = useState<ThroneRoomCardData[]>([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [selectedCard, setSelectedCard] = useState<ThroneRoomCardData | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load admin testing cards from localStorage on mount
   useEffect(() => {
-    console.log("AdminTesting: Loading cards from localStorage");
-    const saved = localStorage.getItem('adminTestingCards');
-    if (saved) {
-      try {
-        const parsedCards = JSON.parse(saved);
-        console.log("AdminTesting: Loaded cards:", parsedCards);
-        setAdminTestingCards(parsedCards);
-      } catch (err) {
-        console.error('Error parsing adminTestingCards:', err);
+    console.log("AdminTesting: Component mounted");
+    
+    // Always show a toast notification to confirm the page is loading
+    toast({
+      title: "Admin Testing Page",
+      description: "Admin testing page has been loaded",
+    });
+    
+    // Initialize cards
+    try {
+      console.log("AdminTesting: Loading cards from localStorage");
+      const saved = localStorage.getItem('adminTestingCards');
+      
+      if (saved) {
+        try {
+          const parsedCards = JSON.parse(saved);
+          console.log("AdminTesting: Loaded cards:", parsedCards);
+          
+          if (Array.isArray(parsedCards) && parsedCards.length > 0) {
+            setAdminTestingCards(parsedCards);
+            setIsInitialized(true);
+          } else {
+            console.log("AdminTesting: Saved cards array was empty, initializing with defaults");
+            initializeDefaultCards();
+          }
+        } catch (err) {
+          console.error('Error parsing adminTestingCards:', err);
+          initializeDefaultCards();
+        }
+      } else {
+        // Initialize with default cards if none exist
+        console.log("AdminTesting: No saved cards found, initializing with defaults");
+        initializeDefaultCards();
       }
-    } else {
-      // Initialize with default cards if none exist
+    } catch (error) {
+      console.error("AdminTesting: Error in initialization:", error);
+      // Ensure we always have cards
+      initializeDefaultCards();
+    }
+  }, []);
+
+  const initializeDefaultCards = () => {
+    try {
       console.log("AdminTesting: Initializing with default cards");
       const initialCards = defaultThroneRoomCards.map(card => ({
         id: card.id,
-        title: card.title,
-        description: card.description,
+        title: card.title || 'Untitled Card',
+        description: card.description || 'No description',
         iconName: '',
         icon_color: '#FFFFFF',
         title_color: '#FFFFFF',
@@ -42,20 +75,27 @@ const AdminTesting = () => {
         highlight_effect: false,
         priority: card.priority || 'medium'
       }));
+      
+      console.log("AdminTesting: Setting initial cards:", initialCards);
       setAdminTestingCards(initialCards);
       localStorage.setItem('adminTestingCards', JSON.stringify(initialCards));
+      setIsInitialized(true);
+    } catch (error) {
+      console.error("AdminTesting: Error initializing default cards:", error);
     }
-  }, []);
+  };
 
   // Carousel timer effect
   useEffect(() => {
+    if (!isInitialized) return;
+    
     const stored = parseInt(localStorage.getItem('adminTesting_carouselTimer') || '5', 10);
     const interval = setInterval(() => {
       setCarouselIndex((prev) => prev + 1);
     }, (isNaN(stored) ? 5 : stored) * 1000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [isInitialized]);
 
   const handleSaveCard = (updatedData: ThroneRoomCardData) => {
     console.log("AdminTesting: Saving card", updatedData);
@@ -85,9 +125,23 @@ const AdminTesting = () => {
           THIS IS THE ADMIN TESTING PAGE
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {adminTestingCards.length > 0 ? (
-            adminTestingCards.map((card) => {
+        {!isInitialized ? (
+          <div className="flex items-center justify-center h-64 bg-navy rounded-lg">
+            <p className="text-white text-xl">Loading admin testing cards...</p>
+          </div>
+        ) : adminTestingCards.length === 0 ? (
+          <div className="flex items-center justify-center h-64 bg-navy rounded-lg">
+            <p className="text-white text-xl">No cards available. Please initialize default cards.</p>
+            <button 
+              className="ml-4 px-4 py-2 bg-blue-500 text-white rounded-md"
+              onClick={initializeDefaultCards}
+            >
+              Load Default Cards
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {adminTestingCards.map((card) => {
               const IconComponent = defaultThroneRoomCards.find(defaultCard => defaultCard.id === card.id)?.icon;
               
               return (
@@ -109,9 +163,9 @@ const AdminTesting = () => {
                           fallbackIcon: IconComponent ? <IconComponent className="text-white w-6 h-6" /> : undefined
                         })
                       }
-                      titleColor={card.title_color}
-                      subtextColor={card.subtext_color}
-                      highlightEffect={card.highlight_effect}
+                      titleColor={card.title_color || '#FFFFFF'}
+                      subtextColor={card.subtext_color || '#8E9196'}
+                      highlightEffect={card.highlight_effect || false}
                     />
                     
                     <CardFooter 
@@ -125,13 +179,9 @@ const AdminTesting = () => {
                   </div>
                 </Card>
               );
-            })
-          ) : (
-            <div className="col-span-2 text-center p-8 bg-navy border border-light-navy rounded-lg">
-              <p className="text-white">No cards available. Loading default cards...</p>
-            </div>
-          )}
-        </div>
+            })}
+          </div>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="p-4 bg-navy border border-light-navy">
