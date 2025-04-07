@@ -51,7 +51,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     priority: card?.priority || priority,
     points: card?.points || points,
     icon_url: card?.icon_url,
-    iconName: card?.icon_name || "",
+    icon_name: card?.icon_name || "",
     background_images: card?.background_images as string[] || [],
     background_image_url: card?.background_image_url
   });

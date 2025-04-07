@@ -37,7 +37,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(cardData?.background_image_url || null);
   const [iconPreview, setIconPreview] = useState<string | null>(cardData?.icon_url || null);
-  const [selectedIconName, setSelectedIconName] = useState<string | null>(cardData?.iconName || null);
+  const [selectedIconName, setSelectedIconName] = useState<string | null>(cardData?.icon_name || null);
   const [position, setPosition] = useState({ 
     x: cardData?.focal_point_x || 50, 
     y: cardData?.focal_point_y || 50 
@@ -54,7 +54,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
       id: cardData?.id || '',
       title: cardData?.title || '',
       description: cardData?.description || '',
-      iconName: cardData?.iconName || '',
+      icon_name: cardData?.icon_name || '',
       icon_url: cardData?.icon_url || '',
       icon_color: cardData?.icon_color || '#FFFFFF',
       title_color: cardData?.title_color || '#FFFFFF',
@@ -78,7 +78,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         id: cardData.id,
         title: cardData.title,
         description: cardData.description,
-        iconName: cardData.iconName || '',
+        icon_name: cardData.icon_name || '',
         icon_url: cardData.icon_url || '',
         icon_color: cardData.icon_color || '#FFFFFF',
         title_color: cardData.title_color || '#FFFFFF',
@@ -95,7 +95,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
       });
       setImagePreview(cardData.background_image_url || null);
       setIconPreview(cardData.icon_url || null);
-      setSelectedIconName(cardData.iconName || null);
+      setSelectedIconName(cardData.icon_name || null);
       setPosition({ 
         x: cardData.focal_point_x || 50, 
         y: cardData.focal_point_y || 50 
@@ -222,7 +222,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
             setIconPreview(base64String);
             setSelectedIconName(null);
             form.setValue('icon_url', base64String);
-            form.setValue('iconName', '');
+            form.setValue('icon_name', '');
           };
           reader.readAsDataURL(file);
         }
@@ -237,7 +237,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
       setIconPreview(iconUrl);
       setSelectedIconName(null);
       form.setValue('icon_url', iconUrl);
-      form.setValue('iconName', '');
+      form.setValue('icon_name', '');
       
       toast({
         title: "Custom icon selected",
@@ -246,7 +246,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
     } else {
       setSelectedIconName(iconName);
       setIconPreview(null);
-      form.setValue('iconName', iconName);
+      form.setValue('icon_name', iconName);
       form.setValue('icon_url', '');
       
       toast({
@@ -275,8 +275,6 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
     try {
       setIsSaving(true);
       console.log("Saving admin testing card data:", data);
-      console.log("Current image slots:", imageSlots.map((s, i) => 
-        s ? `[${i}: ${s.substring(0, 20)}...]` : `[${i}: null]`));
       
       // Validate image slots before saving
       const validImageSlots = imageSlots
@@ -305,7 +303,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         ...data,
         background_image_url: imagePreview || '',
         icon_url: iconPreview || '',
-        iconName: selectedIconName || '',
+        icon_name: selectedIconName || '',
         focal_point_x: position.x,
         focal_point_y: position.y,
         background_images: validImageSlots.length > 0 ? validImageSlots : imagePreview ? [imagePreview] : [],
@@ -374,7 +372,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
                 setIconPreview(null);
                 setSelectedIconName(null);
                 form.setValue('icon_url', '');
-                form.setValue('iconName', '');
+                form.setValue('icon_name', '');
               }}
             />
             

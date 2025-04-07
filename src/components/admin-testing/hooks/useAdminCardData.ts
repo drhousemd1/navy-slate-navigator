@@ -12,7 +12,7 @@ interface UseAdminCardDataProps {
   priority?: 'low' | 'medium' | 'high';
   points?: number;
   icon_url?: string;
-  iconName?: string;
+  icon_name?: string;
   background_images?: string[];
   background_image_url?: string;
 }
@@ -31,7 +31,7 @@ export const useAdminCardData = ({
   priority = 'medium',
   points = 0,
   icon_url,
-  iconName,
+  icon_name,
   background_images = [],
   background_image_url
 }: UseAdminCardDataProps): UseAdminCardDataResult => {
@@ -42,7 +42,7 @@ export const useAdminCardData = ({
     priority,
     points,
     icon_url,
-    icon_name: iconName,
+    icon_name,
     background_image_url,
     background_images: background_images,
     background_opacity: 80,
@@ -82,6 +82,7 @@ export const useAdminCardData = ({
           const savedCard = {
             ...data,
             priority: (data.priority as 'low' | 'medium' | 'high') || 'medium',
+            points: data.points || 5,
             background_images: data.background_images || [],
             usage_data: data.usage_data || [1, 2, 0, 3, 1, 0, 2]
           };
