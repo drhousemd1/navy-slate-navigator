@@ -40,13 +40,19 @@ interface ThroneRoomEditModalProps {
   onClose: () => void;
   cardData: ThroneRoomCardData;
   onSave: (data: ThroneRoomCardData) => void;
+  onDelete?: (cardId: string) => void;
+  localStorageKey?: string;
+  pageTitle?: string;
 }
 
 const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   isOpen,
   onClose,
   cardData,
-  onSave
+  onSave,
+  onDelete,
+  localStorageKey = 'throneRoomCards',
+  pageTitle = 'Throne Room'
 }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(cardData?.background_image_url || null);
@@ -59,13 +65,13 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
   const [carouselTimer, setCarouselTimer] = useState<number>(() => {
-    const stored = localStorage.getItem("throneRoom_carouselTimer");
+    const stored = localStorage.getItem(`${localStorageKey}_carouselTimer`);
     return stored ? parseInt(stored, 10) : 5;
   });
   
   useEffect(() => {
-    localStorage.setItem("throneRoom_carouselTimer", String(carouselTimer));
-  }, [carouselTimer]);
+    localStorage.setItem(`${localStorageKey}_carouselTimer`, String(carouselTimer));
+  }, [carouselTimer, localStorageKey]);
   
   const form = useForm<ThroneRoomCardData>({
     defaultValues: {
@@ -274,18 +280,24 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
 
   const handleDeleteCard = () => {
     try {
-      const existingCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
-      const updatedCards = existingCards.filter((card: ThroneRoomCardData) => card.id !== cardData.id);
-      localStorage.setItem('throneRoomCards', JSON.stringify(updatedCards));
-      
-      toast({
-        title: "Card Deleted",
-        description: "The throne room card has been deleted",
-      });
-      
-      onClose();
+      if (onDelete) {
+        // Use the passed delete handler if provided
+        onDelete(cardData.id);
+      } else {
+        // Default deletion behavior using localStorage
+        const existingCards = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
+        const updatedCards = existingCards.filter((card: ThroneRoomCardData) => card.id !== cardData.id);
+        localStorage.setItem(localStorageKey, JSON.stringify(updatedCards));
+        
+        toast({
+          title: "Card Deleted",
+          description: `The ${pageTitle.toLowerCase()} card has been deleted`,
+        });
+        
+        onClose();
+      }
     } catch (error) {
-      console.error('Error deleting throne room card:', error);
+      console.error(`Error deleting ${pageTitle.toLowerCase()} card:`, error);
       toast({
         title: "Error",
         description: "Failed to delete card",
@@ -297,7 +309,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   const onSubmit = async (data: ThroneRoomCardData) => {
     try {
       setIsSaving(true);
-      console.log("Saving card data:", data);
+      console.log(`Saving ${pageTitle.toLowerCase()} card data:`, data);
       console.log("Current image slots:", imageSlots.map((s, i) => 
         s ? `[${i}: ${s.substring(0, 20)}...]` : `[${i}: null]`));
       
@@ -340,39 +352,16 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         hasBackgroundImageUrl: Boolean(updatedData.background_image_url)
       });
       
-      try {
-        const existingCards = JSON.parse(localStorage.getItem('throneRoomCards') || '[]');
-        const cardIndex = existingCards.findIndex((card: ThroneRoomCardData) => card.id === updatedData.id);
-        
-        if (cardIndex >= 0) {
-          existingCards[cardIndex] = updatedData;
-          console.log(`Updated existing card at index ${cardIndex}`);
-        } else {
-          existingCards.push(updatedData);
-          console.log(`Added new card with id ${updatedData.id}`);
-        }
-        
-        localStorage.setItem('throneRoomCards', JSON.stringify(existingCards));
-        console.log("Successfully saved to localStorage");
-        
-        await onSave(updatedData);
-        
-        toast({
-          title: "Success",
-          description: "Card settings saved successfully",
-        });
-        
-        onClose();
-      } catch (storageError) {
-        console.error('Error with localStorage operations:', storageError);
-        toast({
-          title: "Storage Error",
-          description: `Failed to save to localStorage: ${storageError.message}`,
-          variant: "destructive"
-        });
-      }
+      await onSave(updatedData);
+      
+      toast({
+        title: "Success",
+        description: "Card settings saved successfully",
+      });
+      
+      onClose();
     } catch (error) {
-      console.error('Error saving throne room card:', error);
+      console.error(`Error saving ${pageTitle.toLowerCase()} card:`, error);
       toast({
         title: "Error",
         description: `Failed to save card settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -387,7 +376,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="bg-navy border border-light-navy text-white max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">Edit Card</DialogTitle>
+          <DialogTitle className="text-xl">Edit {pageTitle} Card</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>

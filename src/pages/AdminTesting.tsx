@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -106,6 +107,27 @@ const AdminTesting = () => {
         localStorage.setItem('adminTestingCards', JSON.stringify(newArr));
         return newArr;
       }
+    });
+    
+    toast({
+      title: "Card Updated",
+      description: "The admin testing card has been updated successfully",
+    });
+  };
+  
+  const handleDeleteCard = (cardId: string) => {
+    console.log("AdminTesting: Deleting card", cardId);
+    setAdminTestingCards(prev => {
+      const newArr = prev.filter(card => card.id !== cardId);
+      localStorage.setItem('adminTestingCards', JSON.stringify(newArr));
+      return newArr;
+    });
+    
+    setIsEditModalOpen(false);
+    
+    toast({
+      title: "Card Deleted",
+      description: "The admin testing card has been deleted successfully",
     });
   };
 
@@ -228,6 +250,9 @@ const AdminTesting = () => {
           cardData={selectedCard}
           onClose={() => setIsEditModalOpen(false)}
           onSave={handleSaveCard}
+          onDelete={handleDeleteCard}
+          localStorageKey="adminTestingCards"
+          pageTitle="Admin Testing"
         />
       )}
     </AppLayout>
