@@ -45,7 +45,7 @@ export type Database = {
           icon_color?: string | null
           icon_name?: string | null
           icon_url?: string | null
-          id?: string
+          id: string
           priority?: string | null
           subtext_color?: string | null
           title: string

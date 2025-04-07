@@ -339,7 +339,7 @@ export const useSupabaseAdminTesting = (defaultCards: AdminTestingCardData[]) =>
 
   /*
   7) Add a brand-new card. 
-     Currently, we insert it into supabase with a generated ID.
+     Now using a string-based ID generation that doesn't rely on UUID format.
   */
   const addCard = async () => {
     try {
@@ -411,6 +411,8 @@ export const useSupabaseAdminTesting = (defaultCards: AdminTestingCardData[]) =>
       const usageData = [...(card.usage_data || [0, 0, 0, 0, 0, 0, 0])];
       usageData[dayOfWeek] = (usageData[dayOfWeek] || 0) + 1;
 
+      console.log("Updating usage for card:", card.id, "New usage data:", usageData);
+
       const { error } = await supabase
         .from('admin_testing_cards')
         .update({
@@ -420,6 +422,7 @@ export const useSupabaseAdminTesting = (defaultCards: AdminTestingCardData[]) =>
         .eq('id', card.id);
 
       if (error) {
+        console.error("Error in Supabase update:", error);
         throw error;
       }
 
