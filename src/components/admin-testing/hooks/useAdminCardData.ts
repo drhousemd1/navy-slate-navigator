@@ -1,6 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { AdminTestingCardData } from '../defaultAdminTestingCards';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from "@/hooks/use-toast";
 
 interface UseAdminCardDataProps {
   id: string;
@@ -54,28 +56,61 @@ export const useAdminCardData = ({
   });
 
   const [images, setImages] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Try to load saved card data from localStorage
-    const savedCards = JSON.parse(localStorage.getItem('adminTestingCards') || '[]');
-    const savedCard = savedCards.find((card: AdminTestingCardData) => card.id === id);
-    
-    if (savedCard) {
-      setCardData({
-        ...cardData,
-        ...savedCard
-      });
-      
-      // Set images from background_images or single background_image_url
-      const imageArray = Array.isArray(savedCard.background_images) && savedCard.background_images.length > 0
-        ? savedCard.background_images.filter(Boolean)
-        : savedCard.background_image_url
-          ? [savedCard.background_image_url]
-          : [];
+    const fetchCardData = async () => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('admin_testing_cards')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (error) {
+          if (error.code !== 'PGRST116') { // Not found is not a critical error
+            console.error('Error fetching card data:', error);
+          }
+          // If not found in Supabase, use the default state
+          return;
+        }
+        
+        if (data) {
+          // Transform data from Supabase to match our expected format
+          const savedCard = {
+            ...data,
+            background_images: data.background_images || [],
+            usage_data: data.usage_data || [1, 2, 0, 3, 1, 0, 2]
+          };
           
-      setImages(imageArray);
-    } else {
-      // Initialize images array from props
+          setCardData({
+            ...cardData,
+            ...savedCard
+          });
+          
+          // Set images from background_images or single background_image_url
+          const imageArray = Array.isArray(savedCard.background_images) && savedCard.background_images.length > 0
+            ? savedCard.background_images.filter(Boolean)
+            : savedCard.background_image_url
+              ? [savedCard.background_image_url]
+              : [];
+              
+          setImages(imageArray);
+        }
+      } catch (error) {
+        console.error('Error in fetchCardData:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCardData();
+  }, [id]);
+
+  useEffect(() => {
+    // Initialize images array from props if not loaded from Supabase
+    if (!isLoading && images.length === 0) {
       const initialImages: string[] = [];
       
       if (background_images && background_images.length > 0) {
@@ -86,39 +121,59 @@ export const useAdminCardData = ({
       
       setImages(initialImages);
     }
-  }, [id]);
+  }, [isLoading, background_images, background_image_url, images.length]);
 
-  const handleSaveCard = (updatedCard: AdminTestingCardData) => {
-    // Make sure we have the complete updated data
-    const newCardData = {
-      ...cardData,
-      ...updatedCard
-    };
-    
-    setCardData(newCardData);
-    
-    // Update images array based on updated card data
-    let newImages: string[] = [];
-    
-    if (Array.isArray(updatedCard.background_images) && updatedCard.background_images.length > 0) {
-      newImages = updatedCard.background_images.filter(Boolean);
-    } else if (updatedCard.background_image_url) {
-      newImages = [updatedCard.background_image_url];
+  const handleSaveCard = async (updatedCard: AdminTestingCardData) => {
+    try {
+      // Make sure we have the complete updated data
+      const newCardData = {
+        ...cardData,
+        ...updatedCard
+      };
+      
+      setCardData(newCardData);
+      
+      // Update images array based on updated card data
+      let newImages: string[] = [];
+      
+      if (Array.isArray(updatedCard.background_images) && updatedCard.background_images.length > 0) {
+        newImages = updatedCard.background_images.filter(Boolean);
+      } else if (updatedCard.background_image_url) {
+        newImages = [updatedCard.background_image_url];
+      }
+      
+      setImages(newImages);
+      
+      // Save to Supabase using upsert
+      const { error } = await supabase
+        .from('admin_testing_cards')
+        .upsert(newCardData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
+      
+      if (error) {
+        console.error('Error saving card to Supabase:', error);
+        toast({
+          title: "Error",
+          description: `Failed to save card: ${error.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      toast({
+        title: "Success",
+        description: "Card saved successfully",
+      });
+    } catch (error) {
+      console.error('Error in handleSaveCard:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while saving the card",
+        variant: "destructive"
+      });
     }
-    
-    setImages(newImages);
-    
-    // Save to localStorage
-    const savedCards = JSON.parse(localStorage.getItem('adminTestingCards') || '[]');
-    const cardIndex = savedCards.findIndex((card: AdminTestingCardData) => card.id === id);
-    
-    if (cardIndex >= 0) {
-      savedCards[cardIndex] = newCardData;
-    } else {
-      savedCards.push(newCardData);
-    }
-    
-    localStorage.setItem('adminTestingCards', JSON.stringify(savedCards));
   };
 
   const usageData = cardData.usage_data || [0, 0, 0, 0, 0, 0, 0];

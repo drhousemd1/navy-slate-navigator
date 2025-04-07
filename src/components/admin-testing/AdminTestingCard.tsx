@@ -10,6 +10,7 @@ import { useAdminCardData } from '@/components/admin-testing/hooks/useAdminCardD
 import { useImageCarousel } from '@/components/admin-testing/hooks/useImageCarousel';
 import { renderCardIcon } from '@/components/admin-testing/utils/renderCardIcon';
 import { toast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
 import { AdminTestingCardData } from "./defaultAdminTestingCards";
 
 export interface AdminTestingCardProps {
@@ -71,14 +72,23 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     fallbackIcon: icon
   });
 
-  const handleDeleteCard = (cardId: string) => {
+  const handleDeleteCard = async (cardId: string) => {
     try {
-      // Get current cards from localStorage
-      const cards = JSON.parse(localStorage.getItem("adminTestingCards") || "[]");
-      // Filter out the card to delete
-      const updatedCards = cards.filter((c: AdminTestingCardData) => c.id !== cardId);
-      // Save the updated cards back to localStorage
-      localStorage.setItem("adminTestingCards", JSON.stringify(updatedCards));
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('admin_testing_cards')
+        .delete()
+        .eq('id', cardId);
+      
+      if (error) {
+        console.error("Error deleting card from Supabase:", error);
+        toast({
+          title: "Error",
+          description: `Failed to delete card: ${error.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
       
       // Notify about the deletion
       toast({
@@ -100,6 +110,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   const handleCarouselTimerChange = (newValue: number) => {
     setCarouselTimer(newValue);
+    // Store carousel timer in localStorage for now as it's a global setting
     localStorage.setItem("adminTestingCards_carouselTimer", newValue.toString());
   };
 

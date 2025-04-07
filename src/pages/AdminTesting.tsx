@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -6,18 +5,49 @@ import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { AdminTestingCardData } from '@/components/admin-testing/defaultAdminTestingCards';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from "@/hooks/use-toast";
 
 const AdminTesting = () => {
   const [cards, setCards] = useState<AdminTestingCardData[]>([]);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load cards and carousel timer from localStorage
+  // Load cards from Supabase and carousel timer from localStorage
   useEffect(() => {
-    const savedCards = JSON.parse(localStorage.getItem('adminTestingCards') || '[]');
-    const savedTimer = parseInt(localStorage.getItem('adminTestingCards_carouselTimer') || '5', 10);
+    const fetchCards = async () => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('admin_testing_cards')
+          .select('*');
+        
+        if (error) {
+          console.error('Error fetching cards from Supabase:', error);
+          toast({
+            title: "Error",
+            description: `Failed to load cards: ${error.message}`,
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Only use data from Supabase if we got results
+        if (data && data.length > 0) {
+          setCards(data);
+        }
+      } catch (error) {
+        console.error('Error in fetchCards:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCards();
     
-    setCards(savedCards);
+    // Load carousel timer from localStorage (keeping this in localStorage as it's a global setting)
+    const savedTimer = parseInt(localStorage.getItem('adminTestingCards_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
     
     // Start the carousel interval
@@ -29,7 +59,7 @@ const AdminTesting = () => {
   }, []);
 
   // Add a new card
-  const handleAddCard = () => {
+  const handleAddCard = async () => {
     const newCard: AdminTestingCardData = {
       id: uuidv4(),
       title: 'New Card',
@@ -47,18 +77,46 @@ const AdminTesting = () => {
       usage_data: [0, 0, 0, 0, 0, 0, 0]
     };
     
-    const updatedCards = [...cards, newCard];
-    setCards(updatedCards);
-    localStorage.setItem('adminTestingCards', JSON.stringify(updatedCards));
+    try {
+      // Insert the new card into Supabase
+      const { data, error } = await supabase
+        .from('admin_testing_cards')
+        .insert(newCard)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error adding card to Supabase:', error);
+        toast({
+          title: "Error",
+          description: `Failed to add card: ${error.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Update local state with the card from Supabase
+      setCards(prevCards => [...prevCards, data]);
+      
+      toast({
+        title: "Success",
+        description: "New card created successfully",
+      });
+    } catch (error) {
+      console.error('Error in handleAddCard:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while adding the card",
+        variant: "destructive"
+      });
+    }
   };
 
   // Update a card
   const handleUpdateCard = (updatedCard: AdminTestingCardData) => {
-    const updatedCards = cards.map(card => 
+    setCards(prevCards => prevCards.map(card => 
       card.id === updatedCard.id ? updatedCard : card
-    );
-    setCards(updatedCards);
-    localStorage.setItem('adminTestingCards', JSON.stringify(updatedCards));
+    ));
   };
 
   return (
@@ -81,21 +139,25 @@ const AdminTesting = () => {
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cards.map(card => (
-            <AdminTestingCard
-              key={card.id}
-              card={card}
-              id={card.id}
-              title={card.title}
-              description={card.description}
-              priority={card.priority}
-              points={card.points}
-              globalCarouselIndex={globalCarouselIndex}
-              onUpdate={handleUpdateCard}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="text-center text-white p-8">Loading cards...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {cards.map(card => (
+              <AdminTestingCard
+                key={card.id}
+                card={card}
+                id={card.id}
+                title={card.title}
+                description={card.description}
+                priority={card.priority}
+                points={card.points}
+                globalCarouselIndex={globalCarouselIndex}
+                onUpdate={handleUpdateCard}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </AppLayout>
   );
