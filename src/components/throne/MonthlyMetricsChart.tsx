@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps
@@ -40,7 +39,6 @@ const MonthlyMetricsChart: React.FC = () => {
     }
   };
 
-  // Generate month days for the current month
   const generateMonthDays = (): string[] => {
     const today = new Date();
     const monthStart = startOfMonth(today);
@@ -54,7 +52,6 @@ const MonthlyMetricsChart: React.FC = () => {
     return monthDates;
   };
 
-  // Format date for display
   const formatDate = (dateString: string): string => {
     try {
       return format(parseISO(dateString), 'MMM d');
@@ -63,7 +60,6 @@ const MonthlyMetricsChart: React.FC = () => {
     }
   };
 
-  // Get the month dates once
   const monthDates = useMemo(() => generateMonthDays(), []);
 
   useEffect(() => {
@@ -73,7 +69,6 @@ const MonthlyMetricsChart: React.FC = () => {
         
         const metricsMap = new Map<string, MonthlyDataItem>();
 
-        // Initialize data for each day of the month
         monthDates.forEach((date) => {
           metricsMap.set(date, {
             date,
@@ -84,12 +79,10 @@ const MonthlyMetricsChart: React.FC = () => {
           });
         });
 
-        // Get the first day of the current month
         const today = new Date();
         const monthStart = startOfMonth(today);
         const monthEnd = endOfMonth(today);
 
-        // Fetch task completions for the month
         const { data: taskCompletions, error: taskError } = await supabase
           .from('task_completion_history')
           .select('*')
@@ -99,7 +92,6 @@ const MonthlyMetricsChart: React.FC = () => {
         if (taskError) {
           console.error('Error fetching task completions:', taskError);
         } else if (taskCompletions) {
-          // Group task completions by date
           taskCompletions.forEach((completion) => {
             const completionDate = format(new Date(completion.completed_at), 'yyyy-MM-dd');
             if (metricsMap.has(completionDate)) {
@@ -109,7 +101,6 @@ const MonthlyMetricsChart: React.FC = () => {
           });
         }
 
-        // Fetch rule violations for the month
         const { data: ruleViolations, error: ruleError } = await supabase
           .from('rule_violations')
           .select('*')
@@ -119,7 +110,6 @@ const MonthlyMetricsChart: React.FC = () => {
         if (ruleError) {
           console.error('Error fetching rule violations:', ruleError);
         } else if (ruleViolations) {
-          // Group rule violations by date
           ruleViolations.forEach((violation) => {
             const violationDate = format(new Date(violation.violation_date), 'yyyy-MM-dd');
             if (metricsMap.has(violationDate)) {
@@ -129,7 +119,6 @@ const MonthlyMetricsChart: React.FC = () => {
           });
         }
 
-        // Fetch reward usage for the month
         const { data: rewardUsage, error: rewardError } = await supabase
           .from('reward_usage')
           .select('*')
@@ -139,7 +128,6 @@ const MonthlyMetricsChart: React.FC = () => {
         if (rewardError) {
           console.error('Error fetching reward usage:', rewardError);
         } else if (rewardUsage) {
-          // Group reward usage by date
           rewardUsage.forEach((usage) => {
             const usageDate = format(new Date(usage.created_at), 'yyyy-MM-dd');
             if (metricsMap.has(usageDate)) {
@@ -149,7 +137,6 @@ const MonthlyMetricsChart: React.FC = () => {
           });
         }
 
-        // Fetch punishment history for the month
         const { data: punishmentHistory, error: punishmentError } = await supabase
           .from('punishment_history')
           .select('*')
@@ -159,7 +146,6 @@ const MonthlyMetricsChart: React.FC = () => {
         if (punishmentError) {
           console.error('Error fetching punishment history:', punishmentError);
         } else if (punishmentHistory) {
-          // Group punishment history by date
           punishmentHistory.forEach((punishment) => {
             const punishmentDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
             if (metricsMap.has(punishmentDate)) {
@@ -187,7 +173,7 @@ const MonthlyMetricsChart: React.FC = () => {
     if (!chartContainerRef.current) return;
     
     const container = chartContainerRef.current;
-    const barWidth = 40;  // approximate bar width
+    const barWidth = 40;
     const scrollTo = (index * barWidth) - (container.clientWidth / 2) + barWidth;
     
     container.scrollTo({
@@ -200,76 +186,74 @@ const MonthlyMetricsChart: React.FC = () => {
     d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
   );
 
-  // Memoize the monthly chart to prevent unnecessary re-renders
   const monthlyChart = useMemo(() => {
     return (
       <ChartContainer 
         className="w-full h-full"
         config={chartConfig}
       >
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
-            <XAxis 
-              dataKey="date"
-              tickFormatter={(date) => {
-                try {
-                  const d = parseISO(date);
-                  return `${getMonth(d) + 1}/${format(d, 'd')}`;
-                } catch {
-                  return date;
-                }
-              }}
-              stroke="#8E9196"
-              tick={{ fill: '#D1D5DB' }}
-            />
-            <YAxis 
-              stroke="#8E9196"
-              tick={{ fill: '#D1D5DB' }}
-            />
-            <Tooltip 
-              formatter={(value, name, props) => {
-                // Safe type checking for values
-                return [value, name];
-              }}
-              labelFormatter={(label) => {
-                try {
-                  return format(parseISO(String(label)), 'MMM d, yyyy');
-                } catch {
-                  return label;
-                }
-              }}
-            />
-            <Bar 
-              dataKey="tasksCompleted" 
-              name="Tasks Completed" 
-              fill={chartConfig.tasksCompleted.color} 
-              radius={[4, 4, 0, 0]} 
-              onClick={handleBarClick}
-            />
-            <Bar 
-              dataKey="rulesBroken" 
-              name="Rules Broken" 
-              fill={chartConfig.rulesBroken.color} 
-              radius={[4, 4, 0, 0]} 
-              onClick={handleBarClick}
-            />
-            <Bar 
-              dataKey="rewardsRedeemed" 
-              name="Rewards Redeemed" 
-              fill={chartConfig.rewardsRedeemed.color} 
-              radius={[4, 4, 0, 0]} 
-              onClick={handleBarClick}
-            />
-            <Bar 
-              dataKey="punishments" 
-              name="Punishments" 
-              fill={chartConfig.punishments.color} 
-              radius={[4, 4, 0, 0]} 
-              onClick={handleBarClick}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+        <div style={{ width: data.length * 60, height: "100%" }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
+              <XAxis 
+                dataKey="date"
+                tickFormatter={(date) => {
+                  try {
+                    const d = parseISO(date);
+                    return `${getMonth(d) + 1}/${format(d, 'd')}`;
+                  } catch {
+                    return date;
+                  }
+                }}
+                stroke="#8E9196"
+                tick={{ fill: '#D1D5DB' }}
+              />
+              <YAxis 
+                stroke="#8E9196"
+                tick={{ fill: '#D1D5DB' }}
+              />
+              <Tooltip 
+                formatter={(value, name) => [value, name]}
+                labelFormatter={(label) => {
+                  try {
+                    return format(parseISO(String(label)), 'MMM d, yyyy');
+                  } catch {
+                    return label;
+                  }
+                }}
+              />
+              <Bar 
+                dataKey="tasksCompleted" 
+                name="Tasks Completed" 
+                fill={chartConfig.tasksCompleted.color} 
+                radius={[4, 4, 0, 0]} 
+                onClick={handleBarClick}
+              />
+              <Bar 
+                dataKey="rulesBroken" 
+                name="Rules Broken" 
+                fill={chartConfig.rulesBroken.color} 
+                radius={[4, 4, 0, 0]} 
+                onClick={handleBarClick}
+              />
+              <Bar 
+                dataKey="rewardsRedeemed" 
+                name="Rewards Redeemed" 
+                fill={chartConfig.rewardsRedeemed.color} 
+                radius={[4, 4, 0, 0]} 
+                onClick={handleBarClick}
+              />
+              <Bar 
+                dataKey="punishments" 
+                name="Punishments" 
+                fill={chartConfig.punishments.color} 
+                radius={[4, 4, 0, 0]} 
+                onClick={handleBarClick}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </ChartContainer>
     );
   }, [data]);
