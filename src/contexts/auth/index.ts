@@ -1,6 +1,6 @@
 
-// This file re-exports all auth-related components for easier imports
-export * from './AuthContext';
+// This file exports all auth-related components and hooks
+export { AuthProvider, useAuth } from './AuthContext';
 export * from './types';
 export * from './useAuthOperations';
 export * from './useRoleManagement';

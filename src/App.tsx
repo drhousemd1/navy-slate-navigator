@@ -6,8 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/auth"; 
-import { AuthProvider } from "./contexts/auth/AuthContext";
-import { useAuth } from "./contexts/auth/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/auth";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 
