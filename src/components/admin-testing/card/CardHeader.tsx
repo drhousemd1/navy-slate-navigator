@@ -8,16 +8,13 @@ interface CardHeaderProps {
   points: number;
 }
 
-const CardHeader: React.FC<CardHeaderProps> = ({ priority, points }) => {
-  return (
-    <div className="flex justify-between items-start mb-3">
-      <PriorityBadge priority={priority} />
-      
-      <div className="flex items-center gap-2">
-        <PointsBadge points={points} />
-      </div>
+const CardHeader: React.FC<CardHeaderProps> = ({ priority, points }) => (
+  <div className="flex justify-between items-start mb-3">
+    <PriorityBadge priority={priority} />
+    <div className="flex items-center gap-2">
+      <PointsBadge points={points} />
     </div>
-  );
-};
+  </div>
+);
 
 export default CardHeader;

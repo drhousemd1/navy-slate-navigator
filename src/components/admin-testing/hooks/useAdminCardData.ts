@@ -57,38 +57,23 @@ export const useAdminCardData = ({
 
   useEffect(() => {
     // Try to load saved card data from localStorage
-    const storageKey = `adminTestingCard_${id}`;
-    const savedCardData = localStorage.getItem(storageKey);
+    const savedCards = JSON.parse(localStorage.getItem('adminTestingCards') || '[]');
+    const savedCard = savedCards.find((card: AdminTestingCardData) => card.id === id);
     
-    if (savedCardData) {
-      try {
-        const parsedData = JSON.parse(savedCardData);
-        console.log("Loaded saved card data:", {
-          id: parsedData.id,
-          hasBackgroundImages: Array.isArray(parsedData.background_images),
-          backgroundImagesCount: Array.isArray(parsedData.background_images) ? parsedData.background_images.length : 0,
-          hasBackgroundImageUrl: Boolean(parsedData.background_image_url)
-        });
-        
-        setCardData({
-          ...cardData,
-          ...parsedData
-        });
-        
-        // Set images from background_images or single background_image_url
-        if (Array.isArray(parsedData.background_images) && parsedData.background_images.length > 0) {
-          console.log("Setting images from background_images:", parsedData.background_images.length);
-          setImages(parsedData.background_images.filter(Boolean));
-        } else if (parsedData.background_image_url) {
-          console.log("Setting single image from background_image_url");
-          setImages([parsedData.background_image_url]);
-        } else {
-          console.log("No images found in saved data");
-          setImages([]);
-        }
-      } catch (error) {
-        console.error('Error parsing saved card data:', error);
-      }
+    if (savedCard) {
+      setCardData({
+        ...cardData,
+        ...savedCard
+      });
+      
+      // Set images from background_images or single background_image_url
+      const imageArray = Array.isArray(savedCard.background_images) && savedCard.background_images.length > 0
+        ? savedCard.background_images.filter(Boolean)
+        : savedCard.background_image_url
+          ? [savedCard.background_image_url]
+          : [];
+          
+      setImages(imageArray);
     } else {
       // Initialize images array from props
       const initialImages: string[] = [];
@@ -99,19 +84,11 @@ export const useAdminCardData = ({
         initialImages.push(background_image_url);
       }
       
-      console.log("Initial images set from props:", initialImages.length);
       setImages(initialImages);
     }
   }, [id]);
 
   const handleSaveCard = (updatedCard: AdminTestingCardData) => {
-    console.log("Saving card data:", {
-      id: updatedCard.id,
-      hasBackgroundImageUrl: Boolean(updatedCard.background_image_url),
-      hasBackgroundImages: Array.isArray(updatedCard.background_images) && updatedCard.background_images.length > 0,
-      imagePreview: updatedCard.background_image_url ? updatedCard.background_image_url.substring(0, 30) + '...' : 'none'
-    });
-    
     // Make sure we have the complete updated data
     const newCardData = {
       ...cardData,
@@ -124,20 +101,24 @@ export const useAdminCardData = ({
     let newImages: string[] = [];
     
     if (Array.isArray(updatedCard.background_images) && updatedCard.background_images.length > 0) {
-      console.log("Setting images from updated background_images array:", updatedCard.background_images.length);
       newImages = updatedCard.background_images.filter(Boolean);
     } else if (updatedCard.background_image_url) {
-      console.log("Setting single image from updated background_image_url");
       newImages = [updatedCard.background_image_url];
     }
     
-    console.log("Updated images array:", newImages.length > 0 ? `${newImages.length} images` : "empty");
     setImages(newImages);
     
     // Save to localStorage
-    const storageKey = `adminTestingCard_${id}`;
-    localStorage.setItem(storageKey, JSON.stringify(newCardData));
-    console.log(`Saved card data to localStorage with key: ${storageKey}`);
+    const savedCards = JSON.parse(localStorage.getItem('adminTestingCards') || '[]');
+    const cardIndex = savedCards.findIndex((card: AdminTestingCardData) => card.id === id);
+    
+    if (cardIndex >= 0) {
+      savedCards[cardIndex] = newCardData;
+    } else {
+      savedCards.push(newCardData);
+    }
+    
+    localStorage.setItem('adminTestingCards', JSON.stringify(savedCards));
   };
 
   const usageData = cardData.usage_data || [0, 0, 0, 0, 0, 0, 0];

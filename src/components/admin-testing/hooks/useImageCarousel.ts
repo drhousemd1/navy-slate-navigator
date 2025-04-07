@@ -16,7 +16,7 @@ export const useImageCarousel = ({
   images, 
   globalCarouselIndex 
 }: UseImageCarouselProps): UseImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(null);
+  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
@@ -30,7 +30,6 @@ export const useImageCarousel = ({
         images.some((img, i) => previousImages[i] !== img);
       
       if (imagesChanged) {
-        console.log("Images array changed, updating visible image");
         setPreviousImages(images);
         setVisibleImage(images[0]);
         setTransitionImage(null);
@@ -38,7 +37,6 @@ export const useImageCarousel = ({
       }
     } else if (previousImages.length > 0 && images.length === 0) {
       // Reset if we had images but now don't
-      console.log("Images array is now empty");
       setPreviousImages([]);
       setVisibleImage(null);
       setTransitionImage(null);
@@ -54,8 +52,6 @@ export const useImageCarousel = ({
     const next = images[nextIndex];
     
     if (next === visibleImage) return;
-    
-    console.log(`Transitioning to image at index ${nextIndex}`);
     
     const preload = new Image();
     preload.src = next;
