@@ -135,7 +135,7 @@ const AdminTesting = () => {
             {adminTestingCards.map((card, index) => (
               <AdminTestingCard
                 key={card.id}
-                {...card}
+                card={card}
                 onUpdate={handleUpdateCard}
                 globalCarouselIndex={index}
               />
