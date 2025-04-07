@@ -24,19 +24,28 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const { cardData, images, usageData, handleSaveCard } = useAdminCardData({
+  const {
+    cardData,
+    images,
+    usageData,
+    handleSaveCard
+  } = useAdminCardData({
     id: card.id,
     title: card.title,
     description: card.description,
     priority: card.priority || "medium",
     points: card.points || 0,
     icon_url: card.icon_url,
-    iconName: card.iconName,
+    iconName: card.iconName || "",
     background_images: card.background_images,
     background_image_url: card.background_image_url
   });
 
-  const { visibleImage, transitionImage, isTransitioning } = useImageCarousel({
+  const {
+    visibleImage,
+    transitionImage,
+    isTransitioning
+  } = useImageCarousel({
     images,
     globalCarouselIndex
   });
@@ -59,7 +68,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
           focalPointY={cardData.focal_point_y}
           backgroundOpacity={cardData.background_opacity}
         />
-
+        
         <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
           <CardHeader 
             priority={cardData.priority || "medium"} 
@@ -82,7 +91,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
           />
         </div>
       </Card>
-      
+
       <AdminTestingEditModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}

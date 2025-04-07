@@ -93,7 +93,10 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
         </div>
       </div>
       <BackgroundImageSelector
-        control={{ setValue: (name, value) => setValue(name, value) }}
+        control={{ 
+          _formValues: {}, 
+          _getWatch: () => null
+        }}
         imagePreview={imagePreview}
         initialPosition={position}
         onRemoveImage={onRemoveImage}
