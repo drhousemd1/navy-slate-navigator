@@ -300,9 +300,9 @@ const MonthlyMetricsChart: React.FC = () => {
                 />
                 <Tooltip 
                   cursor={false}
-                  wrapperStyle={{ zIndex: 9999, marginLeft: '40px' }}
+                  wrapperStyle={{ zIndex: 9999, marginLeft: '20px' }}
                   contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                  offset={50}
+                  offset={25}
                   formatter={(value, name) => [value, name]}
                   labelFormatter={(label) => {
                     try {
