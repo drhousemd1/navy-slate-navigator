@@ -119,7 +119,6 @@ const MonthlyMetricsChart: React.FC = () => {
         const monthStart = startOfMonth(today);
         const monthEnd = endOfMonth(today);
 
-        // Fetch task completions
         try {
           const { data: taskCompletions, error: taskError } = await supabase
             .from('task_completion_history')
@@ -142,7 +141,6 @@ const MonthlyMetricsChart: React.FC = () => {
           console.error('Error processing task completions:', err);
         }
 
-        // Fetch rule violations
         try {
           const { data: ruleViolations, error: ruleError } = await supabase
             .from('rule_violations')
@@ -165,7 +163,6 @@ const MonthlyMetricsChart: React.FC = () => {
           console.error('Error processing rule violations:', err);
         }
 
-        // Fetch reward usage
         try {
           const { data: rewardUsage, error: rewardError } = await supabase
             .from('reward_usage')
@@ -188,7 +185,6 @@ const MonthlyMetricsChart: React.FC = () => {
           console.error('Error processing reward usage:', err);
         }
 
-        // Fetch punishment history
         try {
           const { data: punishmentHistory, error: punishmentError } = await supabase
             .from('punishment_history')
@@ -231,45 +227,24 @@ const MonthlyMetricsChart: React.FC = () => {
   }, [monthDates]);
 
   const handleBarClick = (data: any, index: number) => {
-    console.log("Bar clicked at index:", index, "data:", data);
-    
-    if (!chartScrollRef.current) {
-      console.log("No chart scroll ref");
-      return;
-    }
-    
+    if (!chartScrollRef.current) return;
+
+    const chartWrapper = chartScrollRef.current.querySelector('.recharts-wrapper') as HTMLDivElement;
+    if (!chartWrapper) return;
+
+    const totalChartWidth = chartWrapper.scrollWidth;
     const containerWidth = chartScrollRef.current.clientWidth;
-    console.log("Container width:", containerWidth);
-    
-    // Calculate bar width based on DOM measurements
-    const chartWrapper = chartScrollRef.current?.querySelector('.recharts-wrapper') as HTMLDivElement;
-    const chartWidth = chartWrapper?.scrollWidth || 900;
+
     const barCount = monthDates.length;
-    const barWidth = chartWidth / barCount;
-    console.log("Calculated bar width:", barWidth);
-    
-    // Get the actual date value from the clicked bar
+    const barWidth = totalChartWidth / barCount;
+
     const clickedDate = data.date;
-    console.log("Clicked date:", clickedDate);
-    
-    // Find the index of the clicked date in our data array
     const dateIndex = monthDates.findIndex(date => date === clickedDate);
-    console.log("Date index in array:", dateIndex);
-    
-    if (dateIndex === -1) {
-      console.log("Couldn't find date in monthDates array");
-      return;
-    }
-    
-    // Calculate the target scroll position to center the clicked bar
+    if (dateIndex === -1) return;
+
     const scrollPosition = (dateIndex * barWidth) - (containerWidth / 2) + (barWidth / 2);
-    console.log("New calculated scroll position:", scrollPosition);
-    
-    // Ensure we don't scroll before the start of the chart
     const adjustedPosition = Math.max(0, scrollPosition);
-    console.log("Adjusted scroll position:", adjustedPosition);
-    
-    // Animate scrolling to center the clicked bar
+
     chartScrollRef.current.scrollTo({
       left: adjustedPosition,
       behavior: 'smooth'
