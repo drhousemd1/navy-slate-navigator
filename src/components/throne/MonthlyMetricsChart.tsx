@@ -235,13 +235,23 @@ const MonthlyMetricsChart: React.FC = () => {
   }, [monthDates]);
 
   const handleBarClick = (data: any, index: number) => {
-    if (!chartScrollRef.current) return;
+    console.log("Bar clicked at index:", index);
+    if (!chartScrollRef.current) {
+      console.log("No chart scroll ref");
+      return;
+    }
     
     const containerWidth = chartScrollRef.current.clientWidth;
+    console.log("Container width:", containerWidth);
+    
     const barWidth = 40; // Approximate width of each bar
+    console.log("Bar width:", barWidth);
     
+    // Calculate the target scroll position to center the clicked bar
     const scrollPosition = (index * barWidth) - (containerWidth / 2) + (barWidth / 2);
+    console.log("Calculated scroll position:", scrollPosition);
     
+    // Animate scrolling to center the clicked bar
     chartScrollRef.current.scrollTo({
       left: Math.max(0, scrollPosition),
       behavior: 'smooth'

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -56,7 +55,6 @@ const chartConfig = {
   }
 };
 
-// Hardcoded activity data
 const activityData = [
   { date: '2025-04-01', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 },
   { date: '2025-04-05', tasksCompleted: 2, rulesBroken: 1, rewardsRedeemed: 0, punishments: 0 },
@@ -67,7 +65,6 @@ const activityData = [
   { date: '2025-04-28', tasksCompleted: 2, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
 ];
 
-// Hardcoded weekly activity data
 const weeklyActivityData = [
   { name: 'Tasks Completed', value: 2 },
   { name: 'Rules Broken', value: 0 },
@@ -86,10 +83,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
-  // Helper functions
   const generateWeekDays = (): string[] => {
     const today = new Date();
-    const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 0 }); // Sunday as start
+    const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 0 });
     const weekDates = Array.from({ length: 7 }, (_, i) =>
       format(addDays(startOfCurrentWeek, i), 'yyyy-MM-dd')
     );
@@ -101,14 +97,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     return format(parseISO(dateString), 'yyyy-MM-dd');
   };
 
-  // Get the week dates once for XAxis ticks
   const weekDates = useMemo(() => generateWeekDays(), []);
 
-  // Generate monthly metrics data
   const getCurrentMonthMetrics = () => {
     const now = new Date();
     const year = now.getFullYear();
-    const month = now.getMonth(); // zero-based
+    const month = now.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     const base = Array.from({ length: daysInMonth }, (_, i) => {
@@ -165,7 +159,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         const days = weekDates;
         const metricsMap = new Map<string, MetricsData>();
 
-        // Initialize data for each day
         days.forEach((date) => {
           metricsMap.set(date, {
             date,
@@ -176,9 +169,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         });
 
-        // Use hardcoded data instead of fetching from Supabase
-        // Distribute values across the week
-        const dayIndex = 2; // Wednesday
+        const dayIndex = 2;
         const dateKey = days[dayIndex];
         const dayData = metricsMap.get(dateKey);
         
@@ -194,7 +185,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         
         setData(finalData);
         
-        // Calculate summary for callback
         if (onDataLoaded) {
           const summary: WeeklyMetricsSummary = {
             tasksCompleted: weeklyActivityData[0].value,
@@ -220,7 +210,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
   );
 
-  // Memoize the weekly chart to prevent unnecessary re-renders
   const weeklyChart = useMemo(() => {
     return (
       <ChartContainer 
@@ -235,12 +224,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               ticks={weekDates}
               tickFormatter={(date) => {
                 try {
-                  return format(new Date(date), 'EEE'); // Format as 'Sun', 'Mon', etc.
+                  return format(new Date(date), 'EEE');
                 } catch {
                   return date;
                 }
               }}
-              interval={0} // show all days
+              interval={0}
               stroke="#8E9196"
               tick={{ fill: '#D1D5DB' }}
             />
@@ -249,10 +238,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               tick={{ fill: '#D1D5DB' }}
             />
             <Tooltip 
-              cursor={{ fill: 'transparent' }} // Fix #1 - completely transparent cursor
-              wrapperStyle={{ zIndex: 9999 }}
-              contentStyle={{ backgroundColor: 'transparent', border: 'none' }} // Fix #2 - transparent background
-              offset={25} // Fix #3 - same offset as monthly chart
+              cursor={false}
+              wrapperStyle={{ zIndex: 9999, marginLeft: '20px' }}
+              contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
+              offset={25}
               formatter={(value, name, props) => {
                 return [value, name];
               }}
@@ -300,12 +289,13 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
         
         <div 
-          className="w-full select-none" 
+          className="w-full select-none user-select-none" 
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={endDrag}
           onMouseLeave={endDrag}
           ref={chartScrollRef}
+          style={{ WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
         >
           {loading && (
             <Skeleton className="w-full h-64 bg-light-navy/30" />
