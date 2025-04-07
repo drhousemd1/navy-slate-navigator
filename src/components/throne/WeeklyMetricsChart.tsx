@@ -9,10 +9,8 @@ import {
   parseISO, 
   addDays 
 } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface MetricsData {
   date: string;
@@ -52,17 +50,6 @@ const chartConfig = {
     label: 'Punishments'
   }
 };
-
-// Hardcoded activity data
-const activityData = [
-  { date: '2025-04-01', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 },
-  { date: '2025-04-05', tasksCompleted: 2, rulesBroken: 1, rewardsRedeemed: 0, punishments: 0 },
-  { date: '2025-04-10', tasksCompleted: 1, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
-  { date: '2025-04-15', tasksCompleted: 4, rulesBroken: 0, rewardsRedeemed: 0, punishments: 1 },
-  { date: '2025-04-20', tasksCompleted: 0, rulesBroken: 2, rewardsRedeemed: 0, punishments: 2 },
-  { date: '2025-04-25', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
-  { date: '2025-04-28', tasksCompleted: 2, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
-];
 
 // Hardcoded weekly activity data
 const weeklyActivityData = [
@@ -206,7 +193,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             stroke="#8E9196"
             tick={{ fill: '#D1D5DB' }}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
           <Bar 
             dataKey="tasksCompleted" 
             name="Tasks Completed" 
@@ -240,7 +227,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   return (
     <>
       {/* Chart Container */}
-      <div className="w-full bg-navy border border-light-navy rounded-lg mb-6">
+      <div className="w-full bg-navy border border-light-navy rounded-lg mb-4">
         {!hideTitle && <h3 className="text-lg font-medium text-white px-4 pt-4 mb-4">Weekly Activity Metrics</h3>}
         
         {error && (
@@ -265,7 +252,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           )}
         </div>
 
-        <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
+        <div className="flex justify-around items-center flex-wrap px-4 pb-4 gap-2">
           <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
             Tasks Completed
           </span>
@@ -283,7 +270,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
       
       {/* Summary Tiles Container */}
       {!loading && (
-        <div className="bg-navy border border-light-navy rounded-lg p-4 mb-6">
+        <div className="bg-navy border border-light-navy rounded-lg p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
             <div className="bg-light-navy rounded-lg px-3 py-2">
               <div className="flex items-center justify-between">

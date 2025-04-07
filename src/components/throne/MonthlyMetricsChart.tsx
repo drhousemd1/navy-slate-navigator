@@ -1,11 +1,12 @@
 
 import React, { useMemo, useRef } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
 import { Card } from '@/components/ui/card';
+import { format, parseISO } from 'date-fns';
 
-// Hardcoded activity data from the parent component
+// Hardcoded activity data
 const activityData = [
   { date: '2025-04-01', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 },
   { date: '2025-04-05', tasksCompleted: 2, rulesBroken: 1, rewardsRedeemed: 0, punishments: 0 },
@@ -82,27 +83,25 @@ export const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
   };
 
   return (
-    <Card className="bg-navy border border-light-navy rounded-lg">
-      {!hideTitle && <h2 className="text-lg font-semibold text-white px-4 pt-4 mb-2">Monthly Activity</h2>}
+    <Card className="bg-navy border border-light-navy rounded-lg p-4">
+      {!hideTitle && <h2 className="text-lg font-semibold text-white mb-4">Monthly Activity</h2>}
       
-      <div className="overflow-x-auto hide-scrollbar -mx-4 px-4 relative pb-4" ref={containerRef}>
-        {/* Left/right fade shadows for scroll cue */}
-        <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
-        <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
-        
-        <div className="min-w-[900px]">
+      <div ref={containerRef} className="overflow-x-auto hide-scrollbar relative">
+        <div style={{ minWidth: '100%', width: `${monthlyMetrics.length * 30}px`, maxWidth: '100%' }}>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart 
               data={monthlyMetrics}
               onClick={(state) => handleClick(state.activePayload?.[0]?.payload, state.activeTooltipIndex || 0)}
+              margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
             >
+              <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
               <XAxis
                 dataKey="date"
                 tick={{ fill: '#CBD5E0', fontSize: 12 }}
-                interval={0}
+                interval={2}
               />
               <YAxis tick={{ fill: '#CBD5E0', fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
               <Bar
                 dataKey="tasksCompleted"
                 fill="#38bdf8"
@@ -133,7 +132,7 @@ export const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
       </div>
       
       {/* Monthly chart legend */}
-      <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-4">
+      <div className="flex justify-around items-center flex-wrap px-4 mt-4 gap-2">
         <span className="text-xs whitespace-nowrap" style={{ color: "#38bdf8" }}>
           Tasks Completed
         </span>
