@@ -17,10 +17,6 @@ interface MonthlyDataItem {
 
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
   const [data, setData] = useState<MonthlyDataItem[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -41,29 +37,6 @@ const MonthlyMetricsChart: React.FC = () => {
       color: '#ea384c',
       label: 'Punishments'
     }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!scrollContainerRef.current) return;
-    setIsDragging(true);
-    setStartX(e.pageX - scrollContainerRef.current.offsetLeft);
-    setScrollLeft(scrollContainerRef.current.scrollLeft);
-  };
-
-  const handleMouseLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging || !scrollContainerRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5; // drag speed
-    scrollContainerRef.current.scrollLeft = scrollLeft - walk;
   };
 
   const generateMonthDays = (): string[] => {
@@ -222,91 +195,82 @@ const MonthlyMetricsChart: React.FC = () => {
         className="w-full h-full"
         config={chartConfig}
       >
-        <div 
-          ref={scrollContainerRef}
-          className="overflow-x-auto cursor-grab active:cursor-grabbing"
-          onMouseDown={handleMouseDown}
-          onMouseLeave={handleMouseLeave}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-        >
-          <div className="min-w-[900px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
-                <CartesianGrid 
-                  strokeDasharray="0" 
-                  stroke="#1A1F2C" 
-                />
-                <XAxis 
-                  dataKey="date"
-                  tickFormatter={(date) => {
-                    try {
-                      const d = parseISO(date);
-                      return `${getMonth(d) + 1}/${format(d, 'd')}`;
-                    } catch {
-                      return date;
-                    }
-                  }}
-                  stroke="#8E9196"
-                  tick={{ fill: '#D1D5DB' }}
-                />
-                <YAxis 
-                  stroke="#8E9196"
-                  tick={{ fill: '#D1D5DB' }}
-                />
-                <Tooltip 
-                  cursor={false}
-                  wrapperStyle={{ zIndex: 9999, marginLeft: '40px' }}
-                  contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                  offset={50}
-                  formatter={(value, name) => [value, name]}
-                  labelFormatter={(label) => {
-                    try {
-                      return format(parseISO(String(label)), 'MMM d, yyyy');
-                    } catch {
-                      return label;
-                    }
-                  }}
-                />
-                <Bar 
-                  dataKey="tasksCompleted" 
-                  name="Tasks Completed" 
-                  fill={chartConfig.tasksCompleted.color} 
-                  radius={[4, 4, 0, 0]} 
-                  onClick={handleBarClick}
-                  isAnimationActive={false}
-                />
-                <Bar 
-                  dataKey="rulesBroken" 
-                  name="Rules Broken" 
-                  fill={chartConfig.rulesBroken.color} 
-                  radius={[4, 4, 0, 0]} 
-                  onClick={handleBarClick}
-                  isAnimationActive={false}
-                />
-                <Bar 
-                  dataKey="rewardsRedeemed" 
-                  name="Rewards Redeemed" 
-                  fill={chartConfig.rewardsRedeemed.color} 
-                  radius={[4, 4, 0, 0]} 
-                  onClick={handleBarClick}
-                  isAnimationActive={false}
-                />
-                <Bar 
-                  dataKey="punishments" 
-                  name="Punishments" 
-                  fill={chartConfig.punishments.color} 
-                  radius={[4, 4, 0, 0]} 
-                  onClick={handleBarClick}
-                  isAnimationActive={false}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        <div style={{ width: data.length * 40, height: "100%" }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data}>
+              <CartesianGrid 
+                strokeDasharray="0" 
+                stroke="#1A1F2C" 
+              />
+              <XAxis 
+                dataKey="date"
+                tickFormatter={(date) => {
+                  try {
+                    const d = parseISO(date);
+                    return `${getMonth(d) + 1}/${format(d, 'd')}`;
+                  } catch {
+                    return date;
+                  }
+                }}
+                stroke="#8E9196"
+                tick={{ fill: '#D1D5DB' }}
+              />
+              <YAxis 
+                stroke="#8E9196"
+                tick={{ fill: '#D1D5DB' }}
+              />
+              <Tooltip 
+                cursor={false}
+                wrapperStyle={{ zIndex: 9999, marginLeft: '40px' }}
+                contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
+                offset={50}
+                formatter={(value, name) => [value, name]}
+                labelFormatter={(label) => {
+                  try {
+                    return format(parseISO(String(label)), 'MMM d, yyyy');
+                  } catch {
+                    return label;
+                  }
+                }}
+              />
+              <Bar 
+                dataKey="tasksCompleted" 
+                name="Tasks Completed" 
+                fill={chartConfig.tasksCompleted.color} 
+                radius={[4, 4, 0, 0]} 
+                onClick={handleBarClick}
+                isAnimationActive={false}
+              />
+              <Bar 
+                dataKey="rulesBroken" 
+                name="Rules Broken" 
+                fill={chartConfig.rulesBroken.color} 
+                radius={[4, 4, 0, 0]} 
+                onClick={handleBarClick}
+                isAnimationActive={false}
+              />
+              <Bar 
+                dataKey="rewardsRedeemed" 
+                name="Rewards Redeemed" 
+                fill={chartConfig.rewardsRedeemed.color} 
+                radius={[4, 4, 0, 0]} 
+                onClick={handleBarClick}
+                isAnimationActive={false}
+              />
+              <Bar 
+                dataKey="punishments" 
+                name="Punishments" 
+                fill={chartConfig.punishments.color} 
+                radius={[4, 4, 0, 0]} 
+                onClick={handleBarClick}
+                isAnimationActive={false}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </ChartContainer>
     );
-  }, [data, isDragging]);
+  }, [data]);
 
   return (
     <Card className="bg-navy border border-light-navy rounded-lg mb-6">
@@ -315,7 +279,7 @@ const MonthlyMetricsChart: React.FC = () => {
         
         <div 
           ref={chartContainerRef}
-          className="relative h-64"
+          className="overflow-x-auto hide-scrollbar relative h-64"
         >
           <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
           <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
