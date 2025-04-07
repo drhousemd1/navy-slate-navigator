@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -19,17 +18,14 @@ const AdminTesting = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load admin testing cards from localStorage on mount
   useEffect(() => {
     console.log("AdminTesting: Component mounted");
     
-    // Always show a toast notification to confirm the page is loading
     toast({
       title: "Admin Testing Page",
       description: "Admin testing page has been loaded",
     });
     
-    // Initialize cards
     try {
       console.log("AdminTesting: Loading cards from localStorage");
       const saved = localStorage.getItem('adminTestingCards');
@@ -51,13 +47,11 @@ const AdminTesting = () => {
           initializeDefaultCards();
         }
       } else {
-        // Initialize with default cards if none exist
         console.log("AdminTesting: No saved cards found, initializing with defaults");
         initializeDefaultCards();
       }
     } catch (error) {
       console.error("AdminTesting: Error in initialization:", error);
-      // Ensure we always have cards
       initializeDefaultCards();
     }
   }, []);
@@ -87,7 +81,6 @@ const AdminTesting = () => {
     }
   };
 
-  // Carousel timer effect
   useEffect(() => {
     if (!isInitialized) return;
     
@@ -117,7 +110,6 @@ const AdminTesting = () => {
   };
 
   const handleAddCard = () => {
-    // Create a new card with a unique ID
     const newId = `card-${Date.now()}`;
     const newCard: ThroneRoomCardData = {
       id: newId,
@@ -132,7 +124,6 @@ const AdminTesting = () => {
       priority: 'medium'
     };
 
-    // Add the new card to the list and save to localStorage
     setAdminTestingCards(prev => {
       const newArr = [...prev, newCard];
       localStorage.setItem('adminTestingCards', JSON.stringify(newArr));
@@ -152,8 +143,12 @@ const AdminTesting = () => {
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold text-white mb-6">TESTING PAGE - ADMIN TESTING PANEL</h1>
         
-        <div className="bg-red-500 text-white p-6 mb-6 rounded-lg flex items-center justify-between">
+        <div className="bg-red-500 text-white p-6 mb-6 rounded-lg">
           <h2 className="text-3xl font-bold">THIS IS THE ADMIN TESTING PAGE</h2>
+        </div>
+        
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-white">Section 1</h2>
           <Button 
             className="bg-green-500 hover:bg-green-600 text-white"
             onClick={handleAddCard}
@@ -161,8 +156,6 @@ const AdminTesting = () => {
             Add Card
           </Button>
         </div>
-        
-        <h2 className="text-xl font-bold text-white mb-6">Section 1</h2>
         
         {!isInitialized ? (
           <div className="flex items-center justify-center h-64 bg-navy rounded-lg">
