@@ -80,7 +80,6 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
     if (isOpen && cardData) {
       console.log("AdminTesting Modal opened with card data:", cardData);
       
-      // Reset form with provided card data, with fallbacks for all fields
       form.reset({
         id: cardData.id || '',
         title: cardData.title || '',
@@ -100,14 +99,11 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
         usage_data: Array.isArray(cardData.usage_data) ? cardData.usage_data : [0, 0, 0, 0, 0, 0, 0]
       });
       
-      // Set image preview
       setImagePreview(cardData.background_image_url || null);
       
-      // Set icon preview or name
       setIconPreview(cardData.icon_url || null);
       setSelectedIconName(cardData.iconName || null);
       
-      // Set position for focal point
       setPosition({ 
         x: cardData.focal_point_x !== undefined ? cardData.focal_point_x : 50, 
         y: cardData.focal_point_y !== undefined ? cardData.focal_point_y : 50 
@@ -119,7 +115,6 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
         hasBackgroundImageUrl: Boolean(cardData.background_image_url)
       });
       
-      // Initialize image slots
       const newImageSlots = [null, null, null, null, null];
       
       if (Array.isArray(cardData.background_images) && cardData.background_images.length > 0) {
@@ -146,12 +141,10 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // If no box selected, auto-select the first empty slot
     let targetIndex = selectedBoxIndex;
     if (targetIndex === null) {
       const firstEmpty = imageSlots.findIndex((slot) => !slot);
       if (firstEmpty === -1) {
-        // All slots are full, select the first one
         targetIndex = 0;
       } else {
         targetIndex = firstEmpty;
@@ -207,17 +200,29 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
   
   const handleRemoveImage = () => {
     if (selectedBoxIndex !== null) {
+      console.log(`Removing image from slot ${selectedBoxIndex}`);
+      
       const updatedSlots = [...imageSlots];
       updatedSlots[selectedBoxIndex] = null;
       setImageSlots(updatedSlots);
       
-      // Clear preview but keep the selected box highlighted
       setImagePreview(null);
       form.setValue('background_image_url', '');
+      form.setValue('background_opacity', 100);
       
-      console.log(`Removed image from slot ${selectedBoxIndex}, cleared preview but kept selection`);
+      toast({
+        title: "Image Removed",
+        description: "Background image has been removed",
+      });
+      
+      console.log(`Updated image slots after removal:`, updatedSlots);
     } else {
       console.log('No slot selected for removal');
+      toast({
+        title: "No Image Selected",
+        description: "Please select an image slot to remove",
+        variant: "destructive"
+      });
     }
   };
 
@@ -298,11 +303,9 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
       console.log("Current image slots:", imageSlots.map((s, i) => 
         s ? `[${i}: ${s.substring(0, 20)}...]` : `[${i}: null]`));
       
-      // Validate image slots before saving
       const validImageSlots = imageSlots
         .filter(slot => typeof slot === 'string' && slot.trim() !== '')
         .map(slot => {
-          // Additional validation to ensure it's a valid data URL or image URL
           if (!slot) return null;
           try {
             if (slot.startsWith('data:image') || slot.startsWith('http')) {
@@ -320,7 +323,6 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
       
       console.log(`Found ${validImageSlots.length} valid image slots after validation`);
       
-      // Use the image preview for the background image URL
       const updatedData: ThroneRoomCardData = {
         ...data,
         background_image_url: imagePreview,
