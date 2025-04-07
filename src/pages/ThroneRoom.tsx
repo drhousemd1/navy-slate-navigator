@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { WeeklyMetricsChart } from '@/components/throne/WeeklyMetricsChart';
+import WeeklyMetricsChart, { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsChart';
+import MonthlyMetricsChart from '@/components/throne/MonthlyMetricsChart';
 import { 
   TooltipProvider, 
   Tooltip,
@@ -415,6 +417,7 @@ const ThroneRoom: React.FC = () => {
           </div>
           
           <div className="space-y-6">
+            {/* Weekly Activity Chart */}
             <Card className="bg-navy border border-light-navy">
               <CardHeader className="border-b border-light-navy">
                 <div className="flex justify-between items-center">
@@ -430,6 +433,7 @@ const ThroneRoom: React.FC = () => {
                   />
                 </div>
                 
+                {/* Weekly Activity Tiles */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mt-6 px-6">
                   <div className="bg-light-navy rounded-lg px-3 py-2">
                     <div className="flex items-center justify-between">
@@ -458,6 +462,9 @@ const ThroneRoom: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Monthly Activity Chart */}
+            <MonthlyMetricsChart />
             
             <Card className="bg-navy border border-light-navy">
               <CardHeader className="border-b border-light-navy">
