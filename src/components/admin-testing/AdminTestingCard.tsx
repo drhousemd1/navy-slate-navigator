@@ -24,10 +24,10 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
+  const [images, setImages] = useState<string[]>([]);
 
   const {
     cardData,
-    images,
     usageData,
     handleSaveCard
   } = useAdminCardData({
@@ -43,18 +43,23 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   });
 
   useEffect(() => {
-    // Load carousel timer from localStorage
-    const savedTimer = localStorage.getItem('adminTestingCards_carouselTimer');
+    const savedTimer = localStorage.getItem("adminTestingCards_carouselTimer");
     if (savedTimer) {
       setCarouselTimer(parseInt(savedTimer, 10) || 5);
     }
   }, []);
 
-  const {
-    visibleImage,
-    transitionImage,
-    isTransitioning
-  } = useImageCarousel({
+  useEffect(() => {
+    const imageArray = Array.isArray(cardData.background_images)
+      ? cardData.background_images.filter(Boolean)
+      : cardData.background_image_url
+        ? [cardData.background_image_url]
+        : [];
+
+    setImages(imageArray);
+  }, [cardData.background_images, cardData.background_image_url]);
+
+  const { visibleImage, transitionImage, isTransitioning } = useImageCarousel({
     images,
     globalCarouselIndex
   });
@@ -63,34 +68,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     iconUrl: cardData.icon_url,
     iconName: cardData.iconName,
     iconColor: cardData.icon_color,
-    fallbackIcon: null
-  });
-
-  const handleSaveAndUpdate = (updated: AdminTestingCardData) => {
-    console.log("Saving updated card data:", updated);
-    
-    // First save locally
-    handleSaveCard(updated);
-    
-    // Then update parent component
-    onUpdate(updated);
-    
-    // Close the modal
-    setIsEditModalOpen(false);
-  };
-
-  const handleCarouselTimerChange = (newTimer: number) => {
-    setCarouselTimer(newTimer);
-    localStorage.setItem('adminTestingCards_carouselTimer', String(newTimer));
-  };
-
-  console.log("AdminTestingCard render:", {
-    id: card.id, 
-    hasVisibleImage: Boolean(visibleImage), 
-    hasTransitionImage: Boolean(transitionImage),
-    imagesCount: images.length,
-    backgroundImageUrl: cardData.background_image_url ? "exists" : "none",
-    backgroundImages: cardData.background_images ? `${cardData.background_images.length} images` : "none"
+    fallbackIcon: card.icon || null
   });
 
   return (
@@ -102,44 +80,31 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
           isTransitioning={isTransitioning}
           focalPointX={cardData.focal_point_x}
           focalPointY={cardData.focal_point_y}
-          backgroundOpacity={cardData.background_opacity}
         />
-        
-        <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
-          <CardHeader 
-            priority={cardData.priority || "medium"} 
-            points={cardData.points || 0}
-          />
-          
-          <CardContent 
-            title={cardData.title}
-            description={cardData.description}
-            iconComponent={iconComponent}
-            titleColor={cardData.title_color}
-            subtextColor={cardData.subtext_color}
-            highlightEffect={cardData.highlight_effect}
-          />
-          
-          <CardFooter 
-            calendarColor={cardData.calendar_color || '#7E69AB'}
-            usageData={usageData}
-            onEditClick={() => setIsEditModalOpen(true)}
-          />
-        </div>
+        <CardHeader
+          priority={cardData.priority}
+          iconComponent={iconComponent}
+          title={cardData.title}
+          points={cardData.points}
+          titleColor={cardData.title_color}
+        />
+        <CardContent
+          description={cardData.description}
+          usageData={usageData}
+          subtextColor={cardData.subtext_color}
+          highlightEffect={cardData.highlight_effect}
+        />
+        <CardFooter onEdit={() => setIsEditModalOpen(true)} />
       </Card>
 
       <AdminTestingEditModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        cardData={cardData}
-        onSave={handleSaveAndUpdate}
-        onDelete={(id) => {
-          // Handle deletion if needed
-          console.log("Delete requested for card:", id);
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        card={cardData}
+        onSave={(updated) => {
+          handleSaveCard(updated);
+          onUpdate(updated);
         }}
-        localStorageKey="adminTestingCards"
-        carouselTimer={carouselTimer}
-        onCarouselTimerChange={handleCarouselTimerChange}
       />
     </>
   );
