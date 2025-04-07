@@ -246,13 +246,13 @@ const MonthlyMetricsChart: React.FC = () => {
       >
         <div
           ref={chartScrollRef}
-          className="overflow-x-auto cursor-grab active:cursor-grabbing"
+          className="overflow-x-auto cursor-grab active:cursor-grabbing select-none"
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={endDrag}
           onMouseLeave={endDrag}
         >
-          <div className="inline-block min-w-full">
+          <div className="inline-block min-w-full select-none">
             <ResponsiveContainer width={900} height={300}>
               <BarChart data={data}>
                 <CartesianGrid 
