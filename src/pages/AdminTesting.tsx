@@ -79,7 +79,11 @@ const AdminTesting = () => {
   return (
     <AppLayout>
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold text-white mb-6">Admin Testing Panel</h1>
+        <h1 className="text-2xl font-bold text-white mb-6">TESTING PAGE - ADMIN TESTING PANEL</h1>
+        
+        <div className="bg-red-500 text-white p-6 mb-6 rounded-lg text-center text-3xl font-bold">
+          THIS IS THE ADMIN TESTING PAGE
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {adminTestingCards.length > 0 ? (
