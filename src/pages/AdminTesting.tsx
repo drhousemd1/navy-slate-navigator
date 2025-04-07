@@ -132,11 +132,12 @@ const AdminTesting = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {adminTestingCards.map((card) => (
-              <AdminTestingCard 
-                key={card.id} 
-                card={card} 
-                onUpdate={handleUpdateCard} 
+            {adminTestingCards.map((card, index) => (
+              <AdminTestingCard
+                key={card.id}
+                {...card}
+                onUpdate={handleUpdateCard}
+                globalCarouselIndex={index}
               />
             ))}
           </div>
