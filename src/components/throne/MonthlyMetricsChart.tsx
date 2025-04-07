@@ -192,7 +192,7 @@ const MonthlyMetricsChart: React.FC = () => {
         className="w-full h-full"
         config={chartConfig}
       >
-        <div style={{ width: data.length * 20, height: "100%" }}>
+        <div style={{ width: data.length * 40, height: "100%" }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
