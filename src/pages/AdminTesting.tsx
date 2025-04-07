@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -527,8 +526,7 @@ const AdminTesting = () => {
                     <CardFooter 
                       calendarColor={card.calendar_color || '#7E69AB'}
                       usageData={card.usage_data || [0, 0, 0, 0, 0, 0, 0]}
-                      onEditClick={(e: React.MouseEvent) => {
-                        e.stopPropagation(); // Prevent card click event
+                      onEditClick={() => {
                         setSelectedCard(card);
                         setIsEditModalOpen(true);
                       }}
