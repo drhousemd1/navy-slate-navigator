@@ -212,10 +212,10 @@ const MonthlyMetricsChart: React.FC = () => {
             <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
             <XAxis 
               dataKey="date"
-              ticks={data.filter((_, i) => i % 5 === 0).map(d => d.date)} // Show every 5th day
               tickFormatter={(date) => {
                 try {
-                  return format(parseISO(date), 'd'); // Format as day number only
+                  const d = parseISO(date);
+                  return `${getMonth(d) + 1}/${format(d, 'd')}`;
                 } catch {
                   return date;
                 }
