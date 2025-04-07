@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -38,6 +39,14 @@ const AccountSheet = () => {
   
   const nickname = getNickname();
   const userRole = getUserRole();
+  
+  // Add debugging for admin check
+  useEffect(() => {
+    if (user) {
+      console.log('Current user email:', user.email);
+      console.log('Is admin check result:', user.email?.toLowerCase() === 'towenhall@gmail.com'.toLowerCase());
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchProfileImage = async () => {
@@ -82,6 +91,12 @@ const AccountSheet = () => {
       }
     }
   }, [getProfileImage, profileImage]);
+  
+  // Function to check if user is admin (case-insensitive email check)
+  const isAdminUser = () => {
+    if (!user || !user.email) return false;
+    return user.email.toLowerCase() === 'towenhall@gmail.com'.toLowerCase();
+  };
   
   return (
     <Sheet>
@@ -154,7 +169,7 @@ const AccountSheet = () => {
               Encyclopedia
             </Button>
             
-            {user?.email === "Towenhall@gmail.com" && (
+            {isAdminUser() && (
               <Button 
                 variant="ghost" 
                 className="w-full justify-start text-white hover:bg-light-navy border border-white"
@@ -185,3 +200,4 @@ const AccountSheet = () => {
 };
 
 export default AccountSheet;
+
