@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -14,15 +13,15 @@ import IconSelector from '@/components/task-editor/IconSelector';
 import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
 import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
 import { supabase } from '@/integrations/supabase/client';
 import ImageSlotSelector from './ImageSlotSelector';
-import { AdminTestingCardData } from './AdminTestingCardData';
 
 interface AdminTestingCardEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  cardData: AdminTestingCardData;
-  onSave: (data: AdminTestingCardData) => void;
+  cardData: ThroneRoomCardData;
+  onSave: (data: ThroneRoomCardData) => void;
   onDelete: (cardId: string) => void;
   localStorageKey: string;
   carouselTimer: number;
@@ -56,7 +55,7 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
     }
   }, [carouselTimer, localStorageKey]);
   
-  const form = useForm<AdminTestingCardData>({
+  const form = useForm<ThroneRoomCardData>({
     defaultValues: {
       id: '',
       title: '',
@@ -292,7 +291,7 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
     }
   };
   
-  const onSubmit = async (data: AdminTestingCardData) => {
+  const onSubmit = async (data: ThroneRoomCardData) => {
     try {
       setIsSaving(true);
       console.log("Saving admin testing card data:", data);
@@ -322,10 +321,10 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
       console.log(`Found ${validImageSlots.length} valid image slots after validation`);
       
       // Use the image preview for the background image URL
-      const updatedData: AdminTestingCardData = {
+      const updatedData: ThroneRoomCardData = {
         ...data,
-        background_image_url: imagePreview || undefined,
-        icon_url: iconPreview || undefined,
+        background_image_url: imagePreview,
+        icon_url: iconPreview,
         iconName: selectedIconName || '',
         focal_point_x: position.x,
         focal_point_y: position.y,
