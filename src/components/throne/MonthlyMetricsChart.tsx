@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { Card } from '@/components/ui/card';
 
-// Hardcoded activity data
+// Hardcoded activity data from the parent component
 const activityData = [
   { date: '2025-04-01', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 },
   { date: '2025-04-05', tasksCompleted: 2, rulesBroken: 1, rewardsRedeemed: 0, punishments: 0 },
@@ -102,7 +102,7 @@ export const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
                 interval={0}
               />
               <YAxis tick={{ fill: '#CBD5E0', fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
+              <Tooltip content={<CustomTooltip />} />
               <Bar
                 dataKey="tasksCompleted"
                 fill="#38bdf8"

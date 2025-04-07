@@ -11,6 +11,7 @@ import {
 } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface MetricsData {
@@ -205,7 +206,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             stroke="#8E9196"
             tick={{ fill: '#D1D5DB' }}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
+          <Tooltip content={<CustomTooltip />} />
           <Bar 
             dataKey="tasksCompleted" 
             name="Tasks Completed" 
