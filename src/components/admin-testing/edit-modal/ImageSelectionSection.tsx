@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 import { FormLabel } from '@/components/ui/form';
+import { Control } from 'react-hook-form';
 
 interface ImageSelectionSectionProps {
   imagePreview: string | null;
@@ -15,6 +16,7 @@ interface ImageSelectionSectionProps {
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setValue: (key: string, value: any) => void;
   position: { x: number; y: number };
+  control: Control<any>;
 }
 
 const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
@@ -27,7 +29,8 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   onRemoveImage,
   onImageUpload,
   setValue,
-  position
+  position,
+  control
 }) => {
   return (
     <div className="space-y-4">
@@ -93,10 +96,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
         </div>
       </div>
       <BackgroundImageSelector
-        control={{ 
-          _formValues: {}, 
-          _getWatch: () => null
-        }}
+        control={control}
         imagePreview={imagePreview}
         initialPosition={position}
         onRemoveImage={onRemoveImage}
