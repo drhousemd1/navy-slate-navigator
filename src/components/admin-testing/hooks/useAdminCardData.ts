@@ -24,6 +24,31 @@ interface UseAdminCardDataResult {
   handleSaveCard: (updatedCard: AdminTestingCardData) => void;
 }
 
+// Helper type to handle Supabase data conversion
+interface SupabaseCardData {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: string | null;
+  points?: number;  // Add points as optional to match Supabase schema
+  background_image_url: string | null;
+  background_images: Json | null;
+  background_opacity: number | null;
+  focal_point_x: number | null;
+  focal_point_y: number | null;
+  title_color: string | null;
+  subtext_color: string | null;
+  calendar_color: string | null;
+  icon_url: string | null;
+  icon_name: string | null;
+  icon_color: string | null;
+  highlight_effect: boolean | null;
+  usage_data: Json | null;
+  created_at: string | null;
+  updated_at: string | null;
+  user_id: string | null;
+}
+
 export const useAdminCardData = ({
   id,
   title,
@@ -78,14 +103,17 @@ export const useAdminCardData = ({
         }
         
         if (data) {
+          // Cast data to our helper type to handle type conversions
+          const supabaseData = data as SupabaseCardData;
+          
           // Transform data from Supabase to match our expected format
           const savedCard = {
             ...data,
             // Ensure points is a number with fallback to default
-            points: typeof data.points === 'number' ? data.points : 5,
-            priority: (data.priority as 'low' | 'medium' | 'high') || 'medium',
-            background_images: data.background_images || [],
-            usage_data: data.usage_data || [1, 2, 0, 3, 1, 0, 2]
+            points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
+            priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
+            background_images: supabaseData.background_images || [],
+            usage_data: supabaseData.usage_data || [1, 2, 0, 3, 1, 0, 2]
           };
           
           setCardData({
@@ -160,7 +188,11 @@ export const useAdminCardData = ({
       // Save to Supabase using upsert
       const { error } = await supabase
         .from('admin_testing_cards')
-        .upsert(newCardData, { 
+        .upsert({
+          ...newCardData,
+          // Explicitly add points to ensure it's included in the upsert
+          points: newCardData.points || 0
+        }, { 
           onConflict: 'id',
           ignoreDuplicates: false 
         });

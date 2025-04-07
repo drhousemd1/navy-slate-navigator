@@ -1,5 +1,4 @@
 
-import { Skull, Crown, Swords, Award } from 'lucide-react';
 import { Json } from '@/integrations/supabase/types';
 
 export interface AdminTestingCardData {

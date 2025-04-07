@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form } from '@/components/ui/form';
@@ -50,28 +49,28 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
     localStorage.setItem(`${localStorageKey}_carouselTimer`, String(carouselTimer));
   }, [carouselTimer, localStorageKey]);
   
-  // Use type assertion to fix infinite type instantiation
+  // Fix infinite type instantiation by explicitly typing the form values
   const form = useForm<AdminTestingCardData>({
-    defaultValues: {
-      id: cardData?.id || '',
-      title: cardData?.title || '',
-      description: cardData?.description || '',
-      icon_name: cardData?.icon_name || '',
-      icon_url: cardData?.icon_url || '',
-      icon_color: cardData?.icon_color || '#FFFFFF',
-      title_color: cardData?.title_color || '#FFFFFF',
-      subtext_color: cardData?.subtext_color || '#8E9196',
-      calendar_color: cardData?.calendar_color || '#7E69AB',
-      background_image_url: cardData?.background_image_url || '',
-      background_opacity: cardData?.background_opacity || 100,
-      focal_point_x: cardData?.focal_point_x || 50,
-      focal_point_y: cardData?.focal_point_y || 50,
-      highlight_effect: cardData?.highlight_effect || false,
-      priority: cardData?.priority || 'medium',
-      points: cardData?.points || 0,
-      usage_data: cardData?.usage_data || [],
-      background_images: cardData?.background_images || []
-    } as AdminTestingCardData
+    defaultValues: cardData || {
+      id: '',
+      title: '',
+      description: '',
+      icon_name: '',
+      icon_url: '',
+      icon_color: '#FFFFFF',
+      title_color: '#FFFFFF',
+      subtext_color: '#8E9196',
+      calendar_color: '#7E69AB',
+      background_image_url: '',
+      background_opacity: 100,
+      focal_point_x: 50,
+      focal_point_y: 50,
+      highlight_effect: false,
+      priority: 'medium',
+      points: 0,
+      usage_data: [],
+      background_images: []
+    }
   });
   
   useEffect(() => {

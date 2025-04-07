@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -9,13 +8,36 @@ import { AdminTestingCardData } from '@/components/admin-testing/defaultAdminTes
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 
+interface SupabaseCardData {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: string | null;
+  points?: number;
+  background_image_url: string | null;
+  background_images: any;
+  background_opacity: number | null;
+  focal_point_x: number | null;
+  focal_point_y: number | null;
+  title_color: string | null;
+  subtext_color: string | null;
+  calendar_color: string | null;
+  icon_url: string | null;
+  icon_name: string | null;
+  icon_color: string | null;
+  highlight_effect: boolean | null;
+  usage_data: any;
+  created_at: string | null;
+  updated_at: string | null;
+  user_id: string | null;
+}
+
 const AdminTesting = () => {
   const [cards, setCards] = useState<AdminTestingCardData[]>([]);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load cards from Supabase and carousel timer from localStorage
   useEffect(() => {
     const fetchCards = async () => {
       try {
@@ -34,13 +56,10 @@ const AdminTesting = () => {
           return;
         }
         
-        // Only use data from Supabase if we got results
         if (data && data.length > 0) {
-          // Convert data to the expected format
-          const formattedCards = data.map(card => ({
+          const formattedCards = data.map((card: SupabaseCardData) => ({
             ...card,
             priority: (card.priority as 'low' | 'medium' | 'high') || 'medium',
-            // Ensure points is a number with fallback to default
             points: typeof card.points === 'number' ? card.points : 5,
             background_opacity: card.background_opacity || 80,
             focal_point_x: card.focal_point_x || 50,
@@ -64,11 +83,9 @@ const AdminTesting = () => {
 
     fetchCards();
     
-    // Load carousel timer from localStorage (keeping this in localStorage as it's a global setting)
     const savedTimer = parseInt(localStorage.getItem('adminTestingCards_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
     
-    // Start the carousel interval
     const intervalId = setInterval(() => {
       setGlobalCarouselIndex(prev => prev + 1);
     }, savedTimer * 1000);
@@ -76,7 +93,6 @@ const AdminTesting = () => {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Add a new card
   const handleAddCard = async () => {
     const newCard: AdminTestingCardData = {
       id: uuidv4(),
@@ -97,10 +113,12 @@ const AdminTesting = () => {
     };
     
     try {
-      // Insert the new card into Supabase
       const { data, error } = await supabase
         .from('admin_testing_cards')
-        .insert(newCard)
+        .insert({
+          ...newCard,
+          points: newCard.points || 0
+        })
         .select()
         .single();
       
@@ -114,13 +132,12 @@ const AdminTesting = () => {
         return;
       }
       
-      // Update local state with the card from Supabase
+      const supabaseData = data as SupabaseCardData;
       const formattedCard = {
         ...data,
-        priority: (data.priority as 'low' | 'medium' | 'high') || 'medium',
-        // Ensure points is a number with fallback to default
-        points: typeof data.points === 'number' ? data.points : 5,
-        background_images: data.background_images || []
+        priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
+        points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
+        background_images: supabaseData.background_images || []
       } as AdminTestingCardData;
       
       setCards(prevCards => [...prevCards, formattedCard]);
@@ -139,7 +156,6 @@ const AdminTesting = () => {
     }
   };
 
-  // Update a card
   const handleUpdateCard = (updatedCard: AdminTestingCardData) => {
     setCards(prevCards => prevCards.map(card => 
       card.id === updatedCard.id ? updatedCard : card
