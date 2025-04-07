@@ -69,9 +69,7 @@ const MonthlyMetricsChart: React.FC = () => {
   const monthDates = useMemo(() => generateMonthDays(), []);
 
   const getYAxisDomain = useMemo(() => {
-    if (!data || data.length === 0) return [0, 2]; // Default when no data
-    
-    // Find the maximum value across all metrics
+    if (!data || data.length === 0) return ['auto', 'auto'];
     const maxValue = Math.max(
       ...data.flatMap(item => [
         item.tasksCompleted,
@@ -80,9 +78,7 @@ const MonthlyMetricsChart: React.FC = () => {
         item.punishments
       ])
     );
-    
-    // Return at least 0-2 range, or adjust upward as needed
-    return [0, Math.max(2, Math.ceil(maxValue))];
+    return [0, Math.max(5, Math.ceil(maxValue))];
   }, [data]);
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -245,8 +241,11 @@ const MonthlyMetricsChart: React.FC = () => {
     const containerWidth = chartScrollRef.current.clientWidth;
     console.log("Container width:", containerWidth);
     
-    // Calculate bar width based on the number of data points
-    const barWidth = 900 / monthDates.length; // Width divided by number of days
+    // Calculate bar width based on DOM measurements
+    const chartWrapper = chartScrollRef.current?.querySelector('.recharts-wrapper') as HTMLDivElement;
+    const chartWidth = chartWrapper?.scrollWidth || 900;
+    const barCount = monthDates.length;
+    const barWidth = chartWidth / barCount;
     console.log("Calculated bar width:", barWidth);
     
     // Get the actual date value from the clicked bar
