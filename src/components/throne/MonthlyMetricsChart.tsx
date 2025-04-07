@@ -195,7 +195,7 @@ const MonthlyMetricsChart: React.FC = () => {
         <div style={{ width: data.length * 40, height: "100%" }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
+              <CartesianGrid strokeDasharray="0" stroke="#1A1F2C" />
               <XAxis 
                 dataKey="date"
                 tickFormatter={(date) => {
@@ -214,6 +214,10 @@ const MonthlyMetricsChart: React.FC = () => {
                 tick={{ fill: '#D1D5DB' }}
               />
               <Tooltip 
+                cursor={false}
+                contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
+                offset={50}
+                wrapperStyle={{ marginLeft: '40px' }}
                 formatter={(value, name) => [value, name]}
                 labelFormatter={(label) => {
                   try {
@@ -229,6 +233,8 @@ const MonthlyMetricsChart: React.FC = () => {
                 fill={chartConfig.tasksCompleted.color} 
                 radius={[4, 4, 0, 0]} 
                 onClick={handleBarClick}
+                isAnimationActive={false}
+                activeOpacity={1}
               />
               <Bar 
                 dataKey="rulesBroken" 
@@ -236,6 +242,8 @@ const MonthlyMetricsChart: React.FC = () => {
                 fill={chartConfig.rulesBroken.color} 
                 radius={[4, 4, 0, 0]} 
                 onClick={handleBarClick}
+                isAnimationActive={false}
+                activeOpacity={1}
               />
               <Bar 
                 dataKey="rewardsRedeemed" 
@@ -243,6 +251,8 @@ const MonthlyMetricsChart: React.FC = () => {
                 fill={chartConfig.rewardsRedeemed.color} 
                 radius={[4, 4, 0, 0]} 
                 onClick={handleBarClick}
+                isAnimationActive={false}
+                activeOpacity={1}
               />
               <Bar 
                 dataKey="punishments" 
@@ -250,6 +260,8 @@ const MonthlyMetricsChart: React.FC = () => {
                 fill={chartConfig.punishments.color} 
                 radius={[4, 4, 0, 0]} 
                 onClick={handleBarClick}
+                isAnimationActive={false}
+                activeOpacity={1}
               />
             </BarChart>
           </ResponsiveContainer>
