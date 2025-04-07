@@ -1,0 +1,118 @@
+
+import { useState, useEffect } from 'react';
+import { AdminTestingCardData } from '../defaultAdminTestingCards';
+
+interface UseAdminCardDataProps {
+  id: string;
+  title: string;
+  description: string;
+  priority?: 'low' | 'medium' | 'high';
+  points?: number;
+  icon_url?: string;
+  iconName?: string;
+  background_images?: string[];
+  background_image_url?: string;
+}
+
+interface UseAdminCardDataResult {
+  cardData: AdminTestingCardData;
+  images: string[];
+  usageData: number[];
+  handleSaveCard: (updatedCard: AdminTestingCardData) => void;
+}
+
+export const useAdminCardData = ({
+  id,
+  title,
+  description,
+  priority = 'medium',
+  points = 0,
+  icon_url,
+  iconName,
+  background_images = [],
+  background_image_url
+}: UseAdminCardDataProps): UseAdminCardDataResult => {
+  const [cardData, setCardData] = useState<AdminTestingCardData>({
+    id,
+    title,
+    description,
+    priority,
+    points,
+    icon_url,
+    iconName,
+    background_image_url,
+    background_opacity: 80,
+    focal_point_x: 50,
+    focal_point_y: 50,
+    title_color: '#FFFFFF',
+    subtext_color: '#8E9196',
+    calendar_color: '#7E69AB',
+    icon_color: '#FFFFFF',
+    highlight_effect: false,
+    usage_data: [1, 2, 0, 3, 1, 0, 2]
+  });
+
+  const [images, setImages] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Try to load saved card data from localStorage
+    const storageKey = `adminTestingCard_${id}`;
+    const savedCardData = localStorage.getItem(storageKey);
+    
+    if (savedCardData) {
+      try {
+        const parsedData = JSON.parse(savedCardData);
+        setCardData({
+          ...cardData,
+          ...parsedData
+        });
+        
+        // Set images from background_images or single background_image_url
+        if (parsedData.background_images && parsedData.background_images.length > 0) {
+          setImages(parsedData.background_images.filter(Boolean));
+        } else if (parsedData.background_image_url) {
+          setImages([parsedData.background_image_url]);
+        }
+      } catch (error) {
+        console.error('Error parsing saved card data:', error);
+      }
+    } else {
+      // Initialize images array from props
+      const initialImages: string[] = [];
+      
+      if (background_images && background_images.length > 0) {
+        initialImages.push(...background_images.filter(Boolean));
+      } else if (background_image_url) {
+        initialImages.push(background_image_url);
+      }
+      
+      setImages(initialImages);
+    }
+  }, [id]);
+
+  const handleSaveCard = (updatedCard: AdminTestingCardData) => {
+    setCardData(updatedCard);
+    
+    // Update images array if needed
+    if (updatedCard.background_images && updatedCard.background_images.length > 0) {
+      setImages(updatedCard.background_images.filter(Boolean));
+    } else if (updatedCard.background_image_url) {
+      setImages([updatedCard.background_image_url]);
+    } else {
+      setImages([]);
+    }
+    
+    // Save to localStorage
+    const storageKey = `adminTestingCard_${id}`;
+    localStorage.setItem(storageKey, JSON.stringify(updatedCard));
+  };
+
+  const usageData = cardData.usage_data || [0, 0, 0, 0, 0, 0, 0];
+
+  return {
+    cardData,
+    images,
+    usageData,
+    handleSaveCard
+  };
+};

@@ -1,38 +1,105 @@
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react";
+import { Card } from "@/components/ui/card";
+import AdminTestingEditModal from "./AdminTestingEditModal";
+import CardBackground from "./card/CardBackground";
+import CardHeader from "./card/CardHeader";
+import CardContent from "./card/CardContent";
+import CardFooter from "./card/CardFooter";
+import { useAdminCardData } from "./hooks/useAdminCardData";
+import { useImageCarousel } from "./hooks/useImageCarousel";
+import { renderCardIcon } from "./utils/renderCardIcon";
 import { AdminTestingCardData } from "./defaultAdminTestingCards";
-import { AdminTestingEditModal } from "./AdminTestingEditModal";
 
 interface AdminTestingCardProps {
   card: AdminTestingCardData;
-  onUpdate: (updatedCard: AdminTestingCardData) => void;
+  globalCarouselIndex: number;
+  onUpdate: (updated: AdminTestingCardData) => void;
 }
 
-export function AdminTestingCard({ card, onUpdate }: AdminTestingCardProps) {
-  const [isEditing, setIsEditing] = useState(false);
+const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
+  card,
+  globalCarouselIndex,
+  onUpdate
+}) => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const { cardData, images, usageData, handleSaveCard } = useAdminCardData({
+    id: card.id,
+    title: card.title,
+    description: card.description,
+    priority: card.priority || "medium",
+    points: card.points || 0,
+    icon_url: card.icon_url,
+    iconName: card.iconName,
+    background_images: card.background_images,
+    background_image_url: card.background_image_url
+  });
+
+  const { visibleImage, transitionImage, isTransitioning } = useImageCarousel({
+    images,
+    globalCarouselIndex
+  });
+
+  const iconComponent = renderCardIcon({
+    iconUrl: cardData.icon_url,
+    iconName: cardData.iconName,
+    iconColor: cardData.icon_color,
+    fallbackIcon: null
+  });
 
   return (
     <>
-      <Card className="w-full">
-        <CardContent className="flex items-center justify-between p-4">
-          <div>
-            <h3 className="font-bold text-lg">{card.title}</h3>
-            <p className="text-sm text-muted-foreground">{card.description}</p>
-          </div>
-          <Button size="icon" variant="ghost" onClick={() => setIsEditing(true)}>
-            <Pencil className="w-4 h-4" />
-          </Button>
-        </CardContent>
+      <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
+        <CardBackground
+          visibleImage={visibleImage}
+          transitionImage={transitionImage}
+          isTransitioning={isTransitioning}
+          focalPointX={cardData.focal_point_x}
+          focalPointY={cardData.focal_point_y}
+          backgroundOpacity={cardData.background_opacity}
+        />
+
+        <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
+          <CardHeader 
+            priority={cardData.priority || "medium"} 
+            points={cardData.points || 0}
+          />
+          
+          <CardContent 
+            title={cardData.title}
+            description={cardData.description}
+            iconComponent={iconComponent}
+            titleColor={cardData.title_color}
+            subtextColor={cardData.subtext_color}
+            highlightEffect={cardData.highlight_effect}
+          />
+          
+          <CardFooter 
+            calendarColor={cardData.calendar_color || '#7E69AB'}
+            usageData={usageData}
+            onEditClick={() => setIsEditModalOpen(true)}
+          />
+        </div>
       </Card>
+      
       <AdminTestingEditModal
-        open={isEditing}
-        onOpenChange={setIsEditing}
-        card={card}
-        onSave={onUpdate}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        cardData={cardData}
+        onSave={(updated) => {
+          handleSaveCard(updated);
+          onUpdate(updated);
+        }}
+        onDelete={(id) => {
+          // Handle deletion if needed
+        }}
+        localStorageKey="adminTestingCards"
+        carouselTimer={5}
+        onCarouselTimerChange={() => {}}
       />
     </>
   );
-}
+};
+
+export default AdminTestingCard;
