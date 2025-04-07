@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Card } from '@/components/ui/card';
-import ThroneRoomEditModal, { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
+import { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
 import { defaultThroneRoomCards } from '@/components/throne/defaultThroneRoomCards';
 import { renderCardIcon } from '@/components/throne/utils/renderCardIcon';
 import CardHeader from '@/components/throne/card/CardHeader';
@@ -11,6 +11,7 @@ import CardFooter from '@/components/throne/card/CardFooter';
 import { toast } from '@/components/ui/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import AdminTestingCardEditModal from '@/components/admin-testing/AdminTestingCardEditModal';
 
 const AdminTesting = () => {
   const [adminTestingCards, setAdminTestingCards] = useState<ThroneRoomCardData[]>([]);
@@ -18,6 +19,9 @@ const AdminTesting = () => {
   const [selectedCard, setSelectedCard] = useState<ThroneRoomCardData | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Constant for localStorage key to ensure consistency
+  const ADMIN_TESTING_STORAGE_KEY = 'adminTestingCards';
 
   useEffect(() => {
     console.log("AdminTesting: Component mounted");
@@ -29,7 +33,7 @@ const AdminTesting = () => {
     
     try {
       console.log("AdminTesting: Loading cards from localStorage");
-      const saved = localStorage.getItem('adminTestingCards');
+      const saved = localStorage.getItem(ADMIN_TESTING_STORAGE_KEY);
       
       if (saved) {
         try {
@@ -75,7 +79,7 @@ const AdminTesting = () => {
       
       console.log("AdminTesting: Setting initial cards:", initialCards);
       setAdminTestingCards(initialCards);
-      localStorage.setItem('adminTestingCards', JSON.stringify(initialCards));
+      localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(initialCards));
       setIsInitialized(true);
     } catch (error) {
       console.error("AdminTesting: Error initializing default cards:", error);
@@ -85,7 +89,7 @@ const AdminTesting = () => {
   useEffect(() => {
     if (!isInitialized) return;
     
-    const stored = parseInt(localStorage.getItem('adminTesting_carouselTimer') || '5', 10);
+    const stored = parseInt(localStorage.getItem(`${ADMIN_TESTING_STORAGE_KEY}_carouselTimer`) || '5', 10);
     const interval = setInterval(() => {
       setCarouselIndex((prev) => prev + 1);
     }, (isNaN(stored) ? 5 : stored) * 1000);
@@ -100,11 +104,11 @@ const AdminTesting = () => {
       if (index >= 0) {
         const newArr = [...prev];
         newArr[index] = updatedData;
-        localStorage.setItem('adminTestingCards', JSON.stringify(newArr));
+        localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
         return newArr;
       } else {
         const newArr = [...prev, updatedData];
-        localStorage.setItem('adminTestingCards', JSON.stringify(newArr));
+        localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
         return newArr;
       }
     });
@@ -113,13 +117,16 @@ const AdminTesting = () => {
       title: "Card Updated",
       description: "The admin testing card has been updated successfully",
     });
+    
+    // Close the edit modal after saving
+    setIsEditModalOpen(false);
   };
   
   const handleDeleteCard = (cardId: string) => {
     console.log("AdminTesting: Deleting card", cardId);
     setAdminTestingCards(prev => {
       const newArr = prev.filter(card => card.id !== cardId);
-      localStorage.setItem('adminTestingCards', JSON.stringify(newArr));
+      localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
       return newArr;
     });
     
@@ -148,7 +155,7 @@ const AdminTesting = () => {
 
     setAdminTestingCards(prev => {
       const newArr = [...prev, newCard];
-      localStorage.setItem('adminTestingCards', JSON.stringify(newArr));
+      localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
       return newArr;
     });
 
@@ -156,6 +163,10 @@ const AdminTesting = () => {
       title: "Card Added",
       description: "A new card has been added successfully",
     });
+    
+    // Select and open the edit modal for the new card
+    setSelectedCard(newCard);
+    setIsEditModalOpen(true);
   };
 
   console.log("AdminTesting: Rendering with cards:", adminTestingCards);
@@ -245,14 +256,16 @@ const AdminTesting = () => {
       </div>
       
       {selectedCard && (
-        <ThroneRoomEditModal
+        <AdminTestingCardEditModal
           isOpen={isEditModalOpen}
           cardData={selectedCard}
-          onClose={() => setIsEditModalOpen(false)}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedCard(null);
+          }}
           onSave={handleSaveCard}
           onDelete={handleDeleteCard}
-          localStorageKey="adminTestingCards"
-          pageTitle="Admin Testing"
+          localStorageKey={ADMIN_TESTING_STORAGE_KEY}
         />
       )}
     </AppLayout>
