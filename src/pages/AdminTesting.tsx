@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -35,7 +36,23 @@ const AdminTesting = () => {
         
         // Only use data from Supabase if we got results
         if (data && data.length > 0) {
-          setCards(data);
+          // Convert data to the expected format
+          const formattedCards = data.map(card => ({
+            ...card,
+            priority: (card.priority as 'low' | 'medium' | 'high') || 'medium',
+            points: card.points || 5,
+            background_opacity: card.background_opacity || 80,
+            focal_point_x: card.focal_point_x || 50,
+            focal_point_y: card.focal_point_y || 50,
+            title_color: card.title_color || '#FFFFFF',
+            subtext_color: card.subtext_color || '#8E9196',
+            calendar_color: card.calendar_color || '#7E69AB',
+            icon_color: card.icon_color || '#FFFFFF',
+            highlight_effect: card.highlight_effect || false,
+            usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0]
+          })) as AdminTestingCardData[];
+          
+          setCards(formattedCards);
         }
       } catch (error) {
         console.error('Error in fetchCards:', error);
@@ -67,12 +84,12 @@ const AdminTesting = () => {
       priority: 'medium',
       points: 5,
       background_opacity: 80,
+      focal_point_x: 50,
+      focal_point_y: 50,
       title_color: '#FFFFFF',
       subtext_color: '#8E9196',
       calendar_color: '#7E69AB',
       icon_color: '#FFFFFF',
-      focal_point_x: 50,
-      focal_point_y: 50,
       highlight_effect: false,
       usage_data: [0, 0, 0, 0, 0, 0, 0]
     };
@@ -96,7 +113,13 @@ const AdminTesting = () => {
       }
       
       // Update local state with the card from Supabase
-      setCards(prevCards => [...prevCards, data]);
+      const formattedCard = {
+        ...data,
+        priority: (data.priority as 'low' | 'medium' | 'high') || 'medium',
+        points: data.points || 5
+      } as AdminTestingCardData;
+      
+      setCards(prevCards => [...prevCards, formattedCard]);
       
       toast({
         title: "Success",

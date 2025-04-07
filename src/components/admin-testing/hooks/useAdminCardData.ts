@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { AdminTestingCardData } from '../defaultAdminTestingCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
+import { Json } from '@/integrations/supabase/types';
 
 interface UseAdminCardDataProps {
   id: string;
@@ -41,7 +42,7 @@ export const useAdminCardData = ({
     priority,
     points,
     icon_url,
-    iconName,
+    icon_name: iconName,
     background_image_url,
     background_images: background_images,
     background_opacity: 80,
@@ -80,6 +81,7 @@ export const useAdminCardData = ({
           // Transform data from Supabase to match our expected format
           const savedCard = {
             ...data,
+            priority: (data.priority as 'low' | 'medium' | 'high') || 'medium',
             background_images: data.background_images || [],
             usage_data: data.usage_data || [1, 2, 0, 3, 1, 0, 2]
           };
@@ -90,11 +92,20 @@ export const useAdminCardData = ({
           });
           
           // Set images from background_images or single background_image_url
-          const imageArray = Array.isArray(savedCard.background_images) && savedCard.background_images.length > 0
-            ? savedCard.background_images.filter(Boolean)
-            : savedCard.background_image_url
-              ? [savedCard.background_image_url]
-              : [];
+          let imageArray: string[] = [];
+          if (Array.isArray(savedCard.background_images)) {
+            imageArray = savedCard.background_images.filter(Boolean) as string[];
+          } else if (typeof savedCard.background_images === 'object' && savedCard.background_images !== null) {
+            // Try to convert JSON object to array if possible
+            const bgImages = (savedCard.background_images as unknown) as Json[];
+            if (Array.isArray(bgImages)) {
+              imageArray = bgImages.filter(item => typeof item === 'string') as string[];
+            }
+          }
+          
+          if (imageArray.length === 0 && savedCard.background_image_url) {
+            imageArray = [savedCard.background_image_url];
+          }
               
           setImages(imageArray);
         }
@@ -136,8 +147,8 @@ export const useAdminCardData = ({
       // Update images array based on updated card data
       let newImages: string[] = [];
       
-      if (Array.isArray(updatedCard.background_images) && updatedCard.background_images.length > 0) {
-        newImages = updatedCard.background_images.filter(Boolean);
+      if (Array.isArray(updatedCard.background_images)) {
+        newImages = updatedCard.background_images.filter(Boolean) as string[];
       } else if (updatedCard.background_image_url) {
         newImages = [updatedCard.background_image_url];
       }
@@ -176,7 +187,14 @@ export const useAdminCardData = ({
     }
   };
 
-  const usageData = cardData.usage_data || [0, 0, 0, 0, 0, 0, 0];
+  // Ensure usageData is always an array of numbers
+  const usageData = Array.isArray(cardData.usage_data) 
+    ? cardData.usage_data as number[]
+    : typeof cardData.usage_data === 'object' && cardData.usage_data !== null
+      ? Object.values(cardData.usage_data).map(val => 
+          typeof val === 'number' ? val : 0
+        ) 
+      : [0, 0, 0, 0, 0, 0, 0];
 
   return {
     cardData,

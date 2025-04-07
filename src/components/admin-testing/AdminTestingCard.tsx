@@ -51,8 +51,8 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     priority: card?.priority || priority,
     points: card?.points || points,
     icon_url: card?.icon_url,
-    iconName: card?.iconName || "",
-    background_images: card?.background_images,
+    iconName: card?.icon_name || "",
+    background_images: card?.background_images as string[] || [],
     background_image_url: card?.background_image_url
   });
 
@@ -67,7 +67,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   const iconComponent = renderCardIcon({
     iconUrl: cardData.icon_url,
-    iconName: cardData.iconName,
+    iconName: cardData.icon_name,
     iconColor: cardData.icon_color,
     fallbackIcon: icon
   });
