@@ -4,6 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps
 } from 'recharts';
 import { format, getMonth, getYear, getDaysInMonth } from 'date-fns';
+import { Card } from '@/components/ui/card';
 
 interface MonthlyDataItem {
   date: string;

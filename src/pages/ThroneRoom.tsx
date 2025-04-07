@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -335,13 +334,6 @@ const defaultThroneRoomCards = [
     points: 7
   }
 ];
-
-interface WeeklyMetricsSummary {
-  tasksCompleted: number;
-  rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
-}
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
