@@ -16,7 +16,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface MetricsData {
   date: string;
@@ -34,7 +34,6 @@ export interface WeeklyMetricsSummary {
 }
 
 interface WeeklyMetricsChartProps {
-  hideTitle?: boolean;
   onDataLoaded?: (summaryData: WeeklyMetricsSummary) => void;
 }
 
@@ -77,7 +76,6 @@ const weeklyActivityData = [
 ];
 
 export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ 
-  hideTitle = false,
   onDataLoaded 
 }) => {
   const [data, setData] = useState<MetricsData[]>([]);
@@ -266,44 +264,48 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   }, [data, weekDates]);
 
   return (
-    <div className="w-full bg-navy border border-light-navy rounded-lg">
-      {!hideTitle && <h3 className="text-lg font-medium text-white px-4 pt-4 mb-4">Weekly Activity Metrics</h3>}
-      {error && (
-        <div className="mb-4 px-3 py-2 bg-red-900/30 border border-red-900/50 rounded text-sm text-red-300 mx-4">
-          {error}
-        </div>
-      )}
-      <div className="w-full px-4 pb-4">
-        {loading && (
-          <Skeleton className="w-full h-64 bg-light-navy/30" />
-        )}
-        {!loading && (
-          <div className="h-64">
-            {!hasContent && (
-              <div className="flex items-center justify-center h-full text-white text-sm">
-                No activity data to display for this week.
-              </div>
-            )}
-            {hasContent && weeklyChart}
+    <Card className="bg-navy border border-light-navy">
+      <CardHeader className="border-b border-light-navy">
+        <CardTitle className="text-white text-lg">Weekly Activity</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-4 px-0">
+        {error && (
+          <div className="mb-4 px-3 py-2 bg-red-900/30 border border-red-900/50 rounded text-sm text-red-300 mx-4">
+            {error}
           </div>
         )}
-      </div>
+        <div className="w-full px-4 pb-4">
+          {loading && (
+            <Skeleton className="w-full h-64 bg-light-navy/30" />
+          )}
+          {!loading && (
+            <div className="h-64">
+              {!hasContent && (
+                <div className="flex items-center justify-center h-full text-white text-sm">
+                  No activity data to display for this week.
+                </div>
+              )}
+              {hasContent && weeklyChart}
+            </div>
+          )}
+        </div>
 
-      <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
-        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
-          Tasks Completed
-        </span>
-        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
-          Rules Broken
-        </span>
-        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
-          Rewards Redeemed
-        </span>
-        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
-          Punishments
-        </span>
-      </div>
-    </div>
+        <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
+            Tasks Completed
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
+            Rules Broken
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
+            Rewards Redeemed
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
+            Punishments
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

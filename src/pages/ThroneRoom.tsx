@@ -100,31 +100,19 @@ const ThroneRoom: React.FC = () => {
           </div>
           
           <div className="space-y-6">
-            {/* Weekly Activity Chart with title inside */}
-            <Card className="bg-navy border border-light-navy">
-              <CardHeader className="border-b border-light-navy">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-white text-lg">Weekly Activity</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-4 px-0">
-                <div className="w-full">
-                  <WeeklyMetricsChart 
-                    hideTitle={true} 
-                    onDataLoaded={handleMetricsDataLoaded}
-                    key={`metrics-chart-${refreshTrigger}`}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            {/* Weekly Activity Chart - now containing its own title */}
+            <WeeklyMetricsChart 
+              onDataLoaded={handleMetricsDataLoaded}
+              key={`metrics-chart-${refreshTrigger}`}
+            />
             
-            {/* Weekly Activity Tiles - Now as a separate component */}
+            {/* Weekly Activity Tiles */}
             <WeeklyMetricsSummaryTiles {...metricsSummary} />
             
             {/* Monthly Activity Chart */}
             <MonthlyMetricsChart />
             
-            {/* Admin Settings Card - Now as a separate component */}
+            {/* Admin Settings Card */}
             <AdminSettingsCard />
           </div>
         </div>
