@@ -10,6 +10,7 @@ import { useAdminCardData } from "./hooks/useAdminCardData";
 import { useImageCarousel } from "./hooks/useImageCarousel";
 import { renderCardIcon } from "./utils/renderCardIcon";
 import { AdminTestingCardData } from "./defaultAdminTestingCards";
+import { toast } from "@/hooks/use-toast";
 
 interface AdminTestingCardProps {
   card: AdminTestingCardData;
@@ -68,9 +69,40 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     iconUrl: cardData.icon_url,
     iconName: cardData.iconName,
     iconColor: cardData.icon_color,
-    // Remove the fallback icon reference that doesn't exist
     fallbackIcon: null
   });
+
+  const handleDeleteCard = (cardId: string) => {
+    try {
+      // Get current cards from localStorage
+      const cards = JSON.parse(localStorage.getItem("adminTestingCards") || "[]");
+      // Filter out the card to delete
+      const updatedCards = cards.filter((c: AdminTestingCardData) => c.id !== cardId);
+      // Save the updated cards back to localStorage
+      localStorage.setItem("adminTestingCards", JSON.stringify(updatedCards));
+      
+      // Notify the parent component about the deletion
+      toast({
+        title: "Card Deleted",
+        description: "The admin testing card has been deleted",
+      });
+      
+      // Close the modal
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error("Error deleting card:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete card",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCarouselTimerChange = (newValue: number) => {
+    setCarouselTimer(newValue);
+    localStorage.setItem("adminTestingCards_carouselTimer", newValue.toString());
+  };
 
   return (
     <>
@@ -83,14 +115,12 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
           focalPointY={cardData.focal_point_y}
         />
         
-        {/* Fix the props passed to CardHeader to match its interface */}
         <div className="p-4">
           <CardHeader
             priority={cardData.priority}
             points={cardData.points}
           />
           
-          {/* Now add the content that should be displayed but isn't in the CardHeader component */}
           <div className="flex items-start mt-4">
             <div className="mr-4 flex-shrink-0">
               <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00f0ff' }}>
@@ -106,7 +136,6 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
             </div>
           </div>
           
-          {/* Fix the props passed to CardContent to match its interface */}
           <div className="mt-4">
             <p className="text-sm" 
                style={{ 
@@ -119,7 +148,6 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
             </p>
           </div>
           
-          {/* Fix the props passed to CardFooter to match its interface */}
           <div className="mt-4">
             <div className="flex items-center justify-between">
               <div></div> {/* Empty div for spacing */}
@@ -136,7 +164,6 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         </div>
       </Card>
 
-      {/* Fix the props passed to AdminTestingEditModal to match its interface */}
       <AdminTestingEditModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
@@ -145,6 +172,10 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
           handleSaveCard(updated);
           onUpdate(updated);
         }}
+        onDelete={handleDeleteCard}
+        localStorageKey="adminTestingCards"
+        carouselTimer={carouselTimer}
+        onCarouselTimerChange={handleCarouselTimerChange}
       />
     </>
   );
