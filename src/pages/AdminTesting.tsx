@@ -8,7 +8,6 @@ import { renderCardIcon } from '@/components/throne/utils/renderCardIcon';
 import CardHeader from '@/components/throne/card/CardHeader';
 import CardContent from '@/components/throne/card/CardContent';
 import CardFooter from '@/components/throne/card/CardFooter';
-import CardBackground from '@/components/throne/card/CardBackground';
 import { toast } from '@/components/ui/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,8 @@ import AdminTestingCardEditModal from '@/components/admin-testing/AdminTestingCa
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { PostgrestResponse } from '@supabase/supabase-js';
+import { useImageCarousel } from '@/components/throne/hooks/useImageCarousel';
+import AdminTestingCardBackground from '@/components/admin-testing/AdminTestingCardBackground';
 
 // Define a type specifically for the admin testing cards
 interface AdminTestingCardData extends ThroneRoomCardData {
@@ -514,6 +515,22 @@ const AdminTesting = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {adminTestingCards.map((card) => {
               const IconComponent = defaultThroneRoomCards.find(defaultCard => defaultCard.id === card.id)?.icon;
+              const images = card.background_images ? 
+                Array.isArray(card.background_images) ? card.background_images.filter(Boolean) as string[] : [] 
+                : [];
+              
+              const backgroundImageUrl = card.background_image_url || null;
+              const allImages = backgroundImageUrl ? 
+                [backgroundImageUrl, ...images] : images;
+              
+              // Only use the carousel if there are multiple images
+              const { visibleImage, transitionImage, isTransitioning } = 
+                allImages.length > 0 ? 
+                useImageCarousel({ 
+                  images: allImages, 
+                  globalCarouselIndex: carouselIndex 
+                }) : 
+                { visibleImage: backgroundImageUrl, transitionImage: null, isTransitioning: false };
               
               return (
                 <Card 
@@ -521,10 +538,10 @@ const AdminTesting = () => {
                   className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy cursor-pointer"
                   onClick={() => updateCardUsage(card)}
                 >
-                  <CardBackground 
-                    visibleImage={card.background_image_url || null}
-                    transitionImage={null}
-                    isTransitioning={false}
+                  <AdminTestingCardBackground 
+                    visibleImage={visibleImage}
+                    transitionImage={transitionImage}
+                    isTransitioning={isTransitioning}
                     focalPointX={card.focal_point_x}
                     focalPointY={card.focal_point_y}
                     backgroundOpacity={card.background_opacity}
