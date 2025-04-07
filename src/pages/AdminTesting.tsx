@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
-import { AdminTestingCard } from '@/components/admin-testing/AdminTestingCard';
+import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
 import { AdminTestingCardData, defaultAdminTestingCards } from '@/components/admin-testing/defaultAdminTestingCards';
 
 const AdminTesting = () => {
