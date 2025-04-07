@@ -13,8 +13,6 @@ interface BackgroundImageSelectorProps {
   onRemoveImage: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setValue: UseFormSetValue<any>;
-  imageSlots?: (string | null)[];
-  carouselTimer?: number;
 }
 
 const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
@@ -23,9 +21,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   initialPosition,
   onRemoveImage,
   onImageUpload,
-  setValue,
-  imageSlots = [],
-  carouselTimer = 5
+  setValue
 }) => {
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);

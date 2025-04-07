@@ -435,8 +435,6 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
                   onRemoveImage={handleRemoveImage}
                   onImageUpload={handleImageUpload}
                   setValue={form.setValue}
-                  imageSlots={imageSlots}
-                  carouselTimer={carouselTimer}
                 />
               </div>
               
