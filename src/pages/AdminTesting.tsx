@@ -246,31 +246,45 @@ const AdminTesting = () => {
         throw new Error("Card title is required");
       }
       
+      // Ensure icon fields are properly formatted
+      const iconName = updatedData.iconName || null;
+      const iconUrl = updatedData.icon_url || null;
+      
+      // Ensure background image fields are properly formatted
+      let backgroundImageUrl = updatedData.background_image_url || null;
+      let backgroundImages = updatedData.background_images || null;
+      
+      // Prepare data for Supabase with proper types
+      const dataForSupabase = {
+        id: updatedData.id,
+        title: updatedData.title,
+        description: updatedData.description,
+        icon_name: iconName,
+        icon_url: iconUrl,
+        icon_color: updatedData.icon_color,
+        title_color: updatedData.title_color,
+        subtext_color: updatedData.subtext_color,
+        calendar_color: updatedData.calendar_color,
+        background_image_url: backgroundImageUrl,
+        background_images: backgroundImages,
+        background_opacity: updatedData.background_opacity || 100,
+        focal_point_x: updatedData.focal_point_x || 50,
+        focal_point_y: updatedData.focal_point_y || 50,
+        highlight_effect: updatedData.highlight_effect || false,
+        priority: updatedData.priority || 'medium',
+        usage_data: updatedData.usage_data || [0, 0, 0, 0, 0, 0, 0],
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log("Sending data to Supabase:", dataForSupabase);
+      
       // Update in Supabase
       const { error } = await supabase
         .from('admin_testing_cards')
-        .upsert({
-          id: updatedData.id,
-          title: updatedData.title,
-          description: updatedData.description,
-          icon_name: updatedData.iconName,
-          icon_url: updatedData.icon_url,
-          icon_color: updatedData.icon_color,
-          title_color: updatedData.title_color,
-          subtext_color: updatedData.subtext_color,
-          calendar_color: updatedData.calendar_color,
-          background_image_url: updatedData.background_image_url,
-          background_images: updatedData.background_images,
-          background_opacity: updatedData.background_opacity,
-          focal_point_x: updatedData.focal_point_x,
-          focal_point_y: updatedData.focal_point_y,
-          highlight_effect: updatedData.highlight_effect,
-          priority: updatedData.priority,
-          usage_data: updatedData.usage_data || [0, 0, 0, 0, 0, 0, 0],
-          updated_at: new Date().toISOString()
-        });
+        .upsert(dataForSupabase);
       
       if (error) {
+        console.error("Supabase error:", error);
         throw error;
       }
       

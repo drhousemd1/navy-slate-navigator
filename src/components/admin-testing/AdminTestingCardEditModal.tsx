@@ -223,7 +223,7 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
             setIconPreview(base64String);
             setSelectedIconName(null);
             form.setValue('icon_url', base64String);
-            form.setValue('iconName', undefined);
+            form.setValue('iconName', '');
           };
           reader.readAsDataURL(file);
         }
@@ -238,7 +238,7 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
       setIconPreview(iconUrl);
       setSelectedIconName(null);
       form.setValue('icon_url', iconUrl);
-      form.setValue('iconName', undefined);
+      form.setValue('iconName', '');
       
       toast({
         title: "Custom icon selected",
@@ -248,7 +248,7 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
       setSelectedIconName(iconName);
       setIconPreview(null);
       form.setValue('iconName', iconName);
-      form.setValue('icon_url', undefined);
+      form.setValue('icon_url', '');
       
       toast({
         title: "Icon selected",
@@ -300,14 +300,15 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
       
       console.log(`Found ${validImageSlots.length} valid image slots after validation`);
       
+      // Use the image preview for the background image URL
       const updatedData = {
         ...data,
-        background_image_url: imagePreview || undefined,
-        icon_url: iconPreview || undefined,
-        iconName: selectedIconName || undefined,
+        background_image_url: imagePreview,
+        icon_url: iconPreview,
+        iconName: selectedIconName || '',
         focal_point_x: position.x,
         focal_point_y: position.y,
-        background_images: validImageSlots,
+        background_images: validImageSlots.length > 0 ? validImageSlots : undefined,
       };
       
       console.log("Transformed data ready for save:", {
@@ -406,6 +407,9 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
                         onClick={() => {
                           setSelectedBoxIndex(index);
                           setImagePreview(imageSlots[index]);
+                          if (imageSlots[index]) {
+                            form.setValue('background_image_url', imageSlots[index] || '');
+                          }
                         }}
                         className={`w-12 h-12 rounded-md cursor-pointer transition-all
                           ${selectedBoxIndex === index
@@ -484,8 +488,8 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
                       onRemoveIcon={() => {
                         setIconPreview(null);
                         setSelectedIconName(null);
-                        form.setValue('icon_url', undefined);
-                        form.setValue('iconName', undefined);
+                        form.setValue('icon_url', '');
+                        form.setValue('iconName', '');
                       }}
                     />
                   </div>
