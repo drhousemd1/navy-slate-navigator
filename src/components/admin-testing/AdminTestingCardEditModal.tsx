@@ -38,48 +38,52 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
   onCarouselTimerChange
 }) => {
   const [isSaving, setIsSaving] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(cardData?.background_image_url || null);
-  const [iconPreview, setIconPreview] = useState<string | null>(cardData?.icon_url || null);
-  const [selectedIconName, setSelectedIconName] = useState<string | null>(cardData?.iconName || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [position, setPosition] = useState({ 
-    x: cardData?.focal_point_x || 50, 
-    y: cardData?.focal_point_y || 50 
+    x: 50, 
+    y: 50 
   });
   const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
   
   useEffect(() => {
-    localStorage.setItem(`${localStorageKey}_carouselTimer`, String(carouselTimer));
+    if (localStorageKey) {
+      localStorage.setItem(`${localStorageKey}_carouselTimer`, String(carouselTimer));
+    }
   }, [carouselTimer, localStorageKey]);
   
   const form = useForm<ThroneRoomCardData>({
     defaultValues: {
-      id: cardData?.id || '',
-      title: cardData?.title || '',
-      description: cardData?.description || '',
-      iconName: cardData?.iconName || '',
-      icon_url: cardData?.icon_url || '',
-      icon_color: cardData?.icon_color || '#FFFFFF',
-      title_color: cardData?.title_color || '#FFFFFF',
-      subtext_color: cardData?.subtext_color || '#8E9196',
-      calendar_color: cardData?.calendar_color || '#7E69AB',
-      background_image_url: cardData?.background_image_url || '',
-      background_opacity: cardData?.background_opacity || 100,
-      focal_point_x: cardData?.focal_point_x || 50,
-      focal_point_y: cardData?.focal_point_y || 50,
-      highlight_effect: cardData?.highlight_effect || false,
-      priority: cardData?.priority || 'medium',
-      usage_data: cardData?.usage_data || []
+      id: '',
+      title: '',
+      description: '',
+      iconName: '',
+      icon_url: '',
+      icon_color: '#FFFFFF',
+      title_color: '#FFFFFF',
+      subtext_color: '#8E9196',
+      calendar_color: '#7E69AB',
+      background_image_url: '',
+      background_opacity: 100,
+      focal_point_x: 50,
+      focal_point_y: 50,
+      highlight_effect: false,
+      priority: 'medium',
+      usage_data: [0, 0, 0, 0, 0, 0, 0]
     }
   });
   
   useEffect(() => {
     if (isOpen && cardData) {
       console.log("AdminTesting Modal opened with card data:", cardData);
+      
+      // Reset form with provided card data, with fallbacks for all fields
       form.reset({
-        id: cardData.id,
-        title: cardData.title,
-        description: cardData.description,
+        id: cardData.id || '',
+        title: cardData.title || '',
+        description: cardData.description || '',
         iconName: cardData.iconName || '',
         icon_url: cardData.icon_url || '',
         icon_color: cardData.icon_color || '#FFFFFF',
@@ -87,19 +91,25 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
         subtext_color: cardData.subtext_color || '#8E9196',
         calendar_color: cardData.calendar_color || '#7E69AB',
         background_image_url: cardData.background_image_url || '',
-        background_opacity: cardData.background_opacity || 100,
-        focal_point_x: cardData.focal_point_x || 50,
-        focal_point_y: cardData.focal_point_y || 50,
-        highlight_effect: cardData.highlight_effect || false,
+        background_opacity: cardData.background_opacity !== undefined ? cardData.background_opacity : 100,
+        focal_point_x: cardData.focal_point_x !== undefined ? cardData.focal_point_x : 50,
+        focal_point_y: cardData.focal_point_y !== undefined ? cardData.focal_point_y : 50,
+        highlight_effect: Boolean(cardData.highlight_effect),
         priority: cardData.priority || 'medium',
-        usage_data: cardData.usage_data || []
+        usage_data: Array.isArray(cardData.usage_data) ? cardData.usage_data : [0, 0, 0, 0, 0, 0, 0]
       });
+      
+      // Set image preview
       setImagePreview(cardData.background_image_url || null);
+      
+      // Set icon preview or name
       setIconPreview(cardData.icon_url || null);
       setSelectedIconName(cardData.iconName || null);
+      
+      // Set position for focal point
       setPosition({ 
-        x: cardData.focal_point_x || 50, 
-        y: cardData.focal_point_y || 50 
+        x: cardData.focal_point_x !== undefined ? cardData.focal_point_x : 50, 
+        y: cardData.focal_point_y !== undefined ? cardData.focal_point_y : 50 
       });
       
       console.log("Initializing image slots from card data:", {
@@ -108,6 +118,7 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
         hasBackgroundImageUrl: Boolean(cardData.background_image_url)
       });
       
+      // Initialize image slots
       const newImageSlots = [null, null, null, null, null];
       
       if (Array.isArray(cardData.background_images) && cardData.background_images.length > 0) {
@@ -301,7 +312,7 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
       console.log(`Found ${validImageSlots.length} valid image slots after validation`);
       
       // Use the image preview for the background image URL
-      const updatedData = {
+      const updatedData: ThroneRoomCardData = {
         ...data,
         background_image_url: imagePreview,
         icon_url: iconPreview,
@@ -557,7 +568,7 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
               <Button 
                 type="button" 
                 variant="destructive" 
-                onClick={handleDeleteCard} 
+                onClick={() => handleDeleteCard(cardData.id)} 
                 className="mr-auto"
               >
                 <Trash2 className="mr-2 h-4 w-4" />

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -305,6 +306,7 @@ const AdminTesting = () => {
       
       // Close the edit modal after saving
       setIsEditModalOpen(false);
+      setSelectedCard(null);
     } catch (error) {
       console.error("Error saving admin testing card:", error);
       toast({
@@ -541,7 +543,8 @@ const AdminTesting = () => {
                       calendarColor={card.calendar_color || '#7E69AB'}
                       usageData={card.usage_data || [0, 0, 0, 0, 0, 0, 0]}
                       onEditClick={() => {
-                        setSelectedCard(card);
+                        console.log("Setting selected card:", card);
+                        setSelectedCard({...card}); // Create a copy to avoid reference issues
                         setIsEditModalOpen(true);
                       }}
                     />
