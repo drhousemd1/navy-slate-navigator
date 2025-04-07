@@ -17,16 +17,19 @@ const AdminTesting = () => {
 
   // Load admin testing cards from localStorage on mount
   useEffect(() => {
+    console.log("AdminTesting: Loading cards from localStorage");
     const saved = localStorage.getItem('adminTestingCards');
     if (saved) {
       try {
         const parsedCards = JSON.parse(saved);
+        console.log("AdminTesting: Loaded cards:", parsedCards);
         setAdminTestingCards(parsedCards);
       } catch (err) {
         console.error('Error parsing adminTestingCards:', err);
       }
     } else {
       // Initialize with default cards if none exist
+      console.log("AdminTesting: Initializing with default cards");
       const initialCards = defaultThroneRoomCards.map(card => ({
         id: card.id,
         title: card.title,
@@ -55,6 +58,7 @@ const AdminTesting = () => {
   }, []);
 
   const handleSaveCard = (updatedData: ThroneRoomCardData) => {
+    console.log("AdminTesting: Saving card", updatedData);
     setAdminTestingCards(prev => {
       const index = prev.findIndex(c => c.id === updatedData.id);
       if (index >= 0) {
@@ -70,51 +74,59 @@ const AdminTesting = () => {
     });
   };
 
+  console.log("AdminTesting: Rendering with cards:", adminTestingCards);
+
   return (
     <AppLayout>
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold text-white mb-6">Admin Testing Panel</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {adminTestingCards.map((card) => {
-            const IconComponent = defaultThroneRoomCards.find(defaultCard => defaultCard.id === card.id)?.icon;
-            
-            return (
-              <Card key={card.id} className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
-                <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
-                  <CardHeader 
-                    priority={card.priority || 'medium'}
-                    points={5}
-                  />
-                  
-                  <CardContent 
-                    title={card.title || 'Untitled Card'}
-                    description={card.description || 'No description'}
-                    iconComponent={
-                      renderCardIcon({
-                        iconUrl: card.icon_url,
-                        iconName: card.iconName,
-                        iconColor: card.icon_color,
-                        fallbackIcon: IconComponent ? <IconComponent className="text-white w-6 h-6" /> : undefined
-                      })
-                    }
-                    titleColor={card.title_color}
-                    subtextColor={card.subtext_color}
-                    highlightEffect={card.highlight_effect}
-                  />
-                  
-                  <CardFooter 
-                    calendarColor={card.calendar_color || '#7E69AB'}
-                    usageData={card.usage_data || [1, 0, 1, 0, 0, 0, 0]}
-                    onEditClick={() => {
-                      setSelectedCard(card);
-                      setIsEditModalOpen(true);
-                    }}
-                  />
-                </div>
-              </Card>
-            );
-          })}
+          {adminTestingCards.length > 0 ? (
+            adminTestingCards.map((card) => {
+              const IconComponent = defaultThroneRoomCards.find(defaultCard => defaultCard.id === card.id)?.icon;
+              
+              return (
+                <Card key={card.id} className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
+                  <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
+                    <CardHeader 
+                      priority={card.priority || 'medium'}
+                      points={5}
+                    />
+                    
+                    <CardContent 
+                      title={card.title || 'Untitled Card'}
+                      description={card.description || 'No description'}
+                      iconComponent={
+                        renderCardIcon({
+                          iconUrl: card.icon_url,
+                          iconName: card.iconName,
+                          iconColor: card.icon_color,
+                          fallbackIcon: IconComponent ? <IconComponent className="text-white w-6 h-6" /> : undefined
+                        })
+                      }
+                      titleColor={card.title_color}
+                      subtextColor={card.subtext_color}
+                      highlightEffect={card.highlight_effect}
+                    />
+                    
+                    <CardFooter 
+                      calendarColor={card.calendar_color || '#7E69AB'}
+                      usageData={card.usage_data || [1, 0, 1, 0, 0, 0, 0]}
+                      onEditClick={() => {
+                        setSelectedCard(card);
+                        setIsEditModalOpen(true);
+                      }}
+                    />
+                  </div>
+                </Card>
+              );
+            })
+          ) : (
+            <div className="col-span-2 text-center p-8 bg-navy border border-light-navy rounded-lg">
+              <p className="text-white">No cards available. Loading default cards...</p>
+            </div>
+          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
