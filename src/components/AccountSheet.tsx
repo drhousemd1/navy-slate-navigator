@@ -37,6 +37,11 @@ const AccountSheet = () => {
     navigate('/encyclopedia');
   };
   
+  const handleAdminTestingClick = () => {
+    console.log("Admin Testing button clicked");
+    navigate('/admin-testing');
+  };
+  
   const nickname = getNickname();
   const userRole = getUserRole();
   
@@ -173,9 +178,7 @@ const AccountSheet = () => {
               <Button 
                 variant="ghost" 
                 className="w-full justify-start text-white hover:bg-light-navy border border-white"
-                onClick={() => {
-                  console.log("Admin Testing button clicked");
-                }}
+                onClick={handleAdminTestingClick}
               >
                 <Terminal className="w-5 h-5 mr-2" />
                 Admin Testing
@@ -200,4 +203,3 @@ const AccountSheet = () => {
 };
 
 export default AccountSheet;
-

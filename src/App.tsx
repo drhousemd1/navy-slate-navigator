@@ -20,6 +20,7 @@ import ThroneRoom from "./pages/ThroneRoom";
 import Encyclopedia from "./pages/Encyclopedia";
 import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
+import AdminTesting from "./pages/AdminTesting";
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -95,6 +96,7 @@ const AppRoutes = () => {
       <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+      <Route path="/admin-testing" element={<AdminRoute><AdminTesting /></AdminRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
