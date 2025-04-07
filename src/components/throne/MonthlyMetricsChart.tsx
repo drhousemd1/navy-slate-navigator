@@ -68,6 +68,23 @@ const MonthlyMetricsChart: React.FC = () => {
 
   const monthDates = useMemo(() => generateMonthDays(), []);
 
+  const getYAxisDomain = useMemo(() => {
+    if (!data || data.length === 0) return [0, 2]; // Default when no data
+    
+    // Find the maximum value across all metrics
+    const maxValue = Math.max(
+      ...data.flatMap(item => [
+        item.tasksCompleted,
+        item.rulesBroken,
+        item.rewardsRedeemed,
+        item.punishments
+      ])
+    );
+    
+    // Return at least 0-2 range, or adjust upward as needed
+    return [0, Math.max(2, Math.ceil(maxValue))];
+  }, [data]);
+
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!chartScrollRef.current) return;
     setIsDragging(true);
@@ -278,6 +295,8 @@ const MonthlyMetricsChart: React.FC = () => {
                 <YAxis 
                   stroke="#8E9196"
                   tick={{ fill: '#D1D5DB' }}
+                  domain={getYAxisDomain}
+                  allowDataOverflow={false}
                 />
                 <Tooltip 
                   cursor={false}
@@ -331,7 +350,7 @@ const MonthlyMetricsChart: React.FC = () => {
         </div>
       </ChartContainer>
     );
-  }, [data, isDragging]);
+  }, [data, isDragging, getYAxisDomain]);
 
   return (
     <Card className="bg-navy border border-light-navy rounded-lg mb-6">
