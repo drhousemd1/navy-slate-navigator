@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -89,7 +89,7 @@ const queryClient = new QueryClient({
 
 // Configure routes with proper nesting to ensure context is available
 const AppRoutes = () => {
-  // Add debugging for routing
+  // Add debugging for routing using standard React hooks
   React.useEffect(() => {
     console.log('AppRoutes component initialized. Routes ready to be matched.');
   }, []);
@@ -114,8 +114,9 @@ const AppRoutes = () => {
   );
 };
 
+// Main App component
 const App = () => {
-  // Add debugging for react-router to help troubleshoot
+  // Use proper React hooks inside the component function
   React.useEffect(() => {
     console.log('App component initialized. React Router ready.');
   }, []);
