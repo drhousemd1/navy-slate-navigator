@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/AuthContext'; 
@@ -16,7 +15,6 @@ export function useAuthForm() {
   const { signIn, signUp, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Log auth state changes for debugging
   useEffect(() => {
     console.log('Auth state in useAuthForm:', { 
       isAuthenticated, 
@@ -24,7 +22,6 @@ export function useAuthForm() {
     });
   }, [isAuthenticated, authLoading]);
 
-  // Only redirect if we're confident about auth state
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
       console.log("User is authenticated, redirecting to home");
@@ -41,7 +38,6 @@ export function useAuthForm() {
     updateFormState({ loading: true, loginError: null });
 
     try {
-      // Validate input first to prevent unnecessary API calls
       if (!formState.email || !formState.password) {
         updateFormState({
           loginError: "Email and password are required",
@@ -52,40 +48,27 @@ export function useAuthForm() {
       
       console.log("Login attempt with email:", formState.email);
       
-      // Sign in with email and password directly
       const { error } = await signIn(formState.email, formState.password);
       
-      // Handle errors with consistent format
       if (error) {
         console.error("Login error:", error);
-        
-        // Clear auth state only after failed login attempts
-        await clearAuthState();
-        
         updateFormState({
           loginError: error.message || "Authentication failed. Please check your credentials.",
           loading: false
         });
       } else {
-        // Success case - toast notification
         toast({
           title: "Login successful",
           description: "You have been successfully logged in.",
         });
         
-        // Reset login error and loading state
         updateFormState({ 
           loginError: null,
           loading: false 
         });
-        
-        // The useEffect watching isAuthenticated will handle navigation
       }
     } catch (error: any) {
       console.error("Authentication error:", error);
-      
-      // Clear auth state on error
-      await clearAuthState();
       
       updateFormState({
         loginError: "An unexpected error occurred. Please try again.",
@@ -99,7 +82,6 @@ export function useAuthForm() {
     updateFormState({ loading: true, loginError: null });
 
     try {
-      // Validate input
       if (!formState.email || !formState.password) {
         updateFormState({
           loginError: "Email and password are required",
@@ -131,7 +113,6 @@ export function useAuthForm() {
           title: "Account created",
           description: "Please check your email for verification instructions.",
         });
-        // Return to login view after successful signup
         updateFormState({ loading: false });
         return "login";
       }
