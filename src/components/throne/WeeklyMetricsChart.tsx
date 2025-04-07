@@ -12,6 +12,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface MetricsData {
   date: string;
@@ -71,6 +72,21 @@ const weeklyActivityData = [
   { name: 'Punishments', value: 3 },
 ];
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  
+  return (
+    <div style={{ background: 'transparent', color: 'white', fontSize: '0.875rem', lineHeight: '1.4' }}>
+      <div>{label}</div>
+      {payload.map((entry: any, index: number) => (
+        <div key={index} style={{ color: entry.fill || entry.color }}>
+          {entry.name}: {entry.value}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ 
   hideTitle = false,
   onDataLoaded 
@@ -78,6 +94,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   const [data, setData] = useState<MetricsData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<WeeklyMetricsSummary>({
+    tasksCompleted: 0,
+    rulesBroken: 0,
+    rewardsRedeemed: 0,
+    punishments: 0
+  });
 
   // Helper functions
   const generateWeekDays = (): string[] => {
@@ -88,10 +110,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     );
     
     return weekDates;
-  };
-
-  const formatDate = (dateString: string): string => {
-    return format(parseISO(dateString), 'yyyy-MM-dd');
   };
 
   // Get the week dates once for XAxis ticks
@@ -136,15 +154,18 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         setData(finalData);
         
         // Calculate summary for callback
+        const summaryData: WeeklyMetricsSummary = {
+          tasksCompleted: weeklyActivityData[0].value,
+          rulesBroken: weeklyActivityData[1].value,
+          rewardsRedeemed: weeklyActivityData[2].value,
+          punishments: weeklyActivityData[3].value
+        };
+        
+        setSummary(summaryData);
+        
         if (onDataLoaded) {
-          const summary: WeeklyMetricsSummary = {
-            tasksCompleted: weeklyActivityData[0].value,
-            rulesBroken: weeklyActivityData[1].value,
-            rewardsRedeemed: weeklyActivityData[2].value,
-            punishments: weeklyActivityData[3].value
-          };
-          console.log("[SUMMARY METRICS]", summary);
-          onDataLoaded(summary);
+          console.log("[SUMMARY METRICS]", summaryData);
+          onDataLoaded(summaryData);
         }
       } catch (err: any) {
         console.error('[Chart error]', err);
@@ -161,103 +182,136 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
   );
 
-  // Memoize the weekly chart to prevent unnecessary re-renders
+  // Chart component
   const weeklyChart = useMemo(() => {
     return (
-      <ChartContainer 
-        className="w-full h-full"
-        config={chartConfig}
-      >
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
-            <XAxis 
-              dataKey="date"
-              ticks={weekDates}
-              tickFormatter={(date) => {
-                try {
-                  return format(new Date(date), 'EEE'); // Format as 'Sun', 'Mon', etc.
-                } catch {
-                  return date;
-                }
-              }}
-              interval={0} // show all days
-              stroke="#8E9196"
-              tick={{ fill: '#D1D5DB' }}
-            />
-            <YAxis 
-              stroke="#8E9196"
-              tick={{ fill: '#D1D5DB' }}
-            />
-            <ChartTooltip />
-            <Bar 
-              dataKey="tasksCompleted" 
-              name="Tasks Completed" 
-              fill={chartConfig.tasksCompleted.color} 
-              radius={[4, 4, 0, 0]} 
-            />
-            <Bar 
-              dataKey="rulesBroken" 
-              name="Rules Broken" 
-              fill={chartConfig.rulesBroken.color} 
-              radius={[4, 4, 0, 0]} 
-            />
-            <Bar 
-              dataKey="rewardsRedeemed" 
-              name="Rewards Redeemed" 
-              fill={chartConfig.rewardsRedeemed.color} 
-              radius={[4, 4, 0, 0]} 
-            />
-            <Bar 
-              dataKey="punishments" 
-              name="Punishments" 
-              fill={chartConfig.punishments.color} 
-              radius={[4, 4, 0, 0]} 
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartContainer>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
+          <XAxis 
+            dataKey="date"
+            ticks={weekDates}
+            tickFormatter={(date) => {
+              try {
+                return format(new Date(date), 'EEE'); // Format as 'Sun', 'Mon', etc.
+              } catch {
+                return date;
+              }
+            }}
+            interval={0} // show all days
+            stroke="#8E9196"
+            tick={{ fill: '#D1D5DB' }}
+          />
+          <YAxis 
+            stroke="#8E9196"
+            tick={{ fill: '#D1D5DB' }}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Bar 
+            dataKey="tasksCompleted" 
+            name="Tasks Completed" 
+            fill={chartConfig.tasksCompleted.color} 
+            radius={[4, 4, 0, 0]} 
+          />
+          <Bar 
+            dataKey="rulesBroken" 
+            name="Rules Broken" 
+            fill={chartConfig.rulesBroken.color} 
+            radius={[4, 4, 0, 0]} 
+          />
+          <Bar 
+            dataKey="rewardsRedeemed" 
+            name="Rewards Redeemed" 
+            fill={chartConfig.rewardsRedeemed.color} 
+            radius={[4, 4, 0, 0]} 
+          />
+          <Bar 
+            dataKey="punishments" 
+            name="Punishments" 
+            fill={chartConfig.punishments.color} 
+            radius={[4, 4, 0, 0]} 
+          />
+        </BarChart>
+      </ResponsiveContainer>
     );
   }, [data, weekDates]);
 
+  // Component render
   return (
-    <div className="w-full bg-navy border border-light-navy rounded-lg">
-      {!hideTitle && <h3 className="text-lg font-medium text-white px-4 pt-4 mb-4">Weekly Activity Metrics</h3>}
-      {error && (
-        <div className="mb-4 px-3 py-2 bg-red-900/30 border border-red-900/50 rounded text-sm text-red-300 mx-4">
-          {error}
-        </div>
-      )}
-      <div className="w-full px-4 pb-4">
-        {loading && (
-          <Skeleton className="w-full h-64 bg-light-navy/30" />
-        )}
-        {!loading && (
-          <div className="h-64">
-            {!hasContent && (
-              <div className="flex items-center justify-center h-full text-white text-sm">
-                No activity data to display for this week.
-              </div>
-            )}
-            {hasContent && weeklyChart}
+    <>
+      {/* Chart Container */}
+      <div className="w-full bg-navy border border-light-navy rounded-lg mb-6">
+        {!hideTitle && <h3 className="text-lg font-medium text-white px-4 pt-4 mb-4">Weekly Activity Metrics</h3>}
+        
+        {error && (
+          <div className="mb-4 px-3 py-2 bg-red-900/30 border border-red-900/50 rounded text-sm text-red-300 mx-4">
+            {error}
           </div>
         )}
-      </div>
+        
+        <div className="w-full px-4 pb-4">
+          {loading && (
+            <Skeleton className="w-full h-64 bg-light-navy/30" />
+          )}
+          {!loading && (
+            <div className="h-64">
+              {!hasContent && (
+                <div className="flex items-center justify-center h-full text-white text-sm">
+                  No activity data to display for this week.
+                </div>
+              )}
+              {hasContent && weeklyChart}
+            </div>
+          )}
+        </div>
 
-      <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
-        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
-          Tasks Completed
-        </span>
-        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
-          Rules Broken
-        </span>
-        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
-          Rewards Redeemed
-        </span>
-        <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
-          Punishments
-        </span>
+        <div className="flex justify-between items-center flex-wrap px-4 pb-4 gap-2">
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
+            Tasks Completed
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
+            Rules Broken
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
+            Rewards Redeemed
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
+            Punishments
+          </span>
+        </div>
       </div>
-    </div>
+      
+      {/* Summary Tiles Container */}
+      {!loading && (
+        <div className="bg-navy border border-light-navy rounded-lg p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="bg-light-navy rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sky-400 text-sm">Tasks Completed:</span>
+                <span className="text-sm font-bold text-white">{summary.tasksCompleted}</span>
+              </div>
+            </div>
+            <div className="bg-light-navy rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-orange-500 text-sm">Rules Broken:</span>
+                <span className="text-sm font-bold text-white">{summary.rulesBroken}</span>
+              </div>
+            </div>
+            <div className="bg-light-navy rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-purple-400 text-sm">Rewards Redeemed:</span>
+                <span className="text-sm font-bold text-white">{summary.rewardsRedeemed}</span>
+              </div>
+            </div>
+            <div className="bg-light-navy rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-red-400 text-sm">Punishments:</span>
+                <span className="text-sm font-bold text-white">{summary.punishments}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

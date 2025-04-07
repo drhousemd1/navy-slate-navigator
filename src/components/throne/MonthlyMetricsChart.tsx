@@ -1,7 +1,7 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { Card } from '@/components/ui/card';
 
@@ -20,9 +20,26 @@ interface MonthlyMetricsChartProps {
   hideTitle?: boolean;
 }
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  
+  return (
+    <div style={{ background: 'transparent', color: 'white', fontSize: '0.875rem', lineHeight: '1.4' }}>
+      <div>{label}</div>
+      {payload.map((entry: any, index: number) => (
+        <div key={index} style={{ color: entry.fill }}>
+          {entry.name}: {entry.value}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({ 
   hideTitle = false 
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   // Generate monthly metrics data
   const monthlyMetrics = useMemo(() => {
     const now = new Date();
@@ -55,26 +72,37 @@ export const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
 
     return base;
   }, []);
+  
+  const handleClick = (data: any, index: number) => {
+    const container = containerRef.current;
+    if (container) {
+      const scrollOffset = (index * 30) - container.offsetWidth / 2 + 15;
+      container.scrollTo({ left: scrollOffset, behavior: 'smooth' });
+    }
+  };
 
   return (
     <Card className="bg-navy border border-light-navy rounded-lg">
       {!hideTitle && <h2 className="text-lg font-semibold text-white px-4 pt-4 mb-2">Monthly Activity</h2>}
       
-      <div className="overflow-x-auto hide-scrollbar -mx-4 px-4 relative pb-4">
+      <div className="overflow-x-auto hide-scrollbar -mx-4 px-4 relative pb-4" ref={containerRef}>
         {/* Left/right fade shadows for scroll cue */}
         <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
         <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
         
         <div className="min-w-[900px]">
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={monthlyMetrics}>
+            <BarChart 
+              data={monthlyMetrics}
+              onClick={(state) => handleClick(state.activePayload?.[0]?.payload, state.activeTooltipIndex || 0)}
+            >
               <XAxis
                 dataKey="date"
                 tick={{ fill: '#CBD5E0', fontSize: 12 }}
                 interval={0}
               />
               <YAxis tick={{ fill: '#CBD5E0', fontSize: 12 }} />
-              <Tooltip />
+              <Tooltip content={<CustomTooltip />} />
               <Bar
                 dataKey="tasksCompleted"
                 fill="#38bdf8"
