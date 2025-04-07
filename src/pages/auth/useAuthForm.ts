@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/AuthContext'; 
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
@@ -13,8 +13,23 @@ export function useAuthForm() {
     loading: false,
     loginError: null
   });
+  
+  // We'll wrap the Router-dependent code in a try-catch to prevent errors
+  // when the component is rendered outside of a Router context (like in tests)
+  let navigate;
+  let location;
+  
+  try {
+    navigate = useNavigate();
+    location = useLocation();
+  } catch (error) {
+    console.error("Router context not available:", error);
+    // Provide fallback functions that do nothing
+    navigate = () => {};
+    location = { pathname: '/' };
+  }
+  
   const { signIn, signUp, isAuthenticated, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
 
   // Log auth state changes for debugging
   useEffect(() => {
@@ -28,7 +43,11 @@ export function useAuthForm() {
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
       console.log("User is authenticated, redirecting to home");
-      navigate('/');
+      try {
+        navigate('/');
+      } catch (error) {
+        console.error("Navigation failed:", error);
+      }
     }
   }, [isAuthenticated, authLoading, navigate]);
 

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import AppLayout from '../components/AppLayout';
-import Card from "@/components/ui/Card";
+import Card from "@/components/ui/card";
 import { supabase } from '@/integrations/supabase/client';
 import { getWeekDates, getCurrentMonthDates } from "@/utils/dateUtils";
 import { format } from "date-fns";
@@ -121,13 +121,15 @@ const ThroneRoom: React.FC = () => {
     }
     
     for (const entry of rewardData || []) {
-      const date = format(new Date(entry.redeemed_at), "yyyy-MM-dd");
+      // Fix: Use created_at instead of redeemed_at since it doesn't exist
+      const date = format(new Date(entry.created_at), "yyyy-MM-dd");
       if (weekMap[date]) weekMap[date].rewards++;
       if (monthMap[date]) monthMap[date].rewards++;
     }
     
     for (const entry of punishmentData || []) {
-      const date = format(new Date(entry.applied_at), "yyyy-MM-dd");
+      // Fix: Use applied_date instead of applied_at
+      const date = format(new Date(entry.applied_date), "yyyy-MM-dd");
       if (weekMap[date]) weekMap[date].punishments++;
       if (monthMap[date]) monthMap[date].punishments++;
     }
