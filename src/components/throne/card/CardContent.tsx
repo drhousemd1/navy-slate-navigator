@@ -1,6 +1,5 @@
 
 import React from 'react';
-import TaskIcon from '@/components/task/TaskIcon';
 
 interface CardContentProps {
   title: string;
