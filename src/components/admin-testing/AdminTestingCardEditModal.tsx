@@ -15,6 +15,7 @@ import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
 import { supabase } from '@/integrations/supabase/client';
+import ImageSlotSelector from './ImageSlotSelector';
 
 interface AdminTestingCardEditModalProps {
   isOpen: boolean;
@@ -282,6 +283,14 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
     }
   };
   
+  const handleSlotSelect = (index: number) => {
+    setSelectedBoxIndex(index);
+    setImagePreview(imageSlots[index]);
+    if (imageSlots[index]) {
+      form.setValue('background_image_url', imageSlots[index] || '');
+    }
+  };
+  
   const onSubmit = async (data: ThroneRoomCardData) => {
     try {
       setIsSaving(true);
@@ -409,73 +418,14 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
               />
               
               <div className="space-y-4">
-                <FormLabel className="text-white text-lg">Background Image</FormLabel>
-                <div className="flex flex-row items-end space-x-6 mb-4">
-                  <div className="flex space-x-2">
-                    {imageSlots.map((imageUrl, index) => (
-                      <div
-                        key={index}
-                        onClick={() => {
-                          setSelectedBoxIndex(index);
-                          setImagePreview(imageSlots[index]);
-                          if (imageSlots[index]) {
-                            form.setValue('background_image_url', imageSlots[index] || '');
-                          }
-                        }}
-                        className={`w-12 h-12 rounded-md cursor-pointer transition-all
-                          ${selectedBoxIndex === index
-                            ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
-                            : 'bg-dark-navy border border-light-navy hover:border-white'}
-                        `}
-                      >
-                        {imageUrl && (
-                          <img
-                            src={imageUrl}
-                            alt={`Image ${index + 1}`}
-                            className="w-full h-full object-cover rounded-md"
-                            onError={(e) => {
-                              console.error(`Error loading image in slot ${index}`);
-                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMjJDMTcuNTIyOCAyMiAyMiAxNy41MjI4IDIyIDEyQzIyIDYuNDc3MTUgMTcuNTIyOCAyIDIgNi40NzcxNSAyIDEyQzIgMTcuNTIyOCA2LjQ3NzE1IDIyIDEyIDIyWiIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTE1IDlMOSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTkgOUwxNSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
-                            }}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-col items-start space-y-1">
-                    <span className="text-sm text-white font-medium leading-tight">
-                      Carousel Timer
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      (Settings will be applied to all cards)
-                    </span>
-
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => onCarouselTimerChange(Math.max(1, carouselTimer - 1))}
-                        className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
-                      >
-                        –
-                      </Button>
-
-                      <div className="w-10 text-center text-white">{carouselTimer}</div>
-
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => onCarouselTimerChange(carouselTimer + 1)}
-                        className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
-                      >
-                        +
-                      </Button>
-
-                      <span className="text-sm text-slate-400">(s)</span>
-                    </div>
-                  </div>
-                </div>
+                <ImageSlotSelector
+                  imageSlots={imageSlots}
+                  selectedBoxIndex={selectedBoxIndex}
+                  onSelectSlot={handleSlotSelect}
+                  carouselTimer={carouselTimer}
+                  onCarouselTimerChange={onCarouselTimerChange}
+                />
+                
                 <BackgroundImageSelector
                   control={form.control}
                   imagePreview={imagePreview}
@@ -568,7 +518,7 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
               <Button 
                 type="button" 
                 variant="destructive" 
-                onClick={() => handleDeleteCard(cardData.id)} 
+                onClick={handleDeleteCard} 
                 className="mr-auto"
               >
                 <Trash2 className="mr-2 h-4 w-4" />

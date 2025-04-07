@@ -8,6 +8,7 @@ import { renderCardIcon } from '@/components/throne/utils/renderCardIcon';
 import CardHeader from '@/components/throne/card/CardHeader';
 import CardContent from '@/components/throne/card/CardContent';
 import CardFooter from '@/components/throne/card/CardFooter';
+import CardBackground from '@/components/throne/card/CardBackground';
 import { toast } from '@/components/ui/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -254,6 +255,9 @@ const AdminTesting = () => {
       // Ensure background image fields are properly formatted
       let backgroundImageUrl = updatedData.background_image_url || null;
       let backgroundImages = updatedData.background_images || null;
+      
+      console.log("Background image URL:", backgroundImageUrl);
+      console.log("Background images array:", backgroundImages);
       
       // Prepare data for Supabase with proper types
       const dataForSupabase = {
@@ -517,6 +521,15 @@ const AdminTesting = () => {
                   className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy cursor-pointer"
                   onClick={() => updateCardUsage(card)}
                 >
+                  <CardBackground 
+                    visibleImage={card.background_image_url || null}
+                    transitionImage={null}
+                    isTransitioning={false}
+                    focalPointX={card.focal_point_x}
+                    focalPointY={card.focal_point_y}
+                    backgroundOpacity={card.background_opacity}
+                  />
+                  
                   <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
                     <CardHeader 
                       priority={card.priority || 'medium'}
