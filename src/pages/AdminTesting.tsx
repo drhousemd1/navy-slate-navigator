@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Card } from '@/components/ui/card';
-import ThroneRoomCard from '@/components/throne/ThroneRoomCard';
 import ThroneRoomEditModal, { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
 import { defaultThroneRoomCards } from '@/components/throne/defaultThroneRoomCards';
 import { renderCardIcon } from '@/components/throne/utils/renderCardIcon';
