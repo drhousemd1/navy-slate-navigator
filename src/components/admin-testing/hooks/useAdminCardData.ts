@@ -41,6 +41,7 @@ export const useAdminCardData = ({
     icon_url,
     iconName,
     background_image_url,
+    background_images: background_images,
     background_opacity: 80,
     focal_point_x: 50,
     focal_point_y: 50,
@@ -62,18 +63,28 @@ export const useAdminCardData = ({
     if (savedCardData) {
       try {
         const parsedData = JSON.parse(savedCardData);
+        console.log("Loaded saved card data:", {
+          id: parsedData.id,
+          hasBackgroundImages: Array.isArray(parsedData.background_images),
+          backgroundImagesCount: Array.isArray(parsedData.background_images) ? parsedData.background_images.length : 0,
+          hasBackgroundImageUrl: Boolean(parsedData.background_image_url)
+        });
+        
         setCardData({
           ...cardData,
           ...parsedData
         });
         
         // Set images from background_images or single background_image_url
-        if (parsedData.background_images && parsedData.background_images.length > 0) {
+        if (Array.isArray(parsedData.background_images) && parsedData.background_images.length > 0) {
           console.log("Setting images from background_images:", parsedData.background_images.length);
           setImages(parsedData.background_images.filter(Boolean));
         } else if (parsedData.background_image_url) {
           console.log("Setting single image from background_image_url");
           setImages([parsedData.background_image_url]);
+        } else {
+          console.log("No images found in saved data");
+          setImages([]);
         }
       } catch (error) {
         console.error('Error parsing saved card data:', error);
@@ -95,17 +106,24 @@ export const useAdminCardData = ({
 
   const handleSaveCard = (updatedCard: AdminTestingCardData) => {
     console.log("Saving card data:", {
-      ...updatedCard,
+      id: updatedCard.id,
       hasBackgroundImageUrl: Boolean(updatedCard.background_image_url),
-      hasBackgroundImages: Array.isArray(updatedCard.background_images) && updatedCard.background_images.length > 0
+      hasBackgroundImages: Array.isArray(updatedCard.background_images) && updatedCard.background_images.length > 0,
+      imagePreview: updatedCard.background_image_url ? updatedCard.background_image_url.substring(0, 30) + '...' : 'none'
     });
     
-    setCardData(updatedCard);
+    // Make sure we have the complete updated data
+    const newCardData = {
+      ...cardData,
+      ...updatedCard
+    };
+    
+    setCardData(newCardData);
     
     // Update images array based on updated card data
     let newImages: string[] = [];
     
-    if (updatedCard.background_images && updatedCard.background_images.length > 0) {
+    if (Array.isArray(updatedCard.background_images) && updatedCard.background_images.length > 0) {
       console.log("Setting images from updated background_images array:", updatedCard.background_images.length);
       newImages = updatedCard.background_images.filter(Boolean);
     } else if (updatedCard.background_image_url) {
@@ -118,7 +136,8 @@ export const useAdminCardData = ({
     
     // Save to localStorage
     const storageKey = `adminTestingCard_${id}`;
-    localStorage.setItem(storageKey, JSON.stringify(updatedCard));
+    localStorage.setItem(storageKey, JSON.stringify(newCardData));
+    console.log(`Saved card data to localStorage with key: ${storageKey}`);
   };
 
   const usageData = cardData.usage_data || [0, 0, 0, 0, 0, 0, 0];

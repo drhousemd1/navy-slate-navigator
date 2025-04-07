@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form } from '@/components/ui/form';
@@ -309,14 +308,15 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         iconName: selectedIconName || '',
         focal_point_x: position.x,
         focal_point_y: position.y,
-        background_images: validImageSlots.length > 0 ? validImageSlots : [imagePreview].filter(Boolean) as string[],
+        background_images: validImageSlots.length > 0 ? validImageSlots : imagePreview ? [imagePreview] : [],
       };
       
       console.log("Transformed data ready for save:", {
         id: updatedData.id,
         title: updatedData.title,
         imageCount: updatedData.background_images?.length || 0,
-        hasBackgroundImageUrl: Boolean(updatedData.background_image_url)
+        hasBackgroundImageUrl: Boolean(updatedData.background_image_url),
+        backgroundImageUrlPreview: updatedData.background_image_url ? updatedData.background_image_url.substring(0, 30) + '...' : 'none'
       });
       
       await onSave(updatedData);

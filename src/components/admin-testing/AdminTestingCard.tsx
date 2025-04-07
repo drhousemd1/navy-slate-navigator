@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import AdminTestingEditModal from "./AdminTestingEditModal";
 import CardBackground from "./card/CardBackground";
@@ -23,6 +23,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   onUpdate
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [carouselTimer, setCarouselTimer] = useState(5);
 
   const {
     cardData,
@@ -40,6 +41,14 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     background_images: card.background_images,
     background_image_url: card.background_image_url
   });
+
+  useEffect(() => {
+    // Load carousel timer from localStorage
+    const savedTimer = localStorage.getItem('adminTestingCards_carouselTimer');
+    if (savedTimer) {
+      setCarouselTimer(parseInt(savedTimer, 10) || 5);
+    }
+  }, []);
 
   const {
     visibleImage,
@@ -59,9 +68,30 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   const handleSaveAndUpdate = (updated: AdminTestingCardData) => {
     console.log("Saving updated card data:", updated);
+    
+    // First save locally
     handleSaveCard(updated);
+    
+    // Then update parent component
     onUpdate(updated);
+    
+    // Close the modal
+    setIsEditModalOpen(false);
   };
+
+  const handleCarouselTimerChange = (newTimer: number) => {
+    setCarouselTimer(newTimer);
+    localStorage.setItem('adminTestingCards_carouselTimer', String(newTimer));
+  };
+
+  console.log("AdminTestingCard render:", {
+    id: card.id, 
+    hasVisibleImage: Boolean(visibleImage), 
+    hasTransitionImage: Boolean(transitionImage),
+    imagesCount: images.length,
+    backgroundImageUrl: cardData.background_image_url ? "exists" : "none",
+    backgroundImages: cardData.background_images ? `${cardData.background_images.length} images` : "none"
+  });
 
   return (
     <>
@@ -105,10 +135,11 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         onSave={handleSaveAndUpdate}
         onDelete={(id) => {
           // Handle deletion if needed
+          console.log("Delete requested for card:", id);
         }}
         localStorageKey="adminTestingCards"
-        carouselTimer={5}
-        onCarouselTimerChange={() => {}}
+        carouselTimer={carouselTimer}
+        onCarouselTimerChange={handleCarouselTimerChange}
       />
     </>
   );

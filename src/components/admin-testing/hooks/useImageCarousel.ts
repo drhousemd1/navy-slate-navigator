@@ -16,15 +16,46 @@ export const useImageCarousel = ({
   images, 
   globalCarouselIndex 
 }: UseImageCarouselProps): UseImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
+  const [visibleImage, setVisibleImage] = useState<string | null>(null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [previousImages, setPreviousImages] = useState<string[]>([]);
 
+  // Initialize or update visible image when images array changes
   useEffect(() => {
-    if (!images.length || !visibleImage) return;
+    if (images.length > 0) {
+      // Check if images array has changed
+      const imagesChanged = 
+        images.length !== previousImages.length || 
+        images.some((img, i) => previousImages[i] !== img);
+      
+      if (imagesChanged) {
+        console.log("Images array changed, updating visible image");
+        setPreviousImages(images);
+        setVisibleImage(images[0]);
+        setTransitionImage(null);
+        setIsTransitioning(false);
+      }
+    } else if (previousImages.length > 0 && images.length === 0) {
+      // Reset if we had images but now don't
+      console.log("Images array is now empty");
+      setPreviousImages([]);
+      setVisibleImage(null);
+      setTransitionImage(null);
+      setIsTransitioning(false);
+    }
+  }, [images]);
+
+  // Handle image transitions when global carousel index changes
+  useEffect(() => {
+    if (!images.length || images.length <= 1) return;
     
-    const next = images[globalCarouselIndex % images.length];
+    const nextIndex = globalCarouselIndex % images.length;
+    const next = images[nextIndex];
+    
     if (next === visibleImage) return;
+    
+    console.log(`Transitioning to image at index ${nextIndex}`);
     
     const preload = new Image();
     preload.src = next;
@@ -46,6 +77,12 @@ export const useImageCarousel = ({
           return () => clearTimeout(timeout);
         }, 0);
       });
+    };
+    
+    preload.onerror = () => {
+      console.error("Failed to load image:", next);
+      // Try to continue with the next image anyway
+      setVisibleImage(next);
     };
   }, [globalCarouselIndex, images, visibleImage]);
 
