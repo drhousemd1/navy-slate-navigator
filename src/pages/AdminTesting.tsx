@@ -38,6 +38,7 @@ const AdminTesting = () => {
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
   const [isLoading, setIsLoading] = useState(true);
+  const [cardsFetched, setCardsFetched] = useState(false);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -71,6 +72,7 @@ const AdminTesting = () => {
         }
         
         console.log("Received data from Supabase:", data);
+        setCardsFetched(true);
         
         if (data && data.length > 0) {
           const formattedCards = data.map((card: SupabaseCardData) => ({
@@ -94,10 +96,15 @@ const AdminTesting = () => {
         } else {
           console.log("No cards found in the database, creating a default card");
           // If no cards are found, create a default one
-          handleAddCard();
+          await handleAddCard();
         }
       } catch (error) {
         console.error('Error in fetchCards:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load cards. Please try again.",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
@@ -172,6 +179,8 @@ const AdminTesting = () => {
         title: "Success",
         description: "New card created successfully",
       });
+      
+      return formattedCard;
     } catch (error) {
       console.error('Error in handleAddCard:', error);
       toast({
@@ -179,6 +188,7 @@ const AdminTesting = () => {
         description: "An unexpected error occurred while adding the card",
         variant: "destructive"
       });
+      return null;
     }
   };
 
@@ -210,9 +220,13 @@ const AdminTesting = () => {
         
         {isLoading ? (
           <div className="text-center text-white p-8">Loading cards...</div>
-        ) : cards.length === 0 ? (
+        ) : cards.length === 0 && cardsFetched ? (
           <div className="text-center text-white p-8">
             <p>No cards found. Click the "Add New Card" button to create one.</p>
+          </div>
+        ) : cards.length === 0 && !cardsFetched ? (
+          <div className="text-center text-white p-8">
+            <p>Unable to load cards. Please try refreshing the page.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

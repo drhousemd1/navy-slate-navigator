@@ -30,7 +30,7 @@ interface SupabaseCardData {
   title: string;
   description: string | null;
   priority: string | null;
-  points: number | null;  // Ensure points is included as a property
+  points: number | null;
   background_image_url: string | null;
   background_images: Json | null;
   background_opacity: number | null;
