@@ -1,9 +1,11 @@
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps
 } from 'recharts';
-import { format, getMonth, getYear, getDaysInMonth } from 'date-fns';
+import { format, getMonth, getYear, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 
 interface MonthlyDataItem {
   date: string;
@@ -13,8 +15,21 @@ interface MonthlyDataItem {
   punishments: number;
 }
 
+// Hardcoded activity data for the month (similar to the weekly chart approach)
+const monthlyActivityData = [
+  { date: '2025-04-03', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 },
+  { date: '2025-04-07', tasksCompleted: 2, rulesBroken: 1, rewardsRedeemed: 0, punishments: 0 },
+  { date: '2025-04-12', tasksCompleted: 1, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
+  { date: '2025-04-15', tasksCompleted: 4, rulesBroken: 0, rewardsRedeemed: 0, punishments: 1 },
+  { date: '2025-04-20', tasksCompleted: 0, rulesBroken: 2, rewardsRedeemed: 0, punishments: 2 },
+  { date: '2025-04-23', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
+  { date: '2025-04-27', tasksCompleted: 2, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
+];
+
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [data, setData] = useState<MonthlyDataItem[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const chartConfig = {
     tasksCompleted: {
@@ -35,25 +50,74 @@ const MonthlyMetricsChart: React.FC = () => {
     }
   };
 
-  const generateMonthlyData = (): MonthlyDataItem[] => {
-    const now = new Date();
-    const year = getYear(now);
-    const month = getMonth(now);
-    const daysInMonth = getDaysInMonth(new Date(year, month));
+  // Generate month days for the current month
+  const generateMonthDays = (): string[] => {
+    const today = new Date();
+    const monthStart = startOfMonth(today);
+    const monthEnd = endOfMonth(today);
     
-    return Array.from({ length: daysInMonth }, (_, i) => {
-      const day = i + 1;
-      return {
-        date: `${month + 1}/${day}`,
-        tasksCompleted: Math.floor(Math.random() * 4),
-        rulesBroken: Math.floor(Math.random() * 2),
-        rewardsRedeemed: Math.floor(Math.random() * 2),
-        punishments: Math.floor(Math.random() * 2)
-      };
-    });
+    const monthDates = eachDayOfInterval({ 
+      start: monthStart, 
+      end: monthEnd 
+    }).map(date => format(date, 'yyyy-MM-dd'));
+    
+    return monthDates;
   };
 
-  const monthlyData = useMemo(() => generateMonthlyData(), []);
+  // Format date for display
+  const formatDate = (dateString: string): string => {
+    try {
+      return format(parseISO(dateString), 'MMM d');
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Get the month dates once
+  const monthDates = useMemo(() => generateMonthDays(), []);
+
+  useEffect(() => {
+    const loadMonthlyData = () => {
+      try {
+        setLoading(true);
+        
+        const metricsMap = new Map<string, MonthlyDataItem>();
+
+        // Initialize data for each day of the month
+        monthDates.forEach((date) => {
+          metricsMap.set(date, {
+            date,
+            tasksCompleted: 0,
+            rulesBroken: 0,
+            rewardsRedeemed: 0,
+            punishments: 0
+          });
+        });
+
+        // Add the hardcoded monthly activity data
+        monthlyActivityData.forEach((item) => {
+          if (metricsMap.has(item.date)) {
+            const dayData = metricsMap.get(item.date)!;
+            dayData.tasksCompleted = item.tasksCompleted;
+            dayData.rulesBroken = item.rulesBroken;
+            dayData.rewardsRedeemed = item.rewardsRedeemed;
+            dayData.punishments = item.punishments;
+          }
+        });
+
+        const finalData = Array.from(metricsMap.values());
+        console.log("[MONTHLY METRICS DATA]", finalData);
+        
+        setData(finalData);
+      } catch (err: any) {
+        console.error('[Monthly Chart error]', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMonthlyData();
+  }, [monthDates]);
 
   const handleBarClick = (data: any, index: number) => {
     if (!chartContainerRef.current) return;
@@ -68,29 +132,83 @@ const MonthlyMetricsChart: React.FC = () => {
     });
   };
 
-  const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
-    if (active && payload && payload.length) {
-      const dataItem = payload[0].payload as MonthlyDataItem;
-      
-      return (
-        <div className="bg-navy p-2 border border-light-navy rounded-md shadow-lg">
-          <p className="text-white font-medium">{dataItem.date}</p>
-          {payload.map((entry, index) => {
-            const color = entry.color as string || '#fff';
-            const name = entry.name || '';
-            const value = entry.value || 0;
-            
-            return (
-              <p key={index} style={{ color }}>
-                {name}: {value}
-              </p>
-            );
-          })}
-        </div>
-      );
-    }
-    return null;
-  };
+  const hasContent = data.some(d =>
+    d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
+  );
+
+  // Memoize the monthly chart to prevent unnecessary re-renders
+  const monthlyChart = useMemo(() => {
+    return (
+      <ChartContainer 
+        className="w-full h-full"
+        config={chartConfig}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
+            <XAxis 
+              dataKey="date"
+              ticks={data.filter((_, i) => i % 5 === 0).map(d => d.date)} // Show every 5th day
+              tickFormatter={(date) => {
+                try {
+                  return format(parseISO(date), 'd'); // Format as day number only
+                } catch {
+                  return date;
+                }
+              }}
+              stroke="#8E9196"
+              tick={{ fill: '#D1D5DB' }}
+            />
+            <YAxis 
+              stroke="#8E9196"
+              tick={{ fill: '#D1D5DB' }}
+            />
+            <Tooltip 
+              formatter={(value, name, props) => {
+                // Safe type checking for values
+                return [value, name];
+              }}
+              labelFormatter={(label) => {
+                try {
+                  return format(parseISO(String(label)), 'MMM d, yyyy');
+                } catch {
+                  return label;
+                }
+              }}
+            />
+            <Bar 
+              dataKey="tasksCompleted" 
+              name="Tasks Completed" 
+              fill={chartConfig.tasksCompleted.color} 
+              radius={[4, 4, 0, 0]} 
+              onClick={handleBarClick}
+            />
+            <Bar 
+              dataKey="rulesBroken" 
+              name="Rules Broken" 
+              fill={chartConfig.rulesBroken.color} 
+              radius={[4, 4, 0, 0]} 
+              onClick={handleBarClick}
+            />
+            <Bar 
+              dataKey="rewardsRedeemed" 
+              name="Rewards Redeemed" 
+              fill={chartConfig.rewardsRedeemed.color} 
+              radius={[4, 4, 0, 0]} 
+              onClick={handleBarClick}
+            />
+            <Bar 
+              dataKey="punishments" 
+              name="Punishments" 
+              fill={chartConfig.punishments.color} 
+              radius={[4, 4, 0, 0]} 
+              onClick={handleBarClick}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartContainer>
+    );
+  }, [data]);
 
   return (
     <Card className="bg-navy border border-light-navy rounded-lg mb-6">
@@ -99,55 +217,29 @@ const MonthlyMetricsChart: React.FC = () => {
         
         <div 
           ref={chartContainerRef}
-          className="overflow-x-auto hide-scrollbar -mx-4 px-4 relative"
+          className="overflow-x-auto hide-scrollbar relative h-64"
         >
           <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
           <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
           
-          <div className="min-w-[900px]">
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={monthlyData}>
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: '#CBD5E0', fontSize: 12 }}
-                  interval={0}
-                />
-                <YAxis tick={{ fill: '#CBD5E0', fontSize: 12 }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar
-                  dataKey="tasksCompleted"
-                  fill={chartConfig.tasksCompleted.color}
-                  name="Tasks Completed"
-                  radius={[4, 4, 0, 0]}
-                  onClick={handleBarClick}
-                />
-                <Bar
-                  dataKey="rulesBroken"
-                  fill={chartConfig.rulesBroken.color}
-                  name="Rules Broken"
-                  radius={[4, 4, 0, 0]}
-                  onClick={handleBarClick}
-                />
-                <Bar
-                  dataKey="rewardsRedeemed"
-                  fill={chartConfig.rewardsRedeemed.color}
-                  name="Rewards Redeemed"
-                  radius={[4, 4, 0, 0]}
-                  onClick={handleBarClick}
-                />
-                <Bar
-                  dataKey="punishments"
-                  fill={chartConfig.punishments.color}
-                  name="Punishments"
-                  radius={[4, 4, 0, 0]}
-                  onClick={handleBarClick}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="w-full h-full bg-light-navy/30 animate-pulse rounded"></div>
+            </div>
+          ) : (
+            <div className="h-full">
+              {!hasContent ? (
+                <div className="flex items-center justify-center h-full text-white text-sm">
+                  No activity data to display for this month.
+                </div>
+              ) : (
+                monthlyChart
+              )}
+            </div>
+          )}
         </div>
         
-        <div className="flex justify-between items-center flex-wrap mt-2 gap-4">
+        <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
           <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
             Tasks Completed
           </span>
