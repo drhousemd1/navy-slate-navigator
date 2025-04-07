@@ -9,6 +9,75 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_testing_cards: {
+        Row: {
+          background_image_url: string | null
+          background_images: Json | null
+          background_opacity: number | null
+          calendar_color: string | null
+          created_at: string | null
+          description: string | null
+          focal_point_x: number | null
+          focal_point_y: number | null
+          highlight_effect: boolean | null
+          icon_color: string | null
+          icon_name: string | null
+          icon_url: string | null
+          id: string
+          priority: string | null
+          subtext_color: string | null
+          title: string
+          title_color: string | null
+          updated_at: string | null
+          usage_data: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          background_image_url?: string | null
+          background_images?: Json | null
+          background_opacity?: number | null
+          calendar_color?: string | null
+          created_at?: string | null
+          description?: string | null
+          focal_point_x?: number | null
+          focal_point_y?: number | null
+          highlight_effect?: boolean | null
+          icon_color?: string | null
+          icon_name?: string | null
+          icon_url?: string | null
+          id?: string
+          priority?: string | null
+          subtext_color?: string | null
+          title: string
+          title_color?: string | null
+          updated_at?: string | null
+          usage_data?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          background_image_url?: string | null
+          background_images?: Json | null
+          background_opacity?: number | null
+          calendar_color?: string | null
+          created_at?: string | null
+          description?: string | null
+          focal_point_x?: number | null
+          focal_point_y?: number | null
+          highlight_effect?: boolean | null
+          icon_color?: string | null
+          icon_name?: string | null
+          icon_url?: string | null
+          id?: string
+          priority?: string | null
+          subtext_color?: string | null
+          title?: string
+          title_color?: string | null
+          updated_at?: string | null
+          usage_data?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       archived_messages: {
         Row: {
           content: string | null

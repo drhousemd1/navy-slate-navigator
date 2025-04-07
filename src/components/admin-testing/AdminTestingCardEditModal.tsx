@@ -14,6 +14,7 @@ import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
 import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AdminTestingCardEditModalProps {
   isOpen: boolean;
@@ -22,6 +23,8 @@ interface AdminTestingCardEditModalProps {
   onSave: (data: ThroneRoomCardData) => void;
   onDelete: (cardId: string) => void;
   localStorageKey: string;
+  carouselTimer: number;
+  onCarouselTimerChange: (timer: number) => void;
 }
 
 const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
@@ -30,7 +33,9 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
   cardData,
   onSave,
   onDelete,
-  localStorageKey
+  localStorageKey,
+  carouselTimer,
+  onCarouselTimerChange
 }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(cardData?.background_image_url || null);
@@ -42,10 +47,6 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
   });
   const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
-  const [carouselTimer, setCarouselTimer] = useState<number>(() => {
-    const stored = localStorage.getItem(`${localStorageKey}_carouselTimer`);
-    return stored ? parseInt(stored, 10) : 5;
-  });
   
   useEffect(() => {
     localStorage.setItem(`${localStorageKey}_carouselTimer`, String(carouselTimer));
@@ -260,11 +261,6 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
     try {
       console.log("AdminTesting: Deleting card", cardData.id);
       onDelete(cardData.id);
-      
-      toast({
-        title: "Card Deleted",
-        description: "The admin testing card has been deleted",
-      });
     } catch (error) {
       console.error("Error deleting admin testing card:", error);
       toast({
@@ -444,7 +440,7 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
                       <Button
                         type="button"
                         size="sm"
-                        onClick={() => setCarouselTimer((prev) => Math.max(1, prev - 1))}
+                        onClick={() => onCarouselTimerChange(Math.max(1, carouselTimer - 1))}
                         className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
                       >
                         –
@@ -455,7 +451,7 @@ const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
                       <Button
                         type="button"
                         size="sm"
-                        onClick={() => setCarouselTimer((prev) => prev + 1)}
+                        onClick={() => onCarouselTimerChange(carouselTimer + 1)}
                         className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
                       >
                         +

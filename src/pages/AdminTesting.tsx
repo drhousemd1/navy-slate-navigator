@@ -12,16 +12,70 @@ import { toast } from '@/components/ui/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import AdminTestingCardEditModal from '@/components/admin-testing/AdminTestingCardEditModal';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 
 const AdminTesting = () => {
   const [adminTestingCards, setAdminTestingCards] = useState<ThroneRoomCardData[]>([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [selectedCard, setSelectedCard] = useState<ThroneRoomCardData | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [carouselTimer, setCarouselTimer] = useState(5);
   
-  // Constant for localStorage key to ensure consistency
+  // Constant for localStorage key as fallback and for carousel timer
   const ADMIN_TESTING_STORAGE_KEY = 'adminTestingCards';
+
+  const fetchCards = async () => {
+    try {
+      setIsLoading(true);
+      console.log("AdminTesting: Fetching cards from Supabase");
+      
+      const { data, error } = await supabase
+        .from('admin_testing_cards')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching admin testing cards:", error);
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        console.log("AdminTesting: Loaded cards from Supabase:", data);
+        setAdminTestingCards(data);
+      } else {
+        console.log("AdminTesting: No cards found in Supabase, initializing with defaults");
+        initializeDefaultCards();
+      }
+    } catch (error) {
+      console.error("Error fetching admin testing cards:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load cards. Loading default cards instead.",
+        variant: "destructive"
+      });
+      
+      // Try to load from localStorage as fallback
+      const saved = localStorage.getItem(ADMIN_TESTING_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsedCards = JSON.parse(saved);
+          if (Array.isArray(parsedCards) && parsedCards.length > 0) {
+            setAdminTestingCards(parsedCards);
+          } else {
+            initializeDefaultCards();
+          }
+        } catch (err) {
+          initializeDefaultCards();
+        }
+      } else {
+        initializeDefaultCards();
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     console.log("AdminTesting: Component mounted");
@@ -31,37 +85,52 @@ const AdminTesting = () => {
       description: "Admin testing page has been loaded",
     });
     
-    try {
-      console.log("AdminTesting: Loading cards from localStorage");
-      const saved = localStorage.getItem(ADMIN_TESTING_STORAGE_KEY);
-      
-      if (saved) {
-        try {
-          const parsedCards = JSON.parse(saved);
-          console.log("AdminTesting: Loaded cards:", parsedCards);
-          
-          if (Array.isArray(parsedCards) && parsedCards.length > 0) {
-            setAdminTestingCards(parsedCards);
-            setIsInitialized(true);
-          } else {
-            console.log("AdminTesting: Saved cards array was empty, initializing with defaults");
-            initializeDefaultCards();
-          }
-        } catch (err) {
-          console.error('Error parsing adminTestingCards:', err);
-          initializeDefaultCards();
-        }
-      } else {
-        console.log("AdminTesting: No saved cards found, initializing with defaults");
-        initializeDefaultCards();
-      }
-    } catch (error) {
-      console.error("AdminTesting: Error in initialization:", error);
-      initializeDefaultCards();
+    // Load carousel timer from localStorage
+    const storedTimer = parseInt(localStorage.getItem(`${ADMIN_TESTING_STORAGE_KEY}_carouselTimer`) || '5', 10);
+    if (!isNaN(storedTimer)) {
+      setCarouselTimer(storedTimer);
     }
+    
+    fetchCards();
+    
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('admin-testing-changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'admin_testing_cards' 
+        }, 
+        (payload) => {
+          console.log("Realtime update received:", payload);
+          fetchCards(); // Refetch cards when changes occur
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const initializeDefaultCards = () => {
+  useEffect(() => {
+    if (isLoading) return;
+    
+    localStorage.setItem(`${ADMIN_TESTING_STORAGE_KEY}_carouselTimer`, carouselTimer.toString());
+    
+    const interval = setInterval(() => {
+      setCarouselIndex((prev) => {
+        // Only rotate if there are multiple cards
+        if (adminTestingCards.length <= 1) return prev;
+        return (prev + 1) % adminTestingCards.length;
+      });
+    }, carouselTimer * 1000);
+    
+    return () => clearInterval(interval);
+  }, [isLoading, carouselTimer, adminTestingCards.length]);
+
+  const initializeDefaultCards = async () => {
     try {
       console.log("AdminTesting: Initializing with default cards");
       const initialCards = defaultThroneRoomCards.map(card => ({
@@ -74,99 +143,252 @@ const AdminTesting = () => {
         subtext_color: '#8E9196',
         calendar_color: '#7E69AB',
         highlight_effect: false,
-        priority: card.priority || 'medium'
+        priority: card.priority || 'medium',
+        usage_data: [0, 0, 0, 0, 0, 0, 0]
       }));
       
       console.log("AdminTesting: Setting initial cards:", initialCards);
-      setAdminTestingCards(initialCards);
+      
+      // Save to Supabase
+      for (const card of initialCards) {
+        const { error } = await supabase
+          .from('admin_testing_cards')
+          .insert([card]);
+          
+        if (error) {
+          console.error("Error inserting default card:", error);
+        }
+      }
+      
+      // Also save to localStorage as fallback
       localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(initialCards));
-      setIsInitialized(true);
+      
+      setAdminTestingCards(initialCards);
     } catch (error) {
       console.error("AdminTesting: Error initializing default cards:", error);
+      toast({
+        title: "Error",
+        description: "Failed to initialize default cards.",
+        variant: "destructive"
+      });
     }
   };
 
-  useEffect(() => {
-    if (!isInitialized) return;
-    
-    const stored = parseInt(localStorage.getItem(`${ADMIN_TESTING_STORAGE_KEY}_carouselTimer`) || '5', 10);
-    const interval = setInterval(() => {
-      setCarouselIndex((prev) => prev + 1);
-    }, (isNaN(stored) ? 5 : stored) * 1000);
-    
-    return () => clearInterval(interval);
-  }, [isInitialized]);
-
-  const handleSaveCard = (updatedData: ThroneRoomCardData) => {
-    console.log("AdminTesting: Saving card", updatedData);
-    setAdminTestingCards(prev => {
-      const index = prev.findIndex(c => c.id === updatedData.id);
-      if (index >= 0) {
-        const newArr = [...prev];
-        newArr[index] = updatedData;
-        localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
-        return newArr;
-      } else {
-        const newArr = [...prev, updatedData];
-        localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
-        return newArr;
+  const handleSaveCard = async (updatedData: ThroneRoomCardData) => {
+    try {
+      console.log("AdminTesting: Saving card", updatedData);
+      
+      // Ensure we have the required fields
+      if (!updatedData.title) {
+        throw new Error("Card title is required");
       }
-    });
-    
-    toast({
-      title: "Card Updated",
-      description: "The admin testing card has been updated successfully",
-    });
-    
-    // Close the edit modal after saving
-    setIsEditModalOpen(false);
+      
+      // Update in Supabase
+      const { error } = await supabase
+        .from('admin_testing_cards')
+        .upsert({
+          id: updatedData.id,
+          title: updatedData.title,
+          description: updatedData.description,
+          icon_name: updatedData.iconName,
+          icon_url: updatedData.icon_url,
+          icon_color: updatedData.icon_color,
+          title_color: updatedData.title_color,
+          subtext_color: updatedData.subtext_color,
+          calendar_color: updatedData.calendar_color,
+          background_image_url: updatedData.background_image_url,
+          background_images: updatedData.background_images,
+          background_opacity: updatedData.background_opacity,
+          focal_point_x: updatedData.focal_point_x,
+          focal_point_y: updatedData.focal_point_y,
+          highlight_effect: updatedData.highlight_effect,
+          priority: updatedData.priority,
+          usage_data: updatedData.usage_data || [0, 0, 0, 0, 0, 0, 0],
+          updated_at: new Date().toISOString()
+        });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state only when no realtime subscription
+      const index = adminTestingCards.findIndex(c => c.id === updatedData.id);
+      if (index >= 0) {
+        const newArr = [...adminTestingCards];
+        newArr[index] = updatedData;
+        setAdminTestingCards(newArr);
+        // Also update localStorage as fallback
+        localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
+      }
+      
+      toast({
+        title: "Card Updated",
+        description: "The admin testing card has been updated successfully",
+      });
+      
+      // Close the edit modal after saving
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error("Error saving admin testing card:", error);
+      toast({
+        title: "Error",
+        description: `Failed to save card: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    }
   };
   
-  const handleDeleteCard = (cardId: string) => {
-    console.log("AdminTesting: Deleting card", cardId);
-    setAdminTestingCards(prev => {
-      const newArr = prev.filter(card => card.id !== cardId);
+  const handleDeleteCard = async (cardId: string) => {
+    try {
+      console.log("AdminTesting: Deleting card", cardId);
+      
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('admin_testing_cards')
+        .delete()
+        .eq('id', cardId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state only when no realtime subscription
+      const newArr = adminTestingCards.filter(card => card.id !== cardId);
+      setAdminTestingCards(newArr);
+      
+      // Also update localStorage as fallback
       localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
-      return newArr;
-    });
-    
-    setIsEditModalOpen(false);
-    
-    toast({
-      title: "Card Deleted",
-      description: "The admin testing card has been deleted successfully",
-    });
+      
+      setIsEditModalOpen(false);
+      
+      toast({
+        title: "Card Deleted",
+        description: "The admin testing card has been deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting admin testing card:", error);
+      toast({
+        title: "Error",
+        description: `Failed to delete card: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleAddCard = () => {
-    const newId = `card-${Date.now()}`;
-    const newCard: ThroneRoomCardData = {
-      id: newId,
-      title: 'New Card',
-      description: 'This is a new card description',
-      iconName: '',
-      icon_color: '#FFFFFF',
-      title_color: '#FFFFFF',
-      subtext_color: '#8E9196',
-      calendar_color: '#7E69AB',
-      highlight_effect: false,
-      priority: 'medium'
-    };
+  const handleAddCard = async () => {
+    try {
+      const newId = `card-${Date.now()}`;
+      const newCard: ThroneRoomCardData = {
+        id: newId,
+        title: 'New Card',
+        description: 'This is a new card description',
+        iconName: '',
+        icon_color: '#FFFFFF',
+        title_color: '#FFFFFF',
+        subtext_color: '#8E9196',
+        calendar_color: '#7E69AB',
+        highlight_effect: false,
+        priority: 'medium',
+        usage_data: [0, 0, 0, 0, 0, 0, 0]
+      };
 
-    setAdminTestingCards(prev => {
-      const newArr = [...prev, newCard];
-      localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
-      return newArr;
-    });
+      // Insert into Supabase
+      const { error } = await supabase
+        .from('admin_testing_cards')
+        .insert([{
+          id: newCard.id,
+          title: newCard.title,
+          description: newCard.description,
+          icon_name: newCard.iconName,
+          icon_color: newCard.icon_color,
+          title_color: newCard.title_color,
+          subtext_color: newCard.subtext_color,
+          calendar_color: newCard.calendar_color,
+          highlight_effect: newCard.highlight_effect,
+          priority: newCard.priority,
+          usage_data: newCard.usage_data
+        }]);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setAdminTestingCards(prev => {
+        const newArr = [...prev, newCard];
+        // Also update localStorage as fallback
+        localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
+        return newArr;
+      });
 
-    toast({
-      title: "Card Added",
-      description: "A new card has been added successfully",
-    });
-    
-    // Select and open the edit modal for the new card
-    setSelectedCard(newCard);
-    setIsEditModalOpen(true);
+      toast({
+        title: "Card Added",
+        description: "A new card has been added successfully",
+      });
+      
+      // Select and open the edit modal for the new card
+      setSelectedCard(newCard);
+      setIsEditModalOpen(true);
+    } catch (error) {
+      console.error("Error adding admin testing card:", error);
+      toast({
+        title: "Error",
+        description: `Failed to add card: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Update card usage data
+  const updateCardUsage = async (card: ThroneRoomCardData) => {
+    try {
+      // Get current day of week (0-6, where 0 is Sunday)
+      const dayOfWeek = new Date().getDay();
+      
+      // Create a copy of the current usage data or initialize if not present
+      const usageData = [...(card.usage_data || [0, 0, 0, 0, 0, 0, 0])];
+      
+      // Increment the count for today
+      usageData[dayOfWeek] = (usageData[dayOfWeek] || 0) + 1;
+      
+      // Update in Supabase
+      const { error } = await supabase
+        .from('admin_testing_cards')
+        .update({ 
+          usage_data: usageData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', card.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      const updatedCards = adminTestingCards.map(c => {
+        if (c.id === card.id) {
+          return { ...c, usage_data: usageData };
+        }
+        return c;
+      });
+      
+      setAdminTestingCards(updatedCards);
+      
+      // Also update localStorage as fallback
+      localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(updatedCards));
+      
+      toast({
+        title: "Usage Recorded",
+        description: "Card usage has been recorded for today",
+      });
+    } catch (error) {
+      console.error("Error updating card usage:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update card usage",
+        variant: "destructive"
+      });
+    }
   };
 
   console.log("AdminTesting: Rendering with cards:", adminTestingCards);
@@ -181,7 +403,7 @@ const AdminTesting = () => {
         </div>
         
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-white">Section 1</h2>
+          <h2 className="text-xl font-bold text-white">Admin Testing Cards</h2>
           <Button 
             className="bg-green-500 hover:bg-green-600 text-white"
             onClick={handleAddCard}
@@ -190,8 +412,9 @@ const AdminTesting = () => {
           </Button>
         </div>
         
-        {!isInitialized ? (
+        {isLoading ? (
           <div className="flex items-center justify-center h-64 bg-navy rounded-lg">
+            <Loader2 className="h-8 w-8 text-white animate-spin mr-2" />
             <p className="text-white text-xl">Loading admin testing cards...</p>
           </div>
         ) : adminTestingCards.length === 0 ? (
@@ -210,7 +433,11 @@ const AdminTesting = () => {
               const IconComponent = defaultThroneRoomCards.find(defaultCard => defaultCard.id === card.id)?.icon;
               
               return (
-                <Card key={card.id} className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
+                <Card 
+                  key={card.id} 
+                  className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy cursor-pointer"
+                  onClick={() => updateCardUsage(card)}
+                >
                   <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
                     <CardHeader 
                       priority={card.priority || 'medium'}
@@ -235,8 +462,9 @@ const AdminTesting = () => {
                     
                     <CardFooter 
                       calendarColor={card.calendar_color || '#7E69AB'}
-                      usageData={card.usage_data || [1, 0, 1, 0, 0, 0, 0]}
-                      onEditClick={() => {
+                      usageData={card.usage_data || [0, 0, 0, 0, 0, 0, 0]}
+                      onEditClick={(e) => {
+                        e.stopPropagation(); // Prevent card click event
                         setSelectedCard(card);
                         setIsEditModalOpen(true);
                       }}
@@ -266,6 +494,8 @@ const AdminTesting = () => {
           onSave={handleSaveCard}
           onDelete={handleDeleteCard}
           localStorageKey={ADMIN_TESTING_STORAGE_KEY}
+          carouselTimer={carouselTimer}
+          onCarouselTimerChange={setCarouselTimer}
         />
       )}
     </AppLayout>
