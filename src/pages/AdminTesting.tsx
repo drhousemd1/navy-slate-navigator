@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -15,15 +14,13 @@ import AdminTestingCardEditModal from '@/components/admin-testing/AdminTestingCa
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { PostgrestResponse } from '@supabase/supabase-js';
-import { useImageCarousel } from '@/components/throne/hooks/useImageCarousel';
+import { useImageCarousel } from '@/components/admin-testing/hooks/useImageCarousel';
 import AdminTestingCardBackground from '@/components/admin-testing/AdminTestingCardBackground';
 
-// Define a type specifically for the admin testing cards
 interface AdminTestingCardData extends ThroneRoomCardData {
   // Additional fields specific to admin testing cards can be added here
 }
 
-// Define the structure of the data returned from Supabase
 interface AdminTestingCardRow {
   id: string;
   title: string;
@@ -55,7 +52,6 @@ const AdminTesting = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [carouselTimer, setCarouselTimer] = useState(5);
   
-  // Constant for localStorage key as fallback and for carousel timer
   const ADMIN_TESTING_STORAGE_KEY = 'adminTestingCards';
 
   const fetchCards = async () => {
@@ -63,7 +59,6 @@ const AdminTesting = () => {
       setIsLoading(true);
       console.log("AdminTesting: Fetching cards from Supabase");
       
-      // Using the any type to avoid TypeScript errors
       const { data, error }: PostgrestResponse<AdminTestingCardRow> = await supabase
         .from('admin_testing_cards')
         .select('*')
@@ -76,7 +71,6 @@ const AdminTesting = () => {
       
       if (data && data.length > 0) {
         console.log("AdminTesting: Loaded cards from Supabase:", data);
-        // Transform the data to ensure it matches our expected format
         const formattedData = data.map(card => ({
           id: card.id,
           title: card.title || 'Untitled Card',
@@ -110,7 +104,6 @@ const AdminTesting = () => {
         variant: "destructive"
       });
       
-      // Try to load from localStorage as fallback
       const saved = localStorage.getItem(ADMIN_TESTING_STORAGE_KEY);
       if (saved) {
         try {
@@ -139,7 +132,6 @@ const AdminTesting = () => {
       description: "Admin testing page has been loaded",
     });
     
-    // Load carousel timer from localStorage
     const storedTimer = parseInt(localStorage.getItem(`${ADMIN_TESTING_STORAGE_KEY}_carouselTimer`) || '5', 10);
     if (!isNaN(storedTimer)) {
       setCarouselTimer(storedTimer);
@@ -147,7 +139,6 @@ const AdminTesting = () => {
     
     fetchCards();
     
-    // Set up realtime subscription
     const channel = supabase
       .channel('admin-testing-changes')
       .on('postgres_changes', 
@@ -158,7 +149,7 @@ const AdminTesting = () => {
         }, 
         (payload) => {
           console.log("Realtime update received:", payload);
-          fetchCards(); // Refetch cards when changes occur
+          fetchCards();
         }
       )
       .subscribe();
@@ -175,7 +166,6 @@ const AdminTesting = () => {
     
     const interval = setInterval(() => {
       setCarouselIndex((prev) => {
-        // Only rotate if there are multiple cards
         if (adminTestingCards.length <= 1) return prev;
         return (prev + 1) % adminTestingCards.length;
       });
@@ -203,7 +193,6 @@ const AdminTesting = () => {
       
       console.log("AdminTesting: Setting initial cards:", initialCards);
       
-      // Save to Supabase
       for (const card of initialCards) {
         const { error } = await supabase
           .from('admin_testing_cards')
@@ -226,7 +215,6 @@ const AdminTesting = () => {
         }
       }
       
-      // Also save to localStorage as fallback
       localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(initialCards));
       
       setAdminTestingCards(initialCards);
@@ -244,23 +232,16 @@ const AdminTesting = () => {
     try {
       console.log("AdminTesting: Saving card", updatedData);
       
-      // Ensure we have the required fields
       if (!updatedData.title) {
         throw new Error("Card title is required");
       }
       
-      // Ensure icon fields are properly formatted
       const iconName = updatedData.iconName || null;
       const iconUrl = updatedData.icon_url || null;
       
-      // Ensure background image fields are properly formatted
       let backgroundImageUrl = updatedData.background_image_url || null;
       let backgroundImages = updatedData.background_images || null;
       
-      console.log("Background image URL:", backgroundImageUrl);
-      console.log("Background images array:", backgroundImages);
-      
-      // Prepare data for Supabase with proper types
       const dataForSupabase = {
         id: updatedData.id,
         title: updatedData.title,
@@ -282,9 +263,6 @@ const AdminTesting = () => {
         updated_at: new Date().toISOString()
       };
       
-      console.log("Sending data to Supabase:", dataForSupabase);
-      
-      // Update in Supabase
       const { error } = await supabase
         .from('admin_testing_cards')
         .upsert(dataForSupabase);
@@ -294,13 +272,11 @@ const AdminTesting = () => {
         throw error;
       }
       
-      // Update local state only when no realtime subscription
       const index = adminTestingCards.findIndex(c => c.id === updatedData.id);
       if (index >= 0) {
         const newArr = [...adminTestingCards];
         newArr[index] = updatedData;
         setAdminTestingCards(newArr);
-        // Also update localStorage as fallback
         localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
       }
       
@@ -309,7 +285,6 @@ const AdminTesting = () => {
         description: "The admin testing card has been updated successfully",
       });
       
-      // Close the edit modal after saving
       setIsEditModalOpen(false);
       setSelectedCard(null);
     } catch (error) {
@@ -321,12 +296,11 @@ const AdminTesting = () => {
       });
     }
   };
-  
+
   const handleDeleteCard = async (cardId: string) => {
     try {
       console.log("AdminTesting: Deleting card", cardId);
       
-      // Delete from Supabase
       const { error } = await supabase
         .from('admin_testing_cards')
         .delete()
@@ -336,11 +310,9 @@ const AdminTesting = () => {
         throw error;
       }
       
-      // Update local state only when no realtime subscription
       const newArr = adminTestingCards.filter(card => card.id !== cardId);
       setAdminTestingCards(newArr);
       
-      // Also update localStorage as fallback
       localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
       
       setIsEditModalOpen(false);
@@ -376,7 +348,6 @@ const AdminTesting = () => {
         usage_data: [0, 0, 0, 0, 0, 0, 0]
       };
 
-      // Insert into Supabase
       const { error } = await supabase
         .from('admin_testing_cards')
         .insert([{
@@ -397,10 +368,8 @@ const AdminTesting = () => {
         throw error;
       }
       
-      // Update local state
       setAdminTestingCards(prev => {
         const newArr = [...prev, newCard];
-        // Also update localStorage as fallback
         localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(newArr));
         return newArr;
       });
@@ -410,7 +379,6 @@ const AdminTesting = () => {
         description: "A new card has been added successfully",
       });
       
-      // Select and open the edit modal for the new card
       setSelectedCard(newCard);
       setIsEditModalOpen(true);
     } catch (error) {
@@ -423,19 +391,12 @@ const AdminTesting = () => {
     }
   };
 
-  // Update card usage data
   const updateCardUsage = async (card: AdminTestingCardData) => {
     try {
-      // Get current day of week (0-6, where 0 is Sunday)
       const dayOfWeek = new Date().getDay();
-      
-      // Create a copy of the current usage data or initialize if not present
       const usageData = [...(card.usage_data || [0, 0, 0, 0, 0, 0, 0])];
-      
-      // Increment the count for today
       usageData[dayOfWeek] = (usageData[dayOfWeek] || 0) + 1;
       
-      // Update in Supabase
       const { error } = await supabase
         .from('admin_testing_cards')
         .update({ 
@@ -448,7 +409,6 @@ const AdminTesting = () => {
         throw error;
       }
       
-      // Update local state
       const updatedCards = adminTestingCards.map(c => {
         if (c.id === card.id) {
           return { ...c, usage_data: usageData };
@@ -458,7 +418,6 @@ const AdminTesting = () => {
       
       setAdminTestingCards(updatedCards);
       
-      // Also update localStorage as fallback
       localStorage.setItem(ADMIN_TESTING_STORAGE_KEY, JSON.stringify(updatedCards));
       
       toast({
@@ -515,6 +474,7 @@ const AdminTesting = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {adminTestingCards.map((card) => {
               const IconComponent = defaultThroneRoomCards.find(defaultCard => defaultCard.id === card.id)?.icon;
+              
               const images = card.background_images ? 
                 Array.isArray(card.background_images) ? card.background_images.filter(Boolean) as string[] : [] 
                 : [];
@@ -523,14 +483,10 @@ const AdminTesting = () => {
               const allImages = backgroundImageUrl ? 
                 [backgroundImageUrl, ...images] : images;
               
-              // Only use the carousel if there are multiple images
-              const { visibleImage, transitionImage, isTransitioning } = 
-                allImages.length > 0 ? 
-                useImageCarousel({ 
-                  images: allImages, 
-                  globalCarouselIndex: carouselIndex 
-                }) : 
-                { visibleImage: backgroundImageUrl, transitionImage: null, isTransitioning: false };
+              const { visibleImage, transitionImage, isTransitioning } = useImageCarousel(
+                allImages,
+                5000
+              );
               
               return (
                 <Card 
@@ -574,7 +530,7 @@ const AdminTesting = () => {
                       usageData={card.usage_data || [0, 0, 0, 0, 0, 0, 0]}
                       onEditClick={() => {
                         console.log("Setting selected card:", card);
-                        setSelectedCard({...card}); // Create a copy to avoid reference issues
+                        setSelectedCard({...card});
                         setIsEditModalOpen(true);
                       }}
                     />

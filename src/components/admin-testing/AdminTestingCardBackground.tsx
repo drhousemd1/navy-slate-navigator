@@ -1,7 +1,7 @@
 
 import React from 'react';
 
-interface AdminTestingCardBackgroundProps {
+interface Props {
   visibleImage: string | null;
   transitionImage: string | null;
   isTransitioning: boolean;
@@ -10,48 +10,34 @@ interface AdminTestingCardBackgroundProps {
   backgroundOpacity?: number;
 }
 
-const AdminTestingCardBackground: React.FC<AdminTestingCardBackgroundProps> = ({
+const AdminTestingCardBackground: React.FC<Props> = ({
   visibleImage,
   transitionImage,
   isTransitioning,
   focalPointX = 50,
   focalPointY = 50,
-  backgroundOpacity = 100
+  backgroundOpacity = 100,
 }) => {
-  if (!visibleImage && !transitionImage) return null;
-  
-  return (
-    <>
-      {visibleImage && (
-        <img
-          src={visibleImage}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
-          style={{ 
-            transition: 'opacity 2s ease-in-out',
-            objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100
-          }}
-          draggable={false}
-        />
-      )}
+  const createStyle = (image: string | null) => ({
+    backgroundImage: image ? `url(${image})` : undefined,
+    backgroundSize: 'cover',
+    backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+    opacity: backgroundOpacity / 100,
+    transition: 'opacity 0.8s ease-in-out',
+  });
 
-      {transitionImage && (
-        <img
-          src={transitionImage}
-          alt=""
-          className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
-            isTransitioning ? 'opacity-100' : 'opacity-0'
-          }`}
-          style={{ 
-            transition: 'opacity 2s ease-in-out',
-            objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: isTransitioning ? backgroundOpacity / 100 : 0
-          }}
-          draggable={false}
+  return (
+    <div className="absolute inset-0 overflow-hidden rounded-lg">
+      {visibleImage && (
+        <div className="absolute inset-0 z-0" style={createStyle(visibleImage)} />
+      )}
+      {isTransitioning && transitionImage && (
+        <div
+          className="absolute inset-0 z-10"
+          style={{ ...createStyle(transitionImage), opacity: 1 }}
         />
       )}
-    </>
+    </div>
   );
 };
 
