@@ -410,7 +410,7 @@ const ThroneRoom: React.FC = () => {
           </div>
           
           <div className="space-y-6">
-            {/* Weekly Activity Chart */}
+            {/* Weekly Activity Chart with title inside */}
             <Card className="bg-navy border border-light-navy">
               <CardHeader className="border-b border-light-navy">
                 <div className="flex justify-between items-center">
