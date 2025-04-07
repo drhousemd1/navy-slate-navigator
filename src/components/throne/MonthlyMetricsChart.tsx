@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps
@@ -246,14 +245,18 @@ const MonthlyMetricsChart: React.FC = () => {
       >
         <div
           ref={chartScrollRef}
-          className="overflow-x-auto cursor-grab active:cursor-grabbing select-none"
+          className="overflow-x-auto cursor-grab active:cursor-grabbing select-none scrollbar-hide"
+          style={{ 
+            scrollbarWidth: 'none', 
+            msOverflowStyle: 'none'
+          }}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={endDrag}
           onMouseLeave={endDrag}
         >
           <div className="inline-block min-w-full select-none">
-            <ResponsiveContainer width={900} height={300}>
+            <ResponsiveContainer width={900} height={260}>
               <BarChart data={data}>
                 <CartesianGrid 
                   strokeDasharray="0" 
@@ -337,7 +340,7 @@ const MonthlyMetricsChart: React.FC = () => {
         
         <div 
           ref={chartContainerRef}
-          className="overflow-x-auto hide-scrollbar relative h-64"
+          className="overflow-hidden relative h-64"
         >
           <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
           <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
