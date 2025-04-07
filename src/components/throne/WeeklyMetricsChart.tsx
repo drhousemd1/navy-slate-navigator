@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend
@@ -81,6 +81,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   const [data, setData] = useState<MetricsData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const chartScrollRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
 
   // Helper functions
   const generateWeekDays = (): string[] => {
@@ -134,6 +138,23 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   };
 
   const monthlyMetrics = useMemo(() => getCurrentMonthMetrics(), []);
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!chartScrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - chartScrollRef.current.offsetLeft);
+    setScrollLeft(chartScrollRef.current.scrollLeft);
+  };
+
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !chartScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - chartScrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    chartScrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const endDrag = () => setIsDragging(false);
 
   useEffect(() => {
     const loadHardcodedData = () => {
@@ -228,9 +249,19 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               tick={{ fill: '#D1D5DB' }}
             />
             <Tooltip 
+              cursor={{ fill: '#0000' }} // Transparent cursor
+              wrapperStyle={{ zIndex: 9999, marginLeft: '20px' }}
+              contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
+              offset={25}
               formatter={(value, name, props) => {
-                // Safe type checking for values
                 return [value, name];
+              }}
+              labelFormatter={(label) => {
+                try {
+                  return format(new Date(String(label)), 'MMM d, yyyy');
+                } catch {
+                  return label;
+                }
               }}
             />
             <Bar 
@@ -268,7 +299,14 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
       <div className="p-4">
         <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
         
-        <div className="w-full">
+        <div 
+          className="w-full select-none"
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={endDrag}
+          onMouseLeave={endDrag}
+          ref={chartScrollRef}
+        >
           {loading && (
             <Skeleton className="w-full h-64 bg-light-navy/30" />
           )}
