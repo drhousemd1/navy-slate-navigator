@@ -235,7 +235,8 @@ const MonthlyMetricsChart: React.FC = () => {
   }, [monthDates]);
 
   const handleBarClick = (data: any, index: number) => {
-    console.log("Bar clicked at index:", index);
+    console.log("Bar clicked at index:", index, "data:", data);
+    
     if (!chartScrollRef.current) {
       console.log("No chart scroll ref");
       return;
@@ -244,16 +245,34 @@ const MonthlyMetricsChart: React.FC = () => {
     const containerWidth = chartScrollRef.current.clientWidth;
     console.log("Container width:", containerWidth);
     
-    const barWidth = 40; // Approximate width of each bar
-    console.log("Bar width:", barWidth);
+    // Calculate bar width based on the number of data points
+    const barWidth = 900 / monthDates.length; // Width divided by number of days
+    console.log("Calculated bar width:", barWidth);
+    
+    // Get the actual date value from the clicked bar
+    const clickedDate = data.date;
+    console.log("Clicked date:", clickedDate);
+    
+    // Find the index of the clicked date in our data array
+    const dateIndex = monthDates.findIndex(date => date === clickedDate);
+    console.log("Date index in array:", dateIndex);
+    
+    if (dateIndex === -1) {
+      console.log("Couldn't find date in monthDates array");
+      return;
+    }
     
     // Calculate the target scroll position to center the clicked bar
-    const scrollPosition = (index * barWidth) - (containerWidth / 2) + (barWidth / 2);
-    console.log("Calculated scroll position:", scrollPosition);
+    const scrollPosition = (dateIndex * barWidth) - (containerWidth / 2) + (barWidth / 2);
+    console.log("New calculated scroll position:", scrollPosition);
+    
+    // Ensure we don't scroll before the start of the chart
+    const adjustedPosition = Math.max(0, scrollPosition);
+    console.log("Adjusted scroll position:", adjustedPosition);
     
     // Animate scrolling to center the clicked bar
     chartScrollRef.current.scrollTo({
-      left: Math.max(0, scrollPosition),
+      left: adjustedPosition,
       behavior: 'smooth'
     });
   };
