@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps
@@ -6,6 +7,7 @@ import { format, getMonth, getYear, getDaysInMonth, eachDayOfInterval, startOfMo
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface MonthlyDataItem {
   date: string;
@@ -105,76 +107,96 @@ const MonthlyMetricsChart: React.FC = () => {
         const monthStart = startOfMonth(today);
         const monthEnd = endOfMonth(today);
 
-        const { data: taskCompletions, error: taskError } = await supabase
-          .from('task_completion_history')
-          .select('*')
-          .gte('completed_at', monthStart.toISOString())
-          .lte('completed_at', monthEnd.toISOString());
+        // Fetch task completions
+        try {
+          const { data: taskCompletions, error: taskError } = await supabase
+            .from('task_completion_history')
+            .select('*')
+            .gte('completed_at', monthStart.toISOString())
+            .lte('completed_at', monthEnd.toISOString());
 
-        if (taskError) {
-          console.error('Error fetching task completions:', taskError);
-        } else if (taskCompletions) {
-          taskCompletions.forEach((completion) => {
-            const completionDate = format(new Date(completion.completed_at), 'yyyy-MM-dd');
-            if (metricsMap.has(completionDate)) {
-              const dayData = metricsMap.get(completionDate)!;
-              dayData.tasksCompleted++;
-            }
-          });
+          if (taskError) {
+            console.error('Error fetching task completions:', taskError);
+          } else if (taskCompletions) {
+            taskCompletions.forEach((completion) => {
+              const completionDate = format(new Date(completion.completed_at), 'yyyy-MM-dd');
+              if (metricsMap.has(completionDate)) {
+                const dayData = metricsMap.get(completionDate)!;
+                dayData.tasksCompleted++;
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Error processing task completions:', err);
         }
 
-        const { data: ruleViolations, error: ruleError } = await supabase
-          .from('rule_violations')
-          .select('*')
-          .gte('violation_date', monthStart.toISOString())
-          .lte('violation_date', monthEnd.toISOString());
+        // Fetch rule violations
+        try {
+          const { data: ruleViolations, error: ruleError } = await supabase
+            .from('rule_violations')
+            .select('*')
+            .gte('violation_date', monthStart.toISOString())
+            .lte('violation_date', monthEnd.toISOString());
 
-        if (ruleError) {
-          console.error('Error fetching rule violations:', ruleError);
-        } else if (ruleViolations) {
-          ruleViolations.forEach((violation) => {
-            const violationDate = format(new Date(violation.violation_date), 'yyyy-MM-dd');
-            if (metricsMap.has(violationDate)) {
-              const dayData = metricsMap.get(violationDate)!;
-              dayData.rulesBroken++;
-            }
-          });
+          if (ruleError) {
+            console.error('Error fetching rule violations:', ruleError);
+          } else if (ruleViolations) {
+            ruleViolations.forEach((violation) => {
+              const violationDate = format(new Date(violation.violation_date), 'yyyy-MM-dd');
+              if (metricsMap.has(violationDate)) {
+                const dayData = metricsMap.get(violationDate)!;
+                dayData.rulesBroken++;
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Error processing rule violations:', err);
         }
 
-        const { data: rewardUsage, error: rewardError } = await supabase
-          .from('reward_usage')
-          .select('*')
-          .gte('created_at', monthStart.toISOString())
-          .lte('created_at', monthEnd.toISOString());
+        // Fetch reward usage
+        try {
+          const { data: rewardUsage, error: rewardError } = await supabase
+            .from('reward_usage')
+            .select('*')
+            .gte('created_at', monthStart.toISOString())
+            .lte('created_at', monthEnd.toISOString());
 
-        if (rewardError) {
-          console.error('Error fetching reward usage:', rewardError);
-        } else if (rewardUsage) {
-          rewardUsage.forEach((usage) => {
-            const usageDate = format(new Date(usage.created_at), 'yyyy-MM-dd');
-            if (metricsMap.has(usageDate)) {
-              const dayData = metricsMap.get(usageDate)!;
-              dayData.rewardsRedeemed++;
-            }
-          });
+          if (rewardError) {
+            console.error('Error fetching reward usage:', rewardError);
+          } else if (rewardUsage) {
+            rewardUsage.forEach((usage) => {
+              const usageDate = format(new Date(usage.created_at), 'yyyy-MM-dd');
+              if (metricsMap.has(usageDate)) {
+                const dayData = metricsMap.get(usageDate)!;
+                dayData.rewardsRedeemed++;
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Error processing reward usage:', err);
         }
 
-        const { data: punishmentHistory, error: punishmentError } = await supabase
-          .from('punishment_history')
-          .select('*')
-          .gte('applied_date', monthStart.toISOString())
-          .lte('applied_date', monthEnd.toISOString());
+        // Fetch punishment history
+        try {
+          const { data: punishmentHistory, error: punishmentError } = await supabase
+            .from('punishment_history')
+            .select('*')
+            .gte('applied_date', monthStart.toISOString())
+            .lte('applied_date', monthEnd.toISOString());
 
-        if (punishmentError) {
-          console.error('Error fetching punishment history:', punishmentError);
-        } else if (punishmentHistory) {
-          punishmentHistory.forEach((punishment) => {
-            const punishmentDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
-            if (metricsMap.has(punishmentDate)) {
-              const dayData = metricsMap.get(punishmentDate)!;
-              dayData.punishments++;
-            }
-          });
+          if (punishmentError) {
+            console.error('Error fetching punishment history:', punishmentError);
+          } else if (punishmentHistory) {
+            punishmentHistory.forEach((punishment) => {
+              const punishmentDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
+              if (metricsMap.has(punishmentDate)) {
+                const dayData = metricsMap.get(punishmentDate)!;
+                dayData.punishments++;
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Error processing punishment history:', err);
         }
 
         const finalData = Array.from(metricsMap.values());
@@ -183,6 +205,11 @@ const MonthlyMetricsChart: React.FC = () => {
         setData(finalData);
       } catch (err: any) {
         console.error('[Monthly Chart error]', err);
+        toast({
+          title: "Error loading chart data",
+          description: "There was a problem loading the monthly metrics",
+          variant: "destructive"
+        });
       } finally {
         setLoading(false);
       }
