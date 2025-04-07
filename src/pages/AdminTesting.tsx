@@ -35,28 +35,7 @@ const AdminTesting = () => {
         console.log("AdminTesting: Fetched cards from Supabase:", data);
         
         if (data && data.length > 0) {
-          // Transform the data to match AdminTestingCardData structure
-          const transformedData: AdminTestingCardData[] = data.map(card => ({
-            id: card.id,
-            title: card.title,
-            description: card.description || '',
-            iconName: card.icon_name || '',
-            icon_url: card.icon_url,
-            icon_color: card.icon_color || '#FFFFFF',
-            title_color: card.title_color || '#FFFFFF',
-            subtext_color: card.subtext_color || '#8E9196',
-            calendar_color: card.calendar_color || '#7E69AB',
-            background_image_url: card.background_image_url,
-            background_images: Array.isArray(card.background_images) ? card.background_images as string[] : undefined,
-            background_opacity: card.background_opacity,
-            focal_point_x: card.focal_point_x,
-            focal_point_y: card.focal_point_y,
-            highlight_effect: card.highlight_effect || false,
-            priority: (card.priority as 'low' | 'medium' | 'high') || 'medium',
-            usage_data: Array.isArray(card.usage_data) ? card.usage_data as number[] : [0, 0, 0, 0, 0, 0, 0]
-          }));
-          
-          setAdminTestingCards(transformedData);
+          setAdminTestingCards(data as AdminTestingCardData[]);
         } else {
           // Load from localStorage as fallback
           const savedCards = localStorage.getItem(ADMIN_TESTING_STORAGE_KEY);
@@ -342,3 +321,4 @@ const AdminTesting = () => {
 };
 
 export default AdminTesting;
+
