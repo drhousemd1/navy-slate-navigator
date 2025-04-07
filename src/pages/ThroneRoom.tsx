@@ -1,17 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
+import { Card } from '@/components/ui/card';
+import { format, parseISO, startOfWeek, addDays, isSameWeek } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { WeeklyMetricsChart } from '@/components/throne/WeeklyMetricsChart';
-import { MonthlyMetricsChart } from '@/components/throne/MonthlyMetricsChart';
 import { 
   TooltipProvider, 
-  Tooltip,
+  Tooltip as UITooltip,
   TooltipTrigger,
   TooltipContent
 } from '@/components/ui/tooltip';
 import { InfoIcon, ChevronDown, ChevronUp, Settings2, Skull, Crown, Swords, Award, Pencil } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
@@ -22,6 +26,163 @@ import FrequencyTracker from '@/components/task/FrequencyTracker';
 import PriorityBadge from '@/components/task/PriorityBadge';
 import PointsBadge from '@/components/task/PointsBadge';
 import TaskIcon from '@/components/task/TaskIcon';
+
+const COLORS = {
+  tasksCompleted: '#0ea5e9',
+  rulesBroken: '#f97316',
+  rewardsRedeemed: '#8b5cf6',
+  punishments: '#ef4444',
+};
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="p-2 text-sm leading-snug text-white" style={{ background: 'transparent' }}>
+        <p className="text-white font-semibold">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <p key={index} className="text-white" style={{ color: entry.color }}>
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+const MonthlyMetricsChart = () => {
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  const activityData = [
+    { date: '2025-04-01', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 },
+    { date: '2025-04-05', tasksCompleted: 2, rulesBroken: 1, rewardsRedeemed: 0, punishments: 0 },
+    { date: '2025-04-10', tasksCompleted: 1, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
+    { date: '2025-04-15', tasksCompleted: 4, rulesBroken: 2, rewardsRedeemed: 1, punishments: 1 },
+    { date: '2025-04-20', tasksCompleted: 0, rulesBroken: 3, rewardsRedeemed: 0, punishments: 2 },
+    { date: '2025-04-22', tasksCompleted: 2, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 },
+    { date: '2025-04-25', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
+    { date: '2025-04-27', tasksCompleted: 2, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
+  ];
+
+  const handleClick = (data: any) => {
+    const index = activityData.findIndex(d => d.date === data.activeLabel);
+    if (chartRef.current) {
+      const scrollAmount = index * 60 - chartRef.current.offsetWidth / 2 + 30;
+      chartRef.current.scrollTo({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <Card className="p-4 w-full">
+      <h2 className="text-xl font-semibold text-white mb-4">Monthly Activity</h2>
+      <div ref={chartRef} className="overflow-x-auto overflow-y-hidden">
+        <div style={{ width: `${activityData.length * 60}px`, height: '300px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={activityData}
+              onClick={handleClick}
+              margin={{ top: 20, right: 30, left: 0, bottom: 30 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tick={{ fill: 'white' }} />
+              <YAxis tick={{ fill: 'white' }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
+              <Bar dataKey="tasksCompleted" fill={COLORS.tasksCompleted} name="Tasks Completed" />
+              <Bar dataKey="rulesBroken" fill={COLORS.rulesBroken} name="Rules Broken" />
+              <Bar dataKey="rewardsRedeemed" fill={COLORS.rewardsRedeemed} name="Rewards Redeemed" />
+              <Bar dataKey="punishments" fill={COLORS.punishments} name="Punishments" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="flex justify-around mt-4 text-sm text-white whitespace-nowrap">
+        <span style={{ color: COLORS.tasksCompleted }}>Tasks Completed</span>
+        <span style={{ color: COLORS.rulesBroken }}>Rules Broken</span>
+        <span style={{ color: COLORS.rewardsRedeemed }}>Rewards Redeemed</span>
+        <span style={{ color: COLORS.punishments }}>Punishments</span>
+      </div>
+    </Card>
+  );
+};
+
+const WeeklyMetricsChart = () => {
+  const [data, setData] = useState([]);
+  const [summary, setSummary] = useState({ tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 });
+
+  useEffect(() => {
+    const loadData = async () => {
+      const { data: completions } = await supabase.from('task_completion_history').select('*');
+      const { data: rules } = await supabase.from('rule_violations').select('*');
+      const { data: rewards } = await supabase.from('reward_usage').select('*');
+      const { data: punishments } = await supabase.from('punishment_history').select('*');
+
+      const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
+      const chartData = Array.from({ length: 7 }).map((_, i) => {
+        const date = format(addDays(weekStart, i), 'yyyy-MM-dd');
+        return {
+          date,
+          tasksCompleted: completions?.filter(d => format(parseISO(d.created_at), 'yyyy-MM-dd') === date).length || 0,
+          rulesBroken: rules?.filter(d => format(parseISO(d.created_at), 'yyyy-MM-dd') === date).length || 0,
+          rewardsRedeemed: rewards?.filter(d => format(parseISO(d.created_at), 'yyyy-MM-dd') === date).length || 0,
+          punishments: punishments?.filter(d => format(parseISO(d.created_at), 'yyyy-MM-dd') === date).length || 0,
+        };
+      });
+
+      setData(chartData);
+
+      const total = chartData.reduce(
+        (acc, cur) => ({
+          tasksCompleted: acc.tasksCompleted + cur.tasksCompleted,
+          rulesBroken: acc.rulesBroken + cur.rulesBroken,
+          rewardsRedeemed: acc.rewardsRedeemed + cur.rewardsRedeemed,
+          punishments: acc.punishments + cur.punishments,
+        }),
+        summary
+      );
+
+      setSummary(total);
+    };
+
+    loadData();
+  }, []);
+
+  return (
+    <>
+      <Card className="p-4 w-full mt-6">
+        <h2 className="text-xl font-semibold text-white mb-4">Weekly Activity</h2>
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" tick={{ fill: 'white' }} />
+            <YAxis tick={{ fill: 'white' }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
+            <Bar dataKey="tasksCompleted" fill={COLORS.tasksCompleted} name="Tasks Completed" />
+            <Bar dataKey="rulesBroken" fill={COLORS.rulesBroken} name="Rules Broken" />
+            <Bar dataKey="rewardsRedeemed" fill={COLORS.rewardsRedeemed} name="Rewards Redeemed" />
+            <Bar dataKey="punishments" fill={COLORS.punishments} name="Punishments" />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card>
+
+      <Card className="p-4 w-full mt-4">
+        <div className="grid grid-cols-2 gap-4 text-white text-center text-sm">
+          <div className="bg-navy border border-light-navy p-3 rounded-lg">
+            Tasks Completed: {summary.tasksCompleted}
+          </div>
+          <div className="bg-navy border border-light-navy p-3 rounded-lg">
+            Rules Broken: {summary.rulesBroken}
+          </div>
+          <div className="bg-navy border border-light-navy p-3 rounded-lg">
+            Rewards Redeemed: {summary.rewardsRedeemed}
+          </div>
+          <div className="bg-navy border border-light-navy p-3 rounded-lg">
+            Punishments: {summary.punishments}
+          </div>
+        </div>
+      </Card>
+    </>
+  );
+};
 
 const ThroneRoomCard: React.FC<{
   title: string;
@@ -416,66 +577,24 @@ const ThroneRoom: React.FC = () => {
           </div>
           
           <div className="space-y-6">
-            <MonthlyMetricsChart hideTitle={false} />
+            <MonthlyMetricsChart />
             
-            <Card className="bg-navy border border-light-navy">
-              <CardHeader className="border-b border-light-navy">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-white text-lg">Weekly Activity</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-4 px-0">
-                <div className="w-full">
-                  <WeeklyMetricsChart 
-                    hideTitle={true} 
-                    onDataLoaded={handleMetricsDataLoaded}
-                    key={`metrics-chart-${refreshTrigger}`}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mt-6 px-6">
-                  <div className="bg-light-navy rounded-lg px-3 py-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sky-400 text-sm">Tasks Completed:</span>
-                      <span className="text-sm font-bold text-white">{metricsSummary.tasksCompleted}</span>
-                    </div>
-                  </div>
-                  <div className="bg-light-navy rounded-lg px-3 py-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-orange-500 text-sm">Rules Broken:</span>
-                      <span className="text-sm font-bold text-white">{metricsSummary.rulesBroken}</span>
-                    </div>
-                  </div>
-                  <div className="bg-light-navy rounded-lg px-3 py-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-purple-400 text-sm">Rewards Redeemed:</span>
-                      <span className="text-sm font-bold text-white">{metricsSummary.rewardsRedeemed}</span>
-                    </div>
-                  </div>
-                  <div className="bg-light-navy rounded-lg px-3 py-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-red-400 text-sm">Punishments:</span>
-                      <span className="text-sm font-bold text-white">{metricsSummary.punishments}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
+            <WeeklyMetricsChart />
+
             <Card className="bg-navy border border-light-navy">
               <CardHeader className="border-b border-light-navy">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
                     <CardTitle className="text-white text-lg">Admin Settings</CardTitle>
                     <TooltipProvider>
-                      <Tooltip>
+                      <UITooltip>
                         <TooltipTrigger asChild>
                           <InfoIcon className="h-4 w-4 text-gray-400 ml-2 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p className="w-80">Configure global settings for your domain</p>
                         </TooltipContent>
-                      </Tooltip>
+                      </UITooltip>
                     </TooltipProvider>
                   </div>
                   <button 
