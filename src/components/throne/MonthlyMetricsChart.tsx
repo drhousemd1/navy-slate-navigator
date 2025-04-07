@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps
@@ -202,7 +201,6 @@ const MonthlyMetricsChart: React.FC = () => {
               <CartesianGrid 
                 strokeDasharray="0" 
                 stroke="#1A1F2C" 
-                strokeZIndex={0}
               />
               <XAxis 
                 dataKey="date"
