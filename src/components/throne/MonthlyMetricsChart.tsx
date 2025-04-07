@@ -6,6 +6,7 @@ import {
 import { format, getMonth, getYear, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MonthlyDataItem {
   date: string;
@@ -14,17 +15,6 @@ interface MonthlyDataItem {
   rewardsRedeemed: number;
   punishments: number;
 }
-
-// Hardcoded activity data for the month (similar to the weekly chart approach)
-const monthlyActivityData = [
-  { date: '2025-04-03', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 },
-  { date: '2025-04-07', tasksCompleted: 2, rulesBroken: 1, rewardsRedeemed: 0, punishments: 0 },
-  { date: '2025-04-12', tasksCompleted: 1, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
-  { date: '2025-04-15', tasksCompleted: 4, rulesBroken: 0, rewardsRedeemed: 0, punishments: 1 },
-  { date: '2025-04-20', tasksCompleted: 0, rulesBroken: 2, rewardsRedeemed: 0, punishments: 2 },
-  { date: '2025-04-23', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
-  { date: '2025-04-27', tasksCompleted: 2, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
-];
 
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -77,7 +67,7 @@ const MonthlyMetricsChart: React.FC = () => {
   const monthDates = useMemo(() => generateMonthDays(), []);
 
   useEffect(() => {
-    const loadMonthlyData = () => {
+    const loadMonthlyData = async () => {
       try {
         setLoading(true);
         
@@ -94,16 +84,90 @@ const MonthlyMetricsChart: React.FC = () => {
           });
         });
 
-        // Add the hardcoded monthly activity data
-        monthlyActivityData.forEach((item) => {
-          if (metricsMap.has(item.date)) {
-            const dayData = metricsMap.get(item.date)!;
-            dayData.tasksCompleted = item.tasksCompleted;
-            dayData.rulesBroken = item.rulesBroken;
-            dayData.rewardsRedeemed = item.rewardsRedeemed;
-            dayData.punishments = item.punishments;
-          }
-        });
+        // Get the first day of the current month
+        const today = new Date();
+        const monthStart = startOfMonth(today);
+        const monthEnd = endOfMonth(today);
+
+        // Fetch task completions for the month
+        const { data: taskCompletions, error: taskError } = await supabase
+          .from('task_completion_history')
+          .select('*')
+          .gte('completed_at', monthStart.toISOString())
+          .lte('completed_at', monthEnd.toISOString());
+
+        if (taskError) {
+          console.error('Error fetching task completions:', taskError);
+        } else if (taskCompletions) {
+          // Group task completions by date
+          taskCompletions.forEach((completion) => {
+            const completionDate = format(new Date(completion.completed_at), 'yyyy-MM-dd');
+            if (metricsMap.has(completionDate)) {
+              const dayData = metricsMap.get(completionDate)!;
+              dayData.tasksCompleted++;
+            }
+          });
+        }
+
+        // Fetch rule violations for the month
+        const { data: ruleViolations, error: ruleError } = await supabase
+          .from('rule_violations')
+          .select('*')
+          .gte('violation_date', monthStart.toISOString())
+          .lte('violation_date', monthEnd.toISOString());
+
+        if (ruleError) {
+          console.error('Error fetching rule violations:', ruleError);
+        } else if (ruleViolations) {
+          // Group rule violations by date
+          ruleViolations.forEach((violation) => {
+            const violationDate = format(new Date(violation.violation_date), 'yyyy-MM-dd');
+            if (metricsMap.has(violationDate)) {
+              const dayData = metricsMap.get(violationDate)!;
+              dayData.rulesBroken++;
+            }
+          });
+        }
+
+        // Fetch reward usage for the month
+        const { data: rewardUsage, error: rewardError } = await supabase
+          .from('reward_usage')
+          .select('*')
+          .gte('created_at', monthStart.toISOString())
+          .lte('created_at', monthEnd.toISOString());
+
+        if (rewardError) {
+          console.error('Error fetching reward usage:', rewardError);
+        } else if (rewardUsage) {
+          // Group reward usage by date
+          rewardUsage.forEach((usage) => {
+            const usageDate = format(new Date(usage.created_at), 'yyyy-MM-dd');
+            if (metricsMap.has(usageDate)) {
+              const dayData = metricsMap.get(usageDate)!;
+              dayData.rewardsRedeemed++;
+            }
+          });
+        }
+
+        // Fetch punishment history for the month
+        const { data: punishmentHistory, error: punishmentError } = await supabase
+          .from('punishment_history')
+          .select('*')
+          .gte('applied_date', monthStart.toISOString())
+          .lte('applied_date', monthEnd.toISOString());
+
+        if (punishmentError) {
+          console.error('Error fetching punishment history:', punishmentError);
+        } else if (punishmentHistory) {
+          // Group punishment history by date
+          punishmentHistory.forEach((punishment) => {
+            const punishmentDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
+            if (metricsMap.has(punishmentDate)) {
+              const dayData = metricsMap.get(punishmentDate)!;
+              dayData.punishments++;
+            }
+          });
+        }
 
         const finalData = Array.from(metricsMap.values());
         console.log("[MONTHLY METRICS DATA]", finalData);
