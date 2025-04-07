@@ -1,10 +1,9 @@
-
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps
 } from 'recharts';
 import { format, getMonth, getYear, getDaysInMonth } from 'date-fns';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface MonthlyDataItem {
   date: string;
@@ -36,7 +35,6 @@ const MonthlyMetricsChart: React.FC = () => {
     }
   };
 
-  // Generate simulated monthly data
   const generateMonthlyData = (): MonthlyDataItem[] => {
     const now = new Date();
     const year = getYear(now);
@@ -57,7 +55,6 @@ const MonthlyMetricsChart: React.FC = () => {
 
   const monthlyData = useMemo(() => generateMonthlyData(), []);
 
-  // Center bar on click
   const handleBarClick = (data: any, index: number) => {
     if (!chartContainerRef.current) return;
     
@@ -71,7 +68,6 @@ const MonthlyMetricsChart: React.FC = () => {
     });
   };
 
-  // Custom tooltip for better appearance
   const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
     if (active && payload && payload.length) {
       const dataItem = payload[0].payload as MonthlyDataItem;
@@ -80,7 +76,6 @@ const MonthlyMetricsChart: React.FC = () => {
         <div className="bg-navy p-2 border border-light-navy rounded-md shadow-lg">
           <p className="text-white font-medium">{dataItem.date}</p>
           {payload.map((entry, index) => {
-            // Safe type assertion for the color
             const color = entry.color as string || '#fff';
             const name = entry.name || '';
             const value = entry.value || 0;
@@ -102,12 +97,10 @@ const MonthlyMetricsChart: React.FC = () => {
       <div className="p-4">
         <h2 className="text-lg font-semibold text-white mb-2">Monthly Activity</h2>
         
-        {/* Scrollable Chart Container */}
         <div 
           ref={chartContainerRef}
           className="overflow-x-auto hide-scrollbar -mx-4 px-4 relative"
         >
-          {/* Left/right fade shadows for scroll cue */}
           <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
           <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
           
@@ -154,7 +147,6 @@ const MonthlyMetricsChart: React.FC = () => {
           </div>
         </div>
         
-        {/* Monthly chart legend */}
         <div className="flex justify-between items-center flex-wrap mt-2 gap-4">
           <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
             Tasks Completed
