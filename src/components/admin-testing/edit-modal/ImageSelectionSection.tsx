@@ -1,9 +1,9 @@
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
-import { FormLabel } from '@/components/ui/form';
-import { Control } from 'react-hook-form';
+import React from "react";
+import { Button } from "@/components/ui/button";
+import BackgroundImageSelector from "@/components/task-editor/BackgroundImageSelector";
+import { FormLabel } from "@/components/ui/form";
+import { Control } from "react-hook-form";
 
 interface ImageSelectionSectionProps {
   imagePreview: string | null;
@@ -20,7 +20,6 @@ interface ImageSelectionSectionProps {
 }
 
 const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
-  imagePreview,
   imageSlots,
   selectedBoxIndex,
   carouselTimer,
@@ -32,6 +31,15 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   position,
   control
 }) => {
+  const currentImage = selectedBoxIndex !== null ? imageSlots[selectedBoxIndex] : null;
+  
+  console.log("ImageSelectionSection rendering with:", {
+    selectedBoxIndex,
+    hasCurrentImage: Boolean(currentImage),
+    imageSlotCount: imageSlots.length,
+    nonEmptySlots: imageSlots.filter(Boolean).length
+  });
+
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Image</FormLabel>
@@ -54,7 +62,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
                   className="w-full h-full object-cover rounded-md"
                   onError={(e) => {
                     console.error(`Error loading image in slot ${index}`);
-                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMjJDMTcuNTIyOCAyMiAyMiAxNy41MjI4IDIyIDEyQzIyIDYuNDc3MTUgMTcuNTIyOCAyIDIgNi40NzcxNSAyIDEyQzIgMTcuNTIyOCA2LjQ3NzE1IDIyIDEyIDIyWiIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTE1IDlMOSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTkgOUwxNSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
+                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMjJDMTcuNTIyOCAyMiAyMiAxNy41MjI4IDIyIDEyQzIyIDYuNDc3MTUgMTcuNTIyOCAyIDEyIDJDNi40NzcxNSAyIDIgNi40NzcxNSAyIDEyQzIgMTcuNTIyOCA2LjQ3NzE1IDIyIDEyIDIyWiIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTE1IDlMOSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTkgOUwxNSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
                   }}
                 />
               )}
@@ -95,9 +103,10 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
           </div>
         </div>
       </div>
+
       <BackgroundImageSelector
         control={control}
-        imagePreview={imagePreview}
+        imagePreview={currentImage}
         initialPosition={position}
         onRemoveImage={onRemoveImage}
         onImageUpload={onImageUpload}
