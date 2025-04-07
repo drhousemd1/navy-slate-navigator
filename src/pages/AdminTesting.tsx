@@ -9,6 +9,7 @@ import CardHeader from '@/components/throne/card/CardHeader';
 import CardContent from '@/components/throne/card/CardContent';
 import CardFooter from '@/components/throne/card/CardFooter';
 import { toast } from '@/components/ui/use-toast';
+import { Separator } from '@/components/ui/separator';
 
 const AdminTesting = () => {
   const [adminTestingCards, setAdminTestingCards] = useState<ThroneRoomCardData[]>([]);
@@ -183,27 +184,11 @@ const AdminTesting = () => {
           </div>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="p-4 bg-navy border border-light-navy">
-            <h2 className="text-xl text-white mb-2">Feature Testing</h2>
-            <p className="text-gray-300">This area is for testing new features before deploying them to all users.</p>
-          </Card>
-          
-          <Card className="p-4 bg-navy border border-light-navy">
-            <h2 className="text-xl text-white mb-2">User Management</h2>
-            <p className="text-gray-300">Test user management functionality.</p>
-          </Card>
-          
-          <Card className="p-4 bg-navy border border-light-navy">
-            <h2 className="text-xl text-white mb-2">Database Operations</h2>
-            <p className="text-gray-300">Test database queries and operations.</p>
-          </Card>
-          
-          <Card className="p-4 bg-navy border border-light-navy">
-            <h2 className="text-xl text-white mb-2">System Status</h2>
-            <p className="text-gray-300">View system status and logs.</p>
-          </Card>
-        </div>
+        <Separator className="my-6 bg-gray-600" />
+        <h2 className="text-xl font-bold text-white mb-6">Section 2</h2>
+        
+        <Separator className="my-6 bg-gray-600" />
+        <h2 className="text-xl font-bold text-white mb-6">Section 3</h2>
       </div>
       
       {selectedCard && (
