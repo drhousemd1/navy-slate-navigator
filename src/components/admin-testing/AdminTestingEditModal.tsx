@@ -359,6 +359,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
               onImageUpload={handleImageUpload}
               setValue={form.setValue}
               position={position}
+              control={form.control}
             />
             
             <IconSelectionSection
