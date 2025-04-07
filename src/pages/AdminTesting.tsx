@@ -15,10 +15,15 @@ import AdminTestingCardEditModal from '@/components/admin-testing/AdminTestingCa
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 
+// Define a type specifically for the admin testing cards
+interface AdminTestingCardData extends ThroneRoomCardData {
+  // Additional fields specific to admin testing cards can be added here
+}
+
 const AdminTesting = () => {
-  const [adminTestingCards, setAdminTestingCards] = useState<ThroneRoomCardData[]>([]);
+  const [adminTestingCards, setAdminTestingCards] = useState<AdminTestingCardData[]>([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const [selectedCard, setSelectedCard] = useState<ThroneRoomCardData | null>(null);
+  const [selectedCard, setSelectedCard] = useState<AdminTestingCardData | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [carouselTimer, setCarouselTimer] = useState(5);
@@ -31,8 +36,9 @@ const AdminTesting = () => {
       setIsLoading(true);
       console.log("AdminTesting: Fetching cards from Supabase");
       
+      // Using type casting to avoid TypeScript errors with the table name
       const { data, error } = await supabase
-        .from('admin_testing_cards')
+        .from('admin_testing_cards' as any)
         .select('*')
         .order('created_at', { ascending: false });
       
@@ -43,7 +49,28 @@ const AdminTesting = () => {
       
       if (data && data.length > 0) {
         console.log("AdminTesting: Loaded cards from Supabase:", data);
-        setAdminTestingCards(data);
+        // Transform the data to ensure it matches our expected format
+        const formattedData = data.map(card => ({
+          id: card.id,
+          title: card.title || 'Untitled Card',
+          description: card.description || 'No description',
+          iconName: card.icon_name || '',
+          icon_url: card.icon_url || undefined,
+          icon_color: card.icon_color || '#FFFFFF',
+          title_color: card.title_color || '#FFFFFF',
+          subtext_color: card.subtext_color || '#8E9196',
+          calendar_color: card.calendar_color || '#7E69AB',
+          background_image_url: card.background_image_url || undefined,
+          background_images: card.background_images || undefined,
+          background_opacity: card.background_opacity || 100,
+          focal_point_x: card.focal_point_x || 50,
+          focal_point_y: card.focal_point_y || 50,
+          highlight_effect: card.highlight_effect || false,
+          priority: card.priority || 'medium',
+          usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0]
+        }));
+        
+        setAdminTestingCards(formattedData);
       } else {
         console.log("AdminTesting: No cards found in Supabase, initializing with defaults");
         initializeDefaultCards();
@@ -145,14 +172,14 @@ const AdminTesting = () => {
         highlight_effect: false,
         priority: card.priority || 'medium',
         usage_data: [0, 0, 0, 0, 0, 0, 0]
-      }));
+      })) as AdminTestingCardData[];
       
       console.log("AdminTesting: Setting initial cards:", initialCards);
       
       // Save to Supabase
       for (const card of initialCards) {
         const { error } = await supabase
-          .from('admin_testing_cards')
+          .from('admin_testing_cards' as any)
           .insert([card]);
           
         if (error) {
@@ -174,7 +201,7 @@ const AdminTesting = () => {
     }
   };
 
-  const handleSaveCard = async (updatedData: ThroneRoomCardData) => {
+  const handleSaveCard = async (updatedData: AdminTestingCardData) => {
     try {
       console.log("AdminTesting: Saving card", updatedData);
       
@@ -185,7 +212,7 @@ const AdminTesting = () => {
       
       // Update in Supabase
       const { error } = await supabase
-        .from('admin_testing_cards')
+        .from('admin_testing_cards' as any)
         .upsert({
           id: updatedData.id,
           title: updatedData.title,
@@ -244,7 +271,7 @@ const AdminTesting = () => {
       
       // Delete from Supabase
       const { error } = await supabase
-        .from('admin_testing_cards')
+        .from('admin_testing_cards' as any)
         .delete()
         .eq('id', cardId);
       
@@ -278,7 +305,7 @@ const AdminTesting = () => {
   const handleAddCard = async () => {
     try {
       const newId = `card-${Date.now()}`;
-      const newCard: ThroneRoomCardData = {
+      const newCard: AdminTestingCardData = {
         id: newId,
         title: 'New Card',
         description: 'This is a new card description',
@@ -294,7 +321,7 @@ const AdminTesting = () => {
 
       // Insert into Supabase
       const { error } = await supabase
-        .from('admin_testing_cards')
+        .from('admin_testing_cards' as any)
         .insert([{
           id: newCard.id,
           title: newCard.title,
@@ -340,7 +367,7 @@ const AdminTesting = () => {
   };
 
   // Update card usage data
-  const updateCardUsage = async (card: ThroneRoomCardData) => {
+  const updateCardUsage = async (card: AdminTestingCardData) => {
     try {
       // Get current day of week (0-6, where 0 is Sunday)
       const dayOfWeek = new Date().getDay();
@@ -353,7 +380,7 @@ const AdminTesting = () => {
       
       // Update in Supabase
       const { error } = await supabase
-        .from('admin_testing_cards')
+        .from('admin_testing_cards' as any)
         .update({ 
           usage_data: usageData,
           updated_at: new Date().toISOString()
