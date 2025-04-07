@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Upload } from 'lucide-react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import ImageFocalPointControl from '@/components/encyclopedia/image/ImageFocalPointControl';
+import { useImageCarousel } from '@/components/throne/hooks/useImageCarousel';
 
 interface BackgroundImageSelectorProps {
   control: Control<any>;
@@ -13,6 +15,8 @@ interface BackgroundImageSelectorProps {
   onRemoveImage: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setValue: UseFormSetValue<any>;
+  imageSlots?: (string | null)[];
+  carouselTimer?: number;
 }
 
 const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
@@ -21,7 +25,9 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   initialPosition,
   onRemoveImage,
   onImageUpload,
-  setValue
+  setValue,
+  imageSlots = [],
+  carouselTimer = 5
 }) => {
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -31,6 +37,27 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   });
   
   const [opacity, setOpacity] = useState<number>(100);
+  const [visibleImageIndex, setVisibleImageIndex] = useState(0);
+  
+  // Filter out null values from imageSlots
+  const validImageSlots = (imageSlots || []).filter(Boolean) as string[];
+  
+  // Use the imagePreview as fallback if no valid image slots
+  const actualImages = validImageSlots.length > 0 ? validImageSlots : (imagePreview ? [imagePreview] : []);
+  
+  // Set up the carousel effect
+  useEffect(() => {
+    if (actualImages.length <= 1) return;
+    
+    const intervalId = setInterval(() => {
+      setVisibleImageIndex(prev => (prev + 1) % actualImages.length);
+    }, carouselTimer * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [carouselTimer, actualImages.length]);
+  
+  // Get the current visible image
+  const currentImage = actualImages.length > 0 ? actualImages[visibleImageIndex] : null;
 
   useEffect(() => {
     if (initialPosition) {
@@ -125,14 +152,14 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   return (
     <div className="space-y-4">
       <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
-        {imagePreview ? (
+        {currentImage ? (
           <div className="space-y-4">
             <div 
               ref={imageContainerRef}
               className="relative w-full h-48 rounded-lg overflow-hidden"
             >
               <ImageFocalPointControl
-                imagePreview={imagePreview}
+                imagePreview={currentImage}
                 position={position}
                 opacity={opacity}
                 isDragging={isDragging}
@@ -162,7 +189,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
           </div>
         )}
       </div>
-      {imagePreview && (
+      {currentImage && (
         <FormField
           control={control}
           name="background_opacity"
