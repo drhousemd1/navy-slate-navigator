@@ -24,6 +24,28 @@ interface AdminTestingEditModalProps {
   onCarouselTimerChange: (timer: number) => void;
 }
 
+// Define a specific type for the form values to prevent infinite type instantiation
+type AdminTestingFormValues = {
+  id: string;
+  title: string;
+  description: string;
+  icon_name: string;
+  icon_url: string | null;
+  icon_color: string;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  background_image_url: string | null;
+  background_opacity: number;
+  focal_point_x: number;
+  focal_point_y: number;
+  highlight_effect: boolean;
+  priority: 'low' | 'medium' | 'high';
+  points: number;
+  usage_data: number[] | any;
+  background_images: string[] | any;
+};
+
 const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
   isOpen,
   onClose,
@@ -49,27 +71,27 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
     localStorage.setItem(`${localStorageKey}_carouselTimer`, String(carouselTimer));
   }, [carouselTimer, localStorageKey]);
   
-  // Fix infinite type instantiation by explicitly typing the form values
-  const form = useForm<AdminTestingCardData>({
-    defaultValues: cardData || {
-      id: '',
-      title: '',
-      description: '',
-      icon_name: '',
-      icon_url: '',
-      icon_color: '#FFFFFF',
-      title_color: '#FFFFFF',
-      subtext_color: '#8E9196',
-      calendar_color: '#7E69AB',
-      background_image_url: '',
-      background_opacity: 100,
-      focal_point_x: 50,
-      focal_point_y: 50,
-      highlight_effect: false,
-      priority: 'medium',
-      points: 0,
-      usage_data: [],
-      background_images: []
+  // Use the explicit form values type to prevent infinite type instantiation
+  const form = useForm<AdminTestingFormValues>({
+    defaultValues: {
+      id: cardData?.id || '',
+      title: cardData?.title || '',
+      description: cardData?.description || '',
+      icon_name: cardData?.icon_name || '',
+      icon_url: cardData?.icon_url || null,
+      icon_color: cardData?.icon_color || '#FFFFFF',
+      title_color: cardData?.title_color || '#FFFFFF',
+      subtext_color: cardData?.subtext_color || '#8E9196',
+      calendar_color: cardData?.calendar_color || '#7E69AB',
+      background_image_url: cardData?.background_image_url || null,
+      background_opacity: cardData?.background_opacity || 100,
+      focal_point_x: cardData?.focal_point_x || 50,
+      focal_point_y: cardData?.focal_point_y || 50,
+      highlight_effect: cardData?.highlight_effect || false,
+      priority: cardData?.priority || 'medium',
+      points: cardData?.points || 0,
+      usage_data: cardData?.usage_data || [],
+      background_images: cardData?.background_images || []
     }
   });
   
@@ -81,12 +103,12 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         title: cardData.title,
         description: cardData.description,
         icon_name: cardData.icon_name || '',
-        icon_url: cardData.icon_url || '',
+        icon_url: cardData.icon_url || null,
         icon_color: cardData.icon_color || '#FFFFFF',
         title_color: cardData.title_color || '#FFFFFF',
         subtext_color: cardData.subtext_color || '#8E9196',
         calendar_color: cardData.calendar_color || '#7E69AB',
-        background_image_url: cardData.background_image_url || '',
+        background_image_url: cardData.background_image_url || null,
         background_opacity: cardData.background_opacity || 100,
         focal_point_x: cardData.focal_point_x || 50,
         focal_point_y: cardData.focal_point_y || 50,
@@ -117,9 +139,8 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         cardData.background_images.forEach((img, index) => {
           if (index < newImageSlots.length && img) {
             // Fix for substring error - ensure img is a string before using substring
-            const imgDisplay = typeof img === 'string' ? 
-              (img.substring(0, 50) + '...') : 
-              (typeof img === 'object' ? '[Object]' : String(img));
+            const imgStr = typeof img === 'string' ? img : '';
+            const imgDisplay = imgStr ? (imgStr.substring(0, 50) + '...') : '[Non-string]';
             
             console.log(`Setting slot ${index} to image:`, imgDisplay);
             newImageSlots[index] = typeof img === 'string' ? img : null;
@@ -286,7 +307,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
     }
   };
   
-  const onSubmit = async (data: AdminTestingCardData) => {
+  const onSubmit = async (data: AdminTestingFormValues) => {
     try {
       setIsSaving(true);
       console.log("Saving admin testing card data:", data);
@@ -314,7 +335,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
       console.log(`Found ${validImageSlots.length} valid image slots after validation`);
       
       // Ensure background_image_url is set to the current imagePreview
-      const updatedData = {
+      const updatedData: AdminTestingCardData = {
         ...data,
         background_image_url: imagePreview || '',
         icon_url: iconPreview || '',

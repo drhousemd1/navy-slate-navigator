@@ -13,7 +13,7 @@ interface SupabaseCardData {
   title: string;
   description: string | null;
   priority: string | null;
-  points?: number;
+  points?: number | null;
   background_image_url: string | null;
   background_images: any;
   background_opacity: number | null;

@@ -30,7 +30,7 @@ interface SupabaseCardData {
   title: string;
   description: string | null;
   priority: string | null;
-  points?: number;  // Add points as optional to match Supabase schema
+  points?: number | null;  // Mark as optional and nullable
   background_image_url: string | null;
   background_images: Json | null;
   background_opacity: number | null;
