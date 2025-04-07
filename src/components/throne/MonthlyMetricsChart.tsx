@@ -237,8 +237,10 @@ const MonthlyMetricsChart: React.FC = () => {
   const handleBarClick = (data: any, index: number) => {
     if (!chartScrollRef.current) return;
     
+    const containerWidth = chartScrollRef.current.clientWidth;
     const barWidth = 40; // Approximate width of each bar
-    const scrollPosition = index * barWidth - (chartScrollRef.current.clientWidth / 2) + (barWidth / 2);
+    
+    const scrollPosition = (index * barWidth) - (containerWidth / 2) + (barWidth / 2);
     
     chartScrollRef.current.scrollTo({
       left: Math.max(0, scrollPosition),

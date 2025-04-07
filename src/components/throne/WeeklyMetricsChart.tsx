@@ -249,10 +249,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               tick={{ fill: '#D1D5DB' }}
             />
             <Tooltip 
-              cursor={{ fill: '#0000' }} // Transparent cursor
-              wrapperStyle={{ zIndex: 9999, marginLeft: '20px' }}
-              contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
-              offset={25}
+              cursor={{ fill: 'transparent' }} // Fix #1 - completely transparent cursor
+              wrapperStyle={{ zIndex: 9999 }}
+              contentStyle={{ backgroundColor: 'transparent', border: 'none' }} // Fix #2 - transparent background
+              offset={25} // Fix #3 - same offset as monthly chart
               formatter={(value, name, props) => {
                 return [value, name];
               }}
@@ -300,7 +300,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
         
         <div 
-          className="w-full select-none"
+          className="w-full select-none" 
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={endDrag}
