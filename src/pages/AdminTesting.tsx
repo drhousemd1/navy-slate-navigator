@@ -10,6 +10,7 @@ import CardContent from '@/components/throne/card/CardContent';
 import CardFooter from '@/components/throne/card/CardFooter';
 import { toast } from '@/components/ui/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 
 const AdminTesting = () => {
   const [adminTestingCards, setAdminTestingCards] = useState<ThroneRoomCardData[]>([]);
@@ -115,6 +116,35 @@ const AdminTesting = () => {
     });
   };
 
+  const handleAddCard = () => {
+    // Create a new card with a unique ID
+    const newId = `card-${Date.now()}`;
+    const newCard: ThroneRoomCardData = {
+      id: newId,
+      title: 'New Card',
+      description: 'This is a new card description',
+      iconName: '',
+      icon_color: '#FFFFFF',
+      title_color: '#FFFFFF',
+      subtext_color: '#8E9196',
+      calendar_color: '#7E69AB',
+      highlight_effect: false,
+      priority: 'medium'
+    };
+
+    // Add the new card to the list and save to localStorage
+    setAdminTestingCards(prev => {
+      const newArr = [...prev, newCard];
+      localStorage.setItem('adminTestingCards', JSON.stringify(newArr));
+      return newArr;
+    });
+
+    toast({
+      title: "Card Added",
+      description: "A new card has been added successfully",
+    });
+  };
+
   console.log("AdminTesting: Rendering with cards:", adminTestingCards);
 
   return (
@@ -122,9 +152,17 @@ const AdminTesting = () => {
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold text-white mb-6">TESTING PAGE - ADMIN TESTING PANEL</h1>
         
-        <div className="bg-red-500 text-white p-6 mb-6 rounded-lg text-center text-3xl font-bold">
-          THIS IS THE ADMIN TESTING PAGE
+        <div className="bg-red-500 text-white p-6 mb-6 rounded-lg flex items-center justify-between">
+          <h2 className="text-3xl font-bold">THIS IS THE ADMIN TESTING PAGE</h2>
+          <Button 
+            className="bg-green-500 hover:bg-green-600 text-white"
+            onClick={handleAddCard}
+          >
+            Add Card
+          </Button>
         </div>
+        
+        <h2 className="text-xl font-bold text-white mb-6">Section 1</h2>
         
         {!isInitialized ? (
           <div className="flex items-center justify-center h-64 bg-navy rounded-lg">
