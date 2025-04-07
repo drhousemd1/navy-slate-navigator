@@ -10,26 +10,16 @@ import { BrowserRouter } from 'react-router-dom';
 const Auth: React.FC = () => {
   // Use state for the auth view
   const [authView, setAuthView] = React.useState<AuthView>("login");
-  let route;
-  let routeState;
   
-  // Try to get location, but handle cases where Router context might not be available
-  try {
-    const location = useLocation();
-    route = location.pathname;
-    routeState = location.state;
-    
-    // Check if there's a view state passed via navigation
-    React.useEffect(() => {
-      if (location.state && location.state.view) {
-        setAuthView(location.state.view as AuthView);
-      }
-    }, [location]);
-  } catch (error) {
-    console.error("Router context not available:", error);
-    route = "/auth";
-    routeState = null;
-  }
+  // Get location from Router context
+  const location = useLocation();
+  
+  // Check if there's a view state passed via navigation
+  React.useEffect(() => {
+    if (location.state && location.state.view) {
+      setAuthView(location.state.view as AuthView);
+    }
+  }, [location]);
   
   // Get auth state
   const { isAuthenticated, loading } = useAuth();
@@ -54,7 +44,7 @@ const Auth: React.FC = () => {
   );
 };
 
-// Wrap the Auth component in a BrowserRouter to ensure Router context is available
+// Export the Auth component wrapped with BrowserRouter
 const AuthWithRouter = () => {
   return (
     <BrowserRouter>
@@ -63,4 +53,4 @@ const AuthWithRouter = () => {
   );
 };
 
-export default Auth;
+export default AuthWithRouter;

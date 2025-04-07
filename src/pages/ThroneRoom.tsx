@@ -1,23 +1,22 @@
-
-import React, { useEffect, useRef, useState } from "react";
-import AppLayout from '../components/AppLayout';
-import Card from "@/components/ui/card";
-import { supabase } from '@/integrations/supabase/client';
-import { getWeekDates, getCurrentMonthDates } from "@/utils/dateUtils";
-import { format } from "date-fns";
+import { useEffect, useRef, useState } from "react";
+import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
-  Tooltip as ChartTooltip,
+  Tooltip,
   Title,
   Legend,
 } from "chart.js";
-import { Bar } from "react-chartjs-2";
 import { useAuth } from '../contexts/auth/AuthContext';
+import AppLayout from '../components/AppLayout';
+import { Card } from "@/components/ui/card";
+import { supabase } from '@/integrations/supabase/client';
+import { getWeekDates, getCurrentMonthDates } from "@/utils/dateUtils";
+import { format } from "date-fns";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ChartTooltip, Title, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Title, Legend);
 
 // Constants
 const barColors = {

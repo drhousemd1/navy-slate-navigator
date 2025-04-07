@@ -8,7 +8,7 @@ interface CardProps {
   className?: string;
 }
 
-const Card: React.FC<CardProps> = ({ children, title, className }) => {
+export const CardComponent: React.FC<CardProps> = ({ children, title, className }) => {
   return (
     <ShadcnCard className={`bg-navy border border-light-navy rounded-lg ${className || ''}`}>
       {title && (
@@ -23,4 +23,5 @@ const Card: React.FC<CardProps> = ({ children, title, className }) => {
   );
 };
 
-export default Card;
+// Named export for consistency with shadcn/ui patterns
+export { CardComponent as Card };
