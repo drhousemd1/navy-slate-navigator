@@ -19,10 +19,8 @@ import { useLocation } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 
 // Import extracted components
-import ThroneRoomCard from '@/components/throne/ThroneRoomCard';
 import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
-import { defaultThroneRoomCards } from '@/components/throne/defaultThroneRoomCards';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
@@ -37,18 +35,7 @@ const ThroneRoom: React.FC = () => {
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   const location = useLocation();
   
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  
   const { rewards } = useRewards();
-
-  useEffect(() => {
-    const stored = parseInt(localStorage.getItem('throneRoom_carouselTimer') || '5', 10);
-    const interval = setInterval(() => {
-      setCarouselIndex((prev) => prev + 1);
-    }, (isNaN(stored) ? 5 : stored) * 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     console.log('Location changed or component mounted, refreshing metrics chart');
@@ -80,24 +67,6 @@ const ThroneRoom: React.FC = () => {
           <p className="text-nav-inactive">
             Welcome to your command center where you can track activities and manage your domain
           </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {defaultThroneRoomCards.map((card, index) => {
-              const IconComponent = card.icon;
-              return (
-                <ThroneRoomCard
-                  key={index}
-                  id={card.id}
-                  title={card.title}
-                  description={card.description}
-                  icon={<IconComponent className="text-white w-6 h-6" />}
-                  priority={card.priority}
-                  points={card.points}
-                  globalCarouselIndex={carouselIndex}
-                />
-              );
-            })}
-          </div>
           
           <div className="space-y-6">
             {/* Weekly Activity Chart - now containing its own title */}
