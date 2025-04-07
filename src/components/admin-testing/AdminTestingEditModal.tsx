@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form } from '@/components/ui/form';
@@ -49,6 +50,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
     localStorage.setItem(`${localStorageKey}_carouselTimer`, String(carouselTimer));
   }, [carouselTimer, localStorageKey]);
   
+  // Use type assertion to fix infinite type instantiation
   const form = useForm<AdminTestingCardData>({
     defaultValues: {
       id: cardData?.id || '',
@@ -67,8 +69,9 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
       highlight_effect: cardData?.highlight_effect || false,
       priority: cardData?.priority || 'medium',
       points: cardData?.points || 0,
-      usage_data: cardData?.usage_data || []
-    }
+      usage_data: cardData?.usage_data || [],
+      background_images: cardData?.background_images || []
+    } as AdminTestingCardData
   });
   
   useEffect(() => {
@@ -91,7 +94,8 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         highlight_effect: cardData.highlight_effect || false,
         priority: cardData.priority || 'medium',
         points: cardData.points || 0,
-        usage_data: cardData.usage_data || []
+        usage_data: cardData.usage_data || [],
+        background_images: cardData.background_images || []
       });
       setImagePreview(cardData.background_image_url || null);
       setIconPreview(cardData.icon_url || null);
@@ -113,19 +117,31 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         console.log("Loading background_images into slots:", cardData.background_images);
         cardData.background_images.forEach((img, index) => {
           if (index < newImageSlots.length && img) {
-            console.log(`Setting slot ${index} to image:`, img.substring(0, 50) + '...');
-            newImageSlots[index] = img;
+            // Fix for substring error - ensure img is a string before using substring
+            const imgDisplay = typeof img === 'string' ? 
+              (img.substring(0, 50) + '...') : 
+              (typeof img === 'object' ? '[Object]' : String(img));
+            
+            console.log(`Setting slot ${index} to image:`, imgDisplay);
+            newImageSlots[index] = typeof img === 'string' ? img : null;
           }
         });
       } else if (cardData.background_image_url) {
-        console.log("Loading single background_image_url into slot 0:", 
-          cardData.background_image_url.substring(0, 50) + '...');
-        newImageSlots[0] = cardData.background_image_url;
+        // Fix for substring error - ensure background_image_url is a string
+        const bgImgUrl = cardData.background_image_url;
+        const bgImgPreview = typeof bgImgUrl === 'string' ? 
+          (bgImgUrl.substring(0, 50) + '...') : 
+          String(bgImgUrl);
+          
+        console.log("Loading single background_image_url into slot 0:", bgImgPreview);
+        newImageSlots[0] = typeof bgImgUrl === 'string' ? bgImgUrl : null;
       }
       
       setImageSlots(newImageSlots);
       console.log("Final image slots after initialization:", 
-        newImageSlots.map(s => s ? `[Image: ${s.substring(0, 20)}...]` : 'null'));
+        newImageSlots.map(s => s ? 
+          (typeof s === 'string' ? `[Image: ${s.substring(0, 20)}...]` : '[Non-string]') 
+          : 'null'));
     }
   }, [isOpen, cardData, form]);
   
@@ -286,7 +302,7 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
             if (slot.startsWith('data:image') || slot.startsWith('http')) {
               return slot;
             } else {
-              console.warn("Invalid image data in slot:", slot.substring(0, 30));
+              console.warn("Invalid image data in slot:", typeof slot === 'string' ? slot.substring(0, 30) : String(slot));
               return null;
             }
           } catch (e) {
@@ -314,7 +330,11 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         title: updatedData.title,
         imageCount: updatedData.background_images?.length || 0,
         hasBackgroundImageUrl: Boolean(updatedData.background_image_url),
-        backgroundImageUrlPreview: updatedData.background_image_url ? updatedData.background_image_url.substring(0, 30) + '...' : 'none'
+        backgroundImageUrlPreview: updatedData.background_image_url ? 
+          (typeof updatedData.background_image_url === 'string' ? 
+            updatedData.background_image_url.substring(0, 30) + '...' : 
+            String(updatedData.background_image_url)) 
+          : 'none'
       });
       
       await onSave(updatedData);

@@ -81,8 +81,9 @@ export const useAdminCardData = ({
           // Transform data from Supabase to match our expected format
           const savedCard = {
             ...data,
+            // Ensure points is a number with fallback to default
+            points: typeof data.points === 'number' ? data.points : 5,
             priority: (data.priority as 'low' | 'medium' | 'high') || 'medium',
-            points: data.points || 5,
             background_images: data.background_images || [],
             usage_data: data.usage_data || [1, 2, 0, 3, 1, 0, 2]
           };
@@ -95,7 +96,7 @@ export const useAdminCardData = ({
           // Set images from background_images or single background_image_url
           let imageArray: string[] = [];
           if (Array.isArray(savedCard.background_images)) {
-            imageArray = savedCard.background_images.filter(Boolean) as string[];
+            imageArray = savedCard.background_images.filter(img => typeof img === 'string') as string[];
           } else if (typeof savedCard.background_images === 'object' && savedCard.background_images !== null) {
             // Try to convert JSON object to array if possible
             const bgImages = (savedCard.background_images as unknown) as Json[];
@@ -149,7 +150,7 @@ export const useAdminCardData = ({
       let newImages: string[] = [];
       
       if (Array.isArray(updatedCard.background_images)) {
-        newImages = updatedCard.background_images.filter(Boolean) as string[];
+        newImages = updatedCard.background_images.filter(img => typeof img === 'string') as string[];
       } else if (updatedCard.background_image_url) {
         newImages = [updatedCard.background_image_url];
       }

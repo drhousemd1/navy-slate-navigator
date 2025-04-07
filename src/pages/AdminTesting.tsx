@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -39,7 +40,8 @@ const AdminTesting = () => {
           const formattedCards = data.map(card => ({
             ...card,
             priority: (card.priority as 'low' | 'medium' | 'high') || 'medium',
-            points: card.points || 5,
+            // Ensure points is a number with fallback to default
+            points: typeof card.points === 'number' ? card.points : 5,
             background_opacity: card.background_opacity || 80,
             focal_point_x: card.focal_point_x || 50,
             focal_point_y: card.focal_point_y || 50,
@@ -90,7 +92,8 @@ const AdminTesting = () => {
       calendar_color: '#7E69AB',
       icon_color: '#FFFFFF',
       highlight_effect: false,
-      usage_data: [0, 0, 0, 0, 0, 0, 0]
+      usage_data: [0, 0, 0, 0, 0, 0, 0],
+      background_images: []
     };
     
     try {
@@ -115,7 +118,9 @@ const AdminTesting = () => {
       const formattedCard = {
         ...data,
         priority: (data.priority as 'low' | 'medium' | 'high') || 'medium',
-        points: data.points || 5
+        // Ensure points is a number with fallback to default
+        points: typeof data.points === 'number' ? data.points : 5,
+        background_images: data.background_images || []
       } as AdminTestingCardData;
       
       setCards(prevCards => [...prevCards, formattedCard]);
