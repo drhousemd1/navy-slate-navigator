@@ -1,32 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { useForm } from 'react-hook-form';
-import ColorPickerField from '@/components/task-editor/ColorPickerField';
-import PrioritySelector from '@/components/task-editor/PrioritySelector';
-import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
-import IconSelector from '@/components/task-editor/IconSelector';
-import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
-import { Loader2, Trash2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { AdminTestingCardData } from './defaultAdminTestingCards';
 
-interface AdminTestingEditModalProps {
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Form } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { toast } from '@/hooks/use-toast';
+import { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
+
+// Import refactored components
+import BasicDetailsSection from './edit-modal/BasicDetailsSection';
+import ImageSelectionSection from './edit-modal/ImageSelectionSection';
+import IconSelectionSection from './edit-modal/IconSelectionSection';
+import ColorSettingsSection from './edit-modal/ColorSettingsSection';
+import HighlightEffectToggle from './edit-modal/HighlightEffectToggle';
+import ModalActions from './edit-modal/ModalActions';
+
+// Import custom hooks
+import { useModalImageHandling } from './edit-modal/hooks/useModalImageHandling';
+import { useModalIconHandling } from './edit-modal/hooks/useModalIconHandling';
+
+interface AdminTestingCardEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  cardData: AdminTestingCardData;
-  onSave: (data: AdminTestingCardData) => void;
+  cardData: ThroneRoomCardData;
+  onSave: (data: ThroneRoomCardData) => void;
   onDelete: (cardId: string) => void;
   localStorageKey: string;
   carouselTimer: number;
   onCarouselTimerChange: (timer: number) => void;
 }
 
-const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
+const AdminTestingCardEditModal: React.FC<AdminTestingCardEditModalProps> = ({
   isOpen,
   onClose,
   cardData,
@@ -37,21 +40,34 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
   onCarouselTimerChange
 }) => {
   const [isSaving, setIsSaving] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(cardData?.background_image_url || null);
-  const [iconPreview, setIconPreview] = useState<string | null>(cardData?.icon_url || null);
-  const [selectedIconName, setSelectedIconName] = useState<string | null>(cardData?.iconName || null);
-  const [position, setPosition] = useState({ 
-    x: cardData?.focal_point_x || 50, 
-    y: cardData?.focal_point_y || 50 
-  });
-  const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
-  const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
   
+  // Use custom hooks for image and icon handling
+  const {
+    imagePreview,
+    imageSlots,
+    selectedBoxIndex,
+    position,
+    setPosition,
+    handleImageUpload,
+    handleRemoveImage,
+    handleSelectImageSlot,
+    getProcessedImages
+  } = useModalImageHandling(cardData?.background_image_url, cardData?.background_images);
+  
+  const {
+    iconPreview,
+    selectedIconName,
+    handleIconUpload,
+    handleIconSelect,
+    handleRemoveIcon
+  } = useModalIconHandling(cardData?.icon_url, cardData?.iconName);
+  
+  // Store carousel timer in localStorage
   useEffect(() => {
     localStorage.setItem(`${localStorageKey}_carouselTimer`, String(carouselTimer));
   }, [carouselTimer, localStorageKey]);
   
-  const form = useForm<AdminTestingCardData>({
+  const form = useForm<ThroneRoomCardData>({
     defaultValues: {
       id: cardData?.id || '',
       title: cardData?.title || '',
@@ -68,11 +84,11 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
       focal_point_y: cardData?.focal_point_y || 50,
       highlight_effect: cardData?.highlight_effect || false,
       priority: cardData?.priority || 'medium',
-      usage_data: cardData?.usage_data || [],
-      points: cardData?.points || 0
+      usage_data: cardData?.usage_data || []
     }
   });
   
+  // Reset form when modal opens with new card data
   useEffect(() => {
     if (isOpen && cardData) {
       console.log("AdminTesting Modal opened with card data:", cardData);
@@ -92,133 +108,10 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         focal_point_y: cardData.focal_point_y || 50,
         highlight_effect: cardData.highlight_effect || false,
         priority: cardData.priority || 'medium',
-        usage_data: cardData.usage_data || [],
-        points: cardData.points || 0
+        usage_data: cardData.usage_data || []
       });
-      setImagePreview(cardData.background_image_url || null);
-      setIconPreview(cardData.icon_url || null);
-      setSelectedIconName(cardData.iconName || null);
-      setPosition({ 
-        x: cardData.focal_point_x || 50, 
-        y: cardData.focal_point_y || 50 
-      });
-      
-      const newImageSlots = [null, null, null, null, null];
-      
-      if (Array.isArray(cardData.background_images) && cardData.background_images.length > 0) {
-        cardData.background_images.forEach((img, index) => {
-          if (index < newImageSlots.length && img) {
-            newImageSlots[index] = img;
-          }
-        });
-      } else if (cardData.background_image_url) {
-        newImageSlots[0] = cardData.background_image_url;
-      }
-      
-      setImageSlots(newImageSlots);
     }
   }, [isOpen, cardData, form]);
-  
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    // If no box selected, auto-select the first empty slot
-    let targetIndex = selectedBoxIndex;
-    if (targetIndex === null) {
-      const firstEmpty = imageSlots.findIndex((slot) => !slot);
-      if (firstEmpty === -1) {
-        // All slots are full, select the first one
-        targetIndex = 0;
-      } else {
-        targetIndex = firstEmpty;
-      }
-      setSelectedBoxIndex(targetIndex);
-    }
-    
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      try {
-        const base64String = reader.result as string;
-        
-        const updatedSlots = [...imageSlots];
-        updatedSlots[targetIndex!] = base64String;
-        setImageSlots(updatedSlots);
-        setImagePreview(base64String);
-        form.setValue('background_image_url', base64String);
-        form.setValue('background_opacity', 100);
-      } catch (error) {
-        console.error("Error processing uploaded image:", error);
-        toast({
-          title: "Image Error",
-          description: "There was a problem processing the uploaded image",
-          variant: "destructive"
-        });
-      }
-    };
-    
-    reader.readAsDataURL(file);
-  };
-  
-  const handleRemoveImage = () => {
-    if (selectedBoxIndex !== null) {
-      const updatedSlots = [...imageSlots];
-      updatedSlots[selectedBoxIndex] = null;
-      setImageSlots(updatedSlots);
-      
-      // Clear preview but keep the selected box highlighted
-      setImagePreview(null);
-      form.setValue('background_image_url', '');
-    }
-  };
-
-  const handleIconUpload = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => {
-      if (e.target instanceof HTMLInputElement && e.target.files) {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64String = reader.result as string;
-            setIconPreview(base64String);
-            setSelectedIconName(null);
-            form.setValue('icon_url', base64String);
-            form.setValue('iconName', undefined);
-          };
-          reader.readAsDataURL(file);
-        }
-      }
-    };
-    input.click();
-  };
-
-  const handleIconSelect = (iconName: string) => {
-    if (iconName.startsWith('custom:')) {
-      const iconUrl = iconName.substring(7);
-      setIconPreview(iconUrl);
-      setSelectedIconName(null);
-      form.setValue('icon_url', iconUrl);
-      form.setValue('iconName', undefined);
-      
-      toast({
-        title: "Custom icon selected",
-        description: "Custom icon has been applied to the card",
-      });
-    } else {
-      setSelectedIconName(iconName);
-      setIconPreview(null);
-      form.setValue('iconName', iconName);
-      form.setValue('icon_url', undefined);
-      
-      toast({
-        title: "Icon selected",
-        description: `${iconName} icon selected`,
-      });
-    }
-  };
 
   const handleDeleteCard = () => {
     try {
@@ -234,22 +127,21 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
     }
   };
   
-  const onSubmit = async (data: AdminTestingCardData) => {
+  const onSubmit = async (data: ThroneRoomCardData) => {
     try {
       setIsSaving(true);
+      console.log("Saving admin testing card data:", data);
       
-      // Filter out null values from image slots
-      const validImageSlots = imageSlots
-        .filter(slot => typeof slot === 'string' && slot.trim() !== '') as string[];
+      const { backgroundImageUrl, backgroundImages } = getProcessedImages();
       
       const updatedData = {
         ...data,
-        background_image_url: imagePreview || undefined,
+        background_image_url: backgroundImageUrl || undefined,
         icon_url: iconPreview || undefined,
         iconName: selectedIconName || undefined,
         focal_point_x: position.x,
         focal_point_y: position.y,
-        background_images: validImageSlots,
+        background_images: backgroundImages,
       };
       
       await onSave(updatedData);
@@ -272,6 +164,11 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
     }
   };
 
+  // Helper method to set form values
+  const setValue = (key: string, value: any) => {
+    form.setValue(key as any, value);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="bg-navy border border-light-navy text-white max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -281,260 +178,45 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Title</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Enter title" 
-                        className="bg-dark-navy border-light-navy text-white"
-                        {...field} 
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Description</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Enter description" 
-                        className="bg-dark-navy border-light-navy text-white"
-                        {...field} 
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="points"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Points</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="Enter points" 
-                        className="bg-dark-navy border-light-navy text-white"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="priority"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Priority</FormLabel>
-                    <FormControl>
-                      <PrioritySelector 
-                        control={form.control}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <div className="space-y-4">
-                <FormLabel className="text-white text-lg">Background Image</FormLabel>
-                <div className="flex flex-row items-end space-x-6 mb-4">
-                  <div className="flex space-x-2">
-                    {imageSlots.map((imageUrl, index) => (
-                      <div
-                        key={index}
-                        onClick={() => {
-                          setSelectedBoxIndex(index);
-                          setImagePreview(imageSlots[index]);
-                        }}
-                        className={`w-12 h-12 rounded-md cursor-pointer transition-all
-                          ${selectedBoxIndex === index
-                            ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
-                            : 'bg-dark-navy border border-light-navy hover:border-white'}
-                        `}
-                      >
-                        {imageUrl && (
-                          <img
-                            src={imageUrl}
-                            alt={`Image ${index + 1}`}
-                            className="w-full h-full object-cover rounded-md"
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-col items-start space-y-1">
-                    <span className="text-sm text-white font-medium leading-tight">
-                      Carousel Timer
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      (Settings will be applied to all cards)
-                    </span>
-
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => onCarouselTimerChange(Math.max(1, carouselTimer - 1))}
-                        className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
-                      >
-                        –
-                      </Button>
-
-                      <div className="w-10 text-center text-white">{carouselTimer}</div>
-
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => onCarouselTimerChange(carouselTimer + 1)}
-                        className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
-                      >
-                        +
-                      </Button>
-
-                      <span className="text-sm text-slate-400">(s)</span>
-                    </div>
-                  </div>
-                </div>
-                <BackgroundImageSelector
-                  control={form.control}
-                  imagePreview={imagePreview}
-                  initialPosition={position}
-                  onRemoveImage={handleRemoveImage}
-                  onImageUpload={handleImageUpload}
-                  setValue={form.setValue}
-                />
-              </div>
-              
-              <div className="space-y-4">
-                <FormLabel className="text-white text-lg">Card Icon</FormLabel>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
-                    <IconSelector
-                      selectedIconName={selectedIconName}
-                      iconPreview={iconPreview}
-                      iconColor={form.watch('icon_color')}
-                      onSelectIcon={handleIconSelect}
-                      onUploadIcon={handleIconUpload}
-                      onRemoveIcon={() => {
-                        setIconPreview(null);
-                        setSelectedIconName(null);
-                        form.setValue('icon_url', undefined);
-                        form.setValue('iconName', undefined);
-                      }}
-                    />
-                  </div>
-                  
-                  <PredefinedIconsGrid
-                    selectedIconName={selectedIconName}
-                    iconColor={form.watch('icon_color')}
-                    onSelectIcon={handleIconSelect}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="text-white font-medium text-sm">Colors</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ColorPickerField 
-                    control={form.control}
-                    name="title_color"
-                    label="Title Color"
-                  />
-                  
-                  <ColorPickerField 
-                    control={form.control}
-                    name="subtext_color"
-                    label="Description Color"
-                  />
-                  
-                  <ColorPickerField 
-                    control={form.control}
-                    name="calendar_color"
-                    label="Calendar Color"
-                  />
-                  
-                  <ColorPickerField 
-                    control={form.control}
-                    name="icon_color"
-                    label="Icon Color"
-                  />
-                </div>
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="highlight_effect"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-white">Highlight Effect</FormLabel>
-                      <FormDescription className="text-gray-400">
-                        Apply a highlight behind title and description
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Basic details section */}
+            <BasicDetailsSection control={form.control} />
             
-            <DialogFooter className="flex justify-between items-center pt-4">
-              <Button 
-                type="button" 
-                variant="destructive" 
-                onClick={handleDeleteCard} 
-                className="mr-auto"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Card
-              </Button>
-              
-              <div className="flex space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={onClose} 
-                  className="bg-transparent border border-slate-600 text-white hover:bg-slate-800"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit"
-                  className="bg-emerald-600 text-white hover:bg-emerald-700"
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </div>
-            </DialogFooter>
+            {/* Image selection section */}
+            <ImageSelectionSection 
+              imagePreview={imagePreview}
+              imageSlots={imageSlots}
+              selectedBoxIndex={selectedBoxIndex}
+              carouselTimer={carouselTimer}
+              onCarouselTimerChange={onCarouselTimerChange}
+              onSelectImageSlot={handleSelectImageSlot}
+              onRemoveImage={handleRemoveImage}
+              onImageUpload={handleImageUpload}
+              setValue={setValue}
+              position={position}
+            />
+            
+            {/* Icon selection section */}
+            <IconSelectionSection 
+              selectedIconName={selectedIconName}
+              iconPreview={iconPreview}
+              iconColor={form.watch('icon_color')}
+              onSelectIcon={handleIconSelect}
+              onUploadIcon={handleIconUpload}
+              onRemoveIcon={handleRemoveIcon}
+            />
+            
+            {/* Color settings section */}
+            <ColorSettingsSection control={form.control} />
+            
+            {/* Highlight effect toggle */}
+            <HighlightEffectToggle control={form.control} />
+            
+            {/* Modal actions */}
+            <ModalActions 
+              onClose={onClose}
+              onDelete={handleDeleteCard}
+              isSaving={isSaving}
+            />
           </form>
         </Form>
       </DialogContent>
@@ -542,4 +224,4 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
   );
 };
 
-export default AdminTestingEditModal;
+export default AdminTestingCardEditModal;
