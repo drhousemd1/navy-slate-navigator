@@ -265,7 +265,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
 
   return (
     <Card className="bg-navy border border-light-navy">
-      <CardHeader className="border-b border-light-navy">
+      <CardHeader className="border-b-0 border-light-navy">
         <CardTitle className="text-white text-lg">Weekly Activity</CardTitle>
       </CardHeader>
       <CardContent className="pt-4 px-0">
