@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -49,11 +50,17 @@ const MonthlyMetricsChart: React.FC = () => {
   };
 
   const monthDates = useMemo(() => generateMonthDays(), []);
+  
+  // Fixed bar width calculations
   const BAR_WIDTH = 6;
   const BAR_COUNT = 4;
   const BAR_GAP = 2;
-  const BAR_CLUSTER_WIDTH = (BAR_WIDTH * BAR_COUNT) + (BAR_GAP * (BAR_COUNT - 1));
-  const chartWidth = Math.max(monthDates.length * BAR_CLUSTER_WIDTH, 900);
+  const GROUP_PADDING = 10; // Space between day groups
+  const CHART_PADDING = 20; // Padding at chart edges
+  
+  // Calculate fixed chart width based on number of days and consistent spacing
+  const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
+  const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
 
   const getYAxisDomain = useMemo(() => {
     if (!data.length) return ['auto', 'auto'];
@@ -82,19 +89,12 @@ const MonthlyMetricsChart: React.FC = () => {
 
   const handleBarClick = (data: any) => {
     if (!chartScrollRef.current) return;
-    const chartWrapper = chartScrollRef.current.querySelector('.recharts-wrapper') as HTMLDivElement;
-    if (!chartWrapper) return;
-
-    const totalChartWidth = chartWrapper.scrollWidth;
-    const containerWidth = chartScrollRef.current.clientWidth;
-    const barCount = monthDates.length;
-    const barWidth = totalChartWidth / barCount;
-
     const clickedDate = data.date;
     const dateIndex = monthDates.findIndex(date => date === clickedDate);
     if (dateIndex === -1) return;
 
-    const scrollPosition = (dateIndex * barWidth) - (containerWidth / 2) + (barWidth / 2);
+    // Calculate precise scroll position based on fixed day width
+    const scrollPosition = (dateIndex * dayWidth) - (chartScrollRef.current.clientWidth / 2) + (dayWidth / 2);
     chartScrollRef.current.scrollTo({ left: Math.max(0, scrollPosition), behavior: 'smooth' });
   };
 
@@ -202,7 +202,7 @@ const MonthlyMetricsChart: React.FC = () => {
               <BarChart
                 data={data}
                 barGap={BAR_GAP}
-                barCategoryGap={0}
+                barCategoryGap={GROUP_PADDING}
                 margin={{ left: 20, right: 20 }}
               >
                 <CartesianGrid strokeDasharray="0" stroke="#1A1F2C" />
@@ -210,7 +210,7 @@ const MonthlyMetricsChart: React.FC = () => {
                   dataKey="date"
                   type="category"
                   scale="band"
-                  padding={{ left: 10, right: 10 }}
+                  padding={{ left: CHART_PADDING, right: CHART_PADDING }}
                   stroke="#8E9196"
                   tick={{ fill: '#D1D5DB' }}
                   tickFormatter={(date) => {
