@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -18,7 +19,6 @@ import { useLocation } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 
 // Import extracted components
-import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
 
 const ThroneRoom: React.FC = () => {
@@ -72,7 +72,6 @@ const ThroneRoom: React.FC = () => {
               onDataLoaded={handleMetricsDataLoaded}
               key={`metrics-chart-${refreshTrigger}`}
             />
-            <WeeklyMetricsSummaryTiles {...metricsSummary} />
             
             <MonthlyMetricsChart />
             
