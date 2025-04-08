@@ -42,4 +42,3 @@ export function convertToMondayBasedIndex(jsDayIndex: number): number {
 export function convertToJSDayIndex(mondayBasedIndex: number): number {
   return mondayBasedIndex === 6 ? 0 : mondayBasedIndex + 1;
 }
-
