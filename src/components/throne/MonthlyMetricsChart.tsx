@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { format, getMonth, getYear, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { format, getMonth, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
@@ -112,21 +112,65 @@ const MonthlyMetricsChart: React.FC = () => {
         const start = startOfMonth(today).toISOString();
         const end = endOfMonth(today).toISOString();
 
-        const tables = [
-          { table: 'task_completion_history', field: 'completed_at', key: 'tasksCompleted' },
-          { table: 'rule_violations', field: 'violation_date', key: 'rulesBroken' },
-          { table: 'reward_usage', field: 'created_at', key: 'rewardsRedeemed' },
-          { table: 'punishment_history', field: 'applied_date', key: 'punishments' },
-        ];
+        // Load task completions
+        const { data: taskEntries, error: taskError } = await supabase
+          .from('task_completion_history')
+          .select('*')
+          .gte('completed_at', start)
+          .lte('completed_at', end);
+        
+        if (taskError) console.error('Error loading task_completion_history', taskError);
+        taskEntries?.forEach(entry => {
+          const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
+          if (metrics.has(date)) {
+            metrics.get(date)!.tasksCompleted++;
+          }
+        });
 
-        for (const { table, field, key } of tables) {
-          const { data: entries, error } = await supabase.from(table).select('*').gte(field, start).lte(field, end);
-          if (error) console.error(`Error loading ${table}`, error);
-          entries?.forEach(entry => {
-            const date = format(new Date(entry[field]), 'yyyy-MM-dd');
-            if (metrics.has(date)) metrics.get(date)![key]++;
-          });
-        }
+        // Load rule violations
+        const { data: ruleEntries, error: ruleError } = await supabase
+          .from('rule_violations')
+          .select('*')
+          .gte('violation_date', start)
+          .lte('violation_date', end);
+        
+        if (ruleError) console.error('Error loading rule_violations', ruleError);
+        ruleEntries?.forEach(entry => {
+          const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
+          if (metrics.has(date)) {
+            metrics.get(date)!.rulesBroken++;
+          }
+        });
+
+        // Load reward usage
+        const { data: rewardEntries, error: rewardError } = await supabase
+          .from('reward_usage')
+          .select('*')
+          .gte('created_at', start)
+          .lte('created_at', end);
+        
+        if (rewardError) console.error('Error loading reward_usage', rewardError);
+        rewardEntries?.forEach(entry => {
+          const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
+          if (metrics.has(date)) {
+            metrics.get(date)!.rewardsRedeemed++;
+          }
+        });
+
+        // Load punishments
+        const { data: punishmentEntries, error: punishmentError } = await supabase
+          .from('punishment_history')
+          .select('*')
+          .gte('applied_date', start)
+          .lte('applied_date', end);
+        
+        if (punishmentError) console.error('Error loading punishment_history', punishmentError);
+        punishmentEntries?.forEach(entry => {
+          const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
+          if (metrics.has(date)) {
+            metrics.get(date)!.punishments++;
+          }
+        });
 
         setData(Array.from(metrics.values()));
       } catch (err) {
