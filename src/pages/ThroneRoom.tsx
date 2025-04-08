@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -21,7 +20,6 @@ import { toast } from '@/hooks/use-toast';
 // Import extracted components
 import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
-import MonthlyMetricsSummaryTiles from '@/components/throne/MonthlyMetricsSummaryTiles';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
@@ -70,25 +68,14 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
-            <div className="space-y-2">
-              <WeeklyMetricsChart 
-                onDataLoaded={handleMetricsDataLoaded}
-                key={`metrics-chart-${refreshTrigger}`}
-              />
-              
-              <WeeklyMetricsSummaryTiles {...metricsSummary} />
-            </div>
+            <WeeklyMetricsChart 
+              onDataLoaded={handleMetricsDataLoaded}
+              key={`metrics-chart-${refreshTrigger}`}
+            />
             
-            <div className="space-y-2">
-              <MonthlyMetricsChart />
-              
-              <MonthlyMetricsSummaryTiles 
-                tasksCompleted={12} 
-                rulesBroken={5} 
-                rewardsRedeemed={7} 
-                punishments={3} 
-              />
-            </div>
+            <WeeklyMetricsSummaryTiles {...metricsSummary} />
+            
+            <MonthlyMetricsChart />
             
             <AdminSettingsCard />
           </div>
