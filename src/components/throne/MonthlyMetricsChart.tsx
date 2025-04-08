@@ -70,9 +70,10 @@ const MonthlyMetricsChart: React.FC = () => {
   const monthDates = useMemo(() => generateMonthDays(), []);
   
   const BAR_WIDTH = 6;
-  const BAR_GROUP_COUNT = 4;
-  const DATE_SLOT_WIDTH = (BAR_WIDTH * BAR_GROUP_COUNT) + 6;
-  const chartWidth = Math.max(monthDates.length * DATE_SLOT_WIDTH, 900);
+  const BAR_COUNT = 4;
+  const BAR_GAP = 2;
+  const BAR_CLUSTER_WIDTH = (BAR_WIDTH * BAR_COUNT) + (BAR_GAP * (BAR_COUNT - 1));
+  const chartWidth = Math.max(monthDates.length * BAR_CLUSTER_WIDTH, 900);
 
   const getYAxisDomain = useMemo(() => {
     if (!data || data.length === 0) return ['auto', 'auto'];
@@ -272,7 +273,10 @@ const MonthlyMetricsChart: React.FC = () => {
         <div
           ref={chartScrollRef}
           className="overflow-x-auto cursor-grab active:cursor-grabbing select-none scrollbar-hide"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={endDrag}
@@ -282,19 +286,24 @@ const MonthlyMetricsChart: React.FC = () => {
             <ResponsiveContainer width={chartWidth} height={260}>
               <BarChart
                 data={data}
-                barGap={2}
+                barGap={BAR_GAP}
                 barCategoryGap={0}
                 margin={{ left: 20, right: 20 }}
               >
                 <CartesianGrid strokeDasharray="0" stroke="#1A1F2C" />
                 <XAxis
-                  type="number"
-                  dataKey="timestamp"
-                  domain={['dataMin', 'dataMax']}
-                  tickFormatter={(tick) => format(new Date(tick), 'M/d')}
+                  dataKey="date"
+                  type="category"
                   stroke="#8E9196"
                   tick={{ fill: '#D1D5DB' }}
-                  scale="time"
+                  tickFormatter={(date) => {
+                    try {
+                      const d = parseISO(date);
+                      return `${getMonth(d) + 1}/${format(d, 'd')}`;
+                    } catch {
+                      return date;
+                    }
+                  }}
                 />
                 <YAxis
                   stroke="#8E9196"
@@ -308,7 +317,13 @@ const MonthlyMetricsChart: React.FC = () => {
                   contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
                   offset={25}
                   formatter={(value, name) => [value, name]}
-                  labelFormatter={(label) => format(new Date(label), 'MMM d, yyyy')}
+                  labelFormatter={(label) => {
+                    try {
+                      return format(parseISO(String(label)), 'MMM d, yyyy');
+                    } catch {
+                      return label;
+                    }
+                  }}
                 />
                 <Bar
                   dataKey="tasksCompleted"
