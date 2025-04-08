@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -78,7 +77,7 @@ const ThroneRoom: React.FC = () => {
             {/* Weekly Activity Tiles */}
             <WeeklyMetricsSummaryTiles {...metricsSummary} />
             
-            {/* Monthly Activity Chart */}
+            {/* Monthly Activity Chart with its own tiles */}
             <MonthlyMetricsChart />
             
             {/* Admin Settings Card */}

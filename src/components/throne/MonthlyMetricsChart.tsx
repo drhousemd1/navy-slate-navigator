@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -8,9 +7,17 @@ import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 
 interface MonthlyDataItem {
   date: string;
+  tasksCompleted: number;
+  rulesBroken: number;
+  rewardsRedeemed: number;
+  punishments: number;
+}
+
+export interface MonthlyMetricsSummary {
   tasksCompleted: number;
   rulesBroken: number;
   rewardsRedeemed: number;
@@ -26,6 +33,12 @@ const MonthlyMetricsChart: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [monthlySummary, setMonthlySummary] = useState<MonthlyMetricsSummary>({
+    tasksCompleted: 0,
+    rulesBroken: 0,
+    rewardsRedeemed: 0,
+    punishments: 0
+  });
 
   const chartConfig = {
     tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
@@ -51,14 +64,12 @@ const MonthlyMetricsChart: React.FC = () => {
 
   const monthDates = useMemo(() => generateMonthDays(), []);
   
-  // Fixed bar width calculations
   const BAR_WIDTH = 6;
   const BAR_COUNT = 4;
   const BAR_GAP = 2;
   const GROUP_PADDING = 10; // Space between day groups
   const CHART_PADDING = 20; // Padding at chart edges
   
-  // Calculate fixed chart width based on number of days and consistent spacing
   const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
   const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
 
@@ -93,7 +104,6 @@ const MonthlyMetricsChart: React.FC = () => {
     const dateIndex = monthDates.findIndex(date => date === clickedDate);
     if (dateIndex === -1) return;
 
-    // Calculate precise scroll position based on fixed day width
     const scrollPosition = (dateIndex * dayWidth) - (chartScrollRef.current.clientWidth / 2) + (dayWidth / 2);
     chartScrollRef.current.scrollTo({ left: Math.max(0, scrollPosition), behavior: 'smooth' });
   };
@@ -167,7 +177,24 @@ const MonthlyMetricsChart: React.FC = () => {
           }
         });
 
-        setData(Array.from(metrics.values()));
+        const dataArray = Array.from(metrics.values());
+        setData(dataArray);
+        
+        const monthlyTotals = dataArray.reduce((acc, item) => {
+          return {
+            tasksCompleted: acc.tasksCompleted + item.tasksCompleted,
+            rulesBroken: acc.rulesBroken + item.rulesBroken,
+            rewardsRedeemed: acc.rewardsRedeemed + item.rewardsRedeemed,
+            punishments: acc.punishments + item.punishments
+          };
+        }, {
+          tasksCompleted: 0,
+          rulesBroken: 0,
+          rewardsRedeemed: 0,
+          punishments: 0
+        });
+        
+        setMonthlySummary(monthlyTotals);
       } catch (err) {
         toast({
           title: 'Error loading chart data',
@@ -255,44 +282,48 @@ const MonthlyMetricsChart: React.FC = () => {
   }, [data, isDragging, getYAxisDomain, chartWidth]);
 
   return (
-    <Card className="bg-navy border border-light-navy rounded-lg mb-6">
-      <div className="p-4">
-        <h2 className="text-lg font-semibold text-white mb-2">Monthly Activity</h2>
-        <div ref={chartContainerRef} className="overflow-hidden relative h-64">
-          <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
-          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="w-full h-full bg-light-navy/30 animate-pulse rounded"></div>
-            </div>
-          ) : (
-            <div className="h-full">
-              {!hasContent ? (
-                <div className="flex items-center justify-center h-full text-white text-sm">
-                  No activity data to display for this month.
-                </div>
-              ) : (
-                monthlyChart
-              )}
-            </div>
-          )}
+    <div className="space-y-2">
+      <Card className="bg-navy border border-light-navy rounded-lg">
+        <div className="p-4">
+          <h2 className="text-lg font-semibold text-white mb-2">Monthly Activity</h2>
+          <div ref={chartContainerRef} className="overflow-hidden relative h-64">
+            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="w-full h-full bg-light-navy/30 animate-pulse rounded"></div>
+              </div>
+            ) : (
+              <div className="h-full">
+                {!hasContent ? (
+                  <div className="flex items-center justify-center h-full text-white text-sm">
+                    No activity data to display for this month.
+                  </div>
+                ) : (
+                  monthlyChart
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
+              Tasks Completed
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
+              Rules Broken
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
+              Rewards Redeemed
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
+              Punishments
+            </span>
+          </div>
         </div>
-        <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
-            Tasks Completed
-          </span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
-            Rules Broken
-          </span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
-            Rewards Redeemed
-          </span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
-            Punishments
-          </span>
-        </div>
-      </div>
-    </Card>
+      </Card>
+      
+      <MonthlyMetricsSummaryTiles {...monthlySummary} />
+    </div>
   );
 };
 
