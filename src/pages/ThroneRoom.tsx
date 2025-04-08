@@ -69,8 +69,8 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
-            {/* Weekly metrics section */}
-            <div className="space-y-6">
+            {/* Weekly metrics section - structure matches monthly section */}
+            <div className="space-y-2">
               <WeeklyMetricsChart 
                 onDataLoaded={handleMetricsDataLoaded}
                 key={`metrics-chart-${refreshTrigger}`}
