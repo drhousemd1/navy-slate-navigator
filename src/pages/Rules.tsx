@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import HighlightedText from '../components/task/HighlightedText';
 import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
+import { getMondayBasedDay } from '@/lib/utils';
 
 interface Rule {
   id: string;
