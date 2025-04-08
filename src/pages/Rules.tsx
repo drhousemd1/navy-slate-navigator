@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -44,7 +43,7 @@ const Rules: React.FC = () => {
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   useEffect(() => {
     const fetchRules = async () => {
       try {
@@ -92,7 +91,7 @@ const Rules: React.FC = () => {
 
   const handleRuleBroken = async (rule: Rule) => {
     try {
-      const currentDayOfWeek = new Date().getDay();
+      const currentDayOfWeek = getMondayBasedDay();
       
       const newUsageData = [...(rule.usage_data || [0, 0, 0, 0, 0, 0, 0])];
       newUsageData[currentDayOfWeek] = 1;
@@ -109,14 +108,14 @@ const Rules: React.FC = () => {
       if (error) throw error;
       
       const today = new Date();
+      const jsDayOfWeek = today.getDay();
       
-      // Insert into the rule_violations table
       const { error: violationError } = await supabase
         .from('rule_violations')
         .insert({
           rule_id: rule.id,
           violation_date: today.toISOString(),
-          day_of_week: currentDayOfWeek,
+          day_of_week: jsDayOfWeek,
           week_number: `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`
         });
         

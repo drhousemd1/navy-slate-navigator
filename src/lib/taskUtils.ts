@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { getMondayBasedDay } from "./utils";
 
 export interface Task {
   id: string;
@@ -39,7 +39,7 @@ export const wasCompletedToday = (task: Task): boolean => {
 };
 
 export const getCurrentDayOfWeek = (): number => {
-  return new Date().getDay();
+  return getMondayBasedDay();
 };
 
 export const canCompleteTask = (task: Task): boolean => {
@@ -213,7 +213,6 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
       const userId = authData.user?.id;
       
       if (userId) {
-        // Use type assertion to fix TypeScript error
         const { error: historyError } = await supabase.rpc('record_task_completion', {
           task_id_param: id,
           user_id_param: userId

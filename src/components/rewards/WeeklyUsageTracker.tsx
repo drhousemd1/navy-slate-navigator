@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Calendar } from 'lucide-react';
+import { getMondayBasedDay } from '@/lib/utils';
 
 interface WeeklyUsageTrackerProps {
   usageData: boolean[];
@@ -11,8 +12,8 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
   usageData, 
   calendarColor 
 }) => {
-  // Get the current day of the week (0 = Sunday, 1 = Monday, etc.)
-  const currentDayOfWeek = new Date().getDay();
+  // Get the current day of the week (0 = Monday, 6 = Sunday)
+  const currentDayOfWeek = getMondayBasedDay();
   
   // Ensure we always have exactly 7 circles
   const renderCircles = () => {

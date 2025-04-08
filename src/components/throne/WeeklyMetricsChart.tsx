@@ -5,17 +5,15 @@ import {
 } from 'recharts';
 import { 
   format, 
-  startOfWeek, 
-  endOfWeek, 
-  parseISO, 
-  formatISO, 
-  eachDayOfInterval,
+  parseISO,
+  formatISO,
   addDays 
 } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { generateMondayBasedWeekDates } from '@/lib/utils';
 
 interface MetricsData {
   date: string;
@@ -90,13 +88,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   });
 
   const generateWeekDays = (): string[] => {
-    const today = new Date();
-    const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 0 });
-    const weekDates = Array.from({ length: 7 }, (_, i) =>
-      format(addDays(startOfCurrentWeek, i), 'yyyy-MM-dd')
-    );
-    
-    return weekDates;
+    return generateMondayBasedWeekDates();
   };
 
   const formatDate = (dateString: string): string => {

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Calendar } from 'lucide-react';
+import { getMondayBasedDay } from '@/lib/utils';
 
 interface FrequencyTrackerProps {
   frequency: 'daily' | 'weekly';
@@ -15,8 +16,8 @@ const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({
   calendar_color,
   usage_data
 }) => {
-  // Get the current day of the week (0 = Sunday, 1 = Monday, etc.)
-  const currentDayOfWeek = new Date().getDay();
+  // Get the current day of the week (0 = Monday, 6 = Sunday)
+  const currentDayOfWeek = getMondayBasedDay();
   
   const generateTrackerCircles = () => {
     const circles = [];

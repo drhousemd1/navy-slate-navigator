@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { usePunishments, PunishmentHistoryItem } from '@/contexts/PunishmentsContext';
+import { convertToMondayBasedIndex } from '@/lib/utils';
 
 interface UsePunishmentHistoryProps {
   id?: string;
@@ -25,8 +26,9 @@ export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
       const daysSinceToday = Math.floor((currentDate.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24));
       
       if (daysSinceToday < 7) {
-        const dayIndex = item.day_of_week;
-        weekData[dayIndex] = 1;
+        // Convert the day_of_week to Monday-based index
+        const mondayBasedDayIndex = convertToMondayBasedIndex(item.day_of_week);
+        weekData[mondayBasedDayIndex] = 1;
       }
     });
     
