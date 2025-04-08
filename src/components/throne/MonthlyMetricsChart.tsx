@@ -17,18 +17,7 @@ interface MonthlyDataItem {
   punishments: number;
 }
 
-export interface MonthlyMetricsSummary {
-  tasksCompleted: number;
-  rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
-}
-
-interface MonthlyMetricsChartProps {
-  onDataLoaded?: (summary: MonthlyMetricsSummary) => void;
-}
-
-const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({ onDataLoaded }) => {
+const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
 
@@ -37,12 +26,6 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({ onDataLoaded 
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [monthlySummary, setMonthlySummary] = useState<MonthlyMetricsSummary>({
-    tasksCompleted: 0,
-    rulesBroken: 0,
-    rewardsRedeemed: 0,
-    punishments: 0
-  });
 
   const chartConfig = {
     tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
@@ -128,12 +111,6 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({ onDataLoaded 
         const start = startOfMonth(today).toISOString();
         const end = endOfMonth(today).toISOString();
 
-        // Monthly summary totals
-        let totalTasksCompleted = 0;
-        let totalRulesBroken = 0;
-        let totalRewardsRedeemed = 0; 
-        let totalPunishments = 0;
-
         const { data: taskEntries, error: taskError } = await supabase
           .from('task_completion_history')
           .select('*')
@@ -145,7 +122,6 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({ onDataLoaded 
           const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
           if (metrics.has(date)) {
             metrics.get(date)!.tasksCompleted++;
-            totalTasksCompleted++;
           }
         });
 
@@ -160,7 +136,6 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({ onDataLoaded 
           const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
           if (metrics.has(date)) {
             metrics.get(date)!.rulesBroken++;
-            totalRulesBroken++;
           }
         });
 
@@ -175,7 +150,6 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({ onDataLoaded 
           const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
           if (metrics.has(date)) {
             metrics.get(date)!.rewardsRedeemed++;
-            totalRewardsRedeemed++;
           }
         });
 
@@ -190,24 +164,10 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({ onDataLoaded 
           const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
           if (metrics.has(date)) {
             metrics.get(date)!.punishments++;
-            totalPunishments++;
           }
         });
 
-        const monthSummary = {
-          tasksCompleted: totalTasksCompleted,
-          rulesBroken: totalRulesBroken,
-          rewardsRedeemed: totalRewardsRedeemed,
-          punishments: totalPunishments
-        };
-
-        setMonthlySummary(monthSummary);
         setData(Array.from(metrics.values()));
-
-        // Call the callback if provided
-        if (onDataLoaded) {
-          onDataLoaded(monthSummary);
-        }
       } catch (err) {
         toast({
           title: 'Error loading chart data',
@@ -219,7 +179,7 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({ onDataLoaded 
       }
     };
     load();
-  }, [monthDates, onDataLoaded]);
+  }, [monthDates]);
 
   const hasContent = data.some(d =>
     d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
