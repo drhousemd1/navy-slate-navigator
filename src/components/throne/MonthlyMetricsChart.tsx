@@ -69,7 +69,10 @@ const MonthlyMetricsChart: React.FC = () => {
   const monthDates = useMemo(() => generateMonthDays(), []);
   
   const BAR_WIDTH = 6;
-  const chartWidth = Math.max(monthDates.length * 24, 900);
+  const BAR_GROUP_COUNT = 4;
+  const BAR_GAP = 2;
+  const DATE_SLOT_WIDTH = (BAR_WIDTH * BAR_GROUP_COUNT) + (BAR_GAP * (BAR_GROUP_COUNT - 1));
+  const chartWidth = monthDates.length * DATE_SLOT_WIDTH;
 
   const getYAxisDomain = useMemo(() => {
     if (!data || data.length === 0) return ['auto', 'auto'];
@@ -277,12 +280,12 @@ const MonthlyMetricsChart: React.FC = () => {
           onMouseLeave={endDrag}
         >
           <div style={{ width: chartWidth }} className="select-none">
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width={chartWidth} height={260}>
               <BarChart
                 data={data}
-                barGap={2}
-                barCategoryGap="30%"
                 margin={{ left: 20, right: 20 }}
+                barGap={BAR_GAP}
+                barCategoryGap={0}
               >
                 <CartesianGrid strokeDasharray="0" stroke="#1A1F2C" />
                 <XAxis
