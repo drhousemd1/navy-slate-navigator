@@ -1,16 +1,16 @@
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { format, getMonth, getYear, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { Card } from '@/components/ui/card';
+import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 interface MonthlyDataItem {
   date: string;
-  timestamp: number;
   tasksCompleted: number;
   rulesBroken: number;
   rewardsRedeemed: number;
@@ -19,44 +19,26 @@ interface MonthlyDataItem {
 
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartScrollRef = useRef<HTMLDivElement>(null);
+
   const [data, setData] = useState<MonthlyDataItem[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  const chartScrollRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
-  
+
   const chartConfig = {
-    tasksCompleted: {
-      color: '#0EA5E9',
-      label: 'Tasks Completed'
-    },
-    rulesBroken: {
-      color: '#F97316',
-      label: 'Rules Broken'
-    },
-    rewardsRedeemed: {
-      color: '#9b87f5',
-      label: 'Rewards Redeemed'
-    },
-    punishments: {
-      color: '#ea384c',
-      label: 'Punishments'
-    }
+    tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
+    rulesBroken: { color: '#F97316', label: 'Rules Broken' },
+    rewardsRedeemed: { color: '#9b87f5', label: 'Rewards Redeemed' },
+    punishments: { color: '#ea384c', label: 'Punishments' }
   };
 
   const generateMonthDays = (): string[] => {
     const today = new Date();
-    const monthStart = startOfMonth(today);
-    const monthEnd = endOfMonth(today);
-    
-    const monthDates = eachDayOfInterval({ 
-      start: monthStart, 
-      end: monthEnd 
-    }).map(date => format(date, 'yyyy-MM-dd'));
-    
-    return monthDates;
+    const start = startOfMonth(today);
+    const end = endOfMonth(today);
+    return eachDayOfInterval({ start, end }).map(date => format(date, 'yyyy-MM-dd'));
   };
 
   const formatDate = (dateString: string): string => {
@@ -68,7 +50,6 @@ const MonthlyMetricsChart: React.FC = () => {
   };
 
   const monthDates = useMemo(() => generateMonthDays(), []);
-  
   const BAR_WIDTH = 6;
   const BAR_COUNT = 4;
   const BAR_GAP = 2;
@@ -76,16 +57,11 @@ const MonthlyMetricsChart: React.FC = () => {
   const chartWidth = Math.max(monthDates.length * BAR_CLUSTER_WIDTH, 900);
 
   const getYAxisDomain = useMemo(() => {
-    if (!data || data.length === 0) return ['auto', 'auto'];
-    const maxValue = Math.max(
-      ...data.flatMap(item => [
-        item.tasksCompleted,
-        item.rulesBroken,
-        item.rewardsRedeemed,
-        item.punishments
-      ])
-    );
-    return [0, Math.max(5, Math.ceil(maxValue))];
+    if (!data.length) return ['auto', 'auto'];
+    const max = Math.max(...data.flatMap(d => [
+      d.tasksCompleted, d.rulesBroken, d.rewardsRedeemed, d.punishments
+    ]));
+    return [0, Math.max(5, Math.ceil(max))];
   }, [data]);
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -105,148 +81,13 @@ const MonthlyMetricsChart: React.FC = () => {
 
   const endDrag = () => setIsDragging(false);
 
-  useEffect(() => {
-    const loadMonthlyData = async () => {
-      try {
-        setLoading(true);
-        
-        const metricsMap = new Map<string, MonthlyDataItem>();
-
-        monthDates.forEach((date) => {
-          metricsMap.set(date, {
-            date,
-            timestamp: new Date(date).getTime(),
-            tasksCompleted: 0,
-            rulesBroken: 0,
-            rewardsRedeemed: 0,
-            punishments: 0
-          });
-        });
-
-        const today = new Date();
-        const monthStart = startOfMonth(today);
-        const monthEnd = endOfMonth(today);
-
-        try {
-          const { data: taskCompletions, error: taskError } = await supabase
-            .from('task_completion_history')
-            .select('*')
-            .gte('completed_at', monthStart.toISOString())
-            .lte('completed_at', monthEnd.toISOString());
-
-          if (taskError) {
-            console.error('Error fetching task completions:', taskError);
-          } else if (taskCompletions) {
-            taskCompletions.forEach((completion) => {
-              const completionDate = format(new Date(completion.completed_at), 'yyyy-MM-dd');
-              if (metricsMap.has(completionDate)) {
-                const dayData = metricsMap.get(completionDate)!;
-                dayData.tasksCompleted++;
-              }
-            });
-          }
-        } catch (err) {
-          console.error('Error processing task completions:', err);
-        }
-
-        try {
-          const { data: ruleViolations, error: ruleError } = await supabase
-            .from('rule_violations')
-            .select('*')
-            .gte('violation_date', monthStart.toISOString())
-            .lte('violation_date', monthEnd.toISOString());
-
-          if (ruleError) {
-            console.error('Error fetching rule violations:', ruleError);
-          } else if (ruleViolations) {
-            ruleViolations.forEach((violation) => {
-              const violationDate = format(new Date(violation.violation_date), 'yyyy-MM-dd');
-              if (metricsMap.has(violationDate)) {
-                const dayData = metricsMap.get(violationDate)!;
-                dayData.rulesBroken++;
-              }
-            });
-          }
-        } catch (err) {
-          console.error('Error processing rule violations:', err);
-        }
-
-        try {
-          const { data: rewardUsage, error: rewardError } = await supabase
-            .from('reward_usage')
-            .select('*')
-            .gte('created_at', monthStart.toISOString())
-            .lte('created_at', monthEnd.toISOString());
-
-          if (rewardError) {
-            console.error('Error fetching reward usage:', rewardError);
-          } else if (rewardUsage) {
-            rewardUsage.forEach((usage) => {
-              const usageDate = format(new Date(usage.created_at), 'yyyy-MM-dd');
-              if (metricsMap.has(usageDate)) {
-                const dayData = metricsMap.get(usageDate)!;
-                dayData.rewardsRedeemed++;
-              }
-            });
-          }
-        } catch (err) {
-          console.error('Error processing reward usage:', err);
-        }
-
-        try {
-          const { data: punishmentHistory, error: punishmentError } = await supabase
-            .from('punishment_history')
-            .select('*')
-            .gte('applied_date', monthStart.toISOString())
-            .lte('applied_date', monthEnd.toISOString());
-
-          if (punishmentError) {
-            console.error('Error fetching punishment history:', punishmentError);
-          } else if (punishmentHistory) {
-            punishmentHistory.forEach((punishment) => {
-              const punishmentDate = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
-              if (metricsMap.has(punishmentDate)) {
-                const dayData = metricsMap.get(punishmentDate)!;
-                dayData.punishments++;
-              }
-            });
-          }
-        } catch (err) {
-          console.error('Error processing punishment history:', err);
-        }
-
-        const finalData = Array.from(metricsMap.values()).map(item => ({
-          ...item,
-          timestamp: new Date(item.date).getTime()
-        }));
-        
-        console.log("[MONTHLY METRICS DATA]", finalData);
-        
-        setData(finalData);
-      } catch (err: any) {
-        console.error('[Monthly Chart error]', err);
-        toast({
-          title: "Error loading chart data",
-          description: "There was a problem loading the monthly metrics",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadMonthlyData();
-  }, [monthDates]);
-
-  const handleBarClick = (data: any, index: number) => {
+  const handleBarClick = (data: any) => {
     if (!chartScrollRef.current) return;
-
     const chartWrapper = chartScrollRef.current.querySelector('.recharts-wrapper') as HTMLDivElement;
     if (!chartWrapper) return;
 
     const totalChartWidth = chartWrapper.scrollWidth;
     const containerWidth = chartScrollRef.current.clientWidth;
-
     const barCount = monthDates.length;
     const barWidth = totalChartWidth / barCount;
 
@@ -255,13 +96,51 @@ const MonthlyMetricsChart: React.FC = () => {
     if (dateIndex === -1) return;
 
     const scrollPosition = (dateIndex * barWidth) - (containerWidth / 2) + (barWidth / 2);
-    const adjustedPosition = Math.max(0, scrollPosition);
-
-    chartScrollRef.current.scrollTo({
-      left: adjustedPosition,
-      behavior: 'smooth'
-    });
+    chartScrollRef.current.scrollTo({ left: Math.max(0, scrollPosition), behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const metrics = new Map<string, MonthlyDataItem>();
+        monthDates.forEach(date => metrics.set(date, {
+          date, tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0
+        }));
+
+        const today = new Date();
+        const start = startOfMonth(today).toISOString();
+        const end = endOfMonth(today).toISOString();
+
+        const tables = [
+          { table: 'task_completion_history', field: 'completed_at', key: 'tasksCompleted' },
+          { table: 'rule_violations', field: 'violation_date', key: 'rulesBroken' },
+          { table: 'reward_usage', field: 'created_at', key: 'rewardsRedeemed' },
+          { table: 'punishment_history', field: 'applied_date', key: 'punishments' },
+        ];
+
+        for (const { table, field, key } of tables) {
+          const { data: entries, error } = await supabase.from(table).select('*').gte(field, start).lte(field, end);
+          if (error) console.error(`Error loading ${table}`, error);
+          entries?.forEach(entry => {
+            const date = format(new Date(entry[field]), 'yyyy-MM-dd');
+            if (metrics.has(date)) metrics.get(date)![key]++;
+          });
+        }
+
+        setData(Array.from(metrics.values()));
+      } catch (err) {
+        toast({
+          title: 'Error loading chart data',
+          description: 'There was a problem loading the monthly metrics.',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [monthDates]);
 
   const hasContent = data.some(d =>
     d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
@@ -273,10 +152,7 @@ const MonthlyMetricsChart: React.FC = () => {
         <div
           ref={chartScrollRef}
           className="overflow-x-auto cursor-grab active:cursor-grabbing select-none scrollbar-hide"
-          style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-          }}
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={endDrag}
@@ -325,42 +201,10 @@ const MonthlyMetricsChart: React.FC = () => {
                     }
                   }}
                 />
-                <Bar
-                  dataKey="tasksCompleted"
-                  name="Tasks Completed"
-                  fill={chartConfig.tasksCompleted.color}
-                  radius={[4, 4, 0, 0]}
-                  barSize={BAR_WIDTH}
-                  onClick={handleBarClick}
-                  isAnimationActive={false}
-                />
-                <Bar
-                  dataKey="rulesBroken"
-                  name="Rules Broken"
-                  fill={chartConfig.rulesBroken.color}
-                  radius={[4, 4, 0, 0]}
-                  barSize={BAR_WIDTH}
-                  onClick={handleBarClick}
-                  isAnimationActive={false}
-                />
-                <Bar
-                  dataKey="rewardsRedeemed"
-                  name="Rewards Redeemed"
-                  fill={chartConfig.rewardsRedeemed.color}
-                  radius={[4, 4, 0, 0]}
-                  barSize={BAR_WIDTH}
-                  onClick={handleBarClick}
-                  isAnimationActive={false}
-                />
-                <Bar
-                  dataKey="punishments"
-                  name="Punishments"
-                  fill={chartConfig.punishments.color}
-                  radius={[4, 4, 0, 0]}
-                  barSize={BAR_WIDTH}
-                  onClick={handleBarClick}
-                  isAnimationActive={false}
-                />
+                <Bar dataKey="tasksCompleted" name="Tasks Completed" fill={chartConfig.tasksCompleted.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+                <Bar dataKey="rulesBroken" name="Rules Broken" fill={chartConfig.rulesBroken.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+                <Bar dataKey="rewardsRedeemed" name="Rewards Redeemed" fill={chartConfig.rewardsRedeemed.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+                <Bar dataKey="punishments" name="Punishments" fill={chartConfig.punishments.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -373,14 +217,9 @@ const MonthlyMetricsChart: React.FC = () => {
     <Card className="bg-navy border border-light-navy rounded-lg mb-6">
       <div className="p-4">
         <h2 className="text-lg font-semibold text-white mb-2">Monthly Activity</h2>
-        
-        <div 
-          ref={chartContainerRef}
-          className="overflow-hidden relative h-64"
-        >
+        <div ref={chartContainerRef} className="overflow-hidden relative h-64">
           <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
           <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
-          
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="w-full h-full bg-light-navy/30 animate-pulse rounded"></div>
@@ -397,7 +236,6 @@ const MonthlyMetricsChart: React.FC = () => {
             </div>
           )}
         </div>
-        
         <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
           <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
             Tasks Completed
