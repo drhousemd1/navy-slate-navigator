@@ -16,7 +16,7 @@ const WeeklyMetricsSummaryTiles: React.FC<WeeklyMetricsSummaryProps> = ({
   punishments 
 }) => {
   return (
-    <Card className="bg-navy border border-light-navy mt-2">
+    <Card className="bg-navy border border-light-navy">
       <CardContent className="pt-4 px-0">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mt-2 px-6">
           <div className="bg-light-navy rounded-lg px-3 py-2">
