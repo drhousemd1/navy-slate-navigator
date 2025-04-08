@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -69,14 +68,13 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
-            <div className="mb-6">
+            <div className="space-y-6">
               <WeeklyMetricsChart 
                 onDataLoaded={handleMetricsDataLoaded}
                 key={`metrics-chart-${refreshTrigger}`}
               />
+              <WeeklyMetricsSummaryTiles {...metricsSummary} />
             </div>
-            
-            <WeeklyMetricsSummaryTiles {...metricsSummary} />
             
             <MonthlyMetricsChart />
             
