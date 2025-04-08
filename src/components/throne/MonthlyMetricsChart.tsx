@@ -68,8 +68,10 @@ const MonthlyMetricsChart: React.FC = () => {
 
   const monthDates = useMemo(() => generateMonthDays(), []);
   
-  const BAR_WIDTH = 30;
-  const chartWidth = monthDates.length * BAR_WIDTH;
+  const BAR_WIDTH = 16;
+  const BAR_GROUP_SIZE = 4;
+  const DATE_SLOT_WIDTH = BAR_WIDTH * BAR_GROUP_SIZE + 8;
+  const chartWidth = monthDates.length * DATE_SLOT_WIDTH;
 
   const getYAxisDomain = useMemo(() => {
     if (!data || data.length === 0) return ['auto', 'auto'];
@@ -260,16 +262,16 @@ const MonthlyMetricsChart: React.FC = () => {
 
   const monthlyChart = useMemo(() => {
     return (
-      <ChartContainer 
+      <ChartContainer
         className="w-full h-full"
         config={chartConfig}
       >
         <div
           ref={chartScrollRef}
           className="overflow-x-auto cursor-grab active:cursor-grabbing select-none scrollbar-hide"
-          style={{ 
-            scrollbarWidth: 'none', 
-            msOverflowStyle: 'none'
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
           }}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
@@ -278,16 +280,14 @@ const MonthlyMetricsChart: React.FC = () => {
         >
           <div style={{ width: chartWidth }} className="select-none">
             <ResponsiveContainer width={chartWidth} height={260}>
-              <BarChart 
+              <BarChart
                 data={data}
-                barGap={0}
-                barCategoryGap={0}
+                barGap={4}
+                barCategoryGap="20%"
+                margin={{ left: 20, right: 20 }}
               >
-                <CartesianGrid 
-                  strokeDasharray="0" 
-                  stroke="#1A1F2C" 
-                />
-                <XAxis 
+                <CartesianGrid strokeDasharray="0" stroke="#1A1F2C" />
+                <XAxis
                   dataKey="date"
                   tickFormatter={(date) => {
                     try {
@@ -300,13 +300,13 @@ const MonthlyMetricsChart: React.FC = () => {
                   stroke="#8E9196"
                   tick={{ fill: '#D1D5DB' }}
                 />
-                <YAxis 
+                <YAxis
                   stroke="#8E9196"
                   tick={{ fill: '#D1D5DB' }}
                   domain={getYAxisDomain}
                   allowDataOverflow={false}
                 />
-                <Tooltip 
+                <Tooltip
                   cursor={false}
                   wrapperStyle={{ zIndex: 9999, marginLeft: '20px' }}
                   contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
@@ -320,41 +320,41 @@ const MonthlyMetricsChart: React.FC = () => {
                     }
                   }}
                 />
-                <Bar 
-                  dataKey="tasksCompleted" 
-                  name="Tasks Completed" 
-                  fill={chartConfig.tasksCompleted.color} 
-                  radius={[4, 4, 0, 0]} 
+                <Bar
+                  dataKey="tasksCompleted"
+                  name="Tasks Completed"
+                  fill={chartConfig.tasksCompleted.color}
+                  radius={[4, 4, 0, 0]}
+                  barSize={BAR_WIDTH}
                   onClick={handleBarClick}
                   isAnimationActive={false}
-                  barSize={BAR_WIDTH}
                 />
-                <Bar 
-                  dataKey="rulesBroken" 
-                  name="Rules Broken" 
-                  fill={chartConfig.rulesBroken.color} 
-                  radius={[4, 4, 0, 0]} 
+                <Bar
+                  dataKey="rulesBroken"
+                  name="Rules Broken"
+                  fill={chartConfig.rulesBroken.color}
+                  radius={[4, 4, 0, 0]}
+                  barSize={BAR_WIDTH}
                   onClick={handleBarClick}
                   isAnimationActive={false}
-                  barSize={BAR_WIDTH}
                 />
-                <Bar 
-                  dataKey="rewardsRedeemed" 
-                  name="Rewards Redeemed" 
-                  fill={chartConfig.rewardsRedeemed.color} 
-                  radius={[4, 4, 0, 0]} 
+                <Bar
+                  dataKey="rewardsRedeemed"
+                  name="Rewards Redeemed"
+                  fill={chartConfig.rewardsRedeemed.color}
+                  radius={[4, 4, 0, 0]}
+                  barSize={BAR_WIDTH}
                   onClick={handleBarClick}
                   isAnimationActive={false}
-                  barSize={BAR_WIDTH}
                 />
-                <Bar 
-                  dataKey="punishments" 
-                  name="Punishments" 
-                  fill={chartConfig.punishments.color} 
-                  radius={[4, 4, 0, 0]} 
+                <Bar
+                  dataKey="punishments"
+                  name="Punishments"
+                  fill={chartConfig.punishments.color}
+                  radius={[4, 4, 0, 0]}
+                  barSize={BAR_WIDTH}
                   onClick={handleBarClick}
                   isAnimationActive={false}
-                  barSize={BAR_WIDTH}
                 />
               </BarChart>
             </ResponsiveContainer>
