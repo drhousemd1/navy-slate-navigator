@@ -20,6 +20,7 @@ import { toast } from '@/hooks/use-toast';
 
 // Import extracted components
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
+import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
@@ -68,10 +69,20 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
-            <WeeklyMetricsChart 
-              onDataLoaded={handleMetricsDataLoaded}
-              key={`metrics-chart-${refreshTrigger}`}
-            />
+            {/* Weekly metrics section */}
+            <div className="space-y-6">
+              <WeeklyMetricsChart 
+                onDataLoaded={handleMetricsDataLoaded}
+                key={`metrics-chart-${refreshTrigger}`}
+              />
+              
+              <WeeklyMetricsSummaryTiles 
+                tasksCompleted={metricsSummary.tasksCompleted}
+                rulesBroken={metricsSummary.rulesBroken}
+                rewardsRedeemed={metricsSummary.rewardsRedeemed}
+                punishments={metricsSummary.punishments}
+              />
+            </div>
             
             <MonthlyMetricsChart />
             

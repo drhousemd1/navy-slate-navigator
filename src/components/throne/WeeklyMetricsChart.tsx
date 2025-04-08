@@ -16,7 +16,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import WeeklyMetricsSummaryTiles from './WeeklyMetricsSummaryTiles';
 
 interface MetricsData {
   date: string;
@@ -294,59 +293,50 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   }, [data, weekDates]);
 
   return (
-    <div className="space-y-6">
-      <Card className="bg-navy border border-light-navy rounded-lg">
-        <div className="p-4">
-          <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
-          
-          <div 
-            className="w-full select-none user-select-none" 
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={endDrag}
-            onMouseLeave={endDrag}
-            ref={chartScrollRef}
-            style={{ WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
-          >
-            {loading && (
-              <Skeleton className="w-full h-64 bg-light-navy/30" />
-            )}
-            {!loading && (
-              <div className="h-64">
-                {!hasContent && (
-                  <div className="flex items-center justify-center h-full text-white text-sm">
-                    No activity data to display for this week.
-                  </div>
-                )}
-                {hasContent && weeklyChart}
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
-            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
-              Tasks Completed
-            </span>
-            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
-              Rules Broken
-            </span>
-            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
-              Rewards Redeemed
-            </span>
-            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
-              Punishments
-            </span>
-          </div>
+    <Card className="bg-navy border border-light-navy rounded-lg">
+      <div className="p-4">
+        <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
+        
+        <div 
+          className="w-full select-none user-select-none" 
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={endDrag}
+          onMouseLeave={endDrag}
+          ref={chartScrollRef}
+          style={{ WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
+        >
+          {loading && (
+            <Skeleton className="w-full h-64 bg-light-navy/30" />
+          )}
+          {!loading && (
+            <div className="h-64">
+              {!hasContent && (
+                <div className="flex items-center justify-center h-full text-white text-sm">
+                  No activity data to display for this week.
+                </div>
+              )}
+              {hasContent && weeklyChart}
+            </div>
+          )}
         </div>
-      </Card>
-      
-      <WeeklyMetricsSummaryTiles 
-        tasksCompleted={summaryData.tasksCompleted}
-        rulesBroken={summaryData.rulesBroken}
-        rewardsRedeemed={summaryData.rewardsRedeemed}
-        punishments={summaryData.punishments}
-      />
-    </div>
+
+        <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
+            Tasks Completed
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
+            Rules Broken
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
+            Rewards Redeemed
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
+            Punishments
+          </span>
+        </div>
+      </div>
+    </Card>
   );
 };
 
