@@ -278,7 +278,11 @@ const MonthlyMetricsChart: React.FC = () => {
         >
           <div style={{ width: chartWidth }} className="select-none">
             <ResponsiveContainer width={chartWidth} height={260}>
-              <BarChart data={data}>
+              <BarChart 
+                data={data}
+                barGap={0}
+                barCategoryGap={0}
+              >
                 <CartesianGrid 
                   strokeDasharray="0" 
                   stroke="#1A1F2C" 
@@ -323,6 +327,7 @@ const MonthlyMetricsChart: React.FC = () => {
                   radius={[4, 4, 0, 0]} 
                   onClick={handleBarClick}
                   isAnimationActive={false}
+                  barSize={BAR_WIDTH}
                 />
                 <Bar 
                   dataKey="rulesBroken" 
@@ -331,6 +336,7 @@ const MonthlyMetricsChart: React.FC = () => {
                   radius={[4, 4, 0, 0]} 
                   onClick={handleBarClick}
                   isAnimationActive={false}
+                  barSize={BAR_WIDTH}
                 />
                 <Bar 
                   dataKey="rewardsRedeemed" 
@@ -339,6 +345,7 @@ const MonthlyMetricsChart: React.FC = () => {
                   radius={[4, 4, 0, 0]} 
                   onClick={handleBarClick}
                   isAnimationActive={false}
+                  barSize={BAR_WIDTH}
                 />
                 <Bar 
                   dataKey="punishments" 
@@ -347,6 +354,7 @@ const MonthlyMetricsChart: React.FC = () => {
                   radius={[4, 4, 0, 0]} 
                   onClick={handleBarClick}
                   isAnimationActive={false}
+                  barSize={BAR_WIDTH}
                 />
               </BarChart>
             </ResponsiveContainer>
