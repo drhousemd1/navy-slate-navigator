@@ -4,7 +4,7 @@ import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import WeeklyMetricsChart, { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsChart';
-import MonthlyMetricsChart from '@/components/throne/MonthlyMetricsChart';
+import MonthlyMetricsChart, { MonthlyMetricsSummary } from '@/components/throne/MonthlyMetricsChart';
 import { 
   TooltipProvider, 
   Tooltip,
@@ -20,11 +20,18 @@ import { toast } from '@/hooks/use-toast';
 
 // Import extracted components
 import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
+import MonthlyMetricsSummaryTiles from '@/components/throne/MonthlyMetricsSummaryTiles';
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
-  const [metricsSummary, setMetricsSummary] = useState<WeeklyMetricsSummary>({
+  const [weeklyMetricsSummary, setWeeklyMetricsSummary] = useState<WeeklyMetricsSummary>({
+    tasksCompleted: 0,
+    rulesBroken: 0,
+    rewardsRedeemed: 0,
+    punishments: 0
+  });
+  const [monthlyMetricsSummary, setMonthlyMetricsSummary] = useState<MonthlyMetricsSummary>({
     tasksCompleted: 0,
     rulesBroken: 0,
     rewardsRedeemed: 0,
@@ -54,10 +61,15 @@ const ThroneRoom: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
-    console.log('Metrics data loaded with summary:', summaryData);
-    setMetricsSummary(summaryData);
+  const handleWeeklyMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
+    console.log('Weekly metrics data loaded with summary:', summaryData);
+    setWeeklyMetricsSummary(summaryData);
     setChartLoading(false);
+  };
+
+  const handleMonthlyMetricsDataLoaded = (summaryData: MonthlyMetricsSummary) => {
+    console.log('Monthly metrics data loaded with summary:', summaryData);
+    setMonthlyMetricsSummary(summaryData);
   };
 
   return (
@@ -71,15 +83,21 @@ const ThroneRoom: React.FC = () => {
           <div className="space-y-6">
             {/* Weekly Activity Chart - now containing its own title */}
             <WeeklyMetricsChart 
-              onDataLoaded={handleMetricsDataLoaded}
+              onDataLoaded={handleWeeklyMetricsDataLoaded}
               key={`metrics-chart-${refreshTrigger}`}
             />
             
             {/* Weekly Activity Tiles */}
-            <WeeklyMetricsSummaryTiles {...metricsSummary} />
+            <WeeklyMetricsSummaryTiles {...weeklyMetricsSummary} />
             
             {/* Monthly Activity Chart */}
-            <MonthlyMetricsChart />
+            <MonthlyMetricsChart 
+              onDataLoaded={handleMonthlyMetricsDataLoaded}
+              key={`monthly-metrics-chart-${refreshTrigger}`}
+            />
+            
+            {/* Monthly Activity Tiles */}
+            <MonthlyMetricsSummaryTiles {...monthlyMetricsSummary} />
             
             {/* Admin Settings Card */}
             <AdminSettingsCard />
