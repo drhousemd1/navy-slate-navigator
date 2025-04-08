@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 
 interface MonthlyDataItem {
   date: string;
+  timestamp: number;
   tasksCompleted: number;
   rulesBroken: number;
   rewardsRedeemed: number;
@@ -70,9 +71,8 @@ const MonthlyMetricsChart: React.FC = () => {
   
   const BAR_WIDTH = 6;
   const BAR_GROUP_COUNT = 4;
-  const BAR_GAP = 2;
-  const DATE_SLOT_WIDTH = (BAR_WIDTH * BAR_GROUP_COUNT) + (BAR_GAP * (BAR_GROUP_COUNT - 1));
-  const chartWidth = monthDates.length * DATE_SLOT_WIDTH;
+  const DATE_SLOT_WIDTH = (BAR_WIDTH * BAR_GROUP_COUNT) + 6;
+  const chartWidth = Math.max(monthDates.length * DATE_SLOT_WIDTH, 900);
 
   const getYAxisDomain = useMemo(() => {
     if (!data || data.length === 0) return ['auto', 'auto'];
@@ -114,6 +114,7 @@ const MonthlyMetricsChart: React.FC = () => {
         monthDates.forEach((date) => {
           metricsMap.set(date, {
             date,
+            timestamp: new Date(date).getTime(),
             tasksCompleted: 0,
             rulesBroken: 0,
             rewardsRedeemed: 0,
@@ -213,7 +214,11 @@ const MonthlyMetricsChart: React.FC = () => {
           console.error('Error processing punishment history:', err);
         }
 
-        const finalData = Array.from(metricsMap.values());
+        const finalData = Array.from(metricsMap.values()).map(item => ({
+          ...item,
+          timestamp: new Date(item.date).getTime()
+        }));
+        
         console.log("[MONTHLY METRICS DATA]", finalData);
         
         setData(finalData);
@@ -263,17 +268,11 @@ const MonthlyMetricsChart: React.FC = () => {
 
   const monthlyChart = useMemo(() => {
     return (
-      <ChartContainer
-        className="w-full h-full"
-        config={chartConfig}
-      >
+      <ChartContainer className="w-full h-full" config={chartConfig}>
         <div
           ref={chartScrollRef}
           className="overflow-x-auto cursor-grab active:cursor-grabbing select-none scrollbar-hide"
-          style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-          }}
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={endDrag}
@@ -283,23 +282,19 @@ const MonthlyMetricsChart: React.FC = () => {
             <ResponsiveContainer width={chartWidth} height={260}>
               <BarChart
                 data={data}
-                margin={{ left: 20, right: 20 }}
-                barGap={BAR_GAP}
+                barGap={2}
                 barCategoryGap={0}
+                margin={{ left: 20, right: 20 }}
               >
                 <CartesianGrid strokeDasharray="0" stroke="#1A1F2C" />
                 <XAxis
-                  dataKey="date"
-                  tickFormatter={(date) => {
-                    try {
-                      const d = parseISO(date);
-                      return `${getMonth(d) + 1}/${format(d, 'd')}`;
-                    } catch {
-                      return date;
-                    }
-                  }}
+                  type="number"
+                  dataKey="timestamp"
+                  domain={['dataMin', 'dataMax']}
+                  tickFormatter={(tick) => format(new Date(tick), 'M/d')}
                   stroke="#8E9196"
                   tick={{ fill: '#D1D5DB' }}
+                  scale="time"
                 />
                 <YAxis
                   stroke="#8E9196"
@@ -313,13 +308,7 @@ const MonthlyMetricsChart: React.FC = () => {
                   contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
                   offset={25}
                   formatter={(value, name) => [value, name]}
-                  labelFormatter={(label) => {
-                    try {
-                      return format(parseISO(String(label)), 'MMM d, yyyy');
-                    } catch {
-                      return label;
-                    }
-                  }}
+                  labelFormatter={(label) => format(new Date(label), 'MMM d, yyyy')}
                 />
                 <Bar
                   dataKey="tasksCompleted"
