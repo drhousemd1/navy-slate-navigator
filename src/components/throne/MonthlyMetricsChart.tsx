@@ -67,6 +67,9 @@ const MonthlyMetricsChart: React.FC = () => {
   };
 
   const monthDates = useMemo(() => generateMonthDays(), []);
+  
+  const BAR_WIDTH = 30;
+  const chartWidth = monthDates.length * BAR_WIDTH;
 
   const getYAxisDomain = useMemo(() => {
     if (!data || data.length === 0) return ['auto', 'auto'];
@@ -273,8 +276,8 @@ const MonthlyMetricsChart: React.FC = () => {
           onMouseUp={endDrag}
           onMouseLeave={endDrag}
         >
-          <div className="inline-block min-w-full select-none">
-            <ResponsiveContainer width={900} height={260}>
+          <div style={{ width: chartWidth }} className="select-none">
+            <ResponsiveContainer width={chartWidth} height={260}>
               <BarChart data={data}>
                 <CartesianGrid 
                   strokeDasharray="0" 
@@ -351,7 +354,7 @@ const MonthlyMetricsChart: React.FC = () => {
         </div>
       </ChartContainer>
     );
-  }, [data, isDragging, getYAxisDomain]);
+  }, [data, isDragging, getYAxisDomain, chartWidth]);
 
   return (
     <Card className="bg-navy border border-light-navy rounded-lg mb-6">
