@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -112,7 +111,6 @@ const MonthlyMetricsChart: React.FC = () => {
         const start = startOfMonth(today).toISOString();
         const end = endOfMonth(today).toISOString();
 
-        // Load task completions
         const { data: taskEntries, error: taskError } = await supabase
           .from('task_completion_history')
           .select('*')
@@ -127,7 +125,6 @@ const MonthlyMetricsChart: React.FC = () => {
           }
         });
 
-        // Load rule violations
         const { data: ruleEntries, error: ruleError } = await supabase
           .from('rule_violations')
           .select('*')
@@ -142,7 +139,6 @@ const MonthlyMetricsChart: React.FC = () => {
           }
         });
 
-        // Load reward usage
         const { data: rewardEntries, error: rewardError } = await supabase
           .from('reward_usage')
           .select('*')
@@ -157,7 +153,6 @@ const MonthlyMetricsChart: React.FC = () => {
           }
         });
 
-        // Load punishments
         const { data: punishmentEntries, error: punishmentError } = await supabase
           .from('punishment_history')
           .select('*')
@@ -214,6 +209,8 @@ const MonthlyMetricsChart: React.FC = () => {
                 <XAxis
                   dataKey="date"
                   type="category"
+                  scale="band"
+                  padding={{ left: 10, right: 10 }}
                   stroke="#8E9196"
                   tick={{ fill: '#D1D5DB' }}
                   tickFormatter={(date) => {
