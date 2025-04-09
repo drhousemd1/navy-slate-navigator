@@ -221,13 +221,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               type="category"
               dataKey="date"
               ticks={weekDates}
-              tickFormatter={(date) => {
-                try {
-                  const [year, month, day] = date.split('-').map(Number);
-                  return format(new Date(Date.UTC(year, month - 1, day)), 'EEE');
-                } catch {
-                  return date;
-                }
+              tickFormatter={(_, index) => {
+                const staticLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                return staticLabels[index] || '';
               }}
               interval={0}
               stroke="#8E9196"
