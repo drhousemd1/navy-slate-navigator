@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -234,9 +235,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               type="category"
               dataKey="date"
               ticks={weekDates}
-              tickFormatter={(_, index) => {
-                const staticLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                return staticLabels[index] || '';
+              tickFormatter={(date) => {
+                try {
+                  return format(parseISO(date), 'EEE');
+                } catch {
+                  return date;
+                }
               }}
               interval={0}
               stroke="#8E9196"
