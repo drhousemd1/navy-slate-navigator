@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -165,6 +166,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           .gte('completed_at', isoStart)
           .lt('completed_at', isoEnd);
 
+        console.log('[WEEK RANGE]', isoStart, '→', isoEnd);
+        console.log('[COMPLETION DATA]', completions);
+
         if (fetchError) throw fetchError;
 
         // Prepare blank metrics for each day of the week
@@ -189,7 +193,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         });
 
         const finalData = weekDates.map((d) => metricsMap.get(d)!);
-        console.log("[FINAL METRICS DATA]", finalData);
+        console.log('[FINAL DATA]', finalData);
         setData(finalData);
 
         const summary = finalData.reduce(
