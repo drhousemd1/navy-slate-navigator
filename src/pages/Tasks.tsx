@@ -15,6 +15,7 @@ import {
   wasCompletedToday
 } from '../lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TasksContentProps {
   isEditorOpen: boolean;
@@ -157,6 +158,24 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
           const task = tasks.find(t => t.id === taskId);
           const points = task?.points || 0;
           console.log(`Task completed, earned ${points} points`);
+          
+          const { data: authData } = await supabase.auth.getUser();
+          const userId = authData.user?.id || 'anonymous';
+          
+          const { error: insertError } = await supabase
+            .from('task_completion_history')
+            .insert({
+              task_id: taskId,
+              completed_at: new Date().toISOString(),
+              user_id: userId
+            });
+
+          if (insertError) {
+            console.error('Error inserting into task_completion_history:', insertError.message);
+          } else {
+            console.log('Logged task completion to history');
+            queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
+          }
           
           await refreshPointsFromDatabase();
         }
