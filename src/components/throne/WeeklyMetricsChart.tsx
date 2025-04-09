@@ -228,11 +228,10 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         className="w-full h-full"
         config={chartConfig}
       >
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={256}>
           <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
-            <XAxis 
-              type="category"
+            <XAxis
               dataKey="date"
               ticks={weekDates}
               tickFormatter={(date) => {
@@ -246,31 +245,26 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               stroke="#8E9196"
               tick={{ fill: '#D1D5DB' }}
             />
-            <YAxis 
-              stroke="#8E9196"
-              tick={{ fill: '#D1D5DB' }}
-            />
-            <Tooltip 
+            <YAxis stroke="#8E9196" tick={{ fill: '#D1D5DB' }} />
+            <Tooltip
               cursor={false}
               wrapperStyle={{ zIndex: 9999, marginLeft: '20px' }}
               contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
               offset={25}
-              formatter={(value, name, props) => {
-                return [value, name];
-              }}
+              formatter={(value, name) => [value, name]}
               labelFormatter={(label) => {
                 try {
-                  return format(new Date(String(label)), 'EEEE, MMM d');
+                  return format(parseISO(label), 'EEEE, MMM d');
                 } catch {
                   return label;
                 }
               }}
             />
-            <Bar 
-              dataKey="tasksCompleted" 
-              name="Tasks Completed" 
-              fill={chartConfig.tasksCompleted.color} 
-              radius={[4, 4, 0, 0]} 
+            <Bar
+              dataKey="tasksCompleted"
+              name="Tasks Completed"
+              fill={chartConfig.tasksCompleted.color}
+              radius={[4, 4, 0, 0]}
             />
           </BarChart>
         </ResponsiveContainer>
