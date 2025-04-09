@@ -39,6 +39,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
   const [data, setData] = useState<MetricsData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chartKey, setChartKey] = useState<number>(0); // Add a key to force chart re-render
 
   const weekDates = useMemo(() => {
     const start = startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -192,13 +193,15 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
 
         console.log('WeeklyMetricsChart: Summary calculated:', summary);
         
-        // First mark loading as false
+        // Update state
         setLoading(false);
         console.log('WeeklyMetricsChart: Set loading to false');
         
-        // Then update the data
         setData(finalData);
         console.log('WeeklyMetricsChart: Data set in state');
+
+        // Force chart to re-render with a new key
+        setChartKey(prev => prev + 1);
 
         // Check whether data has any content (debugging)
         const hasAnyData = finalData.some(d => 
@@ -228,9 +231,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
     loadMetrics();
   }, [onDataLoaded, weekDates]);
 
-  const hasContent = data.some(d =>
-    d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0
-  );
+  // Compute this outside of the render function
+  const hasContent = useMemo(() => {
+    return data.some(d =>
+      d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0
+    );
+  }, [data]);
 
   console.log('WeeklyMetricsChart render - Loading:', loading, 'Error:', error, 'Has content:', hasContent);
 
@@ -252,8 +258,14 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
             </div>
           )}
 
+          {!loading && !error && !hasContent && (
+            <div className="w-full h-64 flex items-center justify-center border border-dashed border-gray-700 rounded-lg">
+              <span className="text-gray-400 text-sm">No activity data to display for this week</span>
+            </div>
+          )}
+
           {!loading && !error && hasContent && (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={300} key={chartKey}>
               <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
                 <XAxis
@@ -278,12 +290,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
                 <Bar dataKey="punishments" name={chartConfig.punishments.label} fill={chartConfig.punishments.color} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          )}
-
-          {!loading && !error && !hasContent && (
-            <div className="w-full h-64 flex items-center justify-center border border-dashed border-gray-700 rounded-lg">
-              <span className="text-gray-400 text-sm">No activity data to display for this week</span>
-            </div>
           )}
         </div>
 

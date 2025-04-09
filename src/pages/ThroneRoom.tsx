@@ -37,16 +37,19 @@ const ThroneRoom: React.FC = () => {
   
   const { rewards } = useRewards();
 
+  // Force refresh when location changes or component mounts
   useEffect(() => {
     console.log('ThroneRoom: Location changed or component mounted, refreshing metrics chart');
     setRefreshTrigger(prev => prev + 1);
   }, [location.pathname]);
 
+  // Force refresh when rewards change
   useEffect(() => {
     console.log('ThroneRoom: Rewards changed, refreshing metrics chart');
     setRefreshTrigger(prev => prev + 1);
   }, [rewards]);
 
+  // Set up auto-refresh interval
   useEffect(() => {
     console.log('ThroneRoom: Setting up interval for refreshing metrics');
     const interval = setInterval(() => {
