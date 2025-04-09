@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -190,6 +189,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
 
         const finalData = weekDates.map((d) => metricsMap.get(d)!);
         console.log('[FINAL DATA]', finalData);
+        console.log('[FINAL DATA]', JSON.stringify(finalData, null, 2));
         setData(finalData);
 
         const summary = finalData.reduce(
