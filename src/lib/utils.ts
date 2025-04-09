@@ -20,7 +20,7 @@ export function getMondayBasedDay(date: Date = new Date()): number {
  * Generates an array of dates for the current week, starting with Monday
  */
 export function generateMondayBasedWeekDates(): string[] {
-  const start = startOfWeek(new Date(), { weekStartsOn: 1 }); // Explicitly start on Monday
+  const start = startOfWeek(new Date(), { weekStartsOn: 1 }); // Start on Monday
   return Array.from({ length: 7 }, (_, i) =>
     format(addDays(start, i), 'yyyy-MM-dd')
   );
