@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -100,36 +99,32 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
           });
         });
 
-        // Process task completions
-        taskCompletions?.forEach(({ completed_at }) => {
-          const dateObj = new Date(completed_at);
-          const dateKey = dateObj.toISOString().split("T")[0]; // '2025-04-09'
-          const entry = metricsMap.get(dateKey);
-          if (entry) entry.tasksCompleted += 1;
+        taskCompletions?.forEach(entry => {
+          const date = new Date(entry.completed_at).toISOString().split("T")[0];
+          if (metricsMap.has(date)) {
+            metricsMap.get(date)!.tasksCompleted += 1;
+          }
         });
 
-        // Process rule violations
-        ruleViolations?.forEach(({ violation_date }) => {
-          const dateObj = new Date(violation_date);
-          const dateKey = dateObj.toISOString().split("T")[0];
-          const entry = metricsMap.get(dateKey);
-          if (entry) entry.rulesBroken += 1;
+        ruleViolations?.forEach(entry => {
+          const date = new Date(entry.violation_date).toISOString().split("T")[0];
+          if (metricsMap.has(date)) {
+            metricsMap.get(date)!.rulesBroken += 1;
+          }
         });
 
-        // Process reward redemptions
-        rewardUsages?.forEach(({ created_at }) => {
-          const dateObj = new Date(created_at);
-          const dateKey = dateObj.toISOString().split("T")[0];
-          const entry = metricsMap.get(dateKey);
-          if (entry) entry.rewardsRedeemed += 1;
+        rewardUsages?.forEach(entry => {
+          const date = new Date(entry.created_at).toISOString().split("T")[0];
+          if (metricsMap.has(date)) {
+            metricsMap.get(date)!.rewardsRedeemed += 1;
+          }
         });
 
-        // Process punishments
-        punishmentHistory?.forEach(({ applied_date }) => {
-          const dateObj = new Date(applied_date);
-          const dateKey = dateObj.toISOString().split("T")[0];
-          const entry = metricsMap.get(dateKey);
-          if (entry) entry.punishments += 1;
+        punishmentHistory?.forEach(entry => {
+          const date = new Date(entry.applied_date).toISOString().split("T")[0];
+          if (metricsMap.has(date)) {
+            metricsMap.get(date)!.punishments += 1;
+          }
         });
 
         const finalData = weekDates.map(d => metricsMap.get(d)!);
