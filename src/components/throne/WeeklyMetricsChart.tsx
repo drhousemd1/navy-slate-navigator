@@ -8,7 +8,8 @@ import {
   format, 
   parseISO,
   formatISO,
-  addDays 
+  addDays,
+  startOfWeek
 } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -54,14 +55,15 @@ const chartConfig = {
   }
 };
 
+// Demo data - using Monday to Sunday order
 const activityData = [
-  { date: '2025-04-01', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 },
-  { date: '2025-04-05', tasksCompleted: 2, rulesBroken: 1, rewardsRedeemed: 0, punishments: 0 },
-  { date: '2025-04-10', tasksCompleted: 1, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
-  { date: '2025-04-15', tasksCompleted: 4, rulesBroken: 0, rewardsRedeemed: 0, punishments: 1 },
-  { date: '2025-04-20', tasksCompleted: 0, rulesBroken: 2, rewardsRedeemed: 0, punishments: 2 },
-  { date: '2025-04-25', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
-  { date: '2025-04-28', tasksCompleted: 2, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 },
+  { date: '2025-04-07', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 }, // Monday
+  { date: '2025-04-08', tasksCompleted: 2, rulesBroken: 1, rewardsRedeemed: 0, punishments: 0 }, // Tuesday
+  { date: '2025-04-09', tasksCompleted: 1, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 }, // Wednesday
+  { date: '2025-04-10', tasksCompleted: 4, rulesBroken: 0, rewardsRedeemed: 0, punishments: 1 }, // Thursday
+  { date: '2025-04-11', tasksCompleted: 0, rulesBroken: 2, rewardsRedeemed: 0, punishments: 2 }, // Friday
+  { date: '2025-04-12', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 }, // Saturday
+  { date: '2025-04-13', tasksCompleted: 2, rulesBroken: 0, rewardsRedeemed: 1, punishments: 0 }, // Sunday
 ];
 
 const weeklyActivityData = [
@@ -152,11 +154,11 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         setLoading(true);
         setError(null);
 
-        // Use the Monday-based dates
-        const days = weekDates;
+        // Create empty data structure for each day of the week
         const metricsMap = new Map<string, MetricsData>();
-
-        days.forEach((date) => {
+        
+        // Initialize data for each day of the week (Monday to Sunday)
+        weekDates.forEach((date) => {
           metricsMap.set(date, {
             date,
             tasksCompleted: 0,
@@ -166,8 +168,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         });
 
-        const dayIndex = 2; // Wednesday (which is now index 2 in Monday-based week)
-        const dateKey = days[dayIndex];
+        // For demo, add some data on Wednesday (index 2 in Monday-based week)
+        const dayIndex = 2; // Wednesday
+        const dateKey = weekDates[dayIndex];
         const dayData = metricsMap.get(dateKey);
         
         if (dayData) {
@@ -177,6 +180,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           dayData.punishments = weeklyActivityData[3].value;
         }
 
+        // Convert the map to an array for the chart
         const finalData = Array.from(metricsMap.values());
         console.log("[FINAL METRICS DATA]", finalData);
         
@@ -224,7 +228,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               ticks={weekDates}
               tickFormatter={(date) => {
                 try {
-                  // Format to show day names (Mon, Tue, etc.)
+                  // Format to display day names (Mon, Tue, Wed, etc.)
                   return format(new Date(date), 'EEE');
                 } catch {
                   return date;
@@ -248,7 +252,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               }}
               labelFormatter={(label) => {
                 try {
-                  return format(new Date(String(label)), 'MMM d, yyyy');
+                  return format(new Date(String(label)), 'EEEE, MMM d');
                 } catch {
                   return label;
                 }
