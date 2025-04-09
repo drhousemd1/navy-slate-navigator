@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -87,15 +88,12 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     punishments: 0
   });
 
-  const generateWeekDays = (): string[] => {
-    return generateMondayBasedWeekDates();
-  };
+  // Use the generated Monday-based week dates
+  const weekDates = useMemo(() => generateMondayBasedWeekDates(), []);
 
   const formatDate = (dateString: string): string => {
     return format(parseISO(dateString), 'yyyy-MM-dd');
   };
-
-  const weekDates = useMemo(() => generateWeekDays(), []);
 
   const getCurrentMonthMetrics = () => {
     const now = new Date();
@@ -154,6 +152,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         setLoading(true);
         setError(null);
 
+        // Use the Monday-based dates
         const days = weekDates;
         const metricsMap = new Map<string, MetricsData>();
 
@@ -167,7 +166,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         });
 
-        const dayIndex = 2;
+        const dayIndex = 2; // Wednesday (which is now index 2 in Monday-based week)
         const dateKey = days[dayIndex];
         const dayData = metricsMap.get(dateKey);
         
@@ -225,6 +224,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               ticks={weekDates}
               tickFormatter={(date) => {
                 try {
+                  // Format to show day names (Mon, Tue, etc.)
                   return format(new Date(date), 'EEE');
                 } catch {
                   return date;
