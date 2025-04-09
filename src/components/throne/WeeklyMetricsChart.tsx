@@ -175,7 +175,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           dayData.punishments = weeklyActivityData[3].value;
         }
 
-        const finalData = Array.from(metricsMap.values());
+        const finalData = weekDates.map(date => metricsMap.get(date)!);
         console.log("[FINAL METRICS DATA]", finalData);
         
         setData(finalData);
