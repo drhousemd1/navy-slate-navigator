@@ -47,61 +47,33 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
 
   useEffect(() => {
     const loadMetrics = async () => {
+      setLoading(true);
+      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+      const weekEnd = addDays(weekStart, 7);
+      const isoStart = formatISO(weekStart);
+      const isoEnd = formatISO(weekEnd);
+  
       try {
-        setLoading(true);
-        setError(null);
-        
-        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-        const weekEnd = addDays(weekStart, 7);
-        const isoStart = formatISO(weekStart);
-        const isoEnd = formatISO(weekEnd);
-
-        console.log('Fetching metrics for period:', isoStart, 'to', isoEnd);
-
-        // Fetch task completions
-        const { data: taskCompletions, error: taskError } = await supabase
-          .from('task_completion_history')
-          .select('completed_at')
-          .gte('completed_at', isoStart)
-          .lt('completed_at', isoEnd);
-
-        if (taskError) throw new Error(`Task query error: ${taskError.message}`);
-        
-        // Fetch rule violations
-        const { data: ruleViolations, error: ruleError } = await supabase
-          .from('rule_violations')
-          .select('violation_date')
-          .gte('violation_date', isoStart)
-          .lt('violation_date', isoEnd);
-
-        if (ruleError) throw new Error(`Rule violation query error: ${ruleError.message}`);
-
-        // Fetch reward usage/redemptions
-        const { data: rewardUsages, error: rewardError } = await supabase
-          .from('reward_usage')
-          .select('created_at')
-          .gte('created_at', isoStart)
-          .lt('created_at', isoEnd);
-
-        if (rewardError) throw new Error(`Reward usage query error: ${rewardError.message}`);
-
-        // Fetch punishments history
-        const { data: punishmentHistory, error: punishmentError } = await supabase
-          .from('punishment_history')
-          .select('applied_date')
-          .gte('applied_date', isoStart)
-          .lt('applied_date', isoEnd);
-
-        if (punishmentError) throw new Error(`Punishment history query error: ${punishmentError.message}`);
-
-        console.log('Data fetched:', {
-          tasks: taskCompletions?.length || 0,
-          rules: ruleViolations?.length || 0,
-          rewards: rewardUsages?.length || 0,
-          punishments: punishmentHistory?.length || 0
-        });
-
-        // Initialize metrics map with zeroes for all dates
+        const [tasks, rules, rewards, punishments] = await Promise.all([
+          supabase.from('task_completion_history').select('completed_at').gte('completed_at', isoStart).lt('completed_at', isoEnd),
+          supabase.from('rule_violations').select('violation_date').gte('violation_date', isoStart).lt('violation_date', isoEnd),
+          supabase.from('reward_usage').select('created_at').gte('created_at', isoStart).lt('created_at', isoEnd),
+          supabase.from('punishment_history').select('applied_date').gte('applied_date', isoStart).lt('applied_date', isoEnd)
+        ]);
+  
+        // Log if any query failed
+        if (tasks.error || rules.error || rewards.error || punishments.error) {
+          console.error('Supabase errors:', {
+            tasks: tasks.error,
+            rules: rules.error,
+            rewards: rewards.error,
+            punishments: punishments.error
+          });
+        }
+  
+        // Safety fallback
+        const safe = (res: any) => Array.isArray(res?.data) ? res.data : [];
+  
         const metricsMap = new Map<string, MetricsData>();
         weekDates.forEach(date => {
           metricsMap.set(date, {
@@ -112,41 +84,34 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
             punishments: 0
           });
         });
-
-        // Process task completions
-        taskCompletions?.forEach(({ completed_at }) => {
+  
+        safe(tasks).forEach(({ completed_at }) => {
           const date = format(parseISO(completed_at), 'yyyy-MM-dd');
           const entry = metricsMap.get(date);
           if (entry) entry.tasksCompleted += 1;
         });
-
-        // Process rule violations
-        ruleViolations?.forEach(({ violation_date }) => {
+  
+        safe(rules).forEach(({ violation_date }) => {
           const date = format(parseISO(violation_date), 'yyyy-MM-dd');
           const entry = metricsMap.get(date);
           if (entry) entry.rulesBroken += 1;
         });
-
-        // Process reward redemptions
-        rewardUsages?.forEach(({ created_at }) => {
+  
+        safe(rewards).forEach(({ created_at }) => {
           const date = format(parseISO(created_at), 'yyyy-MM-dd');
           const entry = metricsMap.get(date);
           if (entry) entry.rewardsRedeemed += 1;
         });
-
-        // Process punishments
-        punishmentHistory?.forEach(({ applied_date }) => {
+  
+        safe(punishments).forEach(({ applied_date }) => {
           const date = format(parseISO(applied_date), 'yyyy-MM-dd');
           const entry = metricsMap.get(date);
           if (entry) entry.punishments += 1;
         });
-
-        // Convert map to array for the chart
+  
         const finalData = weekDates.map(d => metricsMap.get(d)!);
-        console.log('Processed chart data:', finalData);
         setData(finalData);
-
-        // Calculate summary totals
+  
         const summary = finalData.reduce<WeeklyMetricsSummary>(
           (acc, curr) => {
             acc.tasksCompleted += curr.tasksCompleted;
@@ -157,22 +122,22 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
           },
           { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 }
         );
-
-        console.log('Weekly metrics summary:', summary);
+  
         if (onDataLoaded) onDataLoaded(summary);
-      } catch (err: any) {
-        console.error('Failed to load weekly metrics:', err);
-        setError(`Error loading metrics: ${err.message}`);
+        setError(null);
+      } catch (e: any) {
+        console.error('Metrics fetch failed:', e);
+        setError(`Error loading metrics: ${e.message}`);
         toast({
           title: "Error loading metrics",
-          description: err.message,
+          description: e.message,
           variant: "destructive"
         });
       } finally {
-        setLoading(false);
+        setLoading(false); // Always clear loading state
       }
     };
-
+  
     loadMetrics();
   }, [onDataLoaded, weekDates]);
 
