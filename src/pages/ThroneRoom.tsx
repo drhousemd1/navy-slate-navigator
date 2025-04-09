@@ -30,40 +30,43 @@ const ThroneRoom: React.FC = () => {
     rewardsRedeemed: 0,
     punishments: 0
   });
-  const [chartError, setChartError] = useState<string | null>(null);
-  const [chartLoading, setChartLoading] = useState<boolean>(true);
-  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const [refreshKey, setRefreshKey] = useState<number>(0);
   const location = useLocation();
   
   const { rewards } = useRewards();
 
-  // Force refresh when location changes or component mounts
+  // Force refresh when necessary
   useEffect(() => {
-    console.log('ThroneRoom: Location changed or component mounted, refreshing metrics chart');
-    setRefreshTrigger(prev => prev + 1);
-  }, [location.pathname]);
-
-  // Force refresh when rewards change
-  useEffect(() => {
-    console.log('ThroneRoom: Rewards changed, refreshing metrics chart');
-    setRefreshTrigger(prev => prev + 1);
-  }, [rewards]);
-
-  // Set up auto-refresh interval
-  useEffect(() => {
-    console.log('ThroneRoom: Setting up interval for refreshing metrics');
-    const interval = setInterval(() => {
-      console.log('ThroneRoom: Auto-refresh triggered');
-      setRefreshTrigger(prev => prev + 1);
-    }, 60000);
+    // Create a function to refresh charts
+    const triggerRefresh = () => {
+      setRefreshKey(prev => prev + 1);
+    };
     
-    return () => clearInterval(interval);
+    // Set up interval for auto-refresh (every minute)
+    const refreshInterval = setInterval(triggerRefresh, 60000);
+    
+    // Trigger refresh when location changes (navigation)
+    const handleRouteChange = () => {
+      triggerRefresh();
+    };
+    
+    // Call once on mount
+    handleRouteChange();
+    
+    // Clean up interval on unmount
+    return () => {
+      clearInterval(refreshInterval);
+    };
   }, []);
-
+  
+  // Also refresh when rewards change
+  useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [rewards]);
+  
+  // Handle data callback from the weekly metrics chart
   const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
-    console.log('ThroneRoom: Metrics data loaded with summary:', summaryData);
     setMetricsSummary(summaryData);
-    setChartLoading(false);
   };
 
   return (
@@ -75,11 +78,11 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
-            {/* Weekly metrics section with explicit key to force refresh */}
+            {/* Weekly metrics section with key to force refresh */}
             <div className="space-y-2">
               <WeeklyMetricsChart 
                 onDataLoaded={handleMetricsDataLoaded}
-                key={`weekly-metrics-chart-${refreshTrigger}`}
+                key={`weekly-metrics-${refreshKey}`}
               />
               
               <WeeklyMetricsSummaryTiles 
