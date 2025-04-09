@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -143,6 +142,51 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     loadTaskCompletionsFromSupabase();
   }, [onDataLoaded, weekDates]);
 
+  const weeklyChart = useMemo(() => {
+    return (
+      <div style={{ width: '100%', height: 300, backgroundColor: '#0B1120', padding: '16px', borderRadius: '8px' }}>
+        <BarChart width={600} height={300} data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
+          <XAxis
+            dataKey="date"
+            ticks={weekDates}
+            tickFormatter={(date) => {
+              try {
+                return format(parseISO(date), 'EEE');
+              } catch {
+                return date;
+              }
+            }}
+            interval={0}
+            stroke="#8E9196"
+            tick={{ fill: '#D1D5DB' }}
+          />
+          <YAxis stroke="#8E9196" tick={{ fill: '#D1D5DB' }} />
+          <Tooltip
+            cursor={false}
+            wrapperStyle={{ zIndex: 9999 }}
+            contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
+            offset={25}
+            formatter={(value, name) => [value, name]}
+            labelFormatter={(label) => {
+              try {
+                return format(parseISO(label), 'EEEE, MMM d');
+              } catch {
+                return label;
+              }
+            }}
+          />
+          <Bar
+            dataKey="tasksCompleted"
+            name="Tasks Completed"
+            fill={chartConfig.tasksCompleted.color}
+            radius={[4, 4, 0, 0]}
+          />
+        </BarChart>
+      </div>
+    );
+  }, [data, weekDates]);
+
   const hasContent = data.some(d =>
     d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0
   );
@@ -156,40 +200,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           {loading ? (
             <Skeleton className="w-full h-64 bg-light-navy/30" />
           ) : (
-            <div className="h-64">
-              {!hasContent ? (
-                <div className="flex items-center justify-center h-full text-white text-sm">
-                  No activity data to display for this week.
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={256}>
-                  <BarChart data={data}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
-                    <XAxis
-                      dataKey="date"
-                      tickFormatter={(date) => format(parseISO(date), 'EEE')}
-                      interval={0}
-                      stroke="#8E9196"
-                      tick={{ fill: '#D1D5DB' }}
-                    />
-                    <YAxis stroke="#8E9196" tick={{ fill: '#D1D5DB' }} />
-                    <Tooltip
-                      cursor={false}
-                      wrapperStyle={{ zIndex: 9999 }}
-                      contentStyle={{ backgroundColor: '#1A1F2C', border: '1px solid #2A2F3C', borderRadius: '4px' }}
-                      formatter={(value, name) => [`${value}`, name]}
-                      labelFormatter={(label) => format(parseISO(label), 'EEEE, MMM d')}
-                    />
-                    <Bar
-                      dataKey="tasksCompleted"
-                      name="Tasks Completed"
-                      fill={chartConfig.tasksCompleted.color}
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+            weeklyChart
           )}
         </div>
 
