@@ -141,8 +141,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
 
         // Create the final data array and calculate summary
         const finalData = weekDates.map(d => metricsMap.get(d)!);
-        setData(finalData);
-
+        
         // Calculate summary totals for the tiles
         const summary = finalData.reduce<WeeklyMetricsSummary>(
           (acc, curr) => {
@@ -158,16 +157,20 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
         console.log('Weekly metrics data processed:', finalData);
         console.log('Weekly metrics summary calculated:', summary);
 
+        // Set loading to false BEFORE setting the data to prevent the loading screen from showing
+        setLoading(false);
+        // Set data AFTER loading is set to false
+        setData(finalData);
+
         if (onDataLoaded) onDataLoaded(summary);
       } catch (err: any) {
         setError(`Error loading metrics: ${err.message}`);
+        setLoading(false); // Important to set loading to false even if there's an error
         toast({
           title: "Error loading metrics",
           description: err.message,
           variant: "destructive"
         });
-      } finally {
-        setLoading(false);
       }
     };
 
