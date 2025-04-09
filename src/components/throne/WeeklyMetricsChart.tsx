@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { format, parseISO, addDays, startOfWeek, formatISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,9 +38,8 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Create an array of dates for the current week (Monday to Sunday)
   const weekDates = useMemo(() => {
-    const start = startOfWeek(new Date(), { weekStartsOn: 1 }); // Start from Monday
+    const start = startOfWeek(new Date(), { weekStartsOn: 1 });
     return Array.from({ length: 7 }, (_, i) => format(addDays(start, i), 'yyyy-MM-dd'));
   }, []);
 
@@ -61,7 +59,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
           supabase.from('punishment_history').select('applied_date').gte('applied_date', isoStart).lt('applied_date', isoEnd)
         ]);
   
-        // Log if any query failed
         if (tasks.error || rules.error || rewards.error || punishments.error) {
           console.error('Supabase errors:', {
             tasks: tasks.error,
@@ -71,7 +68,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
           });
         }
   
-        // Safety fallback
         const safe = (res: any) => Array.isArray(res?.data) ? res.data : [];
   
         const metricsMap = new Map<string, MetricsData>();
@@ -134,100 +130,68 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
           variant: "destructive"
         });
       } finally {
-        setLoading(false); // Always clear loading state
+        setLoading(false);
       }
     };
   
     loadMetrics();
   }, [onDataLoaded, weekDates]);
 
-  // Check if there's any data to display
   const hasContent = data.some(d =>
     d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0
   );
 
   return (
-    <Card className="bg-navy border border-light-navy rounded-lg">
-      <div className="p-4">
-        <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
-        
-        <div className="w-full" style={{ height: 300 }}>
-          {loading && (
-            <div className="w-full h-64 bg-light-navy/30 animate-pulse rounded flex items-center justify-center">
-              <span className="text-white">Loading weekly metrics...</span>
-            </div>
-          )}
-          
-          {!loading && error && (
-            <div className="w-full h-64 bg-red-900/20 rounded flex items-center justify-center">
-              <span className="text-red-400 text-sm">{error}</span>
-            </div>
-          )}
-          
-          {!loading && !error && hasContent && (
-            <div className="w-full h-full">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
-                  <XAxis
-                    dataKey="date"
-                    ticks={weekDates}
-                    tickFormatter={(date) => {
-                      try {
-                        return format(parseISO(date), 'EEE');
-                      } catch {
-                        return date;
-                      }
-                    }}
-                    interval={0}
-                    stroke="#8E9196"
-                    tick={{ fill: '#D1D5DB' }}
-                  />
-                  <YAxis stroke="#8E9196" tick={{ fill: '#D1D5DB' }} />
-                  <Tooltip
-                    cursor={false}
-                    wrapperStyle={{ zIndex: 9999 }}
-                    contentStyle={{ backgroundColor: '#0F172A', border: '1px solid #1E293B', borderRadius: '4px', padding: '8px' }}
-                    offset={25}
-                    formatter={(value, name) => [value, name]}
-                    labelFormatter={(label) => {
-                      try {
-                        return format(parseISO(label), 'EEEE, MMM d');
-                      } catch {
-                        return label;
-                      }
-                    }}
-                  />
-                  <Bar dataKey="tasksCompleted" name={chartConfig.tasksCompleted.label} fill={chartConfig.tasksCompleted.color} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="rulesBroken" name={chartConfig.rulesBroken.label} fill={chartConfig.rulesBroken.color} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="rewardsRedeemed" name={chartConfig.rewardsRedeemed.label} fill={chartConfig.rewardsRedeemed.color} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="punishments" name={chartConfig.punishments.label} fill={chartConfig.punishments.color} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-          
-          {!loading && !error && !hasContent && (
-            <div className="w-full h-64 flex items-center justify-center border border-dashed border-gray-700 rounded-lg">
-              <span className="text-gray-400 text-sm">No activity data to display for this week</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
-            Tasks Completed
-          </span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
-            Rules Broken
-          </span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
-            Rewards Redeemed
-          </span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
-            Punishments
-          </span>
-        </div>
+    <Card className="bg-slate-900 text-white p-4 shadow-xl w-full">
+      <h2 className="text-xl font-semibold mb-4">Weekly Activity</h2>
+      <div className="w-full h-72 flex items-center justify-center">
+        {loading ? (
+          <span className="text-lg text-slate-300">Loading weekly metrics...</span>
+        ) : data.some(
+            (d) =>
+              d.tasksCompleted > 0 ||
+              d.rulesBroken > 0 ||
+              d.rewardsRedeemed > 0 ||
+              d.punishments > 0
+          ) ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data}>
+              <XAxis
+                dataKey="date"
+                ticks={weekDates}
+                tickFormatter={(date) => {
+                  try {
+                    const [year, month, day] = date.split('-').map(Number);
+                    return format(new Date(Date.UTC(year, month - 1, day)), 'EEE');
+                  } catch {
+                    return date;
+                  }
+                }}
+                stroke="#8E9196"
+                tick={{ fill: '#D1D5DB' }}
+                interval={0}
+              />
+              <YAxis stroke="#8E9196" tick={{ fill: '#D1D5DB' }} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151' }}
+                labelFormatter={(label) => format(parseISO(label), 'EEEE')}
+              />
+              <Legend />
+              <Bar dataKey="tasksCompleted" stackId="a" fill="#0ea5e9" name="Tasks Completed" />
+              <Bar dataKey="rulesBroken" stackId="a" fill="#f97316" name="Rules Broken" />
+              <Bar dataKey="rewardsRedeemed" stackId="a" fill="#8b5cf6" name="Rewards Redeemed" />
+              <Bar dataKey="punishments" stackId="a" fill="#ef4444" name="Punishments" />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <span className="text-lg text-slate-400">No activity recorded this week.</span>
+        )}
+      </div>
+      <div className="flex justify-around mt-4 text-sm text-slate-400">
+        <span className="text-sky-400">Tasks Completed</span>
+        <span className="text-orange-400">Rules Broken</span>
+        <span className="text-violet-400">Rewards Redeemed</span>
+        <span className="text-red-400">Punishments</span>
       </div>
     </Card>
   );
