@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -148,20 +147,18 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   const endDrag = () => setIsDragging(false);
 
   useEffect(() => {
-    const loadRealTaskCompletions = async () => {
+    const loadTaskCompletionsFromSupabase = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Generate Monday–Sunday range
-        const start = startOfWeek(new Date(), { weekStartsOn: 1 });
-        const end = addDays(start, 7);
+        // Get start and end of current week (Monday–Sunday)
+        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+        const weekEnd = addDays(weekStart, 7);
+        const isoStart = formatISO(weekStart);
+        const isoEnd = formatISO(weekEnd);
 
-        // Format dates for comparison
-        const isoStart = formatISO(start);
-        const isoEnd = formatISO(end);
-
-        // Get completions for current week from task_completion_history
+        // Query task completions
         const { data: completions, error: fetchError } = await supabase
           .from('task_completion_history')
           .select('completed_at')
@@ -170,7 +167,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
 
         if (fetchError) throw fetchError;
 
-        // Build empty metrics for Monday to Sunday
+        // Prepare blank metrics for each day of the week
         const metricsMap = new Map<string, MetricsData>();
         weekDates.forEach((date) => {
           metricsMap.set(date, {
@@ -178,49 +175,47 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             tasksCompleted: 0,
             rulesBroken: 0,
             rewardsRedeemed: 0,
-            punishments: 0
+            punishments: 0,
           });
         });
 
-        // Tally completions by ISO date
+        // Count completions per day
         completions?.forEach(({ completed_at }) => {
-          const completionDate = format(parseISO(completed_at), 'yyyy-MM-dd');
-          const target = metricsMap.get(completionDate);
+          const date = format(parseISO(completed_at), 'yyyy-MM-dd');
+          const target = metricsMap.get(date);
           if (target) {
             target.tasksCompleted += 1;
           }
         });
 
-        const finalData = weekDates.map((date) => metricsMap.get(date)!);
+        const finalData = weekDates.map((d) => metricsMap.get(d)!);
         console.log("[FINAL METRICS DATA]", finalData);
-        
         setData(finalData);
 
-        const total = finalData.reduce(
+        const summary = finalData.reduce(
           (acc, d) => ({
             tasksCompleted: acc.tasksCompleted + d.tasksCompleted,
             rulesBroken: acc.rulesBroken + d.rulesBroken,
             rewardsRedeemed: acc.rewardsRedeemed + d.rewardsRedeemed,
-            punishments: acc.punishments + d.punishments
+            punishments: acc.punishments + d.punishments,
           }),
           { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 }
         );
-        
-        setSummaryData(total);
-        
+
+        setSummaryData(summary);
         if (onDataLoaded) {
-          console.log("[SUMMARY METRICS]", total);
-          onDataLoaded(total);
+          console.log("[SUMMARY METRICS]", summary);
+          onDataLoaded(summary);
         }
       } catch (err: any) {
-        console.error('[Chart error]', err);
-        setError('Unexpected chart error');
+        console.error('[WeeklyMetricsChart Error]', err);
+        setError('Failed to load weekly metrics.');
       } finally {
         setLoading(false);
       }
     };
 
-    loadRealTaskCompletions();
+    loadTaskCompletionsFromSupabase();
   }, [onDataLoaded, weekDates]);
 
   const hasContent = data.some(d =>
