@@ -100,27 +100,35 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
           });
         });
 
+        // Process task completions
         taskCompletions?.forEach(({ completed_at }) => {
-          const date = format(parseISO(completed_at), 'yyyy-MM-dd');
-          const entry = metricsMap.get(date);
+          const dateObj = new Date(completed_at);
+          const dateKey = dateObj.toISOString().split("T")[0]; // '2025-04-09'
+          const entry = metricsMap.get(dateKey);
           if (entry) entry.tasksCompleted += 1;
         });
 
+        // Process rule violations
         ruleViolations?.forEach(({ violation_date }) => {
-          const date = format(parseISO(violation_date), 'yyyy-MM-dd');
-          const entry = metricsMap.get(date);
+          const dateObj = new Date(violation_date);
+          const dateKey = dateObj.toISOString().split("T")[0];
+          const entry = metricsMap.get(dateKey);
           if (entry) entry.rulesBroken += 1;
         });
 
+        // Process reward redemptions
         rewardUsages?.forEach(({ created_at }) => {
-          const date = format(parseISO(created_at), 'yyyy-MM-dd');
-          const entry = metricsMap.get(date);
+          const dateObj = new Date(created_at);
+          const dateKey = dateObj.toISOString().split("T")[0];
+          const entry = metricsMap.get(dateKey);
           if (entry) entry.rewardsRedeemed += 1;
         });
 
+        // Process punishments
         punishmentHistory?.forEach(({ applied_date }) => {
-          const date = format(parseISO(applied_date), 'yyyy-MM-dd');
-          const entry = metricsMap.get(date);
+          const dateObj = new Date(applied_date);
+          const dateKey = dateObj.toISOString().split("T")[0];
+          const entry = metricsMap.get(dateKey);
           if (entry) entry.punishments += 1;
         });
 
