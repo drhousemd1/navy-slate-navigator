@@ -38,16 +38,19 @@ const ThroneRoom: React.FC = () => {
   const { rewards } = useRewards();
 
   useEffect(() => {
-    console.log('Location changed or component mounted, refreshing metrics chart');
+    console.log('ThroneRoom: Location changed or component mounted, refreshing metrics chart');
     setRefreshTrigger(prev => prev + 1);
   }, [location.pathname]);
 
   useEffect(() => {
+    console.log('ThroneRoom: Rewards changed, refreshing metrics chart');
     setRefreshTrigger(prev => prev + 1);
   }, [rewards]);
 
   useEffect(() => {
+    console.log('ThroneRoom: Setting up interval for refreshing metrics');
     const interval = setInterval(() => {
+      console.log('ThroneRoom: Auto-refresh triggered');
       setRefreshTrigger(prev => prev + 1);
     }, 60000);
     
@@ -55,7 +58,7 @@ const ThroneRoom: React.FC = () => {
   }, []);
 
   const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
-    console.log('Metrics data loaded with summary:', summaryData);
+    console.log('ThroneRoom: Metrics data loaded with summary:', summaryData);
     setMetricsSummary(summaryData);
     setChartLoading(false);
   };
@@ -69,11 +72,11 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
-            {/* Weekly metrics section - structure matches monthly section */}
+            {/* Weekly metrics section with explicit key to force refresh */}
             <div className="space-y-2">
               <WeeklyMetricsChart 
                 onDataLoaded={handleMetricsDataLoaded}
-                key={`metrics-chart-${refreshTrigger}`}
+                key={`weekly-metrics-chart-${refreshTrigger}`}
               />
               
               <WeeklyMetricsSummaryTiles 
