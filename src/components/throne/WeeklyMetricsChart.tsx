@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -55,7 +54,6 @@ const chartConfig = {
   }
 };
 
-// Demo data - using Monday to Sunday order
 const activityData = [
   { date: '2025-04-07', tasksCompleted: 3, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 }, // Monday
   { date: '2025-04-08', tasksCompleted: 2, rulesBroken: 1, rewardsRedeemed: 0, punishments: 0 }, // Tuesday
@@ -90,7 +88,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     punishments: 0
   });
 
-  // Use the generated Monday-based week dates
   const weekDates = useMemo(() => generateMondayBasedWeekDates(), []);
 
   const formatDate = (dateString: string): string => {
@@ -154,10 +151,8 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         setLoading(true);
         setError(null);
 
-        // Create empty data structure for each day of the week
         const metricsMap = new Map<string, MetricsData>();
         
-        // Initialize data for each day of the week (Monday to Sunday)
         weekDates.forEach((date) => {
           metricsMap.set(date, {
             date,
@@ -168,8 +163,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         });
 
-        // For demo, add some data on Wednesday (index 2 in Monday-based week)
-        const dayIndex = 2; // Wednesday
+        const dayIndex = 2;
         const dateKey = weekDates[dayIndex];
         const dayData = metricsMap.get(dateKey);
         
@@ -180,7 +174,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           dayData.punishments = weeklyActivityData[3].value;
         }
 
-        // Convert the map to an array for the chart
         const finalData = Array.from(metricsMap.values());
         console.log("[FINAL METRICS DATA]", finalData);
         
@@ -228,8 +221,8 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               ticks={weekDates}
               tickFormatter={(date) => {
                 try {
-                  // Format to display day names (Mon, Tue, Wed, etc.)
-                  return format(new Date(date), 'EEE');
+                  const [year, month, day] = date.split('-').map(Number);
+                  return format(new Date(Date.UTC(year, month - 1, day)), 'EEE');
                 } catch {
                   return date;
                 }
