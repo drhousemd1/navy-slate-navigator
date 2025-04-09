@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -54,6 +55,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
         const isoStart = formatISO(weekStart);
         const isoEnd = formatISO(weekEnd);
 
+        // Fetch all the data from different tables
         const { data: taskCompletions, error: taskError } = await supabase
           .from('task_completion_history')
           .select('completed_at')
@@ -88,6 +90,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
           );
         }
 
+        // Initialize the metrics map with all week dates
         const metricsMap = new Map<string, MetricsData>();
         weekDates.forEach(date => {
           metricsMap.set(date, {
@@ -99,37 +102,48 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
           });
         });
 
-        taskCompletions?.forEach(entry => {
-          const date = new Date(entry.completed_at).toISOString().split("T")[0];
-          if (metricsMap.has(date)) {
-            metricsMap.get(date)!.tasksCompleted += 1;
-          }
-        });
+        // Process all the data using consistent date formatting
+        if (taskCompletions) {
+          taskCompletions.forEach(entry => {
+            const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
+            if (metricsMap.has(date)) {
+              metricsMap.get(date)!.tasksCompleted += 1;
+            }
+          });
+        }
 
-        ruleViolations?.forEach(entry => {
-          const date = new Date(entry.violation_date).toISOString().split("T")[0];
-          if (metricsMap.has(date)) {
-            metricsMap.get(date)!.rulesBroken += 1;
-          }
-        });
+        if (ruleViolations) {
+          ruleViolations.forEach(entry => {
+            const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
+            if (metricsMap.has(date)) {
+              metricsMap.get(date)!.rulesBroken += 1;
+            }
+          });
+        }
 
-        rewardUsages?.forEach(entry => {
-          const date = new Date(entry.created_at).toISOString().split("T")[0];
-          if (metricsMap.has(date)) {
-            metricsMap.get(date)!.rewardsRedeemed += 1;
-          }
-        });
+        if (rewardUsages) {
+          rewardUsages.forEach(entry => {
+            const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
+            if (metricsMap.has(date)) {
+              metricsMap.get(date)!.rewardsRedeemed += 1;
+            }
+          });
+        }
 
-        punishmentHistory?.forEach(entry => {
-          const date = new Date(entry.applied_date).toISOString().split("T")[0];
-          if (metricsMap.has(date)) {
-            metricsMap.get(date)!.punishments += 1;
-          }
-        });
+        if (punishmentHistory) {
+          punishmentHistory.forEach(entry => {
+            const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
+            if (metricsMap.has(date)) {
+              metricsMap.get(date)!.punishments += 1;
+            }
+          });
+        }
 
+        // Create the final data array and calculate summary
         const finalData = weekDates.map(d => metricsMap.get(d)!);
         setData(finalData);
 
+        // Calculate summary totals for the tiles
         const summary = finalData.reduce<WeeklyMetricsSummary>(
           (acc, curr) => {
             acc.tasksCompleted += curr.tasksCompleted;
@@ -140,6 +154,9 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLo
           },
           { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 }
         );
+
+        console.log('Weekly metrics data processed:', finalData);
+        console.log('Weekly metrics summary calculated:', summary);
 
         if (onDataLoaded) onDataLoaded(summary);
       } catch (err: any) {
