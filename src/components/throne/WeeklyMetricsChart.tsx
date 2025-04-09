@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -90,6 +89,7 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   });
 
   const weekDates = useMemo(() => generateMondayBasedWeekDates(), []);
+  console.log('[WEEK DATES]', weekDates);
 
   const formatDate = (dateString: string): string => {
     return format(parseISO(dateString), 'yyyy-MM-dd');
