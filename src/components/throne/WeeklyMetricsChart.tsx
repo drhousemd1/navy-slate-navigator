@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -153,13 +152,11 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         setLoading(true);
         setError(null);
 
-        // Get start and end of current week (Monday–Sunday)
         const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
         const weekEnd = addDays(weekStart, 7);
         const isoStart = formatISO(weekStart);
         const isoEnd = formatISO(weekEnd);
 
-        // Query task completions
         const { data: completions, error: fetchError } = await supabase
           .from('task_completion_history')
           .select('completed_at')
@@ -171,7 +168,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
 
         if (fetchError) throw fetchError;
 
-        // Prepare blank metrics for each day of the week
         const metricsMap = new Map<string, MetricsData>();
         weekDates.forEach((date) => {
           metricsMap.set(date, {
@@ -183,7 +179,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           });
         });
 
-        // Count completions per day
         completions?.forEach(({ completed_at }) => {
           const date = format(parseISO(completed_at), 'yyyy-MM-dd');
           const target = metricsMap.get(date);
@@ -271,24 +266,6 @@ export const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
               dataKey="tasksCompleted" 
               name="Tasks Completed" 
               fill={chartConfig.tasksCompleted.color} 
-              radius={[4, 4, 0, 0]} 
-            />
-            <Bar 
-              dataKey="rulesBroken" 
-              name="Rules Broken" 
-              fill={chartConfig.rulesBroken.color} 
-              radius={[4, 4, 0, 0]} 
-            />
-            <Bar 
-              dataKey="rewardsRedeemed" 
-              name="Rewards Redeemed" 
-              fill={chartConfig.rewardsRedeemed.color} 
-              radius={[4, 4, 0, 0]} 
-            />
-            <Bar 
-              dataKey="punishments" 
-              name="Punishments" 
-              fill={chartConfig.punishments.color} 
               radius={[4, 4, 0, 0]} 
             />
           </BarChart>
