@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -205,7 +204,7 @@ const MonthlyMetricsChart: React.FC = () => {
     refetchOnWindowFocus: true,
     refetchInterval: 60000, // Refetch every minute
     staleTime: 10000, // Consider data stale after 10 seconds for quicker refresh
-    cacheTime: 20000, // Only cache for 20 seconds to ensure fresher data after reset
+    gcTime: 20000, // Changed from cacheTime to gcTime
   });
 
   const hasContent = data.dataArray.some(d =>

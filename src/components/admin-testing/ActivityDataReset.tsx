@@ -120,7 +120,7 @@ const ActivityDataReset = () => {
       // Force a harder window reload with cache clearing to reset everything
       setTimeout(() => {
         // Clear all browser caches before reloading
-        window.location.reload(true);
+        window.location.reload();
       }, 1500);
     } catch (error) {
       console.error('Reset error:', error);

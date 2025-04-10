@@ -108,7 +108,7 @@ const ThroneRoom: React.FC = () => {
     refetchOnWindowFocus: true,
     refetchInterval: 60000, // Refetch every minute
     staleTime: 10000, // Consider data stale after 10 seconds
-    cacheTime: 20000, // Reduced cache time to ensure fresh data after reset
+    gcTime: 20000, // Changed from cacheTime to gcTime
   });
 
   // Format date for consistent date handling
