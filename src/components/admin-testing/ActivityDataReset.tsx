@@ -98,6 +98,14 @@ const ActivityDataReset = () => {
         }
       }
       
+      // CRITICAL FIX: Double check all tables have been fully cleared
+      await supabase.from('task_completion_history').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('rule_violations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('reward_usage').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('punishment_history').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      console.log("DATABASE RESET COMPLETE. Now clearing ALL caches.");
+      
       // CRITICAL FIX: Force complete cache reset by removing ALL cached data
       queryClient.clear(); 
 
@@ -118,11 +126,21 @@ const ActivityDataReset = () => {
         const deleteRequest = indexedDB.deleteDatabase('tanstack-query');
         deleteRequest.onsuccess = () => console.log("Successfully deleted IndexedDB cache");
         deleteRequest.onerror = () => console.error("Error deleting IndexedDB cache");
+        
+        // Also attempt to clear browser cache via cache API if available
+        if ('caches' in window) {
+          caches.keys().then(names => {
+            names.forEach(name => {
+              caches.delete(name);
+              console.log(`Deleted cache: ${name}`);
+            });
+          });
+        }
       }
       
       toast({
         title: 'Reset Complete',
-        description: 'All activity data has been reset successfully. Page will refresh in 2 seconds to show all changes.',
+        description: 'All activity data has been reset. Page will reload in 2 seconds to show changes.',
         duration: 5000,
       });
       
@@ -130,13 +148,18 @@ const ActivityDataReset = () => {
       setTimeout(() => {
         // Create a unique timestamp to avoid any caching
         const timestamp = new Date().getTime();
-        const refreshUrl = window.location.pathname + "?fresh=" + timestamp;
+        const refreshUrl = window.location.pathname + "?fresh=" + timestamp + "&nocache=true&reset=true";
         
         // Log that we're forcing the refresh
         console.log("FORCING HARD REFRESH to url:", refreshUrl);
         
-        // Force reload with cache clearing
+        // Force reload with cache clearing - use the most aggressive method
         window.location.href = refreshUrl;
+        
+        // Just in case the redirect doesn't work, set a backup reload
+        setTimeout(() => {
+          window.location.reload(true); // true = force reload from server, not cache
+        }, 500);
       }, 2000);
     } catch (error) {
       console.error('Reset error:', error);

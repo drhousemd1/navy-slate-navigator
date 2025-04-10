@@ -5,7 +5,7 @@ import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface WeeklyUsageTrackerProps {
-  usageData: boolean[];
+  usageData: boolean[] | number[];
   calendarColor: string;
 }
 
@@ -17,21 +17,21 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
   const currentDayOfWeek = getMondayBasedDay();
   const queryClient = useQueryClient();
   const [trackerData, setTrackerData] = useState<boolean[]>(
-    Array.isArray(usageData) ? [...usageData] : [false, false, false, false, false, false, false]
+    Array.isArray(usageData) ? [...usageData].map(val => Boolean(val)) : [false, false, false, false, false, false, false]
   );
   
   // Add useEffect to update trackerData when usageData changes
   useEffect(() => {
     // Important: Force clean up any potential stale data
     const cleanData = Array.isArray(usageData) && usageData.length > 0 
-      ? [...usageData] 
+      ? [...usageData].map(val => Boolean(val)) // Convert any truthy values to true, falsy to false
       : [false, false, false, false, false, false, false];
       
     // Create a new array reference to ensure rendering
     setTrackerData(cleanData);
     
     // Debug log to track data changes 
-    console.log("WeeklyUsageTracker updated with data:", cleanData);
+    console.log("WeeklyUsageTracker updated with data:", cleanData, "original:", usageData);
   }, [usageData, queryClient]);
   
   // Ensure we always have exactly 7 circles
