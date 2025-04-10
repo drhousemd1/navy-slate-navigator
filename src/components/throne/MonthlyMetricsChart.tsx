@@ -137,7 +137,6 @@ const MonthlyMetricsChart: React.FC = () => {
                 fill={color}
                 name={label}
                 radius={[4, 4, 0, 0]}
-                isAnimationActive={false}
               />
             ))}
           </BarChart>
