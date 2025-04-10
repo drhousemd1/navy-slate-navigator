@@ -18,11 +18,10 @@ const ActivityDataReset = () => {
       setIsResetting(true);
       console.log("Resetting all activity data...");
 
-      // Final correct timestamp fields
       const timestampColumns: Record<string, string> = {
         task_completion_history: 'completed_at',
         rule_violations: 'violation_date',
-        reward_usage: 'redeemed_date',
+        reward_usage: 'created_at',
         punishment_history: 'applied_date',
       };
 
