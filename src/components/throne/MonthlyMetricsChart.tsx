@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -8,9 +8,8 @@ import {
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 
 interface MonthlyDataItem {
   date: string;
@@ -28,24 +27,19 @@ export interface MonthlyMetricsSummary {
 }
 
 const fetchMonthlyData = async (): Promise<MonthlyDataItem[]> => {
-  const startDate = startOfMonth(new Date()).toISOString();
-  const endDate = endOfMonth(new Date()).toISOString();
-  const daysInMonth = eachDayOfInterval({ start: new Date(startDate), end: new Date(endDate) });
+  const start = startOfMonth(new Date());
+  const end = endOfMonth(new Date());
+  const startDate = start.toISOString();
+  const endDate = end.toISOString();
 
-  const formatDate = (date: Date) => format(date, 'yyyy-MM-dd');
+  const days = eachDayOfInterval({ start, end });
+  const formatDate = (d: Date) => format(d, 'yyyy-MM-dd');
 
-  const [{ data: tasks }, { data: rules }, { data: rewards }, { data: punishments }] = await Promise.all([
-    supabase.from('task_completion_history').select('created_at').gte('created_at', startDate).lte('created_at', endDate),
-    supabase.from('rule_violations').select('created_at').gte('created_at', startDate).lte('created_at', endDate),
-    supabase.from('reward_usage').select('created_at').gte('created_at', startDate).lte('created_at', endDate),
-    supabase.from('punishment_history').select('created_at').gte('created_at', startDate).lte('created_at', endDate)
-  ]);
-
-  const activityMap: Record<string, MonthlyDataItem> = {};
-
-  for (const day of daysInMonth) {
+  // Prepare base map
+  const daily: Record<string, MonthlyDataItem> = {};
+  for (const day of days) {
     const key = formatDate(day);
-    activityMap[key] = {
+    daily[key] = {
       date: key,
       tasksCompleted: 0,
       rulesBroken: 0,
@@ -54,31 +48,59 @@ const fetchMonthlyData = async (): Promise<MonthlyDataItem[]> => {
     };
   }
 
-  const incrementCounts = (items: any[], field: keyof MonthlyDataItem) => {
-    items?.forEach(({ created_at }) => {
-      const dateKey = formatDate(new Date(created_at));
-      if (activityMap[dateKey]) {
-        activityMap[dateKey][field]++;
-      }
+  const [{ data: tasks }, { data: rules }, { data: rewards }, { data: punishments }] = await Promise.all([
+    supabase.from('task_completion_history').select('completed_at').gte('completed_at', startDate).lte('completed_at', endDate),
+    supabase.from('rule_violations').select('violation_date').gte('violation_date', startDate).lte('violation_date', endDate),
+    supabase.from('reward_usage').select('created_at').gte('created_at', startDate).lte('created_at', endDate),
+    supabase.from('punishment_history').select('applied_date').gte('applied_date', startDate).lte('applied_date', endDate),
+  ]);
+
+  const countInto = (rows: any[] | null | undefined, field: keyof MonthlyDataItem, dateField: string) => {
+    rows?.forEach(row => {
+      const key = formatDate(new Date(row[dateField]));
+      if (daily[key]) daily[key][field]++;
     });
   };
 
-  incrementCounts(tasks || [], 'tasksCompleted');
-  incrementCounts(rules || [], 'rulesBroken');
-  incrementCounts(rewards || [], 'rewardsRedeemed');
-  incrementCounts(punishments || [], 'punishments');
+  countInto(tasks, 'tasksCompleted', 'completed_at');
+  countInto(rules, 'rulesBroken', 'violation_date');
+  countInto(rewards, 'rewardsRedeemed', 'created_at');
+  countInto(punishments, 'punishments', 'applied_date');
 
-  return Object.values(activityMap);
+  return Object.values(daily);
 };
 
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
-
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+
+  const { data = [], isLoading } = useQuery({
+    queryKey: ['monthly-metrics'],
+    queryFn: fetchMonthlyData,
+    refetchOnWindowFocus: true,
+    refetchInterval: 10000,
+  });
+
+  const monthlySummary = useMemo<MonthlyMetricsSummary>(() => {
+    return data.reduce(
+      (acc, day) => {
+        acc.tasksCompleted += day.tasksCompleted;
+        acc.rulesBroken += day.rulesBroken;
+        acc.rewardsRedeemed += day.rewardsRedeemed;
+        acc.punishments += day.punishments;
+        return acc;
+      },
+      {
+        tasksCompleted: 0,
+        rulesBroken: 0,
+        rewardsRedeemed: 0,
+        punishments: 0,
+      }
+    );
+  }, [data]);
 
   const chartConfig = {
     tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
@@ -87,32 +109,11 @@ const MonthlyMetricsChart: React.FC = () => {
     punishments: { color: '#ef4444', label: 'Punishments' },
   };
 
-  const { data = [], isLoading } = useQuery({
-    queryKey: ['monthly-metrics'],
-    queryFn: fetchMonthlyData,
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000,
-  });
-
-  const monthlySummary = useMemo<MonthlyMetricsSummary>(() => {
-    return data.reduce((acc, item) => {
-      acc.tasksCompleted += item.tasksCompleted;
-      acc.rulesBroken += item.rulesBroken;
-      acc.rewardsRedeemed += item.rewardsRedeemed;
-      acc.punishments += item.punishments;
-      return acc;
-    }, {
-      tasksCompleted: 0,
-      rulesBroken: 0,
-      rewardsRedeemed: 0,
-      punishments: 0,
-    });
-  }, [data]);
-
   return (
     <Card className="w-full p-4">
       <h2 className="text-xl font-semibold mb-4">Monthly Activity</h2>
       <ChartContainer
+        config={chartConfig}
         ref={chartContainerRef}
         scrollRef={chartScrollRef}
         isDragging={isDragging}
@@ -122,7 +123,7 @@ const MonthlyMetricsChart: React.FC = () => {
         scrollLeft={scrollLeft}
         setScrollLeft={setScrollLeft}
       >
-        <ResponsiveContainer width={data.length * 60} height={300}>
+        <ResponsiveContainer width={data.length * 30} height={300}>
           <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
