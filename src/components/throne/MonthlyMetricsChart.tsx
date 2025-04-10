@@ -1,4 +1,5 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+
+import React, { useRef, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -8,6 +9,7 @@ import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
+import { useQuery } from '@tanstack/react-query';
 
 interface MonthlyDataItem {
   date: string;
@@ -28,17 +30,9 @@ const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
 
-  const [data, setData] = useState<MonthlyDataItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [monthlySummary, setMonthlySummary] = useState<MonthlyMetricsSummary>({
-    tasksCompleted: 0,
-    rulesBroken: 0,
-    rewardsRedeemed: 0,
-    punishments: 0
-  });
 
   const chartConfig = {
     tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
@@ -73,13 +67,157 @@ const MonthlyMetricsChart: React.FC = () => {
   const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
   const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
 
+  // Fetch monthly metrics data using React Query
+  const fetchMonthlyData = async (): Promise<{ 
+    dataArray: MonthlyDataItem[], 
+    monthlyTotals: MonthlyMetricsSummary 
+  }> => {
+    try {
+      const metrics = new Map<string, MonthlyDataItem>();
+      monthDates.forEach(date => metrics.set(date, {
+        date, tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0
+      }));
+
+      const today = new Date();
+      const start = startOfMonth(today).toISOString();
+      const end = endOfMonth(today).toISOString();
+
+      // Fetch task completions with unique daily counts
+      const { data: taskEntries, error: taskError } = await supabase
+        .from('task_completion_history')
+        .select('task_id, completed_at')
+        .gte('completed_at', start)
+        .lte('completed_at', end);
+      
+      if (taskError) {
+        console.error('Error loading task_completion_history', taskError);
+      } else {
+        // Group by date and task_id to count uniquely per day
+        const tasksByDate = new Map<string, Set<string>>();
+        
+        taskEntries?.forEach(entry => {
+          const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
+          if (!tasksByDate.has(date)) {
+            tasksByDate.set(date, new Set());
+          }
+          tasksByDate.get(date)!.add(entry.task_id);
+        });
+        
+        // Update counts based on unique task IDs per day
+        tasksByDate.forEach((taskIds, date) => {
+          if (metrics.has(date)) {
+            metrics.get(date)!.tasksCompleted = taskIds.size;
+          }
+        });
+      }
+
+      // Fetch rule violations
+      const { data: ruleEntries, error: ruleError } = await supabase
+        .from('rule_violations')
+        .select('*')
+        .gte('violation_date', start)
+        .lte('violation_date', end);
+      
+      if (ruleError) {
+        console.error('Error loading rule_violations', ruleError);
+      } else {
+        ruleEntries?.forEach(entry => {
+          const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
+          if (metrics.has(date)) {
+            metrics.get(date)!.rulesBroken++;
+          }
+        });
+      }
+
+      // Fetch reward usages
+      const { data: rewardEntries, error: rewardError } = await supabase
+        .from('reward_usage')
+        .select('*')
+        .gte('created_at', start)
+        .lte('created_at', end);
+      
+      if (rewardError) {
+        console.error('Error loading reward_usage', rewardError);
+      } else {
+        rewardEntries?.forEach(entry => {
+          const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
+          if (metrics.has(date)) {
+            metrics.get(date)!.rewardsRedeemed++;
+          }
+        });
+      }
+
+      // Fetch punishment history
+      const { data: punishmentEntries, error: punishmentError } = await supabase
+        .from('punishment_history')
+        .select('*')
+        .gte('applied_date', start)
+        .lte('applied_date', end);
+      
+      if (punishmentError) {
+        console.error('Error loading punishment_history', punishmentError);
+      } else {
+        punishmentEntries?.forEach(entry => {
+          const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
+          if (metrics.has(date)) {
+            metrics.get(date)!.punishments++;
+          }
+        });
+      }
+
+      const dataArray = Array.from(metrics.values());
+      
+      // Calculate monthly totals
+      const monthlyTotals = dataArray.reduce((acc, item) => {
+        return {
+          tasksCompleted: acc.tasksCompleted + item.tasksCompleted,
+          rulesBroken: acc.rulesBroken + item.rulesBroken,
+          rewardsRedeemed: acc.rewardsRedeemed + item.rewardsRedeemed,
+          punishments: acc.punishments + item.punishments
+        };
+      }, {
+        tasksCompleted: 0,
+        rulesBroken: 0,
+        rewardsRedeemed: 0,
+        punishments: 0
+      });
+      
+      return { dataArray, monthlyTotals };
+    } catch (err) {
+      console.error('Error in fetchMonthlyData:', err);
+      toast({
+        title: 'Error loading chart data',
+        description: 'There was a problem loading the monthly metrics.',
+        variant: 'destructive'
+      });
+      return { 
+        dataArray: [], 
+        monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } 
+      };
+    }
+  };
+
+  // Use React Query to fetch data
+  const { data = { dataArray: [], monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } }, 
+          isLoading } = useQuery({
+    queryKey: ['monthly-metrics'],
+    queryFn: fetchMonthlyData,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60000, // Refetch every minute
+    staleTime: 30000, // Consider data stale after 30 seconds
+  });
+
+  const hasContent = data.dataArray.some(d =>
+    d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
+  );
+
   const getYAxisDomain = useMemo(() => {
-    if (!data.length) return ['auto', 'auto'];
-    const max = Math.max(...data.flatMap(d => [
+    if (!data.dataArray.length) return ['auto', 'auto'];
+    const max = Math.max(...data.dataArray.flatMap(d => [
       d.tasksCompleted, d.rulesBroken, d.rewardsRedeemed, d.punishments
     ]));
     return [0, Math.max(5, Math.ceil(max))];
-  }, [data]);
+  }, [data.dataArray]);
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!chartScrollRef.current) return;
@@ -108,110 +246,6 @@ const MonthlyMetricsChart: React.FC = () => {
     chartScrollRef.current.scrollTo({ left: Math.max(0, scrollPosition), behavior: 'smooth' });
   };
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const metrics = new Map<string, MonthlyDataItem>();
-        monthDates.forEach(date => metrics.set(date, {
-          date, tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0
-        }));
-
-        const today = new Date();
-        const start = startOfMonth(today).toISOString();
-        const end = endOfMonth(today).toISOString();
-
-        const { data: taskEntries, error: taskError } = await supabase
-          .from('task_completion_history')
-          .select('*')
-          .gte('completed_at', start)
-          .lte('completed_at', end);
-        
-        if (taskError) console.error('Error loading task_completion_history', taskError);
-        taskEntries?.forEach(entry => {
-          const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
-          if (metrics.has(date)) {
-            metrics.get(date)!.tasksCompleted++;
-          }
-        });
-
-        const { data: ruleEntries, error: ruleError } = await supabase
-          .from('rule_violations')
-          .select('*')
-          .gte('violation_date', start)
-          .lte('violation_date', end);
-        
-        if (ruleError) console.error('Error loading rule_violations', ruleError);
-        ruleEntries?.forEach(entry => {
-          const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
-          if (metrics.has(date)) {
-            metrics.get(date)!.rulesBroken++;
-          }
-        });
-
-        const { data: rewardEntries, error: rewardError } = await supabase
-          .from('reward_usage')
-          .select('*')
-          .gte('created_at', start)
-          .lte('created_at', end);
-        
-        if (rewardError) console.error('Error loading reward_usage', rewardError);
-        rewardEntries?.forEach(entry => {
-          const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
-          if (metrics.has(date)) {
-            metrics.get(date)!.rewardsRedeemed++;
-          }
-        });
-
-        const { data: punishmentEntries, error: punishmentError } = await supabase
-          .from('punishment_history')
-          .select('*')
-          .gte('applied_date', start)
-          .lte('applied_date', end);
-        
-        if (punishmentError) console.error('Error loading punishment_history', punishmentError);
-        punishmentEntries?.forEach(entry => {
-          const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
-          if (metrics.has(date)) {
-            metrics.get(date)!.punishments++;
-          }
-        });
-
-        const dataArray = Array.from(metrics.values());
-        setData(dataArray);
-        
-        const monthlyTotals = dataArray.reduce((acc, item) => {
-          return {
-            tasksCompleted: acc.tasksCompleted + item.tasksCompleted,
-            rulesBroken: acc.rulesBroken + item.rulesBroken,
-            rewardsRedeemed: acc.rewardsRedeemed + item.rewardsRedeemed,
-            punishments: acc.punishments + item.punishments
-          };
-        }, {
-          tasksCompleted: 0,
-          rulesBroken: 0,
-          rewardsRedeemed: 0,
-          punishments: 0
-        });
-        
-        setMonthlySummary(monthlyTotals);
-      } catch (err) {
-        toast({
-          title: 'Error loading chart data',
-          description: 'There was a problem loading the monthly metrics.',
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [monthDates]);
-
-  const hasContent = data.some(d =>
-    d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
-  );
-
   const monthlyChart = useMemo(() => {
     return (
       <ChartContainer className="w-full h-full" config={chartConfig}>
@@ -227,7 +261,7 @@ const MonthlyMetricsChart: React.FC = () => {
           <div style={{ width: chartWidth }} className="select-none">
             <ResponsiveContainer width={chartWidth} height={260}>
               <BarChart
-                data={data}
+                data={data.dataArray}
                 barGap={BAR_GAP}
                 barCategoryGap={GROUP_PADDING}
                 margin={{ left: 20, right: 20 }}
@@ -279,7 +313,7 @@ const MonthlyMetricsChart: React.FC = () => {
         </div>
       </ChartContainer>
     );
-  }, [data, isDragging, getYAxisDomain, chartWidth]);
+  }, [data.dataArray, isDragging, getYAxisDomain, chartWidth]);
 
   return (
     <div className="space-y-2">
@@ -289,7 +323,7 @@ const MonthlyMetricsChart: React.FC = () => {
           <div ref={chartContainerRef} className="overflow-hidden relative h-64">
             <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
             <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
-            {loading ? (
+            {isLoading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="w-full h-full bg-light-navy/30 animate-pulse rounded"></div>
               </div>
@@ -322,7 +356,7 @@ const MonthlyMetricsChart: React.FC = () => {
         </div>
       </Card>
       
-      <MonthlyMetricsSummaryTiles {...monthlySummary} />
+      <MonthlyMetricsSummaryTiles {...data.monthlyTotals} />
     </div>
   );
 };

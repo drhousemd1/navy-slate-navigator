@@ -82,7 +82,11 @@ const ActivityDataReset = () => {
         
       if (fetchRewardsError) throw new Error(`Error fetching rewards: ${fetchRewardsError.message}`);
       
-      // Invalidate all relevant query cache
+      // Force a complete cache reset to ensure all components refresh
+      queryClient.removeQueries();
+      queryClient.invalidateQueries();
+      
+      // Then invalidate specific queries to ensure they reload
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
@@ -92,8 +96,12 @@ const ActivityDataReset = () => {
       
       toast({
         title: 'Reset Complete',
-        description: 'All activity data has been reset successfully.',
+        description: 'All activity data has been reset successfully. Please refresh any open pages to see the changes.',
+        duration: 5000,
       });
+      
+      // Force window reload to ensure metrics pages are refreshed
+      window.location.reload();
     } catch (error) {
       console.error('Reset error:', error);
       toast({
