@@ -104,6 +104,35 @@ const ActivityDataReset = () => {
       // Force invalidate ALL query caches to ensure everything is refetched
       queryClient.invalidateQueries();
       
+      // Clear all browser storage that might be caching data
+      if (typeof window !== 'undefined') {
+        // Clear all localStorage items that might be related to metrics or activities
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('metrics') || 
+              key.includes('tasks') || 
+              key.includes('rewards') || 
+              key.includes('rules') || 
+              key.includes('punishments') ||
+              key.includes('cache') ||
+              key.includes('tanstack')) {
+            localStorage.removeItem(key);
+          }
+        });
+        
+        // Clear sessionStorage items too for good measure
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.includes('metrics') || 
+              key.includes('tasks') || 
+              key.includes('rewards') || 
+              key.includes('rules') || 
+              key.includes('punishments') ||
+              key.includes('cache') ||
+              key.includes('tanstack')) {
+            sessionStorage.removeItem(key);
+          }
+        });
+      }
+      
       toast({
         title: 'Reset Complete',
         description: 'All activity data has been reset successfully. Page will refresh to show all changes.',
@@ -112,12 +141,8 @@ const ActivityDataReset = () => {
       
       // Force a harder window reload with cache clearing to reset everything
       setTimeout(() => {
-        // Clear localStorage cache for any data that might be stored there
-        localStorage.removeItem('weeklyMetricsData');
-        localStorage.removeItem('monthlyMetricsData');
-        
-        // Use location.href instead of reload for a full page refresh that clears everything
-        window.location.href = window.location.href;
+        // Most aggressive page reload approach
+        window.location.href = window.location.href.split('?')[0] + '?fresh=' + Date.now();
       }, 1500);
     } catch (error) {
       console.error('Reset error:', error);

@@ -29,6 +29,7 @@ const WeeklyMetricsChart: React.FC = () => {
 
   // Use React Query for data fetching to ensure it refreshes properly
   const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
+    console.log('Fetching weekly chart data at', new Date().toISOString());
     try {
       // Generate all days of the week (Monday to Sunday)
       const weekDays = generateMondayBasedWeekDates();
@@ -60,6 +61,7 @@ const WeeklyMetricsChart: React.FC = () => {
       if (taskError) {
         console.error('Error fetching task completions:', taskError);
       } else if (taskCompletions && taskCompletions.length > 0) {
+        console.log('Found task completions:', taskCompletions.length);
         // Group completions by date
         const completionsByDate = new Map<string, Set<string>>();
         
@@ -80,6 +82,8 @@ const WeeklyMetricsChart: React.FC = () => {
             metricsMap.get(date)!.tasksCompleted = taskIds.size;
           }
         });
+      } else {
+        console.log('No task completions found for the week');
       }
 
       // Fetch rule violations
@@ -92,12 +96,15 @@ const WeeklyMetricsChart: React.FC = () => {
       if (ruleError) {
         console.error('Error fetching rule violations:', ruleError);
       } else if (ruleViolations && ruleViolations.length > 0) {
+        console.log('Found rule violations:', ruleViolations.length);
         ruleViolations.forEach(entry => {
           const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
           if (metricsMap.has(date)) {
             metricsMap.get(date)!.rulesBroken++;
           }
         });
+      } else {
+        console.log('No rule violations found for the week');
       }
 
       // Fetch reward usages
@@ -110,12 +117,15 @@ const WeeklyMetricsChart: React.FC = () => {
       if (rewardError) {
         console.error('Error fetching reward usages:', rewardError);
       } else if (rewardUsages && rewardUsages.length > 0) {
+        console.log('Found reward usages:', rewardUsages.length);
         rewardUsages.forEach(entry => {
           const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
           if (metricsMap.has(date)) {
             metricsMap.get(date)!.rewardsRedeemed++;
           }
         });
+      } else {
+        console.log('No reward usages found for the week');
       }
 
       // Fetch punishments
@@ -128,18 +138,23 @@ const WeeklyMetricsChart: React.FC = () => {
       if (punishmentError) {
         console.error('Error fetching punishments:', punishmentError);
       } else if (punishments && punishments.length > 0) {
+        console.log('Found punishments:', punishments.length);
         punishments.forEach(entry => {
           const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
           if (metricsMap.has(date)) {
             metricsMap.get(date)!.punishments++;
           }
         });
+      } else {
+        console.log('No punishments found for the week');
       }
 
       // Convert map to sorted array
-      return Array.from(metricsMap.values())
+      const result = Array.from(metricsMap.values())
         .sort((a, b) => a.date.localeCompare(b.date));
-        
+      
+      console.log('Weekly chart data prepared:', result);
+      return result;
     } catch (error) {
       console.error('Error fetching weekly data:', error);
       toast({

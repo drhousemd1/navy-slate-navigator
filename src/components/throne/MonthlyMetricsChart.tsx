@@ -72,6 +72,7 @@ const MonthlyMetricsChart: React.FC = () => {
     dataArray: MonthlyDataItem[], 
     monthlyTotals: MonthlyMetricsSummary 
   }> => {
+    console.log('Fetching monthly chart data at', new Date().toISOString());
     try {
       const metrics = new Map<string, MonthlyDataItem>();
       monthDates.forEach(date => metrics.set(date, {
@@ -92,6 +93,7 @@ const MonthlyMetricsChart: React.FC = () => {
       if (taskError) {
         console.error('Error loading task_completion_history', taskError);
       } else {
+        console.log('Found task completions:', taskEntries?.length || 0);
         // Group by date and task_id to count uniquely per day
         const tasksByDate = new Map<string, Set<string>>();
         
@@ -121,6 +123,7 @@ const MonthlyMetricsChart: React.FC = () => {
       if (ruleError) {
         console.error('Error loading rule_violations', ruleError);
       } else {
+        console.log('Found rule violations:', ruleEntries?.length || 0);
         ruleEntries?.forEach(entry => {
           const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
           if (metrics.has(date)) {
@@ -139,6 +142,7 @@ const MonthlyMetricsChart: React.FC = () => {
       if (rewardError) {
         console.error('Error loading reward_usage', rewardError);
       } else {
+        console.log('Found reward usages:', rewardEntries?.length || 0);
         rewardEntries?.forEach(entry => {
           const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
           if (metrics.has(date)) {
@@ -157,6 +161,7 @@ const MonthlyMetricsChart: React.FC = () => {
       if (punishmentError) {
         console.error('Error loading punishment_history', punishmentError);
       } else {
+        console.log('Found punishments:', punishmentEntries?.length || 0);
         punishmentEntries?.forEach(entry => {
           const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
           if (metrics.has(date)) {
@@ -182,6 +187,7 @@ const MonthlyMetricsChart: React.FC = () => {
         punishments: 0
       });
       
+      console.log('Monthly chart data prepared. Monthly totals:', monthlyTotals);
       return { dataArray, monthlyTotals };
     } catch (err) {
       console.error('Error in fetchMonthlyData:', err);
