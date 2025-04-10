@@ -23,12 +23,11 @@ const ActivityDataReset = () => {
       const deleteFromTable = async (
         table: 'task_completion_history' | 'rule_violations' | 'reward_usage' | 'punishment_history'
       ) => {
-        // Correct Supabase API call with proper TypeScript syntax
         const { error, count } = await supabase
           .from(table)
           .delete()
           .gt('created_at', '1900-01-01')
-          .select('*', { head: false, count: 'exact' } as any)
+          .select('*', { count: 'exact', head: false }); // Fixed: Removed the second argument
 
         if (error) {
           throw new Error(`Failed to delete from ${table}: ${error.message}`);
@@ -160,7 +159,7 @@ const ActivityDataReset = () => {
           <Button 
             variant="destructive" 
             size="lg"
-            className="bg-red-700 hover:bg-red-800 text-white"
+            className="bg-red-700 hover:bg-red-800"
             onClick={handleReset}
             disabled={isResetting}
           >

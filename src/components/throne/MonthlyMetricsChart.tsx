@@ -1,10 +1,9 @@
+
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import {
-  format, eachDayOfInterval, startOfMonth, endOfMonth
-} from 'date-fns';
+import { format, getMonth, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,50 +26,6 @@ export interface MonthlyMetricsSummary {
   punishments: number;
 }
 
-const fetchMonthlyData = async (): Promise<MonthlyDataItem[]> => {
-  const startDate = startOfMonth(new Date()).toISOString();
-  const endDate = endOfMonth(new Date()).toISOString();
-  const daysInMonth = eachDayOfInterval({ start: new Date(startDate), end: new Date(endDate) });
-
-  const formatDate = (date: Date) => format(date, 'yyyy-MM-dd');
-
-  const [{ data: tasks }, { data: rules }, { data: rewards }, { data: punishments }] = await Promise.all([
-    supabase.from('task_completion_history').select('created_at').gte('created_at', startDate).lte('created_at', endDate),
-    supabase.from('rule_violations').select('created_at').gte('created_at', startDate).lte('created_at', endDate),
-    supabase.from('reward_usage').select('created_at').gte('created_at', startDate).lte('created_at', endDate),
-    supabase.from('punishment_history').select('created_at').gte('created_at', startDate).lte('created_at', endDate)
-  ]);
-
-  const activityMap: Record<string, MonthlyDataItem> = {};
-
-  for (const day of daysInMonth) {
-    const key = formatDate(day);
-    activityMap[key] = {
-      date: key,
-      tasksCompleted: 0,
-      rulesBroken: 0,
-      rewardsRedeemed: 0,
-      punishments: 0,
-    };
-  }
-
-  const incrementCounts = (items: any[], field: keyof MonthlyDataItem) => {
-    items?.forEach(({ created_at }) => {
-      const dateKey = formatDate(new Date(created_at));
-      if (activityMap[dateKey]) {
-        activityMap[dateKey][field]++;
-      }
-    });
-  };
-
-  incrementCounts(tasks || [], 'tasksCompleted');
-  incrementCounts(rules || [], 'rulesBroken');
-  incrementCounts(rewards || [], 'rewardsRedeemed');
-  incrementCounts(punishments || [], 'punishments');
-
-  return Object.values(activityMap);
-};
-
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
@@ -84,58 +39,356 @@ const MonthlyMetricsChart: React.FC = () => {
     tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
     rulesBroken: { color: '#F97316', label: 'Rules Broken' },
     rewardsRedeemed: { color: '#9b87f5', label: 'Rewards Redeemed' },
-    punishments: { color: '#ef4444', label: 'Punishments' },
+    punishments: { color: '#ea384c', label: 'Punishments' }
   };
 
-  const { data = [], isLoading } = useQuery({
+  // Force clear cache on component mount
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
+    console.log('MonthlyMetricsChart: Invalidated cached data on mount');
+  }, [queryClient]);
+
+  const generateMonthDays = (): string[] => {
+    const today = new Date();
+    const start = startOfMonth(today);
+    const end = endOfMonth(today);
+    return eachDayOfInterval({ start, end }).map(date => format(date, 'yyyy-MM-dd'));
+  };
+
+  const formatDate = (dateString: string): string => {
+    try {
+      return format(parseISO(dateString), 'MMM d');
+    } catch {
+      return dateString;
+    }
+  };
+
+  const monthDates = useMemo(() => generateMonthDays(), []);
+  
+  const BAR_WIDTH = 6;
+  const BAR_COUNT = 4;
+  const BAR_GAP = 2;
+  const GROUP_PADDING = 10; // Space between day groups
+  const CHART_PADDING = 20; // Padding at chart edges
+  
+  const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
+  const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
+
+  // Fetch monthly metrics data using React Query with updated settings for better resetting
+  const fetchMonthlyData = async (): Promise<{ 
+    dataArray: MonthlyDataItem[], 
+    monthlyTotals: MonthlyMetricsSummary 
+  }> => {
+    console.log('Fetching monthly chart data at', new Date().toISOString());
+    try {
+      const metrics = new Map<string, MonthlyDataItem>();
+      monthDates.forEach(date => metrics.set(date, {
+        date, tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0
+      }));
+
+      const today = new Date();
+      const start = startOfMonth(today).toISOString();
+      const end = endOfMonth(today).toISOString();
+
+      // Fetch task completions with unique daily counts
+      const { data: taskEntries, error: taskError } = await supabase
+        .from('task_completion_history')
+        .select('task_id, completed_at')
+        .gte('completed_at', start)
+        .lte('completed_at', end);
+      
+      if (taskError) {
+        console.error('Error loading task_completion_history', taskError);
+      } else {
+        console.log('Found task completions:', taskEntries?.length || 0);
+        // Group by date and task_id to count uniquely per day
+        const tasksByDate = new Map<string, Set<string>>();
+        
+        taskEntries?.forEach(entry => {
+          const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
+          if (!tasksByDate.has(date)) {
+            tasksByDate.set(date, new Set());
+          }
+          tasksByDate.get(date)!.add(entry.task_id);
+        });
+        
+        // Update counts based on unique task IDs per day
+        tasksByDate.forEach((taskIds, date) => {
+          if (metrics.has(date)) {
+            metrics.get(date)!.tasksCompleted = taskIds.size;
+          }
+        });
+      }
+
+      // Fetch rule violations
+      const { data: ruleEntries, error: ruleError } = await supabase
+        .from('rule_violations')
+        .select('*')
+        .gte('violation_date', start)
+        .lte('violation_date', end);
+      
+      if (ruleError) {
+        console.error('Error loading rule_violations', ruleError);
+      } else {
+        console.log('Found rule violations:', ruleEntries?.length || 0);
+        ruleEntries?.forEach(entry => {
+          const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
+          if (metrics.has(date)) {
+            metrics.get(date)!.rulesBroken++;
+          }
+        });
+      }
+
+      // Fetch reward usages
+      const { data: rewardEntries, error: rewardError } = await supabase
+        .from('reward_usage')
+        .select('*')
+        .gte('created_at', start)
+        .lte('created_at', end);
+      
+      if (rewardError) {
+        console.error('Error loading reward_usage', rewardError);
+      } else {
+        console.log('Found reward usages:', rewardEntries?.length || 0);
+        rewardEntries?.forEach(entry => {
+          const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
+          if (metrics.has(date)) {
+            metrics.get(date)!.rewardsRedeemed++;
+          }
+        });
+      }
+
+      // Fetch punishment history
+      const { data: punishmentEntries, error: punishmentError } = await supabase
+        .from('punishment_history')
+        .select('*')
+        .gte('applied_date', start)
+        .lte('applied_date', end);
+      
+      if (punishmentError) {
+        console.error('Error loading punishment_history', punishmentError);
+      } else {
+        console.log('Found punishments:', punishmentEntries?.length || 0);
+        punishmentEntries?.forEach(entry => {
+          const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
+          if (metrics.has(date)) {
+            metrics.get(date)!.punishments++;
+          }
+        });
+      }
+
+      const dataArray = Array.from(metrics.values());
+      
+      // Calculate monthly totals
+      const monthlyTotals = dataArray.reduce((acc, item) => {
+        return {
+          tasksCompleted: acc.tasksCompleted + item.tasksCompleted,
+          rulesBroken: acc.rulesBroken + item.rulesBroken,
+          rewardsRedeemed: acc.rewardsRedeemed + item.rewardsRedeemed,
+          punishments: acc.punishments + item.punishments
+        };
+      }, {
+        tasksCompleted: 0,
+        rulesBroken: 0,
+        rewardsRedeemed: 0,
+        punishments: 0
+      });
+      
+      console.log('Monthly chart data prepared. Monthly totals:', monthlyTotals);
+      return { dataArray, monthlyTotals };
+    } catch (err) {
+      console.error('Error in fetchMonthlyData:', err);
+      toast({
+        title: 'Error loading chart data',
+        description: 'There was a problem loading the monthly metrics.',
+        variant: 'destructive'
+      });
+      return { 
+        dataArray: [], 
+        monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } 
+      };
+    }
+  };
+
+  // Critical fix: Use React Query with updated settings to ensure proper data refresh after reset
+  const { data = { dataArray: [], monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } }, 
+          isLoading, refetch } = useQuery({
     queryKey: ['monthly-metrics'],
     queryFn: fetchMonthlyData,
     refetchOnWindowFocus: true,
-    refetchInterval: 5000,
+    refetchInterval: 5000, // More aggressive refresh (every 5 seconds)
+    staleTime: 0, // Consider data always stale to force refresh
+    gcTime: 0, // Don't cache at all
   });
 
-  const monthlySummary = useMemo<MonthlyMetricsSummary>(() => {
-    return data.reduce((acc, item) => {
-      acc.tasksCompleted += item.tasksCompleted;
-      acc.rulesBroken += item.rulesBroken;
-      acc.rewardsRedeemed += item.rewardsRedeemed;
-      acc.punishments += item.punishments;
-      return acc;
-    }, {
-      tasksCompleted: 0,
-      rulesBroken: 0,
-      rewardsRedeemed: 0,
-      punishments: 0,
-    });
-  }, [data]);
+  // Force refresh on URL parameters that indicate a reset
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('fresh')) {
+      console.log('Fresh page load detected in MonthlyMetricsChart, forcing data refresh');
+      refetch();
+    }
+    
+    // Aggressive refresh strategy - periodically check for fresh data
+    const interval = setInterval(() => {
+      console.log('Periodic refresh check in MonthlyMetricsChart');
+      refetch();
+    }, 10000); // Check every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, [refetch]);
+
+  const hasContent = data.dataArray.some(d =>
+    d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
+  );
+
+  const getYAxisDomain = useMemo(() => {
+    if (!data.dataArray.length) return ['auto', 'auto'];
+    const max = Math.max(...data.dataArray.flatMap(d => [
+      d.tasksCompleted, d.rulesBroken, d.rewardsRedeemed, d.punishments
+    ]));
+    return [0, Math.max(5, Math.ceil(max))];
+  }, [data.dataArray]);
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!chartScrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - chartScrollRef.current.offsetLeft);
+    setScrollLeft(chartScrollRef.current.scrollLeft);
+  };
+
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !chartScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - chartScrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    chartScrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const endDrag = () => setIsDragging(false);
+
+  const handleBarClick = (data: any) => {
+    if (!chartScrollRef.current) return;
+    const clickedDate = data.date;
+    const dateIndex = monthDates.findIndex(date => date === clickedDate);
+    if (dateIndex === -1) return;
+
+    const scrollPosition = (dateIndex * dayWidth) - (chartScrollRef.current.clientWidth / 2) + (dayWidth / 2);
+    chartScrollRef.current.scrollTo({ left: Math.max(0, scrollPosition), behavior: 'smooth' });
+  };
+
+  const monthlyChart = useMemo(() => {
+    return (
+      <ChartContainer className="w-full h-full" config={chartConfig}>
+        <div
+          ref={chartScrollRef}
+          className="overflow-x-auto cursor-grab active:cursor-grabbing select-none scrollbar-hide"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={endDrag}
+          onMouseLeave={endDrag}
+        >
+          <div style={{ width: chartWidth }} className="select-none">
+            <ResponsiveContainer width={chartWidth} height={260}>
+              <BarChart
+                data={data.dataArray}
+                barGap={BAR_GAP}
+                barCategoryGap={GROUP_PADDING}
+                margin={{ left: 20, right: 20 }}
+              >
+                <CartesianGrid strokeDasharray="0" stroke="#1A1F2C" />
+                <XAxis
+                  dataKey="date"
+                  type="category"
+                  scale="band"
+                  padding={{ left: CHART_PADDING, right: CHART_PADDING }}
+                  stroke="#8E9196"
+                  tick={{ fill: '#D1D5DB' }}
+                  tickFormatter={(date) => {
+                    try {
+                      const d = parseISO(date);
+                      return `${getMonth(d) + 1}/${format(d, 'd')}`;
+                    } catch {
+                      return date;
+                    }
+                  }}
+                />
+                <YAxis
+                  stroke="#8E9196"
+                  tick={{ fill: '#D1D5DB' }}
+                  domain={getYAxisDomain}
+                  allowDataOverflow={false}
+                />
+                <Tooltip
+                  cursor={false}
+                  wrapperStyle={{ zIndex: 9999, marginLeft: '20px' }}
+                  contentStyle={{ backgroundColor: 'transparent', border: 'none' }}
+                  offset={25}
+                  formatter={(value, name) => [value, name]}
+                  labelFormatter={(label) => {
+                    try {
+                      return format(parseISO(String(label)), 'MMM d, yyyy');
+                    } catch {
+                      return label;
+                    }
+                  }}
+                />
+                <Bar dataKey="tasksCompleted" name="Tasks Completed" fill={chartConfig.tasksCompleted.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+                <Bar dataKey="rulesBroken" name="Rules Broken" fill={chartConfig.rulesBroken.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+                <Bar dataKey="rewardsRedeemed" name="Rewards Redeemed" fill={chartConfig.rewardsRedeemed.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+                <Bar dataKey="punishments" name="Punishments" fill={chartConfig.punishments.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </ChartContainer>
+    );
+  }, [data.dataArray, isDragging, getYAxisDomain, chartWidth]);
 
   return (
-    <Card className="w-full p-4">
-      <h2 className="text-xl font-semibold mb-4">Monthly Activity</h2>
-      <ChartContainer
-        ref={chartContainerRef}
-        scrollRef={chartScrollRef}
-        isDragging={isDragging}
-        setIsDragging={setIsDragging}
-        startX={startX}
-        setStartX={setStartX}
-        scrollLeft={scrollLeft}
-        setScrollLeft={setScrollLeft}
-      >
-        <ResponsiveContainer width={data.length * 60} height={300}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis allowDecimals={false} />
-            <Tooltip />
-            {Object.entries(chartConfig).map(([key, { color, label }]) => (
-              <Bar key={key} dataKey={key} stackId="a" fill={color} name={label} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartContainer>
-      <MonthlyMetricsSummaryTiles summary={monthlySummary} />
-    </Card>
+    <div className="space-y-2">
+      <Card className="bg-navy border border-light-navy rounded-lg">
+        <div className="p-4">
+          <h2 className="text-lg font-semibold text-white mb-2">Monthly Activity</h2>
+          <div ref={chartContainerRef} className="overflow-hidden relative h-64">
+            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="w-full h-full bg-light-navy/30 animate-pulse rounded"></div>
+              </div>
+            ) : (
+              <div className="h-full">
+                {!hasContent ? (
+                  <div className="flex items-center justify-center h-full text-white text-sm">
+                    No activity data to display for this month.
+                  </div>
+                ) : (
+                  monthlyChart
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
+              Tasks Completed
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
+              Rules Broken
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
+              Rewards Redeemed
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
+              Punishments
+            </span>
+          </div>
+        </div>
+      </Card>
+      
+      <MonthlyMetricsSummaryTiles {...data.monthlyTotals} />
+    </div>
   );
 };
 
