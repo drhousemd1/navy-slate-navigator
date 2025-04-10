@@ -98,18 +98,11 @@ const ActivityDataReset = () => {
         }
       }
       
-      // Completely clear all cached data to force full refresh
+      // CRITICAL FIX: Force complete cache reset by removing ALL cached data
       queryClient.clear(); 
 
       // Force invalidate ALL query caches to ensure everything is refetched
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['rules'] });
-      queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      queryClient.invalidateQueries({ queryKey: ['punishments'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['task-completions'] });
+      queryClient.invalidateQueries();
       
       toast({
         title: 'Reset Complete',
@@ -119,8 +112,12 @@ const ActivityDataReset = () => {
       
       // Force a harder window reload with cache clearing to reset everything
       setTimeout(() => {
-        // Clear all browser caches before reloading
-        window.location.reload();
+        // Clear localStorage cache for any data that might be stored there
+        localStorage.removeItem('weeklyMetricsData');
+        localStorage.removeItem('monthlyMetricsData');
+        
+        // Use location.href instead of reload for a full page refresh that clears everything
+        window.location.href = window.location.href;
       }, 1500);
     } catch (error) {
       console.error('Reset error:', error);

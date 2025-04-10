@@ -151,14 +151,14 @@ const WeeklyMetricsChart: React.FC = () => {
     }
   };
 
-  // Fetch data with React Query - crucial staleTime and gcTime settings for reset functionality
+  // Key change: Use React Query with updated settings to ensure proper refresh
   const { data = [], isLoading, error } = useQuery({
     queryKey: ['weekly-metrics'],
     queryFn: fetchWeeklyData,
     refetchOnWindowFocus: true,
     refetchInterval: 60000, // Refetch every minute
-    staleTime: 10000, // Consider data stale after 10 seconds for quicker refresh
-    gcTime: 20000, // Only cache for 20 seconds (renamed from cacheTime)
+    staleTime: 0, // Always consider data stale to force refresh
+    gcTime: 0, // Don't cache at all - force refetch every time
   });
 
   const hasData = data.some(d => 

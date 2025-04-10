@@ -100,15 +100,15 @@ const ThroneRoom: React.FC = () => {
     }
   };
   
-  // Use React Query to fetch the summary data with reduced cache time for better reset response
+  // Critical fix: Use React Query with settings that force refresh after reset
   const { data: metricsSummary = { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 }, 
           refetch } = useQuery({
     queryKey: ['weekly-metrics-summary'],
     queryFn: fetchSummaryData,
     refetchOnWindowFocus: true,
     refetchInterval: 60000, // Refetch every minute
-    staleTime: 10000, // Consider data stale after 10 seconds
-    gcTime: 20000, // Changed from cacheTime to gcTime
+    staleTime: 0, // Consider data always stale to force refresh
+    gcTime: 0, // Don't cache at all
   });
 
   // Format date for consistent date handling
@@ -123,6 +123,8 @@ const ThroneRoom: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
     queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
     queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+    
+    // Force immediate refetch
     refetch();
   }, [location.pathname, refetch, queryClient]);
 

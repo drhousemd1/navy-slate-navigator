@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -196,15 +197,15 @@ const MonthlyMetricsChart: React.FC = () => {
     }
   };
 
-  // Use React Query with updated settings to ensure proper data refresh after reset
+  // Critical fix: Use React Query with updated settings to ensure proper data refresh after reset
   const { data = { dataArray: [], monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } }, 
           isLoading } = useQuery({
     queryKey: ['monthly-metrics'],
     queryFn: fetchMonthlyData,
     refetchOnWindowFocus: true,
     refetchInterval: 60000, // Refetch every minute
-    staleTime: 10000, // Consider data stale after 10 seconds for quicker refresh
-    gcTime: 20000, // Changed from cacheTime to gcTime
+    staleTime: 0, // Consider data always stale to force refresh
+    gcTime: 0, // Don't cache at all
   });
 
   const hasContent = data.dataArray.some(d =>
