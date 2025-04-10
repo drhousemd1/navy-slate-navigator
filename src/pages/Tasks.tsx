@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -162,6 +163,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
           const { data: authData } = await supabase.auth.getUser();
           const userId = authData.user?.id || 'anonymous';
           
+          // Log the completion to history
           const { error: insertError } = await supabase
             .from('task_completion_history')
             .insert({
@@ -174,6 +176,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
             console.error('Error inserting into task_completion_history:', insertError.message);
           } else {
             console.log('Logged task completion to history');
+            // Make sure we invalidate weekly metrics data when a task is completed
             queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
           }
           

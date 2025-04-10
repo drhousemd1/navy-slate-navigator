@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -55,7 +55,7 @@ const WeeklyMetricsChart: React.FC = () => {
         const start = startOfWeek(today, { weekStartsOn: 1 }); // Start on Monday
         const end = endOfWeek(today, { weekStartsOn: 1 }); // End on Sunday
         
-        // Fetch task completions
+        // Fetch task completions - ONLY count the actual completion events, not the completed task flag
         const { data: taskCompletions, error: taskError } = await supabase
           .from('task_completion_history')
           .select('*')
@@ -65,9 +65,22 @@ const WeeklyMetricsChart: React.FC = () => {
         if (taskError) {
           console.error('Error fetching task completions:', taskError);
         } else {
+          // Group by date to avoid counting multiple completions of the same task
+          const completionsByDate = new Map<string, Set<string>>();
+          
           taskCompletions?.forEach(entry => {
             const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
+            
+            if (!completionsByDate.has(date)) {
+              completionsByDate.set(date, new Set());
+            }
+            
+            // Add the task_id to the set for this date
+            completionsByDate.get(date)?.add(entry.task_id);
+            
             if (metricsMap.has(date)) {
+              // Simply count each completion event as 1, regardless of how many times
+              // the same task was completed that day
               metricsMap.get(date)!.tasksCompleted++;
             }
           });

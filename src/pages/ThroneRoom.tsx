@@ -57,14 +57,18 @@ const ThroneRoom: React.FC = () => {
   useEffect(() => {
     const fetchSummaryData = async () => {
       try {
-        // Get current week's start and end dates
+        // Get current week's start and end dates (Monday-based)
         const today = new Date();
-        const dayOfWeek = today.getDay();
-        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        const weekStart = new Date(today.setDate(diff));
+        const diff = today.getDay();
+        const mondayDiff = diff === 0 ? -6 : 1 - diff; // Convert Sunday (0) to be -6 days from Monday
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() + mondayDiff);
         weekStart.setHours(0, 0, 0, 0);
+        
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekStart.getDate() + 7);
+        
+        console.log('Fetching weekly data from', weekStart.toISOString(), 'to', weekEnd.toISOString());
         
         // Fetch task completions
         const { data: taskCompletions, error: taskError } = await supabase
