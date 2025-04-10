@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
-  format, getMonth, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO
+  format, eachDayOfInterval, startOfMonth, endOfMonth, parseISO
 } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
@@ -149,7 +149,7 @@ const MonthlyMetricsChart: React.FC = () => {
     }
   };
 
-  const { data: response = { dataArray: [], monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } }, isLoading, refetch } = useQuery({
+  const { data = { dataArray: [], monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } }, isLoading } = useQuery({
     queryKey: ['monthly-metrics'],
     queryFn: fetchMonthlyData,
     refetchOnWindowFocus: true,
@@ -158,7 +158,7 @@ const MonthlyMetricsChart: React.FC = () => {
     gcTime: 0
   });
 
-  const { dataArray, monthlyTotals } = response;
+  const { dataArray, monthlyTotals } = data;
 
   return (
     <Card className="w-full p-4">
