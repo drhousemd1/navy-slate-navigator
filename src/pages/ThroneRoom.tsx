@@ -52,7 +52,7 @@ const ThroneRoom: React.FC = () => {
     setRefreshKey(prev => prev + 1);
   }, [rewards, location.pathname]);
   
-  // Fetch summary data directly since WeeklyMetricsChart is removed
+  // Fetch summary data directly
   useEffect(() => {
     const fetchSummaryData = async () => {
       try {
@@ -127,19 +127,8 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
-            {/* Weekly metrics summary tiles */}
+            {/* Weekly metrics summary tiles - graph has been removed */}
             <div className="space-y-2">
-              <Card className="bg-navy border border-light-navy rounded-lg">
-                <div className="p-4">
-                  <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
-                  <div className="w-full" style={{ height: 300 }}>
-                    <div className="w-full h-64 flex items-center justify-center border border-dashed border-gray-700 rounded-lg">
-                      <span className="text-gray-400 text-sm">Weekly activity graph has been removed</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-              
               <WeeklyMetricsSummaryTiles 
                 tasksCompleted={metricsSummary.tasksCompleted}
                 rulesBroken={metricsSummary.rulesBroken}
