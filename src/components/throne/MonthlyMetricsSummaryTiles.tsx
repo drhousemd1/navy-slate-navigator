@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -22,25 +21,25 @@ const MonthlyMetricsSummaryTiles: React.FC<MonthlyMetricsSummaryProps> = ({
           <div className="bg-light-navy rounded-lg px-3 py-2">
             <div className="flex items-center justify-between">
               <span className="text-sky-400 text-sm">Monthly Tasks:</span>
-              <span className="text-sm font-bold text-white">{tasksCompleted}</span>
+              <span className="text-sm font-bold text-white">{tasksCompleted ?? 0}</span>
             </div>
           </div>
           <div className="bg-light-navy rounded-lg px-3 py-2">
             <div className="flex items-center justify-between">
               <span className="text-orange-500 text-sm">Monthly Rules Broken:</span>
-              <span className="text-sm font-bold text-white">{rulesBroken}</span>
+              <span className="text-sm font-bold text-white">{rulesBroken ?? 0}</span>
             </div>
           </div>
           <div className="bg-light-navy rounded-lg px-3 py-2">
             <div className="flex items-center justify-between">
               <span className="text-purple-400 text-sm">Monthly Rewards:</span>
-              <span className="text-sm font-bold text-white">{rewardsRedeemed}</span>
+              <span className="text-sm font-bold text-white">{rewardsRedeemed ?? 0}</span>
             </div>
           </div>
           <div className="bg-light-navy rounded-lg px-3 py-2">
             <div className="flex items-center justify-between">
               <span className="text-red-400 text-sm">Monthly Punishments:</span>
-              <span className="text-sm font-bold text-white">{punishments}</span>
+              <span className="text-sm font-bold text-white">{punishments ?? 0}</span>
             </div>
           </div>
         </div>
