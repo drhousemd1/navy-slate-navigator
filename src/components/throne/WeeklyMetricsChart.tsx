@@ -55,7 +55,7 @@ const WeeklyMetricsChart: React.FC = () => {
         const start = startOfWeek(today, { weekStartsOn: 1 }); // Start on Monday
         const end = endOfWeek(today, { weekStartsOn: 1 }); // End on Sunday
         
-        // Fetch task completions - ONLY count the actual completion events, not the completed task flag
+        // Fetch task completions - ONLY count unique tasks per day
         const { data: taskCompletions, error: taskError } = await supabase
           .from('task_completion_history')
           .select('*')
@@ -65,7 +65,7 @@ const WeeklyMetricsChart: React.FC = () => {
         if (taskError) {
           console.error('Error fetching task completions:', taskError);
         } else {
-          // Group by date to avoid counting multiple completions of the same task
+          // Group completions by date
           const completionsByDate = new Map<string, Set<string>>();
           
           taskCompletions?.forEach(entry => {
@@ -77,11 +77,12 @@ const WeeklyMetricsChart: React.FC = () => {
             
             // Add the task_id to the set for this date
             completionsByDate.get(date)?.add(entry.task_id);
-            
+          });
+          
+          // Count unique completions per day (each task counted only once per day)
+          completionsByDate.forEach((taskIds, date) => {
             if (metricsMap.has(date)) {
-              // Simply count each completion event as 1, regardless of how many times
-              // the same task was completed that day
-              metricsMap.get(date)!.tasksCompleted++;
+              metricsMap.get(date)!.tasksCompleted = taskIds.size;
             }
           });
         }

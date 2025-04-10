@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
+import ActivityDataReset from '@/components/admin-testing/ActivityDataReset';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -245,6 +246,12 @@ const AdminTesting = () => {
             ))}
           </div>
         )}
+        
+        {/* Activity Data Reset Section */}
+        <div className="mt-12">
+          <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Data Management</h2>
+          <ActivityDataReset />
+        </div>
       </div>
     </AppLayout>
   );
