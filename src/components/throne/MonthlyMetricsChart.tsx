@@ -1,14 +1,15 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { format, getMonth, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import {
+  format, eachDayOfInterval, startOfMonth, endOfMonth
+} from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface MonthlyDataItem {
   date: string;
@@ -25,139 +26,110 @@ export interface MonthlyMetricsSummary {
   punishments: number;
 }
 
+const fetchMonthlyData = async (): Promise<MonthlyDataItem[]> => {
+  const start = startOfMonth(new Date());
+  const end = endOfMonth(new Date());
+  const startDate = start.toISOString();
+  const endDate = end.toISOString();
+
+  const days = eachDayOfInterval({ start, end });
+  const formatDate = (d: Date) => format(d, 'yyyy-MM-dd');
+
+  const daily: Record<string, MonthlyDataItem> = {};
+  for (const day of days) {
+    const key = formatDate(day);
+    daily[key] = {
+      date: key,
+      tasksCompleted: 0,
+      rulesBroken: 0,
+      rewardsRedeemed: 0,
+      punishments: 0,
+    };
+  }
+
+  const [{ data: tasks }, { data: rules }, { data: rewards }, { data: punishments }] = await Promise.all([
+    supabase.from('task_completion_history').select('completed_at').gte('completed_at', startDate).lte('completed_at', endDate),
+    supabase.from('rule_violations').select('violation_date').gte('violation_date', startDate).lte('violation_date', endDate),
+    supabase.from('reward_usage').select('created_at').gte('created_at', startDate).lte('created_at', endDate),
+    supabase.from('punishment_history').select('applied_date').gte('applied_date', startDate).lte('applied_date', endDate),
+  ]);
+
+  const countInto = (rows: any[] | null | undefined, field: keyof MonthlyDataItem, dateField: string) => {
+    rows?.forEach(row => {
+      const key = formatDate(new Date(row[dateField]));
+      if (daily[key]) daily[key][field]++;
+    });
+  };
+
+  countInto(tasks, 'tasksCompleted', 'completed_at');
+  countInto(rules, 'rulesBroken', 'violation_date');
+  countInto(rewards, 'rewardsRedeemed', 'created_at');
+  countInto(punishments, 'punishments', 'applied_date');
+
+  return Object.values(daily);
+};
+
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
-
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+
+  const { data = [], isLoading } = useQuery({
+    queryKey: ['monthly-metrics'],
+    queryFn: fetchMonthlyData,
+    refetchOnWindowFocus: true,
+    refetchInterval: 10000,
+  });
+
+  const monthlySummary = useMemo<MonthlyMetricsSummary>(() => {
+    try {
+      if (!data || !Array.isArray(data)) {
+        return {
+          tasksCompleted: 0,
+          rulesBroken: 0,
+          rewardsRedeemed: 0,
+          punishments: 0,
+        };
+      }
+
+      return data.reduce(
+        (acc, day) => {
+          acc.tasksCompleted += day?.tasksCompleted ?? 0;
+          acc.rulesBroken += day?.rulesBroken ?? 0;
+          acc.rewardsRedeemed += day?.rewardsRedeemed ?? 0;
+          acc.punishments += day?.punishments ?? 0;
+          return acc;
+        },
+        {
+          tasksCompleted: 0,
+          rulesBroken: 0,
+          rewardsRedeemed: 0,
+          punishments: 0,
+        }
+      );
+    } catch {
+      return {
+        tasksCompleted: 0,
+        rulesBroken: 0,
+        rewardsRedeemed: 0,
+        punishments: 0,
+      };
+    }
+  }, [data]);
 
   const chartConfig = {
     tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
     rulesBroken: { color: '#F97316', label: 'Rules Broken' },
     rewardsRedeemed: { color: '#9b87f5', label: 'Rewards Redeemed' },
-    punishments: { color: '#ea384c', label: 'Punishments' }
+    punishments: { color: '#ef4444', label: 'Punishments' },
   };
 
-  useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-    console.log('MonthlyMetricsChart: Invalidated cached data on mount');
-  }, [queryClient]);
-
-  const generateMonthDays = (): string[] => {
-    const today = new Date();
-    const start = startOfMonth(today);
-    const end = endOfMonth(today);
-    return eachDayOfInterval({ start, end }).map(date => format(date, 'yyyy-MM-dd'));
-  };
-
-  const formatDate = (dateString: string): string => {
-    try {
-      return format(parseISO(dateString), 'MMM d');
-    } catch {
-      return dateString;
-    }
-  };
-
-  const monthDates = useMemo(() => generateMonthDays(), []);
-  
-  const BAR_WIDTH = 6;
-  const BAR_COUNT = 4;
-  const BAR_GAP = 2;
-  const GROUP_PADDING = 10;
-  const CHART_PADDING = 20;
-  
-  const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
-  const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
-
-  const fetchMonthlyData = async (): Promise<{ 
-    dataArray: MonthlyDataItem[], 
-    monthlyTotals: MonthlyMetricsSummary 
-  }> => {
-    console.log('Fetching monthly chart data at', new Date().toISOString());
-    try {
-      const metrics = new Map<string, MonthlyDataItem>();
-      monthDates.forEach(date => {
-        metrics.set(date, {
-          date,
-          tasksCompleted: 0,
-          rulesBroken: 0,
-          rewardsRedeemed: 0,
-          punishments: 0
-        });
-      });
-
-      const today = new Date();
-      const start = startOfMonth(today);
-      const end = endOfMonth(today);
-
-      const [{ data: tasks }, { data: rules }, { data: rewards }, { data: punishments }] = await Promise.all([
-        supabase.from('task_completion_history').select('completed_at').gte('completed_at', start.toISOString()).lte('completed_at', end.toISOString()),
-        supabase.from('rule_violations').select('violation_date').gte('violation_date', start.toISOString()).lte('violation_date', end.toISOString()),
-        supabase.from('reward_usage').select('created_at').gte('created_at', start.toISOString()).lte('created_at', end.toISOString()),
-        supabase.from('punishment_history').select('applied_date').gte('applied_date', start.toISOString()).lte('applied_date', end.toISOString()),
-      ]);
-
-      tasks?.forEach(entry => {
-        const key = format(new Date(entry.completed_at), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.tasksCompleted++;
-      });
-
-      rules?.forEach(entry => {
-        const key = format(new Date(entry.violation_date), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.rulesBroken++;
-      });
-
-      rewards?.forEach(entry => {
-        const key = format(new Date(entry.created_at), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.rewardsRedeemed++;
-      });
-
-      punishments?.forEach(entry => {
-        const key = format(new Date(entry.applied_date), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.punishments++;
-      });
-
-      const result = Array.from(metrics.values());
-      const totals: MonthlyMetricsSummary = {
-        tasksCompleted: result.reduce((sum, d) => sum + d.tasksCompleted, 0),
-        rulesBroken: result.reduce((sum, d) => sum + d.rulesBroken, 0),
-        rewardsRedeemed: result.reduce((sum, d) => sum + d.rewardsRedeemed, 0),
-        punishments: result.reduce((sum, d) => sum + d.punishments, 0),
-      };
-
-      return { dataArray: result, monthlyTotals: totals };
-    } catch (error) {
-      console.error('Error fetching monthly data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch monthly activity data',
-        variant: 'destructive'
-      });
-      return {
-        dataArray: [],
-        monthlyTotals: {
-          tasksCompleted: 0,
-          rulesBroken: 0,
-          rewardsRedeemed: 0,
-          punishments: 0
-        }
-      };
-    }
-  };
-
-  const { data: response = { dataArray: [], monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } }, isLoading } = useQuery({
-    queryKey: ['monthly-metrics'],
-    queryFn: fetchMonthlyData,
-    refetchOnWindowFocus: true,
-    refetchInterval: 10000,
-    staleTime: 0,
-    gcTime: 0,
-  });
-
-  const { dataArray, monthlyTotals } = response;
+  // ✅ Filter out rows where all metrics are 0
+  const filteredData = data.filter(d =>
+    d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0
+  );
 
   return (
     <Card className="w-full p-4">
@@ -173,19 +145,19 @@ const MonthlyMetricsChart: React.FC = () => {
         scrollLeft={scrollLeft}
         setScrollLeft={setScrollLeft}
       >
-        <ResponsiveContainer width={chartWidth} height={300}>
-          <BarChart data={dataArray}>
+        <ResponsiveContainer width={filteredData.length * 30 || 300} height={300}>
+          <BarChart data={filteredData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" tickFormatter={formatDate} />
+            <XAxis dataKey="date" />
             <YAxis allowDecimals={false} />
             <Tooltip />
             {Object.entries(chartConfig).map(([key, { color, label }]) => (
-              <Bar key={key} dataKey={key} fill={color} name={label} radius={[4, 4, 0, 0]} />
+              <Bar key={key} dataKey={key} stackId="a" fill={color} name={label} />
             ))}
           </BarChart>
         </ResponsiveContainer>
       </ChartContainer>
-      <MonthlyMetricsSummaryTiles summary={monthlyTotals} />
+      <MonthlyMetricsSummaryTiles summary={monthlySummary} />
     </Card>
   );
 };
