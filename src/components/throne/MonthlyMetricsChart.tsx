@@ -3,16 +3,16 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
-  format, startOfWeek, endOfWeek, eachDayOfInterval, parseISO
+  format, getMonth, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO
 } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import WeeklyMetricsSummaryTiles from './WeeklyMetricsSummaryTiles';
+import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 import { useQuery } from '@tanstack/react-query';
 
-interface WeeklyDataItem {
+interface MonthlyDataItem {
   date: string;
   tasksCompleted: number;
   rulesBroken: number;
@@ -20,14 +20,14 @@ interface WeeklyDataItem {
   punishments: number;
 }
 
-interface WeeklyMetricsSummary {
+interface MonthlyMetricsSummary {
   tasksCompleted: number;
   rulesBroken: number;
   rewardsRedeemed: number;
   punishments: number;
 }
 
-const WeeklyMetricsChart: React.FC = () => {
+const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
 
@@ -42,39 +42,39 @@ const WeeklyMetricsChart: React.FC = () => {
     punishments: { color: '#ea384c', label: 'Punishments' }
   };
 
-  const generateWeekDays = (): string[] => {
+  const generateMonthDays = (): string[] => {
     const today = new Date();
-    const start = startOfWeek(today, { weekStartsOn: 1 });
-    const end = endOfWeek(today, { weekStartsOn: 1 });
+    const start = startOfMonth(today);
+    const end = endOfMonth(today);
     return eachDayOfInterval({ start, end }).map(date => format(date, 'yyyy-MM-dd'));
   };
 
   const formatDate = (dateString: string): string => {
     try {
-      return format(parseISO(dateString), 'EEE');
+      return format(parseISO(dateString), 'MMM d');
     } catch {
       return dateString;
     }
   };
 
-  const weekDates = useMemo(() => generateWeekDays(), []);
+  const monthDates = useMemo(() => generateMonthDays(), []);
 
-  const BAR_WIDTH = 16;
+  const BAR_WIDTH = 6;
   const BAR_COUNT = 4;
-  const BAR_GAP = 4;
+  const BAR_GAP = 2;
   const GROUP_PADDING = 10;
   const CHART_PADDING = 20;
 
   const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
-  const chartWidth = Math.max(weekDates.length * dayWidth + CHART_PADDING * 2, 700);
+  const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
 
-  const fetchWeeklyData = async (): Promise<{
-    dataArray: WeeklyDataItem[];
-    weeklyTotals: WeeklyMetricsSummary;
+  const fetchMonthlyData = async (): Promise<{
+    dataArray: MonthlyDataItem[];
+    monthlyTotals: MonthlyMetricsSummary;
   }> => {
     try {
-      const metrics = new Map<string, WeeklyDataItem>();
-      weekDates.forEach(date => {
+      const metrics = new Map<string, MonthlyDataItem>();
+      monthDates.forEach(date => {
         metrics.set(date, {
           date,
           tasksCompleted: 0,
@@ -85,8 +85,8 @@ const WeeklyMetricsChart: React.FC = () => {
       });
 
       const today = new Date();
-      const start = startOfWeek(today, { weekStartsOn: 1 });
-      const end = endOfWeek(today, { weekStartsOn: 1 });
+      const start = startOfMonth(today);
+      const end = endOfMonth(today);
 
       const [{ data: tasks }, { data: rules }, { data: rewards }, { data: punishments }] = await Promise.all([
         supabase.from('task_completion_history').select('completed_at').gte('completed_at', start.toISOString()).lte('completed_at', end.toISOString()),
@@ -120,7 +120,7 @@ const WeeklyMetricsChart: React.FC = () => {
       });
 
       const dataArray = Array.from(metrics.values());
-      const weeklyTotals = dataArray.reduce<WeeklyMetricsSummary>((totals, item) => {
+      const monthlyTotals = dataArray.reduce<MonthlyMetricsSummary>((totals, item) => {
         totals.tasksCompleted += item.tasksCompleted;
         totals.rulesBroken += item.rulesBroken;
         totals.rewardsRedeemed += item.rewardsRedeemed;
@@ -128,31 +128,29 @@ const WeeklyMetricsChart: React.FC = () => {
         return totals;
       }, { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 });
 
-      return { dataArray, weeklyTotals };
+      return { dataArray, monthlyTotals };
     } catch (error) {
-      toast({ title: 'Error loading weekly data', description: `${error}` });
+      toast({ title: 'Error loading monthly data', description: `${error}` });
       throw error;
     }
   };
 
-  const query = useQuery({
-    queryKey: ['weekly-metrics'],
-    queryFn: fetchWeeklyData
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['monthly-metrics'],
+    queryFn: fetchMonthlyData
   });
-
-  const data = query.data;
 
   return (
     <Card className="bg-slate-900">
       <ChartContainer
-        title="Weekly Activity"
+        title="Monthly Activity"
         chartWidth={chartWidth}
         chartContainerRef={chartContainerRef}
         chartScrollRef={chartScrollRef}
       >
         {/* Chart Rendering Logic */}
       </ChartContainer>
-      <WeeklyMetricsSummaryTiles summary={data?.weeklyTotals || {
+      <MonthlyMetricsSummaryTiles summary={data?.monthlyTotals || {
         tasksCompleted: 0,
         rulesBroken: 0,
         rewardsRedeemed: 0,
@@ -162,4 +160,4 @@ const WeeklyMetricsChart: React.FC = () => {
   );
 };
 
-export default WeeklyMetricsChart;
+export default MonthlyMetricsChart;
