@@ -2,7 +2,9 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { format, getMonth, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import {
+  format, getMonth, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO
+} from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,12 +69,13 @@ const MonthlyMetricsChart: React.FC = () => {
   const BAR_GAP = 2;
   const GROUP_PADDING = 10;
   const CHART_PADDING = 20;
+
   const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
   const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
 
-  const fetchMonthlyData = async (): Promise<{ 
-    dataArray: MonthlyDataItem[], 
-    monthlyTotals: MonthlyMetricsSummary 
+  const fetchMonthlyData = async (): Promise<{
+    dataArray: MonthlyDataItem[];
+    monthlyTotals: MonthlyMetricsSummary;
   }> => {
     try {
       const metrics = new Map<string, MonthlyDataItem>();
@@ -118,6 +121,7 @@ const MonthlyMetricsChart: React.FC = () => {
       });
 
       const result = Array.from(metrics.values());
+
       const totals: MonthlyMetricsSummary = {
         tasksCompleted: result.reduce((sum, d) => sum + (d.tasksCompleted ?? 0), 0),
         rulesBroken: result.reduce((sum, d) => sum + (d.rulesBroken ?? 0), 0),
