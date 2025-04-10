@@ -10,7 +10,7 @@ import { InfoIcon, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Import extracted components
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
@@ -21,6 +21,7 @@ const ThroneRoom: React.FC = () => {
   const { isAdmin } = useAuth();
   const location = useLocation();
   const { rewards } = useRewards();
+  const queryClient = useQueryClient();
   
   // Fetch summary data with React Query for better cache management and refreshing
   const fetchSummaryData = async (): Promise<WeeklyMetricsSummary> => {
@@ -99,14 +100,15 @@ const ThroneRoom: React.FC = () => {
     }
   };
   
-  // Use React Query to fetch the summary data
+  // Use React Query to fetch the summary data with reduced cache time for better reset response
   const { data: metricsSummary = { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 }, 
           refetch } = useQuery({
     queryKey: ['weekly-metrics-summary'],
     queryFn: fetchSummaryData,
     refetchOnWindowFocus: true,
     refetchInterval: 60000, // Refetch every minute
-    staleTime: 30000, // Consider data stale after 30 seconds
+    staleTime: 10000, // Consider data stale after 10 seconds
+    cacheTime: 20000, // Reduced cache time to ensure fresh data after reset
   });
 
   // Format date for consistent date handling
@@ -115,10 +117,14 @@ const ThroneRoom: React.FC = () => {
     return dateFormat(date, formatString);
   };
 
-  // Force refresh data when location changes
+  // Force refresh data when location changes or when component mounts
   useEffect(() => {
+    // Invalidate all metrics queries to ensure fresh data
+    queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
     refetch();
-  }, [location.pathname, refetch]);
+  }, [location.pathname, refetch, queryClient]);
 
   return (
     <AppLayout>

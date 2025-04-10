@@ -98,21 +98,29 @@ const ActivityDataReset = () => {
         }
       }
       
-      // Force a complete cache reset to ensure all components refresh
-      queryClient.clear(); // Clear the entire cache
-      
-      // Then invalidate specific queries to ensure they reload
-      queryClient.invalidateQueries();
+      // Completely clear all cached data to force full refresh
+      queryClient.clear(); 
+
+      // Force invalidate ALL query caches to ensure everything is refetched
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      queryClient.invalidateQueries({ queryKey: ['punishments'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['task-completions'] });
       
       toast({
         title: 'Reset Complete',
-        description: 'All activity data has been reset successfully. Please refresh the page to see all changes.',
+        description: 'All activity data has been reset successfully. Page will refresh to show all changes.',
         duration: 5000,
       });
       
-      // Force window reload to ensure all pages are refreshed
+      // Force a harder window reload with cache clearing to reset everything
       setTimeout(() => {
-        window.location.reload();
+        // Clear all browser caches before reloading
+        window.location.reload(true);
       }, 1500);
     } catch (error) {
       console.error('Reset error:', error);

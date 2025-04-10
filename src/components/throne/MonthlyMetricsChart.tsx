@@ -67,7 +67,7 @@ const MonthlyMetricsChart: React.FC = () => {
   const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
   const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
 
-  // Fetch monthly metrics data using React Query
+  // Fetch monthly metrics data using React Query with updated settings for better resetting
   const fetchMonthlyData = async (): Promise<{ 
     dataArray: MonthlyDataItem[], 
     monthlyTotals: MonthlyMetricsSummary 
@@ -197,14 +197,15 @@ const MonthlyMetricsChart: React.FC = () => {
     }
   };
 
-  // Use React Query to fetch data
+  // Use React Query with updated settings to ensure proper data refresh after reset
   const { data = { dataArray: [], monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } }, 
           isLoading } = useQuery({
     queryKey: ['monthly-metrics'],
     queryFn: fetchMonthlyData,
     refetchOnWindowFocus: true,
     refetchInterval: 60000, // Refetch every minute
-    staleTime: 30000, // Consider data stale after 30 seconds
+    staleTime: 10000, // Consider data stale after 10 seconds for quicker refresh
+    cacheTime: 20000, // Only cache for 20 seconds to ensure fresher data after reset
   });
 
   const hasContent = data.dataArray.some(d =>

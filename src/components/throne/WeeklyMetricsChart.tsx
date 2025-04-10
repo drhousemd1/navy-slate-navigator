@@ -50,7 +50,7 @@ const WeeklyMetricsChart: React.FC = () => {
       const start = startOfWeek(today, { weekStartsOn: 1 }); // Start on Monday
       const end = endOfWeek(today, { weekStartsOn: 1 }); // End on Sunday
       
-      // Fetch task completions - ONLY count unique tasks per day
+      // Fetch task completions - Count unique tasks per day
       const { data: taskCompletions, error: taskError } = await supabase
         .from('task_completion_history')
         .select('*')
@@ -151,13 +151,14 @@ const WeeklyMetricsChart: React.FC = () => {
     }
   };
 
-  // Fetch data with React Query
-  const { data = [], isLoading, error, refetch } = useQuery({
+  // Fetch data with React Query - crucial staleTime and cacheTime settings for reset functionality
+  const { data = [], isLoading, error } = useQuery({
     queryKey: ['weekly-metrics'],
     queryFn: fetchWeeklyData,
     refetchOnWindowFocus: true,
     refetchInterval: 60000, // Refetch every minute
-    staleTime: 30000, // Consider data stale after 30 seconds
+    staleTime: 10000, // Consider data stale after 10 seconds for quicker refresh
+    cacheTime: 20000, // Only cache for 20 seconds
   });
 
   const hasData = data.some(d => 

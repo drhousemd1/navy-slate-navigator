@@ -20,8 +20,14 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
   
   // Add useEffect to update trackerData when usageData changes
   useEffect(() => {
-    setTrackerData(usageData);
-  }, [usageData]);
+    // Make sure we correctly handle array updates without unexpected behavior
+    if (Array.isArray(usageData)) {
+      setTrackerData([...usageData]); // Create a new array reference to ensure rendering
+    } else {
+      // Handle case where usageData might be null or undefined
+      setTrackerData([false, false, false, false, false, false, false]);
+    }
+  }, [usageData, queryClient]);
   
   // Ensure we always have exactly 7 circles
   const renderCircles = () => {
@@ -30,7 +36,7 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
     // Always render 7 circles
     for (let i = 0; i < 7; i++) {
       // Get usage status from data or default to false
-      const used = i < trackerData.length ? trackerData[i] : false;
+      const used = i < trackerData.length ? Boolean(trackerData[i]) : false;
       
       circles.push(
         <div 
