@@ -16,15 +16,17 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
   // Get the current day of the week (0 = Monday, 6 = Sunday)
   const currentDayOfWeek = getMondayBasedDay();
   const queryClient = useQueryClient();
+  
+  // Initialize with default empty data to avoid showing stale data
   const [trackerData, setTrackerData] = useState<boolean[]>(
-    Array.isArray(usageData) ? [...usageData].map(val => Boolean(val)) : [false, false, false, false, false, false, false]
+    [false, false, false, false, false, false, false]
   );
   
-  // Add useEffect to update trackerData when usageData changes
+  // Update trackerData when usageData changes, with explicit conversion to boolean values
   useEffect(() => {
-    // Important: Force clean up any potential stale data
+    // Important: Force clean up any potential stale data and always convert values to boolean
     const cleanData = Array.isArray(usageData) && usageData.length > 0 
-      ? [...usageData].map(val => Boolean(val)) // Convert any truthy values to true, falsy to false
+      ? [...usageData].map(val => Boolean(val)) // Explicitly convert any value to boolean
       : [false, false, false, false, false, false, false];
       
     // Create a new array reference to ensure rendering

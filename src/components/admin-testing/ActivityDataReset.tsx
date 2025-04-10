@@ -18,7 +18,7 @@ const ActivityDataReset = () => {
     try {
       setIsResetting(true);
       
-      // Reset task completions
+      // Reset task completions - FIRST DELETE ATTEMPT
       const { error: taskError } = await supabase
         .from('task_completion_history')
         .delete()
@@ -98,11 +98,32 @@ const ActivityDataReset = () => {
         }
       }
       
-      // CRITICAL FIX: Double check all tables have been fully cleared
-      await supabase.from('task_completion_history').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('rule_violations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('reward_usage').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('punishment_history').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      // CRITICAL FIX: Use simpler delete syntax that will work for SURE (no complex conditions)
+      console.log("PERFORMING FORCED DELETION OF ALL ACTIVITY DATA");
+      await supabase.from('task_completion_history').delete().gt('id', '');
+      await supabase.from('rule_violations').delete().gt('id', '');
+      await supabase.from('reward_usage').delete().gt('id', '');
+      await supabase.from('punishment_history').delete().gt('id', '');
+      
+      // Reset any rewards supply to 0
+      const { data: rewards, error: fetchRewardsError } = await supabase
+        .from('rewards')
+        .select('id');
+      
+      if (fetchRewardsError) throw new Error(`Error fetching rewards: ${fetchRewardsError.message}`);
+      
+      if (rewards && rewards.length > 0) {
+        for (const reward of rewards) {
+          const { error: updateRewardError } = await supabase
+            .from('rewards')
+            .update({ supply: 0 })
+            .eq('id', reward.id);
+            
+          if (updateRewardError) {
+            console.error(`Error updating reward ${reward.id}:`, updateRewardError);
+          }
+        }
+      }
       
       console.log("DATABASE RESET COMPLETE. Now clearing ALL caches.");
       
@@ -140,7 +161,7 @@ const ActivityDataReset = () => {
       
       toast({
         title: 'Reset Complete',
-        description: 'All activity data has been reset. Page will reload in 2 seconds to show changes.',
+        description: 'All activity data has been reset. Page will reload in 3 seconds to show changes.',
         duration: 5000,
       });
       
@@ -158,9 +179,9 @@ const ActivityDataReset = () => {
         
         // Just in case the redirect doesn't work, set a backup reload
         setTimeout(() => {
-          window.location.reload(true); // true = force reload from server, not cache
+          window.location.reload();
         }, 500);
-      }, 2000);
+      }, 3000);
     } catch (error) {
       console.error('Reset error:', error);
       toast({

@@ -11,6 +11,7 @@ import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { format, parseISO } from 'date-fns'; // Import format from date-fns
 
 // Import extracted components
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
@@ -123,12 +124,6 @@ const ThroneRoom: React.FC = () => {
     staleTime: 0, // Consider data always stale to force refresh
     gcTime: 0, // Don't cache at all
   });
-
-  // Format date for consistent date handling
-  const format = (date: Date, formatString: string): string => {
-    const { format: dateFormat } = require('date-fns');
-    return dateFormat(date, formatString);
-  };
 
   // Force refresh data when location changes or when component mounts
   useEffect(() => {
