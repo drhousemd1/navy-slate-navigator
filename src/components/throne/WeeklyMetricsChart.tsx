@@ -3,9 +3,10 @@ import React, { useEffect, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { format, parseISO, addDays, startOfWeek } from 'date-fns';
+import { format, parseISO, startOfWeek, addDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 
 export interface WeeklyMetricsSummary {
@@ -29,7 +30,7 @@ interface DailyData {
 
 const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded }) => {
   const [data, setData] = useState<DailyData[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const chartColors = {
@@ -45,38 +46,38 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
     rewardsRedeemed: 'Rewards Redeemed',
     punishments: 'Punishments'
   };
-  
+
   useEffect(() => {
-    const fetchData = async () => {
+    async function fetchData() {
       try {
         setLoading(true);
         setError(null);
         
-        // Get current week's start and end dates
-        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-        const weekEnd = addDays(weekStart, 7);
+        // Generate dates for the current week (Monday-Sunday)
+        const currentDate = new Date();
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Start on Monday
         
-        // Generate array of the 7 days of the week
-        const weekDays = Array.from({ length: 7 }, (_, i) => {
+        // Create array of formatted dates for the week
+        const weekDates = Array.from({ length: 7 }, (_, i) => {
           const date = addDays(weekStart, i);
           return format(date, 'yyyy-MM-dd');
         });
         
-        // Initialize data for the week with zeros
-        const initialData = weekDays.map(date => ({
+        // Initialize data structure with zeros
+        const initialData = weekDates.map(date => ({
           date,
           tasksCompleted: 0,
           rulesBroken: 0,
           rewardsRedeemed: 0,
           punishments: 0
         }));
-        
+
         // Fetch task completions
         const { data: taskCompletions, error: taskError } = await supabase
           .from('task_completion_history')
           .select('completed_at')
           .gte('completed_at', weekStart.toISOString())
-          .lt('completed_at', weekEnd.toISOString());
+          .lt('completed_at', addDays(weekStart, 7).toISOString());
           
         if (taskError) throw new Error(`Error fetching tasks: ${taskError.message}`);
         
@@ -85,7 +86,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
           .from('rule_violations')
           .select('violation_date')
           .gte('violation_date', weekStart.toISOString())
-          .lt('violation_date', weekEnd.toISOString());
+          .lt('violation_date', addDays(weekStart, 7).toISOString());
           
         if (ruleError) throw new Error(`Error fetching rule violations: ${ruleError.message}`);
         
@@ -94,7 +95,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
           .from('reward_usage')
           .select('created_at')
           .gte('created_at', weekStart.toISOString())
-          .lt('created_at', weekEnd.toISOString());
+          .lt('created_at', addDays(weekStart, 7).toISOString());
           
         if (rewardError) throw new Error(`Error fetching rewards: ${rewardError.message}`);
         
@@ -103,7 +104,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
           .from('punishment_history')
           .select('applied_date')
           .gte('applied_date', weekStart.toISOString())
-          .lt('applied_date', weekEnd.toISOString());
+          .lt('applied_date', addDays(weekStart, 7).toISOString());
           
         if (punishmentError) throw new Error(`Error fetching punishments: ${punishmentError.message}`);
         
@@ -112,16 +113,16 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
         
         // Helper function to increment a metric for a date
         const incrementMetric = (dateStr: string, metric: keyof DailyData) => {
-          const day = processedData.find(d => d.date === dateStr);
-          if (day && typeof day[metric] === 'number') {
-            (day[metric] as number) += 1;
+          const dayIndex = processedData.findIndex(d => d.date === dateStr);
+          if (dayIndex !== -1 && typeof processedData[dayIndex][metric] === 'number') {
+            (processedData[dayIndex][metric] as number) += 1;
           }
         };
         
         // Process task completions
         taskCompletions?.forEach(task => {
           if (task.completed_at) {
-            const dateStr = new Date(task.completed_at).toISOString().split('T')[0];
+            const dateStr = format(new Date(task.completed_at), 'yyyy-MM-dd');
             incrementMetric(dateStr, 'tasksCompleted');
           }
         });
@@ -129,7 +130,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
         // Process rule violations
         ruleViolations?.forEach(rule => {
           if (rule.violation_date) {
-            const dateStr = new Date(rule.violation_date).toISOString().split('T')[0];
+            const dateStr = format(new Date(rule.violation_date), 'yyyy-MM-dd');
             incrementMetric(dateStr, 'rulesBroken');
           }
         });
@@ -137,7 +138,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
         // Process reward usages
         rewardUsages?.forEach(reward => {
           if (reward.created_at) {
-            const dateStr = new Date(reward.created_at).toISOString().split('T')[0];
+            const dateStr = format(new Date(reward.created_at), 'yyyy-MM-dd');
             incrementMetric(dateStr, 'rewardsRedeemed');
           }
         });
@@ -145,7 +146,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
         // Process punishments
         punishments?.forEach(punishment => {
           if (punishment.applied_date) {
-            const dateStr = new Date(punishment.applied_date).toISOString().split('T')[0];
+            const dateStr = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
             incrementMetric(dateStr, 'punishments');
           }
         });
@@ -165,26 +166,24 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
         if (onDataLoaded) {
           onDataLoaded(summary);
         }
-        
-        setLoading(false);
       } catch (err) {
         console.error('Error fetching metrics data:', err);
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
-        setLoading(false);
-        
         toast({
-          title: "Error loading weekly metrics",
+          title: "Error loading metrics",
           description: err instanceof Error ? err.message : 'Unknown error occurred',
           variant: "destructive"
         });
+      } finally {
+        setLoading(false);
       }
-    };
+    }
     
     fetchData();
   }, [onDataLoaded]);
   
   // Check if there's any data to display
-  const hasData = !loading && !error && data.some(
+  const hasData = data.some(
     day => day.tasksCompleted > 0 || day.rulesBroken > 0 || 
            day.rewardsRedeemed > 0 || day.punishments > 0
   );
@@ -196,20 +195,23 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
         
         <div className="w-full" style={{ height: 300 }}>
           {loading && (
-            <div className="w-full h-64 bg-light-navy/30 animate-pulse rounded flex items-center justify-center">
-              <span className="text-white">Loading weekly metrics...</span>
+            <div className="w-full h-64 flex items-center justify-center">
+              <div className="text-center">
+                <Skeleton className="h-8 w-40 bg-light-navy/50 mb-2 mx-auto" />
+                <p className="text-white">Loading weekly metrics...</p>
+              </div>
             </div>
           )}
           
           {!loading && error && (
             <div className="w-full h-64 bg-red-900/20 rounded flex items-center justify-center">
-              <span className="text-red-400 text-sm">{error}</span>
+              <span className="text-red-400 text-sm p-4 text-center">{error}</span>
             </div>
           )}
           
           {!loading && !error && !hasData && (
             <div className="w-full h-64 flex items-center justify-center border border-dashed border-gray-700 rounded-lg">
-              <span className="text-gray-400 text-sm">No activity data to display for this week</span>
+              <span className="text-gray-400 text-sm p-4 text-center">No activity data to display for this week</span>
             </div>
           )}
           
