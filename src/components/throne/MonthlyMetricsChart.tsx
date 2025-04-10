@@ -8,7 +8,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 
 interface MonthlyDataItem {
@@ -35,6 +35,7 @@ const fetchMonthlyData = async (): Promise<MonthlyDataItem[]> => {
   const days = eachDayOfInterval({ start, end });
   const formatDate = (d: Date) => format(d, 'yyyy-MM-dd');
 
+  // Prepare base map
   const daily: Record<string, MonthlyDataItem> = {};
   for (const day of days) {
     const key = formatDate(day);
@@ -76,7 +77,7 @@ const MonthlyMetricsChart: React.FC = () => {
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
-  const { data = [] } = useQuery({
+  const { data = [], isLoading } = useQuery({
     queryKey: ['monthly-metrics'],
     queryFn: fetchMonthlyData,
     refetchOnWindowFocus: true,
@@ -135,8 +136,8 @@ const MonthlyMetricsChart: React.FC = () => {
                 stackId="a"
                 fill={color}
                 name={label}
+                radius={[4, 4, 0, 0]}
                 isAnimationActive={false}
-                hide={(data.every(d => d[key as keyof MonthlyDataItem] === 0))}
               />
             ))}
           </BarChart>
