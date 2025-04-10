@@ -6,6 +6,7 @@ import MonthlyMetricsChart from '@/components/throne/MonthlyMetricsChart';
 import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
+import WeeklyMetricsChart from '@/components/throne/WeeklyMetricsChart';
 
 // Import extracted components
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
@@ -52,6 +53,9 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
+            {/* Weekly activity chart */}
+            <WeeklyMetricsChart key={`weekly-metrics-${refreshKey}`} />
+            
             <MonthlyMetricsChart />
             
             <AdminSettingsCard />
