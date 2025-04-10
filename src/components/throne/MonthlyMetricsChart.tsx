@@ -86,7 +86,6 @@ const MonthlyMetricsChart: React.FC = () => {
   const monthlySummary = useMemo<MonthlyMetricsSummary>(() => {
     try {
       if (!data || !Array.isArray(data)) {
-        console.warn("Monthly summary data is not an array:", data);
         return {
           tasksCompleted: 0,
           rulesBroken: 0,
@@ -110,8 +109,7 @@ const MonthlyMetricsChart: React.FC = () => {
           punishments: 0,
         }
       );
-    } catch (err) {
-      console.error("Failed to compute monthlySummary:", err);
+    } catch {
       return {
         tasksCompleted: 0,
         rulesBroken: 0,
@@ -128,6 +126,11 @@ const MonthlyMetricsChart: React.FC = () => {
     punishments: { color: '#ef4444', label: 'Punishments' },
   };
 
+  // ✅ Filter out rows where all metrics are 0
+  const filteredData = data.filter(d =>
+    d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0
+  );
+
   return (
     <Card className="w-full p-4">
       <h2 className="text-xl font-semibold mb-4">Monthly Activity</h2>
@@ -142,8 +145,8 @@ const MonthlyMetricsChart: React.FC = () => {
         scrollLeft={scrollLeft}
         setScrollLeft={setScrollLeft}
       >
-        <ResponsiveContainer width={data.length * 30} height={300}>
-          <BarChart data={data}>
+        <ResponsiveContainer width={filteredData.length * 30 || 300} height={300}>
+          <BarChart data={filteredData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis allowDecimals={false} />
