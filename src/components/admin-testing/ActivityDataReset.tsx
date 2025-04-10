@@ -18,17 +18,20 @@ const ActivityDataReset = () => {
       setIsResetting(true);
       console.log("Resetting all activity data...");
 
-      const deleteFromTable = async (
-        table:
-          | 'task_completion_history'
-          | 'rule_violations'
-          | 'reward_usage'
-          | 'punishment_history'
-      ) => {
+      // Final correct timestamp fields
+      const timestampColumns: Record<string, string> = {
+        task_completion_history: 'completed_at',
+        rule_violations: 'violation_date',
+        reward_usage: 'redeemed_date',
+        punishment_history: 'applied_date',
+      };
+
+      const deleteFromTable = async (table: keyof typeof timestampColumns) => {
+        const timestampField = timestampColumns[table];
         const { error } = await supabase
           .from(table)
           .delete()
-          .gt('created_at', '1900-01-01');
+          .gt(timestampField, '1900-01-01');
 
         if (error) {
           console.error(`Failed to delete from ${table}:`, error.message);
