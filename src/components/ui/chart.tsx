@@ -1,192 +1,363 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
-} from 'recharts';
-import {
-  format, getMonth, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO
-} from 'date-fns';
-import { Card } from '@/components/ui/card';
-import { ChartContainer } from '@/components/ui/chart';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import * as React from "react"
+import * as RechartsPrimitive from "recharts"
 
-interface MonthlyDataItem {
-  date: string;
-  tasksCompleted: number;
-  rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
+import { cn } from "@/lib/utils"
+
+// Format: { THEME_NAME: CSS_SELECTOR }
+const THEMES = { light: "", dark: ".dark" } as const
+
+export type ChartConfig = {
+  [k in string]: {
+    label?: React.ReactNode
+    icon?: React.ComponentType
+  } & (
+    | { color?: string; theme?: never }
+    | { color?: never; theme: Record<keyof typeof THEMES, string> }
+  )
 }
 
-export interface MonthlyMetricsSummary {
-  tasksCompleted: number;
-  rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
+type ChartContextProps = {
+  config: ChartConfig
 }
 
-const MonthlyMetricsChart: React.FC = () => {
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartScrollRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
+const ChartContext = React.createContext<ChartContextProps | null>(null)
 
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
+function useChart() {
+  const context = React.useContext(ChartContext)
 
-  const chartConfig = {
-    tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
-    rulesBroken: { color: '#F97316', label: 'Rules Broken' },
-    rewardsRedeemed: { color: '#9b87f5', label: 'Rewards Redeemed' },
-    punishments: { color: '#ea384c', label: 'Punishments' }
-  };
+  if (!context) {
+    throw new Error("useChart must be used within a <ChartContainer />")
+  }
 
-  useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-  }, [queryClient]);
+  return context
+}
 
-  const generateMonthDays = (): string[] => {
-    const today = new Date();
-    const start = startOfMonth(today);
-    const end = endOfMonth(today);
-    return eachDayOfInterval({ start, end }).map(date => format(date, 'yyyy-MM-dd'));
-  };
-
-  const formatDate = (dateString: string): string => {
-    try {
-      return format(parseISO(dateString), 'MMM d');
-    } catch {
-      return dateString;
-    }
-  };
-
-  const monthDates = useMemo(() => generateMonthDays(), []);
-
-  const BAR_WIDTH = 6;
-  const BAR_COUNT = 4;
-  const BAR_GAP = 2;
-  const GROUP_PADDING = 10;
-  const CHART_PADDING = 20;
-
-  const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
-  const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
-
-  const fetchMonthlyData = async (): Promise<{
-    dataArray: MonthlyDataItem[];
-    monthlyTotals: MonthlyMetricsSummary;
-  }> => {
-    try {
-      const metrics = new Map<string, MonthlyDataItem>();
-      monthDates.forEach(date => {
-        metrics.set(date, {
-          date,
-          tasksCompleted: 0,
-          rulesBroken: 0,
-          rewardsRedeemed: 0,
-          punishments: 0
-        });
-      });
-
-      const today = new Date();
-      const start = startOfMonth(today);
-      const end = endOfMonth(today);
-
-      const [{ data: tasks }, { data: rules }, { data: rewards }, { data: punishments }] = await Promise.all([
-        supabase.from('task_completion_history').select('completed_at').gte('completed_at', start.toISOString()).lte('completed_at', end.toISOString()),
-        supabase.from('rule_violations').select('violation_date').gte('violation_date', start.toISOString()).lte('violation_date', end.toISOString()),
-        supabase.from('reward_usage').select('created_at').gte('created_at', start.toISOString()).lte('created_at', end.toISOString()),
-        supabase.from('punishment_history').select('applied_date').gte('applied_date', start.toISOString()).lte('applied_date', end.toISOString()),
-      ]);
-
-      tasks?.forEach(entry => {
-        const key = format(new Date(entry.completed_at), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.tasksCompleted++;
-      });
-
-      rules?.forEach(entry => {
-        const key = format(new Date(entry.violation_date), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.rulesBroken++;
-      });
-
-      rewards?.forEach(entry => {
-        const key = format(new Date(entry.created_at), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.rewardsRedeemed++;
-      });
-
-      punishments?.forEach(entry => {
-        const key = format(new Date(entry.applied_date), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.punishments++;
-      });
-
-      const result = Array.from(metrics.values());
-
-      const totals: MonthlyMetricsSummary = {
-        tasksCompleted: result.reduce((sum, d) => sum + (d.tasksCompleted ?? 0), 0),
-        rulesBroken: result.reduce((sum, d) => sum + (d.rulesBroken ?? 0), 0),
-        rewardsRedeemed: result.reduce((sum, d) => sum + (d.rewardsRedeemed ?? 0), 0),
-        punishments: result.reduce((sum, d) => sum + (d.punishments ?? 0), 0)
-      };
-
-      return { dataArray: result, monthlyTotals: totals };
-    } catch (error) {
-      console.error('Error fetching monthly data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch monthly activity data',
-        variant: 'destructive'
-      });
-      return {
-        dataArray: [],
-        monthlyTotals: {
-          tasksCompleted: 0,
-          rulesBroken: 0,
-          rewardsRedeemed: 0,
-          punishments: 0
-        }
-      };
-    }
-  };
-
-  const { data: dataArray = [], isLoading, refetch } = useQuery({
-    queryKey: ['monthly-metrics'],
-    queryFn: fetchMonthlyData,
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000,
-    staleTime: 0,
-    gcTime: 0
-  });
+const ChartContainer = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div"> & {
+    config: ChartConfig
+    children: React.ComponentProps<
+      typeof RechartsPrimitive.ResponsiveContainer
+    >["children"]
+  }
+>(({ id, className, children, config, ...props }, ref) => {
+  const uniqueId = React.useId()
+  const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
 
   return (
-    <Card className="w-full p-4">
-      <h2 className="text-xl font-semibold mb-4">Monthly Activity</h2>
-      <ChartContainer
-        config={chartConfig}
-        ref={chartContainerRef}
-        scrollRef={chartScrollRef}
-        isDragging={isDragging}
-        setIsDragging={setIsDragging}
-        startX={startX}
-        setStartX={setStartX}
-        scrollLeft={scrollLeft}
-        setScrollLeft={setScrollLeft}
+    <ChartContext.Provider value={{ config }}>
+      <div
+        data-chart={chartId}
+        ref={ref}
+        className={cn(
+          "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-none [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-none [&_.recharts-surface]:outline-none",
+          className
+        )}
+        {...props}
       >
-        <ResponsiveContainer width={chartWidth} height={300}>
-          <BarChart data={dataArray}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" tickFormatter={formatDate} />
-            <YAxis allowDecimals={false} />
-            <Tooltip />
-            {Object.entries(chartConfig).map(([key, { color, label }]) => (
-              <Bar key={key} dataKey={key} fill={color} name={label} radius={[4, 4, 0, 0]} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartContainer>
-      <MonthlyMetricsSummaryTiles summary={monthlyTotals} />
-    </Card>
-  );
-};
+        <ChartStyle id={chartId} config={config} />
+        <RechartsPrimitive.ResponsiveContainer>
+          {children}
+        </RechartsPrimitive.ResponsiveContainer>
+      </div>
+    </ChartContext.Provider>
+  )
+})
+ChartContainer.displayName = "Chart"
 
-export default MonthlyMetricsChart;
+const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
+  const colorConfig = Object.entries(config).filter(
+    ([_, config]) => config.theme || config.color
+  )
+
+  if (!colorConfig.length) {
+    return null
+  }
+
+  return (
+    <style
+      dangerouslySetInnerHTML={{
+        __html: Object.entries(THEMES)
+          .map(
+            ([theme, prefix]) => `
+${prefix} [data-chart=${id}] {
+${colorConfig
+  .map(([key, itemConfig]) => {
+    const color =
+      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
+      itemConfig.color
+    return color ? `  --color-${key}: ${color};` : null
+  })
+  .join("\n")}
+}
+`
+          )
+          .join("\n"),
+      }}
+    />
+  )
+}
+
+const ChartTooltip = RechartsPrimitive.Tooltip
+
+const ChartTooltipContent = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
+    React.ComponentProps<"div"> & {
+      hideLabel?: boolean
+      hideIndicator?: boolean
+      indicator?: "line" | "dot" | "dashed"
+      nameKey?: string
+      labelKey?: string
+    }
+>(
+  (
+    {
+      active,
+      payload,
+      className,
+      indicator = "dot",
+      hideLabel = false,
+      hideIndicator = false,
+      label,
+      labelFormatter,
+      labelClassName,
+      formatter,
+      color,
+      nameKey,
+      labelKey,
+    },
+    ref
+  ) => {
+    const { config } = useChart()
+
+    const tooltipLabel = React.useMemo(() => {
+      if (hideLabel || !payload?.length) {
+        return null
+      }
+
+      const [item] = payload
+      const key = `${labelKey || item.dataKey || item.name || "value"}`
+      const itemConfig = getPayloadConfigFromPayload(config, item, key)
+      const value =
+        !labelKey && typeof label === "string"
+          ? config[label as keyof typeof config]?.label || label
+          : itemConfig?.label
+
+      if (labelFormatter) {
+        return (
+          <div className={cn("font-medium", labelClassName)}>
+            {labelFormatter(value, payload)}
+          </div>
+        )
+      }
+
+      if (!value) {
+        return null
+      }
+
+      return <div className={cn("font-medium", labelClassName)}>{value}</div>
+    }, [
+      label,
+      labelFormatter,
+      payload,
+      hideLabel,
+      labelClassName,
+      config,
+      labelKey,
+    ])
+
+    if (!active || !payload?.length) {
+      return null
+    }
+
+    const nestLabel = payload.length === 1 && indicator !== "dot"
+
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl",
+          className
+        )}
+      >
+        {!nestLabel ? tooltipLabel : null}
+        <div className="grid gap-1.5">
+          {payload.map((item, index) => {
+            const key = `${nameKey || item.name || item.dataKey || "value"}`
+            const itemConfig = getPayloadConfigFromPayload(config, item, key)
+            const indicatorColor = color || item.payload.fill || item.color
+
+            return (
+              <div
+                key={item.dataKey}
+                className={cn(
+                  "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground",
+                  indicator === "dot" && "items-center"
+                )}
+              >
+                {formatter && item?.value !== undefined && item.name ? (
+                  formatter(item.value, item.name, item, index, item.payload)
+                ) : (
+                  <>
+                    {itemConfig?.icon ? (
+                      <itemConfig.icon />
+                    ) : (
+                      !hideIndicator && (
+                        <div
+                          className={cn(
+                            "shrink-0 rounded-[2px] border-[--color-border] bg-[--color-bg]",
+                            {
+                              "h-2.5 w-2.5": indicator === "dot",
+                              "w-1": indicator === "line",
+                              "w-0 border-[1.5px] border-dashed bg-transparent":
+                                indicator === "dashed",
+                              "my-0.5": nestLabel && indicator === "dashed",
+                            }
+                          )}
+                          style={
+                            {
+                              "--color-bg": indicatorColor,
+                              "--color-border": indicatorColor,
+                            } as React.CSSProperties
+                          }
+                        />
+                      )
+                    )}
+                    <div
+                      className={cn(
+                        "flex flex-1 justify-between leading-none",
+                        nestLabel ? "items-end" : "items-center"
+                      )}
+                    >
+                      <div className="grid gap-1.5">
+                        {nestLabel ? tooltipLabel : null}
+                        <span className="text-muted-foreground">
+                          {itemConfig?.label || item.name}
+                        </span>
+                      </div>
+                      {item.value && (
+                        <span className="font-mono font-medium tabular-nums text-foreground">
+                          {item.value.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+)
+ChartTooltipContent.displayName = "ChartTooltip"
+
+const ChartLegend = RechartsPrimitive.Legend
+
+const ChartLegendContent = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div"> &
+    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+      hideIcon?: boolean
+      nameKey?: string
+    }
+>(
+  (
+    { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey },
+    ref
+  ) => {
+    const { config } = useChart()
+
+    if (!payload?.length) {
+      return null
+    }
+
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "flex items-center justify-center gap-4",
+          verticalAlign === "top" ? "pb-3" : "pt-3",
+          className
+        )}
+      >
+        {payload.map((item) => {
+          const key = `${nameKey || item.dataKey || "value"}`
+          const itemConfig = getPayloadConfigFromPayload(config, item, key)
+
+          return (
+            <div
+              key={item.value}
+              className={cn(
+                "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground"
+              )}
+            >
+              {itemConfig?.icon && !hideIcon ? (
+                <itemConfig.icon />
+              ) : (
+                <div
+                  className="h-2 w-2 shrink-0 rounded-[2px]"
+                  style={{
+                    backgroundColor: item.color,
+                  }}
+                />
+              )}
+              {itemConfig?.label}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+)
+ChartLegendContent.displayName = "ChartLegend"
+
+// Helper to extract item config from a payload.
+function getPayloadConfigFromPayload(
+  config: ChartConfig,
+  payload: unknown,
+  key: string
+) {
+  if (typeof payload !== "object" || payload === null) {
+    return undefined
+  }
+
+  const payloadPayload =
+    "payload" in payload &&
+    typeof payload.payload === "object" &&
+    payload.payload !== null
+      ? payload.payload
+      : undefined
+
+  let configLabelKey: string = key
+
+  if (
+    key in payload &&
+    typeof payload[key as keyof typeof payload] === "string"
+  ) {
+    configLabelKey = payload[key as keyof typeof payload] as string
+  } else if (
+    payloadPayload &&
+    key in payloadPayload &&
+    typeof payloadPayload[key as keyof typeof payloadPayload] === "string"
+  ) {
+    configLabelKey = payloadPayload[
+      key as keyof typeof payloadPayload
+    ] as string
+  }
+
+  return configLabelKey in config
+    ? config[configLabelKey]
+    : config[key as keyof typeof config]
+}
+
+export {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  ChartStyle,
+}

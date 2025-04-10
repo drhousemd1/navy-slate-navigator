@@ -1,16 +1,14 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import {
-  format, getMonth, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO
-} from 'date-fns';
+import { format, getMonth, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface MonthlyDataItem {
   date: string;
@@ -20,7 +18,7 @@ interface MonthlyDataItem {
   punishments: number;
 }
 
-interface MonthlyMetricsSummary {
+export interface MonthlyMetricsSummary {
   tasksCompleted: number;
   rulesBroken: number;
   rewardsRedeemed: number;
@@ -30,6 +28,7 @@ interface MonthlyMetricsSummary {
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -41,6 +40,10 @@ const MonthlyMetricsChart: React.FC = () => {
     rewardsRedeemed: { color: '#9b87f5', label: 'Rewards Redeemed' },
     punishments: { color: '#ea384c', label: 'Punishments' }
   };
+
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
+  }, [queryClient]);
 
   const generateMonthDays = (): string[] => {
     const today = new Date();
@@ -64,13 +67,12 @@ const MonthlyMetricsChart: React.FC = () => {
   const BAR_GAP = 2;
   const GROUP_PADDING = 10;
   const CHART_PADDING = 20;
-
   const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
   const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
 
-  const fetchMonthlyData = async (): Promise<{
-    dataArray: MonthlyDataItem[];
-    monthlyTotals: MonthlyMetricsSummary;
+  const fetchMonthlyData = async (): Promise<{ 
+    dataArray: MonthlyDataItem[], 
+    monthlyTotals: MonthlyMetricsSummary 
   }> => {
     try {
       const metrics = new Map<string, MonthlyDataItem>();
@@ -92,74 +94,24 @@ const MonthlyMetricsChart: React.FC = () => {
         supabase.from('task_completion_history').select('completed_at').gte('completed_at', start.toISOString()).lte('completed_at', end.toISOString()),
         supabase.from('rule_violations').select('violation_date').gte('violation_date', start.toISOString()).lte('violation_date', end.toISOString()),
         supabase.from('reward_usage').select('created_at').gte('created_at', start.toISOString()).lte('created_at', end.toISOString()),
-        supabase.from('punishment_history').select('applied_date').gte('applied_date', start.toISOString()).lte('applied_date', end.toISOString())
+        supabase.from('punishment_history').select('applied_date').gte('applied_date', start.toISOString()).lte('applied_date', end.toISOString()),
       ]);
 
-      tasks?.forEach(({ completed_at }) => {
-        const date = format(parseISO(completed_at), 'yyyy-MM-dd');
-        const day = metrics.get(date);
-        if (day) day.tasksCompleted++;
+      tasks?.forEach(entry => {
+        const key = format(new Date(entry.completed_at), 'yyyy-MM-dd');
+        if (metrics.has(key)) metrics.get(key)!.tasksCompleted++;
       });
 
-      rules?.forEach(({ violation_date }) => {
-        const date = format(parseISO(violation_date), 'yyyy-MM-dd');
-        const day = metrics.get(date);
-        if (day) day.rulesBroken++;
+      rules?.forEach(entry => {
+        const key = format(new Date(entry.violation_date), 'yyyy-MM-dd');
+        if (metrics.has(key)) metrics.get(key)!.rulesBroken++;
       });
 
-      rewards?.forEach(({ created_at }) => {
-        const date = format(parseISO(created_at), 'yyyy-MM-dd');
-        const day = metrics.get(date);
-        if (day) day.rewardsRedeemed++;
+      rewards?.forEach(entry => {
+        const key = format(new Date(entry.created_at), 'yyyy-MM-dd');
+        if (metrics.has(key)) metrics.get(key)!.rewardsRedeemed++;
       });
 
-      punishments?.forEach(({ applied_date }) => {
-        const date = format(parseISO(applied_date), 'yyyy-MM-dd');
-        const day = metrics.get(date);
-        if (day) day.punishments++;
-      });
-
-      const dataArray = Array.from(metrics.values());
-      const monthlyTotals = dataArray.reduce<MonthlyMetricsSummary>((totals, item) => {
-        totals.tasksCompleted += item.tasksCompleted;
-        totals.rulesBroken += item.rulesBroken;
-        totals.rewardsRedeemed += item.rewardsRedeemed;
-        totals.punishments += item.punishments;
-        return totals;
-      }, { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 });
-
-      return { dataArray, monthlyTotals };
-    } catch (error) {
-      toast({ title: 'Error loading monthly data', description: `${error}` });
-      throw error;
-    }
-  };
-
-  const query = useQuery({
-    queryKey: ['monthly-metrics'],
-    queryFn: fetchMonthlyData
-  });
-
-  const data = query.data;
-
-  return (
-    <Card className="bg-slate-900">
-      <ChartContainer
-        title="Monthly Activity"
-        chartWidth={chartWidth}
-        chartContainerRef={chartContainerRef}
-        chartScrollRef={chartScrollRef}
-      >
-        {/* Chart Rendering Logic */}
-      </ChartContainer>
-      <MonthlyMetricsSummaryTiles summary={data?.monthlyTotals || {
-        tasksCompleted: 0,
-        rulesBroken: 0,
-        rewardsRedeemed: 0,
-        punishments: 0
-      }} />
-    </Card>
-  );
-};
-
-export default MonthlyMetricsChart;
+      punishments?.forEach(entry => {
+        const key = format(new Date(entry.applied_date), 'yyyy-MM-dd');
+        if (metrics.has(key)) metrics
