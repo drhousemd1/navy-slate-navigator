@@ -43,10 +43,6 @@ const MonthlyMetricsChart: React.FC = () => {
     punishments: { color: '#ea384c', label: 'Punishments' }
   };
 
-  useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-  }, [queryClient]);
-
   const generateMonthDays = (): string[] => {
     const today = new Date();
     const start = startOfMonth(today);
@@ -97,94 +93,67 @@ const MonthlyMetricsChart: React.FC = () => {
         supabase.from('task_completion_history').select('completed_at').gte('completed_at', start.toISOString()).lte('completed_at', end.toISOString()),
         supabase.from('rule_violations').select('violation_date').gte('violation_date', start.toISOString()).lte('violation_date', end.toISOString()),
         supabase.from('reward_usage').select('created_at').gte('created_at', start.toISOString()).lte('created_at', end.toISOString()),
-        supabase.from('punishment_history').select('applied_date').gte('applied_date', start.toISOString()).lte('applied_date', end.toISOString()),
+        supabase.from('punishment_history').select('applied_date').gte('applied_date', start.toISOString()).lte('applied_date', end.toISOString())
       ]);
 
-      tasks?.forEach(entry => {
-        const key = format(new Date(entry.completed_at), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.tasksCompleted++;
+      tasks?.forEach(({ completed_at }) => {
+        const date = format(parseISO(completed_at), 'yyyy-MM-dd');
+        const day = metrics.get(date);
+        if (day) day.tasksCompleted++;
       });
 
-      rules?.forEach(entry => {
-        const key = format(new Date(entry.violation_date), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.rulesBroken++;
+      rules?.forEach(({ violation_date }) => {
+        const date = format(parseISO(violation_date), 'yyyy-MM-dd');
+        const day = metrics.get(date);
+        if (day) day.rulesBroken++;
       });
 
-      rewards?.forEach(entry => {
-        const key = format(new Date(entry.created_at), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.rewardsRedeemed++;
+      rewards?.forEach(({ created_at }) => {
+        const date = format(parseISO(created_at), 'yyyy-MM-dd');
+        const day = metrics.get(date);
+        if (day) day.rewardsRedeemed++;
       });
 
-      punishments?.forEach(entry => {
-        const key = format(new Date(entry.applied_date), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.punishments++;
+      punishments?.forEach(({ applied_date }) => {
+        const date = format(parseISO(applied_date), 'yyyy-MM-dd');
+        const day = metrics.get(date);
+        if (day) day.punishments++;
       });
 
-      const result = Array.from(metrics.values());
+      const dataArray = Array.from(metrics.values());
+      const monthlyTotals = dataArray.reduce<MonthlyMetricsSummary>((totals, item) => {
+        totals.tasksCompleted += item.tasksCompleted;
+        totals.rulesBroken += item.rulesBroken;
+        totals.rewardsRedeemed += item.rewardsRedeemed;
+        totals.punishments += item.punishments;
+        return totals;
+      }, { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 });
 
-      const totals: MonthlyMetricsSummary = {
-        tasksCompleted: result.reduce((sum, d) => sum + (d.tasksCompleted ?? 0), 0),
-        rulesBroken: result.reduce((sum, d) => sum + (d.rulesBroken ?? 0), 0),
-        rewardsRedeemed: result.reduce((sum, d) => sum + (d.rewardsRedeemed ?? 0), 0),
-        punishments: result.reduce((sum, d) => sum + (d.punishments ?? 0), 0)
-      };
-
-      return { dataArray: result, monthlyTotals: totals };
+      return { dataArray, monthlyTotals };
     } catch (error) {
-      console.error('Error fetching monthly data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch monthly activity data',
-        variant: 'destructive'
-      });
-      return {
-        dataArray: [],
-        monthlyTotals: {
-          tasksCompleted: 0,
-          rulesBroken: 0,
-          rewardsRedeemed: 0,
-          punishments: 0
-        }
-      };
+      toast({ title: 'Error loading monthly data', description: `${error}` });
+      throw error;
     }
   };
 
-  const { data: dataArray = [], isLoading, refetch } = useQuery({
-    queryKey: ['monthly-metrics'],
-    queryFn: fetchMonthlyData,
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000,
-    staleTime: 0,
-    gcTime: 0
-  });
+  const { data, isLoading, isError } = useQuery(['monthly-metrics'], fetchMonthlyData);
 
   return (
-    <Card className="w-full p-4">
-      <h2 className="text-xl font-semibold mb-4">Monthly Activity</h2>
+    <Card className="bg-slate-900">
       <ChartContainer
-        config={chartConfig}
-        ref={chartContainerRef}
-        scrollRef={chartScrollRef}
-        isDragging={isDragging}
-        setIsDragging={setIsDragging}
-        startX={startX}
-        setStartX={setStartX}
-        scrollLeft={scrollLeft}
-        setScrollLeft={setScrollLeft}
+        title="Monthly Activity"
+        chartWidth={chartWidth}
+        chartContainerRef={chartContainerRef}
+        chartScrollRef={chartScrollRef}
       >
-        <ResponsiveContainer width={chartWidth} height={300}>
-          <BarChart data={dataArray}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" tickFormatter={formatDate} />
-            <YAxis allowDecimals={false} />
-            <Tooltip />
-            {Object.entries(chartConfig).map(([key, { color, label }]) => (
-              <Bar key={key} dataKey={key} fill={color} name={label} radius={[4, 4, 0, 0]} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
+        {/* Chart Rendering Logic */}
       </ChartContainer>
-      <MonthlyMetricsSummaryTiles summary={monthlyTotals} />
+      <MonthlyMetricsSummaryTiles summary={data?.monthlyTotals || {
+        tasksCompleted: 0,
+        rulesBroken: 0,
+        rewardsRedeemed: 0,
+        punishments: 0
+      }} />
     </Card>
   );
 };
