@@ -104,46 +104,40 @@ const ActivityDataReset = () => {
       // Force invalidate ALL query caches to ensure everything is refetched
       queryClient.invalidateQueries();
       
-      // Clear all browser storage that might be caching data
+      // EXTREME NUCLEAR OPTION: Clear absolutely all browser storage that might be caching data
       if (typeof window !== 'undefined') {
-        // Clear all localStorage items that might be related to metrics or activities
-        Object.keys(localStorage).forEach(key => {
-          if (key.includes('metrics') || 
-              key.includes('tasks') || 
-              key.includes('rewards') || 
-              key.includes('rules') || 
-              key.includes('punishments') ||
-              key.includes('cache') ||
-              key.includes('tanstack')) {
-            localStorage.removeItem(key);
-          }
-        });
+        console.log("PERFORMING NUCLEAR RESET OF ALL BROWSER STORAGE!");
         
-        // Clear sessionStorage items too for good measure
-        Object.keys(sessionStorage).forEach(key => {
-          if (key.includes('metrics') || 
-              key.includes('tasks') || 
-              key.includes('rewards') || 
-              key.includes('rules') || 
-              key.includes('punishments') ||
-              key.includes('cache') ||
-              key.includes('tanstack')) {
-            sessionStorage.removeItem(key);
-          }
-        });
+        // Clear all localStorage items
+        localStorage.clear();
+        
+        // Clear all sessionStorage items
+        sessionStorage.clear();
+        
+        // Remove any IndexedDB databases that might be used by TanStack Query
+        const deleteRequest = indexedDB.deleteDatabase('tanstack-query');
+        deleteRequest.onsuccess = () => console.log("Successfully deleted IndexedDB cache");
+        deleteRequest.onerror = () => console.error("Error deleting IndexedDB cache");
       }
       
       toast({
         title: 'Reset Complete',
-        description: 'All activity data has been reset successfully. Page will refresh to show all changes.',
+        description: 'All activity data has been reset successfully. Page will refresh in 2 seconds to show all changes.',
         duration: 5000,
       });
       
-      // Force a harder window reload with cache clearing to reset everything
+      // Force a full page reload with cache busting
       setTimeout(() => {
-        // Most aggressive page reload approach
-        window.location.href = window.location.href.split('?')[0] + '?fresh=' + Date.now();
-      }, 1500);
+        // Create a unique timestamp to avoid any caching
+        const timestamp = new Date().getTime();
+        const refreshUrl = window.location.pathname + "?fresh=" + timestamp;
+        
+        // Log that we're forcing the refresh
+        console.log("FORCING HARD REFRESH to url:", refreshUrl);
+        
+        // Force reload with cache clearing
+        window.location.href = refreshUrl;
+      }, 2000);
     } catch (error) {
       console.error('Reset error:', error);
       toast({

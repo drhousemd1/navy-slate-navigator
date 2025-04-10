@@ -1,5 +1,5 @@
 
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -9,7 +9,7 @@ import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface MonthlyDataItem {
   date: string;
@@ -29,6 +29,7 @@ export interface MonthlyMetricsSummary {
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -40,6 +41,12 @@ const MonthlyMetricsChart: React.FC = () => {
     rewardsRedeemed: { color: '#9b87f5', label: 'Rewards Redeemed' },
     punishments: { color: '#ea384c', label: 'Punishments' }
   };
+
+  // Force clear cache on component mount
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
+    console.log('MonthlyMetricsChart: Invalidated cached data on mount');
+  }, [queryClient]);
 
   const generateMonthDays = (): string[] => {
     const today = new Date();
@@ -205,14 +212,31 @@ const MonthlyMetricsChart: React.FC = () => {
 
   // Critical fix: Use React Query with updated settings to ensure proper data refresh after reset
   const { data = { dataArray: [], monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } }, 
-          isLoading } = useQuery({
+          isLoading, refetch } = useQuery({
     queryKey: ['monthly-metrics'],
     queryFn: fetchMonthlyData,
     refetchOnWindowFocus: true,
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: 5000, // More aggressive refresh (every 5 seconds)
     staleTime: 0, // Consider data always stale to force refresh
     gcTime: 0, // Don't cache at all
   });
+
+  // Force refresh on URL parameters that indicate a reset
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('fresh')) {
+      console.log('Fresh page load detected in MonthlyMetricsChart, forcing data refresh');
+      refetch();
+    }
+    
+    // Aggressive refresh strategy - periodically check for fresh data
+    const interval = setInterval(() => {
+      console.log('Periodic refresh check in MonthlyMetricsChart');
+      refetch();
+    }, 10000); // Check every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, [refetch]);
 
   const hasContent = data.dataArray.some(d =>
     d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments

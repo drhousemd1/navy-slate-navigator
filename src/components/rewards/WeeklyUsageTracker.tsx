@@ -16,17 +16,22 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
   // Get the current day of the week (0 = Monday, 6 = Sunday)
   const currentDayOfWeek = getMondayBasedDay();
   const queryClient = useQueryClient();
-  const [trackerData, setTrackerData] = useState<boolean[]>(usageData);
+  const [trackerData, setTrackerData] = useState<boolean[]>(
+    Array.isArray(usageData) ? [...usageData] : [false, false, false, false, false, false, false]
+  );
   
   // Add useEffect to update trackerData when usageData changes
   useEffect(() => {
-    // Make sure we correctly handle array updates without unexpected behavior
-    if (Array.isArray(usageData)) {
-      setTrackerData([...usageData]); // Create a new array reference to ensure rendering
-    } else {
-      // Handle case where usageData might be null or undefined
-      setTrackerData([false, false, false, false, false, false, false]);
-    }
+    // Important: Force clean up any potential stale data
+    const cleanData = Array.isArray(usageData) && usageData.length > 0 
+      ? [...usageData] 
+      : [false, false, false, false, false, false, false];
+      
+    // Create a new array reference to ensure rendering
+    setTrackerData(cleanData);
+    
+    // Debug log to track data changes 
+    console.log("WeeklyUsageTracker updated with data:", cleanData);
   }, [usageData, queryClient]);
   
   // Ensure we always have exactly 7 circles

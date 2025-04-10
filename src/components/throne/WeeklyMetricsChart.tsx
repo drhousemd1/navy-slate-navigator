@@ -171,10 +171,35 @@ const WeeklyMetricsChart: React.FC = () => {
     queryKey: ['weekly-metrics'],
     queryFn: fetchWeeklyData,
     refetchOnWindowFocus: true,
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: 5000, // Refetch every 5 seconds (more aggressive refresh)
     staleTime: 0, // Always consider data stale to force refresh
     gcTime: 0, // Don't cache at all - force refetch every time
   });
+
+  // Add effect to force refetch on route focus
+  useEffect(() => {
+    // This will force a refetch whenever component is mounted or window focused
+    // Extra insurance for data freshness after reset
+    const fetchData = async () => {
+      await fetchWeeklyData();
+    };
+    
+    fetchData();
+    
+    // Add event listener for page visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Page became visible, forcing weekly data refresh');
+        fetchData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const hasData = data.some(d => 
     d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0

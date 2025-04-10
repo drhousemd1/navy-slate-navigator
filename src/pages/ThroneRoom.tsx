@@ -23,6 +23,19 @@ const ThroneRoom: React.FC = () => {
   const { rewards } = useRewards();
   const queryClient = useQueryClient();
   
+  // Force clear any cached data on component mount
+  useEffect(() => {
+    // Clear all query cache to force fresh data
+    queryClient.clear();
+    
+    // Force invalidate all metrics queries
+    queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+    
+    console.log('ThroneRoom mounted: Cleared all cached data to force fresh fetch');
+  }, [queryClient]);
+  
   // Fetch summary data with React Query for better cache management and refreshing
   const fetchSummaryData = async (): Promise<WeeklyMetricsSummary> => {
     try {
@@ -106,7 +119,7 @@ const ThroneRoom: React.FC = () => {
     queryKey: ['weekly-metrics-summary'],
     queryFn: fetchSummaryData,
     refetchOnWindowFocus: true,
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: 5000, // More aggressive refresh (every 5 seconds)
     staleTime: 0, // Consider data always stale to force refresh
     gcTime: 0, // Don't cache at all
   });
@@ -126,6 +139,20 @@ const ThroneRoom: React.FC = () => {
     
     // Force immediate refetch
     refetch();
+    
+    // Add a check for URL params that indicate a fresh page load from reset
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('fresh')) {
+      console.log('Fresh page load detected after reset, force clearing all caches');
+      // Clear local/session storage again for good measure
+      localStorage.clear();
+      sessionStorage.clear();
+      // Clear all query cache
+      queryClient.clear();
+      // Remove the 'fresh' param from URL to avoid re-triggering on navigation
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
   }, [location.pathname, refetch, queryClient]);
 
   return (
