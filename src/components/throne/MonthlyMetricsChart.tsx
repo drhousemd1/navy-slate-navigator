@@ -76,7 +76,7 @@ const MonthlyMetricsChart: React.FC = () => {
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
-  const { data = [], isLoading } = useQuery({
+  const { data = [] } = useQuery({
     queryKey: ['monthly-metrics'],
     queryFn: fetchMonthlyData,
     refetchOnWindowFocus: true,
@@ -84,39 +84,21 @@ const MonthlyMetricsChart: React.FC = () => {
   });
 
   const monthlySummary = useMemo<MonthlyMetricsSummary>(() => {
-    try {
-      if (!data || !Array.isArray(data)) {
-        return {
-          tasksCompleted: 0,
-          rulesBroken: 0,
-          rewardsRedeemed: 0,
-          punishments: 0,
-        };
-      }
-
-      return data.reduce(
-        (acc, day) => {
-          acc.tasksCompleted += day?.tasksCompleted ?? 0;
-          acc.rulesBroken += day?.rulesBroken ?? 0;
-          acc.rewardsRedeemed += day?.rewardsRedeemed ?? 0;
-          acc.punishments += day?.punishments ?? 0;
-          return acc;
-        },
-        {
-          tasksCompleted: 0,
-          rulesBroken: 0,
-          rewardsRedeemed: 0,
-          punishments: 0,
-        }
-      );
-    } catch {
-      return {
+    return data.reduce(
+      (acc, day) => {
+        acc.tasksCompleted += day.tasksCompleted;
+        acc.rulesBroken += day.rulesBroken;
+        acc.rewardsRedeemed += day.rewardsRedeemed;
+        acc.punishments += day.punishments;
+        return acc;
+      },
+      {
         tasksCompleted: 0,
         rulesBroken: 0,
         rewardsRedeemed: 0,
         punishments: 0,
-      };
-    }
+      }
+    );
   }, [data]);
 
   const chartConfig = {
@@ -125,11 +107,6 @@ const MonthlyMetricsChart: React.FC = () => {
     rewardsRedeemed: { color: '#9b87f5', label: 'Rewards Redeemed' },
     punishments: { color: '#ef4444', label: 'Punishments' },
   };
-
-  // ✅ Filter out rows where all metrics are 0
-  const filteredData = data.filter(d =>
-    d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0
-  );
 
   return (
     <Card className="w-full p-4">
@@ -145,14 +122,22 @@ const MonthlyMetricsChart: React.FC = () => {
         scrollLeft={scrollLeft}
         setScrollLeft={setScrollLeft}
       >
-        <ResponsiveContainer width={filteredData.length * 30 || 300} height={300}>
-          <BarChart data={filteredData}>
+        <ResponsiveContainer width={data.length * 30 || 300} height={300}>
+          <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis allowDecimals={false} />
             <Tooltip />
             {Object.entries(chartConfig).map(([key, { color, label }]) => (
-              <Bar key={key} dataKey={key} stackId="a" fill={color} name={label} />
+              <Bar
+                key={key}
+                dataKey={key}
+                stackId="a"
+                fill={color}
+                name={label}
+                isAnimationActive={false}
+                hide={(data.every(d => d[key as keyof MonthlyDataItem] === 0))}
+              />
             ))}
           </BarChart>
         </ResponsiveContainer>
