@@ -4,6 +4,7 @@ import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
 import { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsSummary';
 import MonthlyMetricsChart from '@/components/throne/MonthlyMetricsChart';
+import WeeklyMetricsChart from '@/components/throne/WeeklyMetricsChart';
 import { Card } from '@/components/ui/card';
 import { InfoIcon, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { useRewards } from '@/contexts/RewardsContext';
@@ -127,7 +128,10 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
-            {/* Weekly metrics summary tiles - graph has been removed */}
+            {/* Weekly activity graph */}
+            <WeeklyMetricsChart />
+            
+            {/* Weekly metrics summary tiles */}
             <div className="space-y-2">
               <WeeklyMetricsSummaryTiles 
                 tasksCompleted={metricsSummary.tasksCompleted}
