@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
-import WeeklyMetricsChart, { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsChart';
 import MonthlyMetricsChart from '@/components/throne/MonthlyMetricsChart';
 import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
@@ -10,16 +9,9 @@ import { useLocation } from 'react-router-dom';
 
 // Import extracted components
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
-import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin } = useAuth();
-  const [metricsSummary, setMetricsSummary] = useState<WeeklyMetricsSummary>({
-    tasksCompleted: 0,
-    rulesBroken: 0,
-    rewardsRedeemed: 0,
-    punishments: 0
-  });
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const location = useLocation();
   
@@ -50,12 +42,6 @@ const ThroneRoom: React.FC = () => {
     console.log('ThroneRoom: Rewards or location changed, refreshing');
     setRefreshKey(prev => prev + 1);
   }, [rewards, location.pathname]);
-  
-  // Handle data callback from the weekly metrics chart
-  const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
-    console.log('ThroneRoom: Metrics data loaded with summary:', summaryData);
-    setMetricsSummary(summaryData);
-  };
 
   return (
     <AppLayout>
@@ -66,21 +52,6 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
-            {/* Weekly metrics section with key to force refresh */}
-            <div className="space-y-2">
-              <WeeklyMetricsChart 
-                onDataLoaded={handleMetricsDataLoaded}
-                key={`weekly-metrics-${refreshKey}`}
-              />
-              
-              <WeeklyMetricsSummaryTiles 
-                tasksCompleted={metricsSummary.tasksCompleted}
-                rulesBroken={metricsSummary.rulesBroken}
-                rewardsRedeemed={metricsSummary.rewardsRedeemed}
-                punishments={metricsSummary.punishments}
-              />
-            </div>
-            
             <MonthlyMetricsChart />
             
             <AdminSettingsCard />
