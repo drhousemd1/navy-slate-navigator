@@ -8,7 +8,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 
 interface MonthlyDataItem {
@@ -35,7 +35,6 @@ const fetchMonthlyData = async (): Promise<MonthlyDataItem[]> => {
   const days = eachDayOfInterval({ start, end });
   const formatDate = (d: Date) => format(d, 'yyyy-MM-dd');
 
-  // Prepare base map
   const daily: Record<string, MonthlyDataItem> = {};
   for (const day of days) {
     const key = formatDate(day);
@@ -85,21 +84,41 @@ const MonthlyMetricsChart: React.FC = () => {
   });
 
   const monthlySummary = useMemo<MonthlyMetricsSummary>(() => {
-    return data.reduce(
-      (acc, day) => {
-        acc.tasksCompleted += day.tasksCompleted;
-        acc.rulesBroken += day.rulesBroken;
-        acc.rewardsRedeemed += day.rewardsRedeemed;
-        acc.punishments += day.punishments;
-        return acc;
-      },
-      {
+    try {
+      if (!data || !Array.isArray(data)) {
+        console.warn("Monthly summary data is not an array:", data);
+        return {
+          tasksCompleted: 0,
+          rulesBroken: 0,
+          rewardsRedeemed: 0,
+          punishments: 0,
+        };
+      }
+
+      return data.reduce(
+        (acc, day) => {
+          acc.tasksCompleted += day?.tasksCompleted ?? 0;
+          acc.rulesBroken += day?.rulesBroken ?? 0;
+          acc.rewardsRedeemed += day?.rewardsRedeemed ?? 0;
+          acc.punishments += day?.punishments ?? 0;
+          return acc;
+        },
+        {
+          tasksCompleted: 0,
+          rulesBroken: 0,
+          rewardsRedeemed: 0,
+          punishments: 0,
+        }
+      );
+    } catch (err) {
+      console.error("Failed to compute monthlySummary:", err);
+      return {
         tasksCompleted: 0,
         rulesBroken: 0,
         rewardsRedeemed: 0,
         punishments: 0,
-      }
-    );
+      };
+    }
   }, [data]);
 
   const chartConfig = {
