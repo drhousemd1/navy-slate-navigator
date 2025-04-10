@@ -14,30 +14,30 @@ const ActivityDataReset = () => {
     if (!confirm('Are you sure you want to reset ALL activity data? This cannot be undone.')) {
       return;
     }
-    
+
     try {
       setIsResetting(true);
       console.log("Resetting all activity data...");
 
       const tables = [
-        { name: 'task_completion_history', column: 'id' },
-        { name: 'rule_violations', column: 'id' },
-        { name: 'reward_usage', column: 'id' },
-        { name: 'punishment_history', column: 'id' }
+        'task_completion_history',
+        'rule_violations',
+        'reward_usage',
+        'punishment_history'
       ];
 
-      for (const { name, column } of tables) {
+      for (const table of tables) {
         const { error, count } = await supabase
-          .from(name)
+          .from(table)
           .delete()
-          .neq(column, '00000000-0000-0000-0000-000000000000')
+          .gt('created_at', '1900-01-01') // safer universal condition
           .select('*', { count: 'exact' });
 
         if (error) {
-          throw new Error(`Failed to delete from ${name}: ${error.message}`);
+          throw new Error(`Failed to delete from ${table}: ${error.message}`);
         }
 
-        console.log(`Deleted ${count} rows from ${name}`);
+        console.log(`Deleted ${count} rows from ${table}`);
       }
 
       const { data: tasks, error: fetchTasksError } = await supabase
