@@ -2,28 +2,20 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import WeeklyMetricsChart, { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsChart';
 import MonthlyMetricsChart from '@/components/throne/MonthlyMetricsChart';
-import { 
-  TooltipProvider, 
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent
-} from '@/components/ui/tooltip';
+import { Card } from '@/components/ui/card';
 import { InfoIcon, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
-import { toast } from '@/hooks/use-toast';
 
 // Import extracted components
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
 import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
 
 const ThroneRoom: React.FC = () => {
-  const { isAdmin, isAuthenticated, loading, checkUserRole } = useAuth();
+  const { isAdmin } = useAuth();
   const [metricsSummary, setMetricsSummary] = useState<WeeklyMetricsSummary>({
     tasksCompleted: 0,
     rulesBroken: 0,
@@ -45,13 +37,8 @@ const ThroneRoom: React.FC = () => {
     // Set up interval for auto-refresh (every minute)
     const refreshInterval = setInterval(triggerRefresh, 60000);
     
-    // Trigger refresh when location changes (navigation)
-    const handleRouteChange = () => {
-      triggerRefresh();
-    };
-    
     // Call once on mount
-    handleRouteChange();
+    triggerRefresh();
     
     // Clean up interval on unmount
     return () => {
@@ -62,7 +49,7 @@ const ThroneRoom: React.FC = () => {
   // Also refresh when rewards change
   useEffect(() => {
     setRefreshKey(prev => prev + 1);
-  }, [rewards]);
+  }, [rewards, location.pathname]);
   
   // Handle data callback from the weekly metrics chart
   const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
