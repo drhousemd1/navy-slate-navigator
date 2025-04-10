@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export interface WeeklyMetricsSummary {
   tasksCompleted: number;
@@ -20,19 +21,12 @@ interface WeeklyMetricsChartProps {
   onDataLoaded?: (summaryData: WeeklyMetricsSummary) => void;
 }
 
-interface DailyData {
-  date: string;
-  tasksCompleted: number;
-  rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
-}
-
 const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded }) => {
-  const [data, setData] = useState<DailyData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Chart colors configuration
   const chartColors = {
     tasksCompleted: '#0EA5E9',
     rulesBroken: '#F97316',
@@ -40,153 +34,198 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
     punishments: '#ea384c'
   };
   
+  // Chart labels for the legend
   const chartLabels = {
     tasksCompleted: 'Tasks Completed',
     rulesBroken: 'Rules Broken',
     rewardsRedeemed: 'Rewards Redeemed',
     punishments: 'Punishments'
   };
-
+  
+  // Function to fetch and process data
   useEffect(() => {
-    async function fetchData() {
+    async function fetchWeeklyData() {
+      console.log('WeeklyMetricsChart: Starting to fetch weekly data');
       try {
-        setLoading(true);
+        setIsLoading(true);
         setError(null);
         
-        // Generate dates for the current week (Monday-Sunday)
+        // Generate dates for current week (Monday to Sunday)
         const currentDate = new Date();
-        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Start on Monday
-        
-        // Create array of formatted dates for the week
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
         const weekDates = Array.from({ length: 7 }, (_, i) => {
           const date = addDays(weekStart, i);
           return format(date, 'yyyy-MM-dd');
         });
         
-        // Initialize data structure with zeros
-        const initialData = weekDates.map(date => ({
+        console.log('WeeklyMetricsChart: Week dates generated', weekDates);
+        
+        // Initialize data structure for the week
+        const weeklyData = weekDates.map(date => ({
           date,
           tasksCompleted: 0,
           rulesBroken: 0,
           rewardsRedeemed: 0,
           punishments: 0
         }));
-
+        
+        // Prepare date range for queries
+        const startDate = weekStart.toISOString();
+        const endDate = addDays(weekStart, 7).toISOString();
+        
+        console.log('WeeklyMetricsChart: Date range', { startDate, endDate });
+        
         // Fetch task completions
         const { data: taskCompletions, error: taskError } = await supabase
           .from('task_completion_history')
           .select('completed_at')
-          .gte('completed_at', weekStart.toISOString())
-          .lt('completed_at', addDays(weekStart, 7).toISOString());
+          .gte('completed_at', startDate)
+          .lt('completed_at', endDate);
           
-        if (taskError) throw new Error(`Error fetching tasks: ${taskError.message}`);
+        if (taskError) {
+          console.error('Error fetching task completions:', taskError);
+          throw new Error(`Error fetching tasks: ${taskError.message}`);
+        }
+        
+        console.log('WeeklyMetricsChart: Task completions fetched', taskCompletions?.length || 0);
         
         // Fetch rule violations
         const { data: ruleViolations, error: ruleError } = await supabase
           .from('rule_violations')
           .select('violation_date')
-          .gte('violation_date', weekStart.toISOString())
-          .lt('violation_date', addDays(weekStart, 7).toISOString());
+          .gte('violation_date', startDate)
+          .lt('violation_date', endDate);
           
-        if (ruleError) throw new Error(`Error fetching rule violations: ${ruleError.message}`);
+        if (ruleError) {
+          console.error('Error fetching rule violations:', ruleError);
+          throw new Error(`Error fetching rule violations: ${ruleError.message}`);
+        }
+        
+        console.log('WeeklyMetricsChart: Rule violations fetched', ruleViolations?.length || 0);
         
         // Fetch reward usages
         const { data: rewardUsages, error: rewardError } = await supabase
           .from('reward_usage')
           .select('created_at')
-          .gte('created_at', weekStart.toISOString())
-          .lt('created_at', addDays(weekStart, 7).toISOString());
+          .gte('created_at', startDate)
+          .lt('created_at', endDate);
           
-        if (rewardError) throw new Error(`Error fetching rewards: ${rewardError.message}`);
+        if (rewardError) {
+          console.error('Error fetching reward usages:', rewardError);
+          throw new Error(`Error fetching rewards: ${rewardError.message}`);
+        }
+        
+        console.log('WeeklyMetricsChart: Reward usages fetched', rewardUsages?.length || 0);
         
         // Fetch punishments
         const { data: punishments, error: punishmentError } = await supabase
           .from('punishment_history')
           .select('applied_date')
-          .gte('applied_date', weekStart.toISOString())
-          .lt('applied_date', addDays(weekStart, 7).toISOString());
+          .gte('applied_date', startDate)
+          .lt('applied_date', endDate);
           
-        if (punishmentError) throw new Error(`Error fetching punishments: ${punishmentError.message}`);
+        if (punishmentError) {
+          console.error('Error fetching punishments:', punishmentError);
+          throw new Error(`Error fetching punishments: ${punishmentError.message}`);
+        }
         
-        // Process the data
-        const processedData = [...initialData];
-        
-        // Helper function to increment a metric for a date
-        const incrementMetric = (dateStr: string, metric: keyof DailyData) => {
-          const dayIndex = processedData.findIndex(d => d.date === dateStr);
-          if (dayIndex !== -1 && typeof processedData[dayIndex][metric] === 'number') {
-            (processedData[dayIndex][metric] as number) += 1;
-          }
-        };
+        console.log('WeeklyMetricsChart: Punishments fetched', punishments?.length || 0);
         
         // Process task completions
-        taskCompletions?.forEach(task => {
-          if (task.completed_at) {
-            const dateStr = format(new Date(task.completed_at), 'yyyy-MM-dd');
-            incrementMetric(dateStr, 'tasksCompleted');
-          }
-        });
+        if (taskCompletions) {
+          taskCompletions.forEach(task => {
+            if (task.completed_at) {
+              const dateStr = format(new Date(task.completed_at), 'yyyy-MM-dd');
+              const dayIndex = weeklyData.findIndex(day => day.date === dateStr);
+              if (dayIndex !== -1) {
+                weeklyData[dayIndex].tasksCompleted += 1;
+              }
+            }
+          });
+        }
         
         // Process rule violations
-        ruleViolations?.forEach(rule => {
-          if (rule.violation_date) {
-            const dateStr = format(new Date(rule.violation_date), 'yyyy-MM-dd');
-            incrementMetric(dateStr, 'rulesBroken');
-          }
-        });
+        if (ruleViolations) {
+          ruleViolations.forEach(rule => {
+            if (rule.violation_date) {
+              const dateStr = format(new Date(rule.violation_date), 'yyyy-MM-dd');
+              const dayIndex = weeklyData.findIndex(day => day.date === dateStr);
+              if (dayIndex !== -1) {
+                weeklyData[dayIndex].rulesBroken += 1;
+              }
+            }
+          });
+        }
         
         // Process reward usages
-        rewardUsages?.forEach(reward => {
-          if (reward.created_at) {
-            const dateStr = format(new Date(reward.created_at), 'yyyy-MM-dd');
-            incrementMetric(dateStr, 'rewardsRedeemed');
-          }
-        });
+        if (rewardUsages) {
+          rewardUsages.forEach(reward => {
+            if (reward.created_at) {
+              const dateStr = format(new Date(reward.created_at), 'yyyy-MM-dd');
+              const dayIndex = weeklyData.findIndex(day => day.date === dateStr);
+              if (dayIndex !== -1) {
+                weeklyData[dayIndex].rewardsRedeemed += 1;
+              }
+            }
+          });
+        }
         
         // Process punishments
-        punishments?.forEach(punishment => {
-          if (punishment.applied_date) {
-            const dateStr = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
-            incrementMetric(dateStr, 'punishments');
-          }
-        });
+        if (punishments) {
+          punishments.forEach(punishment => {
+            if (punishment.applied_date) {
+              const dateStr = format(new Date(punishment.applied_date), 'yyyy-MM-dd');
+              const dayIndex = weeklyData.findIndex(day => day.date === dateStr);
+              if (dayIndex !== -1) {
+                weeklyData[dayIndex].punishments += 1;
+              }
+            }
+          });
+        }
         
-        // Set the data
-        setData(processedData);
+        console.log('WeeklyMetricsChart: Processed data', weeklyData);
+        
+        // Set the processed data to state
+        setChartData(weeklyData);
         
         // Calculate summary totals
         const summary: WeeklyMetricsSummary = {
-          tasksCompleted: processedData.reduce((sum, day) => sum + day.tasksCompleted, 0),
-          rulesBroken: processedData.reduce((sum, day) => sum + day.rulesBroken, 0),
-          rewardsRedeemed: processedData.reduce((sum, day) => sum + day.rewardsRedeemed, 0),
-          punishments: processedData.reduce((sum, day) => sum + day.punishments, 0)
+          tasksCompleted: weeklyData.reduce((sum, day) => sum + day.tasksCompleted, 0),
+          rulesBroken: weeklyData.reduce((sum, day) => sum + day.rulesBroken, 0),
+          rewardsRedeemed: weeklyData.reduce((sum, day) => sum + day.rewardsRedeemed, 0),
+          punishments: weeklyData.reduce((sum, day) => sum + day.punishments, 0)
         };
+        
+        console.log('WeeklyMetricsChart: Summary calculated', summary);
         
         // Call the callback with the summary data if provided
         if (onDataLoaded) {
           onDataLoaded(summary);
         }
       } catch (err) {
-        console.error('Error fetching metrics data:', err);
+        console.error('Error fetching weekly metrics data:', err);
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
         toast({
-          title: "Error loading metrics",
+          title: "Error loading weekly metrics",
           description: err instanceof Error ? err.message : 'Unknown error occurred',
           variant: "destructive"
         });
       } finally {
-        setLoading(false);
+        setIsLoading(false);
+        console.log('WeeklyMetricsChart: Finished loading data');
       }
     }
     
-    fetchData();
+    fetchWeeklyData();
   }, [onDataLoaded]);
   
   // Check if there's any data to display
-  const hasData = data.some(
+  const hasData = chartData.some(
     day => day.tasksCompleted > 0 || day.rulesBroken > 0 || 
            day.rewardsRedeemed > 0 || day.punishments > 0
   );
+  
+  console.log('WeeklyMetricsChart render state:', { isLoading, hasError: !!error, hasData });
   
   return (
     <Card className="bg-navy border border-light-navy rounded-lg">
@@ -194,31 +233,25 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
         <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
         
         <div className="w-full" style={{ height: 300 }}>
-          {loading && (
+          {isLoading ? (
             <div className="w-full h-64 flex items-center justify-center">
               <div className="text-center">
                 <Skeleton className="h-8 w-40 bg-light-navy/50 mb-2 mx-auto" />
                 <p className="text-white">Loading weekly metrics...</p>
               </div>
             </div>
-          )}
-          
-          {!loading && error && (
+          ) : error ? (
             <div className="w-full h-64 bg-red-900/20 rounded flex items-center justify-center">
               <span className="text-red-400 text-sm p-4 text-center">{error}</span>
             </div>
-          )}
-          
-          {!loading && !error && !hasData && (
+          ) : !hasData ? (
             <div className="w-full h-64 flex items-center justify-center border border-dashed border-gray-700 rounded-lg">
               <span className="text-gray-400 text-sm p-4 text-center">No activity data to display for this week</span>
             </div>
-          )}
-          
-          {!loading && !error && hasData && (
-            <ResponsiveContainer width="100%" height={300}>
+          ) : (
+            <ResponsiveContainer width="100%" height={300} key="weekly-chart-container">
               <BarChart 
-                data={data} 
+                data={chartData} 
                 margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
@@ -276,7 +309,10 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ onDataLoaded })
           {Object.entries(chartLabels).map(([key, label]) => (
             <span 
               key={key} 
-              className="text-xs whitespace-nowrap" 
+              className={cn(
+                "text-xs whitespace-nowrap",
+                isLoading && "opacity-50"
+              )} 
               style={{ color: chartColors[key as keyof typeof chartColors] }}
             >
               {label}

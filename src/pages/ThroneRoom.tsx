@@ -29,6 +29,7 @@ const ThroneRoom: React.FC = () => {
   useEffect(() => {
     // Create a function to refresh charts
     const triggerRefresh = () => {
+      console.log('ThroneRoom: Triggering refresh');
       setRefreshKey(prev => prev + 1);
     };
     
@@ -46,11 +47,13 @@ const ThroneRoom: React.FC = () => {
   
   // Also refresh when rewards change or location changes
   useEffect(() => {
+    console.log('ThroneRoom: Rewards or location changed, refreshing');
     setRefreshKey(prev => prev + 1);
   }, [rewards, location.pathname]);
   
   // Handle data callback from the weekly metrics chart
   const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
+    console.log('ThroneRoom: Metrics data loaded with summary:', summaryData);
     setMetricsSummary(summaryData);
   };
 
