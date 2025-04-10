@@ -4,6 +4,8 @@ import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
 import WeeklyMetricsChart, { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsChart';
 import MonthlyMetricsChart from '@/components/throne/MonthlyMetricsChart';
+import { Card } from '@/components/ui/card';
+import { InfoIcon, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
@@ -32,11 +34,11 @@ const ThroneRoom: React.FC = () => {
       setRefreshKey(prev => prev + 1);
     };
     
-    // Trigger refresh when component mounts
-    triggerRefresh();
+    // Set up interval for auto-refresh (every minute)
+    const refreshInterval = setInterval(triggerRefresh, 60000);
     
-    // Set up interval for auto-refresh (every 5 minutes)
-    const refreshInterval = setInterval(triggerRefresh, 300000);
+    // Call once on mount
+    triggerRefresh();
     
     // Clean up interval on unmount
     return () => {
@@ -44,7 +46,7 @@ const ThroneRoom: React.FC = () => {
     };
   }, []);
   
-  // Also refresh when rewards change or location changes
+  // Also refresh when rewards change
   useEffect(() => {
     setRefreshKey(prev => prev + 1);
   }, [rewards, location.pathname]);
