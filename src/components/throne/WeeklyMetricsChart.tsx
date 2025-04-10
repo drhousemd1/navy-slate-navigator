@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -7,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { generateMondayBasedWeekDates } from '@/lib/utils';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 interface WeeklyDataItem {
   date: string;
@@ -18,8 +19,7 @@ interface WeeklyDataItem {
 }
 
 const WeeklyMetricsChart: React.FC = () => {
-  const queryClient = useQueryClient();
-
+  // Configure chart colors
   const chartConfig = {
     tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
     rulesBroken: { color: '#F97316', label: 'Rules Broken' },
@@ -27,83 +27,181 @@ const WeeklyMetricsChart: React.FC = () => {
     punishments: { color: '#ea384c', label: 'Punishments' }
   };
 
+  // Use React Query for data fetching to ensure it refreshes properly
   const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
-    const weekDays = generateMondayBasedWeekDates();
-    const metricsMap = new Map<string, WeeklyDataItem>();
-    weekDays.forEach(date => {
-      metricsMap.set(date, {
-        date,
-        tasksCompleted: 0,
-        rulesBroken: 0,
-        rewardsRedeemed: 0,
-        punishments: 0
+    console.log('Fetching weekly chart data at', new Date().toISOString());
+    try {
+      // Generate all days of the week (Monday to Sunday)
+      const weekDays = generateMondayBasedWeekDates();
+      
+      // Initialize data structure with all days, starting with zero values
+      const metricsMap = new Map<string, WeeklyDataItem>();
+      weekDays.forEach(date => {
+        metricsMap.set(date, {
+          date,
+          tasksCompleted: 0,
+          rulesBroken: 0,
+          rewardsRedeemed: 0,
+          punishments: 0
+        });
       });
-    });
 
-    const today = new Date();
-    const start = startOfWeek(today, { weekStartsOn: 1 });
-    const end = endOfWeek(today, { weekStartsOn: 1 });
+      // Get current week date range
+      const today = new Date();
+      const start = startOfWeek(today, { weekStartsOn: 1 }); // Start on Monday
+      const end = endOfWeek(today, { weekStartsOn: 1 }); // End on Sunday
+      
+      // Fetch task completions - Count unique tasks per day
+      const { data: taskCompletions, error: taskError } = await supabase
+        .from('task_completion_history')
+        .select('*')
+        .gte('completed_at', start.toISOString())
+        .lte('completed_at', end.toISOString());
+      
+      if (taskError) {
+        console.error('Error fetching task completions:', taskError);
+      } else if (taskCompletions && taskCompletions.length > 0) {
+        console.log('Found task completions:', taskCompletions.length);
+        // Group completions by date
+        const completionsByDate = new Map<string, Set<string>>();
+        
+        taskCompletions.forEach(entry => {
+          const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
+          
+          if (!completionsByDate.has(date)) {
+            completionsByDate.set(date, new Set());
+          }
+          
+          // Add the task_id to the set for this date
+          completionsByDate.get(date)?.add(entry.task_id);
+        });
+        
+        // Count unique completions per day (each task counted only once per day)
+        completionsByDate.forEach((taskIds, date) => {
+          if (metricsMap.has(date)) {
+            metricsMap.get(date)!.tasksCompleted = taskIds.size;
+          }
+        });
+      } else {
+        console.log('No task completions found for the week');
+      }
 
-    const [{ data: tasks }, { data: rules }, { data: rewards }, { data: punishments }] = await Promise.all([
-      supabase.from('task_completion_history').select('*').gte('completed_at', start.toISOString()).lte('completed_at', end.toISOString()),
-      supabase.from('rule_violations').select('*').gte('violation_date', start.toISOString()).lte('violation_date', end.toISOString()),
-      supabase.from('reward_usage').select('*').gte('created_at', start.toISOString()).lte('created_at', end.toISOString()),
-      supabase.from('punishment_history').select('*').gte('applied_date', start.toISOString()).lte('applied_date', end.toISOString())
-    ]);
+      // Fetch rule violations
+      const { data: ruleViolations, error: ruleError } = await supabase
+        .from('rule_violations')
+        .select('*')
+        .gte('violation_date', start.toISOString())
+        .lte('violation_date', end.toISOString());
+      
+      if (ruleError) {
+        console.error('Error fetching rule violations:', ruleError);
+      } else if (ruleViolations && ruleViolations.length > 0) {
+        console.log('Found rule violations:', ruleViolations.length);
+        ruleViolations.forEach(entry => {
+          const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
+          if (metricsMap.has(date)) {
+            metricsMap.get(date)!.rulesBroken++;
+          }
+        });
+      } else {
+        console.log('No rule violations found for the week');
+      }
 
-    tasks?.forEach(entry => {
-      const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
-      if (!metricsMap.has(date)) return;
-      const set = metricsMap.get(date)!;
-      set.tasksCompleted++;
-    });
+      // Fetch reward usages
+      const { data: rewardUsages, error: rewardError } = await supabase
+        .from('reward_usage')
+        .select('*')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString());
+      
+      if (rewardError) {
+        console.error('Error fetching reward usages:', rewardError);
+      } else if (rewardUsages && rewardUsages.length > 0) {
+        console.log('Found reward usages:', rewardUsages.length);
+        rewardUsages.forEach(entry => {
+          const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
+          if (metricsMap.has(date)) {
+            metricsMap.get(date)!.rewardsRedeemed++;
+          }
+        });
+      } else {
+        console.log('No reward usages found for the week');
+      }
 
-    rules?.forEach(entry => {
-      const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
-      if (!metricsMap.has(date)) return;
-      metricsMap.get(date)!.rulesBroken++;
-    });
+      // Fetch punishments
+      const { data: punishments, error: punishmentError } = await supabase
+        .from('punishment_history')
+        .select('*')
+        .gte('applied_date', start.toISOString())
+        .lte('applied_date', end.toISOString());
+      
+      if (punishmentError) {
+        console.error('Error fetching punishments:', punishmentError);
+      } else if (punishments && punishments.length > 0) {
+        console.log('Found punishments:', punishments.length);
+        punishments.forEach(entry => {
+          const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
+          if (metricsMap.has(date)) {
+            metricsMap.get(date)!.punishments++;
+          }
+        });
+      } else {
+        console.log('No punishments found for the week');
+      }
 
-    rewards?.forEach(entry => {
-      const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
-      if (!metricsMap.has(date)) return;
-      metricsMap.get(date)!.rewardsRedeemed++;
-    });
-
-    punishments?.forEach(entry => {
-      const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
-      if (!metricsMap.has(date)) return;
-      metricsMap.get(date)!.punishments++;
-    });
-
-    return Array.from(metricsMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+      // Convert map to sorted array
+      const result = Array.from(metricsMap.values())
+        .sort((a, b) => a.date.localeCompare(b.date));
+      
+      console.log('Weekly chart data prepared:', result);
+      return result;
+    } catch (error) {
+      console.error('Error fetching weekly data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch weekly activity data',
+        variant: 'destructive'
+      });
+      return [];
+    }
   };
 
-  const { data = [], isLoading } = useQuery({
+  // Key change: Use React Query with updated settings to ensure proper refresh
+  const { data = [], isLoading, error } = useQuery({
     queryKey: ['weekly-metrics'],
     queryFn: fetchWeeklyData,
     refetchOnWindowFocus: true,
-    refetchInterval: 10000,
-    staleTime: 0,
-    gcTime: 0,
+    refetchInterval: 5000, // Refetch every 5 seconds (more aggressive refresh)
+    staleTime: 0, // Always consider data stale to force refresh
+    gcTime: 0, // Don't cache at all - force refetch every time
   });
 
+  // Add effect to force refetch on route focus
   useEffect(() => {
-    // INSTEAD of calling fetchWeeklyData directly, refetch through query client
-    const refetch = () => {
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
+    // This will force a refetch whenever component is mounted or window focused
+    // Extra insurance for data freshness after reset
+    const fetchData = async () => {
+      await fetchWeeklyData();
     };
-    refetch();
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') refetch();
+    
+    fetchData();
+    
+    // Add event listener for page visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Page became visible, forcing weekly data refresh');
+        fetchData();
+      }
     };
-    document.addEventListener('visibilitychange', handleVisibility);
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [queryClient]);
+  }, []);
 
-  const hasData = data.some(d =>
+  const hasData = data.some(d => 
     d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0
   );
 
@@ -122,9 +220,15 @@ const WeeklyMetricsChart: React.FC = () => {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <BarChart 
+                data={data} 
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              >
                 <CartesianGrid strokeDasharray="0" stroke="#1A1F2C" />
-                <XAxis dataKey="date" tick={{ fill: '#D1D5DB' }} stroke="#8E9196"
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fill: '#D1D5DB' }} 
+                  stroke="#8E9196"
                   tickFormatter={(date) => {
                     try {
                       return format(parseISO(date), 'EEE');
@@ -133,8 +237,11 @@ const WeeklyMetricsChart: React.FC = () => {
                     }
                   }}
                 />
-                <YAxis tick={{ fill: '#D1D5DB' }} stroke="#8E9196" />
-                <Tooltip
+                <YAxis 
+                  tick={{ fill: '#D1D5DB' }} 
+                  stroke="#8E9196"
+                />
+                <Tooltip 
                   cursor={{ fill: 'rgba(30, 41, 59, 0.4)' }}
                   contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155' }}
                   labelStyle={{ color: '#F8FAFC' }}
@@ -146,19 +253,47 @@ const WeeklyMetricsChart: React.FC = () => {
                     }
                   }}
                 />
-                <Bar dataKey="tasksCompleted" name="Tasks Completed" fill={chartConfig.tasksCompleted.color} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="rulesBroken" name="Rules Broken" fill={chartConfig.rulesBroken.color} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="rewardsRedeemed" name="Rewards Redeemed" fill={chartConfig.rewardsRedeemed.color} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="punishments" name="Punishments" fill={chartConfig.punishments.color} radius={[4, 4, 0, 0]} />
+                <Bar 
+                  dataKey="tasksCompleted" 
+                  name="Tasks Completed" 
+                  fill={chartConfig.tasksCompleted.color} 
+                  radius={[4, 4, 0, 0]} 
+                />
+                <Bar 
+                  dataKey="rulesBroken" 
+                  name="Rules Broken" 
+                  fill={chartConfig.rulesBroken.color} 
+                  radius={[4, 4, 0, 0]} 
+                />
+                <Bar 
+                  dataKey="rewardsRedeemed" 
+                  name="Rewards Redeemed" 
+                  fill={chartConfig.rewardsRedeemed.color} 
+                  radius={[4, 4, 0, 0]} 
+                />
+                <Bar 
+                  dataKey="punishments" 
+                  name="Punishments" 
+                  fill={chartConfig.punishments.color} 
+                  radius={[4, 4, 0, 0]} 
+                />
               </BarChart>
             </ResponsiveContainer>
           )}
         </div>
         <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>Tasks Completed</span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>Rules Broken</span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>Rewards Redeemed</span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>Punishments</span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
+            Tasks Completed
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
+            Rules Broken
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
+            Rewards Redeemed
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
+            Punishments
+          </span>
         </div>
       </div>
     </Card>

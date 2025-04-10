@@ -43,7 +43,6 @@ const MonthlyMetricsChart: React.FC = () => {
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-    console.log('MonthlyMetricsChart: Invalidated cached data on mount');
   }, [queryClient]);
 
   const generateMonthDays = (): string[] => {
@@ -62,13 +61,12 @@ const MonthlyMetricsChart: React.FC = () => {
   };
 
   const monthDates = useMemo(() => generateMonthDays(), []);
-  
+
   const BAR_WIDTH = 6;
   const BAR_COUNT = 4;
   const BAR_GAP = 2;
   const GROUP_PADDING = 10;
   const CHART_PADDING = 20;
-  
   const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
   const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
 
@@ -76,7 +74,6 @@ const MonthlyMetricsChart: React.FC = () => {
     dataArray: MonthlyDataItem[], 
     monthlyTotals: MonthlyMetricsSummary 
   }> => {
-    console.log('Fetching monthly chart data at', new Date().toISOString());
     try {
       const metrics = new Map<string, MonthlyDataItem>();
       monthDates.forEach(date => {
@@ -117,77 +114,4 @@ const MonthlyMetricsChart: React.FC = () => {
 
       punishments?.forEach(entry => {
         const key = format(new Date(entry.applied_date), 'yyyy-MM-dd');
-        if (metrics.has(key)) metrics.get(key)!.punishments++;
-      });
-
-      const result = Array.from(metrics.values());
-      const totals: MonthlyMetricsSummary = {
-        tasksCompleted: result.reduce((sum, d) => sum + d.tasksCompleted, 0),
-        rulesBroken: result.reduce((sum, d) => sum + d.rulesBroken, 0),
-        rewardsRedeemed: result.reduce((sum, d) => sum + d.rewardsRedeemed, 0),
-        punishments: result.reduce((sum, d) => sum + d.punishments, 0),
-      };
-
-      return { dataArray: result, monthlyTotals: totals };
-    } catch (error) {
-      console.error('Error fetching monthly data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch monthly activity data',
-        variant: 'destructive'
-      });
-      return {
-        dataArray: [],
-        monthlyTotals: {
-          tasksCompleted: 0,
-          rulesBroken: 0,
-          rewardsRedeemed: 0,
-          punishments: 0
-        }
-      };
-    }
-  };
-
-  const { data: response = { dataArray: [], monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } }, isLoading } = useQuery({
-    queryKey: ['monthly-metrics'],
-    queryFn: fetchMonthlyData,
-    refetchOnWindowFocus: true,
-    refetchInterval: 10000,
-    staleTime: 0,
-    gcTime: 0,
-  });
-
-  const { dataArray, monthlyTotals } = response;
-
-  return (
-    <Card className="w-full p-4">
-      <h2 className="text-xl font-semibold mb-4">Monthly Activity</h2>
-      <ChartContainer
-        config={chartConfig}
-        ref={chartContainerRef}
-        scrollRef={chartScrollRef}
-        isDragging={isDragging}
-        setIsDragging={setIsDragging}
-        startX={startX}
-        setStartX={setStartX}
-        scrollLeft={scrollLeft}
-        setScrollLeft={setScrollLeft}
-      >
-        <ResponsiveContainer width={chartWidth} height={300}>
-          <BarChart data={dataArray}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" tickFormatter={formatDate} />
-            <YAxis allowDecimals={false} />
-            <Tooltip />
-            {Object.entries(chartConfig).map(([key, { color, label }]) => (
-              <Bar key={key} dataKey={key} fill={color} name={label} radius={[4, 4, 0, 0]} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartContainer>
-      <MonthlyMetricsSummaryTiles summary={monthlyTotals} />
-    </Card>
-  );
-};
-
-export default MonthlyMetricsChart;
+        if (metrics.has(key)) metrics
