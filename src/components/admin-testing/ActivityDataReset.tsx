@@ -19,18 +19,14 @@ const ActivityDataReset = () => {
       setIsResetting(true);
       console.log("Resetting all activity data...");
 
-      const tables = [
-        'task_completion_history',
-        'rule_violations',
-        'reward_usage',
-        'punishment_history'
-      ];
-
-      for (const table of tables) {
+      // Define tables with their exact literal types to satisfy TypeScript
+      const deleteFromTable = async (
+        table: 'task_completion_history' | 'rule_violations' | 'reward_usage' | 'punishment_history'
+      ) => {
         const { error, count } = await supabase
           .from(table)
           .delete()
-          .gt('created_at', '1900-01-01') // safer universal condition
+          .gt('created_at', '1900-01-01')
           .select('*', { count: 'exact' });
 
         if (error) {
@@ -38,8 +34,16 @@ const ActivityDataReset = () => {
         }
 
         console.log(`Deleted ${count} rows from ${table}`);
-      }
+        return count;
+      };
 
+      // Delete from all activity tables
+      await deleteFromTable('task_completion_history');
+      await deleteFromTable('rule_violations');
+      await deleteFromTable('reward_usage');
+      await deleteFromTable('punishment_history');
+
+      // Reset tasks
       const { data: tasks, error: fetchTasksError } = await supabase
         .from('tasks')
         .select('id');
@@ -64,6 +68,7 @@ const ActivityDataReset = () => {
         }
       }
 
+      // Reset rules
       const { data: rules, error: fetchRulesError } = await supabase
         .from('rules')
         .select('id');
@@ -87,7 +92,35 @@ const ActivityDataReset = () => {
         }
       }
 
+      // Reset rewards supply and ensure any cached data is cleared
+      const { data: rewards, error: fetchRewardsError } = await supabase
+        .from('rewards')
+        .select('id');
+
+      if (fetchRewardsError) {
+        throw new Error("Failed to fetch rewards");
+      }
+
+      // Update rewards to reset their state
+      for (const reward of rewards) {
+        const { error: updateRewardError } = await supabase
+          .from('rewards')
+          .update({
+            // Reset important reward state data
+            supply: 0 // Reset supply to 0
+          })
+          .eq('id', reward.id);
+
+        if (updateRewardError) {
+          throw new Error(`Failed to update reward ${reward.id}: ${updateRewardError.message}`);
+        }
+      }
+
+      // Force clear all caches to ensure no stale data is displayed
       queryClient.clear();
+      queryClient.invalidateQueries();
+      
+      // Clear browser storage
       localStorage.clear();
       sessionStorage.clear();
 
@@ -96,6 +129,7 @@ const ActivityDataReset = () => {
         description: "All tracked data has been deleted.",
       });
 
+      // Redirect with a timestamp parameter to force fresh page load
       window.location.href = `/admin-testing?fresh=${Date.now()}`;
     } catch (err: any) {
       console.error("Reset failed:", err.message);

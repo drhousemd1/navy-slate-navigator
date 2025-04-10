@@ -22,12 +22,12 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
     [false, false, false, false, false, false, false]
   );
   
-  // Update trackerData when usageData changes, with explicit conversion to boolean values
+  // Force refresh when usageData changes or when component mounts
   useEffect(() => {
     // Important: Force clean up any potential stale data and always convert values to boolean
-    const cleanData = Array.isArray(usageData) && usageData.length > 0 
+    const cleanData = Array.isArray(usageData) && usageData.length === 7
       ? [...usageData].map(val => Boolean(val)) // Explicitly convert any value to boolean
-      : [false, false, false, false, false, false, false];
+      : [false, false, false, false, false, false, false]; // Ensure default if data is invalid
       
     // Create a new array reference to ensure rendering
     setTrackerData(cleanData);
