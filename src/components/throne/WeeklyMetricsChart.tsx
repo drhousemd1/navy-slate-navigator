@@ -3,16 +3,16 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
-  format, startOfWeek, endOfWeek, eachDayOfInterval, parseISO
+  format, eachDayOfInterval, startOfMonth, endOfMonth, parseISO
 } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import WeeklyMetricsSummaryTiles from './WeeklyMetricsSummaryTiles';
+import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-interface WeeklyDataItem {
+interface MonthlyDataItem {
   date: string;
   tasksCompleted: number;
   rulesBroken: number;
@@ -20,14 +20,14 @@ interface WeeklyDataItem {
   punishments: number;
 }
 
-export interface WeeklyMetricsSummary {
+export interface MonthlyMetricsSummary {
   tasksCompleted: number;
   rulesBroken: number;
   rewardsRedeemed: number;
   punishments: number;
 }
 
-const WeeklyMetricsChart: React.FC = () => {
+const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -43,39 +43,43 @@ const WeeklyMetricsChart: React.FC = () => {
     punishments: { color: '#ea384c', label: 'Punishments' }
   };
 
-  const generateWeekDays = (): string[] => {
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
+  }, [queryClient]);
+
+  const generateMonthDays = (): string[] => {
     const today = new Date();
-    const start = startOfWeek(today, { weekStartsOn: 1 });
-    const end = endOfWeek(today, { weekStartsOn: 1 });
+    const start = startOfMonth(today);
+    const end = endOfMonth(today);
     return eachDayOfInterval({ start, end }).map(date => format(date, 'yyyy-MM-dd'));
   };
 
   const formatDate = (dateString: string): string => {
     try {
-      return format(parseISO(dateString), 'EEE');
+      return format(parseISO(dateString), 'MMM d');
     } catch {
       return dateString;
     }
   };
 
-  const weekDates = useMemo(() => generateWeekDays(), []);
+  const monthDates = useMemo(() => generateMonthDays(), []);
 
-  const BAR_WIDTH = 16;
+  const BAR_WIDTH = 6;
   const BAR_COUNT = 4;
-  const BAR_GAP = 4;
+  const BAR_GAP = 2;
   const GROUP_PADDING = 10;
   const CHART_PADDING = 20;
 
   const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
-  const chartWidth = Math.max(weekDates.length * dayWidth + CHART_PADDING * 2, 700);
+  const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
 
-  const fetchWeeklyData = async (): Promise<{
-    dataArray: WeeklyDataItem[];
-    weeklyTotals: WeeklyMetricsSummary;
+  const fetchMonthlyData = async (): Promise<{
+    dataArray: MonthlyDataItem[];
+    monthlyTotals: MonthlyMetricsSummary;
   }> => {
     try {
-      const metrics = new Map<string, WeeklyDataItem>();
-      weekDates.forEach(date => {
+      const metrics = new Map<string, MonthlyDataItem>();
+      monthDates.forEach(date => {
         metrics.set(date, {
           date,
           tasksCompleted: 0,
@@ -86,76 +90,105 @@ const WeeklyMetricsChart: React.FC = () => {
       });
 
       const today = new Date();
-      const start = startOfWeek(today, { weekStartsOn: 1 });
-      const end = endOfWeek(today, { weekStartsOn: 1 });
+      const start = startOfMonth(today);
+      const end = endOfMonth(today);
 
       const [{ data: tasks }, { data: rules }, { data: rewards }, { data: punishments }] = await Promise.all([
         supabase.from('task_completion_history').select('completed_at').gte('completed_at', start.toISOString()).lte('completed_at', end.toISOString()),
         supabase.from('rule_violations').select('violation_date').gte('violation_date', start.toISOString()).lte('violation_date', end.toISOString()),
         supabase.from('reward_usage').select('created_at').gte('created_at', start.toISOString()).lte('created_at', end.toISOString()),
-        supabase.from('punishment_history').select('applied_date').gte('applied_date', start.toISOString()).lte('applied_date', end.toISOString())
+        supabase.from('punishment_history').select('applied_date').gte('applied_date', start.toISOString()).lte('applied_date', end.toISOString()),
       ]);
 
-      tasks?.forEach(({ completed_at }) => {
-        const date = format(parseISO(completed_at), 'yyyy-MM-dd');
-        const day = metrics.get(date);
-        if (day) day.tasksCompleted++;
+      tasks?.forEach(entry => {
+        const key = format(new Date(entry.completed_at), 'yyyy-MM-dd');
+        if (metrics.has(key)) metrics.get(key)!.tasksCompleted++;
       });
 
-      rules?.forEach(({ violation_date }) => {
-        const date = format(parseISO(violation_date), 'yyyy-MM-dd');
-        const day = metrics.get(date);
-        if (day) day.rulesBroken++;
+      rules?.forEach(entry => {
+        const key = format(new Date(entry.violation_date), 'yyyy-MM-dd');
+        if (metrics.has(key)) metrics.get(key)!.rulesBroken++;
       });
 
-      rewards?.forEach(({ created_at }) => {
-        const date = format(parseISO(created_at), 'yyyy-MM-dd');
-        const day = metrics.get(date);
-        if (day) day.rewardsRedeemed++;
+      rewards?.forEach(entry => {
+        const key = format(new Date(entry.created_at), 'yyyy-MM-dd');
+        if (metrics.has(key)) metrics.get(key)!.rewardsRedeemed++;
       });
 
-      punishments?.forEach(({ applied_date }) => {
-        const date = format(parseISO(applied_date), 'yyyy-MM-dd');
-        const day = metrics.get(date);
-        if (day) day.punishments++;
+      punishments?.forEach(entry => {
+        const key = format(new Date(entry.applied_date), 'yyyy-MM-dd');
+        if (metrics.has(key)) metrics.get(key)!.punishments++;
       });
 
-      const dataArray = Array.from(metrics.values());
-      const weeklyTotals = dataArray.reduce<WeeklyMetricsSummary>((totals, item) => {
-        totals.tasksCompleted += item.tasksCompleted;
-        totals.rulesBroken += item.rulesBroken;
-        totals.rewardsRedeemed += item.rewardsRedeemed;
-        totals.punishments += item.punishments;
-        return totals;
-      }, { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 });
+      const result = Array.from(metrics.values());
 
-      return { dataArray, weeklyTotals };
+      const totals: MonthlyMetricsSummary = {
+        tasksCompleted: result.reduce((sum, d) => sum + (d.tasksCompleted ?? 0), 0),
+        rulesBroken: result.reduce((sum, d) => sum + (d.rulesBroken ?? 0), 0),
+        rewardsRedeemed: result.reduce((sum, d) => sum + (d.rewardsRedeemed ?? 0), 0),
+        punishments: result.reduce((sum, d) => sum + (d.punishments ?? 0), 0)
+      };
+
+      return { dataArray: result, monthlyTotals: totals };
     } catch (error) {
-      toast({ title: 'Error loading weekly data', description: `${error}` });
-      throw error;
+      console.error('Error fetching monthly data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch monthly activity data',
+        variant: 'destructive'
+      });
+      return {
+        dataArray: [],
+        monthlyTotals: {
+          tasksCompleted: 0,
+          rulesBroken: 0,
+          rewardsRedeemed: 0,
+          punishments: 0
+        }
+      };
     }
   };
 
-  const { data, isLoading, isError } = useQuery(['weekly-metrics'], fetchWeeklyData);
+  const { data = { dataArray: [], monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } }, isLoading } = useQuery({
+    queryKey: ['monthly-metrics'],
+    queryFn: fetchMonthlyData,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000,
+    staleTime: 0,
+    gcTime: 0
+  });
+
+  const { dataArray, monthlyTotals } = data;
 
   return (
-    <Card className="bg-slate-900">
+    <Card className="w-full p-4">
+      <h2 className="text-xl font-semibold mb-4">Monthly Activity</h2>
       <ChartContainer
-        title="Weekly Activity"
-        chartWidth={chartWidth}
-        chartContainerRef={chartContainerRef}
-        chartScrollRef={chartScrollRef}
+        config={chartConfig}
+        ref={chartContainerRef}
+        scrollRef={chartScrollRef}
+        isDragging={isDragging}
+        setIsDragging={setIsDragging}
+        startX={startX}
+        setStartX={setStartX}
+        scrollLeft={scrollLeft}
+        setScrollLeft={setScrollLeft}
       >
-        {/* Chart Rendering Logic */}
+        <ResponsiveContainer width={chartWidth} height={300}>
+          <BarChart data={dataArray}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" tickFormatter={formatDate} />
+            <YAxis allowDecimals={false} />
+            <Tooltip />
+            {Object.entries(chartConfig).map(([key, { color, label }]) => (
+              <Bar key={key} dataKey={key} fill={color} name={label} radius={[4, 4, 0, 0]} />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
       </ChartContainer>
-      <WeeklyMetricsSummaryTiles summary={data?.weeklyTotals || {
-        tasksCompleted: 0,
-        rulesBroken: 0,
-        rewardsRedeemed: 0,
-        punishments: 0
-      }} />
+      <MonthlyMetricsSummaryTiles summary={monthlyTotals} />
     </Card>
   );
 };
 
-export default WeeklyMetricsChart;
+export default MonthlyMetricsChart;
