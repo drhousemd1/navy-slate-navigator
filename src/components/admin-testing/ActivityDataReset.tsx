@@ -27,7 +27,7 @@ const ActivityDataReset = () => {
           .from(table)
           .delete()
           .gt('created_at', '1900-01-01')
-          .select('*', { count: 'exact' });
+          .select('*', { count: 'exact', head: false }); // Fixed: Removed the second argument
 
         if (error) {
           throw new Error(`Failed to delete from ${table}: ${error.message}`);
