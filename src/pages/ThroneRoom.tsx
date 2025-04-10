@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
-import WeeklyMetricsChart, { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsChart';
+import { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsSummary';
 import MonthlyMetricsChart from '@/components/throne/MonthlyMetricsChart';
 import { Card } from '@/components/ui/card';
 import { InfoIcon, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
@@ -13,6 +13,7 @@ import { useLocation } from 'react-router-dom';
 // Import extracted components
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
 import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
+import { supabase } from '@/integrations/supabase/client';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin } = useAuth();
@@ -29,7 +30,7 @@ const ThroneRoom: React.FC = () => {
 
   // Force refresh when necessary
   useEffect(() => {
-    // Create a function to refresh charts
+    // Create a function to refresh 
     const triggerRefresh = () => {
       setRefreshKey(prev => prev + 1);
     };
@@ -51,10 +52,71 @@ const ThroneRoom: React.FC = () => {
     setRefreshKey(prev => prev + 1);
   }, [rewards, location.pathname]);
   
-  // Handle data callback from the weekly metrics chart
-  const handleMetricsDataLoaded = (summaryData: WeeklyMetricsSummary) => {
-    setMetricsSummary(summaryData);
-  };
+  // Fetch summary data directly since WeeklyMetricsChart is removed
+  useEffect(() => {
+    const fetchSummaryData = async () => {
+      try {
+        // Get current week's start and end dates
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const weekStart = new Date(today.setDate(diff));
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 7);
+        
+        // Fetch task completions
+        const { data: taskCompletions, error: taskError } = await supabase
+          .from('task_completion_history')
+          .select('*')
+          .gte('completed_at', weekStart.toISOString())
+          .lt('completed_at', weekEnd.toISOString());
+          
+        if (taskError) throw new Error(`Error fetching tasks: ${taskError.message}`);
+        
+        // Fetch rule violations
+        const { data: ruleViolations, error: ruleError } = await supabase
+          .from('rule_violations')
+          .select('*')
+          .gte('violation_date', weekStart.toISOString())
+          .lt('violation_date', weekEnd.toISOString());
+          
+        if (ruleError) throw new Error(`Error fetching rule violations: ${ruleError.message}`);
+        
+        // Fetch reward usages
+        const { data: rewardUsages, error: rewardError } = await supabase
+          .from('reward_usage')
+          .select('*')
+          .gte('created_at', weekStart.toISOString())
+          .lt('created_at', weekEnd.toISOString());
+          
+        if (rewardError) throw new Error(`Error fetching rewards: ${rewardError.message}`);
+        
+        // Fetch punishments
+        const { data: punishments, error: punishmentError } = await supabase
+          .from('punishment_history')
+          .select('*')
+          .gte('applied_date', weekStart.toISOString())
+          .lt('applied_date', weekEnd.toISOString());
+          
+        if (punishmentError) throw new Error(`Error fetching punishments: ${punishmentError.message}`);
+        
+        // Calculate summary counts
+        const summary: WeeklyMetricsSummary = {
+          tasksCompleted: taskCompletions?.length || 0,
+          rulesBroken: ruleViolations?.length || 0,
+          rewardsRedeemed: rewardUsages?.length || 0,
+          punishments: punishments?.length || 0
+        };
+        
+        setMetricsSummary(summary);
+      } catch (err) {
+        console.error('Error fetching metrics summary data:', err);
+      }
+    };
+    
+    fetchSummaryData();
+  }, [refreshKey]);
 
   return (
     <AppLayout>
@@ -65,12 +127,18 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
-            {/* Weekly metrics section with key to force refresh */}
+            {/* Weekly metrics summary tiles */}
             <div className="space-y-2">
-              <WeeklyMetricsChart 
-                onDataLoaded={handleMetricsDataLoaded}
-                key={`weekly-metrics-${refreshKey}`}
-              />
+              <Card className="bg-navy border border-light-navy rounded-lg">
+                <div className="p-4">
+                  <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
+                  <div className="w-full" style={{ height: 300 }}>
+                    <div className="w-full h-64 flex items-center justify-center border border-dashed border-gray-700 rounded-lg">
+                      <span className="text-gray-400 text-sm">Weekly activity graph has been removed</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
               
               <WeeklyMetricsSummaryTiles 
                 tasksCompleted={metricsSummary.tasksCompleted}
