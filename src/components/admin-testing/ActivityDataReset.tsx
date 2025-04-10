@@ -50,7 +50,7 @@ const ActivityDataReset = () => {
       
       if (punishmentError) throw new Error(`Error resetting punishments: ${punishmentError.message}`);
       
-      // Reset task usage data
+      // Reset task usage data and calendars
       const { data: tasks, error: fetchTasksError } = await supabase
         .from('tasks')
         .select('id');
@@ -63,7 +63,7 @@ const ActivityDataReset = () => {
           const { error: updateTaskError } = await supabase
             .from('tasks')
             .update({
-              usage_data: [],
+              usage_data: [0, 0, 0, 0, 0, 0, 0],
               completed: false,
               last_completed_date: null
             })
@@ -75,33 +75,45 @@ const ActivityDataReset = () => {
         }
       }
       
-      // Reset reward usage tracking
-      const { data: rewards, error: fetchRewardsError } = await supabase
-        .from('rewards')
+      // Reset rule usage data and calendars
+      const { data: rules, error: fetchRulesError } = await supabase
+        .from('rules')
         .select('id');
-        
-      if (fetchRewardsError) throw new Error(`Error fetching rewards: ${fetchRewardsError.message}`);
+      
+      if (fetchRulesError) throw new Error(`Error fetching rules: ${fetchRulesError.message}`);
+      
+      // Update each rule to reset usage data
+      if (rules && rules.length > 0) {
+        for (const rule of rules) {
+          const { error: updateRuleError } = await supabase
+            .from('rules')
+            .update({
+              usage_data: [0, 0, 0, 0, 0, 0, 0]
+            })
+            .eq('id', rule.id);
+            
+          if (updateRuleError) {
+            console.error(`Error updating rule ${rule.id}:`, updateRuleError);
+          }
+        }
+      }
       
       // Force a complete cache reset to ensure all components refresh
-      queryClient.removeQueries();
-      queryClient.invalidateQueries();
+      queryClient.clear(); // Clear the entire cache
       
       // Then invalidate specific queries to ensure they reload
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['punishment-history'] });
-      queryClient.invalidateQueries({ queryKey: ['rule-violations'] });
+      queryClient.invalidateQueries();
       
       toast({
         title: 'Reset Complete',
-        description: 'All activity data has been reset successfully. Please refresh any open pages to see the changes.',
+        description: 'All activity data has been reset successfully. Please refresh the page to see all changes.',
         duration: 5000,
       });
       
-      // Force window reload to ensure metrics pages are refreshed
-      window.location.reload();
+      // Force window reload to ensure all pages are refreshed
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       console.error('Reset error:', error);
       toast({

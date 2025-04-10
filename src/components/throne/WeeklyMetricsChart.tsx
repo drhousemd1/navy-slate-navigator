@@ -59,11 +59,11 @@ const WeeklyMetricsChart: React.FC = () => {
       
       if (taskError) {
         console.error('Error fetching task completions:', taskError);
-      } else {
+      } else if (taskCompletions && taskCompletions.length > 0) {
         // Group completions by date
         const completionsByDate = new Map<string, Set<string>>();
         
-        taskCompletions?.forEach(entry => {
+        taskCompletions.forEach(entry => {
           const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
           
           if (!completionsByDate.has(date)) {
@@ -91,8 +91,8 @@ const WeeklyMetricsChart: React.FC = () => {
       
       if (ruleError) {
         console.error('Error fetching rule violations:', ruleError);
-      } else {
-        ruleViolations?.forEach(entry => {
+      } else if (ruleViolations && ruleViolations.length > 0) {
+        ruleViolations.forEach(entry => {
           const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
           if (metricsMap.has(date)) {
             metricsMap.get(date)!.rulesBroken++;
@@ -109,8 +109,8 @@ const WeeklyMetricsChart: React.FC = () => {
       
       if (rewardError) {
         console.error('Error fetching reward usages:', rewardError);
-      } else {
-        rewardUsages?.forEach(entry => {
+      } else if (rewardUsages && rewardUsages.length > 0) {
+        rewardUsages.forEach(entry => {
           const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
           if (metricsMap.has(date)) {
             metricsMap.get(date)!.rewardsRedeemed++;
@@ -127,8 +127,8 @@ const WeeklyMetricsChart: React.FC = () => {
       
       if (punishmentError) {
         console.error('Error fetching punishments:', punishmentError);
-      } else {
-        punishments?.forEach(entry => {
+      } else if (punishments && punishments.length > 0) {
+        punishments.forEach(entry => {
           const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
           if (metricsMap.has(date)) {
             metricsMap.get(date)!.punishments++;
@@ -152,7 +152,7 @@ const WeeklyMetricsChart: React.FC = () => {
   };
 
   // Fetch data with React Query
-  const { data = [], isLoading, error } = useQuery({
+  const { data = [], isLoading, error, refetch } = useQuery({
     queryKey: ['weekly-metrics'],
     queryFn: fetchWeeklyData,
     refetchOnWindowFocus: true,

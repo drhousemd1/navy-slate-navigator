@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { getMondayBasedDay } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface WeeklyUsageTrackerProps {
   usageData: boolean[];
@@ -14,6 +15,13 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
 }) => {
   // Get the current day of the week (0 = Monday, 6 = Sunday)
   const currentDayOfWeek = getMondayBasedDay();
+  const queryClient = useQueryClient();
+  const [trackerData, setTrackerData] = useState<boolean[]>(usageData);
+  
+  // Add useEffect to update trackerData when usageData changes
+  useEffect(() => {
+    setTrackerData(usageData);
+  }, [usageData]);
   
   // Ensure we always have exactly 7 circles
   const renderCircles = () => {
@@ -22,7 +30,7 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
     // Always render 7 circles
     for (let i = 0; i < 7; i++) {
       // Get usage status from data or default to false
-      const used = i < usageData.length ? usageData[i] : false;
+      const used = i < trackerData.length ? trackerData[i] : false;
       
       circles.push(
         <div 

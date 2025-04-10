@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -31,6 +30,9 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
+    staleTime: 10000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   useEffect(() => {
@@ -154,6 +156,9 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       if (success) {
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
         queryClient.invalidateQueries({ queryKey: ['task-completions'] });
+        queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
+        queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
+        queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
         
         if (completed) {
           const task = tasks.find(t => t.id === taskId);

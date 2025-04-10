@@ -13,6 +13,7 @@ import HighlightedText from '../components/task/HighlightedText';
 import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Rule {
   id: string;
@@ -44,6 +45,7 @@ const Rules: React.FC = () => {
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -78,6 +80,12 @@ const Rules: React.FC = () => {
     };
     
     fetchRules();
+    
+    const intervalId = setInterval(() => {
+      fetchRules();
+    }, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleAddRule = () => {
