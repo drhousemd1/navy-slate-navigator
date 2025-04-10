@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -10,7 +10,7 @@ import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 interface MonthlyDataItem {
   date: string;
@@ -20,7 +20,7 @@ interface MonthlyDataItem {
   punishments: number;
 }
 
-export interface MonthlyMetricsSummary {
+interface MonthlyMetricsSummary {
   tasksCompleted: number;
   rulesBroken: number;
   rewardsRedeemed: number;
@@ -30,7 +30,6 @@ export interface MonthlyMetricsSummary {
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
 
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -136,7 +135,10 @@ const MonthlyMetricsChart: React.FC = () => {
     }
   };
 
-  const { data, isLoading, isError } = useQuery(['monthly-metrics'], fetchMonthlyData);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['monthly-metrics'],
+    queryFn: fetchMonthlyData
+  });
 
   return (
     <Card className="bg-slate-900">
