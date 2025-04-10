@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -10,7 +10,7 @@ import { ChartContainer } from '@/components/ui/chart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import WeeklyMetricsSummaryTiles from './WeeklyMetricsSummaryTiles';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface WeeklyDataItem {
   date: string;
@@ -20,7 +20,7 @@ interface WeeklyDataItem {
   punishments: number;
 }
 
-interface WeeklyMetricsSummary {
+export interface WeeklyMetricsSummary {
   tasksCompleted: number;
   rulesBroken: number;
   rewardsRedeemed: number;
@@ -30,6 +30,7 @@ interface WeeklyMetricsSummary {
 const WeeklyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -135,12 +136,7 @@ const WeeklyMetricsChart: React.FC = () => {
     }
   };
 
-  const query = useQuery({
-    queryKey: ['weekly-metrics'],
-    queryFn: fetchWeeklyData
-  });
-
-  const data = query.data;
+  const { data, isLoading, isError } = useQuery(['weekly-metrics'], fetchWeeklyData);
 
   return (
     <Card className="bg-slate-900">
