@@ -20,6 +20,7 @@ export const usePunishmentImageCarousel = ({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
 
+  // Handle image list changes
   useEffect(() => {
     const changed =
       images.length !== previousImages.length ||
@@ -28,6 +29,7 @@ export const usePunishmentImageCarousel = ({
     if (changed) {
       setPreviousImages(images);
 
+      // Only set a new visibleImage if one is not set or missing
       if ((!visibleImage || !images.includes(visibleImage)) && images.length > 0) {
         setVisibleImage(images[0]);
         setTransitionImage(null);
@@ -36,6 +38,7 @@ export const usePunishmentImageCarousel = ({
     }
   }, [images, visibleImage]);
 
+  // Rotate images by external index
   useEffect(() => {
     if (!images.length || images.length <= 1) return;
 
@@ -59,7 +62,7 @@ export const usePunishmentImageCarousel = ({
           }, 2000);
 
           return () => clearTimeout(fadeTimeout);
-        }, 100);
+        }, 100); // Allow rendering before starting fade
       });
     };
 
