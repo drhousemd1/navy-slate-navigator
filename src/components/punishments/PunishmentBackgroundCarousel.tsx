@@ -1,6 +1,4 @@
-// COPY OF ADMIN TESTING WORKING CODE — ADAPTED FOR PUNISHMENT
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePunishmentImageCarousel } from './hooks/usePunishmentImageCarousel';
 
 interface PunishmentBackgroundCarouselProps {
@@ -20,12 +18,22 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
   focalPointX = 50,
   focalPointY = 50
 }) => {
-  const images: (string | null)[] =
+  const images: string[] =
     backgroundImages && backgroundImages.length > 0
-      ? backgroundImages
+      ? backgroundImages.filter((img): img is string => !!img)
       : backgroundImageUrl
       ? [backgroundImageUrl]
       : [];
+
+  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const interval = setInterval(() => {
+      setGlobalCarouselIndex((prev) => prev + 1);
+    }, carouselTimer * 1000);
+    return () => clearInterval(interval);
+  }, [carouselTimer, images.length]);
 
   const {
     visibleImage,
@@ -33,7 +41,7 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
     isTransitioning
   } = usePunishmentImageCarousel({
     images,
-    carouselTimer
+    globalCarouselIndex
   });
 
   if (!visibleImage && !transitionImage) return null;
@@ -44,28 +52,29 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
         <img
           src={visibleImage}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
+          className="absolute inset-0 w-full h-full object-cover z-0"
           style={{
+            opacity: backgroundOpacity / 100,
             transition: 'opacity 2s ease-in-out',
-            objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100
+            objectPosition: `${focalPointX}% ${focalPointY}%`
           }}
           draggable={false}
+          aria-hidden="true"
         />
       )}
+
       {transitionImage && (
         <img
           src={transitionImage}
           alt=""
-          className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
-            isTransitioning ? 'opacity-100' : 'opacity-0'
-          }`}
+          className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
           style={{
+            opacity: backgroundOpacity / 100,
             transition: 'opacity 2s ease-in-out',
-            objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: isTransitioning ? backgroundOpacity / 100 : 0
+            objectPosition: `${focalPointX}% ${focalPointY}%`
           }}
           draggable={false}
+          aria-hidden="true"
         />
       )}
     </>
