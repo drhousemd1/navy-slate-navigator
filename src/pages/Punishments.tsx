@@ -19,8 +19,6 @@ const PunishmentsContent: React.FC = () => {
   
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
-  const [initializing, setInitializing] = useState(false);
-  const [hasInitialized, setHasInitialized] = useState(false); // New state to track initialization
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Add global carousel index state
@@ -51,53 +49,6 @@ const PunishmentsContent: React.FC = () => {
       }
     };
   }, []);
-
-  // Modified initialization effect with hasInitialized flag
-  useEffect(() => {
-    const initSamplePunishments = async () => {
-      if (!loading && punishments.length === 0 && !initializing && !hasInitialized) {
-        setInitializing(true);
-        
-        const samplePunishments = [
-          {
-            title: "Late to Meeting",
-            description: "Being late to scheduled meetings",
-            points: 10,
-            icon_name: "Clock",
-            icon_color: "#ea384c"
-          },
-          {
-            title: "Missed Deadline",
-            description: "Missing agreed upon deadlines",
-            points: 15,
-            icon_name: "Bomb",
-            icon_color: "#f97316"
-          },
-          {
-            title: "Breaking Rules",
-            description: "Violation of established rules",
-            points: 20,
-            icon_name: "Skull",
-            icon_color: "#7c3aed"
-          }
-        ];
-        
-        try {
-          for (const punishment of samplePunishments) {
-            await createPunishment(punishment);
-          }
-          console.log("Sample punishments created successfully");
-          setHasInitialized(true); // Mark as initialized after success
-        } catch (error) {
-          console.error("Error creating sample punishments:", error);
-        } finally {
-          setInitializing(false);
-        }
-      }
-    };
-    
-    initSamplePunishments();
-  }, [loading, punishments.length, createPunishment, initializing, hasInitialized]); // Add hasInitialized to deps
 
   const getIconComponent = (iconName: string) => {
     switch(iconName) {
@@ -139,7 +90,7 @@ const PunishmentsContent: React.FC = () => {
     <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
       <PunishmentsHeader />
       
-      {loading || initializing ? (
+      {loading ? (
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="h-32 bg-navy animate-pulse rounded-lg"></div>
