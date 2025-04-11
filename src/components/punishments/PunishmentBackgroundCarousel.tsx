@@ -48,29 +48,31 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
 
   return (
     <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
+      {/* Base image (always visible, never fades out) */}
       {visibleImage && (
         <img
           src={visibleImage}
           alt=""
           className="absolute inset-0 w-full h-full object-cover z-0"
           style={{
-            transition: "opacity 2s ease-in-out",
             objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: transitionImage ? 0 : backgroundOpacity / 100,
+            transition: "opacity 2s ease-in-out",
+            opacity: backgroundOpacity / 100,
           }}
           draggable={false}
           aria-hidden="true"
         />
       )}
 
+      {/* Fading-in image, only appears during transition */}
       {transitionImage && (
         <img
           src={transitionImage}
           alt=""
           className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
           style={{
-            transition: "opacity 2s ease-in-out",
             objectPosition: `${focalPointX}% ${focalPointY}%`,
+            transition: "opacity 2s ease-in-out",
             opacity: isTransitioning ? backgroundOpacity / 100 : 0,
           }}
           draggable={false}
