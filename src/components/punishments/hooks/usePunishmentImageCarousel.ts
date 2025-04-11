@@ -1,8 +1,9 @@
+
 import { useEffect, useState } from 'react';
 
 interface UsePunishmentImageCarouselProps {
-  images: string[];
-  globalCarouselIndex: number;
+  images: (string | null)[];
+  carouselTimer?: number;
 }
 
 interface UsePunishmentImageCarouselResult {
@@ -13,59 +14,59 @@ interface UsePunishmentImageCarouselResult {
 
 export const usePunishmentImageCarousel = ({
   images,
-  globalCarouselIndex
+  carouselTimer = 5
 }: UsePunishmentImageCarouselProps): UsePunishmentImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
+  const filteredImages = images.filter((img): img is string => !!img);
+  const [visibleImage, setVisibleImage] = useState<string | null>(filteredImages.length > 0 ? filteredImages[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [previousImages, setPreviousImages] = useState<string[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
+  // Effect to change images at the specified interval
   useEffect(() => {
-    const changed =
-      images.length !== previousImages.length ||
-      images.some((img, i) => previousImages[i] !== img);
+    if (filteredImages.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      const nextIndex = (currentIndex + 1) % filteredImages.length;
+      setCurrentIndex(nextIndex);
+    }, carouselTimer * 1000);
+    
+    return () => clearInterval(interval);
+  }, [currentIndex, filteredImages.length, carouselTimer]);
 
-    if (changed) {
-      setPreviousImages(images);
-      if (!visibleImage || !images.includes(visibleImage)) {
-        setVisibleImage(images[0] ?? null);
-        setTransitionImage(null);
-        setIsTransitioning(false);
-      }
-    }
-  }, [images]);
-
+  // Effect to handle the transition between images
   useEffect(() => {
-    if (!images.length || images.length <= 1) return;
+    if (filteredImages.length <= 1) return;
+    
+    const nextImage = filteredImages[currentIndex];
+    if (nextImage === visibleImage) return;
 
-    const nextIndex = globalCarouselIndex % images.length;
-    const next = images[nextIndex];
-
-    const preload = new Image();
-    preload.src = next;
-
-    preload.onload = () => {
-      setTransitionImage(next);
+    // Preload the next image
+    const preloadImage = new Image();
+    preloadImage.src = nextImage;
+    
+    preloadImage.onload = () => {
+      setTransitionImage(nextImage);
       requestAnimationFrame(() => {
-        setTimeout(() => {
-          setIsTransitioning(true);
+        setIsTransitioning(true);
 
-          const timeout = setTimeout(() => {
-            setVisibleImage(next);
-            setTransitionImage(null);
-            setIsTransitioning(false);
-          }, 2000);
+        // After transition completes, update the visible image
+        const timeout = setTimeout(() => {
+          setVisibleImage(nextImage);
+          setTransitionImage(null);
+          setIsTransitioning(false);
+        }, 2000); // Match the transition duration
 
-          return () => clearTimeout(timeout);
-        }, 0);
+        return () => clearTimeout(timeout);
       });
     };
 
-    preload.onerror = () => {
-      console.error("Failed to load image:", next);
-      setVisibleImage(next);
+    preloadImage.onerror = () => {
+      console.error("Failed to load image:", nextImage);
+      // If image fails to load, still update to prevent getting stuck
+      setVisibleImage(nextImage);
     };
-  }, [globalCarouselIndex, images]);
+  }, [currentIndex, filteredImages]);
 
   return {
     visibleImage,
