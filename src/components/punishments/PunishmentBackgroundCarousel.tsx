@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { usePunishmentImageCarousel } from './hooks/usePunishmentImageCarousel';
 
 interface PunishmentBackgroundCarouselProps {
@@ -18,8 +18,8 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
   focalPointX = 50,
   focalPointY = 50
 }) => {
-  const allImages: (string | null)[] =
-    backgroundImages && Array.isArray(backgroundImages) && backgroundImages.length > 0
+  const images: (string | null)[] =
+    backgroundImages && backgroundImages.length > 0
       ? backgroundImages
       : backgroundImageUrl
       ? [backgroundImageUrl]
@@ -30,21 +30,9 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
     transitionImage,
     isTransitioning
   } = usePunishmentImageCarousel({
-    images: allImages,
+    images,
     carouselTimer
   });
-
-  const [showTransition, setShowTransition] = useState(false);
-
-  useEffect(() => {
-    if (transitionImage) {
-      setShowTransition(true);
-      const cleanup = setTimeout(() => {
-        setShowTransition(false);
-      }, 2000);
-      return () => clearTimeout(cleanup);
-    }
-  }, [transitionImage]);
 
   if (!visibleImage && !transitionImage) return null;
 
@@ -52,13 +40,12 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
     <>
       {visibleImage && (
         <img
-          key="visible"
           src={visibleImage}
           alt=""
           className="absolute inset-0 w-full h-full object-cover z-0"
           style={{
             opacity: backgroundOpacity / 100,
-            transition: 'opacity 0.2s linear',
+            transition: 'opacity 2s ease-in-out',
             objectPosition: `${focalPointX}% ${focalPointY}%`
           }}
           draggable={false}
@@ -66,9 +53,8 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
         />
       )}
 
-      {transitionImage && showTransition && (
+      {transitionImage && (
         <img
-          key="transition"
           src={transitionImage}
           alt=""
           className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
