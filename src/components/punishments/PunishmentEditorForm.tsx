@@ -60,10 +60,13 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
 
   const handleFormSubmit = async (values: PunishmentFormValues) => {
     try {
+      // Ensure we have all required fields
       const dataToSave: PunishmentData = {
         ...values,
         icon_name: selectedIconName,
         background_image_url: imagePreview,
+        title: values.title || 'Unnamed Punishment', // Ensure title is not empty
+        points: values.points || 0, // Ensure points is not undefined
       };
       
       if (punishmentData?.id) {
@@ -101,8 +104,8 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
             onImageUpload={handleImageUpload}
             setValue={form.setValue}
             watch={form.watch}
-            initialBackgroundImages={punishmentData?.background_images}
-            initialCarouselTimer={punishmentData?.carousel_timer}
+            initialBackgroundImages={punishmentData?.background_images || []}
+            initialCarouselTimer={punishmentData?.carousel_timer || 5}
           />
           
           <PunishmentColorSettings control={form.control} />

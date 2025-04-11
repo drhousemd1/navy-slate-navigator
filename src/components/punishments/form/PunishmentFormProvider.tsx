@@ -18,7 +18,7 @@ export const punishmentFormSchema = z.object({
   background_opacity: z.number().min(0).max(100).default(50),
   focal_point_x: z.number().min(0).max(100).default(50),
   focal_point_y: z.number().min(0).max(100).default(50),
-  background_images: z.array(z.string().nullable()).optional(),
+  background_images: z.array(z.string().nullable()).optional().nullable(),
   carousel_timer: z.number().min(1).default(5),
 });
 
@@ -33,6 +33,11 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
   punishmentData,
   children
 }) => {
+  // Ensure we have valid background_images
+  const backgroundImages = Array.isArray(punishmentData?.background_images) 
+    ? punishmentData?.background_images 
+    : [];
+
   const form = useForm<PunishmentFormValues>({
     resolver: zodResolver(punishmentFormSchema),
     defaultValues: {
@@ -47,7 +52,7 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
       background_opacity: punishmentData?.background_opacity || 50,
       focal_point_x: punishmentData?.focal_point_x || 50,
       focal_point_y: punishmentData?.focal_point_y || 50,
-      background_images: punishmentData?.background_images || [],
+      background_images: backgroundImages,
       carousel_timer: punishmentData?.carousel_timer || 5,
     }
   });

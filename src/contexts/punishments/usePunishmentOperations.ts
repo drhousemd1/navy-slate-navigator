@@ -29,7 +29,22 @@ export const usePunishmentOperations = () => {
       
       if (historyError) throw historyError;
       
-      setPunishments(punishmentsData || []);
+      // Transform the data to ensure it matches the expected types
+      const transformedPunishments = punishmentsData?.map(punishment => {
+        return {
+          ...punishment,
+          // Ensure background_images is an array
+          background_images: Array.isArray(punishment.background_images) 
+            ? punishment.background_images 
+            : punishment.background_images ? [punishment.background_images] : [],
+          // Ensure carousel_timer is a number
+          carousel_timer: typeof punishment.carousel_timer === 'number' 
+            ? punishment.carousel_timer 
+            : 5
+        };
+      }) || [];
+      
+      setPunishments(transformedPunishments);
       setPunishmentHistory(historyData || []);
       
       const totalDeducted = (historyData || []).reduce((sum, item) => sum + item.points_deducted, 0);
@@ -50,15 +65,31 @@ export const usePunishmentOperations = () => {
 
   const createPunishment = async (punishmentData: PunishmentData): Promise<string> => {
     try {
+      // Ensure the data is in the correct format before sending to Supabase
+      const dataToSave = {
+        ...punishmentData
+      };
+      
       const { data, error } = await supabase
         .from('punishments')
-        .insert(punishmentData)
+        .insert(dataToSave)
         .select()
         .single();
       
       if (error) throw error;
       
-      setPunishments(prev => [...prev, data]);
+      // Transform the returned data to match our type
+      const newPunishment: PunishmentData = {
+        ...data,
+        background_images: Array.isArray(data.background_images) 
+          ? data.background_images 
+          : data.background_images ? [data.background_images] : [],
+        carousel_timer: typeof data.carousel_timer === 'number' 
+          ? data.carousel_timer 
+          : 5
+      };
+      
+      setPunishments(prev => [...prev, newPunishment]);
       toast({
         title: "Success",
         description: "Punishment created successfully",

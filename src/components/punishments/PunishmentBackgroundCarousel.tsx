@@ -3,7 +3,7 @@ import React from 'react';
 import { usePunishmentImageCarousel } from './hooks/usePunishmentImageCarousel';
 
 interface PunishmentBackgroundCarouselProps {
-  backgroundImages?: (string | null)[];
+  backgroundImages?: (string | null)[] | null;
   backgroundImageUrl?: string;
   carouselTimer?: number;
   backgroundOpacity: number;
@@ -19,9 +19,12 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
   focalPointX = 50,
   focalPointY = 50
 }) => {
+  // Ensure we have an array to work with
+  const imagesArray = Array.isArray(backgroundImages) ? backgroundImages : [];
+  
   // Combine background_images array and single background_image_url
-  const allImages: (string | null)[] = backgroundImages.length > 0 
-    ? backgroundImages 
+  const allImages: (string | null)[] = imagesArray.length > 0 
+    ? imagesArray 
     : (backgroundImageUrl ? [backgroundImageUrl] : []);
 
   const {
