@@ -14,11 +14,13 @@ const PunishmentsContent: React.FC = () => {
     loading, 
     createPunishment, 
     updatePunishment,
+    deletePunishment,
     globalCarouselTimer 
   } = usePunishments();
   
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
+  const [cleanupDone, setCleanupDone] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Add global carousel index state
@@ -32,6 +34,26 @@ const PunishmentsContent: React.FC = () => {
     
     return () => clearInterval(interval);
   }, [globalCarouselTimer]);
+
+  // Effect to delete dummy punishment cards
+  useEffect(() => {
+    const removeDummyPunishments = async () => {
+      if (!loading && !cleanupDone && punishments.length > 0) {
+        const dummyTitles = ["Late to Meeting", "Missed Deadline", "Breaking Rules"];
+        
+        for (const punishment of punishments) {
+          if (dummyTitles.includes(punishment.title) && punishment.id) {
+            console.log(`Removing dummy punishment: ${punishment.title}`);
+            await deletePunishment(punishment.id);
+          }
+        }
+        
+        setCleanupDone(true);
+      }
+    };
+    
+    removeDummyPunishments();
+  }, [loading, punishments, deletePunishment, cleanupDone]);
 
   useEffect(() => {
     const handleAddNewPunishment = () => {
