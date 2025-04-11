@@ -19,8 +19,8 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
   focalPointX = 50,
   focalPointY = 50
 }) => {
-  // Ensure we have an array to work with
-  const imagesArray = Array.isArray(backgroundImages) ? backgroundImages : [];
+  // Ensure we have a non-null array to work with
+  const imagesArray = backgroundImages && Array.isArray(backgroundImages) ? backgroundImages : [];
   
   // Combine background_images array and single background_image_url
   const allImages: (string | null)[] = imagesArray.length > 0 

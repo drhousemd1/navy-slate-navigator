@@ -30,17 +30,30 @@ export const usePunishmentOperations = () => {
       if (historyError) throw historyError;
       
       // Transform the data to ensure it matches the expected types
-      const transformedPunishments = punishmentsData?.map(punishment => {
+      const transformedPunishments: PunishmentData[] = punishmentsData?.map(punishment => {
+        // Convert background_images to ensure it's a string array
+        let backgroundImages: (string | null)[] = [];
+        if (punishment.background_images) {
+          // Handle different possible formats
+          if (Array.isArray(punishment.background_images)) {
+            backgroundImages = punishment.background_images
+              .filter(img => img !== null && img !== undefined)
+              .map(img => typeof img === 'string' ? img : null);
+          } else if (typeof punishment.background_images === 'string') {
+            backgroundImages = [punishment.background_images];
+          }
+        }
+        
         return {
           ...punishment,
-          // Ensure background_images is an array
-          background_images: Array.isArray(punishment.background_images) 
-            ? punishment.background_images 
-            : punishment.background_images ? [punishment.background_images] : [],
+          // Ensure background_images is an array of strings or null values
+          background_images: backgroundImages,
           // Ensure carousel_timer is a number
           carousel_timer: typeof punishment.carousel_timer === 'number' 
             ? punishment.carousel_timer 
-            : 5
+            : punishment.carousel_timer !== null && punishment.carousel_timer !== undefined
+              ? Number(punishment.carousel_timer) 
+              : 5
         };
       }) || [];
       
@@ -65,9 +78,20 @@ export const usePunishmentOperations = () => {
 
   const createPunishment = async (punishmentData: PunishmentData): Promise<string> => {
     try {
+      // Format the background_images to ensure it's compatible with Supabase
+      let backgroundImages = punishmentData.background_images;
+      if (backgroundImages && Array.isArray(backgroundImages)) {
+        // Ensure all elements are strings or null
+        backgroundImages = backgroundImages.map(img => 
+          img !== null && img !== undefined ? String(img) : null
+        );
+      }
+      
       // Ensure the data is in the correct format before sending to Supabase
       const dataToSave = {
-        ...punishmentData
+        ...punishmentData,
+        background_images: backgroundImages || null,
+        carousel_timer: punishmentData.carousel_timer || 5
       };
       
       const { data, error } = await supabase
@@ -82,11 +106,13 @@ export const usePunishmentOperations = () => {
       const newPunishment: PunishmentData = {
         ...data,
         background_images: Array.isArray(data.background_images) 
-          ? data.background_images 
-          : data.background_images ? [data.background_images] : [],
+          ? data.background_images.map(img => typeof img === 'string' ? img : null)
+          : data.background_images ? [String(data.background_images)] : [],
         carousel_timer: typeof data.carousel_timer === 'number' 
           ? data.carousel_timer 
-          : 5
+          : data.carousel_timer !== null && data.carousel_timer !== undefined
+            ? Number(data.carousel_timer) 
+            : 5
       };
       
       setPunishments(prev => [...prev, newPunishment]);
