@@ -54,9 +54,9 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
           alt=""
           className="absolute inset-0 w-full h-full object-cover z-0"
           style={{
-            opacity: backgroundOpacity / 100,
             transition: 'opacity 2s ease-in-out',
-            objectPosition: `${focalPointX}% ${focalPointY}%`
+            objectPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: backgroundOpacity / 100
           }}
           draggable={false}
           aria-hidden="true"
@@ -69,9 +69,9 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
           alt=""
           className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
           style={{
-            opacity: backgroundOpacity / 100,
             transition: 'opacity 2s ease-in-out',
-            objectPosition: `${focalPointX}% ${focalPointY}%`
+            objectPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: isTransitioning ? backgroundOpacity / 100 : 0
           }}
           draggable={false}
           aria-hidden="true"
