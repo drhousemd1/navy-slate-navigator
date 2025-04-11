@@ -50,7 +50,6 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
     <>
       {visibleImage && (
         <img
-          key={`visible-${visibleImage}`}
           src={visibleImage}
           alt=""
           className="absolute inset-0 w-full h-full object-cover z-0 opacity-100"
@@ -66,7 +65,6 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
 
       {transitionImage && (
         <img
-          key={`transition-${transitionImage}`}
           src={transitionImage}
           alt=""
           className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
