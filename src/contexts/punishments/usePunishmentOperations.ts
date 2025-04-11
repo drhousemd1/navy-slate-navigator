@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -137,11 +138,17 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
+      // Update the local state first
       setPunishments(prev => 
         prev.map(punishment => 
           punishment.id === id ? { ...punishment, ...dataToUpdate } : punishment
         )
       );
+      
+      // Wait for state update, then fetch fresh data
+      setTimeout(() => {
+        fetchPunishments();
+      }, 100);
       
       toast({
         title: "Success",
@@ -167,8 +174,14 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
+      // Update local state first
       setPunishments(prev => prev.filter(punishment => punishment.id !== id));
       setPunishmentHistory(prev => prev.filter(item => item.punishment_id !== id));
+      
+      // Wait for state update, then fetch fresh data
+      setTimeout(() => {
+        fetchPunishments();
+      }, 100);
       
       toast({
         title: "Success",
