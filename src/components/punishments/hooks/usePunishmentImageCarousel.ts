@@ -47,19 +47,18 @@ export const usePunishmentImageCarousel = ({
     preload.onload = () => {
       setTransitionImage(next);
 
-      // Give the DOM a tick to render the transition image before fading
       requestAnimationFrame(() => {
         setTimeout(() => {
           setIsTransitioning(true);
 
-          const timeout = setTimeout(() => {
+          const fadeTimeout = setTimeout(() => {
             setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
-          }, 2000);
+          }, 2000); // match fade duration
 
-          return () => clearTimeout(timeout);
-        }, 100); // short delay before triggering fade
+          return () => clearTimeout(fadeTimeout);
+        }, 100); // small delay allows transitionImage to visibly render
       });
     };
 
