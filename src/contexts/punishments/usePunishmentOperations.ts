@@ -135,6 +135,7 @@ export const usePunishmentOperations = () => {
 
   const updatePunishment = async (id: string, punishmentData: PunishmentData): Promise<void> => {
     try {
+      // Extract id to avoid sending it in the update
       const { id: _, ...dataToUpdate } = punishmentData;
       
       console.log("Updating punishment with ID:", id);
@@ -147,11 +148,15 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
+      // Update the local state
       setPunishments(prev => 
         prev.map(punishment => 
           punishment.id === id ? { ...punishment, ...dataToUpdate } : punishment
         )
       );
+      
+      // Fetch punishments again to ensure state is fresh
+      fetchPunishments();
       
       toast({
         title: "Success",
@@ -177,8 +182,12 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
+      // Update local state
       setPunishments(prev => prev.filter(punishment => punishment.id !== id));
       setPunishmentHistory(prev => prev.filter(item => item.punishment_id !== id));
+      
+      // Fetch punishments again to ensure state is fresh
+      fetchPunishments();
       
       toast({
         title: "Success",

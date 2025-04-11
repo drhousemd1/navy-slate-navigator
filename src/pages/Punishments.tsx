@@ -1,12 +1,12 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
-import { Clock, Skull, Bomb, Zap, Plus } from 'lucide-react';
+import { Clock, Skull, Bomb, Zap } from 'lucide-react';
 import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts/PunishmentsContext';
 import PunishmentEditor from '../components/PunishmentEditor';
-import { Button } from '@/components/ui/button';
 
 const PunishmentsContent: React.FC = () => {
   const { 
@@ -20,6 +20,7 @@ const PunishmentsContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const [initializing, setInitializing] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false); // New state to track initialization
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Add global carousel index state
@@ -51,9 +52,10 @@ const PunishmentsContent: React.FC = () => {
     };
   }, []);
 
+  // Modified initialization effect with hasInitialized flag
   useEffect(() => {
     const initSamplePunishments = async () => {
-      if (!loading && punishments.length === 0 && !initializing) {
+      if (!loading && punishments.length === 0 && !initializing && !hasInitialized) {
         setInitializing(true);
         
         const samplePunishments = [
@@ -85,6 +87,7 @@ const PunishmentsContent: React.FC = () => {
             await createPunishment(punishment);
           }
           console.log("Sample punishments created successfully");
+          setHasInitialized(true); // Mark as initialized after success
         } catch (error) {
           console.error("Error creating sample punishments:", error);
         } finally {
@@ -94,7 +97,7 @@ const PunishmentsContent: React.FC = () => {
     };
     
     initSamplePunishments();
-  }, [loading, punishments.length, createPunishment, initializing]);
+  }, [loading, punishments.length, createPunishment, initializing, hasInitialized]); // Add hasInitialized to deps
 
   const getIconComponent = (iconName: string) => {
     switch(iconName) {
