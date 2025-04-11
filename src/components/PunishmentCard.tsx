@@ -54,17 +54,17 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
     handleDeletePunishment
   } = usePunishmentCard({ id, points });
 
-  console.log('PunishmentCard rendering with icon_color:', icon_color);
-
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-red-500 bg-navy">
-        <PunishmentBackground 
-          background_image_url={background_image_url}
-          background_opacity={background_opacity}
-          focal_point_x={focal_point_x}
-          focal_point_y={focal_point_y}
-        />
+        {background_image_url && (
+          <PunishmentBackground 
+            background_image_url={background_image_url}
+            background_opacity={background_opacity}
+            focal_point_x={focal_point_x}
+            focal_point_y={focal_point_y}
+          />
+        )}
         
         <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
           <PunishmentCardHeader 

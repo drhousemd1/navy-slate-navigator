@@ -1,15 +1,15 @@
 
 import React from 'react';
 import { FormLabel } from "@/components/ui/form";
-import BackgroundImageSelector from '../../task-editor/BackgroundImageSelector';
-import { Control } from 'react-hook-form';
+import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
+import { Control, UseFormSetValue } from 'react-hook-form';
 
 interface PunishmentBackgroundSectionProps {
   control: Control<any>;
   imagePreview: string | null;
   onRemoveImage: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  setValue: any;
+  setValue: UseFormSetValue<any>;
 }
 
 const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = ({
@@ -19,6 +19,16 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
   onImageUpload,
   setValue
 }) => {
+  const getFocalPointX = () => {
+    const value = control._getWatch ? control._getWatch('focal_point_x') : null;
+    return value !== null && value !== undefined ? value : 50;
+  };
+  
+  const getFocalPointY = () => {
+    const value = control._getWatch ? control._getWatch('focal_point_y') : null;
+    return value !== null && value !== undefined ? value : 50;
+  };
+
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Image</FormLabel>
@@ -26,8 +36,8 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
         control={control}
         imagePreview={imagePreview}
         initialPosition={{
-          x: control._getWatch('focal_point_x') || 50,
-          y: control._getWatch('focal_point_y') || 50
+          x: getFocalPointX(),
+          y: getFocalPointY()
         }}
         onRemoveImage={onRemoveImage}
         onImageUpload={onImageUpload}
