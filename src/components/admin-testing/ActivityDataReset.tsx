@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
@@ -18,32 +19,78 @@ const ActivityDataReset = () => {
       setIsResetting(true);
       console.log("Resetting all activity data...");
 
-      const deleteFromTable = async (table: string, dateField: string) => {
+      // Fixed approach: Using type-safe table names and correct count API
+      const deleteTaskCompletions = async () => {
         const { error, count } = await supabase
-          .from(table)
+          .from('task_completion_history')
           .delete()
-          .gt(dateField, '1900-01-01')
-          .select('*', { count: 'exact' });
+          .gt('completed_at', '1900-01-01')
+          .select('id', { count: 'exact' });
 
         if (error) {
-          throw new Error(`Failed to delete from ${table}: ${error.message}`);
+          throw new Error(`Failed to delete from task_completion_history: ${error.message}`);
         }
 
-        console.log(`Deleted ${count} rows from ${table}`);
+        console.log(`Deleted ${count} rows from task_completion_history`);
         return count;
       };
 
-      // Deleting data from each activity table with correct date fields
-      await deleteFromTable('task_completion_history', 'completed_at');
-      await deleteFromTable('rule_violations', 'violation_date');
-      await deleteFromTable('reward_usage', 'created_at');
-      await deleteFromTable('punishment_history', 'applied_date');
+      const deleteRuleViolations = async () => {
+        const { error, count } = await supabase
+          .from('rule_violations')
+          .delete()
+          .gt('violation_date', '1900-01-01')
+          .select('id', { count: 'exact' });
+
+        if (error) {
+          throw new Error(`Failed to delete from rule_violations: ${error.message}`);
+        }
+
+        console.log(`Deleted ${count} rows from rule_violations`);
+        return count;
+      };
+
+      const deleteRewardUsage = async () => {
+        const { error, count } = await supabase
+          .from('reward_usage')
+          .delete()
+          .gt('created_at', '1900-01-01')
+          .select('id', { count: 'exact' });
+
+        if (error) {
+          throw new Error(`Failed to delete from reward_usage: ${error.message}`);
+        }
+
+        console.log(`Deleted ${count} rows from reward_usage`);
+        return count;
+      };
+
+      const deletePunishmentHistory = async () => {
+        const { error, count } = await supabase
+          .from('punishment_history')
+          .delete()
+          .gt('applied_date', '1900-01-01')
+          .select('id', { count: 'exact' });
+
+        if (error) {
+          throw new Error(`Failed to delete from punishment_history: ${error.message}`);
+        }
+
+        console.log(`Deleted ${count} rows from punishment_history`);
+        return count;
+      };
+
+      // Delete data from each activity table with type-safe calls
+      await deleteTaskCompletions();
+      await deleteRuleViolations();
+      await deleteRewardUsage();
+      await deletePunishmentHistory();
 
       // Invalidate relevant queries so charts and tiles update
       queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
       queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-summary'] });  // optional
-      queryClient.invalidateQueries({ queryKey: ['monthly-summary'] }); // optional
+      queryClient.invalidateQueries({ queryKey: ['weekly-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-summary'] });
 
       toast({
         title: 'Activity data reset successfully.',

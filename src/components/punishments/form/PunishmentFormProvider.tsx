@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form } from '@/components/ui/form';
@@ -23,7 +24,7 @@ export type PunishmentFormValues = z.infer<typeof punishmentFormSchema>;
 
 interface PunishmentFormProviderProps {
   punishmentData?: PunishmentData;
-  children: (form: ReturnType<typeof useForm<PunishmentFormValues>>) => React.ReactNode;
+  children: (form: UseFormReturn<PunishmentFormValues>) => React.ReactNode;
 }
 
 const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({

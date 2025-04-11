@@ -7,12 +7,10 @@ import PunishmentBackgroundSection from './form/PunishmentBackgroundSection';
 import PunishmentColorSettings from './PunishmentColorSettings';
 import PunishmentFormActions from './form/PunishmentFormActions';
 import PunishmentFormProvider from './form/PunishmentFormProvider';
-import PunishmentFormSubmitHandler from './form/PunishmentFormSubmitHandler';
-import PunishmentFormLayout from './form/PunishmentFormLayout';
+import { useForm } from 'react-hook-form';
 import { usePunishmentIcon } from './hooks/usePunishmentIcon';
 import { usePunishmentBackground } from './hooks/usePunishmentBackground';
 import { useDeleteDialog } from './hooks/useDeleteDialog';
-import { useForm } from 'react-hook-form';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
@@ -95,41 +93,43 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
   };
 
   return (
-    <PunishmentFormProvider punishmentData={punishmentData}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
-        <PunishmentBasicDetails 
-          control={form.control}
-          setValue={form.setValue}
-        />
-        
-        <PunishmentIconSection
-          selectedIconName={selectedIconName}
-          iconPreview={iconPreview}
-          iconColor={form.watch('icon_color') || '#ea384c'}
-          onSelectIcon={handleSelectIcon}
-          onUploadIcon={handleUploadIcon}
-          onRemoveIcon={handleRemoveIcon}
-        />
-        
-        <PunishmentBackgroundSection
-          control={form.control}
-          imagePreview={imagePreview}
-          onRemoveImage={handleRemoveImage}
-          onImageUpload={handleImageUpload}
-          setValue={form.setValue}
-        />
-        
-        <PunishmentColorSettings control={form.control} />
-        
-        <PunishmentFormActions
-          punishmentData={punishmentData}
-          loading={false}
-          isDeleteDialogOpen={isDeleteDialogOpen}
-          setIsDeleteDialogOpen={setIsDeleteDialogOpen}
-          onCancel={onCancel}
-          onDelete={onDelete}
-        />
-      </form>
+    <PunishmentFormProvider>
+      {(formContext) => (
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+          <PunishmentBasicDetails 
+            control={form.control}
+            setValue={form.setValue}
+          />
+          
+          <PunishmentIconSection
+            selectedIconName={selectedIconName}
+            iconPreview={iconPreview}
+            iconColor={form.watch('icon_color') || '#ea384c'}
+            onSelectIcon={handleSelectIcon}
+            onUploadIcon={handleUploadIcon}
+            onRemoveIcon={handleRemoveIcon}
+          />
+          
+          <PunishmentBackgroundSection
+            control={form.control}
+            imagePreview={imagePreview}
+            onRemoveImage={handleRemoveImage}
+            onImageUpload={handleImageUpload}
+            setValue={form.setValue}
+          />
+          
+          <PunishmentColorSettings control={form.control} />
+          
+          <PunishmentFormActions
+            punishmentData={punishmentData}
+            loading={false}
+            isDeleteDialogOpen={isDeleteDialogOpen}
+            setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+            onCancel={onCancel}
+            onDelete={onDelete}
+          />
+        </form>
+      )}
     </PunishmentFormProvider>
   );
 };
