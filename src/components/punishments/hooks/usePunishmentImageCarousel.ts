@@ -15,7 +15,7 @@ export const usePunishmentImageCarousel = ({
   images,
   globalCarouselIndex
 }: UsePunishmentImageCarouselProps): UsePunishmentImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(images[0] ?? null);
+  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
@@ -46,7 +46,6 @@ export const usePunishmentImageCarousel = ({
 
     preload.onload = () => {
       setTransitionImage(next);
-
       requestAnimationFrame(() => {
         setTimeout(() => {
           setIsTransitioning(true);
