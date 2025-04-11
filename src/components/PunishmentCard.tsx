@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import PunishmentEditor from './PunishmentEditor';
@@ -8,6 +7,7 @@ import PunishmentCardContent from './punishments/PunishmentCardContent';
 import PunishmentCardFooter from './punishments/PunishmentCardFooter';
 import PunishmentBackgroundCarousel from './punishments/PunishmentBackgroundCarousel';
 import { usePunishmentCard } from './punishments/hooks/usePunishmentCard';
+import { usePunishmentImageCarousel } from './punishments/hooks/usePunishmentBackground';
 
 interface PunishmentCardProps {
   title: string;
@@ -58,6 +58,15 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
     handleDeletePunishment
   } = usePunishmentCard({ id, points });
 
+  const {
+    visibleImage,
+    transitionImage,
+    isTransitioning,
+  } = usePunishmentImageCarousel({
+    images: background_images.filter(Boolean) as string[],
+    globalCarouselIndex: 0
+  });
+
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-red-500 bg-navy">
@@ -68,6 +77,9 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
           backgroundOpacity={background_opacity}
           focalPointX={focal_point_x}
           focalPointY={focal_point_y}
+          visibleImage={visibleImage}
+          transitionImage={transitionImage}
+          isTransitioning={isTransitioning}
         />
         
         <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
