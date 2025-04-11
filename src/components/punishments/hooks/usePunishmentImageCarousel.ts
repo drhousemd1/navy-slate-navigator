@@ -21,14 +21,16 @@ export const usePunishmentImageCarousel = ({
   const [previousImages, setPreviousImages] = useState<string[]>([]);
 
   useEffect(() => {
-    if (images.length > 0) {
-      const changed =
-        images.length !== previousImages.length ||
-        images.some((img, i) => previousImages[i] !== img);
+    const changed =
+      images.length !== previousImages.length ||
+      images.some((img, i) => previousImages[i] !== img);
 
-      if (changed) {
-        setPreviousImages(images);
-        setVisibleImage(images[0]);
+    if (changed) {
+      setPreviousImages(images);
+
+      // Only reset if visibleImage is no longer in the list
+      if (!visibleImage || !images.includes(visibleImage)) {
+        setVisibleImage(images[0] ?? null);
         setTransitionImage(null);
         setIsTransitioning(false);
       }
@@ -46,8 +48,7 @@ export const usePunishmentImageCarousel = ({
     const nextIndex = globalCarouselIndex % images.length;
     const next = images[nextIndex];
 
-    if (next === visibleImage) return;
-
+    // Always animate, even if it's the same image again
     const preload = new Image();
     preload.src = next;
 
