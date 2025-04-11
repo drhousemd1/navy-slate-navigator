@@ -1,37 +1,57 @@
+import { useEffect, useState } from "react";
 
-import React, { useState } from 'react';
-import AppLayout from '../components/AppLayout';
-import { APP_CONFIG } from '../config/constants';
+interface UsePunishmentImageCarouselProps {
+  images: string[];
+  globalCarouselIndex: number;
+}
 
-const Index: React.FC = () => {
-  const [imageError, setImageError] = useState(false);
+interface UsePunishmentImageCarouselResult {
+  visibleImage: string | null;
+  transitionImage: string | null;
+  isTransitioning: boolean;
+}
 
-  return (
-    <AppLayout>
-      <div className="flex flex-col items-center justify-center h-screen">
-        <div className="text-center p-6 animate-slide-up flex flex-col items-center">
-          {/* App Logo */}
-          {!imageError && (
-            <div className="mb-6 w-full max-w-[240px]">
-              <img 
-                src={APP_CONFIG.logoUrl} 
-                alt="TaskMaster Logo" 
-                className="w-full h-auto object-contain"
-                onError={(e) => {
-                  console.error('Failed to load logo image');
-                  setImageError(true);
-                }}
-              />
-            </div>
-          )}
-          
-          <p className="text-nav-inactive">
-            Select an option from the navigation bar below to begin.
-          </p>
-        </div>
-      </div>
-    </AppLayout>
-  );
+export const usePunishmentImageCarousel = ({
+  images,
+  globalCarouselIndex,
+}: UsePunishmentImageCarouselProps): UsePunishmentImageCarouselResult => {
+  const [visibleImage, setVisibleImage] = useState<string | null>(images[0] ?? null);
+  const [transitionImage, setTransitionImage] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+
+    const nextIndex = globalCarouselIndex % images.length;
+    const next = images[nextIndex];
+
+    // Don't transition to the same image
+    if (!next || next === visibleImage) return;
+
+    const preload = new Image();
+    preload.src = next;
+
+    preload.onload = () => {
+      setTransitionImage(next);
+      setIsTransitioning(true);
+
+      const timeout = setTimeout(() => {
+        setVisibleImage(next);
+        setTransitionImage(null);
+        setIsTransitioning(false);
+      }, 2000); // match fade duration
+
+      return () => clearTimeout(timeout);
+    };
+
+    preload.onerror = () => {
+      console.error("Failed to preload image:", next);
+    };
+  }, [globalCarouselIndex, images]);
+
+  return {
+    visibleImage,
+    transitionImage,
+    isTransitioning,
+  };
 };
-
-export default Index;
