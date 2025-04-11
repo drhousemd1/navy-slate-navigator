@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { usePunishmentImageCarousel } from './hooks/usePunishmentImageCarousel';
 
@@ -42,56 +41,43 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
       setShowTransition(true);
       const cleanup = setTimeout(() => {
         setShowTransition(false);
-      }, 2000); // match fade duration
+      }, 2000);
       return () => clearTimeout(cleanup);
     }
   }, [transitionImage]);
 
   if (!visibleImage && !transitionImage) return null;
 
-  const baseStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundSize: 'cover',
-    backgroundRepeat: 'no-repeat',
-    opacity: backgroundOpacity / 100,
-    zIndex: 0,
-    transition: 'none'
-  };
-
-  const fadeInStyle: React.CSSProperties = {
-    ...baseStyle,
-    zIndex: 1,
-    transition: 'opacity 2s ease-in-out',
-    opacity: showTransition ? backgroundOpacity / 100 : 0,
-    pointerEvents: 'none'
-  };
-
   return (
     <>
       {visibleImage && (
-        <div
+        <img
           key="visible"
+          src={visibleImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover z-0"
           style={{
-            ...baseStyle,
-            backgroundImage: `url(${visibleImage})`,
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`
+            opacity: backgroundOpacity / 100,
+            transition: 'opacity 0.2s linear',
+            objectPosition: `${focalPointX}% ${focalPointY}%`
           }}
+          draggable={false}
           aria-hidden="true"
         />
       )}
 
       {transitionImage && showTransition && (
-        <div
+        <img
           key="transition"
+          src={transitionImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
           style={{
-            ...fadeInStyle,
-            backgroundImage: `url(${transitionImage})`,
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`
+            opacity: backgroundOpacity / 100,
+            transition: 'opacity 2s ease-in-out',
+            objectPosition: `${focalPointX}% ${focalPointY}%`
           }}
+          draggable={false}
           aria-hidden="true"
         />
       )}
