@@ -43,8 +43,8 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Image</FormLabel>
-      <div className="flex flex-row items-end space-x-6 mb-4">
-        <div className="flex space-x-2">
+      <div className="flex items-end justify-between mb-4">
+        <div className="flex gap-2">
           {imageSlots.map((imageUrl, index) => (
             <div
               key={index}
