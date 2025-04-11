@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePunishmentImageCarousel } from './hooks/usePunishmentImageCarousel';
 
 interface PunishmentBackgroundCarouselProps {
@@ -19,11 +19,12 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
   focalPointX = 50,
   focalPointY = 50
 }) => {
-  const imagesArray = backgroundImages && Array.isArray(backgroundImages) ? backgroundImages : [];
-
-  const allImages: (string | null)[] = imagesArray.length > 0 
-    ? imagesArray 
-    : (backgroundImageUrl ? [backgroundImageUrl] : []);
+  const allImages: (string | null)[] =
+    backgroundImages && Array.isArray(backgroundImages) && backgroundImages.length > 0
+      ? backgroundImages
+      : backgroundImageUrl
+      ? [backgroundImageUrl]
+      : [];
 
   const {
     visibleImage,
@@ -33,6 +34,18 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
     images: allImages,
     carouselTimer
   });
+
+  const [showTransition, setShowTransition] = useState(false);
+
+  useEffect(() => {
+    if (transitionImage) {
+      setShowTransition(true);
+      const cleanup = setTimeout(() => {
+        setShowTransition(false);
+      }, 2000); // match fade duration
+      return () => clearTimeout(cleanup);
+    }
+  }, [transitionImage]);
 
   if (!visibleImage && !transitionImage) return null;
 
@@ -46,6 +59,15 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
     backgroundRepeat: 'no-repeat',
     opacity: backgroundOpacity / 100,
     zIndex: 0,
+    transition: 'none'
+  };
+
+  const fadeInStyle: React.CSSProperties = {
+    ...baseStyle,
+    zIndex: 1,
+    transition: 'opacity 2s ease-in-out',
+    opacity: showTransition ? backgroundOpacity / 100 : 0,
+    pointerEvents: 'none'
   };
 
   return (
@@ -56,23 +78,19 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
           style={{
             ...baseStyle,
             backgroundImage: `url(${visibleImage})`,
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+            backgroundPosition: `${focalPointX}% ${focalPointY}%`
           }}
           aria-hidden="true"
         />
       )}
 
-      {transitionImage && isTransitioning && (
+      {transitionImage && showTransition && (
         <div
           key="transition"
           style={{
-            ...baseStyle,
+            ...fadeInStyle,
             backgroundImage: `url(${transitionImage})`,
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100,
-            zIndex: 1,
-            transition: 'opacity 2s ease-in-out',
-            pointerEvents: 'none',
+            backgroundPosition: `${focalPointX}% ${focalPointY}%`
           }}
           aria-hidden="true"
         />
