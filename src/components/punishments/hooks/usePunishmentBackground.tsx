@@ -1,57 +1,33 @@
-import { useEffect, useState } from "react";
 
-interface UsePunishmentImageCarouselProps {
-  images: string[];
-  globalCarouselIndex: number;
-}
+import { useState } from 'react';
 
-interface UsePunishmentImageCarouselResult {
-  visibleImage: string | null;
-  transitionImage: string | null;
-  isTransitioning: boolean;
-}
+export const usePunishmentBackground = (initialImageUrl?: string | null) => {
+  const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
 
-export const usePunishmentImageCarousel = ({
-  images,
-  globalCarouselIndex,
-}: UsePunishmentImageCarouselProps): UsePunishmentImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(images[0] ?? null);
-  const [transitionImage, setTransitionImage] = useState<string | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("handleImageUpload called");
+    const file = e.target.files?.[0];
+    if (file) {
+      console.log("File selected:", file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        console.log("Image loaded as base64");
+        setImagePreview(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-  useEffect(() => {
-    if (images.length <= 1) return;
-
-    const nextIndex = globalCarouselIndex % images.length;
-    const next = images[nextIndex];
-
-    // If same as current, do nothing
-    if (!next || next === visibleImage) return;
-
-    const preload = new Image();
-    preload.src = next;
-
-    preload.onload = () => {
-      setTransitionImage(next);
-      setIsTransitioning(true);
-
-      const timeout = setTimeout(() => {
-        setVisibleImage(next);
-        setTransitionImage(null);
-        setIsTransitioning(false);
-      }, 2000); // match the fade duration
-
-      return () => clearTimeout(timeout);
-    };
-
-    preload.onerror = () => {
-      console.error("Failed to preload image:", next);
-    };
-  }, [globalCarouselIndex, images, visibleImage]);
+  const handleRemoveImage = () => {
+    console.log("Removing image");
+    setImagePreview(null);
+  };
 
   return {
-    visibleImage,
-    transitionImage,
-    isTransitioning,
+    imagePreview,
+    handleImageUpload,
+    handleRemoveImage,
+    setImagePreview
   };
 };
