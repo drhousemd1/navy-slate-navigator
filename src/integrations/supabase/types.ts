@@ -265,8 +265,10 @@ export type Database = {
       punishments: {
         Row: {
           background_image_url: string | null
+          background_images: Json | null
           background_opacity: number | null
           calendar_color: string | null
+          carousel_timer: Json | null
           created_at: string | null
           description: string | null
           focal_point_x: number | null
@@ -283,8 +285,10 @@ export type Database = {
         }
         Insert: {
           background_image_url?: string | null
+          background_images?: Json | null
           background_opacity?: number | null
           calendar_color?: string | null
+          carousel_timer?: Json | null
           created_at?: string | null
           description?: string | null
           focal_point_x?: number | null
@@ -301,8 +305,10 @@ export type Database = {
         }
         Update: {
           background_image_url?: string | null
+          background_images?: Json | null
           background_opacity?: number | null
           calendar_color?: string | null
+          carousel_timer?: Json | null
           created_at?: string | null
           description?: string | null
           focal_point_x?: number | null
