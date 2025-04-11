@@ -7,25 +7,34 @@ import HighlightEffectToggle from "@/components/admin-testing/edit-modal/Highlig
 import IconSelectionSection from "@/components/admin-testing/edit-modal/IconSelectionSection";
 import BasicDetailsSection from "@/components/admin-testing/edit-modal/BasicDetailsSection";
 import ModalActions from "@/components/admin-testing/edit-modal/ModalActions";
-import { usePunishmentEditor } from "@/components/punishments/hooks/usePunishmentEditor";
+import { PunishmentData } from "@/contexts/PunishmentsContext";
 
-const PunishmentEditor = () => {
-  const editor = usePunishmentEditor();
+interface PunishmentEditorProps {
+  isOpen: boolean;
+  onClose: () => void;
+  punishmentData: PunishmentData;
+  onSave: (data: PunishmentData) => void;
+  onDelete: () => void;
+}
 
-  // ✅ Fix: gracefully exit if editor is undefined
-  if (!editor || !editor.isOpen) return null;
-
+const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
+  isOpen,
+  onClose,
+  punishmentData,
+  onSave,
+  onDelete
+}) => {
   return (
-    <Dialog open={editor.isOpen} onOpenChange={editor.onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl w-full p-0 overflow-hidden">
         <ScrollArea className="h-[calc(100vh-10rem)] p-6 space-y-6">
-          <BasicDetailsSection {...editor} />
-          <ColorSettingsSection {...editor} />
-          <HighlightEffectToggle {...editor} />
-          <IconSelectionSection {...editor} />
-          <ImageSelectionSection {...editor} />
+          <BasicDetailsSection punishment={punishmentData} onChange={onSave} />
+          <ColorSettingsSection punishment={punishmentData} onChange={onSave} />
+          <HighlightEffectToggle punishment={punishmentData} onChange={onSave} />
+          <IconSelectionSection punishment={punishmentData} onChange={onSave} />
+          <ImageSelectionSection punishment={punishmentData} onChange={onSave} />
         </ScrollArea>
-        <ModalActions {...editor} />
+        <ModalActions onDelete={onDelete} onClose={onClose} />
       </DialogContent>
     </Dialog>
   );
