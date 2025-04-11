@@ -52,7 +52,7 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
         <img
           src={visibleImage}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover z-0"
+          className="absolute inset-0 w-full h-full object-cover z-0 opacity-100"
           style={{
             transition: 'opacity 2s ease-in-out',
             objectPosition: `${focalPointX}% ${focalPointY}%`,
@@ -67,7 +67,9 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
         <img
           src={transitionImage}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+          className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
+            isTransitioning ? 'opacity-100' : 'opacity-0'
+          }`}
           style={{
             transition: 'opacity 2s ease-in-out',
             objectPosition: `${focalPointX}% ${focalPointY}%`,
