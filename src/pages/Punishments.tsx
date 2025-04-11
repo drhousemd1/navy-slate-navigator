@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -9,11 +8,15 @@ import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts
 import PunishmentEditor from '../components/PunishmentEditor';
 import { Button } from '@/components/ui/button';
 
-// Global default carousel timer in seconds
-const DEFAULT_CAROUSEL_TIMER = 5;
-
 const PunishmentsContent: React.FC = () => {
-  const { punishments, loading, createPunishment, updatePunishment } = usePunishments();
+  const { 
+    punishments, 
+    loading, 
+    createPunishment, 
+    updatePunishment,
+    globalCarouselTimer 
+  } = usePunishments();
+  
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const [initializing, setInitializing] = useState(false);
@@ -21,29 +24,15 @@ const PunishmentsContent: React.FC = () => {
   
   // Add global carousel index state
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
-  const [carouselTimer, setCarouselTimer] = useState(DEFAULT_CAROUSEL_TIMER);
 
-  // Effect to increment the global carousel index
+  // Effect to increment the global carousel index using the global timer from context
   useEffect(() => {
     const interval = setInterval(() => {
       setGlobalCarouselIndex(prevIndex => prevIndex + 1);
-    }, carouselTimer * 1000);
+    }, globalCarouselTimer * 1000);
     
     return () => clearInterval(interval);
-  }, [carouselTimer]);
-
-  // Update carouselTimer when any punishment's carouselTimer changes
-  useEffect(() => {
-    if (punishments.length > 0) {
-      // Find the first punishment with a custom carouselTimer or use default
-      const firstWithTimer = punishments.find(p => p.carousel_timer !== undefined);
-      if (firstWithTimer && firstWithTimer.carousel_timer) {
-        setCarouselTimer(firstWithTimer.carousel_timer);
-      } else {
-        setCarouselTimer(DEFAULT_CAROUSEL_TIMER);
-      }
-    }
-  }, [punishments]);
+  }, [globalCarouselTimer]);
 
   useEffect(() => {
     const handleAddNewPunishment = () => {
@@ -180,7 +169,7 @@ const PunishmentsContent: React.FC = () => {
               focal_point_x={punishment.focal_point_x}
               focal_point_y={punishment.focal_point_y}
               background_images={punishment.background_images}
-              carousel_timer={punishment.carousel_timer}
+              carousel_timer={globalCarouselTimer} // Use the global timer from context
               globalCarouselIndex={globalCarouselIndex}
             />
           ))}

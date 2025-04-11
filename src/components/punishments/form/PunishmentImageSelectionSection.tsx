@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Control, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
+import { usePunishments } from '@/contexts/PunishmentsContext';
 
 interface PunishmentImageSelectionSectionProps {
   imageSlots: (string | null)[];
@@ -31,12 +32,19 @@ const PunishmentImageSelectionSection: React.FC<PunishmentImageSelectionSectionP
   watch,
   control
 }) => {
+  const { globalCarouselTimer, setGlobalCarouselTimer } = usePunishments();
   const currentImage = selectedBoxIndex !== null ? imageSlots[selectedBoxIndex] : null;
   
   // Get position from form values for the selected image
   const position = {
     x: watch('focal_point_x') || 50,
     y: watch('focal_point_y') || 50
+  };
+
+  // Update both local and global carousel timer
+  const handleTimerChange = (newTimer: number) => {
+    onCarouselTimerChange(newTimer);
+    setGlobalCarouselTimer(newTimer);
   };
 
   return (
@@ -81,18 +89,18 @@ const PunishmentImageSelectionSection: React.FC<PunishmentImageSelectionSectionP
             <Button
               type="button"
               size="sm"
-              onClick={() => onCarouselTimerChange(Math.max(1, carouselTimer - 1))}
+              onClick={() => handleTimerChange(Math.max(1, globalCarouselTimer - 1))}
               className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
             >
               –
             </Button>
 
-            <div className="w-10 text-center text-white">{carouselTimer}</div>
+            <div className="w-10 text-center text-white">{globalCarouselTimer}</div>
 
             <Button
               type="button"
               size="sm"
-              onClick={() => onCarouselTimerChange(carouselTimer + 1)}
+              onClick={() => handleTimerChange(globalCarouselTimer + 1)}
               className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
             >
               +
