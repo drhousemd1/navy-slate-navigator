@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface UsePunishmentImageCarouselProps {
   images: string[];
@@ -53,8 +53,6 @@ export const usePunishmentImageCarousel = ({
 
     preload.onload = () => {
       setTransitionImage(next);
-      setIsTransitioning(false);
-
       requestAnimationFrame(() => {
         setTimeout(() => {
           setIsTransitioning(true);
