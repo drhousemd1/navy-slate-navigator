@@ -124,7 +124,7 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
         onRemoveImage={handleSlotImageRemove}
         onImageUpload={handleSlotImageUpload}
         setValue={setValue}
-        watch={form.watch}
+        watch={watch}
         control={control}
       />
 
