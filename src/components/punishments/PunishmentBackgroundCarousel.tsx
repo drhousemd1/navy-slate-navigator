@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { usePunishmentImageCarousel } from './hooks/usePunishmentImageCarousel';
+import React, { useEffect, useState } from "react";
+import { usePunishmentImageCarousel } from "./hooks/usePunishmentImageCarousel";
 
 interface PunishmentBackgroundCarouselProps {
   backgroundImages?: (string | null)[] | null;
@@ -16,7 +16,7 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
   carouselTimer = 5,
   backgroundOpacity = 100,
   focalPointX = 50,
-  focalPointY = 50
+  focalPointY = 50,
 }) => {
   const images: string[] =
     backgroundImages && backgroundImages.length > 0
@@ -38,25 +38,25 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
   const {
     visibleImage,
     transitionImage,
-    isTransitioning
+    isTransitioning,
   } = usePunishmentImageCarousel({
     images,
-    globalCarouselIndex
+    globalCarouselIndex,
   });
 
   if (!visibleImage && !transitionImage) return null;
 
   return (
-    <>
+    <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
       {visibleImage && (
         <img
           src={visibleImage}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover z-0 opacity-100"
+          className="absolute inset-0 w-full h-full object-cover z-0"
           style={{
-            transition: 'opacity 2s ease-in-out',
+            transition: "opacity 2s ease-in-out",
             objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100
+            opacity: transitionImage ? 0 : backgroundOpacity / 100,
           }}
           draggable={false}
           aria-hidden="true"
@@ -67,19 +67,17 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
         <img
           src={transitionImage}
           alt=""
-          className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
-            isTransitioning ? 'opacity-100' : 'opacity-0'
-          }`}
+          className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
           style={{
-            transition: 'opacity 2s ease-in-out',
+            transition: "opacity 2s ease-in-out",
             objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: isTransitioning ? backgroundOpacity / 100 : 0
+            opacity: isTransitioning ? backgroundOpacity / 100 : 0,
           }}
           draggable={false}
           aria-hidden="true"
         />
       )}
-    </>
+    </div>
   );
 };
 
