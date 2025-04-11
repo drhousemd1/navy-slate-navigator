@@ -1,4 +1,5 @@
 import React from 'react';
+import { useForm } from 'react-hook-form';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 import PunishmentBasicDetails from './form/PunishmentBasicDetails';
 import PunishmentIconSection from './form/PunishmentIconSection';
@@ -24,6 +25,8 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
   onCancel,
   onDelete
 }) => {
+  const methods = useForm();
+
   const {
     imageSlots,
     selectedBoxIndex,
@@ -77,7 +80,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
           onCarouselTimerChange={setCarouselTimer}
           setValue={setValue}
           position={position}
-          control={{}} // react-hook-form control if needed
+          control={methods.control}
         />
         <PunishmentColorSettings />
         <PunishmentFormActions
