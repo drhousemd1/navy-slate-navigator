@@ -27,7 +27,8 @@ export const usePunishmentImageCarousel = ({
 
     if (changed) {
       setPreviousImages(images);
-      if (!visibleImage && images.length > 0) {
+
+      if ((!visibleImage || !images.includes(visibleImage)) && images.length > 0) {
         setVisibleImage(images[0]);
         setTransitionImage(null);
         setIsTransitioning(false);
@@ -55,10 +56,10 @@ export const usePunishmentImageCarousel = ({
             setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
-          }, 2000); // match fade duration
+          }, 2000);
 
           return () => clearTimeout(fadeTimeout);
-        }, 100); // small delay allows transitionImage to visibly render
+        }, 100);
       });
     };
 
