@@ -1,6 +1,4 @@
-
 import React from "react";
-import { FormLabel } from "@/components/ui/form";
 import BackgroundImageSelector from "@/components/task-editor/BackgroundImageSelector";
 import { Control } from "react-hook-form";
 
@@ -29,18 +27,14 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
   setValue,
   position
 }) => {
-  // Ensure imageSlots is an array, and only check for valid index if it exists
-  const safeImageSlots = Array.isArray(imageSlots) ? imageSlots : [];
-  const safeIndex = typeof selectedBoxIndex === 'number' && 
-                    selectedBoxIndex >= 0 && 
-                    selectedBoxIndex < safeImageSlots.length;
-  const currentImage = safeIndex ? safeImageSlots[selectedBoxIndex] : null;
+  const safeIndex = typeof selectedBoxIndex === 'number' && selectedBoxIndex >= 0 && selectedBoxIndex < imageSlots.length;
+  const currentImage = safeIndex ? imageSlots[selectedBoxIndex] : null;
 
   return (
     <div className="space-y-4">
-      <FormLabel className="text-white text-lg">Background Images</FormLabel>
+      <label className="text-white text-lg">Background Images</label>
       <BackgroundImageSelector
-        imageSlots={safeImageSlots}
+        imageSlots={imageSlots}
         selectedBoxIndex={selectedBoxIndex}
         onSelectImageSlot={onSelectImageSlot}
         onImageUpload={onImageUpload}
@@ -51,7 +45,7 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
         setValue={setValue}
       />
       <div className="flex flex-col space-y-2">
-        <FormLabel className="text-white">Carousel Timer (seconds)</FormLabel>
+        <label className="text-white">Carousel Timer (seconds)</label>
         <input
           type="range"
           min={3}
