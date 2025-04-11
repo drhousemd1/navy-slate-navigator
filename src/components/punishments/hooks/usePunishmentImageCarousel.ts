@@ -15,7 +15,7 @@ export const usePunishmentImageCarousel = ({
   images,
   globalCarouselIndex
 }: UsePunishmentImageCarouselProps): UsePunishmentImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
+  const [visibleImage, setVisibleImage] = useState<string | null>(null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
@@ -27,13 +27,13 @@ export const usePunishmentImageCarousel = ({
 
     if (changed) {
       setPreviousImages(images);
-      if (!visibleImage || !images.includes(visibleImage)) {
-        setVisibleImage(images[0] ?? null);
+      if (!visibleImage && images.length > 0) {
+        setVisibleImage(images[0]);
         setTransitionImage(null);
         setIsTransitioning(false);
       }
     }
-  }, [images]);
+  }, [images, visibleImage]);
 
   useEffect(() => {
     if (!images.length || images.length <= 1) return;
@@ -46,6 +46,8 @@ export const usePunishmentImageCarousel = ({
 
     preload.onload = () => {
       setTransitionImage(next);
+
+      // Give the DOM a tick to render the transition image before fading
       requestAnimationFrame(() => {
         setTimeout(() => {
           setIsTransitioning(true);
@@ -57,7 +59,7 @@ export const usePunishmentImageCarousel = ({
           }, 2000);
 
           return () => clearTimeout(timeout);
-        }, 0);
+        }, 100); // short delay before triggering fade
       });
     };
 
