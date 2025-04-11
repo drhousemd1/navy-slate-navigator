@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import PunishmentEditor from './PunishmentEditor';
 import { cn } from '@/lib/utils';
@@ -22,6 +21,8 @@ interface PunishmentCardProps {
   calendar_color?: string;
   highlight_effect?: boolean;
   background_image_url?: string;
+  background_images?: string[];
+  carousel_timer?: number;
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
@@ -39,7 +40,9 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   calendar_color = '#ea384c',
   highlight_effect = false,
   background_image_url,
-  background_opacity = 50,
+  background_images = [],
+  carousel_timer = 5,
+  background_opacity = 1,
   focal_point_x = 50,
   focal_point_y = 50
 }) => {
@@ -54,44 +57,56 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
     handleDeletePunishment
   } = usePunishmentCard({ id, points });
 
-  console.log('PunishmentCard rendering with icon_color:', icon_color);
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (!background_images || background_images.length <= 1) return;
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % background_images.length);
+    }, Math.max(carousel_timer, 1) * 1000);
+    return () => clearInterval(timer);
+  }, [background_images, carousel_timer]);
+
+  const activeBackground = background_images?.[index] || background_image_url || null;
 
   return (
     <>
-      <Card className="relative overflow-hidden border-2 border-red-500 bg-navy">
-        <PunishmentBackground 
-          background_image_url={background_image_url}
-          background_opacity={background_opacity}
-          focal_point_x={focal_point_x}
-          focal_point_y={focal_point_y}
+      <Card
+        className={cn(
+          'relative overflow-hidden border-none text-white rounded-xl shadow-xl w-full h-full p-4',
+          highlight_effect && 'ring-2 ring-red-500 animate-pulse'
+        )}
+      >
+        <PunishmentBackground
+          background_image_url={activeBackground}
+          background_opacity={background_opacity ?? 1}
+          focal_point_x={focal_point_x ?? 50}
+          focal_point_y={focal_point_y ?? 50}
         />
-        
-        <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
-          <PunishmentCardHeader 
-            points={points}
-            onPunish={handlePunish}
-          />
-          
-          <PunishmentCardContent 
+
+        <div className="relative z-10 flex flex-col justify-between h-full w-full">
+          <PunishmentCardHeader
+            title={title}
             icon_name={icon_name}
             icon_color={icon_color}
-            title={title}
-            description={description}
             title_color={title_color}
-            subtext_color={subtext_color}
-            highlight_effect={highlight_effect}
+            onEdit={() => setIsEditorOpen(true)}
           />
-          
-          <PunishmentCardFooter 
-            frequency_count={frequencyCount}
+          <PunishmentCardContent
+            description={description}
+            subtext_color={subtext_color}
+            frequencyCount={frequencyCount}
+            weekData={weekData}
+          />
+          <PunishmentCardFooter
+            points={points}
+            onPunish={handlePunish}
             calendar_color={calendar_color}
-            usage_data={weekData}
-            onEdit={handleEdit}
           />
         </div>
       </Card>
-      
-      <PunishmentEditor 
+
+      <PunishmentEditor
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
         punishmentData={{
@@ -105,7 +120,8 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
           subtext_color,
           calendar_color,
           highlight_effect,
-          background_image_url,
+          background_images,
+          carousel_timer,
           background_opacity,
           focal_point_x,
           focal_point_y
