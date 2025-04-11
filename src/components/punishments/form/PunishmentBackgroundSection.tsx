@@ -31,12 +31,13 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
   
   // Initialize image slots with the provided background images or create empty ones
+  // FIXED: Now creating 5 slots instead of 4 when no initial images exist
   const [imageSlots, setImageSlots] = useState<(string | null)[]>(
     initialBackgroundImages.length > 0 
       ? [...initialBackgroundImages] 
       : imagePreview 
-        ? [imagePreview, null, null, null] 
-        : [null, null, null, null]
+        ? [imagePreview, null, null, null, null] 
+        : [null, null, null, null, null]
   );
 
   // Update slots if initialBackgroundImages changes
