@@ -50,8 +50,8 @@ const PunishmentImageSelectionSection: React.FC<PunishmentImageSelectionSectionP
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Images</FormLabel>
-      <div className="flex flex-row items-end space-x-6 mb-4">
-        <div className="flex space-x-2">
+      <div className="flex flex-col md:flex-row md:items-end space-y-4 md:space-y-0 md:space-x-6 mb-4">
+        <div className="flex flex-wrap gap-2 max-w-xs">
           {imageSlots.map((imageUrl, index) => (
             <div
               key={index}
