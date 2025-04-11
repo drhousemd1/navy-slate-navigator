@@ -4,7 +4,7 @@ import { Control } from "react-hook-form";
 
 interface PunishmentBackgroundSectionProps {
   control: Control<any>;
-  imageSlots: (string | null)[] | undefined;
+  imageSlots?: (string | null)[];
   selectedBoxIndex: number | null;
   carouselTimer: number;
   onCarouselTimerChange: (timer: number) => void;
@@ -27,36 +27,29 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
   setValue,
   position
 }) => {
-  const safeIndex = typeof selectedBoxIndex === 'number' && selectedBoxIndex >= 0 && selectedBoxIndex < imageSlots.length;
+  const safeIndex =
+    typeof selectedBoxIndex === "number" &&
+    selectedBoxIndex >= 0 &&
+    selectedBoxIndex < imageSlots.length;
+
   const currentImage = safeIndex ? imageSlots[selectedBoxIndex] : null;
 
   return (
     <div className="space-y-4">
       <label className="text-white text-lg">Background Images</label>
       <BackgroundImageSelector
-        imageSlots={imageSlots}
-        selectedBoxIndex={selectedBoxIndex}
-        onSelectImageSlot={onSelectImageSlot}
-        onImageUpload={onImageUpload}
-        onRemoveImage={onRemoveImage}
-        currentImage={currentImage}
         control={control}
-        initialPosition={position}
+        imageSlots={imageSlots}
+        selectedBoxIndex={selectedBoxIndex ?? 0}
+        carouselTimer={carouselTimer}
+        onCarouselTimerChange={onCarouselTimerChange}
+        onSelectImageSlot={onSelectImageSlot}
+        onRemoveImage={onRemoveImage}
+        onImageUpload={onImageUpload}
         setValue={setValue}
+        position={position}
+        currentImage={currentImage}
       />
-      <div className="flex flex-col space-y-2">
-        <label className="text-white">Carousel Timer (seconds)</label>
-        <input
-          type="range"
-          min={3}
-          max={15}
-          step={1}
-          value={carouselTimer}
-          onChange={(e) => onCarouselTimerChange(Number(e.target.value))}
-          className="w-full"
-        />
-        <div className="text-white text-sm">{carouselTimer} seconds</div>
-      </div>
     </div>
   );
 };
