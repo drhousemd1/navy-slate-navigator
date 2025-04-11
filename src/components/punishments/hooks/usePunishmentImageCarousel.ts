@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface UsePunishmentImageCarouselProps {
   images: (string | null)[];
@@ -13,82 +12,51 @@ interface UsePunishmentImageCarouselResult {
   currentImageIndex: number;
 }
 
-export const usePunishmentImageCarousel = ({ 
-  images, 
-  carouselTimer = 5 
+export const usePunishmentImageCarousel = ({
+  images,
+  carouselTimer = 5
 }: UsePunishmentImageCarouselProps): UsePunishmentImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(
-    images && images.length > 0 && images[0] ? images[0] : null
-  );
+  const [visibleImage, setVisibleImage] = useState<string | null>(null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [lastUpdateTime, setLastUpdateTime] = useState(Date.now());
 
-  // Filter out null images to create a clean array of valid images
-  const validImages = images.filter(img => img !== null) as string[];
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Handle image transitions 
+  const validImages = images.filter((img): img is string => !!img);
+
   useEffect(() => {
-    if (!validImages.length || validImages.length <= 1) {
-      return;
-    }
+    if (validImages.length === 0) return;
 
-    // Calculate if it's time for a transition
-    const intervalId = setInterval(() => {
-      const now = Date.now();
-      if (now - lastUpdateTime >= carouselTimer * 1000) {
-        const nextIndex = (currentImageIndex + 1) % validImages.length;
-        const next = validImages[nextIndex];
-        
-        if (next === visibleImage) return;
-        
-        // Start transition
-        setTransitionImage(next);
-        setIsTransitioning(false);
-        
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            setIsTransitioning(true);
-            
-            const timeout = setTimeout(() => {
-              setVisibleImage(next);
-              setTransitionImage(null);
-              setIsTransitioning(false);
-              setCurrentImageIndex(nextIndex);
-              setLastUpdateTime(Date.now());
-            }, 2000);
-            
-            return () => clearTimeout(timeout);
-          }, 0);
-        });
-      }
-    }, 500); // Check every half second
-    
-    return () => clearInterval(intervalId);
-  }, [validImages, currentImageIndex, visibleImage, carouselTimer, lastUpdateTime]);
+    // Start with the first image
+    setVisibleImage(validImages[0]);
+    setCurrentImageIndex(0);
 
-  // Handle initial image setup when images array changes
-  useEffect(() => {
-    if (validImages.length > 0) {
-      // Check if images array has changed
-      const firstValidImage = validImages[0];
-      
-      if (firstValidImage && visibleImage !== firstValidImage) {
-        setVisibleImage(firstValidImage);
+    if (validImages.length === 1) return;
+
+    timerRef.current = setInterval(() => {
+      const nextIndex = (currentImageIndex + 1) % validImages.length;
+      const next = validImages[nextIndex];
+
+      // Initiate transition phase
+      setTransitionImage(next);
+      setIsTransitioning(true);
+
+      // After the fade completes, commit image and clean up
+      transitionTimeoutRef.current = setTimeout(() => {
+        setVisibleImage(next);
         setTransitionImage(null);
         setIsTransitioning(false);
-        setCurrentImageIndex(0);
-        setLastUpdateTime(Date.now());
-      }
-    } else if (visibleImage !== null) {
-      // Reset if we had images but now don't
-      setVisibleImage(null);
-      setTransitionImage(null);
-      setIsTransitioning(false);
-      setCurrentImageIndex(0);
-    }
-  }, [validImages]);
+        setCurrentImageIndex(nextIndex);
+      }, 2000); // Match fade timing
+    }, carouselTimer * 1000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+    };
+  }, [validImages.join(','), carouselTimer]);
 
   return {
     visibleImage,
