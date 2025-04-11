@@ -1,57 +1,36 @@
-import React from "react";
-import BackgroundImageSelector from "@/components/task-editor/BackgroundImageSelector";
-import { Control } from "react-hook-form";
 
-interface PunishmentBackgroundSectionProps {
-  control: Control<any>;
-  imageSlots?: (string | null)[];
-  selectedBoxIndex: number | null;
-  carouselTimer: number;
-  onCarouselTimerChange: (timer: number) => void;
-  onSelectImageSlot: (index: number) => void;
-  onRemoveImage: () => void;
-  onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  setValue: (key: string, value: any) => void;
-  position: { x: number; y: number };
+import React from 'react';
+
+interface PunishmentBackgroundProps {
+  background_image_url?: string;
+  background_opacity: number;
+  focal_point_x: number;
+  focal_point_y: number;
 }
 
-const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = ({
-  control,
-  imageSlots = [],
-  selectedBoxIndex,
-  carouselTimer,
-  onCarouselTimerChange,
-  onSelectImageSlot,
-  onRemoveImage,
-  onImageUpload,
-  setValue,
-  position
+const PunishmentBackground: React.FC<PunishmentBackgroundProps> = ({
+  background_image_url,
+  background_opacity,
+  focal_point_x,
+  focal_point_y
 }) => {
-  const safeIndex =
-    typeof selectedBoxIndex === "number" &&
-    selectedBoxIndex >= 0 &&
-    selectedBoxIndex < imageSlots.length;
+  if (!background_image_url) return null;
+  
+  const backgroundImageStyle: React.CSSProperties = {
+    backgroundImage: `url(${background_image_url})`,
+    backgroundSize: 'cover',
+    backgroundPosition: `${focal_point_x}% ${focal_point_y}%`,
+    backgroundRepeat: 'no-repeat',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: background_opacity / 100,
+    zIndex: 0
+  };
 
-  const currentImage = safeIndex ? imageSlots[selectedBoxIndex] : null;
-
-  return (
-    <div className="space-y-4">
-      <label className="text-white text-lg">Background Images</label>
-      <BackgroundImageSelector
-        control={control}
-        imageSlots={imageSlots}
-        selectedBoxIndex={selectedBoxIndex ?? 0}
-        carouselTimer={carouselTimer}
-        onCarouselTimerChange={onCarouselTimerChange}
-        onSelectImageSlot={onSelectImageSlot}
-        onRemoveImage={onRemoveImage}
-        onImageUpload={onImageUpload}
-        setValue={setValue}
-        position={position}
-        currentImage={currentImage}
-      />
-    </div>
-  );
+  return <div style={backgroundImageStyle} aria-hidden="true" />;
 };
 
-export default PunishmentBackgroundSection;
+export default PunishmentBackground;
