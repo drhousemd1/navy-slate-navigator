@@ -19,10 +19,8 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
   focalPointX = 50,
   focalPointY = 50
 }) => {
-  // Ensure we have a non-null array to work with
   const imagesArray = backgroundImages && Array.isArray(backgroundImages) ? backgroundImages : [];
-  
-  // Combine background_images array and single background_image_url
+
   const allImages: (string | null)[] = imagesArray.length > 0 
     ? imagesArray 
     : (backgroundImageUrl ? [backgroundImageUrl] : []);
@@ -38,42 +36,43 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
 
   if (!visibleImage && !transitionImage) return null;
 
-  const backgroundStyle: React.CSSProperties = {
+  const baseStyle: React.CSSProperties = {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundSize: 'cover',
+    backgroundRepeat: 'no-repeat',
     opacity: backgroundOpacity / 100,
-    zIndex: 0
+    zIndex: 0,
   };
 
   return (
     <>
       {visibleImage && (
-        <div 
+        <div
+          key="visible"
           style={{
-            ...backgroundStyle,
+            ...baseStyle,
             backgroundImage: `url(${visibleImage})`,
-            backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-            backgroundRepeat: 'no-repeat',
-            transition: 'opacity 2s ease-in-out'
           }}
           aria-hidden="true"
         />
       )}
-      {transitionImage && (
+
+      {transitionImage && isTransitioning && (
         <div
+          key="transition"
           style={{
-            ...backgroundStyle,
+            ...baseStyle,
             backgroundImage: `url(${transitionImage})`,
-            backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-            backgroundRepeat: 'no-repeat',
+            opacity: backgroundOpacity / 100,
+            zIndex: 1,
             transition: 'opacity 2s ease-in-out',
-            opacity: isTransitioning ? backgroundOpacity / 100 : 0,
-            zIndex: 5
+            pointerEvents: 'none',
           }}
           aria-hidden="true"
         />
