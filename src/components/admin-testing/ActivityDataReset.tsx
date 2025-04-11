@@ -10,40 +10,28 @@ const ActivityDataReset = () => {
   const queryClient = useQueryClient();
 
   const handleReset = async () => {
-    if (!confirm('Are you sure you want to reset ALL activity data? This cannot be undone.')) {
-      return;
-    }
+    if (!confirm('Are you sure you want to reset ALL activity data? This cannot be undone.')) return;
 
     try {
       setIsResetting(true);
-      console.log("Resetting all activity data...");
 
-      const deleteFromTable = async (table: string, dateField: string) => {
-        const { error, count } = await supabase
+      const deleteFromTable = async (table: 'task_completion_history' | 'rule_violations' | 'reward_usage' | 'punishment_history', dateField: string) => {
+        const { error } = await supabase
           .from(table)
           .delete()
           .gt(dateField, '1900-01-01')
-          .select('*', { count: 'exact' });
+          .select('*');
 
-        if (error) {
-          throw new Error(`Failed to delete from ${table}: ${error.message}`);
-        }
-
-        console.log(`Deleted ${count} rows from ${table}`);
-        return count;
+        if (error) throw new Error(`Failed to delete from ${table}: ${error.message}`);
       };
 
-      // Deleting data from each activity table with correct date fields
       await deleteFromTable('task_completion_history', 'completed_at');
       await deleteFromTable('rule_violations', 'violation_date');
       await deleteFromTable('reward_usage', 'created_at');
       await deleteFromTable('punishment_history', 'applied_date');
 
-      // Invalidate relevant queries so charts and tiles update
       queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
       queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-summary'] });  // optional
-      queryClient.invalidateQueries({ queryKey: ['monthly-summary'] }); // optional
 
       toast({
         title: 'Activity data reset successfully.',
@@ -55,7 +43,6 @@ const ActivityDataReset = () => {
         description: err.message || 'An unknown error occurred.',
         variant: 'destructive',
       });
-      console.error(err);
     } finally {
       setIsResetting(false);
     }
