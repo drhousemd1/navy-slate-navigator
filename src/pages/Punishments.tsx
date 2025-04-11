@@ -8,7 +8,9 @@ import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts/PunishmentsContext';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+
+// Global default carousel timer in seconds
+const DEFAULT_CAROUSEL_TIMER = 5;
 
 const PunishmentsContent: React.FC = () => {
   const { punishments, loading, createPunishment, updatePunishment } = usePunishments();
@@ -16,6 +18,32 @@ const PunishmentsContent: React.FC = () => {
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const [initializing, setInitializing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Add global carousel index state
+  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
+  const [carouselTimer, setCarouselTimer] = useState(DEFAULT_CAROUSEL_TIMER);
+
+  // Effect to increment the global carousel index
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGlobalCarouselIndex(prevIndex => prevIndex + 1);
+    }, carouselTimer * 1000);
+    
+    return () => clearInterval(interval);
+  }, [carouselTimer]);
+
+  // Update carouselTimer when any punishment's carouselTimer changes
+  useEffect(() => {
+    if (punishments.length > 0) {
+      // Find the first punishment with a custom carouselTimer or use default
+      const firstWithTimer = punishments.find(p => p.carousel_timer !== undefined);
+      if (firstWithTimer && firstWithTimer.carousel_timer) {
+        setCarouselTimer(firstWithTimer.carousel_timer);
+      } else {
+        setCarouselTimer(DEFAULT_CAROUSEL_TIMER);
+      }
+    }
+  }, [punishments]);
 
   useEffect(() => {
     const handleAddNewPunishment = () => {
@@ -153,6 +181,7 @@ const PunishmentsContent: React.FC = () => {
               focal_point_y={punishment.focal_point_y}
               background_images={punishment.background_images}
               carousel_timer={punishment.carousel_timer}
+              globalCarouselIndex={globalCarouselIndex}
             />
           ))}
         </div>

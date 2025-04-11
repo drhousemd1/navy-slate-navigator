@@ -1,9 +1,10 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface UsePunishmentImageCarouselProps {
   images: (string | null)[];
   carouselTimer?: number;
+  globalCarouselIndex?: number;
 }
 
 interface UsePunishmentImageCarouselResult {
@@ -14,31 +15,26 @@ interface UsePunishmentImageCarouselResult {
 
 export const usePunishmentImageCarousel = ({
   images,
-  carouselTimer = 5
+  carouselTimer = 5,
+  globalCarouselIndex = 0
 }: UsePunishmentImageCarouselProps): UsePunishmentImageCarouselResult => {
   const filteredImages = images.filter((img): img is string => !!img);
   const [visibleImage, setVisibleImage] = useState<string | null>(filteredImages.length > 0 ? filteredImages[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const prevGlobalIndexRef = useRef(globalCarouselIndex);
 
-  // Effect to change images at the specified interval
+  // Effect to handle the transition between images when globalCarouselIndex changes
   useEffect(() => {
     if (filteredImages.length <= 1) return;
+    if (globalCarouselIndex === prevGlobalIndexRef.current) return;
     
-    const interval = setInterval(() => {
-      const nextIndex = (currentIndex + 1) % filteredImages.length;
-      setCurrentIndex(nextIndex);
-    }, carouselTimer * 1000);
+    prevGlobalIndexRef.current = globalCarouselIndex;
     
-    return () => clearInterval(interval);
-  }, [currentIndex, filteredImages.length, carouselTimer]);
-
-  // Effect to handle the transition between images
-  useEffect(() => {
-    if (filteredImages.length <= 1) return;
+    const currentIndex = filteredImages.indexOf(visibleImage || filteredImages[0]);
+    const nextIndex = (currentIndex + 1) % filteredImages.length;
+    const nextImage = filteredImages[nextIndex];
     
-    const nextImage = filteredImages[currentIndex];
     if (nextImage === visibleImage) return;
 
     // Preload the next image
@@ -47,6 +43,8 @@ export const usePunishmentImageCarousel = ({
     
     preloadImage.onload = () => {
       setTransitionImage(nextImage);
+      
+      // Use requestAnimationFrame for smoother transition
       requestAnimationFrame(() => {
         setIsTransitioning(true);
 
@@ -55,7 +53,7 @@ export const usePunishmentImageCarousel = ({
           setVisibleImage(nextImage);
           setTransitionImage(null);
           setIsTransitioning(false);
-        }, 2000); // Match the transition duration
+        }, 2000); // Match the transition duration in CSS
 
         return () => clearTimeout(timeout);
       });
@@ -66,7 +64,7 @@ export const usePunishmentImageCarousel = ({
       // If image fails to load, still update to prevent getting stuck
       setVisibleImage(nextImage);
     };
-  }, [currentIndex, filteredImages]);
+  }, [globalCarouselIndex, filteredImages, visibleImage]);
 
   return {
     visibleImage,

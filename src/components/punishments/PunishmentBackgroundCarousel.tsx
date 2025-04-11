@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePunishmentImageCarousel } from './hooks/usePunishmentImageCarousel';
 
 interface PunishmentBackgroundCarouselProps {
@@ -9,6 +9,7 @@ interface PunishmentBackgroundCarouselProps {
   backgroundOpacity?: number;
   focalPointX?: number;
   focalPointY?: number;
+  globalCarouselIndex?: number;
 }
 
 const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> = ({
@@ -17,7 +18,8 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
   carouselTimer = 5,
   backgroundOpacity = 100,
   focalPointX = 50,
-  focalPointY = 50
+  focalPointY = 50,
+  globalCarouselIndex = 0
 }) => {
   const allImages: (string | null)[] =
     backgroundImages && backgroundImages.length > 0
@@ -32,7 +34,8 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
     isTransitioning
   } = usePunishmentImageCarousel({
     images: allImages,
-    carouselTimer
+    carouselTimer,
+    globalCarouselIndex
   });
 
   if (!visibleImage && !transitionImage) return null;
