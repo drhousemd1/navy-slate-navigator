@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 interface UsePunishmentImageCarouselProps {
   images: string[];
-  carouselTimer?: number;
+  globalCarouselIndex: number;
 }
 
 interface UsePunishmentImageCarouselResult {
@@ -13,26 +13,19 @@ interface UsePunishmentImageCarouselResult {
 
 export const usePunishmentImageCarousel = ({
   images,
-  carouselTimer = 5
+  globalCarouselIndex
 }: UsePunishmentImageCarouselProps): UsePunishmentImageCarouselResult => {
   const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
-  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
 
-  // Update global index every X seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setGlobalCarouselIndex(prev => prev + 1);
-    }, carouselTimer * 1000);
-    return () => clearInterval(interval);
-  }, [carouselTimer]);
-
-  // Reset if images array changes
   useEffect(() => {
     if (images.length > 0) {
-      const changed = images.length !== previousImages.length || images.some((img, i) => previousImages[i] !== img);
+      const changed =
+        images.length !== previousImages.length ||
+        images.some((img, i) => previousImages[i] !== img);
+
       if (changed) {
         setPreviousImages(images);
         setVisibleImage(images[0]);
@@ -47,7 +40,6 @@ export const usePunishmentImageCarousel = ({
     }
   }, [images]);
 
-  // Handle transitions
   useEffect(() => {
     if (!images.length || images.length <= 1) return;
 
@@ -66,11 +58,13 @@ export const usePunishmentImageCarousel = ({
       requestAnimationFrame(() => {
         setTimeout(() => {
           setIsTransitioning(true);
+
           const timeout = setTimeout(() => {
             setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
           }, 2000);
+
           return () => clearTimeout(timeout);
         }, 0);
       });
