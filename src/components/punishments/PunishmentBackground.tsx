@@ -5,7 +5,7 @@ import { Control } from "react-hook-form";
 
 interface PunishmentBackgroundSectionProps {
   control: Control<any>;
-  imageSlots: (string | null)[];
+  imageSlots: (string | null)[] | undefined;
   selectedBoxIndex: number | null;
   carouselTimer: number;
   onCarouselTimerChange: (timer: number) => void;
@@ -18,7 +18,7 @@ interface PunishmentBackgroundSectionProps {
 
 const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = ({
   control,
-  imageSlots,
+  imageSlots = [],
   selectedBoxIndex,
   carouselTimer,
   onCarouselTimerChange,
@@ -28,12 +28,8 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
   setValue,
   position
 }) => {
-  const currentImage =
-    selectedBoxIndex !== null &&
-    imageSlots.length > selectedBoxIndex &&
-    imageSlots[selectedBoxIndex]
-      ? imageSlots[selectedBoxIndex]
-      : null;
+  const safeIndex = typeof selectedBoxIndex === 'number' && selectedBoxIndex >= 0 && selectedBoxIndex < imageSlots.length;
+  const currentImage = safeIndex ? imageSlots[selectedBoxIndex] : null;
 
   return (
     <div className="space-y-4">
