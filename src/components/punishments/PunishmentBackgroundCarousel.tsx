@@ -34,7 +34,7 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
       setTimeout(() => {
         setIndex((prev) => (prev + 1) % images.length);
         setFade(true);
-      }, 300); // fade duration
+      }, 2000); // match 2s fade duration
     }, carouselTimer * 1000);
     return () => clearInterval(interval);
   }, [images.length, carouselTimer]);
@@ -48,12 +48,11 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
           key={i}
           src={img}
           alt=""
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
-            i === index && fade ? "opacity-100" : "opacity-0"
-          }`}
+          className="absolute inset-0 w-full h-full object-cover"
           style={{
+            transition: "opacity 2s ease-in-out",
             objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: i === index ? backgroundOpacity / 100 : 0,
+            opacity: i === index && fade ? backgroundOpacity / 100 : 0,
           }}
         />
       ))}
