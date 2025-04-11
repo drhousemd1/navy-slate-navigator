@@ -25,7 +25,7 @@ const ActivityDataReset = () => {
           .from('task_completion_history')
           .delete()
           .gt('completed_at', '1900-01-01')
-          .select('*', { count: 'exact' });
+          .select('count');
 
         if (error) {
           throw new Error(`Failed to delete from task_completion_history: ${error.message}`);
@@ -40,7 +40,7 @@ const ActivityDataReset = () => {
           .from('rule_violations')
           .delete()
           .gt('violation_date', '1900-01-01')
-          .select('*', { count: 'exact' });
+          .select('count');
 
         if (error) {
           throw new Error(`Failed to delete from rule_violations: ${error.message}`);
@@ -55,7 +55,7 @@ const ActivityDataReset = () => {
           .from('reward_usage')
           .delete()
           .gt('created_at', '1900-01-01')
-          .select('*', { count: 'exact' });
+          .select('count');
 
         if (error) {
           throw new Error(`Failed to delete from reward_usage: ${error.message}`);
@@ -70,7 +70,7 @@ const ActivityDataReset = () => {
           .from('punishment_history')
           .delete()
           .gt('applied_date', '1900-01-01')
-          .select('*', { count: 'exact' });
+          .select('count');
 
         if (error) {
           throw new Error(`Failed to delete from punishment_history: ${error.message}`);
