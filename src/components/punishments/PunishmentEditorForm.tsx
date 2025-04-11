@@ -1,4 +1,3 @@
-// src/components/punishments/PunishmentEditorForm.tsx
 import React from 'react';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 import PunishmentBasicDetails from './form/PunishmentBasicDetails';
