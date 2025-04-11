@@ -1,10 +1,8 @@
+
 import React from 'react';
-import PunishmentBackgroundCarousel from './PunishmentBackgroundCarousel';
 
 interface PunishmentBackgroundProps {
   background_image_url?: string;
-  background_images?: (string | null)[] | null;
-  carousel_timer?: number;
   background_opacity: number;
   focal_point_x: number;
   focal_point_y: number;
@@ -12,22 +10,27 @@ interface PunishmentBackgroundProps {
 
 const PunishmentBackground: React.FC<PunishmentBackgroundProps> = ({
   background_image_url,
-  background_images = [],
-  carousel_timer = 5,
-  background_opacity = 100,
+  background_opacity = 50,
   focal_point_x = 50,
   focal_point_y = 50
 }) => {
-  return (
-    <PunishmentBackgroundCarousel
-      backgroundImages={background_images}
-      backgroundImageUrl={background_image_url}
-      carouselTimer={carousel_timer}
-      backgroundOpacity={background_opacity}
-      focalPointX={focal_point_x}
-      focalPointY={focal_point_y}
-    />
-  );
+  if (!background_image_url) return null;
+  
+  const backgroundImageStyle: React.CSSProperties = {
+    backgroundImage: `url(${background_image_url})`,
+    backgroundSize: 'cover',
+    backgroundPosition: `${focal_point_x}% ${focal_point_y}%`,
+    backgroundRepeat: 'no-repeat',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: background_opacity / 100,
+    zIndex: 0
+  };
+
+  return <div style={backgroundImageStyle} aria-hidden="true" />;
 };
 
 export default PunishmentBackground;
