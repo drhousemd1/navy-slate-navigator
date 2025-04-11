@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { usePunishmentImageCarousel } from './hooks/usePunishmentImageCarousel';
+import React, { useEffect, useState } from "react";
 
 interface PunishmentBackgroundCarouselProps {
   backgroundImages?: (string | null)[] | null;
@@ -16,7 +15,7 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
   carouselTimer = 5,
   backgroundOpacity = 100,
   focalPointX = 50,
-  focalPointY = 50
+  focalPointY = 50,
 }) => {
   const images: string[] =
     backgroundImages && backgroundImages.length > 0
@@ -25,61 +24,40 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
       ? [backgroundImageUrl]
       : [];
 
-  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
+  const [index, setIndex] = useState(0);
+  const [fade, setFade] = useState(true);
 
   useEffect(() => {
     if (images.length <= 1) return;
     const interval = setInterval(() => {
-      setGlobalCarouselIndex((prev) => prev + 1);
+      setFade(false);
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % images.length);
+        setFade(true);
+      }, 300); // fade duration
     }, carouselTimer * 1000);
     return () => clearInterval(interval);
-  }, [carouselTimer, images.length]);
+  }, [images.length, carouselTimer]);
 
-  const {
-    visibleImage,
-    transitionImage,
-    isTransitioning
-  } = usePunishmentImageCarousel({
-    images,
-    globalCarouselIndex
-  });
-
-  if (!visibleImage && !transitionImage) return null;
+  if (!images.length) return null;
 
   return (
-    <>
-      {visibleImage && (
+    <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
+      {images.map((img, i) => (
         <img
-          src={visibleImage}
+          key={i}
+          src={img}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover z-0 opacity-100"
-          style={{
-            transition: 'opacity 2s ease-in-out',
-            objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100
-          }}
-          draggable={false}
-          aria-hidden="true"
-        />
-      )}
-
-      {transitionImage && (
-        <img
-          src={transitionImage}
-          alt=""
-          className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
-            isTransitioning ? 'opacity-100' : 'opacity-0'
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
+            i === index && fade ? "opacity-100" : "opacity-0"
           }`}
           style={{
-            transition: 'opacity 2s ease-in-out',
             objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: isTransitioning ? backgroundOpacity / 100 : 0
+            opacity: i === index ? backgroundOpacity / 100 : 0,
           }}
-          draggable={false}
-          aria-hidden="true"
         />
-      )}
-    </>
+      ))}
+    </div>
   );
 };
 
