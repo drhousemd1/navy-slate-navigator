@@ -12,7 +12,8 @@ import { usePunishmentEditor } from "@/components/punishments/hooks/usePunishmen
 const PunishmentEditor = () => {
   const editor = usePunishmentEditor();
 
-  if (!editor.isOpen) return null;
+  // ✅ Fix: gracefully exit if editor is undefined
+  if (!editor || !editor.isOpen) return null;
 
   return (
     <Dialog open={editor.isOpen} onOpenChange={editor.onClose}>
