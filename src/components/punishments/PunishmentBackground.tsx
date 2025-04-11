@@ -1,3 +1,4 @@
+
 import React from "react";
 import { FormLabel } from "@/components/ui/form";
 import BackgroundImageSelector from "@/components/task-editor/BackgroundImageSelector";
@@ -28,14 +29,18 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
   setValue,
   position
 }) => {
-  const safeIndex = typeof selectedBoxIndex === 'number' && selectedBoxIndex >= 0 && selectedBoxIndex < imageSlots.length;
-  const currentImage = safeIndex ? imageSlots[selectedBoxIndex] : null;
+  // Ensure imageSlots is an array, and only check for valid index if it exists
+  const safeImageSlots = Array.isArray(imageSlots) ? imageSlots : [];
+  const safeIndex = typeof selectedBoxIndex === 'number' && 
+                    selectedBoxIndex >= 0 && 
+                    selectedBoxIndex < safeImageSlots.length;
+  const currentImage = safeIndex ? safeImageSlots[selectedBoxIndex] : null;
 
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Images</FormLabel>
       <BackgroundImageSelector
-        imageSlots={imageSlots}
+        imageSlots={safeImageSlots}
         selectedBoxIndex={selectedBoxIndex}
         onSelectImageSlot={onSelectImageSlot}
         onImageUpload={onImageUpload}

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
@@ -11,6 +12,7 @@ import PunishmentFormSubmitHandler from './form/PunishmentFormSubmitHandler';
 import PunishmentFormLayout from './form/PunishmentFormLayout';
 import { usePunishmentIcon } from './hooks/usePunishmentIcon';
 import { useModalImageHandling } from '@/components/admin-testing/edit-modal/hooks/useModalImageHandling';
+import { usePunishmentBackground } from './hooks/usePunishmentBackground';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
@@ -38,13 +40,19 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     position,
     setValue
   } = useModalImageHandling({
-    initialImages: punishmentData?.background_images,
-    initialTimer: punishmentData?.carousel_timer,
+    initialImages: punishmentData?.background_images || [],
+    initialTimer: punishmentData?.carousel_timer || 5,
     initialPosition: {
       x: punishmentData?.focal_point_x ?? 50,
       y: punishmentData?.focal_point_y ?? 50
     }
   });
+
+  const { 
+    imagePreview, 
+    handleImageUpload: handleSingleImageUpload, 
+    handleRemoveImage: handleSingleImageRemove 
+  } = usePunishmentBackground(punishmentData?.background_image_url);
 
   const {
     selectedIconName,
@@ -71,16 +79,11 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
           onIconSelect={handleSelectIcon}
         />
         <PunishmentBackgroundSection
-          imageSlots={imageSlots}
-          selectedBoxIndex={selectedBoxIndex}
-          onImageUpload={handleImageUpload}
-          onRemoveImage={handleRemoveImage}
-          onSelectImageSlot={handleSelectBox}
-          carouselTimer={carouselTimer}
-          onCarouselTimerChange={setCarouselTimer}
-          setValue={setValue}
-          position={position}
           control={methods.control}
+          imagePreview={imagePreview}
+          onRemoveImage={handleSingleImageRemove}
+          onImageUpload={handleSingleImageUpload}
+          setValue={setValue}
         />
         <PunishmentColorSettings />
         <PunishmentFormActions
