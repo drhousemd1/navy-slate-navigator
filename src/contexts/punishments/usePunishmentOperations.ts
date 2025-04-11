@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -29,12 +28,9 @@ export const usePunishmentOperations = () => {
       
       if (historyError) throw historyError;
       
-      // Transform the data to ensure it matches the expected types
       const transformedPunishments: PunishmentData[] = punishmentsData?.map(punishment => {
-        // Convert background_images to ensure it's a string array
         let backgroundImages: (string | null)[] = [];
         if (punishment.background_images) {
-          // Handle different possible formats
           if (Array.isArray(punishment.background_images)) {
             backgroundImages = punishment.background_images
               .filter(img => img !== null && img !== undefined)
@@ -46,9 +42,7 @@ export const usePunishmentOperations = () => {
         
         return {
           ...punishment,
-          // Ensure background_images is an array of strings or null values
           background_images: backgroundImages,
-          // Ensure carousel_timer is a number
           carousel_timer: typeof punishment.carousel_timer === 'number' 
             ? punishment.carousel_timer 
             : punishment.carousel_timer !== null && punishment.carousel_timer !== undefined
@@ -78,16 +72,13 @@ export const usePunishmentOperations = () => {
 
   const createPunishment = async (punishmentData: PunishmentData): Promise<string> => {
     try {
-      // Format the background_images to ensure it's compatible with Supabase
       let backgroundImages = punishmentData.background_images;
       if (backgroundImages && Array.isArray(backgroundImages)) {
-        // Ensure all elements are strings or null
         backgroundImages = backgroundImages.map(img => 
           img !== null && img !== undefined ? String(img) : null
         );
       }
       
-      // Ensure the data is in the correct format before sending to Supabase
       const dataToSave = {
         ...punishmentData,
         background_images: backgroundImages || null,
@@ -102,7 +93,6 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
-      // Transform the returned data to match our type
       const newPunishment: PunishmentData = {
         ...data,
         background_images: Array.isArray(data.background_images) 
@@ -135,7 +125,6 @@ export const usePunishmentOperations = () => {
 
   const updatePunishment = async (id: string, punishmentData: PunishmentData): Promise<void> => {
     try {
-      // Extract id to avoid sending it in the update
       const { id: _, ...dataToUpdate } = punishmentData;
       
       console.log("Updating punishment with ID:", id);
@@ -148,15 +137,11 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
-      // Update the local state
       setPunishments(prev => 
         prev.map(punishment => 
           punishment.id === id ? { ...punishment, ...dataToUpdate } : punishment
         )
       );
-      
-      // Fetch punishments again to ensure state is fresh
-      fetchPunishments();
       
       toast({
         title: "Success",
@@ -182,12 +167,8 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
-      // Update local state
       setPunishments(prev => prev.filter(punishment => punishment.id !== id));
       setPunishmentHistory(prev => prev.filter(item => item.punishment_id !== id));
-      
-      // Fetch punishments again to ensure state is fresh
-      fetchPunishments();
       
       toast({
         title: "Success",
