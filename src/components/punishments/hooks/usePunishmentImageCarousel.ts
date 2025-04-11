@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 interface UsePunishmentImageCarouselProps {
-  images: (string | null)[];
+  images: string[];
   carouselTimer?: number;
 }
 
@@ -9,59 +9,82 @@ interface UsePunishmentImageCarouselResult {
   visibleImage: string | null;
   transitionImage: string | null;
   isTransitioning: boolean;
-  currentImageIndex: number;
 }
 
 export const usePunishmentImageCarousel = ({
   images,
   carouselTimer = 5
 }: UsePunishmentImageCarouselProps): UsePunishmentImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(null);
+  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [previousImages, setPreviousImages] = useState<string[]>([]);
+  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const validImages = images.filter((img): img is string => !!img);
-
+  // Update global index every X seconds
   useEffect(() => {
-    if (validImages.length === 0) return;
+    const interval = setInterval(() => {
+      setGlobalCarouselIndex(prev => prev + 1);
+    }, carouselTimer * 1000);
+    return () => clearInterval(interval);
+  }, [carouselTimer]);
 
-    // Start with the first image
-    setVisibleImage(validImages[0]);
-    setCurrentImageIndex(0);
-
-    if (validImages.length === 1) return;
-
-    timerRef.current = setInterval(() => {
-      const nextIndex = (currentImageIndex + 1) % validImages.length;
-      const next = validImages[nextIndex];
-
-      // Initiate transition phase
-      setTransitionImage(next);
-      setIsTransitioning(true);
-
-      // After the fade completes, commit image and clean up
-      transitionTimeoutRef.current = setTimeout(() => {
-        setVisibleImage(next);
+  // Reset if images array changes
+  useEffect(() => {
+    if (images.length > 0) {
+      const changed = images.length !== previousImages.length || images.some((img, i) => previousImages[i] !== img);
+      if (changed) {
+        setPreviousImages(images);
+        setVisibleImage(images[0]);
         setTransitionImage(null);
         setIsTransitioning(false);
-        setCurrentImageIndex(nextIndex);
-      }, 2000); // Match fade timing
-    }, carouselTimer * 1000);
+      }
+    } else if (previousImages.length > 0 && images.length === 0) {
+      setPreviousImages([]);
+      setVisibleImage(null);
+      setTransitionImage(null);
+      setIsTransitioning(false);
+    }
+  }, [images]);
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+  // Handle transitions
+  useEffect(() => {
+    if (!images.length || images.length <= 1) return;
+
+    const nextIndex = globalCarouselIndex % images.length;
+    const next = images[nextIndex];
+
+    if (next === visibleImage) return;
+
+    const preload = new Image();
+    preload.src = next;
+
+    preload.onload = () => {
+      setTransitionImage(next);
+      setIsTransitioning(false);
+
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setIsTransitioning(true);
+          const timeout = setTimeout(() => {
+            setVisibleImage(next);
+            setTransitionImage(null);
+            setIsTransitioning(false);
+          }, 2000);
+          return () => clearTimeout(timeout);
+        }, 0);
+      });
     };
-  }, [validImages.join(','), carouselTimer]);
+
+    preload.onerror = () => {
+      console.error("Failed to load image:", next);
+      setVisibleImage(next);
+    };
+  }, [globalCarouselIndex, images, visibleImage]);
 
   return {
     visibleImage,
     transitionImage,
-    isTransitioning,
-    currentImageIndex
+    isTransitioning
   };
 };
