@@ -1,36 +1,64 @@
+import React from "react";
+import { FormLabel } from "@/components/ui/form";
+import BackgroundImageSelector from "@/components/task-editor/BackgroundImageSelector";
+import { Control } from "react-hook-form";
 
-import React from 'react';
-
-interface PunishmentBackgroundProps {
-  background_image_url?: string;
-  background_opacity: number;
-  focal_point_x: number;
-  focal_point_y: number;
+interface PunishmentBackgroundSectionProps {
+  control: Control<any>;
+  imageSlots: (string | null)[];
+  selectedBoxIndex: number | null;
+  carouselTimer: number;
+  onCarouselTimerChange: (timer: number) => void;
+  onSelectImageSlot: (index: number) => void;
+  onRemoveImage: () => void;
+  onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setValue: (key: string, value: any) => void;
+  position: { x: number; y: number };
 }
 
-const PunishmentBackground: React.FC<PunishmentBackgroundProps> = ({
-  background_image_url,
-  background_opacity,
-  focal_point_x,
-  focal_point_y
+const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = ({
+  control,
+  imageSlots,
+  selectedBoxIndex,
+  carouselTimer,
+  onCarouselTimerChange,
+  onSelectImageSlot,
+  onRemoveImage,
+  onImageUpload,
+  setValue,
+  position
 }) => {
-  if (!background_image_url) return null;
-  
-  const backgroundImageStyle: React.CSSProperties = {
-    backgroundImage: `url(${background_image_url})`,
-    backgroundSize: 'cover',
-    backgroundPosition: `${focal_point_x}% ${focal_point_y}%`,
-    backgroundRepeat: 'no-repeat',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: background_opacity / 100,
-    zIndex: 0
-  };
+  const currentImage = selectedBoxIndex !== null ? imageSlots[selectedBoxIndex] : null;
 
-  return <div style={backgroundImageStyle} aria-hidden="true" />;
+  return (
+    <div className="space-y-4">
+      <FormLabel className="text-white text-lg">Background Images</FormLabel>
+      <BackgroundImageSelector
+        imageSlots={imageSlots}
+        selectedBoxIndex={selectedBoxIndex}
+        onSelectImageSlot={onSelectImageSlot}
+        onImageUpload={onImageUpload}
+        onRemoveImage={onRemoveImage}
+        currentImage={currentImage}
+        control={control}
+        initialPosition={position}
+        setValue={setValue}
+      />
+      <div className="flex flex-col space-y-2">
+        <FormLabel className="text-white">Carousel Timer (seconds)</FormLabel>
+        <input
+          type="range"
+          min={3}
+          max={15}
+          step={1}
+          value={carouselTimer}
+          onChange={(e) => onCarouselTimerChange(Number(e.target.value))}
+          className="w-full"
+        />
+        <div className="text-white text-sm">{carouselTimer} seconds</div>
+      </div>
+    </div>
+  );
 };
 
-export default PunishmentBackground;
+export default PunishmentBackgroundSection;
