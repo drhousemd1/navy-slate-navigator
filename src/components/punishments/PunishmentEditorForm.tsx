@@ -6,11 +6,11 @@ import PunishmentIconSection from './form/PunishmentIconSection';
 import PunishmentBackgroundSection from './form/PunishmentBackgroundSection';
 import PunishmentColorSettings from './PunishmentColorSettings';
 import PunishmentFormActions from './form/PunishmentFormActions';
-import PunishmentFormProvider from './form/PunishmentFormProvider';
-import { useForm } from 'react-hook-form';
+import PunishmentFormProvider, { PunishmentFormValues } from './form/PunishmentFormProvider';
 import { usePunishmentIcon } from './hooks/usePunishmentIcon';
 import { usePunishmentBackground } from './hooks/usePunishmentBackground';
 import { useDeleteDialog } from './hooks/useDeleteDialog';
+import { useForm } from 'react-hook-form';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
@@ -58,23 +58,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     }
   }, [punishmentData, setSelectedIconName, setImagePreview]);
 
-  const form = useForm({
-    defaultValues: {
-      title: punishmentData?.title || '',
-      description: punishmentData?.description || '',
-      points: punishmentData?.points || 5,
-      icon_color: punishmentData?.icon_color || '#ea384c',
-      title_color: punishmentData?.title_color || '#FFFFFF',
-      subtext_color: punishmentData?.subtext_color || '#8E9196',
-      calendar_color: punishmentData?.calendar_color || '#ea384c',
-      highlight_effect: punishmentData?.highlight_effect || false,
-      background_opacity: punishmentData?.background_opacity || 50,
-      focal_point_x: punishmentData?.focal_point_x || 50,
-      focal_point_y: punishmentData?.focal_point_y || 50,
-    }
-  });
-
-  const handleFormSubmit = async (values: any) => {
+  const handleFormSubmit = async (values: PunishmentFormValues) => {
     try {
       const dataToSave: PunishmentData = {
         ...values,
@@ -93,8 +77,8 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
   };
 
   return (
-    <PunishmentFormProvider>
-      {(formContext) => (
+    <PunishmentFormProvider punishmentData={punishmentData}>
+      {(form) => (
         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
           <PunishmentBasicDetails 
             control={form.control}
@@ -116,6 +100,9 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
             onRemoveImage={handleRemoveImage}
             onImageUpload={handleImageUpload}
             setValue={form.setValue}
+            watch={form.watch}
+            initialBackgroundImages={punishmentData?.background_images}
+            initialCarouselTimer={punishmentData?.carousel_timer}
           />
           
           <PunishmentColorSettings control={form.control} />
