@@ -30,20 +30,33 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
   const { globalCarouselTimer, setGlobalCarouselTimer } = usePunishments();
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
   
-  // Initialize image slots with the provided background images or create empty ones
-  // FIXED: Now creating 5 slots instead of 4 when no initial images exist
+  // Ensure we always have exactly 5 slots by padding any existing arrays
+  const ensureExactlyFiveSlots = (slots: (string | null)[]) => {
+    // Copy the array to avoid mutation
+    const result = [...slots];
+    
+    // If less than 5 slots, pad with nulls
+    while (result.length < 5) {
+      result.push(null);
+    }
+    
+    // If more than 5 slots (unlikely), truncate
+    return result.slice(0, 5);
+  };
+  
+  // Initialize image slots with the provided background images (padded to 5) or create empty ones
   const [imageSlots, setImageSlots] = useState<(string | null)[]>(
     initialBackgroundImages.length > 0 
-      ? [...initialBackgroundImages] 
+      ? ensureExactlyFiveSlots(initialBackgroundImages)
       : imagePreview 
         ? [imagePreview, null, null, null, null] 
         : [null, null, null, null, null]
   );
 
-  // Update slots if initialBackgroundImages changes
+  // Update slots if initialBackgroundImages changes, ensuring we have 5 slots
   useEffect(() => {
     if (initialBackgroundImages.length > 0) {
-      setImageSlots([...initialBackgroundImages]);
+      setImageSlots(ensureExactlyFiveSlots(initialBackgroundImages));
     }
   }, [initialBackgroundImages]);
 
@@ -111,7 +124,7 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
         onRemoveImage={handleSlotImageRemove}
         onImageUpload={handleSlotImageUpload}
         setValue={setValue}
-        watch={watch}
+        watch={form.watch}
         control={control}
       />
 
