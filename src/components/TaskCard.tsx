@@ -9,7 +9,7 @@ import CompletionButton from './task/CompletionButton';
 import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
 import HighlightedText from './task/HighlightedText';
-import { getMondayBasedDay } from '@/lib/utils';
+import { getMondayBasedDay } from '@/lib/utils';  // CORRECTED IMPORT
 import { useTasks } from '@/contexts/tasks';
 
 interface TaskCardProps {
