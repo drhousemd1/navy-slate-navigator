@@ -2,7 +2,17 @@
 import React from 'react';
 import { useImageCarousel } from '@/components/hooks/useImageCarousel';
 
-const TaskBackgroundCarousel = ({
+interface TaskBackgroundCarouselProps {
+  backgroundImages?: (string | null)[] | null;
+  backgroundImageUrl?: string;
+  carouselTimer?: number;
+  backgroundOpacity?: number;
+  focalPointX?: number;
+  focalPointY?: number;
+  globalCarouselIndex?: number;
+}
+
+const TaskBackgroundCarousel: React.FC<TaskBackgroundCarouselProps> = ({
   backgroundImages = [],
   backgroundImageUrl,
   carouselTimer = 5,
@@ -11,38 +21,30 @@ const TaskBackgroundCarousel = ({
   focalPointY = 50,
   globalCarouselIndex = 0
 }) => {
-  const allImages =
+  const allImages: (string | null)[] =
     backgroundImages && backgroundImages.length > 0
       ? backgroundImages
       : backgroundImageUrl
       ? [backgroundImageUrl]
       : [];
 
-  const filteredImages = allImages.filter((img): img is string => !!img);
-
   const {
     visibleImage,
     transitionImage,
     isTransitioning
   } = useImageCarousel({
-    images: filteredImages,
+    images: allImages.filter((img): img is string => !!img),
     globalCarouselIndex
   });
 
-  return (
-    <div className="absolute inset-0 w-full h-full overflow-hidden">
-      {!visibleImage && !transitionImage && (
-        <div 
-          className="absolute inset-0 w-full h-full bg-[#0f172a]"
-          aria-hidden="true"
-        />
-      )}
+  if (!visibleImage && !transitionImage) return null;
 
+  return (
+    <>
       {visibleImage && (
         <div
-          className="absolute inset-0 w-full h-full"
+          className="absolute inset-0 w-full h-full z-0"
           style={{
-            zIndex: 0,
             backgroundImage: `url(${visibleImage})`,
             backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
@@ -55,9 +57,8 @@ const TaskBackgroundCarousel = ({
 
       {transitionImage && (
         <div
-          className="absolute inset-0 w-full h-full pointer-events-none"
+          className="absolute inset-0 w-full h-full z-10 pointer-events-none"
           style={{
-            zIndex: 1,
             backgroundImage: `url(${transitionImage})`,
             backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
@@ -67,7 +68,7 @@ const TaskBackgroundCarousel = ({
           aria-hidden="true"
         />
       )}
-    </div>
+    </>
   );
 };
 
