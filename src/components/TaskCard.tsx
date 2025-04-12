@@ -10,6 +10,9 @@ import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
 import HighlightedText from './task/HighlightedText';
 import { getCurrentDayOfWeek } from '@/lib/taskUtils';
+import TaskCardHeader from './tasks/TaskCardHeader';
+import TaskCardFooter from './tasks/TaskCardFooter';
+import TaskBackground from './tasks/TaskBackground';
 
 interface TaskCardProps {
   title: string;
@@ -71,56 +74,23 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const isFullyCompleted = currentCompletions >= maxCompletions;
 
   // Handle both legacy and new background image format
-  const hasCarouselImages = backgroundImages && backgroundImages.length > 0;
-  
-  // Get the current images to display based on the shared index
-  let primaryImage: string | null = null;
-  let transitioningImage: string | null = null;
-  
-  if (hasCarouselImages) {
-    const imageCount = backgroundImages.length;
-    if (imageCount > 0) {
-      const currentIndex = sharedImageIndex % imageCount;
-      const nextIndex = (currentIndex + 1) % imageCount;
-      
-      primaryImage = backgroundImages[currentIndex];
-      transitioningImage = imageCount > 1 ? backgroundImages[nextIndex] : null;
-    }
-  } else if (backgroundImage) {
-    // Legacy single image support
-    primaryImage = backgroundImage;
-  }
+  const allBackgroundImages = backgroundImages && backgroundImages.length > 0 
+    ? backgroundImages 
+    : backgroundImage 
+      ? [backgroundImage] 
+      : [];
 
   return (
-    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!hasCarouselImages && !backgroundImage ? 'bg-navy' : ''}`}>
+    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${allBackgroundImages.length === 0 ? 'bg-navy' : ''}`}>
       {/* Background image carousel */}
-      {(primaryImage || transitioningImage) && (
-        <div className="absolute inset-0 w-full h-full z-0">
-          {primaryImage && (
-            <img
-              src={primaryImage}
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{
-                transition: 'opacity 2s ease-in-out',
-                opacity: transitioningImage ? 0 : backgroundOpacity / 100,
-                objectPosition: `${focalPointX}% ${focalPointY}%`,
-              }}
-              alt="Task background"
-            />
-          )}
-          {transitioningImage && (
-            <img
-              src={transitioningImage}
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{
-                transition: 'opacity 2s ease-in-out',
-                opacity: backgroundOpacity / 100,
-                objectPosition: `${focalPointX}% ${focalPointY}%`,
-              }}
-              alt="Task background transition"
-            />
-          )}
-        </div>
+      {allBackgroundImages.length > 0 && (
+        <TaskBackground
+          backgroundImages={allBackgroundImages}
+          backgroundOpacity={backgroundOpacity}
+          focalPointX={focalPointX}
+          focalPointY={focalPointY}
+          globalCarouselIndex={sharedImageIndex}
+        />
       )}
 
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
