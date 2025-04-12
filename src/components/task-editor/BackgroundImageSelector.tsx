@@ -58,6 +58,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
               style={{
                 backgroundImage: `url(${imagePreview})`,
                 backgroundPosition: `${position.x}% ${position.y}%`,
+                opacity: backgroundOpacity / 100,
                 transition: 'opacity 2s ease-in-out'
               }}
             >
