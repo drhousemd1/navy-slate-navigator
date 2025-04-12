@@ -28,9 +28,26 @@ const TaskEditorForm = ({
 }) => {
   const form = useForm({ defaultValues: taskData });
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    taskData?.background_image_url || (taskData?.background_images && taskData.background_images[0]) || null
+  );
 
   const handleSubmit = (data) => {
     onSave({ ...taskData, ...data });
+  };
+
+  // Mock handlers for the BackgroundImageSelector
+  const handleImageUpload = (e) => {
+    console.log("Image would be uploaded here");
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+  };
+
+  const initialPosition = { 
+    x: taskData?.focal_point_x || 50, 
+    y: taskData?.focal_point_y || 50 
   };
 
   return (
@@ -66,7 +83,6 @@ const TaskEditorForm = ({
           control={form.control}
           name="points"
           label="Points"
-          placeholder="Enter points"
         />
 
         <ColorPickerField
@@ -79,18 +95,34 @@ const TaskEditorForm = ({
 
         <PrioritySelector control={form.control} />
 
-        <IconSelector control={form.control} />
+        <IconSelector 
+          selectedIconName={form.watch("icon_name")}
+          iconPreview={form.watch("icon_url")}
+          iconColor={form.watch("icon_color") || "#000000"}
+          onSelectIcon={(icon) => form.setValue("icon_name", icon)}
+          onUploadIcon={() => console.log("Upload icon")}
+          onRemoveIcon={() => {
+            form.setValue("icon_name", undefined);
+            form.setValue("icon_url", undefined);
+          }}
+        />
 
         <PredefinedIconsGrid
-          selected={form.watch("icon")}
-          onSelect={(icon) => form.setValue("icon", icon)}
+          selectedIconName={form.watch("icon_name")}
+          iconColor={form.watch("icon_color") || "#000000"}
+          onSelectIcon={(icon) => form.setValue("icon_name", icon)}
         />
 
         <BackgroundImageSelector
-          control={form.control}
-          backgroundImages={form.watch("background_images") || []}
-          selectedImageIndex={sharedImageIndex % (form.watch("background_images")?.length || 1)}
+          imagePreview={imagePreview}
+          initialPosition={initialPosition}
+          onRemoveImage={handleRemoveImage}
+          onImageUpload={handleImageUpload}
           setValue={form.setValue}
+          control={form.control}
+          backgroundImages={taskData?.background_images || []}
+          selectedImageIndex={0}
+          onSelectImage={(idx) => console.log("Selected image", idx)}
           background_opacity={form.watch("background_opacity") || 100}
         />
 
@@ -110,12 +142,12 @@ const TaskEditorForm = ({
                   Delete
                 </Button>
                 <DeleteTaskDialog
-                  open={showDeleteDialog}
-                  onConfirm={() => {
+                  isOpen={showDeleteDialog}
+                  onOpenChange={setIsDeleteDialog}
+                  onDelete={() => {
                     if (onDelete) onDelete(taskData.id);
                     setShowDeleteDialog(false);
                   }}
-                  onCancel={() => setShowDeleteDialog(false)}
                 />
               </>
             )}

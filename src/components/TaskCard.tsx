@@ -4,7 +4,7 @@ import { Task } from '../lib/taskUtils';
 import { Button } from './ui/button';
 import { CheckCircle2, Pencil } from 'lucide-react';
 import TaskBackgroundCarousel from './shared/TaskBackgroundCarousel';
-import { wasCompletedToday, getLocalDateString } from '@/lib/taskUtils';
+import { wasCompletedToday } from '@/lib/taskUtils';
 
 interface TaskCardProps {
   task: Task;
@@ -28,7 +28,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
     background_opacity,
     focal_point_x,
     focal_point_y,
-    completed_dates = [],
   } = task;
 
   const allImages =
@@ -38,8 +37,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
       ? [background_image_url]
       : [];
 
-  const today = getLocalDateString(new Date());
-  const isCompleted = wasCompletedToday(task, today);
+  const isCompleted = wasCompletedToday(task);
 
   return (
     <div className={`relative overflow-hidden border-2 border-[#00f0ff] rounded-md ${allImages.length === 0 ? 'bg-navy' : ''}`}>

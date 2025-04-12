@@ -12,7 +12,6 @@ import {
   saveTask, 
   updateTaskCompletion, 
   deleteTask,
-  getLocalDateString,
   wasCompletedToday
 } from '../lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
@@ -77,11 +76,8 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
               setIsEditorOpen(true);
             }}
             onComplete={async () => {
-              const now = new Date();
-              const today = getLocalDateString(now);
-              const completed = wasCompletedToday(task, today);
-
-              await updateTaskCompletion(task.id, !completed, today);
+              const completed = wasCompletedToday(task);
+              await updateTaskCompletion(task.id, !completed);
               await queryClient.invalidateQueries({ queryKey: ['tasks'] });
             }}
             sharedImageIndex={sharedImageIndex}
