@@ -26,7 +26,6 @@ export const usePunishmentFetch = ({
     try {
       setLoading(true);
       
-      // Simple query without any timeout constraints
       const { data: punishmentsData, error: punishmentsError } = await supabase
         .from('punishments')
         .select('*')
@@ -34,7 +33,6 @@ export const usePunishmentFetch = ({
       
       if (punishmentsError) throw punishmentsError;
       
-      // Simple query for punishment history
       const { data: historyData, error: historyError } = await supabase
         .from('punishment_history')
         .select('*')
@@ -79,11 +77,6 @@ export const usePunishmentFetch = ({
         description: "Failed to load punishments. Please try again.",
         variant: "destructive",
       });
-      
-      // Even if there's an error, set empty arrays to prevent UI from breaking
-      setPunishments([]);
-      setPunishmentHistory([]);
-      
     } finally {
       setLoading(false);
     }
