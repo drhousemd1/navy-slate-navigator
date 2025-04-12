@@ -26,18 +26,18 @@ export const usePunishmentFetch = ({
     try {
       setLoading(true);
       
-      // Query without timeout constraints
+      // Simple query without any timeout constraints
       const { data: punishmentsData, error: punishmentsError } = await supabase
         .from('punishments')
-        .select('id, title, description, points, icon_name, icon_color, title_color, subtext_color, calendar_color, highlight_effect, background_image_url, background_opacity, focal_point_x, focal_point_y, background_images, carousel_timer, created_at')
+        .select('*')
         .order('created_at', { ascending: true });
       
       if (punishmentsError) throw punishmentsError;
       
-      // Query punishment history without timeout constraints
+      // Simple query for punishment history
       const { data: historyData, error: historyError } = await supabase
         .from('punishment_history')
-        .select('id, punishment_id, applied_date, day_of_week, points_deducted')
+        .select('*')
         .order('applied_date', { ascending: false });
       
       if (historyError) throw historyError;
