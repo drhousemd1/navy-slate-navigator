@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { FormLabel } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -35,13 +34,11 @@ const PunishmentImageSelectionSection: React.FC<PunishmentImageSelectionSectionP
   const { globalCarouselTimer, setGlobalCarouselTimer } = usePunishments();
   const currentImage = selectedBoxIndex !== null ? imageSlots[selectedBoxIndex] : null;
   
-  // Get position from form values for the selected image
   const position = {
     x: watch('focal_point_x') || 50,
     y: watch('focal_point_y') || 50
   };
 
-  // Update both local and global carousel timer
   const handleTimerChange = (newTimer: number) => {
     onCarouselTimerChange(newTimer);
     setGlobalCarouselTimer(newTimer);
@@ -90,7 +87,7 @@ const PunishmentImageSelectionSection: React.FC<PunishmentImageSelectionSectionP
               type="button"
               size="sm"
               onClick={() => handleTimerChange(Math.max(1, globalCarouselTimer - 1))}
-              className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
+              className="px-3 py-1 bg-navy text-white hover:bg-light-navy rounded"
             >
               –
             </Button>
@@ -101,7 +98,7 @@ const PunishmentImageSelectionSection: React.FC<PunishmentImageSelectionSectionP
               type="button"
               size="sm"
               onClick={() => handleTimerChange(globalCarouselTimer + 1)}
-              className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
+              className="px-3 py-1 bg-navy text-white hover:bg-light-navy rounded"
             >
               +
             </Button>

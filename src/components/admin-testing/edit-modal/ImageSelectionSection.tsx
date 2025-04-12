@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import BackgroundImageSelector from "@/components/task-editor/BackgroundImageSelector";
@@ -83,7 +82,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
               type="button"
               size="sm"
               onClick={() => onCarouselTimerChange(Math.max(1, carouselTimer - 1))}
-              className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
+              className="px-3 py-1 bg-navy text-white hover:bg-light-navy rounded"
             >
               –
             </Button>
@@ -94,7 +93,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
               type="button"
               size="sm"
               onClick={() => onCarouselTimerChange(carouselTimer + 1)}
-              className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
+              className="px-3 py-1 bg-navy text-white hover:bg-light-navy rounded"
             >
               +
             </Button>
