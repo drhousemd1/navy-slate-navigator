@@ -53,7 +53,7 @@ const TaskBackgroundCarousel = ({
             backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
             opacity: isTransitioning ? backgroundOpacity / 100 : 0,
-            transition: 'opacity 2s ease-in-out'
+            transition: 'opacity 2s ease-in-out'  // Restore this to 2s for smooth fading
           }}
           aria-hidden="true"
         />
