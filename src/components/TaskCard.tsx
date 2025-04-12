@@ -1,15 +1,16 @@
 
 import React from 'react';
-import TaskBackground from './tasks/TaskBackground';
-import TaskIcon from './task/TaskIcon';
-import HighlightedText from './task/HighlightedText';
+import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Edit } from 'lucide-react';
 import PriorityBadge from './task/PriorityBadge';
 import PointsBadge from './task/PointsBadge';
 import CompletionButton from './task/CompletionButton';
-import { getCurrentDayOfWeek } from '@/lib/taskUtils';
+import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
+import HighlightedText from './task/HighlightedText';
+import { getCurrentDayOfWeek } from '@/lib/taskUtils';
+import TaskBackground from './tasks/TaskBackground';
 
 interface TaskCardProps {
   title: string;
@@ -37,6 +38,7 @@ interface TaskCardProps {
   icon_color?: string;
   sharedImageIndex?: number;
   carouselTimer?: number;
+  globalCarouselIndex: number;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -63,7 +65,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   calendar_color = '#7E69AB',
   icon_color = '#9b87f5',
   sharedImageIndex = 0,
-  carouselTimer = 5
+  carouselTimer = 5,
+  globalCarouselIndex = 0
 }) => {
   const currentDayOfWeek = getCurrentDayOfWeek();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
@@ -98,7 +101,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         backgroundOpacity={backgroundOpacity ?? 100}
         focalPointX={focalPointX ?? 50}
         focalPointY={focalPointY ?? 50}
-        globalCarouselIndex={sharedImageIndex}
+        globalCarouselIndex={globalCarouselIndex}
       />
       <div className="relative z-10 transition-opacity duration-[2000ms] p-4">
         <div className="flex justify-between items-start mb-3">
