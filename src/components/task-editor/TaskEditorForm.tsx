@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -358,7 +357,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                 return (
                   <div
                     key={index}
-                    onClick={() => setSelectedImageIndex(index)}
+                    onClick={() => handleSelectThumbnail(index)}
                     className={`w-12 h-12 rounded-md cursor-pointer transition-all
                       ${selectedImageIndex === index
                         ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
@@ -384,7 +383,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               })}
             </div>
             
-            <div className="flex flex-col items-end ml-4">
+            <div className="flex flex-col items-start ml-4">
               <label className="text-sm text-white mb-1">
                 Carousel Timer
                 <span className="block text-xs text-muted-foreground">
