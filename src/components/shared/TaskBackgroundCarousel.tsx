@@ -37,7 +37,7 @@ const TaskBackgroundCarousel: React.FC<TaskBackgroundCarouselProps> = ({
             backgroundImage: `url(${visibleImage})`,
             backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100,
+            opacity: isTransitioning ? 0 : backgroundOpacity / 100,
             transition: 'opacity 2s ease-in-out'
           }}
           aria-hidden="true"

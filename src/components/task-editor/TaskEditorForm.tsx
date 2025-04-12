@@ -1,11 +1,12 @@
-import React, { useState, useRef } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Save } from 'lucide-react';
+import { Save, Image, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Task } from '@/lib/taskUtils';
 import NumberField from './NumberField';
@@ -35,6 +36,8 @@ interface TaskFormValues {
   focal_point_x: number;
   focal_point_y: number;
   priority: 'low' | 'medium' | 'high';
+  background_images?: string[];
+  carousel_timer?: number;
 }
 
 interface TaskEditorFormProps {
@@ -52,13 +55,21 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   onDelete,
   onCancel,
   updateCarouselTimer,
-  sharedImageIndex
+  sharedImageIndex = 0
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  const [backgroundImages, setBackgroundImages] = useState<string[]>(
+    taskData?.background_images || []
+  );
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
+  const [formCarouselTimer, setFormCarouselTimer] = useState<number>(
+    taskData?.carousel_timer || 5
+  );
   
   const form = useForm<TaskFormValues>({
     defaultValues: {
@@ -78,13 +89,37 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       focal_point_y: taskData?.focal_point_y || 50,
       priority: taskData?.priority || 'medium',
       icon_name: taskData?.icon_name,
+      background_images: taskData?.background_images || [],
+      carousel_timer: taskData?.carousel_timer || 5,
     },
   });
 
   React.useEffect(() => {
-    setImagePreview(taskData?.background_image_url || null);
     setIconPreview(taskData?.icon_url || null);
     setSelectedIconName(taskData?.icon_name || null);
+    
+    if (taskData?.background_images && taskData.background_images.length > 0) {
+      setBackgroundImages(taskData.background_images);
+    } else if (taskData?.background_image_url) {
+      setBackgroundImages([taskData.background_image_url]);
+    } else {
+      setBackgroundImages([]);
+    }
+    
+    setFormCarouselTimer(taskData?.carousel_timer || 5);
+    
+    setSelectedImageIndex(0);
+    
+    const previewImage = taskData?.background_images?.[0] || taskData?.background_image_url || null;
+    setImagePreview(previewImage);
+  }, [taskData]);
+
+  React.useEffect(() => {
+    if (!taskData) {
+      setSelectedImageIndex(0);
+      setFormCarouselTimer(5);
+      setBackgroundImages([]);
+    }
   }, [taskData]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,10 +128,51 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
+        
+        const newImages = [...backgroundImages];
+        if (selectedImageIndex < newImages.length) {
+          newImages[selectedImageIndex] = base64String;
+        } else {
+          newImages.push(base64String);
+        }
+        
+        setBackgroundImages(newImages);
+        form.setValue('background_images', newImages);
+        
         setImagePreview(base64String);
         form.setValue('background_image_url', base64String);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSelectThumbnail = (index: number) => {
+    setSelectedImageIndex(index);
+    
+    if (index < backgroundImages.length) {
+      setImagePreview(backgroundImages[index]);
+    } else {
+      setImagePreview(null);
+    }
+  };
+
+  const handleRemoveCurrentImage = () => {
+    const newImages = [...backgroundImages];
+    
+    if (selectedImageIndex < newImages.length) {
+      newImages.splice(selectedImageIndex, 1);
+      setBackgroundImages(newImages);
+      form.setValue('background_images', newImages);
+      
+      if (newImages.length > 0) {
+        const newIndex = Math.min(selectedImageIndex, newImages.length - 1);
+        setSelectedImageIndex(newIndex);
+        setImagePreview(newImages[newIndex]);
+      } else {
+        setSelectedImageIndex(0);
+        setImagePreview(null);
+        form.setValue('background_image_url', undefined);
+      }
     }
   };
 
@@ -148,6 +224,41 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     }
   };
 
+  const handleSubmit = async (values: TaskFormValues) => {
+    setLoading(true);
+    
+    try {
+      let backgroundImagesForSave;
+      
+      if (backgroundImages && backgroundImages.length > 0) {
+        backgroundImagesForSave = backgroundImages;
+        
+        if (!values.background_image_url && backgroundImages[0]) {
+          values.background_image_url = backgroundImages[0];
+        }
+      }
+      
+      const taskToSave: Partial<Task> = {
+        ...values,
+        id: taskData?.id,
+        icon_name: selectedIconName || undefined,
+        background_images: backgroundImagesForSave,
+        carousel_timer: formCarouselTimer,
+      };
+      
+      await onSave(taskToSave);
+    } catch (error) {
+      console.error('Error saving task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save task. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const incrementPoints = () => {
     const currentPoints = form.getValues('points');
     form.setValue('points', currentPoints + 1);
@@ -170,33 +281,19 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     }
   };
 
+  const handleCarouselTimerChange = (newValue: number) => {
+    setFormCarouselTimer(newValue);
+    form.setValue('carousel_timer', newValue);
+    
+    if (updateCarouselTimer) {
+      updateCarouselTimer(newValue);
+    }
+  };
+
   const handleDelete = () => {
     if (taskData?.id && onDelete) {
       onDelete(taskData.id);
       setIsDeleteDialogOpen(false);
-    }
-  };
-
-  const handleSubmit = async (values: TaskFormValues) => {
-    setLoading(true);
-    
-    try {
-      const taskToSave: Partial<Task> = {
-        ...values,
-        id: taskData?.id,
-        icon_name: selectedIconName || undefined,
-      };
-      
-      await onSave(taskToSave);
-    } catch (error) {
-      console.error('Error saving task:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save task. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -264,7 +361,80 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         </div>
         
         <div className="space-y-4">
-          <FormLabel className="text-white text-lg">Background Image</FormLabel>
+          <FormLabel className="text-white text-lg">Background Images</FormLabel>
+          
+          <div className="flex justify-between items-end mb-4">
+            <div className="flex gap-2">
+              {[0, 1, 2, 3, 4].map((index) => {
+                const imageUrl = backgroundImages[index] || '';
+                return (
+                  <div
+                    key={index}
+                    onClick={() => handleSelectThumbnail(index)}
+                    className={`w-12 h-12 rounded-md cursor-pointer transition-all
+                      ${selectedImageIndex === index
+                        ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
+                        : 'bg-dark-navy border border-light-navy hover:border-white'}
+                    `}
+                  >
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        className="w-full h-full object-cover rounded-md"
+                        alt="Background thumbnail"
+                        onError={(e) => {
+                          console.error(`Error loading image in slot ${index}`);
+                          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMjJDMTcuNTIyOCAyMiAyMiAxNy41MjI4IDIyIDEyQzIyIDYuNDc3MTUgMTcuNTIyOCAyIDIgNi40NzcxNSAyIDEyQzIgMTcuNTIyOCA2LjQ3NzE1IDIyIDEyIDIyWiIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTE1IDlMOSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTkgOUwxNSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full w-full text-light-navy">
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="flex flex-col items-start ml-4">
+              <label className="text-sm text-white mb-1">
+                Carousel Timer
+                <span className="block text-xs text-slate-400">
+                  (Time between image transitions)
+                </span>
+              </label>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newTime = Math.max(3, formCarouselTimer - 1);
+                    handleCarouselTimerChange(newTime);
+                  }}
+                  className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy w-8 h-8 flex items-center justify-center rounded-md"
+                >
+                  –
+                </button>
+
+                <div className="w-12 text-center text-white">
+                  {formCarouselTimer}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newTime = Math.min(20, formCarouselTimer + 1);
+                    handleCarouselTimerChange(newTime);
+                  }}
+                  className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy w-8 h-8 flex items-center justify-center rounded-md"
+                >
+                  +
+                </button>
+
+                <span className="text-white text-sm ml-1">(s)</span>
+              </div>
+            </div>
+          </div>
+          
           <BackgroundImageSelector
             control={form.control}
             imagePreview={imagePreview}
@@ -272,15 +442,14 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               x: taskData?.focal_point_x || 50, 
               y: taskData?.focal_point_y || 50 
             }}
-            onRemoveImage={() => {
-              setImagePreview(null);
-              form.setValue('background_image_url', undefined);
-            }}
+            onRemoveImage={handleRemoveCurrentImage}
             onImageUpload={handleImageUpload}
             setValue={form.setValue}
+            backgroundImages={backgroundImages}
+            selectedImageIndex={selectedImageIndex}
+            onSelectImage={handleSelectThumbnail}
           />
         </div>
-        
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Task Icon</FormLabel>
