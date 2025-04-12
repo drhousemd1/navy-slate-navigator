@@ -4,7 +4,7 @@ import { useFormContext } from 'react-hook-form';
 import { FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
-import { Image, Upload, X } from 'lucide-react';
+import { Image, X } from 'lucide-react';
 
 interface BackgroundImageSelectorProps {
   imagePreview: string | null;
@@ -13,9 +13,6 @@ interface BackgroundImageSelectorProps {
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setValue: (name: string, value: any, options?: any) => void;
   control: any;
-  backgroundImages?: string[];
-  selectedImageIndex?: number;
-  onSelectImage?: (index: number) => void;
 }
 
 const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
@@ -24,10 +21,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   onRemoveImage,
   onImageUpload,
   setValue,
-  control,
-  backgroundImages = [],
-  selectedImageIndex = 0,
-  onSelectImage
+  control
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const { register } = useFormContext();
@@ -73,63 +67,23 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
               </div>
             </div>
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-light-navy">
+            <label htmlFor="image-upload" className="cursor-pointer w-full h-full flex flex-col items-center justify-center text-light-navy">
               <Image className="h-6 w-6 mb-2" aria-hidden={true} />
               No background image
-            </div>
+              <Input
+                id="image-upload"
+                type="file"
+                className="hidden"
+                onChange={onImageUpload}
+                {...register("background_image_url")}
+              />
+            </label>
           )}
         </div>
       </FormControl>
       <FormDescription className="text-white">
-        Upload a background image for this task.
+        Click on the preview to upload a background image for this task.
       </FormDescription>
-      
-      {/* Image thumbnails for carousel */}
-      {backgroundImages.length > 0 && onSelectImage && (
-        <div className="flex space-x-2 my-2 overflow-x-auto pb-2">
-          {backgroundImages.map((img, idx) => (
-            <div 
-              key={idx}
-              className={`w-16 h-16 rounded-md cursor-pointer border-2 ${
-                selectedImageIndex === idx 
-                  ? 'border-yellow-500' 
-                  : 'border-light-navy'
-              }`}
-              onClick={() => onSelectImage(idx)}
-            >
-              {img ? (
-                <img 
-                  src={img} 
-                  alt={`Background ${idx + 1}`}
-                  className="w-full h-full object-cover rounded-md"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-dark-navy text-light-navy">
-                  <span>+</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      
-      <div className="flex items-center justify-between">
-        <FormLabel className="text-white">Image Upload</FormLabel>
-        <Input
-          id="image-upload"
-          type="file"
-          className="hidden"
-          onChange={onImageUpload}
-          {...register("background_image_url")}
-        />
-        <label
-          htmlFor="image-upload"
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-nav-active text-white hover:bg-nav-active/80 px-4 py-2"
-        >
-          <Upload className="w-4 h-4 mr-2" aria-hidden={true} />
-          Upload Image
-        </label>
-      </div>
       
       <div className="space-y-2">
         <FormLabel className="text-white">Focal Point</FormLabel>
