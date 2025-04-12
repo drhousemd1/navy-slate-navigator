@@ -26,17 +26,21 @@ export const usePunishmentFetch = ({
     try {
       setLoading(true);
       
+      // Optimize the query by selecting only necessary fields and adding a timeout
       const { data: punishmentsData, error: punishmentsError } = await supabase
         .from('punishments')
-        .select('*')
-        .order('created_at', { ascending: true });
+        .select('id, title, description, points, icon_name, icon_color, title_color, subtext_color, calendar_color, highlight_effect, background_image_url, background_opacity, focal_point_x, focal_point_y, background_images, carousel_timer, created_at')
+        .order('created_at', { ascending: true })
+        .abortSignal(AbortSignal.timeout(5000)); // Add 5 second timeout
       
       if (punishmentsError) throw punishmentsError;
       
+      // Optimize history query with timeout as well
       const { data: historyData, error: historyError } = await supabase
         .from('punishment_history')
-        .select('*')
-        .order('applied_date', { ascending: false });
+        .select('id, punishment_id, applied_date, day_of_week, points_deducted')
+        .order('applied_date', { ascending: false })
+        .abortSignal(AbortSignal.timeout(5000)); // Add 5 second timeout
       
       if (historyError) throw historyError;
       
@@ -77,6 +81,11 @@ export const usePunishmentFetch = ({
         description: "Failed to load punishments. Please try again.",
         variant: "destructive",
       });
+      
+      // Even if there's an error, set empty arrays to prevent UI from breaking
+      setPunishments([]);
+      setPunishmentHistory([]);
+      
     } finally {
       setLoading(false);
     }
