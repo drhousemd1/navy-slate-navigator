@@ -16,6 +16,7 @@ import BackgroundImageSelector from './BackgroundImageSelector';
 import IconSelector from './IconSelector';
 import PredefinedIconsGrid from './PredefinedIconsGrid';
 import DeleteTaskDialog from './DeleteTaskDialog';
+import { useTasks } from '@/contexts/tasks';
 
 interface TaskFormValues {
   title: string;
@@ -44,6 +45,7 @@ interface TaskEditorFormProps {
   onSave: (taskData: any) => void;
   onDelete?: (taskId: string) => void;
   onCancel: () => void;
+  initialCarouselTimer?: number;
   updateCarouselTimer?: (newTime: number) => void;
 }
 
@@ -52,8 +54,10 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   onSave,
   onDelete,
   onCancel,
+  initialCarouselTimer,
   updateCarouselTimer
 }) => {
+  const { globalCarouselTimer, setGlobalCarouselTimer } = useTasks();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
@@ -65,7 +69,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   );
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [formCarouselTimer, setFormCarouselTimer] = useState<number>(
-    taskData?.carousel_timer || 5
+    taskData?.carousel_timer || initialCarouselTimer || globalCarouselTimer || 5
   );
   
   const form = useForm<TaskFormValues>({
@@ -87,7 +91,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       priority: taskData?.priority || 'medium',
       icon_name: taskData?.icon_name,
       background_images: taskData?.background_images || [],
-      carousel_timer: taskData?.carousel_timer || 5,
+      carousel_timer: taskData?.carousel_timer || initialCarouselTimer || globalCarouselTimer || 5,
     },
   });
 
@@ -103,7 +107,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       setBackgroundImages([]);
     }
     
-    setFormCarouselTimer(taskData?.carousel_timer || 5);
+    setFormCarouselTimer(taskData?.carousel_timer || initialCarouselTimer || globalCarouselTimer || 5);
     
     setSelectedImageIndex(0);
     
@@ -275,6 +279,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     if (updateCarouselTimer) {
       updateCarouselTimer(newValue);
     }
+    
+    setGlobalCarouselTimer(newValue);
   };
 
   const handleDelete = () => {
