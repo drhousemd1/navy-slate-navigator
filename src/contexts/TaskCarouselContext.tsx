@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 interface TaskCarouselContextProps {
   carouselTimer: number;
   setCarouselTimer: (timer: number) => void;
+  globalCarouselIndex: number;
 }
 
 const DEFAULT_CAROUSEL_TIMER = 5;
@@ -28,11 +29,21 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_CAROUSEL_TIMER;
   });
+  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
 
   // Persist carousel timer to localStorage when it changes
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY, carouselTimer.toString());
     console.log(`TaskCarouselContext: Timer updated to ${carouselTimer}s`);
+  }, [carouselTimer]);
+
+  // Update the global carousel index at intervals based on the timer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGlobalCarouselIndex(prev => prev + 1);
+    }, carouselTimer * 1000);
+    
+    return () => clearInterval(interval);
   }, [carouselTimer]);
 
   const setCarouselTimer = (newTimer: number) => {
@@ -41,7 +52,11 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
   };
 
   return (
-    <TaskCarouselContext.Provider value={{ carouselTimer, setCarouselTimer }}>
+    <TaskCarouselContext.Provider value={{ 
+      carouselTimer, 
+      setCarouselTimer, 
+      globalCarouselIndex 
+    }}>
       {children}
     </TaskCarouselContext.Provider>
   );

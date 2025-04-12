@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -27,9 +28,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
-  const { carouselTimer } = useTaskCarousel();
-  
-  const [sharedImageIndex, setSharedImageIndex] = useState(0);
+  const { carouselTimer, globalCarouselIndex } = useTaskCarousel();
 
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['tasks'],
@@ -38,13 +37,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSharedImageIndex(prev => prev + 1);
-    }, carouselTimer * 1000);
-    return () => clearInterval(interval);
-  }, [carouselTimer]);
 
   useEffect(() => {
     const checkForReset = () => {
@@ -245,7 +237,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
               onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
               backgroundImages={task.background_images}
               carouselTimer={carouselTimer}
-              sharedImageIndex={sharedImageIndex}
+              sharedImageIndex={globalCarouselIndex}
             />
           ))}
         </div>
