@@ -71,7 +71,7 @@ export const useImageCarousel = ({
           }, 2000);
           
           return () => clearTimeout(timeout);
-        }, 0);
+        }, 50);
       });
     };
     
