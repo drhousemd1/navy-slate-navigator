@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 interface UseImageCarouselProps {
   images: string[];
@@ -20,7 +20,6 @@ export const useImageCarousel = ({
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
-  const prevGlobalIndexRef = useRef(globalCarouselIndex);
 
   // Initialize or update visible image when images array changes
   useEffect(() => {
@@ -48,9 +47,6 @@ export const useImageCarousel = ({
   // Handle image transitions when global carousel index changes
   useEffect(() => {
     if (!images.length || images.length <= 1) return;
-    if (globalCarouselIndex === prevGlobalIndexRef.current) return;
-    
-    prevGlobalIndexRef.current = globalCarouselIndex;
     
     const nextIndex = globalCarouselIndex % images.length;
     const next = images[nextIndex];
@@ -72,10 +68,10 @@ export const useImageCarousel = ({
             setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
-          }, 2000); // Match the transition duration in CSS
+          }, 2000);
           
           return () => clearTimeout(timeout);
-        }, 50);
+        }, 0);
       });
     };
     
