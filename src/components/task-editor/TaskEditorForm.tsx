@@ -375,7 +375,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full w-full text-light-navy">
-                        <Plus size={16} />
                       </div>
                     )}
                   </div>
@@ -395,11 +394,9 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                   type="button"
                   onClick={() => {
                     const newTime = Math.max(3, formCarouselTimer - 1);
-                    setFormCarouselTimer(newTime);
-                    form.setValue('carousel_timer', newTime);
-                    if (updateCarouselTimer) updateCarouselTimer(newTime);
+                    handleCarouselTimerChange(newTime);
                   }}
-                  className="bg-dark-navy border border-white w-8 h-8 flex items-center justify-center rounded"
+                  className="bg-dark-navy border border-white w-8 h-8 flex items-center justify-center rounded-md"
                 >
                   –
                 </button>
@@ -412,11 +409,9 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                   type="button"
                   onClick={() => {
                     const newTime = Math.min(20, formCarouselTimer + 1);
-                    setFormCarouselTimer(newTime);
-                    form.setValue('carousel_timer', newTime);
-                    if (updateCarouselTimer) updateCarouselTimer(newTime);
+                    handleCarouselTimerChange(newTime);
                   }}
-                  className="bg-dark-navy border border-white w-8 h-8 flex items-center justify-center rounded"
+                  className="bg-dark-navy border border-white w-8 h-8 flex items-center justify-center rounded-md"
                 >
                   +
                 </button>
