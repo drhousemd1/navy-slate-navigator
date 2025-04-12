@@ -28,7 +28,19 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
-  const { carouselTimer, globalCarouselIndex } = useTaskCarousel();
+  const { carouselTimer } = useTaskCarousel();
+  
+  // Add global carousel index state - exactly like in Punishments.tsx
+  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
+
+  // Effect to increment the global carousel index - exactly like in Punishments.tsx
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGlobalCarouselIndex(prevIndex => prevIndex + 1);
+    }, carouselTimer * 1000);
+    
+    return () => clearInterval(interval);
+  }, [carouselTimer]);
 
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['tasks'],
