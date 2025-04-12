@@ -40,11 +40,12 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     refetchOnWindowFocus: true
   });
 
-  // Effect to control image carousel transitions
+  // Effect to control image carousel transitions with shared timer
   useEffect(() => {
     const interval = setInterval(() => {
       setSharedImageIndex(prev => prev + 1);
     }, carouselTimer * 1000);
+    
     return () => clearInterval(interval);
   }, [carouselTimer]);
 
@@ -258,7 +259,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
               icon_color={task.icon_color}
               onEdit={() => handleEditTask(task)}
               onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
-              // Pass new props for image carousel
+              // Pass shared carousel state to each card
               backgroundImages={task.background_images}
               carouselTimer={task.carousel_timer}
               sharedImageIndex={sharedImageIndex}
