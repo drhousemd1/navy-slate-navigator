@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -28,12 +27,10 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
-  const { carouselTimer } = useTaskCarousel();
+  const { carouselTimer, setCarouselTimer } = useTaskCarousel();
   
-  // Add global carousel index state - exactly like in Punishments.tsx
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
 
-  // Effect to increment the global carousel index - exactly like in Punishments.tsx
   useEffect(() => {
     const interval = setInterval(() => {
       setGlobalCarouselIndex(prevIndex => prevIndex + 1);
@@ -49,6 +46,15 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
+
+  useEffect(() => {
+    if (tasks.length > 0) {
+      const firstWithTimer = tasks.find(t => t.carousel_timer !== undefined);
+      if (firstWithTimer && firstWithTimer.carousel_timer) {
+        setCarouselTimer(firstWithTimer.carousel_timer);
+      }
+    }
+  }, [tasks, setCarouselTimer]);
 
   useEffect(() => {
     const checkForReset = () => {
