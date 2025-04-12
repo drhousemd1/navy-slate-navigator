@@ -2,15 +2,7 @@
 import React from 'react';
 import { usePunishmentImageCarousel } from '@/components/punishments/hooks/usePunishmentImageCarousel';
 
-interface TaskBackgroundCarouselProps {
-  backgroundImages?: (string | null)[] | null;
-  backgroundOpacity?: number;
-  focalPointX?: number;
-  focalPointY?: number;
-  globalCarouselIndex?: number;
-}
-
-const TaskBackgroundCarousel: React.FC<TaskBackgroundCarouselProps> = ({
+const TaskBackgroundCarousel = ({
   backgroundImages = [],
   backgroundOpacity = 100,
   focalPointX = 50,
@@ -61,7 +53,7 @@ const TaskBackgroundCarousel: React.FC<TaskBackgroundCarouselProps> = ({
             backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
             opacity: isTransitioning ? backgroundOpacity / 100 : 0,
-            transition: 'opacity 2s ease-in-out'  // Exactly 2s to match Punishments
+            transition: 'opacity 2s ease-in-out'  // Restore this to 2s for smooth fading
           }}
           aria-hidden="true"
         />

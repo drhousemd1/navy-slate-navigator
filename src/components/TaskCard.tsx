@@ -20,7 +20,7 @@ interface TaskCardProps {
   points: number;
   completed?: boolean;
   backgroundImage?: string;
-  backgroundImages?: (string | null)[] | null;
+  backgroundImages?: string[];
   backgroundOpacity?: number;
   focalPointX?: number;
   focalPointY?: number;
@@ -73,7 +73,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const maxCompletions = frequency_count || 1;
   const isFullyCompleted = currentCompletions >= maxCompletions;
 
-  // Handle both legacy and new background image format (exactly like in PunishmentCard)
+  // Handle both legacy and new background image format
   const allBackgroundImages = backgroundImages && backgroundImages.length > 0 
     ? backgroundImages 
     : backgroundImage 
