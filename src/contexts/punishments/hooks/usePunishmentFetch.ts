@@ -26,21 +26,19 @@ export const usePunishmentFetch = ({
     try {
       setLoading(true);
       
-      // Optimize the query by selecting only necessary fields and adding a timeout
+      // Query without timeout constraints
       const { data: punishmentsData, error: punishmentsError } = await supabase
         .from('punishments')
         .select('id, title, description, points, icon_name, icon_color, title_color, subtext_color, calendar_color, highlight_effect, background_image_url, background_opacity, focal_point_x, focal_point_y, background_images, carousel_timer, created_at')
-        .order('created_at', { ascending: true })
-        .abortSignal(AbortSignal.timeout(5000)); // Add 5 second timeout
+        .order('created_at', { ascending: true });
       
       if (punishmentsError) throw punishmentsError;
       
-      // Optimize history query with timeout as well
+      // Query punishment history without timeout constraints
       const { data: historyData, error: historyError } = await supabase
         .from('punishment_history')
         .select('id, punishment_id, applied_date, day_of_week, points_deducted')
-        .order('applied_date', { ascending: false })
-        .abortSignal(AbortSignal.timeout(5000)); // Add 5 second timeout
+        .order('applied_date', { ascending: false });
       
       if (historyError) throw historyError;
       

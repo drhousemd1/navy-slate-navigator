@@ -35,10 +35,6 @@ export const usePunishmentImageCarousel = ({
     const nextIndex = (currentIndex + 1) % filteredImages.length;
     const nextImage = filteredImages[nextIndex];
     
-    // CRITICAL FIX: Remove the condition that prevents transitions
-    // when the next image is the same as the current one
-    // if (nextImage === visibleImage) return;
-
     // Preload the next image
     const preloadImage = new Image();
     preloadImage.src = nextImage;
