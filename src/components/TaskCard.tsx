@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Edit } from 'lucide-react';
 import PriorityBadge from './task/PriorityBadge';
@@ -79,7 +78,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
     : [];
 
   return (
-    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${allImages.length === 0 ? 'bg-navy' : ''}`}>
+    <div className={`relative overflow-hidden border-2 border-[#00f0ff] rounded-md ${allImages.length === 0 ? 'bg-navy' : ''}`}>
       {allImages.length > 0 && (
         <TaskBackgroundCarousel
           backgroundImages={allImages}
@@ -90,7 +89,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         />
       )}
 
-      <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
+      <div className="relative z-10 flex flex-col p-4 md:p-6 h-full transition-opacity duration-[2000ms]">
         <div className="flex justify-between items-start mb-3">
           <PriorityBadge priority={priority} />
           
@@ -163,7 +162,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
       {isFullyCompleted && (
         <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
       )}
-    </Card>
+    </div>
   );
 };
 
