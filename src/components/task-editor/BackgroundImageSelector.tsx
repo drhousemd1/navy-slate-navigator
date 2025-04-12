@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { FormLabel, FormControl, FormDescription } from "@/components/ui/form";
@@ -102,7 +103,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
         </FormDescription>
         <FormControl>
           <Slider
-            defaultValue={[position.x, position.y]}
+            value={[position.x, position.y]}
             onValueChange={handlePositionChange}
             max={100}
             step={1}
