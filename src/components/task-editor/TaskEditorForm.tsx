@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -5,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Save } from 'lucide-react';
+import { Save, Image, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Task } from '@/lib/taskUtils';
 import NumberField from './NumberField';
@@ -35,6 +36,8 @@ interface TaskFormValues {
   focal_point_x: number;
   focal_point_y: number;
   priority: 'low' | 'medium' | 'high';
+  background_images?: string[];
+  carousel_timer?: number;
 }
 
 interface TaskEditorFormProps {
@@ -42,19 +45,30 @@ interface TaskEditorFormProps {
   onSave: (taskData: any) => void;
   onDelete?: (taskId: string) => void;
   onCancel: () => void;
+  updateCarouselTimer?: (newTime: number) => void;
 }
 
 const TaskEditorForm: React.FC<TaskEditorFormProps> = ({ 
   taskData,
   onSave,
   onDelete,
-  onCancel
+  onCancel,
+  updateCarouselTimer
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  // New state for background images array and carousel
+  const [backgroundImages, setBackgroundImages] = useState<string[]>(
+    taskData?.background_images || []
+  );
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
+  const [formCarouselTimer, setFormCarouselTimer] = useState<number>(
+    taskData?.carousel_timer || 5
+  );
   
   const form = useForm<TaskFormValues>({
     defaultValues: {
@@ -74,6 +88,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       focal_point_y: taskData?.focal_point_y || 50,
       priority: taskData?.priority || 'medium',
       icon_name: taskData?.icon_name,
+      background_images: taskData?.background_images || [],
+      carousel_timer: taskData?.carousel_timer || 5,
     },
   });
 
@@ -81,6 +97,22 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     setImagePreview(taskData?.background_image_url || null);
     setIconPreview(taskData?.icon_url || null);
     setSelectedIconName(taskData?.icon_name || null);
+    
+    // Initialize background images from task data
+    if (taskData?.background_images && taskData.background_images.length > 0) {
+      setBackgroundImages(taskData.background_images);
+    } else if (taskData?.background_image_url) {
+      // Handle legacy single image
+      setBackgroundImages([taskData.background_image_url]);
+    } else {
+      setBackgroundImages([]);
+    }
+    
+    // Initialize carousel timer
+    setFormCarouselTimer(taskData?.carousel_timer || 5);
+    
+    // Reset selected image index
+    setSelectedImageIndex(0);
   }, [taskData]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,10 +121,57 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
+        
+        // Update the current image in the array
+        const newImages = [...backgroundImages];
+        if (selectedImageIndex < newImages.length) {
+          newImages[selectedImageIndex] = base64String;
+        } else {
+          // If uploading to an empty slot, add the image to the array
+          newImages.push(base64String);
+        }
+        
+        setBackgroundImages(newImages);
+        form.setValue('background_images', newImages);
+        
+        // Also update single image for backward compatibility
         setImagePreview(base64String);
         form.setValue('background_image_url', base64String);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSelectThumbnail = (index: number) => {
+    setSelectedImageIndex(index);
+    
+    // If we have an image at this index, show it in the preview
+    if (index < backgroundImages.length) {
+      setImagePreview(backgroundImages[index]);
+    } else {
+      setImagePreview(null);
+    }
+  };
+
+  const handleRemoveCurrentImage = () => {
+    // Remove the image at the selected index
+    const newImages = [...backgroundImages];
+    
+    if (selectedImageIndex < newImages.length) {
+      newImages.splice(selectedImageIndex, 1);
+      setBackgroundImages(newImages);
+      form.setValue('background_images', newImages);
+      
+      // Update preview to the next available image or clear it
+      if (newImages.length > 0) {
+        const newIndex = Math.min(selectedImageIndex, newImages.length - 1);
+        setSelectedImageIndex(newIndex);
+        setImagePreview(newImages[newIndex]);
+      } else {
+        setSelectedImageIndex(0);
+        setImagePreview(null);
+        form.setValue('background_image_url', undefined);
+      }
     }
   };
 
@@ -152,6 +231,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         ...values,
         id: taskData?.id,
         icon_name: selectedIconName || undefined,
+        background_images: backgroundImages,
+        carousel_timer: formCarouselTimer,
       };
       
       await onSave(taskToSave);
@@ -186,6 +267,16 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     const currentCount = form.getValues('frequency_count');
     if (currentCount > 1) {
       form.setValue('frequency_count', currentCount - 1);
+    }
+  };
+
+  const handleCarouselTimerChange = (newValue: number) => {
+    setFormCarouselTimer(newValue);
+    form.setValue('carousel_timer', newValue);
+    
+    // Update global timer immediately if provided
+    if (updateCarouselTimer) {
+      updateCarouselTimer(newValue);
     }
   };
 
@@ -260,7 +351,9 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         </div>
         
         <div className="space-y-4">
-          <FormLabel className="text-white text-lg">Background Image</FormLabel>
+          <FormLabel className="text-white text-lg">Background Images</FormLabel>
+          
+          {/* Background image selector - shows the currently selected image */}
           <BackgroundImageSelector
             control={form.control}
             imagePreview={imagePreview}
@@ -268,13 +361,65 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               x: taskData?.focal_point_x || 50, 
               y: taskData?.focal_point_y || 50 
             }}
-            onRemoveImage={() => {
-              setImagePreview(null);
-              form.setValue('background_image_url', undefined);
-            }}
+            onRemoveImage={handleRemoveCurrentImage}
             onImageUpload={handleImageUpload}
             setValue={form.setValue}
           />
+          
+          {/* Thumbnails row */}
+          <div className="flex gap-2 items-end mt-4 overflow-x-auto py-2">
+            {[0, 1, 2, 3, 4].map((index) => {
+              const imageUrl = backgroundImages[index] || '';
+              return (
+                <div
+                  key={index}
+                  onClick={() => handleSelectThumbnail(index)}
+                  className={`w-12 h-12 rounded-md cursor-pointer transition-all flex-shrink-0
+                    ${selectedImageIndex === index
+                      ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
+                      : 'bg-dark-navy border border-light-navy hover:border-white'}
+                  `}
+                >
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      className="w-full h-full object-cover rounded-md"
+                      alt="Background thumbnail"
+                      onError={(e) => {
+                        // Use a placeholder on error
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTMgNEg4LjhDNy4xMTk4NCA0IDUuNzM5NjggNC44Mi40LjJWMjBIMTZWMTVIMjAuNkMyMS45MjU1IDE1IDIzIDE2LjA3NDUgMjMgMTcuNFYyMEg0VjE3LjRDNyAxNi4wNzQ1IDguMDc0NTIgMTUgOS40IDE1SDEzVjRaIiBzdHJva2U9IiM0QjU1NjMiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0xOSA4QzE5IDkuMTA0NTcgMTguMTA0NiAxMCAxNyAxMEMxNS44OTU0IDEwIDE1IDkuMTA0NTcgMTUgOEMxNSA2Ljg5NTQzIDE1Ljg5NTQgNiAxNyA2QzE4LjEwNDYgNiAxOSA2Ljg5NTQzIDE5IDhaIiBmaWxsPSIjNEI1NTYzIi8+PC9zdmc+';
+                      }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full w-full text-light-navy">
+                      <Plus size={16} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Carousel timer slider */}
+          <div className="mt-6">
+            <FormLabel className="text-white">
+              Carousel Timer: {formCarouselTimer} seconds
+            </FormLabel>
+            <input
+              type="range"
+              min={3}
+              max={20}
+              step={1}
+              value={formCarouselTimer}
+              onChange={(e) => {
+                handleCarouselTimerChange(Number(e.target.value));
+              }}
+              className="w-full h-2 bg-dark-navy rounded-lg appearance-none cursor-pointer my-2"
+            />
+            <p className="text-xs text-light-navy">
+              Control how frequently background images change (3-20 seconds)
+            </p>
+          </div>
         </div>
         
         <div className="space-y-4">

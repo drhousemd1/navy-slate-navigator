@@ -10,6 +10,7 @@ interface TaskEditorProps {
   taskData?: Partial<Task>;
   onSave: (taskData: any) => void;
   onDelete?: (taskId: string) => void;
+  updateCarouselTimer?: (newTime: number) => void;
 }
 
 const TaskEditor: React.FC<TaskEditorProps> = ({ 
@@ -17,7 +18,8 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
   onClose, 
   taskData, 
   onSave, 
-  onDelete 
+  onDelete,
+  updateCarouselTimer
 }) => {
   const handleSave = async (formData: any) => {
     await onSave(formData);
@@ -48,6 +50,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}
+          updateCarouselTimer={updateCarouselTimer}
         />
       </DialogContent>
     </Dialog>

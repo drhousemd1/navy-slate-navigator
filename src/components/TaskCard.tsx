@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -16,6 +17,7 @@ interface TaskCardProps {
   points: number;
   completed?: boolean;
   backgroundImage?: string;
+  backgroundImages?: string[];
   backgroundOpacity?: number;
   focalPointX?: number;
   focalPointY?: number;
@@ -33,6 +35,8 @@ interface TaskCardProps {
   subtext_color?: string;
   calendar_color?: string;
   icon_color?: string;
+  sharedImageIndex?: number;
+  carouselTimer?: number;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -41,6 +45,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   points,
   completed = false,
   backgroundImage,
+  backgroundImages = [],
   backgroundOpacity = 100,
   focalPointX = 50,
   focalPointY = 50,
@@ -56,25 +61,66 @@ const TaskCard: React.FC<TaskCardProps> = ({
   title_color = '#FFFFFF',
   subtext_color = '#8E9196',
   calendar_color = '#7E69AB',
-  icon_color = '#9b87f5'
+  icon_color = '#9b87f5',
+  sharedImageIndex = 0,
+  carouselTimer = 5
 }) => {
   const currentDayOfWeek = getCurrentDayOfWeek();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
   const maxCompletions = frequency_count || 1;
   const isFullyCompleted = currentCompletions >= maxCompletions;
 
+  // Handle both legacy and new background image format
+  const hasCarouselImages = backgroundImages && backgroundImages.length > 0;
+  
+  // Get the current images to display based on the shared index
+  let primaryImage: string | null = null;
+  let transitioningImage: string | null = null;
+  
+  if (hasCarouselImages) {
+    const imageCount = backgroundImages.length;
+    if (imageCount > 0) {
+      const currentIndex = sharedImageIndex % imageCount;
+      const nextIndex = (currentIndex + 1) % imageCount;
+      
+      primaryImage = backgroundImages[currentIndex];
+      transitioningImage = imageCount > 1 ? backgroundImages[nextIndex] : null;
+    }
+  } else if (backgroundImage) {
+    // Legacy single image support
+    primaryImage = backgroundImage;
+  }
+
   return (
-    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
-      {backgroundImage && (
-        <div 
-          className="absolute inset-0 w-full h-full z-0"
-          style={{
-            backgroundImage: `url(${backgroundImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100,
-          }}
-        />
+    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!hasCarouselImages && !backgroundImage ? 'bg-navy' : ''}`}>
+      {/* Background image carousel */}
+      {(primaryImage || transitioningImage) && (
+        <div className="absolute inset-0 w-full h-full z-0">
+          {primaryImage && (
+            <img
+              src={primaryImage}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{
+                transition: 'opacity 2s ease-in-out',
+                opacity: transitioningImage ? 0 : backgroundOpacity / 100,
+                objectPosition: `${focalPointX}% ${focalPointY}%`,
+              }}
+              alt="Task background"
+            />
+          )}
+          {transitioningImage && (
+            <img
+              src={transitioningImage}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{
+                transition: 'opacity 2s ease-in-out',
+                opacity: backgroundOpacity / 100,
+                objectPosition: `${focalPointX}% ${focalPointY}%`,
+              }}
+              alt="Task background transition"
+            />
+          )}
+        </div>
       )}
 
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
