@@ -9,6 +9,7 @@ import PriorityBadge from './task/PriorityBadge';
 import PointsBadge from './task/PointsBadge';
 import CompletionButton from './task/CompletionButton';
 import { getCurrentDayOfWeek } from '@/lib/taskUtils';
+import FrequencyTracker from './task/FrequencyTracker';
 
 interface TaskCardProps {
   title: string;
