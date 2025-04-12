@@ -34,6 +34,8 @@ export const useImageCarousel = ({
     const nextIndex = (currentIndex + 1) % filteredImages.length;
     const nextImage = filteredImages[nextIndex];
 
+    if (nextImage === visibleImage) return;
+
     const preloadImage = new Image();
     preloadImage.src = nextImage;
 

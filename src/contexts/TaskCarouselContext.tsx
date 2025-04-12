@@ -31,7 +31,7 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
     return saved ? parseInt(saved, 10) : DEFAULT_CAROUSEL_TIMER;
   });
   
-  // Global carousel index state
+  // Add global carousel index state - exactly like in PunishmentsProvider
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
 
   // Persist carousel timer to localStorage when it changes
@@ -49,19 +49,13 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
         
         if (!userId) return;
         
-        // Fix: Break the type recursion by explicitly typing the response
-        const { data: tasks, error } = await supabase
+        const { data: tasks } = await supabase
           .from('tasks')
-          .select('carousel_timer')
+          .select('*')
           .eq('user_id', userId);
           
-        if (error) {
-          console.error('Error fetching carousel timer:', error);
-          return;
-        }
-          
         if (tasks && tasks.length > 0) {
-          const firstWithTimer = tasks.find(t => t.carousel_timer !== undefined && t.carousel_timer !== null);
+          const firstWithTimer = tasks.find(t => t.carousel_timer !== undefined);
           if (firstWithTimer && firstWithTimer.carousel_timer) {
             setCarouselTimer(firstWithTimer.carousel_timer);
           }
@@ -78,7 +72,7 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
   useEffect(() => {
     console.log(`TaskCarouselContext: Setting up timer interval of ${carouselTimer}s`);
     const interval = setInterval(() => {
-      setGlobalCarouselIndex((prevIndex) => prevIndex + 1);
+      setGlobalCarouselIndex(prevIndex => prevIndex + 1);
     }, carouselTimer * 1000);
     
     return () => clearInterval(interval);
