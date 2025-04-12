@@ -16,7 +16,7 @@ export const useImageCarousel = ({
   images, 
   globalCarouselIndex 
 }: UseImageCarouselProps): UseImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(images.length >.0 ? images[0] : null);
+  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
