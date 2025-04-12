@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useImageCarousel } from './hooks/useImageCarousel';
+import { useImageCarousel } from '../shared/hooks/useImageCarousel';
 
 interface TaskBackgroundCarouselProps {
   backgroundImages: string[];

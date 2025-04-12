@@ -278,6 +278,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
         updateCarouselTimer={updateCarouselTimer}
+        sharedImageIndex={sharedImageIndex}
       />
     </div>
   );

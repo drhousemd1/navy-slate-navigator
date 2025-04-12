@@ -13,6 +13,9 @@ interface BackgroundImageSelectorProps {
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setValue: (name: string, value: any, options?: any) => void;
   control: any;
+  backgroundImages?: string[];
+  selectedImageIndex?: number;
+  onSelectImage?: (index: number) => void;
 }
 
 const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
@@ -21,7 +24,10 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   onRemoveImage,
   onImageUpload,
   setValue,
-  control
+  control,
+  backgroundImages = [],
+  selectedImageIndex = 0,
+  onSelectImage
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const { register } = useFormContext();
@@ -77,6 +83,35 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
       <FormDescription className="text-white">
         Upload a background image for this task.
       </FormDescription>
+      
+      {/* Image thumbnails for carousel */}
+      {backgroundImages.length > 0 && onSelectImage && (
+        <div className="flex space-x-2 my-2 overflow-x-auto pb-2">
+          {backgroundImages.map((img, idx) => (
+            <div 
+              key={idx}
+              className={`w-16 h-16 rounded-md cursor-pointer border-2 ${
+                selectedImageIndex === idx 
+                  ? 'border-yellow-500' 
+                  : 'border-light-navy'
+              }`}
+              onClick={() => onSelectImage(idx)}
+            >
+              {img ? (
+                <img 
+                  src={img} 
+                  alt={`Background ${idx + 1}`}
+                  className="w-full h-full object-cover rounded-md"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-dark-navy text-light-navy">
+                  <span>+</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       
       <div className="flex items-center justify-between">
         <FormLabel className="text-white">Image Upload</FormLabel>
