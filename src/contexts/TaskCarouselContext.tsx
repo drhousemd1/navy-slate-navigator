@@ -7,8 +7,6 @@ interface TaskCarouselContextProps {
   carouselTimer: number;
   setCarouselTimer: (timer: number) => void;
   globalCarouselIndex: number;
-  globalCarouselTimer: number;
-  setGlobalCarouselTimer: (timer: number) => void;
 }
 
 const DEFAULT_CAROUSEL_TIMER = 5;
@@ -29,14 +27,10 @@ interface TaskCarouselProviderProps {
 }
 
 export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ children }) => {
-  const [carouselTimer, setCarouselTimerState] = useState<number>(() => {
+  const [carouselTimer, setCarouselTimer] = useState<number>(() => {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_CAROUSEL_TIMER;
   });
-  
-  // For backwards compatibility, maintain the same variable name
-  const globalCarouselTimer = carouselTimer;
-  const setGlobalCarouselTimer = setCarouselTimerState;
   
   // Add global carousel index state - exactly like in PunishmentsProvider
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
@@ -64,7 +58,7 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
         if (tasks && tasks.length > 0) {
           const firstWithTimer = tasks.find(t => t.carousel_timer !== undefined);
           if (firstWithTimer && firstWithTimer.carousel_timer) {
-            setGlobalCarouselTimer(firstWithTimer.carousel_timer);
+            setCarouselTimer(firstWithTimer.carousel_timer);
           }
         }
       } catch (error) {
@@ -89,18 +83,11 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
     return () => clearInterval(interval);
   }, [carouselTimer]);
 
-  const setCarouselTimer = (newTimer: number) => {
-    console.log(`TaskCarouselContext: Setting timer to ${newTimer}s`);
-    setCarouselTimerState(newTimer);
-  };
-
   return (
     <TaskCarouselContext.Provider value={{ 
       carouselTimer, 
       setCarouselTimer,
       globalCarouselIndex,
-      globalCarouselTimer,
-      setGlobalCarouselTimer
     }}>
       {children}
     </TaskCarouselContext.Provider>

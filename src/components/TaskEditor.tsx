@@ -20,13 +20,13 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
   onSave, 
   onDelete
 }) => {
-  const { setGlobalCarouselTimer } = useTaskCarousel();
+  const { setCarouselTimer } = useTaskCarousel();
 
   const handleSave = async (formData: any) => {
     await onSave(formData);
     
     if (formData.carousel_timer) {
-      setGlobalCarouselTimer(formData.carousel_timer);
+      setCarouselTimer(formData.carousel_timer);
     }
     
     onClose();
