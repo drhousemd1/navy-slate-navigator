@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useImageCarousel } from './hooks/useImageCarousel';
+import { useImageCarousel } from '../hooks/useImageCarousel';
 
 interface TaskBackgroundCarouselProps {
   backgroundImages: string[];
@@ -46,7 +46,7 @@ const TaskBackgroundCarousel: React.FC<TaskBackgroundCarouselProps> = ({
 
       {transitionImage && (
         <div
-          className="absolute inset-0 w-full h-full z-0 pointer-events-none"
+          className="absolute inset-0 w-full h-full z-10 pointer-events-none"
           style={{
             backgroundImage: `url(${transitionImage})`,
             backgroundSize: 'cover',

@@ -36,11 +36,10 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
   const handleDelete = (taskId: string) => {
     if (onDelete) {
       onDelete(taskId);
-      onClose(); // Ensure modal closes after deletion
+      onClose(); 
     }
   };
 
-  // Render conditionally based on device type
   if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>

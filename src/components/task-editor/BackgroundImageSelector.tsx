@@ -16,6 +16,7 @@ interface BackgroundImageSelectorProps {
   backgroundImages?: string[];
   selectedImageIndex?: number;
   onSelectImage?: (index: number) => void;
+  background_opacity?: number;
 }
 
 const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
@@ -27,7 +28,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   control,
   backgroundImages = [],
   selectedImageIndex = 0,
-  onSelectImage
+  onSelectImage,
+  background_opacity = 100
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const { register } = useFormContext();
@@ -58,7 +60,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
               style={{
                 backgroundImage: `url(${imagePreview})`,
                 backgroundPosition: `${position.x}% ${position.y}%`,
-                opacity: backgroundOpacity / 100,
+                opacity: background_opacity / 100,
                 transition: 'opacity 2s ease-in-out'
               }}
             >
