@@ -31,7 +31,7 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
     return saved ? parseInt(saved, 10) : DEFAULT_CAROUSEL_TIMER;
   });
   
-  // Add global carousel index state - exactly like in PunishmentsProvider
+  // Global carousel index state
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
 
   // Persist carousel timer to localStorage when it changes
@@ -72,7 +72,7 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
   useEffect(() => {
     console.log(`TaskCarouselContext: Setting up timer interval of ${carouselTimer}s`);
     const interval = setInterval(() => {
-      setGlobalCarouselIndex(prevIndex => prevIndex + 1);
+      setGlobalCarouselIndex((prevIndex) => prevIndex + 1);
     }, carouselTimer * 1000);
     
     return () => clearInterval(interval);

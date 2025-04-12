@@ -27,13 +27,15 @@ const TaskBackgroundCarousel: React.FC<TaskBackgroundCarouselProps> = ({
       : backgroundImageUrl
       ? [backgroundImageUrl]
       : [];
+  
+  const filteredImages = allImages.filter((img): img is string => !!img);
 
   const {
     visibleImage,
     transitionImage,
     isTransitioning
   } = useImageCarousel({
-    images: allImages.filter((img): img is string => !!img),
+    images: filteredImages,
     globalCarouselIndex
   });
 
