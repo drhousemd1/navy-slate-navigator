@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Task {
@@ -13,7 +14,7 @@ export interface Task {
   usage_data?: {
     current_count: number;
     current_period_start: string;
-  };
+  } | number[];
   background_image_url?: string;
   background_opacity: number;
   background_images?: string[];
@@ -27,7 +28,7 @@ export interface Task {
   icon_color: string;
   icon_url?: string;
   icon_name?: string;
-  carousel_timer?: number; // Add carousel timer property
+  carousel_timer?: number;
 }
 
 export const fetchTasks = async (): Promise<Task[]> => {
@@ -42,7 +43,8 @@ export const fetchTasks = async (): Promise<Task[]> => {
       throw new Error(error.message);
     }
     
-    return data || [];
+    // Type assertion to ensure data is cast to the correct Task type
+    return (data || []) as Task[];
   } catch (err) {
     console.error('Failed to fetch tasks:', err);
     return [];
@@ -55,7 +57,7 @@ export const saveTask = async (taskData: Partial<Task>): Promise<Task | null> =>
       // Update existing task
       const { data, error } = await supabase
         .from('tasks')
-        .update(taskData)
+        .update(taskData as any)
         .eq('id', taskData.id)
         .select()
         .single();
@@ -65,12 +67,12 @@ export const saveTask = async (taskData: Partial<Task>): Promise<Task | null> =>
         throw new Error(error.message);
       }
       
-      return data;
+      return data as Task;
     } else {
       // Create new task
       const { data, error } = await supabase
         .from('tasks')
-        .insert([taskData])
+        .insert([taskData as any])
         .select()
         .single();
 
@@ -79,7 +81,7 @@ export const saveTask = async (taskData: Partial<Task>): Promise<Task | null> =>
         throw new Error(error.message);
       }
 
-      return data;
+      return data as Task;
     }
   } catch (err) {
     console.error('Failed to save task:', err);

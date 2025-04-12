@@ -9,7 +9,7 @@ import CompletionButton from './task/CompletionButton';
 import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
 import HighlightedText from './task/HighlightedText';
-import { getCurrentDayOfWeek } from '@/lib/taskUtils';
+import { getMondayBasedDay } from '@/lib/utils';
 import { useTasks } from '@/contexts/tasks';
 
 interface TaskCardProps {
@@ -64,7 +64,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   // Use the tasks context for global carousel state
   const { globalCarouselIndex } = useTasks();
-  const currentDayOfWeek = getCurrentDayOfWeek();
+  const currentDayOfWeek = getMondayBasedDay();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
   const maxCompletions = frequency_count || 1;
   const isFullyCompleted = currentCompletions >= maxCompletions;
