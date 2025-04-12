@@ -9,13 +9,8 @@ const TaskBackground = ({
   focalPointY = 50,
   globalCarouselIndex = 0
 }) => {
-  // Apply a default blue-navy background if no images
-  const bgStyle = backgroundImages.length === 0 
-    ? { backgroundColor: '#0f172a' } // navy bg color
-    : {};
-    
   return (
-    <div className="absolute inset-0 -z-10" style={bgStyle}>
+    <div className="absolute inset-0 z-0">
       <TaskBackgroundCarousel
         backgroundImages={backgroundImages}
         backgroundOpacity={backgroundOpacity}

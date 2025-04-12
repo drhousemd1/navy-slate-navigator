@@ -18,10 +18,17 @@ const TaskBackgroundCarousel = ({
     globalCarouselIndex
   });
 
-  // Always render a container even if no images are present
-  // to maintain layout consistency
+  // Always render a container with a fallback color if no images
   return (
-    <>
+    <div className="absolute inset-0 w-full h-full overflow-hidden">
+      {/* Fallback background color if no images are present */}
+      {!visibleImage && !transitionImage && (
+        <div 
+          className="absolute inset-0 w-full h-full z-0 bg-[#0f172a]"
+          aria-hidden="true"
+        />
+      )}
+
       {visibleImage && (
         <div
           className="absolute inset-0 w-full h-full z-0"
@@ -49,7 +56,7 @@ const TaskBackgroundCarousel = ({
           aria-hidden="true"
         />
       )}
-    </>
+    </div>
   );
 };
 
