@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Save, Image, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Task } from '@/lib/taskUtils';
+import { useTaskCarousel } from '@/contexts/TaskCarouselContext';
 import NumberField from './NumberField';
 import ColorPickerField from './ColorPickerField';
 import PrioritySelector from './PrioritySelector';
@@ -44,16 +45,16 @@ interface TaskEditorFormProps {
   onSave: (taskData: any) => void;
   onDelete?: (taskId: string) => void;
   onCancel: () => void;
-  updateCarouselTimer?: (newTime: number) => void;
 }
 
 const TaskEditorForm: React.FC<TaskEditorFormProps> = ({ 
   taskData,
   onSave,
   onDelete,
-  onCancel,
-  updateCarouselTimer
+  onCancel
 }) => {
+  const { carouselTimer, setCarouselTimer } = useTaskCarousel();
+  
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
@@ -64,9 +65,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     taskData?.background_images || []
   );
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
-  const [formCarouselTimer, setFormCarouselTimer] = useState<number>(
-    taskData?.carousel_timer || 5
-  );
   
   const form = useForm<TaskFormValues>({
     defaultValues: {
@@ -87,7 +85,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       priority: taskData?.priority || 'medium',
       icon_name: taskData?.icon_name,
       background_images: taskData?.background_images || [],
-      carousel_timer: taskData?.carousel_timer || 5,
+      carousel_timer: carouselTimer,
     },
   });
 
@@ -103,8 +101,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       setBackgroundImages([]);
     }
     
-    setFormCarouselTimer(taskData?.carousel_timer || 5);
-    
     setSelectedImageIndex(0);
     
     const previewImage = taskData?.background_images?.[0] || taskData?.background_image_url || null;
@@ -114,7 +110,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   React.useEffect(() => {
     if (!taskData) {
       setSelectedImageIndex(0);
-      setFormCarouselTimer(5);
       setBackgroundImages([]);
     }
   }, [taskData]);
@@ -230,7 +225,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         id: taskData?.id,
         icon_name: selectedIconName || undefined,
         background_images: backgroundImages,
-        carousel_timer: formCarouselTimer,
+        carousel_timer: carouselTimer,
       };
       
       await onSave(taskToSave);
@@ -269,12 +264,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   };
 
   const handleCarouselTimerChange = (newValue: number) => {
-    setFormCarouselTimer(newValue);
+    setCarouselTimer(newValue);
     form.setValue('carousel_timer', newValue);
-    
-    if (updateCarouselTimer) {
-      updateCarouselTimer(newValue);
-    }
   };
 
   const handleDelete = () => {
@@ -393,7 +384,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    const newTime = Math.max(3, formCarouselTimer - 1);
+                    const newTime = Math.max(3, carouselTimer - 1);
                     handleCarouselTimerChange(newTime);
                   }}
                   className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy w-8 h-8 flex items-center justify-center rounded-md"
@@ -402,13 +393,13 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                 </button>
 
                 <div className="w-12 text-center text-white">
-                  {formCarouselTimer}
+                  {carouselTimer}
                 </div>
 
                 <button
                   type="button"
                   onClick={() => {
-                    const newTime = Math.min(20, formCarouselTimer + 1);
+                    const newTime = Math.min(20, carouselTimer + 1);
                     handleCarouselTimerChange(newTime);
                   }}
                   className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy w-8 h-8 flex items-center justify-center rounded-md"
