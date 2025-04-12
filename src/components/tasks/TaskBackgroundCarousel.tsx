@@ -18,8 +18,8 @@ const TaskBackgroundCarousel = ({
     globalCarouselIndex
   });
 
-  if (!visibleImage && !transitionImage) return null;
-
+  // Always render a container even if no images are present
+  // to maintain layout consistency
   return (
     <>
       {visibleImage && (

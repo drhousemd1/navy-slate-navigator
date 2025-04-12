@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -79,8 +80,13 @@ const TaskCard: React.FC<TaskCardProps> = ({
       ? [backgroundImage] 
       : [];
 
+  // Add a fallback background class if no images
+  const cardClassNames = `relative overflow-hidden border-2 border-[#00f0ff] ${
+    allBackgroundImages.length === 0 ? 'bg-[#0f172a]' : ''
+  }`;
+
   return (
-    <Card className="relative overflow-hidden border-2 border-[#00f0ff]">
+    <Card className={cardClassNames}>
       {/* Background layer */}
       <TaskBackground
         backgroundImages={allBackgroundImages}
