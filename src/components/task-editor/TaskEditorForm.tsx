@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -61,7 +60,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
-  // New state for background images array and carousel
   const [backgroundImages, setBackgroundImages] = useState<string[]>(
     taskData?.background_images || []
   );
@@ -94,25 +92,31 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   });
 
   React.useEffect(() => {
-    setImagePreview(taskData?.background_image_url || null);
     setIconPreview(taskData?.icon_url || null);
     setSelectedIconName(taskData?.icon_name || null);
     
-    // Initialize background images from task data
     if (taskData?.background_images && taskData.background_images.length > 0) {
       setBackgroundImages(taskData.background_images);
     } else if (taskData?.background_image_url) {
-      // Handle legacy single image
       setBackgroundImages([taskData.background_image_url]);
     } else {
       setBackgroundImages([]);
     }
     
-    // Initialize carousel timer
     setFormCarouselTimer(taskData?.carousel_timer || 5);
     
-    // Reset selected image index
     setSelectedImageIndex(0);
+    
+    const previewImage = taskData?.background_images?.[0] || taskData?.background_image_url || null;
+    setImagePreview(previewImage);
+  }, [taskData]);
+
+  React.useEffect(() => {
+    if (!taskData) {
+      setSelectedImageIndex(0);
+      setFormCarouselTimer(5);
+      setBackgroundImages([]);
+    }
   }, [taskData]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,19 +126,16 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       reader.onloadend = () => {
         const base64String = reader.result as string;
         
-        // Update the current image in the array
         const newImages = [...backgroundImages];
         if (selectedImageIndex < newImages.length) {
           newImages[selectedImageIndex] = base64String;
         } else {
-          // If uploading to an empty slot, add the image to the array
           newImages.push(base64String);
         }
         
         setBackgroundImages(newImages);
         form.setValue('background_images', newImages);
         
-        // Also update single image for backward compatibility
         setImagePreview(base64String);
         form.setValue('background_image_url', base64String);
       };
@@ -145,7 +146,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const handleSelectThumbnail = (index: number) => {
     setSelectedImageIndex(index);
     
-    // If we have an image at this index, show it in the preview
     if (index < backgroundImages.length) {
       setImagePreview(backgroundImages[index]);
     } else {
@@ -154,7 +154,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   };
 
   const handleRemoveCurrentImage = () => {
-    // Remove the image at the selected index
     const newImages = [...backgroundImages];
     
     if (selectedImageIndex < newImages.length) {
@@ -162,7 +161,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       setBackgroundImages(newImages);
       form.setValue('background_images', newImages);
       
-      // Update preview to the next available image or clear it
       if (newImages.length > 0) {
         const newIndex = Math.min(selectedImageIndex, newImages.length - 1);
         setSelectedImageIndex(newIndex);
@@ -274,7 +272,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     setFormCarouselTimer(newValue);
     form.setValue('carousel_timer', newValue);
     
-    // Update global timer immediately if provided
     if (updateCarouselTimer) {
       updateCarouselTimer(newValue);
     }
@@ -353,7 +350,62 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Background Images</FormLabel>
           
-          {/* Background image selector - shows the currently selected image */}
+          <div className="flex flex-col md:flex-row gap-x-4 items-end mb-4">
+            <div className="flex gap-2">
+              {[0, 1, 2, 3, 4].map((index) => {
+                const imageUrl = backgroundImages[index] || '';
+                return (
+                  <div
+                    key={index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`w-12 h-12 rounded-md cursor-pointer transition-all
+                      ${selectedImageIndex === index
+                        ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
+                        : 'bg-dark-navy border border-light-navy hover:border-white'}
+                    `}
+                  >
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        className="w-full h-full object-cover rounded-md"
+                        alt="Background thumbnail"
+                        onError={(e) => {
+                          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTMgNEg4LjhDNy4xMTk4NCA0IDUuNzM5NjggNC44Mi40LjJWMjBIMTZWMTVIMjAuNkMyMS45MjU1IDE1IDIzIDE2LjA3NDUgMjMgMTcuNFYyMEg0VjE3LjRDNyAxNi4wNzQ1IDguMDc0NTIgMTUgOS40IDE1SDEzVjRaIiBzdHJva2U9IiM0QjU1NjMiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0xOSA4QzE5IDkuMTA0NTcgMTguMTA0NiAxMCAxNyAxMEMxNS44OTU0IDEwIDE1IDkuMTA0NTcgMTUgOEMxNSA2Ljg5NTQzIDE1Ljg5NTQgNiAxNyA2QzE4LjEwNDYgNiAxOSA2Ljg5NTQzIDE5IDhaIiBmaWxsPSIjNEI1NTYzIi8+PC9zdmc+';
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full w-full text-light-navy">
+                        <Plus size={16} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="mt-4 md:mt-0 w-full max-w-xs">
+              <FormLabel className="text-white">
+                Carousel Timer: {formCarouselTimer} seconds
+              </FormLabel>
+              <input
+                type="range"
+                min={3}
+                max={20}
+                step={1}
+                value={formCarouselTimer}
+                onChange={(e) => {
+                  const newValue = Number(e.target.value);
+                  setFormCarouselTimer(newValue);
+                  form.setValue('carousel_timer', newValue);
+                  if (updateCarouselTimer) {
+                    updateCarouselTimer(newValue);
+                  }
+                }}
+                className="w-full"
+              />
+            </div>
+          </div>
+          
           <BackgroundImageSelector
             control={form.control}
             imagePreview={imagePreview}
@@ -365,61 +417,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             onImageUpload={handleImageUpload}
             setValue={form.setValue}
           />
-          
-          {/* Thumbnails row */}
-          <div className="flex gap-2 items-end mt-4 overflow-x-auto py-2">
-            {[0, 1, 2, 3, 4].map((index) => {
-              const imageUrl = backgroundImages[index] || '';
-              return (
-                <div
-                  key={index}
-                  onClick={() => handleSelectThumbnail(index)}
-                  className={`w-12 h-12 rounded-md cursor-pointer transition-all flex-shrink-0
-                    ${selectedImageIndex === index
-                      ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
-                      : 'bg-dark-navy border border-light-navy hover:border-white'}
-                  `}
-                >
-                  {imageUrl ? (
-                    <img
-                      src={imageUrl}
-                      className="w-full h-full object-cover rounded-md"
-                      alt="Background thumbnail"
-                      onError={(e) => {
-                        // Use a placeholder on error
-                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTMgNEg4LjhDNy4xMTk4NCA0IDUuNzM5NjggNC44Mi40LjJWMjBIMTZWMTVIMjAuNkMyMS45MjU1IDE1IDIzIDE2LjA3NDUgMjMgMTcuNFYyMEg0VjE3LjRDNyAxNi4wNzQ1IDguMDc0NTIgMTUgOS40IDE1SDEzVjRaIiBzdHJva2U9IiM0QjU1NjMiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0xOSA4QzE5IDkuMTA0NTcgMTguMTA0NiAxMCAxNyAxMEMxNS44OTU0IDEwIDE1IDkuMTA0NTcgMTUgOEMxNSA2Ljg5NTQzIDE1Ljg5NTQgNiAxNyA2QzE4LjEwNDYgNiAxOSA2Ljg5NTQzIDE5IDhaIiBmaWxsPSIjNEI1NTYzIi8+PC9zdmc+';
-                      }}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full w-full text-light-navy">
-                      <Plus size={16} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          
-          {/* Carousel timer slider */}
-          <div className="mt-6">
-            <FormLabel className="text-white">
-              Carousel Timer: {formCarouselTimer} seconds
-            </FormLabel>
-            <input
-              type="range"
-              min={3}
-              max={20}
-              step={1}
-              value={formCarouselTimer}
-              onChange={(e) => {
-                handleCarouselTimerChange(Number(e.target.value));
-              }}
-              className="w-full h-2 bg-dark-navy rounded-lg appearance-none cursor-pointer my-2"
-            />
-            <p className="text-xs text-light-navy">
-              Control how frequently background images change (3-20 seconds)
-            </p>
-          </div>
         </div>
         
         <div className="space-y-4">
