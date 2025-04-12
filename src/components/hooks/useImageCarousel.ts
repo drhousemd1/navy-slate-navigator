@@ -53,43 +53,49 @@ export const useImageCarousel = ({
 
   // Handle image transitions when global carousel index changes
   useEffect(() => {
-    if (filteredImages.length <= 1) return;
+    if (!images.length || images.length <= 1) return;
     if (globalCarouselIndex === prevGlobalIndexRef.current) return;
-
+    
     prevGlobalIndexRef.current = globalCarouselIndex;
-
-    const currentIndex = filteredImages.indexOf(visibleImage || filteredImages[0]);
-    const nextIndex = (currentIndex + 1) % filteredImages.length;
-    const nextImage = filteredImages[nextIndex];
-
-    if (nextImage === visibleImage) return;
-
-    const preloadImage = new Image();
-    preloadImage.src = nextImage;
-
-    preloadImage.onload = () => {
-      setTransitionImage(nextImage);
-
+    
+    const nextIndex = globalCarouselIndex % images.length;
+    const next = images[nextIndex];
+    
+    if (next === visibleImage) return;
+    
+    console.log('Starting transition to new image:', next);
+    
+    const preload = new Image();
+    preload.src = next;
+    
+    preload.onload = () => {
+      console.log('Image preloaded successfully, beginning transition');
+      setTransitionImage(next);
+      setIsTransitioning(false);
+      
       requestAnimationFrame(() => {
-        setIsTransitioning(true);
-
-        const timeout = setTimeout(() => {
-          setVisibleImage(nextImage);
-          setTransitionImage(null);
-          setIsTransitioning(false);
-        }, 2000);
-
-        return () => clearTimeout(timeout);
+        setTimeout(() => {
+          setIsTransitioning(true);
+          console.log('Transition started');
+          
+          const timeout = setTimeout(() => {
+            setVisibleImage(next);
+            setTransitionImage(null);
+            setIsTransitioning(false);
+            console.log('Transition completed');
+          }, 2000);
+          
+          return () => clearTimeout(timeout);
+        }, 0);
       });
     };
-
-    preloadImage.onerror = () => {
-      console.error("Failed to load image:", nextImage);
-      setVisibleImage(nextImage);
+    
+    preload.onerror = () => {
+      console.error("Failed to load image:", next);
+      // Try to continue with the next image anyway
+      setVisibleImage(next);
     };
-  }, [globalCarouselIndex, filteredImages, visibleImage]);
-
-  const filteredImages = images.filter((img): img is string => !!img);
+  }, [globalCarouselIndex, images, visibleImage]);
 
   return {
     visibleImage,

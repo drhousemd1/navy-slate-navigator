@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -27,18 +28,10 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
-  const { carouselTimer, setCarouselTimer } = useTaskCarousel();
   
-  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setGlobalCarouselIndex(prevIndex => prevIndex + 1);
-    }, carouselTimer * 1000);
-    
-    return () => clearInterval(interval);
-  }, [carouselTimer]);
-
+  // Use the global carousel index from the context (just like in Punishments.tsx)
+  const { carouselTimer, globalCarouselIndex } = useTaskCarousel();
+  
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
@@ -46,15 +39,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
-
-  useEffect(() => {
-    if (tasks.length > 0) {
-      const firstWithTimer = tasks.find(t => t.carousel_timer !== undefined);
-      if (firstWithTimer && firstWithTimer.carousel_timer) {
-        setCarouselTimer(firstWithTimer.carousel_timer);
-      }
-    }
-  }, [tasks, setCarouselTimer]);
 
   useEffect(() => {
     const checkForReset = () => {
@@ -254,7 +238,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
               onEdit={() => handleEditTask(task)}
               onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
               backgroundImages={task.background_images}
-              carouselTimer={carouselTimer}
               sharedImageIndex={globalCarouselIndex}
             />
           ))}
