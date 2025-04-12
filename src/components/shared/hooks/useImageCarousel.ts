@@ -70,7 +70,7 @@ export const useImageCarousel = ({
             setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
-          }, 1000); // Match the transition duration in CSS
+          }, 2000); // Match the transition duration in CSS (2s)
           
           return () => clearTimeout(timeout);
         }, 0);

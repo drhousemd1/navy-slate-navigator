@@ -38,7 +38,7 @@ const TaskBackgroundCarousel: React.FC<TaskBackgroundCarouselProps> = ({
             backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
             opacity: isTransitioning ? 0 : backgroundOpacity / 100,
-            transition: 'opacity 1s ease-in-out'
+            transition: 'opacity 2s ease-in-out'
           }}
           aria-hidden="true"
         />
@@ -52,7 +52,7 @@ const TaskBackgroundCarousel: React.FC<TaskBackgroundCarouselProps> = ({
             backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
             opacity: isTransitioning ? backgroundOpacity / 100 : 0,
-            transition: 'opacity 1s ease-in-out'
+            transition: 'opacity 2s ease-in-out'
           }}
           aria-hidden="true"
         />

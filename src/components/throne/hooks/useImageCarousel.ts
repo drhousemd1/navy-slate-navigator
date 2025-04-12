@@ -41,7 +41,7 @@ export const useImageCarousel = ({
             setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
-          }, 2000);
+          }, 2000); // Updated to 2s from 2000ms
           
           return () => clearTimeout(timeout);
         }, 0);
