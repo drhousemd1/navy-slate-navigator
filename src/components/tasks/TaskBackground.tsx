@@ -10,7 +10,7 @@ const TaskBackground = ({
   globalCarouselIndex = 0
 }) => {
   return (
-    <div className="absolute inset-0 -z-10">
+    <div className="absolute inset-0">
       <TaskBackgroundCarousel
         backgroundImages={backgroundImages}
         backgroundOpacity={backgroundOpacity}

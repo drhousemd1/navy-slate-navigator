@@ -24,12 +24,12 @@ const TaskBackgroundCarousel = ({
     <>
       {visibleImage && (
         <div
-          className="absolute inset-0 w-full h-full z-0"
+          className="absolute inset-0 w-full h-full z-[-10] pointer-events-none"
           style={{
             backgroundImage: `url(${visibleImage})`,
             backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100,
+            opacity: isTransitioning ? 0 : backgroundOpacity / 100,
             transition: 'opacity 2s ease-in-out'
           }}
           aria-hidden="true"
@@ -38,7 +38,7 @@ const TaskBackgroundCarousel = ({
 
       {transitionImage && (
         <div
-          className="absolute inset-0 w-full h-full -z-10 pointer-events-none"
+          className="absolute inset-0 w-full h-full z-0 pointer-events-none"
           style={{
             backgroundImage: `url(${transitionImage})`,
             backgroundSize: 'cover',
