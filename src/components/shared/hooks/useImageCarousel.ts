@@ -19,68 +19,74 @@ export const useImageCarousel = ({
   const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [previousImages, setPreviousImages] = useState<string[]>([]);
 
-  // Initialize or update visible image when images array changes
   useEffect(() => {
-    if (images.length > 0) {
-      // Check if images array has changed
-      const imagesChanged = 
-        images.length !== previousImages.length || 
-        images.some((img, i) => previousImages[i] !== img);
-      
-      if (imagesChanged) {
-        setPreviousImages(images);
-        setVisibleImage(images[0]);
-        setTransitionImage(null);
-        setIsTransitioning(false);
-      }
-    } else if (previousImages.length > 0 && images.length === 0) {
-      // Reset if we had images but now don't
-      setPreviousImages([]);
+    if (!images.length) {
+      // Reset state when images array is empty
       setVisibleImage(null);
       setTransitionImage(null);
       setIsTransitioning(false);
+      return;
     }
-  }, [images]);
-
-  // Handle image transitions when global carousel index changes
-  useEffect(() => {
-    if (!images.length || images.length <= 1) return;
     
-    const nextIndex = globalCarouselIndex % images.length;
-    const next = images[nextIndex];
+    // Filter out empty strings or invalid URLs
+    const validImages = images.filter(img => !!img);
     
-    if (next === visibleImage) return;
+    // Handle case where no valid images exist but the array has entries
+    if (!validImages.length) {
+      setVisibleImage(null);
+      setTransitionImage(null);
+      return;
+    }
+    
+    // Set initial visible image if none exists
+    if (!visibleImage && validImages.length > 0) {
+      setVisibleImage(validImages[0]);
+      return;
+    }
+    
+    const currentIndex = globalCarouselIndex % validImages.length;
+    const next = validImages[currentIndex];
+    
+    // Skip if the next image is the same as current or invalid
+    if (!next || next === visibleImage) return;
     
     const preload = new Image();
     preload.src = next;
     
+    // Handle successful load
     preload.onload = () => {
       setTransitionImage(next);
       setIsTransitioning(false);
       
       requestAnimationFrame(() => {
-        // Start transition after a small delay
         setTimeout(() => {
           setIsTransitioning(true);
           
-          // After transition is complete, update visible image and reset
           const timeout = setTimeout(() => {
             setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
-          }, 2000); // Match the transition duration in CSS (2s)
+          }, 2000);
           
           return () => clearTimeout(timeout);
-        }, 0);
+        }, 50);
       });
     };
     
+    // Handle load error
     preload.onerror = () => {
-      console.error("Failed to load image:", next);
-      // Try to continue with the next image anyway
-      setVisibleImage(next);
+      console.error(`Failed to load image: ${next}`);
+      
+      // If image fails to load, try the next one in sequence
+      if (validImages.length > 1) {
+        const nextIndex = (currentIndex + 1) % validImages.length;
+        const fallbackImage = validImages[nextIndex];
+        
+        if (fallbackImage && fallbackImage !== next) {
+          setVisibleImage(fallbackImage);
+        }
+      }
     };
   }, [globalCarouselIndex, images, visibleImage]);
 
