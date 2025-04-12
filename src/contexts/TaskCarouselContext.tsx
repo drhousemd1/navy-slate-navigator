@@ -49,13 +49,19 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
         
         if (!userId) return;
         
-        const { data: tasks } = await supabase
+        // Fix: Break the type recursion by explicitly typing the response
+        const { data: tasks, error } = await supabase
           .from('tasks')
-          .select('*')
+          .select('carousel_timer')
           .eq('user_id', userId);
           
+        if (error) {
+          console.error('Error fetching carousel timer:', error);
+          return;
+        }
+          
         if (tasks && tasks.length > 0) {
-          const firstWithTimer = tasks.find(t => t.carousel_timer !== undefined);
+          const firstWithTimer = tasks.find(t => t.carousel_timer !== undefined && t.carousel_timer !== null);
           if (firstWithTimer && firstWithTimer.carousel_timer) {
             setCarouselTimer(firstWithTimer.carousel_timer);
           }
