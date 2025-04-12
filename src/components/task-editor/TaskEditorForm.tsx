@@ -396,7 +396,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                     const newTime = Math.max(3, formCarouselTimer - 1);
                     handleCarouselTimerChange(newTime);
                   }}
-                  className="bg-dark-navy border border-white w-8 h-8 flex items-center justify-center rounded-md"
+                  className="bg-navy text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-light-navy"
                 >
                   –
                 </button>
@@ -411,7 +411,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                     const newTime = Math.min(20, formCarouselTimer + 1);
                     handleCarouselTimerChange(newTime);
                   }}
-                  className="bg-dark-navy border border-white w-8 h-8 flex items-center justify-center rounded-md"
+                  className="bg-navy text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-light-navy"
                 >
                   +
                 </button>
