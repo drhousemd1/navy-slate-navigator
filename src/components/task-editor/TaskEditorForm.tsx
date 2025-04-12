@@ -225,11 +225,21 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     setLoading(true);
     
     try {
+      let backgroundImagesForSave;
+      
+      if (backgroundImages && backgroundImages.length > 0) {
+        backgroundImagesForSave = backgroundImages;
+        
+        if (!values.background_image_url && backgroundImages[0]) {
+          values.background_image_url = backgroundImages[0];
+        }
+      }
+      
       const taskToSave: Partial<Task> = {
         ...values,
         id: taskData?.id,
         icon_name: selectedIconName || undefined,
-        background_images: backgroundImages,
+        background_images: backgroundImagesForSave,
         carousel_timer: formCarouselTimer,
       };
       

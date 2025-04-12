@@ -113,79 +113,121 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     console.log('Saving task with icon name:', task.icon_name);
     console.log('Saving task with icon color:', task.icon_color);
     console.log('Saving task with usage_data:', task.usage_data);
-    console.log('Saving task with background_images:', task.background_images);
-    console.log('Saving task with carousel_timer:', task.carousel_timer);
+    
+    // Check if task has background_images but prepare to handle if the column doesn't exist
+    if (task.background_images?.length) {
+      console.log('Saving task with background_images:', task.background_images);
+    }
+    
+    if (task.carousel_timer) {
+      console.log('Saving task with carousel_timer:', task.carousel_timer);
+    }
     
     const usage_data = task.usage_data || Array(7).fill(0);
     const now = new Date().toISOString();
     
-    if (task.id) {
-      const { data, error } = await supabase
-        .from('tasks')
-        .update({
-          title: task.title,
-          description: task.description,
-          points: task.points,
-          completed: task.completed,
-          frequency: task.frequency,
-          frequency_count: task.frequency_count,
-          background_image_url: task.background_image_url,
-          background_opacity: task.background_opacity,
-          icon_url: task.icon_url,
-          icon_name: task.icon_name,
-          title_color: task.title_color,
-          subtext_color: task.subtext_color,
-          calendar_color: task.calendar_color,
-          highlight_effect: task.highlight_effect,
-          focal_point_x: task.focal_point_x,
-          focal_point_y: task.focal_point_y,
-          priority: task.priority,
-          icon_color: task.icon_color,
-          last_completed_date: task.last_completed_date,
-          usage_data: usage_data,
+    // Base task data that should always exist in the schema
+    const baseTaskData = {
+      title: task.title,
+      description: task.description,
+      points: task.points,
+      completed: task.completed,
+      frequency: task.frequency,
+      frequency_count: task.frequency_count,
+      background_image_url: task.background_image_url,
+      background_opacity: task.background_opacity,
+      icon_url: task.icon_url,
+      icon_name: task.icon_name,
+      title_color: task.title_color,
+      subtext_color: task.subtext_color,
+      calendar_color: task.calendar_color,
+      highlight_effect: task.highlight_effect,
+      focal_point_x: task.focal_point_x,
+      focal_point_y: task.focal_point_y,
+      priority: task.priority,
+      icon_color: task.icon_color,
+      last_completed_date: task.last_completed_date,
+      usage_data: usage_data,
+      updated_at: now,
+    };
+    
+    // Try to save with all fields including potentially missing ones
+    try {
+      if (task.id) {
+        const fullData = {
+          ...baseTaskData,
           background_images: task.background_images,
           carousel_timer: task.carousel_timer,
-          updated_at: now,
-        })
-        .eq('id', task.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data as Task;
-    } else {
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert({
-          title: task.title,
-          description: task.description,
-          points: task.points,
-          completed: task.completed,
-          frequency: task.frequency,
-          frequency_count: task.frequency_count,
-          background_image_url: task.background_image_url,
-          background_opacity: task.background_opacity,
-          icon_url: task.icon_url,
-          icon_name: task.icon_name,
-          title_color: task.title_color,
-          subtext_color: task.subtext_color,
-          calendar_color: task.calendar_color,
-          highlight_effect: task.highlight_effect,
-          focal_point_x: task.focal_point_x,
-          focal_point_y: task.focal_point_y,
-          priority: task.priority,
-          icon_color: task.icon_color,
-          last_completed_date: null,
-          usage_data: usage_data,
+        };
+        
+        const { data, error } = await supabase
+          .from('tasks')
+          .update(fullData)
+          .eq('id', task.id)
+          .select()
+          .single();
+        
+        if (!error) {
+          return data as Task;
+        }
+        
+        // If error contains PGRST204 and mentions background_images column, try without those fields
+        if (error.code === 'PGRST204' && error.message.includes('background_images')) {
+          console.log('Column background_images not found in schema, trying without it');
+          
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('tasks')
+            .update(baseTaskData)
+            .eq('id', task.id)
+            .select()
+            .single();
+          
+          if (fallbackError) throw fallbackError;
+          return fallbackData as Task;
+        } else {
+          throw error;
+        }
+      } else {
+        // For new tasks, try with all fields first
+        const fullData = {
+          ...baseTaskData,
           background_images: task.background_images,
           carousel_timer: task.carousel_timer,
           created_at: now,
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data as Task;
+        };
+        
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert(fullData)
+          .select()
+          .single();
+        
+        if (!error) {
+          return data as Task;
+        }
+        
+        // If error contains PGRST204 and mentions background_images column, try without those fields
+        if (error.code === 'PGRST204' && error.message.includes('background_images')) {
+          console.log('Column background_images not found in schema, trying without it');
+          
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('tasks')
+            .insert({
+              ...baseTaskData,
+              created_at: now,
+            })
+            .select()
+            .single();
+          
+          if (fallbackError) throw fallbackError;
+          return fallbackData as Task;
+        } else {
+          throw error;
+        }
+      }
+    } catch (error: any) {
+      // Handle any other errors
+      throw error;
     }
   } catch (err: any) {
     console.error('Error saving task:', err);
