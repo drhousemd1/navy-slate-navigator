@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface UseImageCarouselProps {
   images: string[];
@@ -12,49 +12,27 @@ interface UseImageCarouselResult {
   isTransitioning: boolean;
 }
 
-export const useImageCarousel = ({ 
-  images, 
-  globalCarouselIndex 
+export const useImageCarousel = ({
+  images,
+  globalCarouselIndex
 }: UseImageCarouselProps): UseImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
+  const filteredImages = images.filter((img): img is string => !!img);
+  const [visibleImage, setVisibleImage] = useState<string | null>(
+    filteredImages.length > 0 ? filteredImages[0] : null
+  );
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [previousImages, setPreviousImages] = useState<string[]>([]);
   const prevGlobalIndexRef = useRef(globalCarouselIndex);
 
-  // Initialize or update visible image when images array changes
   useEffect(() => {
-    if (images.length > 0) {
-      // Check if images array has changed
-      const imagesChanged = 
-        images.length !== previousImages.length || 
-        images.some((img, i) => previousImages[i] !== img);
-      
-      if (imagesChanged) {
-        setPreviousImages(images);
-        setVisibleImage(images[0]);
-        setTransitionImage(null);
-        setIsTransitioning(false);
-      }
-    } else if (previousImages.length > 0 && images.length === 0) {
-      // Reset if we had images but now don't
-      setPreviousImages([]);
-      setVisibleImage(null);
-      setTransitionImage(null);
-      setIsTransitioning(false);
-    }
-  }, [images]);
-
-  // Handle image transitions when global carousel index changes
-  useEffect(() => {
-    if (images.length <= 1) return;
+    if (filteredImages.length <= 1) return;
     if (globalCarouselIndex === prevGlobalIndexRef.current) return;
 
     prevGlobalIndexRef.current = globalCarouselIndex;
 
-    const currentIndex = images.indexOf(visibleImage || images[0]);
-    const nextIndex = (currentIndex + 1) % images.length;
-    const nextImage = images[nextIndex];
+    const currentIndex = filteredImages.indexOf(visibleImage || filteredImages[0]);
+    const nextIndex = (currentIndex + 1) % filteredImages.length;
+    const nextImage = filteredImages[nextIndex];
 
     if (nextImage === visibleImage) return;
 
@@ -81,7 +59,7 @@ export const useImageCarousel = ({
       console.error("Failed to load image:", nextImage);
       setVisibleImage(nextImage);
     };
-  }, [globalCarouselIndex, images, visibleImage]);
+  }, [globalCarouselIndex, filteredImages, visibleImage]);
 
   return {
     visibleImage,
