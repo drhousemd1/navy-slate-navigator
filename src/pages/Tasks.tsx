@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -28,9 +27,8 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
   
-  // Add shared image index and carousel timer state
   const [sharedImageIndex, setSharedImageIndex] = useState(0);
-  const [carouselTimer, setCarouselTimer] = useState(5); // Default 5 seconds
+  const [carouselTimer, setCarouselTimer] = useState(5);
 
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['tasks'],
@@ -40,7 +38,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     refetchOnWindowFocus: true
   });
 
-  // Effect to control image carousel transitions
   useEffect(() => {
     const interval = setInterval(() => {
       setSharedImageIndex(prev => prev + 1);
@@ -48,7 +45,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     return () => clearInterval(interval);
   }, [carouselTimer]);
 
-  // Function to update carousel timer from the editor
   const updateCarouselTimer = (newValue: number) => {
     console.log("Updating global carousel timer to:", newValue);
     setCarouselTimer(newValue);
@@ -126,7 +122,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       const savedTask = await saveTask(taskData);
       
       if (savedTask) {
-        // If carousel timer was updated in the task, update the shared timer
         if (savedTask.carousel_timer) {
           updateCarouselTimer(savedTask.carousel_timer);
         }
@@ -192,7 +187,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
           const { data: authData } = await supabase.auth.getUser();
           const userId = authData.user?.id || 'anonymous';
           
-          // Log the completion to history
           const { error: insertError } = await supabase
             .from('task_completion_history')
             .insert({
@@ -205,7 +199,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
             console.error('Error inserting into task_completion_history:', insertError.message);
           } else {
             console.log('Logged task completion to history');
-            // Make sure we invalidate weekly metrics data when a task is completed
             queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
           }
           
@@ -258,10 +251,10 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
               icon_color={task.icon_color}
               onEdit={() => handleEditTask(task)}
               onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
-              // Pass new props for image carousel
               backgroundImages={task.background_images}
               carouselTimer={task.carousel_timer}
               sharedImageIndex={sharedImageIndex}
+              globalCarouselIndex={sharedImageIndex}
             />
           ))}
         </div>
