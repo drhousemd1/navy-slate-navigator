@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -28,9 +27,9 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
   
-  // Add shared image index and carousel timer state
+  // Global carousel state
   const [sharedImageIndex, setSharedImageIndex] = useState(0);
-  const [carouselTimer, setCarouselTimer] = useState(5); // Default 5 seconds
+  const [globalCarouselTimer, setGlobalCarouselTimer] = useState(5); // Default 5 seconds
 
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['tasks'],
@@ -44,14 +43,15 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   useEffect(() => {
     const interval = setInterval(() => {
       setSharedImageIndex(prev => prev + 1);
-    }, carouselTimer * 1000);
+    }, globalCarouselTimer * 1000);
+    console.log(`Setting carousel interval to ${globalCarouselTimer} seconds`);
     return () => clearInterval(interval);
-  }, [carouselTimer]);
+  }, [globalCarouselTimer]);
 
-  // Function to update carousel timer from the editor
+  // Function to update global carousel timer
   const updateCarouselTimer = (newValue: number) => {
     console.log("Updating global carousel timer to:", newValue);
-    setCarouselTimer(newValue);
+    setGlobalCarouselTimer(newValue);
   };
 
   useEffect(() => {
@@ -126,7 +126,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       const savedTask = await saveTask(taskData);
       
       if (savedTask) {
-        // If carousel timer was updated in the task, update the shared timer
+        // If carousel timer was updated in the task, update the global timer
         if (savedTask.carousel_timer) {
           updateCarouselTimer(savedTask.carousel_timer);
         }
@@ -258,9 +258,9 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
               icon_color={task.icon_color}
               onEdit={() => handleEditTask(task)}
               onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
-              // Pass new props for image carousel
+              // Pass synchronized props for image carousel
               backgroundImages={task.background_images}
-              carouselTimer={task.carousel_timer}
+              carouselTimer={globalCarouselTimer} // Use global timer rather than per-task timer
               sharedImageIndex={sharedImageIndex}
             />
           ))}
