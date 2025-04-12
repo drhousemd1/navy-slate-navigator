@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -350,7 +351,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Background Images</FormLabel>
           
-          <div className="flex flex-col md:flex-row gap-x-4 items-end mb-4">
+          <div className="flex justify-between items-end mb-4">
             <div className="flex gap-2">
               {[0, 1, 2, 3, 4].map((index) => {
                 const imageUrl = backgroundImages[index] || '';
@@ -383,26 +384,46 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               })}
             </div>
             
-            <div className="mt-4 md:mt-0 w-full max-w-xs">
-              <FormLabel className="text-white">
-                Carousel Timer: {formCarouselTimer} seconds
-              </FormLabel>
-              <input
-                type="range"
-                min={3}
-                max={20}
-                step={1}
-                value={formCarouselTimer}
-                onChange={(e) => {
-                  const newValue = Number(e.target.value);
-                  setFormCarouselTimer(newValue);
-                  form.setValue('carousel_timer', newValue);
-                  if (updateCarouselTimer) {
-                    updateCarouselTimer(newValue);
-                  }
-                }}
-                className="w-full"
-              />
+            <div className="flex flex-col items-end ml-4">
+              <label className="text-sm text-white mb-1">
+                Carousel Timer
+                <span className="block text-xs text-muted-foreground">
+                  (Time between image transitions)
+                </span>
+              </label>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newTime = Math.max(3, formCarouselTimer - 1);
+                    setFormCarouselTimer(newTime);
+                    form.setValue('carousel_timer', newTime);
+                    if (updateCarouselTimer) updateCarouselTimer(newTime);
+                  }}
+                  className="bg-dark-navy border border-white w-8 h-8 flex items-center justify-center rounded"
+                >
+                  –
+                </button>
+
+                <div className="w-12 text-center text-white">
+                  {formCarouselTimer}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newTime = Math.min(20, formCarouselTimer + 1);
+                    setFormCarouselTimer(newTime);
+                    form.setValue('carousel_timer', newTime);
+                    if (updateCarouselTimer) updateCarouselTimer(newTime);
+                  }}
+                  className="bg-dark-navy border border-white w-8 h-8 flex items-center justify-center rounded"
+                >
+                  +
+                </button>
+
+                <span className="text-white text-sm ml-1">(s)</span>
+              </div>
             </div>
           </div>
           
