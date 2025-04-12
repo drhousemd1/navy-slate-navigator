@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useImageCarousel } from '@/components/hooks/useImageCarousel';
+import { usePunishmentImageCarousel } from '@/components/punishments/hooks/usePunishmentImageCarousel';
 
 const TaskBackgroundCarousel = ({
   backgroundImages = [],
@@ -9,12 +9,14 @@ const TaskBackgroundCarousel = ({
   focalPointY = 50,
   globalCarouselIndex = 0
 }) => {
+  const filteredImages = backgroundImages.filter((img): img is string => !!img);
+  
   const {
     visibleImage,
     transitionImage,
     isTransitioning
-  } = useImageCarousel({
-    images: backgroundImages,
+  } = usePunishmentImageCarousel({
+    images: filteredImages,
     globalCarouselIndex
   });
 
@@ -37,7 +39,7 @@ const TaskBackgroundCarousel = ({
             backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
             opacity: backgroundOpacity / 100,
-            transition: 'opacity 2s ease-in-out'
+            transition: 'opacity 0.5s ease-in-out'
           }}
           aria-hidden="true"
         />
