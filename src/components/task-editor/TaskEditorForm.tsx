@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -46,7 +45,6 @@ interface TaskEditorFormProps {
   onDelete?: (taskId: string) => void;
   onCancel: () => void;
   updateCarouselTimer?: (newTime: number) => void;
-  sharedImageIndex?: number;
 }
 
 const TaskEditorForm: React.FC<TaskEditorFormProps> = ({ 
@@ -54,8 +52,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   onSave,
   onDelete,
   onCancel,
-  updateCarouselTimer,
-  sharedImageIndex = 0
+  updateCarouselTimer
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
@@ -228,21 +225,11 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     setLoading(true);
     
     try {
-      let backgroundImagesForSave;
-      
-      if (backgroundImages && backgroundImages.length > 0) {
-        backgroundImagesForSave = backgroundImages;
-        
-        if (!values.background_image_url && backgroundImages[0]) {
-          values.background_image_url = backgroundImages[0];
-        }
-      }
-      
       const taskToSave: Partial<Task> = {
         ...values,
         id: taskData?.id,
         icon_name: selectedIconName || undefined,
-        background_images: backgroundImagesForSave,
+        background_images: backgroundImages,
         carousel_timer: formCarouselTimer,
       };
       
@@ -383,12 +370,12 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                         className="w-full h-full object-cover rounded-md"
                         alt="Background thumbnail"
                         onError={(e) => {
-                          console.error(`Error loading image in slot ${index}`);
-                          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMjJDMTcuNTIyOCAyMiAyMiAxNy41MjI4IDIyIDEyQzIyIDYuNDc3MTUgMTcuNTIyOCAyIDIgNi40NzcxNSAyIDEyQzIgMTcuNTIyOCA2LjQ3NzE1IDIyIDEyIDIyWiIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTE1IDlMOSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTkgOUwxNSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
+                          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTMgNEg4LjhDNy4xMTk4NCA0IDUuNzM5NjggNC44Mi40LjJWMjBIMTZWMTVIMjAuNkMyMS45MjU1IDE1IDIzIDE2LjA3NDUgMjMgMTcuNFYyMEg0VjE3LjRDNyAxNi4wNzQ1IDguMDc0NTIgMTUgOS40IDE1SDEzVjRaIiBzdHJva2U9IiM0QjU1NjMiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0xOSA4QzE5IDkuMTA0NTcgMTguMTA0NiAxMCAxNyAxMEMxNS44OTU0IDEwIDE1IDkuMTA0NTcgMTUgOEMxNSA2Ljg5NTQzIDE1Ljg5NTQgNiAxNyA2QzE4LjEwNDYgNiAxOSA2Ljg5NTQzIDE5IDhaIiBmaWxsPSIjNEI1NTYzIi8+PC9zdmc+';
                         }}
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full w-full text-light-navy">
+                        <Plus size={16} />
                       </div>
                     )}
                   </div>
@@ -399,7 +386,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             <div className="flex flex-col items-start ml-4">
               <label className="text-sm text-white mb-1">
                 Carousel Timer
-                <span className="block text-xs text-slate-400">
+                <span className="block text-xs text-muted-foreground">
                   (Time between image transitions)
                 </span>
               </label>
@@ -408,9 +395,11 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                   type="button"
                   onClick={() => {
                     const newTime = Math.max(3, formCarouselTimer - 1);
-                    handleCarouselTimerChange(newTime);
+                    setFormCarouselTimer(newTime);
+                    form.setValue('carousel_timer', newTime);
+                    if (updateCarouselTimer) updateCarouselTimer(newTime);
                   }}
-                  className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy w-8 h-8 flex items-center justify-center rounded-md"
+                  className="bg-dark-navy border border-white w-8 h-8 flex items-center justify-center rounded"
                 >
                   –
                 </button>
@@ -423,9 +412,11 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                   type="button"
                   onClick={() => {
                     const newTime = Math.min(20, formCarouselTimer + 1);
-                    handleCarouselTimerChange(newTime);
+                    setFormCarouselTimer(newTime);
+                    form.setValue('carousel_timer', newTime);
+                    if (updateCarouselTimer) updateCarouselTimer(newTime);
                   }}
-                  className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy w-8 h-8 flex items-center justify-center rounded-md"
+                  className="bg-dark-navy border border-white w-8 h-8 flex items-center justify-center rounded"
                 >
                   +
                 </button>
@@ -445,9 +436,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             onRemoveImage={handleRemoveCurrentImage}
             onImageUpload={handleImageUpload}
             setValue={form.setValue}
-            backgroundImages={backgroundImages}
-            selectedImageIndex={selectedImageIndex}
-            onSelectImage={handleSelectThumbnail}
           />
         </div>
         

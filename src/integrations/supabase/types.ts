@@ -556,10 +556,8 @@ export type Database = {
       tasks: {
         Row: {
           background_image_url: string | null
-          background_images: Json | null
           background_opacity: number
           calendar_color: string
-          carousel_timer: number | null
           completed: boolean
           created_at: string
           description: string | null
@@ -583,10 +581,8 @@ export type Database = {
         }
         Insert: {
           background_image_url?: string | null
-          background_images?: Json | null
           background_opacity?: number
           calendar_color?: string
-          carousel_timer?: number | null
           completed?: boolean
           created_at?: string
           description?: string | null
@@ -610,10 +606,8 @@ export type Database = {
         }
         Update: {
           background_image_url?: string | null
-          background_images?: Json | null
           background_opacity?: number
           calendar_color?: string
-          carousel_timer?: number | null
           completed?: boolean
           created_at?: string
           description?: string | null

@@ -81,12 +81,8 @@ export const fetchTasks = async (): Promise<Task[]> => {
         task.usage_data = Array(7).fill(0);
       }
       
-      if (!task.background_images || task.background_images.length === 0) {
-        if (task.background_image_url) {
-          task.background_images = [task.background_image_url];
-        } else {
-          task.background_images = [];
-        }
+      if (task.background_image_url && (!task.background_images || task.background_images.length === 0)) {
+        task.background_images = [task.background_image_url];
       }
       
       if (!task.carousel_timer) {
@@ -117,48 +113,40 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     console.log('Saving task with icon name:', task.icon_name);
     console.log('Saving task with icon color:', task.icon_color);
     console.log('Saving task with usage_data:', task.usage_data);
-    
-    if (task.background_images?.length) {
-      console.log('Saving task with background_images count:', task.background_images.length);
-    }
-    
-    if (task.carousel_timer) {
-      console.log('Saving task with carousel_timer:', task.carousel_timer);
-    }
+    console.log('Saving task with background_images:', task.background_images);
+    console.log('Saving task with carousel_timer:', task.carousel_timer);
     
     const usage_data = task.usage_data || Array(7).fill(0);
     const now = new Date().toISOString();
     
-    const taskData = {
-      title: task.title,
-      description: task.description,
-      points: task.points,
-      completed: task.completed,
-      frequency: task.frequency,
-      frequency_count: task.frequency_count,
-      background_image_url: task.background_image_url,
-      background_opacity: task.background_opacity,
-      background_images: task.background_images || [],
-      carousel_timer: task.carousel_timer || 5,
-      icon_url: task.icon_url,
-      icon_name: task.icon_name,
-      title_color: task.title_color,
-      subtext_color: task.subtext_color,
-      calendar_color: task.calendar_color,
-      highlight_effect: task.highlight_effect,
-      focal_point_x: task.focal_point_x,
-      focal_point_y: task.focal_point_y,
-      priority: task.priority,
-      icon_color: task.icon_color,
-      last_completed_date: task.last_completed_date,
-      usage_data: usage_data,
-      updated_at: now,
-    };
-    
     if (task.id) {
       const { data, error } = await supabase
         .from('tasks')
-        .update(taskData)
+        .update({
+          title: task.title,
+          description: task.description,
+          points: task.points,
+          completed: task.completed,
+          frequency: task.frequency,
+          frequency_count: task.frequency_count,
+          background_image_url: task.background_image_url,
+          background_opacity: task.background_opacity,
+          icon_url: task.icon_url,
+          icon_name: task.icon_name,
+          title_color: task.title_color,
+          subtext_color: task.subtext_color,
+          calendar_color: task.calendar_color,
+          highlight_effect: task.highlight_effect,
+          focal_point_x: task.focal_point_x,
+          focal_point_y: task.focal_point_y,
+          priority: task.priority,
+          icon_color: task.icon_color,
+          last_completed_date: task.last_completed_date,
+          usage_data: usage_data,
+          background_images: task.background_images,
+          carousel_timer: task.carousel_timer,
+          updated_at: now,
+        })
         .eq('id', task.id)
         .select()
         .single();
@@ -169,7 +157,28 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
       const { data, error } = await supabase
         .from('tasks')
         .insert({
-          ...taskData,
+          title: task.title,
+          description: task.description,
+          points: task.points,
+          completed: task.completed,
+          frequency: task.frequency,
+          frequency_count: task.frequency_count,
+          background_image_url: task.background_image_url,
+          background_opacity: task.background_opacity,
+          icon_url: task.icon_url,
+          icon_name: task.icon_name,
+          title_color: task.title_color,
+          subtext_color: task.subtext_color,
+          calendar_color: task.calendar_color,
+          highlight_effect: task.highlight_effect,
+          focal_point_x: task.focal_point_x,
+          focal_point_y: task.focal_point_y,
+          priority: task.priority,
+          icon_color: task.icon_color,
+          last_completed_date: null,
+          usage_data: usage_data,
+          background_images: task.background_images,
+          carousel_timer: task.carousel_timer,
           created_at: now,
         })
         .select()
