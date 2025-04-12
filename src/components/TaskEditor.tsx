@@ -3,6 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Task } from '@/lib/taskUtils';
 import TaskEditorForm from './task-editor/TaskEditorForm';
+import { useTaskCarousel } from '@/contexts/TaskCarouselContext';
 
 interface TaskEditorProps {
   isOpen: boolean;
@@ -19,8 +20,15 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
   onSave, 
   onDelete
 }) => {
+  const { setGlobalCarouselTimer } = useTaskCarousel();
+
   const handleSave = async (formData: any) => {
     await onSave(formData);
+    
+    if (formData.carousel_timer) {
+      setGlobalCarouselTimer(formData.carousel_timer);
+    }
+    
     onClose();
   };
 

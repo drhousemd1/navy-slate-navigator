@@ -1,10 +1,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Task } from '@/lib/taskUtils';
 
 interface TaskCarouselContextProps {
   carouselTimer: number;
   setCarouselTimer: (timer: number) => void;
-  globalCarouselIndex: number; // Add global index tracking
+  globalCarouselIndex: number;
+  globalCarouselTimer: number;
+  setGlobalCarouselTimer: (timer: number) => void;
 }
 
 const DEFAULT_CAROUSEL_TIMER = 5;
@@ -30,6 +34,10 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
     return saved ? parseInt(saved, 10) : DEFAULT_CAROUSEL_TIMER;
   });
   
+  // For backwards compatibility, maintain the same variable name
+  const globalCarouselTimer = carouselTimer;
+  const setGlobalCarouselTimer = setCarouselTimerState;
+  
   // Add global carousel index state - exactly like in PunishmentsProvider
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
 
@@ -38,6 +46,34 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
     localStorage.setItem(LOCAL_STORAGE_KEY, carouselTimer.toString());
     console.log(`TaskCarouselContext: Timer updated to ${carouselTimer}s`);
   }, [carouselTimer]);
+
+  // Fetch tasks to get carousel timer from first task with timer defined
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const userId = authData.user?.id;
+        
+        if (!userId) return;
+        
+        const { data: tasks } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('user_id', userId);
+          
+        if (tasks && tasks.length > 0) {
+          const firstWithTimer = tasks.find(t => t.carousel_timer !== undefined);
+          if (firstWithTimer && firstWithTimer.carousel_timer) {
+            setGlobalCarouselTimer(firstWithTimer.carousel_timer);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching tasks for carousel timer:', error);
+      }
+    };
+    
+    fetchTasks();
+  }, []);
 
   // Effect to increment the global carousel index - exactly like in Punishments.tsx
   useEffect(() => {
@@ -62,7 +98,9 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
     <TaskCarouselContext.Provider value={{ 
       carouselTimer, 
       setCarouselTimer,
-      globalCarouselIndex 
+      globalCarouselIndex,
+      globalCarouselTimer,
+      setGlobalCarouselTimer
     }}>
       {children}
     </TaskCarouselContext.Provider>
