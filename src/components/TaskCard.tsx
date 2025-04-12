@@ -10,7 +10,6 @@ import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
 import HighlightedText from './task/HighlightedText';
 import { getCurrentDayOfWeek } from '@/lib/taskUtils';
-import TaskBackground from './tasks/TaskBackground';
 
 interface TaskCardProps {
   title: string;
@@ -38,7 +37,6 @@ interface TaskCardProps {
   icon_color?: string;
   sharedImageIndex?: number;
   carouselTimer?: number;
-  globalCarouselIndex: number;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -65,8 +63,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   calendar_color = '#7E69AB',
   icon_color = '#9b87f5',
   sharedImageIndex = 0,
-  carouselTimer = 5,
-  globalCarouselIndex = 0
+  carouselTimer = 5
 }) => {
   const currentDayOfWeek = getCurrentDayOfWeek();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
@@ -95,15 +92,38 @@ const TaskCard: React.FC<TaskCardProps> = ({
   }
 
   return (
-    <div className="relative rounded-lg overflow-hidden shadow bg-dark-navy">
-      <TaskBackground
-        backgroundImages={backgroundImages || []}
-        backgroundOpacity={backgroundOpacity ?? 100}
-        focalPointX={focalPointX ?? 50}
-        focalPointY={focalPointY ?? 50}
-        globalCarouselIndex={globalCarouselIndex}
-      />
-      <div className="relative z-10 transition-opacity duration-[2000ms] p-4">
+    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!hasCarouselImages && !backgroundImage ? 'bg-navy' : ''}`}>
+      {/* Background image carousel */}
+      {(primaryImage || transitioningImage) && (
+        <div className="absolute inset-0 w-full h-full z-0">
+          {primaryImage && (
+            <img
+              src={primaryImage}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{
+                transition: 'opacity 2s ease-in-out',
+                opacity: transitioningImage ? 0 : backgroundOpacity / 100,
+                objectPosition: `${focalPointX}% ${focalPointY}%`,
+              }}
+              alt="Task background"
+            />
+          )}
+          {transitioningImage && (
+            <img
+              src={transitioningImage}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{
+                transition: 'opacity 2s ease-in-out',
+                opacity: backgroundOpacity / 100,
+                objectPosition: `${focalPointX}% ${focalPointY}%`,
+              }}
+              alt="Task background transition"
+            />
+          )}
+        </div>
+      )}
+
+      <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">
           <PriorityBadge priority={priority} />
           
@@ -176,7 +196,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
       {isFullyCompleted && (
         <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
       )}
-    </div>
+    </Card>
   );
 };
 
