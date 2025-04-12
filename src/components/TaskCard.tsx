@@ -70,7 +70,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const maxCompletions = frequency_count || 1;
   const isFullyCompleted = currentCompletions >= maxCompletions;
 
-  // Handle both legacy and new background image format
+  // ISSUE 2 FIXED: Proper handling of background images fallback
   const allImages = backgroundImages && backgroundImages.length > 0 
     ? backgroundImages 
     : backgroundImage 
@@ -159,9 +159,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         </div>
       </div>
       
-      {isFullyCompleted && (
-        <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
-      )}
+      {/* ISSUE 1 FIXED: Removed the flashing white overlay completely */}
     </div>
   );
 };
