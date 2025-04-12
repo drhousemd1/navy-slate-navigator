@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -81,17 +80,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
       : [];
 
   return (
-    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${allBackgroundImages.length === 0 ? 'bg-navy' : ''}`}>
-      {/* Background image carousel */}
-      {allBackgroundImages.length > 0 && (
-        <TaskBackground
-          backgroundImages={allBackgroundImages}
-          backgroundOpacity={backgroundOpacity}
-          focalPointX={focalPointX}
-          focalPointY={focalPointY}
-          globalCarouselIndex={sharedImageIndex}
-        />
-      )}
+    <Card className="relative overflow-hidden border-2 border-[#00f0ff]">
+      {/* Background layer */}
+      <TaskBackground
+        backgroundImages={allBackgroundImages}
+        backgroundOpacity={backgroundOpacity}
+        focalPointX={focalPointX}
+        focalPointY={focalPointY}
+        globalCarouselIndex={sharedImageIndex}
+      />
 
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">

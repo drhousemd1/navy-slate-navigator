@@ -34,6 +34,9 @@ export const useImageCarousel = ({
         setVisibleImage(images[0]);
         setTransitionImage(null);
         setIsTransitioning(false);
+        
+        // Debug logging
+        console.log('Images updated:', images);
       }
     } else if (previousImages.length > 0 && images.length === 0) {
       // Reset if we had images but now don't
@@ -41,6 +44,9 @@ export const useImageCarousel = ({
       setVisibleImage(null);
       setTransitionImage(null);
       setIsTransitioning(false);
+      
+      // Debug logging
+      console.log('No images available, resetting');
     }
   }, [images]);
 
@@ -53,21 +59,26 @@ export const useImageCarousel = ({
     
     if (next === visibleImage) return;
     
+    console.log('Starting transition to new image:', next);
+    
     const preload = new Image();
     preload.src = next;
     
     preload.onload = () => {
+      console.log('Image preloaded successfully, beginning transition');
       setTransitionImage(next);
       setIsTransitioning(false);
       
       requestAnimationFrame(() => {
         setTimeout(() => {
           setIsTransitioning(true);
+          console.log('Transition started');
           
           const timeout = setTimeout(() => {
             setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
+            console.log('Transition completed');
           }, 2000);
           
           return () => clearTimeout(timeout);
