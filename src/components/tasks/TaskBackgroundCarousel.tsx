@@ -1,14 +1,16 @@
 
 import React from 'react';
 import { useImageCarousel } from '../hooks/useImageCarousel';
+import { useTasks } from '@/contexts/tasks';
 
 const TaskBackgroundCarousel = ({
   backgroundImages = [],
   backgroundOpacity = 100,
   focalPointX = 50,
-  focalPointY = 50,
-  globalCarouselIndex = 0
+  focalPointY = 50
 }) => {
+  const { globalCarouselIndex } = useTasks();
+  
   const {
     visibleImage,
     transitionImage,

@@ -10,6 +10,7 @@ import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
 import HighlightedText from './task/HighlightedText';
 import { getCurrentDayOfWeek } from '@/lib/taskUtils';
+import { useTasks } from '@/contexts/tasks';
 
 interface TaskCardProps {
   title: string;
@@ -35,8 +36,6 @@ interface TaskCardProps {
   subtext_color?: string;
   calendar_color?: string;
   icon_color?: string;
-  sharedImageIndex?: number;
-  carouselTimer?: number;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -61,10 +60,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
   title_color = '#FFFFFF',
   subtext_color = '#8E9196',
   calendar_color = '#7E69AB',
-  icon_color = '#9b87f5',
-  sharedImageIndex = 0,
-  carouselTimer = 5
+  icon_color = '#9b87f5'
 }) => {
+  // Use the tasks context for global carousel state
+  const { globalCarouselIndex } = useTasks();
   const currentDayOfWeek = getCurrentDayOfWeek();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
   const maxCompletions = frequency_count || 1;
@@ -80,7 +79,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   if (hasCarouselImages) {
     const imageCount = backgroundImages.length;
     if (imageCount > 0) {
-      const currentIndex = sharedImageIndex % imageCount;
+      const currentIndex = globalCarouselIndex % imageCount;
       const nextIndex = (currentIndex + 1) % imageCount;
       
       primaryImage = backgroundImages[currentIndex];

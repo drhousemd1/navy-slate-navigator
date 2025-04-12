@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -5,6 +6,7 @@ import TaskCard from '../components/TaskCard';
 import TaskEditor from '../components/TaskEditor';
 import TasksHeader from '../components/task/TasksHeader';
 import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
+import { TasksProvider, useTasks } from '../contexts/tasks';
 import { 
   fetchTasks, 
   Task, 
@@ -26,10 +28,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
-  
-  // Global carousel state
-  const [sharedImageIndex, setSharedImageIndex] = useState(0);
-  const [globalCarouselTimer, setGlobalCarouselTimer] = useState(5); // Default 5 seconds
+  const { globalCarouselTimer, setGlobalCarouselTimer } = useTasks();
 
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['tasks'],
@@ -38,21 +37,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
-
-  // Effect to control image carousel transitions
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSharedImageIndex(prev => prev + 1);
-    }, globalCarouselTimer * 1000);
-    console.log(`Setting carousel interval to ${globalCarouselTimer} seconds`);
-    return () => clearInterval(interval);
-  }, [globalCarouselTimer]);
-
-  // Function to update global carousel timer
-  const updateCarouselTimer = (newValue: number) => {
-    console.log("Updating global carousel timer to:", newValue);
-    setGlobalCarouselTimer(newValue);
-  };
 
   useEffect(() => {
     const checkForReset = () => {
@@ -128,7 +112,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       if (savedTask) {
         // If carousel timer was updated in the task, update the global timer
         if (savedTask.carousel_timer) {
-          updateCarouselTimer(savedTask.carousel_timer);
+          setGlobalCarouselTimer(savedTask.carousel_timer);
         }
         
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -258,10 +242,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
               icon_color={task.icon_color}
               onEdit={() => handleEditTask(task)}
               onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
-              // Pass synchronized props for image carousel
               backgroundImages={task.background_images}
-              carouselTimer={globalCarouselTimer} // Use global timer rather than per-task timer
-              sharedImageIndex={sharedImageIndex}
             />
           ))}
         </div>
@@ -276,7 +257,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         taskData={currentTask || undefined}
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
-        updateCarouselTimer={updateCarouselTimer}
       />
     </div>
   );
@@ -293,10 +273,12 @@ const Tasks: React.FC = () => {
   return (
     <AppLayout onAddNewItem={handleNewTask}>
       <RewardsProvider>
-        <TasksContent 
-          isEditorOpen={isEditorOpen}
-          setIsEditorOpen={setIsEditorOpen}
-        />
+        <TasksProvider>
+          <TasksContent 
+            isEditorOpen={isEditorOpen}
+            setIsEditorOpen={setIsEditorOpen}
+          />
+        </TasksProvider>
       </RewardsProvider>
     </AppLayout>
   );

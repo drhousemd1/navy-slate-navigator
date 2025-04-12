@@ -6,8 +6,7 @@ const TaskBackground = ({
   backgroundImages = [],
   backgroundOpacity = 100,
   focalPointX = 50,
-  focalPointY = 50,
-  globalCarouselIndex = 0
+  focalPointY = 50
 }) => {
   return (
     <div className="absolute inset-0 -z-10">
@@ -16,7 +15,6 @@ const TaskBackground = ({
         backgroundOpacity={backgroundOpacity}
         focalPointX={focalPointX}
         focalPointY={focalPointY}
-        globalCarouselIndex={globalCarouselIndex}
       />
     </div>
   );
