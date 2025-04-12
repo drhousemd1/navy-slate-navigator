@@ -1,48 +1,48 @@
 
 import React from 'react';
-import { usePunishmentImageCarousel } from '@/components/punishments/hooks/usePunishmentImageCarousel';
+import { useImageCarousel } from '@/components/hooks/useImageCarousel';
 
-interface TaskBackgroundCarouselProps {
-  backgroundImages?: (string | null)[] | null;
-  backgroundOpacity?: number;
-  focalPointX?: number;
-  focalPointY?: number;
-  globalCarouselIndex?: number;
-}
-
-const TaskBackgroundCarousel: React.FC<TaskBackgroundCarouselProps> = ({
+const TaskBackgroundCarousel = ({
   backgroundImages = [],
+  backgroundImageUrl,
+  carouselTimer = 5,
   backgroundOpacity = 100,
   focalPointX = 50,
   focalPointY = 50,
   globalCarouselIndex = 0
 }) => {
-  const filteredImages = backgroundImages.filter((img): img is string => !!img);
-  
+  const allImages =
+    backgroundImages && backgroundImages.length > 0
+      ? backgroundImages
+      : backgroundImageUrl
+      ? [backgroundImageUrl]
+      : [];
+
+  const filteredImages = allImages.filter((img): img is string => !!img);
+
   const {
     visibleImage,
     transitionImage,
     isTransitioning
-  } = usePunishmentImageCarousel({
+  } = useImageCarousel({
     images: filteredImages,
     globalCarouselIndex
   });
 
-  // Always render a container with a fallback color if no images
   return (
     <div className="absolute inset-0 w-full h-full overflow-hidden">
-      {/* Fallback background color if no images are present */}
       {!visibleImage && !transitionImage && (
         <div 
-          className="absolute inset-0 w-full h-full z-0 bg-[#0f172a]"
+          className="absolute inset-0 w-full h-full bg-[#0f172a]"
           aria-hidden="true"
         />
       )}
 
       {visibleImage && (
         <div
-          className="absolute inset-0 w-full h-full z-0"
+          className="absolute inset-0 w-full h-full"
           style={{
+            zIndex: 0,
             backgroundImage: `url(${visibleImage})`,
             backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
@@ -55,13 +55,14 @@ const TaskBackgroundCarousel: React.FC<TaskBackgroundCarouselProps> = ({
 
       {transitionImage && (
         <div
-          className="absolute inset-0 w-full h-full z-10 pointer-events-none"
+          className="absolute inset-0 w-full h-full pointer-events-none"
           style={{
+            zIndex: 1,
             backgroundImage: `url(${transitionImage})`,
             backgroundSize: 'cover',
             backgroundPosition: `${focalPointX}% ${focalPointY}%`,
             opacity: isTransitioning ? backgroundOpacity / 100 : 0,
-            transition: 'opacity 2s ease-in-out'  // Exactly 2s to match Punishments
+            transition: 'opacity 2s ease-in-out'
           }}
           aria-hidden="true"
         />

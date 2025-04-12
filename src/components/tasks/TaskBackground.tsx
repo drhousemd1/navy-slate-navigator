@@ -4,6 +4,7 @@ import TaskBackgroundCarousel from './TaskBackgroundCarousel';
 
 interface TaskBackgroundProps {
   backgroundImages?: (string | null)[] | null;
+  backgroundImage?: string;
   backgroundOpacity?: number;
   focalPointX?: number;
   focalPointY?: number;
@@ -12,19 +13,17 @@ interface TaskBackgroundProps {
 
 const TaskBackground: React.FC<TaskBackgroundProps> = ({
   backgroundImages = [],
+  backgroundImage,
   backgroundOpacity = 100,
   focalPointX = 50,
   focalPointY = 50,
   globalCarouselIndex = 0
 }) => {
-  const filteredImages = backgroundImages && backgroundImages.length > 0 
-    ? backgroundImages 
-    : [];
-
   return (
     <div className="absolute inset-0 z-0">
       <TaskBackgroundCarousel
-        backgroundImages={filteredImages}
+        backgroundImages={backgroundImages}
+        backgroundImageUrl={backgroundImage}
         backgroundOpacity={backgroundOpacity}
         focalPointX={focalPointX}
         focalPointY={focalPointY}

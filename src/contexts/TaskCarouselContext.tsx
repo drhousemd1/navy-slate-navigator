@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Task } from '@/lib/taskUtils';
 
 interface TaskCarouselContextProps {
   carouselTimer: number;
@@ -69,15 +68,11 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
     fetchTasks();
   }, []);
 
-  // Effect to increment the global carousel index - exactly like in Punishments.tsx
+  // Effect to increment the global carousel index
   useEffect(() => {
     console.log(`TaskCarouselContext: Setting up timer interval of ${carouselTimer}s`);
     const interval = setInterval(() => {
-      setGlobalCarouselIndex(prevIndex => {
-        const newIndex = prevIndex + 1;
-        console.log(`TaskCarouselContext: Incrementing carousel index to ${newIndex}`);
-        return newIndex;
-      });
+      setGlobalCarouselIndex(prevIndex => prevIndex + 1);
     }, carouselTimer * 1000);
     
     return () => clearInterval(interval);
