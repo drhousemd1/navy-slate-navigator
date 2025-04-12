@@ -1,94 +1,57 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 interface UseImageCarouselProps {
   images: string[];
   globalCarouselIndex: number;
 }
 
-interface UseImageCarouselResult {
-  visibleImage: string | null;
-  transitionImage: string | null;
-  isTransitioning: boolean;
-}
-
 export const useImageCarousel = ({ 
-  images, 
-  globalCarouselIndex 
-}: UseImageCarouselProps): UseImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
+  images,
+  globalCarouselIndex
+}: UseImageCarouselProps) => {
+  const [visibleImage, setVisibleImage] = useState<string | null>(null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [previousImages, setPreviousImages] = useState<string[]>([]);
-  const prevGlobalIndexRef = useRef(globalCarouselIndex);
+  const [internalIndex, setInternalIndex] = useState(0);
 
-  // Initialize or update visible image when images array changes
+  // Update internal state when images array changes
   useEffect(() => {
-    if (images.length > 0) {
-      // Check if images array has changed
-      const imagesChanged = 
-        images.length !== previousImages.length || 
-        images.some((img, i) => previousImages[i] !== img);
-      
-      if (imagesChanged) {
-        setPreviousImages(images);
-        setVisibleImage(images[0]);
-        setTransitionImage(null);
-        setIsTransitioning(false);
-      }
-    } else if (previousImages.length > 0 && images.length === 0) {
-      // Reset if we had images but now don't
-      setPreviousImages([]);
+    if (images && images.length > 0) {
+      setVisibleImage(images[0]);
+    } else {
       setVisibleImage(null);
-      setTransitionImage(null);
-      setIsTransitioning(false);
     }
   }, [images]);
 
-  // Handle image transitions when global carousel index changes
+  // Handle carousel rotation based on global index
   useEffect(() => {
-    if (!images.length || images.length <= 1) return;
-    if (globalCarouselIndex === prevGlobalIndexRef.current) return;
+    if (!images || images.length < 2) return;
+
+    // Calculate the correct index based on the global index
+    const targetIndex = globalCarouselIndex % images.length;
     
-    prevGlobalIndexRef.current = globalCarouselIndex;
-    
-    const nextIndex = globalCarouselIndex % images.length;
-    const next = images[nextIndex];
-    
-    if (next === visibleImage) return;
-    
-    const preload = new Image();
-    preload.src = next;
-    
-    preload.onload = () => {
-      setTransitionImage(next);
-      setIsTransitioning(false);
+    if (targetIndex !== internalIndex) {
+      // Prepare for transition
+      setTransitionImage(images[targetIndex]);
+      setIsTransitioning(true);
       
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          setIsTransitioning(true);
-          
-          const timeout = setTimeout(() => {
-            setVisibleImage(next);
-            setTransitionImage(null);
-            setIsTransitioning(false);
-          }, 2000); // Match the transition duration in CSS
-          
-          return () => clearTimeout(timeout);
-        }, 50);
-      });
-    };
-    
-    preload.onerror = () => {
-      console.error("Failed to load image:", next);
-      // Try to continue with the next image anyway
-      setVisibleImage(next);
-    };
-  }, [globalCarouselIndex, images, visibleImage]);
+      // Complete transition after animation
+      const timer = setTimeout(() => {
+        setVisibleImage(images[targetIndex]);
+        setTransitionImage(null);
+        setIsTransitioning(false);
+        setInternalIndex(targetIndex);
+      }, 2000); // Match the CSS transition duration
+      
+      return () => clearTimeout(timer);
+    }
+  }, [globalCarouselIndex, images, internalIndex]);
 
   return {
     visibleImage,
     transitionImage,
-    isTransitioning
+    isTransitioning,
+    currentIndex: internalIndex,
   };
 };

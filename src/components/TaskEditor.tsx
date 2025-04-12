@@ -56,6 +56,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}
+          initialCarouselTimer={globalCarouselTimer}
           updateCarouselTimer={setGlobalCarouselTimer}
         />
       </DialogContent>
