@@ -27,45 +27,47 @@ const TaskBackgroundCarousel: React.FC<TaskBackgroundCarouselProps> = ({
       : backgroundImageUrl
       ? [backgroundImageUrl]
       : [];
+  
+  const filteredImages = allImages.filter((img): img is string => !!img);
 
   const {
     visibleImage,
     transitionImage,
     isTransitioning
   } = useImageCarousel({
-    images: allImages.filter((img): img is string => !!img),
+    images: filteredImages,
     globalCarouselIndex
   });
-
-  if (!visibleImage && !transitionImage) return null;
 
   return (
     <>
       {visibleImage && (
-        <div
-          className="absolute inset-0 w-full h-full z-0"
+        <img
+          src={visibleImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover z-0"
           style={{
-            backgroundImage: `url(${visibleImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+            objectPosition: `${focalPointX}% ${focalPointY}%`,
             opacity: backgroundOpacity / 100,
-            transition: 'opacity 0.5s ease-in-out'
+            transition: 'opacity 2s ease-in-out'
           }}
           aria-hidden="true"
+          draggable={false}
         />
       )}
 
       {transitionImage && (
-        <div
-          className="absolute inset-0 w-full h-full z-10 pointer-events-none"
+        <img
+          src={transitionImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
           style={{
-            backgroundImage: `url(${transitionImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+            objectPosition: `${focalPointX}% ${focalPointY}%`,
             opacity: isTransitioning ? backgroundOpacity / 100 : 0,
             transition: 'opacity 2s ease-in-out'
           }}
           aria-hidden="true"
+          draggable={false}
         />
       )}
     </>

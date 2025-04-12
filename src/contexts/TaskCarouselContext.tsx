@@ -49,13 +49,19 @@ export const TaskCarouselProvider: React.FC<TaskCarouselProviderProps> = ({ chil
         
         if (!userId) return;
         
-        const { data: tasks } = await supabase
+        // Only select the specific fields we need, not the entire task object
+        const { data: tasks, error } = await supabase
           .from('tasks')
-          .select('*')
+          .select('id, carousel_timer')
           .eq('user_id', userId);
           
+        if (error) {
+          console.error('Error fetching tasks for carousel timer:', error);
+          return;
+        }
+          
         if (tasks && tasks.length > 0) {
-          const firstWithTimer = tasks.find(t => t.carousel_timer !== undefined);
+          const firstWithTimer = tasks.find(t => t.carousel_timer !== null && t.carousel_timer !== undefined);
           if (firstWithTimer && firstWithTimer.carousel_timer) {
             setCarouselTimer(firstWithTimer.carousel_timer);
           }
