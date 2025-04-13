@@ -4,8 +4,8 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 interface RuleCarouselContextValue {
   timer: number;
   setTimer: (value: number | ((prev: number) => number)) => void;
-  resyncFlag: number;
   resync: () => void;
+  resyncFlag: number;
 }
 
 const RuleCarouselContext = createContext<RuleCarouselContextValue | null>(null);
