@@ -11,6 +11,7 @@ interface RewardEditorProps {
   rewardData?: any;
   onSave: (rewardData: any) => void;
   onDelete?: (id: number) => void;
+  globalCarouselIndex?: number;
 }
 
 const RewardEditor: React.FC<RewardEditorProps> = ({ 
@@ -18,7 +19,8 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   onClose, 
   rewardData, 
   onSave,
-  onDelete
+  onDelete,
+  globalCarouselIndex = 0
 }) => {
   const queryClient = useQueryClient();
   
@@ -76,6 +78,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
           onSave={handleSave}
           onCancel={onClose}
           onDelete={onDelete}
+          globalCarouselIndex={globalCarouselIndex}
         />
       </DialogContent>
     </Dialog>

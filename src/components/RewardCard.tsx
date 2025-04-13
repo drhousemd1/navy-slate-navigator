@@ -5,6 +5,9 @@ import RewardHeader from './rewards/RewardHeader';
 import RewardContent from './rewards/RewardContent';
 import RewardFooter from './rewards/RewardFooter';
 import { useToast } from '../hooks/use-toast';
+import { useRewardImageCarousel } from '@/hooks/useRewardImageCarousel';
+import RewardBackground from './rewards/RewardBackground';
+import { Reward } from '@/lib/rewardUtils';
 
 interface RewardCardProps {
   title: string;
@@ -26,6 +29,8 @@ interface RewardCardProps {
   calendar_color?: string;
   usageData?: boolean[];
   frequencyCount?: number;
+  globalCarouselIndex?: number;
+  id?: string;
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({
@@ -46,9 +51,37 @@ const RewardCard: React.FC<RewardCardProps> = ({
   title_color = '#FFFFFF',
   subtext_color = '#8E9196',
   calendar_color = '#7E69AB',
-  usageData = Array(7).fill(false)
+  usageData = Array(7).fill(false),
+  globalCarouselIndex = 0,
+  id
 }) => {
   const { toast } = useToast();
+  
+  // Create a reward object for the carousel hook
+  const reward: Reward = {
+    id: id || 'temp-id',
+    title,
+    description,
+    cost,
+    supply,
+    background_image_url: backgroundImage,
+    background_opacity: backgroundOpacity,
+    focal_point_x: focalPointX,
+    focal_point_y: focalPointY,
+    icon_name: iconName,
+    icon_color: iconColor,
+    title_color,
+    subtext_color,
+    calendar_color,
+    highlight_effect
+  };
+  
+  // Use the carousel hook
+  const {
+    visibleImage,
+    transitionImage,
+    isTransitioning
+  } = useRewardImageCarousel({ reward, globalCarouselIndex });
 
   const handleBuy = (cost: number) => {
     if (onBuy) {
@@ -70,8 +103,8 @@ const RewardCard: React.FC<RewardCardProps> = ({
 
   const cardBorderStyle = supply > 0 
     ? {
-        borderColor: '#FEF7CD', // Changed from #FFD700 to #FEF7CD for a whiter yellow
-        boxShadow: '0 0 8px 2px rgba(254, 247, 205, 0.6)' // Updated shadow to match new color
+        borderColor: '#FEF7CD', 
+        boxShadow: '0 0 8px 2px rgba(254, 247, 205, 0.6)'
       } 
     : {};
 
@@ -80,17 +113,14 @@ const RewardCard: React.FC<RewardCardProps> = ({
       className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy z-0"
       style={cardBorderStyle}
     >
-      {backgroundImage && (
-        <div 
-          className="absolute inset-0 z-0" 
-          style={{
-            backgroundImage: `url(${backgroundImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100,
-          }}
-        />
-      )}
+      <RewardBackground
+        visibleImage={visibleImage}
+        transitionImage={transitionImage}
+        isTransitioning={isTransitioning}
+        focalPointX={focalPointX}
+        focalPointY={focalPointY}
+        backgroundOpacity={backgroundOpacity}
+      />
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <RewardHeader
           title={title}

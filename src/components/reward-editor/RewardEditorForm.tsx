@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -32,13 +33,15 @@ interface RewardEditorFormProps {
   onSave: (data: RewardFormValues) => Promise<void>;
   onCancel: () => void;
   onDelete?: (index: number) => void;
+  globalCarouselIndex?: number;
 }
 
 const RewardEditorForm: React.FC<RewardEditorFormProps> = ({ 
   rewardData, 
   onSave, 
   onCancel, 
-  onDelete 
+  onDelete,
+  globalCarouselIndex = 0
 }) => {
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -208,6 +211,8 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           onRemoveImage={handleRemoveImage}
           onImageUpload={handleImageUpload}
           setValue={form.setValue}
+          watch={form.watch}
+          globalCarouselIndex={globalCarouselIndex}
         />
 
         <RewardColorSettings control={form.control} />

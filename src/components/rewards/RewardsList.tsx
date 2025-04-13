@@ -5,9 +5,10 @@ import RewardCard from '../RewardCard';
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
+  globalCarouselIndex: number;
 }
 
-const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
+const RewardsList: React.FC<RewardsListProps> = ({ onEdit, globalCarouselIndex }) => {
   const { rewards, handleBuyReward, handleUseReward } = useRewards();
   
   if (!rewards || rewards.length === 0) {
@@ -35,6 +36,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
       {rewards.map((reward, index) => (
         <RewardCard
           key={reward.id}
+          id={reward.id}
           title={reward.title}
           description={reward.description || ''}
           cost={reward.cost}
@@ -52,6 +54,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           title_color={reward.title_color}
           subtext_color={reward.subtext_color}
           calendar_color={reward.calendar_color}
+          globalCarouselIndex={globalCarouselIndex}
         />
       ))}
     </div>
