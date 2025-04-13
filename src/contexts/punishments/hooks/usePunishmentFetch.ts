@@ -23,7 +23,7 @@ export const usePunishmentFetch = ({
 }: UsePunishmentFetchProps) => {
   
   const BATCH_SIZE = 12;
-  const MAX_BATCHES = 20; // total of 240 max punishments, adjust if needed
+  const MAX_BATCHES = 20; // up to 240 items
   
   const fetchPunishments = async () => {
     try {
@@ -44,14 +44,17 @@ export const usePunishmentFetch = ({
         if (!batch || batch.length === 0) break;
         
         const cleanedBatch = batch.map(punishment => {
-          let backgroundImages: (string | null)[] = [];
+          let backgroundImages: string[] = [];
+          
           if (punishment.background_images) {
             if (Array.isArray(punishment.background_images)) {
-              backgroundImages = punishment.background_images.filter(img => img !== null && img !== undefined);
+              backgroundImages = punishment.background_images
+                .filter((img): img is string => typeof img === 'string' && !!img);
             } else if (typeof punishment.background_images === 'string') {
               backgroundImages = [punishment.background_images];
             }
           }
+          
           return {
             ...punishment,
             background_images: backgroundImages,
@@ -65,18 +68,16 @@ export const usePunishmentFetch = ({
         
         allPunishments = [...allPunishments, ...cleanedBatch];
         
-        // Delay slightly to avoid overwhelming client/browser
         await new Promise(res => setTimeout(res, 100));
       }
       
       setPunishments(allPunishments);
       
-      // Fetch limited punishment history
       const { data: historyData, error: historyError } = await supabase
         .from('punishment_history')
         .select('*')
         .order('applied_date', { ascending: false })
-        .range(0, 49); // load up to 50 history records
+        .range(0, 49);
       
       if (historyError) throw historyError;
       
