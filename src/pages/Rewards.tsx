@@ -18,25 +18,6 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   // Editor state
   const [currentReward, setCurrentReward] = useState<any>(null);
   const [currentRewardIndex, setCurrentRewardIndex] = useState<number | null>(null);
-  
-  // Carousel state
-  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
-  const [carouselTimer, setCarouselTimer] = useState(5);
-
-  // Set up the carousel timer effect
-  useEffect(() => {
-    // Get saved timer from localStorage or use default 5 seconds
-    const savedTimer = parseInt(localStorage.getItem('rewards_carouselTimer') || '5', 10);
-    setCarouselTimer(savedTimer);
-    
-    // Set up the interval to advance the carousel index
-    const intervalId = setInterval(() => {
-      setGlobalCarouselIndex(prev => prev + 1);
-    }, savedTimer * 1000);
-    
-    // Clean up the interval when component unmounts
-    return () => clearInterval(intervalId);
-  }, []);
 
   // Ensure we have the latest data when component mounts
   useEffect(() => {
@@ -145,10 +126,7 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   return (
     <div className="p-4 pt-6">
       <RewardsHeader />
-      <RewardsList 
-        onEdit={handleEdit} 
-        globalCarouselIndex={globalCarouselIndex} 
-      />
+      <RewardsList onEdit={handleEdit} />
       
       <RewardEditor
         isOpen={isEditorOpen}
@@ -156,7 +134,6 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
         rewardData={currentReward}
         onSave={handleSave}
         onDelete={currentRewardIndex !== null ? handleDelete : undefined}
-        globalCarouselIndex={globalCarouselIndex}
       />
     </div>
   );
