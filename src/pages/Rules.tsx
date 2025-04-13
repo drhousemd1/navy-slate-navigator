@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,6 @@ import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import RuleBackground from '../components/rule/RuleBackground';
 import AppLayout from '../components/AppLayout';
-import { useRuleImageCarousel } from '../components/rule/hooks/useRuleImageCarousel';
 
 interface Rule {
   id: string;
@@ -42,11 +42,18 @@ interface Rule {
   background_images?: string[];
 }
 
+interface RuleWithCarouselData extends Rule {
+  visibleImage: string | null;
+  transitionImage: string | null;
+  isTransitioning: boolean;
+}
+
 const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
+  const [rulesWithCarousel, setRulesWithCarousel] = useState<RuleWithCarouselData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
@@ -66,6 +73,71 @@ const Rules: React.FC = () => {
       clearInterval(carouselIntervalId);
     };
   }, [carouselTimer]);
+
+  // Update carousel data whenever globalCarouselIndex changes
+  useEffect(() => {
+    if (!rules.length) return;
+    
+    setRulesWithCarousel(prevRulesWithCarousel => {
+      return rules.map((rule, index) => {
+        const prevRuleData = prevRulesWithCarousel[index];
+        const backgroundImages = rule.background_images || [];
+        const images = backgroundImages.length > 0 ? backgroundImages : 
+          (rule.background_image_url ? [rule.background_image_url] : []);
+        
+        if (!images.length) {
+          return {
+            ...rule,
+            visibleImage: null,
+            transitionImage: null,
+            isTransitioning: false
+          };
+        }
+        
+        // Only calculate new state if it's needed
+        if (!prevRuleData) {
+          // Initial state
+          return {
+            ...rule,
+            visibleImage: images.length > 0 ? images[0] : null,
+            transitionImage: null,
+            isTransitioning: false
+          };
+        }
+        
+        // Handle transitions
+        const nextIndex = globalCarouselIndex % images.length;
+        const nextImage = images[nextIndex];
+        
+        if (images.length <= 1) {
+          return {
+            ...rule,
+            visibleImage: images[0],
+            transitionImage: null,
+            isTransitioning: false
+          };
+        }
+        
+        if (prevRuleData.transitionImage === null) {
+          // Start a new transition
+          return {
+            ...rule,
+            visibleImage: prevRuleData.visibleImage,
+            transitionImage: nextImage,
+            isTransitioning: true
+          };
+        }
+        
+        // Continue with current transition state
+        return {
+          ...rule,
+          visibleImage: prevRuleData.visibleImage,
+          transitionImage: prevRuleData.transitionImage,
+          isTransitioning: prevRuleData.isTransitioning
+        };
+      });
+    });
+  }, [globalCarouselIndex, rules]);
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -97,6 +169,22 @@ const Rules: React.FC = () => {
         });
         
         setRules(rulesWithUsageData);
+        
+        // Initialize carousel data
+        const initialRulesWithCarousel = rulesWithUsageData.map(rule => {
+          const backgroundImages = rule.background_images || [];
+          const images = backgroundImages.length > 0 ? backgroundImages : 
+            (rule.background_image_url ? [rule.background_image_url] : []);
+            
+          return {
+            ...rule,
+            visibleImage: images.length > 0 ? images[0] : null,
+            transitionImage: null,
+            isTransitioning: false
+          };
+        });
+        
+        setRulesWithCarousel(initialRulesWithCarousel);
       } catch (err) {
         console.error('Error fetching rules:', err);
         toast({
@@ -339,94 +427,79 @@ const Rules: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {rules.map((rule) => {
-                const backgroundImages = rule.background_images || [];
-                const images = backgroundImages.length > 0 ? backgroundImages : 
-                  (rule.background_image_url ? [rule.background_image_url] : []);
-                
-                const {
-                  visibleImage,
-                  transitionImage,
-                  isTransitioning
-                } = useRuleImageCarousel({
-                  images,
-                  globalCarouselIndex
-                });
-                
-                return (
-                  <Card 
-                    key={rule.id}
-                    className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
-                  >
-                    <div className="relative p-4">
-                      <RuleBackground
-                        visibleImage={visibleImage}
-                        transitionImage={transitionImage}
-                        isTransitioning={isTransitioning}
-                        focalPointX={rule.focal_point_x}
-                        focalPointY={rule.focal_point_y}
-                        backgroundOpacity={rule.background_opacity}
-                      />
-                      
-                      <div className="flex justify-between items-center mb-3 relative z-10">
-                        <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="bg-red-500 text-white hover:bg-red-600 h-7 px-3"
-                          onClick={() => handleRuleBroken(rule)}
-                        >
-                          Rule Broken
-                        </Button>
-                      </div>
-                      
-                      <div className="mb-4 relative z-10">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-                            <Check className="w-6 h-6 text-white" />
+              {rulesWithCarousel.map((rule) => (
+                <Card 
+                  key={rule.id}
+                  className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
+                >
+                  <div className="relative p-4">
+                    <RuleBackground
+                      visibleImage={rule.visibleImage}
+                      transitionImage={rule.transitionImage}
+                      isTransitioning={rule.isTransitioning}
+                      focalPointX={rule.focal_point_x}
+                      focalPointY={rule.focal_point_y}
+                      backgroundOpacity={rule.background_opacity}
+                    />
+                    
+                    <div className="flex justify-between items-center mb-3 relative z-10">
+                      <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="bg-red-500 text-white hover:bg-red-600 h-7 px-3"
+                        onClick={() => handleRuleBroken(rule)}
+                      >
+                        Rule Broken
+                      </Button>
+                    </div>
+                    
+                    <div className="mb-4 relative z-10">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
+                          <Check className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1 flex flex-col">
+                          <div className="text-xl font-semibold">
+                            <HighlightedText
+                              text={rule.title}
+                              highlight={rule.highlight_effect}
+                              color={rule.title_color}
+                            />
                           </div>
-                          <div className="flex-1 flex flex-col">
-                            <div className="text-xl font-semibold">
+                          
+                          {rule.description && (
+                            <div className="text-sm mt-1">
                               <HighlightedText
-                                text={rule.title}
+                                text={rule.description}
                                 highlight={rule.highlight_effect}
-                                color={rule.title_color}
+                                color={rule.subtext_color}
                               />
                             </div>
-                            
-                            {rule.description && (
-                              <div className="text-sm mt-1">
-                                <HighlightedText
-                                  text={rule.description}
-                                  highlight={rule.highlight_effect}
-                                  color={rule.subtext_color}
-                                />
-                              </div>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
-                      
-                      <div className="flex items-center justify-between mt-2 relative z-10">
-                        <FrequencyTracker 
-                          frequency={rule.frequency}
-                          frequency_count={rule.frequency_count}
-                          calendar_color={rule.calendar_color}
-                          usage_data={rule.usage_data}
-                        />
-                        
-                        <Button 
-                          size="sm" 
-                          className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
-                          onClick={() => handleEditRule(rule)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
                     </div>
-                  </Card>
-                );
-              })}
+                    
+                    <div className="flex items-center justify-between mt-2 relative z-10">
+                      <FrequencyTracker 
+                        frequency={rule.frequency}
+                        frequency_count={rule.frequency_count}
+                        calendar_color={rule.calendar_color}
+                        usage_data={rule.usage_data}
+                      />
+                      
+                      <Button 
+                        size="sm" 
+                        className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
+                        onClick={() => handleEditRule(rule)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
           )}
         </div>

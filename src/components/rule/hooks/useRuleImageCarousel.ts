@@ -19,7 +19,7 @@ export const useRuleImageCarousel = ({
   const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [previousImages, setPreviousImages] = useState<string[]>([]);
+  const previousImagesRef = useRef<string[]>([]);
   
   // Initialize or update visible image when images array changes
   useEffect(() => {
@@ -27,23 +27,23 @@ export const useRuleImageCarousel = ({
       setVisibleImage(null);
       setTransitionImage(null);
       setIsTransitioning(false);
-      setPreviousImages([]);
+      previousImagesRef.current = [];
       return;
     }
     
     const imagesChanged = 
-      images.length !== previousImages.length || 
-      images.some((img, i) => previousImages[i] !== img);
+      images.length !== previousImagesRef.current.length || 
+      images.some((img, i) => previousImagesRef.current[i] !== img);
     
     if (imagesChanged) {
-      setPreviousImages([...images]);
+      previousImagesRef.current = [...images];
       if (images.length > 0) {
         setVisibleImage(images[0]);
         setTransitionImage(null);
         setIsTransitioning(false);
       }
     }
-  }, [images, previousImages]);
+  }, [images]);
 
   // Handle image transitions based on globalCarouselIndex
   useEffect(() => {
