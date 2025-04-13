@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -7,7 +6,8 @@ import { Edit, Check, Plus, Loader2 } from 'lucide-react';
 import FrequencyTracker from '../components/task/FrequencyTracker';
 import PriorityBadge from '../components/task/PriorityBadge';
 import { useNavigate } from 'react-router-dom';
-import RuleEditor from '../components/RuleEditor';
+import RuleEditor from '../components/rule/RuleEditor';
+import RuleCard from '../components/rule/RuleCard';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import HighlightedText from '../components/task/HighlightedText';
@@ -15,38 +15,12 @@ import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
-import CardBackground from "@/components/rule/CardBackground";
-import { useImageCarousel } from "@/components/rule/useImageCarousel";
-
-interface Rule {
-  id: string;
-  title: string;
-  description: string | null;
-  priority: 'low' | 'medium' | 'high';
-  background_image_url?: string | null;
-  background_opacity: number;
-  icon_url?: string | null;
-  icon_name?: string | null;
-  title_color: string;
-  subtext_color: string;
-  calendar_color: string;
-  icon_color: string;
-  highlight_effect: boolean;
-  focal_point_x: number;
-  focal_point_y: number;
-  frequency: 'daily' | 'weekly';
-  frequency_count: number;
-  usage_data: number[];
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string;
-}
 
 const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [currentRule, setCurrentRule] = useState<Rule | null>(null);
-  const [rules, setRules] = useState<Rule[]>([]);
+  const [currentRule, setCurrentRule] = useState<any | null>(null);
+  const [rules, setRules] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
   
@@ -99,12 +73,12 @@ const Rules: React.FC = () => {
     setIsEditorOpen(true);
   };
 
-  const handleEditRule = (rule: Rule) => {
+  const handleEditRule = (rule: any) => {
     setCurrentRule(rule);
     setIsEditorOpen(true);
   };
 
-  const handleRuleBroken = async (rule: Rule) => {
+  const handleRuleBroken = async (rule: any) => {
     try {
       const currentDayOfWeek = getMondayBasedDay();
       
@@ -166,7 +140,7 @@ const Rules: React.FC = () => {
     }
   };
 
-  const handleSaveRule = async (ruleData: Partial<Rule>) => {
+  const handleSaveRule = async (ruleData: any) => {
     try {
       let result;
       
@@ -313,62 +287,29 @@ const Rules: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {rules.map((rule) => {
-                const {
-                  visibleImage,
-                  transitionImage,
-                  isTransitioning,
-                  currentIndex,
-                  setCurrentIndex,
-                  nextImage,
-                  prevImage
-                } = useImageCarousel({
-                  images: rule.background_images || [],
-                  globalCarouselIndex
-                });
-
-                return (
-                  <Card key={rule.id} className="relative overflow-hidden">
-                    <CardBackground
-                      visibleImage={visibleImage}
-                      transitionImage={transitionImage}
-                      isTransitioning={isTransitioning}
-                      focalPointX={rule.focal_point_x ?? 0.5}
-                      focalPointY={rule.focal_point_y ?? 0.5}
-                      backgroundOpacity={rule.background_opacity ?? 100}
-                    />
-                    <div className="relative z-10 p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-xl font-semibold">{rule.title}</h3>
-                        <PriorityBadge priority={rule.priority} />
-                      </div>
-                      <p className="text-sm">{rule.description}</p>
-                      <div className="mt-4 flex justify-between items-center">
-                        <FrequencyTracker
-                          frequency="weekly"
-                          frequency_count={2}
-                          calendar_color="#888888"
-                          usage_data={[1, 0, 2, 1, 0, 0, 1]}
-                        />
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
+              {rules.map((rule) => (
+                <div key={rule.id} onClick={() => handleEditRule(rule)}>
+                  <RuleCard rule={rule} globalCarouselIndex={globalCarouselIndex} />
+                </div>
+              ))}
             </div>
           )}
         </div>
         
-        <RuleEditor
-          isOpen={isEditorOpen}
-          onClose={() => {
-            setIsEditorOpen(false);
-            setCurrentRule(null);
-          }}
-          ruleData={currentRule || undefined}
-          onSave={handleSaveRule}
-          onDelete={handleDeleteRule}
-        />
+        {currentRule && (
+          <RuleEditor
+            open={isEditorOpen}
+            setOpen={setIsEditorOpen}
+            rule={currentRule}
+            handleChange={(field, value) => {
+              setCurrentRule({
+                ...currentRule,
+                [field]: value
+              });
+            }}
+            onSave={async () => handleSaveRule(currentRule)}
+          />
+        )}
       </RewardsProvider>
     </AppLayout>
   );
