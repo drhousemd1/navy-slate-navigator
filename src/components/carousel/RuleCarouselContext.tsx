@@ -3,9 +3,9 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 interface RuleCarouselContextValue {
   timer: number;
-  setTimer: (value: number) => void;
-  resync: () => void;
+  setTimer: (value: number | ((prev: number) => number)) => void;
   resyncFlag: number;
+  resync: () => void;
 }
 
 const RuleCarouselContext = createContext<RuleCarouselContextValue | null>(null);
@@ -14,8 +14,12 @@ export const RuleCarouselProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [timer, setTimerValue] = useState<number>(5);
   const [resyncFlag, setResyncFlag] = useState<number>(Date.now());
 
-  const setTimer = useCallback((value: number) => {
-    setTimerValue(value);
+  const setTimer = useCallback((value: number | ((prev: number) => number)) => {
+    if (typeof value === 'function') {
+      setTimerValue(value);
+    } else {
+      setTimerValue(value);
+    }
   }, []);
 
   const resync = useCallback(() => {

@@ -1,36 +1,31 @@
 
-import React, { useEffect, useState } from 'react';
-import { useRuleCarousel } from '../../carousel/RuleCarouselContext';
+import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface CardBackgroundProps {
-  images: (string | null)[];
+  images: string[];
   opacity: number;
 }
 
 export const CardBackground: React.FC<CardBackgroundProps> = ({ images, opacity }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const { timer, resyncFlag } = useRuleCarousel();
-
-  useEffect(() => {
-    if (!images || images.length === 0 || !timer) return;
-
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-    }, timer * 1000);
-
-    return () => clearInterval(interval);
-  }, [images, timer, resyncFlag]);
+  if (!images || images.length === 0) {
+    return (
+      <div 
+        className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900"
+        style={{ opacity }}
+      />
+    );
+  }
 
   return (
     <div className="absolute inset-0 z-0 overflow-hidden rounded-xl">
       {images.map((image, index) => (
         <img
           key={index}
-          src={image ?? ''}
+          src={image}
           className={cn(
-            'absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out',
-            index === currentIndex ? 'opacity-100' : 'opacity-0'
+            'absolute inset-0 w-full h-full object-cover',
+            index === 0 ? 'opacity-100' : 'opacity-0'
           )}
           style={{ opacity }}
           alt=""

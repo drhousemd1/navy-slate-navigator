@@ -1,56 +1,65 @@
 
 import React from 'react';
-import { cn } from '@/lib/utils';
 
 interface RuleBackgroundProps {
   visibleImage: string | null;
   transitionImage: string | null;
   isTransitioning: boolean;
-  focalPointX?: number;
-  focalPointY?: number;
-  backgroundOpacity?: number;
+  focalPointX: number;
+  focalPointY: number;
+  backgroundOpacity: number;
 }
 
 const RuleBackground: React.FC<RuleBackgroundProps> = ({
   visibleImage,
   transitionImage,
   isTransitioning,
-  focalPointX = 50,
-  focalPointY = 50,
-  backgroundOpacity = 100
+  focalPointX,
+  focalPointY,
+  backgroundOpacity
 }) => {
-  if (!visibleImage && !transitionImage) return null;
-
-  const opacity = backgroundOpacity / 100;
-
   return (
-    <div className="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+    <div className="absolute inset-0 z-0 overflow-hidden rounded-xl">
+      {/* Background gradient if no image */}
+      {!visibleImage && !transitionImage && (
+        <div className="absolute inset-0 bg-gradient-to-br from-dark-navy to-navy" />
+      )}
+
+      {/* Visible image */}
       {visibleImage && (
-        <img
-          src={visibleImage}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{
-            opacity,
-            objectPosition: `${focalPointX}% ${focalPointY}%`,
-            transition: 'opacity 2s ease-in-out'
+        <div 
+          className="absolute inset-0 w-full h-full"
+          style={{ 
+            backgroundImage: `url(${visibleImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: backgroundOpacity / 100 * (isTransitioning ? 0.3 : 1),
+            transition: 'opacity 2s ease'
           }}
-          draggable={false}
         />
       )}
-      {isTransitioning && transitionImage && (
-        <img
-          src={transitionImage}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{
-            opacity,
-            objectPosition: `${focalPointX}% ${focalPointY}%`,
-            animation: 'fadeIn 2s ease-in-out'
+
+      {/* Transition image */}
+      {transitionImage && isTransitioning && (
+        <div 
+          className="absolute inset-0 w-full h-full"
+          style={{ 
+            backgroundImage: `url(${transitionImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: backgroundOpacity / 100 * 0.7,
+            transition: 'opacity 2s ease'
           }}
-          draggable={false}
         />
       )}
+
+      {/* Overlay to darken the image */}
+      <div 
+        className="absolute inset-0 bg-black" 
+        style={{ 
+          opacity: 1 - (backgroundOpacity / 100)
+        }} 
+      />
     </div>
   );
 };
