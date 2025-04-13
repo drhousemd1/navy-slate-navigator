@@ -2,12 +2,14 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import RuleEditorForm from './rule-editor/RuleEditorForm';
+import { useRuleCarousel } from './carousel/RuleCarouselContext';
 
 interface Rule {
   id?: string;
   title: string;
   description: string | null;
   priority: 'low' | 'medium' | 'high';
+  background_images?: (string | null)[];
   background_image_url?: string | null;
   background_opacity: number;
   icon_url?: string | null;
@@ -42,6 +44,8 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   onSave, 
   onDelete 
 }) => {
+  const { timer, setTimer } = useRuleCarousel();
+
   const handleSave = async (formData: Partial<Rule>) => {
     await onSave(formData);
     onClose();
@@ -71,6 +75,8 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}
+          carouselTimer={timer}
+          onCarouselTimerChange={setTimer}
         />
       </DialogContent>
     </Dialog>
