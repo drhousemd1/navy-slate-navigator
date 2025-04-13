@@ -22,6 +22,7 @@ interface Rule {
   frequency: 'daily' | 'weekly';
   frequency_count: number;
   usage_data?: number[];
+  background_images?: string[];
   created_at?: string;
   updated_at?: string;
   user_id?: string;
@@ -33,6 +34,8 @@ interface RuleEditorProps {
   ruleData?: Partial<Rule>;
   onSave: (ruleData: Partial<Rule>) => void;
   onDelete?: (ruleId: string) => void;
+  carouselTimer?: number;
+  onCarouselTimerChange?: (timer: number) => void;
 }
 
 const RuleEditor: React.FC<RuleEditorProps> = ({ 
@@ -40,7 +43,9 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   onClose, 
   ruleData, 
   onSave, 
-  onDelete 
+  onDelete,
+  carouselTimer = 5,
+  onCarouselTimerChange
 }) => {
   const handleSave = async (formData: Partial<Rule>) => {
     await onSave(formData);
@@ -56,7 +61,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-navy border-light-navy text-white">
+      <DialogContent className="bg-navy border-light-navy text-white max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white">
             {ruleData?.id ? 'Edit Rule' : 'Create New Rule'}
@@ -71,6 +76,8 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}
+          carouselTimer={carouselTimer}
+          onCarouselTimerChange={onCarouselTimerChange}
         />
       </DialogContent>
     </Dialog>
