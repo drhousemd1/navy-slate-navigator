@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -74,7 +73,6 @@ const Rules: React.FC = () => {
     };
   }, [carouselTimer]);
 
-  // Update carousel data whenever globalCarouselIndex changes
   useEffect(() => {
     if (!rules.length) return;
     
@@ -94,20 +92,16 @@ const Rules: React.FC = () => {
           };
         }
         
-        // Only calculate new state if it's needed
+        const currentIndex = globalCarouselIndex % images.length;
+        
         if (!prevRuleData) {
-          // Initial state
           return {
             ...rule,
-            visibleImage: images.length > 0 ? images[0] : null,
+            visibleImage: images[0],
             transitionImage: null,
             isTransitioning: false
           };
         }
-        
-        // Handle transitions
-        const nextIndex = globalCarouselIndex % images.length;
-        const nextImage = images[nextIndex];
         
         if (images.length <= 1) {
           return {
@@ -118,22 +112,17 @@ const Rules: React.FC = () => {
           };
         }
         
-        if (prevRuleData.transitionImage === null) {
-          // Start a new transition
-          return {
-            ...rule,
-            visibleImage: prevRuleData.visibleImage,
-            transitionImage: nextImage,
-            isTransitioning: true
-          };
+        const nextImage = images[currentIndex];
+        
+        if (prevRuleData.isTransitioning) {
+          return prevRuleData;
         }
         
-        // Continue with current transition state
         return {
           ...rule,
-          visibleImage: prevRuleData.visibleImage,
-          transitionImage: prevRuleData.transitionImage,
-          isTransitioning: prevRuleData.isTransitioning
+          visibleImage: prevRuleData.visibleImage || images[0],
+          transitionImage: nextImage,
+          isTransitioning: true
         };
       });
     });
@@ -170,7 +159,6 @@ const Rules: React.FC = () => {
         
         setRules(rulesWithUsageData);
         
-        // Initialize carousel data
         const initialRulesWithCarousel = rulesWithUsageData.map(rule => {
           const backgroundImages = rule.background_images || [];
           const images = backgroundImages.length > 0 ? backgroundImages : 
@@ -224,7 +212,8 @@ const Rules: React.FC = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', rule.id)
-        .select();
+        .select()
+        .single();
         
       if (error) throw error;
       

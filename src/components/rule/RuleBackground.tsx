@@ -19,18 +19,20 @@ const RuleBackground: React.FC<RuleBackgroundProps> = ({
   backgroundOpacity = 100
 }) => {
   if (!visibleImage && !transitionImage) return null;
+
+  const opacity = backgroundOpacity / 100;
   
   return (
-    <>
+    <div className="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
       {visibleImage && (
         <img
           src={visibleImage}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover z-0"
+          className="absolute inset-0 w-full h-full object-cover"
           style={{ 
-            transition: 'opacity 2s ease-in-out',
+            opacity: opacity,
             objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100
+            transition: 'opacity 2s ease-in-out'
           }}
           draggable={false}
         />
@@ -40,18 +42,16 @@ const RuleBackground: React.FC<RuleBackgroundProps> = ({
         <img
           src={transitionImage}
           alt=""
-          className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
-            isTransitioning ? 'opacity-100' : 'opacity-0'
-          }`}
+          className="absolute inset-0 w-full h-full object-cover"
           style={{ 
-            transition: 'opacity 2s ease-in-out',
+            opacity: isTransitioning ? opacity : 0,
             objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: isTransitioning ? backgroundOpacity / 100 : 0
+            transition: 'opacity 2s ease-in-out'
           }}
           draggable={false}
         />
       )}
-    </>
+    </div>
   );
 };
 
