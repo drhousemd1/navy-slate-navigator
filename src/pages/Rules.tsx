@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -52,7 +51,6 @@ const Rules: React.FC = () => {
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
 
-  // Batch size for fetching rules to avoid timeouts
   const batchSize = 12;
 
   useEffect(() => {
@@ -76,7 +74,7 @@ const Rules: React.FC = () => {
           .from('rules')
           .select('*')
           .order('created_at', { ascending: false })
-          .range(0, batchSize - 1); // Batching applied here
+          .range(0, batchSize - 1);
         
         if (error) {
           throw error;
@@ -85,14 +83,6 @@ const Rules: React.FC = () => {
         const rulesWithUsageData = (data as Rule[] || []).map(rule => {
           if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
             return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
-          }
-          
-          // Ensure background_images is an array
-          if (!rule.background_images || !Array.isArray(rule.background_images)) {
-            return { 
-              ...rule, 
-              background_images: rule.background_image_url ? [rule.background_image_url] : []
-            };
           }
           
           return rule;
@@ -217,7 +207,6 @@ const Rules: React.FC = () => {
             focal_point_y: ruleData.focal_point_y,
             frequency: ruleData.frequency,
             frequency_count: ruleData.frequency_count,
-            background_images: ruleData.background_images,
             updated_at: new Date().toISOString()
           })
           .eq('id', ruleData.id)
@@ -258,7 +247,6 @@ const Rules: React.FC = () => {
           frequency: ruleWithoutId.frequency || 'daily',
           frequency_count: ruleWithoutId.frequency_count || 3,
           usage_data: [0, 0, 0, 0, 0, 0, 0],
-          background_images: ruleWithoutId.background_images || [],
           ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
           ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
           ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
@@ -342,9 +330,7 @@ const Rules: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {rules.map((rule) => {
-                const backgroundImages = rule.background_images || [];
-                const images = backgroundImages.length > 0 ? backgroundImages : 
-                  (rule.background_image_url ? [rule.background_image_url] : []);
+                const images = rule.background_image_url ? [rule.background_image_url] : [];
                 
                 return (
                   <Card 
