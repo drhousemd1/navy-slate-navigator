@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -10,10 +10,10 @@ import { Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import ColorPickerField from '../task-editor/ColorPickerField';
 import PrioritySelector from '../task-editor/PrioritySelector';
+import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
-import ImageSelectionSection from './ImageSelectionSection';
 
 interface Rule {
   id?: string;
@@ -33,7 +33,6 @@ interface Rule {
   focal_point_y: number;
   frequency: 'daily' | 'weekly';
   frequency_count: number;
-  background_images?: string[];
   usage_data?: number[];
 }
 
@@ -54,7 +53,6 @@ interface RuleFormValues {
   priority: 'low' | 'medium' | 'high';
   frequency: 'daily' | 'weekly';
   frequency_count: number;
-  background_images?: string[];
 }
 
 interface RuleEditorFormProps {
@@ -62,26 +60,19 @@ interface RuleEditorFormProps {
   onSave: (ruleData: any) => void;
   onDelete?: (ruleId: string) => void;
   onCancel: () => void;
-  carouselTimer: number;
-  onCarouselTimerChange: (timer: number) => void;
 }
 
 const RuleEditorForm: React.FC<RuleEditorFormProps> = ({ 
   ruleData,
   onSave,
   onDelete,
-  onCancel,
-  carouselTimer = 5,
-  onCarouselTimerChange
+  onCancel
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
-  const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
-  const [position, setPosition] = useState({ x: 50, y: 50 });
   
   const form = useForm<RuleFormValues>({
     defaultValues: {
@@ -100,93 +91,25 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       icon_name: ruleData?.icon_name,
       frequency: ruleData?.frequency || 'daily',
       frequency_count: ruleData?.frequency_count || 3,
-      background_images: ruleData?.background_images || [],
     },
   });
 
   useEffect(() => {
-    if (ruleData) {
-      setImagePreview(ruleData.background_image_url || null);
-      setIconPreview(ruleData.icon_url || null);
-      setSelectedIconName(ruleData.icon_name || null);
-      setPosition({
-        x: ruleData.focal_point_x || 50,
-        y: ruleData.focal_point_y || 50
-      });
-      
-      // Initialize image slots
-      const slots = [null, null, null, null, null];
-      if (ruleData.background_images && ruleData.background_images.length > 0) {
-        ruleData.background_images.forEach((img, index) => {
-          if (index < slots.length && img) {
-            slots[index] = img;
-          }
-        });
-      } else if (ruleData.background_image_url) {
-        slots[0] = ruleData.background_image_url;
-      }
-      
-      setImageSlots(slots);
-      setSelectedBoxIndex(0);
-    }
+    setImagePreview(ruleData?.background_image_url || null);
+    setIconPreview(ruleData?.icon_url || null);
+    setSelectedIconName(ruleData?.icon_name || null);
   }, [ruleData]);
-
-  const handleSelectImageSlot = (index: number) => {
-    setSelectedBoxIndex(index);
-    setImagePreview(imageSlots[index]);
-    form.setValue('background_image_url', imageSlots[index] || undefined);
-  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    
-    // If no box selected, auto-select the first empty slot
-    let targetIndex = selectedBoxIndex;
-    if (targetIndex === null) {
-      const firstEmpty = imageSlots.findIndex((slot) => !slot);
-      if (firstEmpty === -1) {
-        // All slots are full, select the first one
-        targetIndex = 0;
-      } else {
-        targetIndex = firstEmpty;
-      }
-      setSelectedBoxIndex(targetIndex);
-    }
-    
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      
-      const updatedSlots = [...imageSlots];
-      updatedSlots[targetIndex!] = base64String;
-      setImageSlots(updatedSlots);
-      setImagePreview(base64String);
-      form.setValue('background_image_url', base64String);
-      form.setValue('background_opacity', 100);
-    };
-    
-    reader.onerror = (error) => {
-      console.error("FileReader error:", error);
-      toast({
-        title: "Upload Error",
-        description: "Failed to read the image file",
-        variant: "destructive"
-      });
-    };
-    
-    reader.readAsDataURL(file);
-  };
-
-  const handleRemoveImage = () => {
-    if (selectedBoxIndex !== null) {
-      const updatedSlots = [...imageSlots];
-      updatedSlots[selectedBoxIndex] = null;
-      setImageSlots(updatedSlots);
-      
-      // Clear preview but keep the selected box highlighted
-      setImagePreview(null);
-      form.setValue('background_image_url', undefined);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setImagePreview(base64String);
+        form.setValue('background_image_url', base64String);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -242,28 +165,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setLoading(true);
     
     try {
-      // Get all valid images from the slots
-      const validBackgroundImages = imageSlots
-        .filter(slot => typeof slot === 'string' && slot.trim() !== '')
-        .map(slot => {
-          if (!slot) return null;
-          if (slot.startsWith('data:image') || slot.startsWith('http')) {
-            return slot;
-          } else {
-            console.warn("Invalid image data in slot:", slot.substring(0, 30));
-            return null;
-          }
-        })
-        .filter(Boolean) as string[];
-      
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
-        highlight_effect: values.highlight_effect || false,
-        background_images: validBackgroundImages,
-        focal_point_x: position.x,
-        focal_point_y: position.y,
+        highlight_effect: values.highlight_effect || false, // Ensure highlight_effect is properly set
       };
       
       await onSave(ruleToSave);
@@ -283,12 +189,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     if (ruleData?.id && onDelete) {
       onDelete(ruleData.id);
       setIsDeleteDialogOpen(false);
-    }
-  };
-
-  const handleCarouselTimerChange = (newValue: number) => {
-    if (onCarouselTimerChange) {
-      onCarouselTimerChange(newValue);
     }
   };
 
@@ -334,18 +234,20 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         </div>
         
         <div className="space-y-4">
-          <ImageSelectionSection
+          <FormLabel className="text-white text-lg">Background Image</FormLabel>
+          <BackgroundImageSelector
+            control={form.control}
             imagePreview={imagePreview}
-            imageSlots={imageSlots}
-            selectedBoxIndex={selectedBoxIndex}
-            carouselTimer={carouselTimer}
-            onCarouselTimerChange={onCarouselTimerChange}
-            onSelectImageSlot={handleSelectImageSlot}
-            onRemoveImage={handleRemoveImage}
+            initialPosition={{ 
+              x: ruleData?.focal_point_x || 50, 
+              y: ruleData?.focal_point_y || 50 
+            }}
+            onRemoveImage={() => {
+              setImagePreview(null);
+              form.setValue('background_image_url', undefined);
+            }}
             onImageUpload={handleImageUpload}
             setValue={form.setValue}
-            position={position}
-            control={form.control}
           />
         </div>
         

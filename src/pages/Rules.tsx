@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Check, Plus, Loader2 } from 'lucide-react';
 import FrequencyTracker from '../components/task/FrequencyTracker';
 import PriorityBadge from '../components/task/PriorityBadge';
+import { useNavigate } from 'react-router-dom';
 import RuleEditor from '../components/RuleEditor';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
@@ -13,8 +14,6 @@ import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
-import RuleBackground from '../components/rule/RuleBackground';
-import AppLayout from '../components/AppLayout';
 
 interface Rule {
   id: string;
@@ -38,13 +37,6 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
-  background_images?: string[];
-}
-
-interface RuleWithCarouselData extends Rule {
-  visibleImage: string | null;
-  transitionImage: string | null;
-  isTransitioning: boolean;
 }
 
 const Rules: React.FC = () => {
@@ -52,91 +44,16 @@ const Rules: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
-  const [rulesWithCarousel, setRulesWithCarousel] = useState<RuleWithCarouselData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
-  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
-  const [carouselTimer, setCarouselTimer] = useState(5);
-
-  const batchSize = 12;
-
-  useEffect(() => {
-    const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
-    setCarouselTimer(savedTimer);
-    
-    const carouselIntervalId = setInterval(() => {
-      setGlobalCarouselIndex(prev => prev + 1);
-    }, savedTimer * 1000);
-    
-    return () => {
-      clearInterval(carouselIntervalId);
-    };
-  }, [carouselTimer]);
-
-  useEffect(() => {
-    if (!rules.length) return;
-    
-    setRulesWithCarousel(prevRulesWithCarousel => {
-      return rules.map((rule, index) => {
-        const prevRuleData = prevRulesWithCarousel[index];
-        const backgroundImages = rule.background_images || [];
-        const images = backgroundImages.length > 0 ? backgroundImages : 
-          (rule.background_image_url ? [rule.background_image_url] : []);
-        
-        if (!images.length) {
-          return {
-            ...rule,
-            visibleImage: null,
-            transitionImage: null,
-            isTransitioning: false
-          };
-        }
-        
-        const currentIndex = globalCarouselIndex % images.length;
-        
-        if (!prevRuleData) {
-          return {
-            ...rule,
-            visibleImage: images[0],
-            transitionImage: null,
-            isTransitioning: false
-          };
-        }
-        
-        if (images.length <= 1) {
-          return {
-            ...rule,
-            visibleImage: images[0],
-            transitionImage: null,
-            isTransitioning: false
-          };
-        }
-        
-        const nextImage = images[currentIndex];
-        
-        if (prevRuleData.isTransitioning) {
-          return prevRuleData;
-        }
-        
-        return {
-          ...rule,
-          visibleImage: prevRuleData.visibleImage || images[0],
-          transitionImage: nextImage,
-          isTransitioning: true
-        };
-      });
-    });
-  }, [globalCarouselIndex, rules]);
 
   useEffect(() => {
     const fetchRules = async () => {
       try {
-        setIsLoading(true);
         const { data, error } = await supabase
           .from('rules')
           .select('*')
-          .order('created_at', { ascending: false })
-          .range(0, batchSize - 1);
+          .order('created_at', { ascending: false });
         
         if (error) {
           throw error;
@@ -146,33 +63,10 @@ const Rules: React.FC = () => {
           if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
             return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
           }
-          
-          if (!rule.background_images || !Array.isArray(rule.background_images)) {
-            return { 
-              ...rule, 
-              background_images: rule.background_image_url ? [rule.background_image_url] : []
-            };
-          }
-          
           return rule;
         });
         
         setRules(rulesWithUsageData);
-        
-        const initialRulesWithCarousel = rulesWithUsageData.map(rule => {
-          const backgroundImages = rule.background_images || [];
-          const images = backgroundImages.length > 0 ? backgroundImages : 
-            (rule.background_image_url ? [rule.background_image_url] : []);
-            
-          return {
-            ...rule,
-            visibleImage: images.length > 0 ? images[0] : null,
-            transitionImage: null,
-            isTransitioning: false
-          };
-        });
-        
-        setRulesWithCarousel(initialRulesWithCarousel);
       } catch (err) {
         console.error('Error fetching rules:', err);
         toast({
@@ -186,6 +80,12 @@ const Rules: React.FC = () => {
     };
     
     fetchRules();
+    
+    const intervalId = setInterval(() => {
+      fetchRules();
+    }, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleAddRule = () => {
@@ -212,8 +112,7 @@ const Rules: React.FC = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', rule.id)
-        .select()
-        .single();
+        .select();
         
       if (error) throw error;
       
@@ -261,11 +160,6 @@ const Rules: React.FC = () => {
     }
   };
 
-  const handleCarouselTimerChange = (newValue: number) => {
-    setCarouselTimer(newValue);
-    localStorage.setItem('rules_carouselTimer', newValue.toString());
-  };
-
   const handleSaveRule = async (ruleData: Partial<Rule>) => {
     try {
       let result;
@@ -292,7 +186,6 @@ const Rules: React.FC = () => {
             focal_point_y: ruleData.focal_point_y,
             frequency: ruleData.frequency,
             frequency_count: ruleData.frequency_count,
-            background_images: ruleData.background_images,
             updated_at: new Date().toISOString()
           })
           .eq('id', ruleData.id)
@@ -306,14 +199,14 @@ const Rules: React.FC = () => {
           result.usage_data = existingRule.usage_data;
         }
         
-        setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result } : rule));
+        setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result as Rule } : rule));
         
         toast({
           title: 'Success',
           description: 'Rule updated successfully!',
         });
       } else {
-        const { id, ...ruleWithoutId } = ruleData as any;
+        const { id, ...ruleWithoutId } = ruleData;
         
         if (!ruleWithoutId.title) {
           throw new Error('Rule title is required');
@@ -333,7 +226,6 @@ const Rules: React.FC = () => {
           frequency: ruleWithoutId.frequency || 'daily',
           frequency_count: ruleWithoutId.frequency_count || 3,
           usage_data: [0, 0, 0, 0, 0, 0, 0],
-          background_images: ruleWithoutId.background_images || [],
           ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
           ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
           ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
@@ -361,7 +253,6 @@ const Rules: React.FC = () => {
       }
       
       setIsEditorOpen(false);
-      setCurrentRule(null);
     } catch (err) {
       console.error('Error saving rule:', err);
       toast({
@@ -416,27 +307,30 @@ const Rules: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {rulesWithCarousel.map((rule) => (
+              {rules.map((rule) => (
                 <Card 
                   key={rule.id}
                   className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
                 >
                   <div className="relative p-4">
-                    <RuleBackground
-                      visibleImage={rule.visibleImage}
-                      transitionImage={rule.transitionImage}
-                      isTransitioning={rule.isTransitioning}
-                      focalPointX={rule.focal_point_x}
-                      focalPointY={rule.focal_point_y}
-                      backgroundOpacity={rule.background_opacity}
-                    />
+                    {rule.background_image_url && (
+                      <div 
+                        className="absolute inset-0 z-0" 
+                        style={{
+                          backgroundImage: `url(${rule.background_image_url})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
+                          opacity: (rule.background_opacity || 100) / 100
+                        }}
+                      />
+                    )}
                     
                     <div className="flex justify-between items-center mb-3 relative z-10">
                       <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
                       <Button
                         variant="destructive"
                         size="sm"
-                        className="bg-red-500 text-white hover:bg-red-600 h-7 px-3"
+                        className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
                         onClick={() => handleRuleBroken(rule)}
                       >
                         Rule Broken
@@ -502,8 +396,6 @@ const Rules: React.FC = () => {
           ruleData={currentRule || undefined}
           onSave={handleSaveRule}
           onDelete={handleDeleteRule}
-          carouselTimer={carouselTimer}
-          onCarouselTimerChange={handleCarouselTimerChange}
         />
       </RewardsProvider>
     </AppLayout>
