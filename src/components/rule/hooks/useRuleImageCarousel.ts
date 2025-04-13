@@ -21,9 +21,6 @@ export const useRuleImageCarousel = ({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
   
-  // Store the last index to prevent unnecessary transitions
-  const lastIndexRef = useRef<number>(0);
-
   // Initialize or update visible image when images array changes
   useEffect(() => {
     if (!images.length) {
@@ -54,29 +51,18 @@ export const useRuleImageCarousel = ({
       return;
     }
     
-    // Prevent unnecessary transitions if the index hasn't changed
-    if (globalCarouselIndex === lastIndexRef.current) {
-      return;
-    }
+    const nextIndex = globalCarouselIndex % images.length;
+    const next = images[nextIndex];
     
-    lastIndexRef.current = globalCarouselIndex;
-    
-    const currentIndex = globalCarouselIndex % images.length;
-    const nextIndex = (currentIndex + 1) % images.length;
-    
-    const currentImage = images[currentIndex];
-    const nextImage = images[nextIndex];
-    
-    if (!currentImage || currentImage === visibleImage) {
-      return;
-    }
+    // CRITICAL FIX: Removed the condition that prevents transitions
+    // when the next image is the same as the current one
     
     // Preload the next image to ensure smooth transition
-    const preloadImage = new Image();
-    preloadImage.src = currentImage;
+    const preload = new Image();
+    preload.src = next;
     
-    preloadImage.onload = () => {
-      setTransitionImage(currentImage);
+    preload.onload = () => {
+      setTransitionImage(next);
       setIsTransitioning(false);
       
       // Use requestAnimationFrame to ensure the browser has painted before starting transition
@@ -88,7 +74,7 @@ export const useRuleImageCarousel = ({
           // After transition completes, update the visible image
           const transitionDuration = 2000; // 2 seconds, matching CSS transition
           setTimeout(() => {
-            setVisibleImage(currentImage);
+            setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
           }, transitionDuration);
@@ -96,10 +82,10 @@ export const useRuleImageCarousel = ({
       });
     };
     
-    preloadImage.onerror = () => {
-      console.error("Failed to load image:", currentImage);
+    preload.onerror = () => {
+      console.error("Failed to load image:", next);
       // Still update the visible image even if preloading fails
-      setVisibleImage(currentImage);
+      setVisibleImage(next);
     };
   }, [globalCarouselIndex, images, visibleImage]);
 

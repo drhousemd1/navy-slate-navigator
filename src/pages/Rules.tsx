@@ -15,6 +15,7 @@ import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import RuleBackground from '../components/rule/RuleBackground';
 import AppLayout from '../components/AppLayout';
+import { useRuleImageCarousel } from '../components/rule/hooks/useRuleImageCarousel';
 
 interface Rule {
   id: string;
@@ -64,7 +65,7 @@ const Rules: React.FC = () => {
     return () => {
       clearInterval(carouselIntervalId);
     };
-  }, []);
+  }, [carouselTimer]);
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -83,6 +84,13 @@ const Rules: React.FC = () => {
         const rulesWithUsageData = (data as Rule[] || []).map(rule => {
           if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
             return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
+          }
+          
+          if (!rule.background_images || !Array.isArray(rule.background_images)) {
+            return { 
+              ...rule, 
+              background_images: rule.background_image_url ? [rule.background_image_url] : []
+            };
           }
           
           return rule;
@@ -207,6 +215,7 @@ const Rules: React.FC = () => {
             focal_point_y: ruleData.focal_point_y,
             frequency: ruleData.frequency,
             frequency_count: ruleData.frequency_count,
+            background_images: ruleData.background_images,
             updated_at: new Date().toISOString()
           })
           .eq('id', ruleData.id)
@@ -247,6 +256,7 @@ const Rules: React.FC = () => {
           frequency: ruleWithoutId.frequency || 'daily',
           frequency_count: ruleWithoutId.frequency_count || 3,
           usage_data: [0, 0, 0, 0, 0, 0, 0],
+          background_images: ruleWithoutId.background_images || [],
           ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
           ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
           ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
@@ -330,7 +340,18 @@ const Rules: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {rules.map((rule) => {
-                const images = rule.background_image_url ? [rule.background_image_url] : [];
+                const backgroundImages = rule.background_images || [];
+                const images = backgroundImages.length > 0 ? backgroundImages : 
+                  (rule.background_image_url ? [rule.background_image_url] : []);
+                
+                const {
+                  visibleImage,
+                  transitionImage,
+                  isTransitioning
+                } = useRuleImageCarousel({
+                  images,
+                  globalCarouselIndex
+                });
                 
                 return (
                   <Card 
@@ -338,16 +359,14 @@ const Rules: React.FC = () => {
                     className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
                   >
                     <div className="relative p-4">
-                      {images.length > 0 && (
-                        <RuleBackground
-                          visibleImage={images[globalCarouselIndex % images.length] || null}
-                          transitionImage={images[(globalCarouselIndex + 1) % images.length] || null}
-                          isTransitioning={false}
-                          focalPointX={rule.focal_point_x}
-                          focalPointY={rule.focal_point_y}
-                          backgroundOpacity={rule.background_opacity}
-                        />
-                      )}
+                      <RuleBackground
+                        visibleImage={visibleImage}
+                        transitionImage={transitionImage}
+                        isTransitioning={isTransitioning}
+                        focalPointX={rule.focal_point_x}
+                        focalPointY={rule.focal_point_y}
+                        backgroundOpacity={rule.background_opacity}
+                      />
                       
                       <div className="flex justify-between items-center mb-3 relative z-10">
                         <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
