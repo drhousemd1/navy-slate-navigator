@@ -1,8 +1,11 @@
 
 import { useEffect, useState } from 'react';
-import { Reward } from '@/lib/rewardUtils';
 
-export const useRewardImageCarousel = (reward: Reward, carouselIndex: number) => {
+interface CarouselInput {
+  backgroundImage?: string | null;
+}
+
+export const useRewardImageCarousel = (input: CarouselInput, carouselIndex: number) => {
   const [fadeStage, setFadeStage] = useState<'fade-in' | 'fade-out'>('fade-in');
 
   useEffect(() => {
@@ -14,9 +17,7 @@ export const useRewardImageCarousel = (reward: Reward, carouselIndex: number) =>
   }, [carouselIndex]);
 
   return {
-    backgroundUrl: reward.background_image_url || '',
+    backgroundUrl: input.backgroundImage || '',
     fadeStage,
   };
 };
-
-export default useRewardImageCarousel;
