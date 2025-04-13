@@ -34,8 +34,8 @@ interface RuleEditorProps {
   ruleData?: Partial<Rule>;
   onSave: (ruleData: Partial<Rule>) => void;
   onDelete?: (ruleId: string) => void;
-  carouselTimer?: number;
-  onCarouselTimerChange?: (timer: number) => void;
+  carouselTimer: number;
+  onCarouselTimerChange: (timer: number) => void;
 }
 
 const RuleEditor: React.FC<RuleEditorProps> = ({ 
@@ -44,7 +44,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   ruleData, 
   onSave, 
   onDelete,
-  carouselTimer = 5,
+  carouselTimer,
   onCarouselTimerChange
 }) => {
   const handleSave = async (formData: Partial<Rule>) => {

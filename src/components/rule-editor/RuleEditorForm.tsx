@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -61,8 +62,8 @@ interface RuleEditorFormProps {
   onSave: (ruleData: any) => void;
   onDelete?: (ruleId: string) => void;
   onCancel: () => void;
-  carouselTimer?: number;
-  onCarouselTimerChange?: (timer: number) => void;
+  carouselTimer: number;
+  onCarouselTimerChange: (timer: number) => void;
 }
 
 const RuleEditorForm: React.FC<RuleEditorFormProps> = ({ 
@@ -338,7 +339,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
             imageSlots={imageSlots}
             selectedBoxIndex={selectedBoxIndex}
             carouselTimer={carouselTimer}
-            onCarouselTimerChange={handleCarouselTimerChange}
+            onCarouselTimerChange={onCarouselTimerChange}
             onSelectImageSlot={handleSelectImageSlot}
             onRemoveImage={handleRemoveImage}
             onImageUpload={handleImageUpload}
