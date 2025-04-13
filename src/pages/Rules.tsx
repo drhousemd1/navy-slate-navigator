@@ -6,8 +6,7 @@ import { Edit, Check, Plus, Loader2 } from 'lucide-react';
 import FrequencyTracker from '../components/task/FrequencyTracker';
 import PriorityBadge from '../components/task/PriorityBadge';
 import { useNavigate } from 'react-router-dom';
-import RuleEditor from '../components/rule/RuleEditor';
-import RuleCard from '../components/rule/RuleCard';
+import RuleEditor from '../components/RuleEditor';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import HighlightedText from '../components/task/HighlightedText';
@@ -16,16 +15,37 @@ import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 
+interface Rule {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: 'low' | 'medium' | 'high';
+  background_image_url?: string | null;
+  background_opacity: number;
+  icon_url?: string | null;
+  icon_name?: string | null;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  icon_color: string;
+  highlight_effect: boolean;
+  focal_point_x: number;
+  focal_point_y: number;
+  frequency: 'daily' | 'weekly';
+  frequency_count: number;
+  usage_data: number[];
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+}
+
 const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [currentRule, setCurrentRule] = useState<any | null>(null);
-  const [rules, setRules] = useState<any[]>([]);
+  const [currentRule, setCurrentRule] = useState<Rule | null>(null);
+  const [rules, setRules] = useState<Rule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
-  
-  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
-  const [carouselTimer, setCarouselTimer] = useState(5);
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -73,12 +93,12 @@ const Rules: React.FC = () => {
     setIsEditorOpen(true);
   };
 
-  const handleEditRule = (rule: any) => {
+  const handleEditRule = (rule: Rule) => {
     setCurrentRule(rule);
     setIsEditorOpen(true);
   };
 
-  const handleRuleBroken = async (rule: any) => {
+  const handleRuleBroken = async (rule: Rule) => {
     try {
       const currentDayOfWeek = getMondayBasedDay();
       
@@ -140,7 +160,7 @@ const Rules: React.FC = () => {
     }
   };
 
-  const handleSaveRule = async (ruleData: any) => {
+  const handleSaveRule = async (ruleData: Partial<Rule>) => {
     try {
       let result;
       
@@ -288,28 +308,95 @@ const Rules: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {rules.map((rule) => (
-                <div key={rule.id} onClick={() => handleEditRule(rule)}>
-                  <RuleCard rule={rule} globalCarouselIndex={globalCarouselIndex} />
-                </div>
+                <Card 
+                  key={rule.id}
+                  className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
+                >
+                  <div className="relative p-4">
+                    {rule.background_image_url && (
+                      <div 
+                        className="absolute inset-0 z-0" 
+                        style={{
+                          backgroundImage: `url(${rule.background_image_url})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
+                          opacity: (rule.background_opacity || 100) / 100
+                        }}
+                      />
+                    )}
+                    
+                    <div className="flex justify-between items-center mb-3 relative z-10">
+                      <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
+                        onClick={() => handleRuleBroken(rule)}
+                      >
+                        Rule Broken
+                      </Button>
+                    </div>
+                    
+                    <div className="mb-4 relative z-10">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
+                          <Check className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1 flex flex-col">
+                          <div className="text-xl font-semibold">
+                            <HighlightedText
+                              text={rule.title}
+                              highlight={rule.highlight_effect}
+                              color={rule.title_color}
+                            />
+                          </div>
+                          
+                          {rule.description && (
+                            <div className="text-sm mt-1">
+                              <HighlightedText
+                                text={rule.description}
+                                highlight={rule.highlight_effect}
+                                color={rule.subtext_color}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-2 relative z-10">
+                      <FrequencyTracker 
+                        frequency={rule.frequency}
+                        frequency_count={rule.frequency_count}
+                        calendar_color={rule.calendar_color}
+                        usage_data={rule.usage_data}
+                      />
+                      
+                      <Button 
+                        size="sm" 
+                        className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
+                        onClick={() => handleEditRule(rule)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
               ))}
             </div>
           )}
         </div>
         
-        {currentRule && (
-          <RuleEditor
-            open={isEditorOpen}
-            setOpen={setIsEditorOpen}
-            rule={currentRule}
-            handleChange={(field, value) => {
-              setCurrentRule({
-                ...currentRule,
-                [field]: value
-              });
-            }}
-            onSave={async () => handleSaveRule(currentRule)}
-          />
-        )}
+        <RuleEditor
+          isOpen={isEditorOpen}
+          onClose={() => {
+            setIsEditorOpen(false);
+            setCurrentRule(null);
+          }}
+          ruleData={currentRule || undefined}
+          onSave={handleSaveRule}
+          onDelete={handleDeleteRule}
+        />
       </RewardsProvider>
     </AppLayout>
   );
