@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -14,6 +15,8 @@ import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
+import CardBackground from '../components/rule/card/CardBackground';
+import { useImageCarousel } from '../components/rule/hooks/useImageCarousel';
 
 interface Rule {
   id: string;
@@ -21,6 +24,7 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
+  background_images?: string[];
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -46,6 +50,21 @@ const Rules: React.FC = () => {
   const [rules, setRules] = useState<Rule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
+  
+  // Add carousel state
+  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
+  const [carouselTimer, setCarouselTimer] = useState(5);
+
+  useEffect(() => {
+    const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
+    setCarouselTimer(savedTimer);
+    
+    const intervalId = setInterval(() => {
+      setGlobalCarouselIndex(prev => prev + 1);
+    }, savedTimer * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [carouselTimer]);
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -60,10 +79,23 @@ const Rules: React.FC = () => {
         }
         
         const rulesWithUsageData = (data as Rule[] || []).map(rule => {
-          if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
-            return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
+          // Convert single background_image_url to background_images array if needed
+          let background_images = rule.background_images || [];
+          if (rule.background_image_url && !background_images.includes(rule.background_image_url)) {
+            background_images = [rule.background_image_url, ...background_images];
           }
-          return rule;
+          
+          if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
+            return { 
+              ...rule, 
+              usage_data: [0, 0, 0, 0, 0, 0, 0],
+              background_images
+            };
+          }
+          return {
+            ...rule,
+            background_images
+          };
         });
         
         setRules(rulesWithUsageData);
@@ -174,6 +206,7 @@ const Rules: React.FC = () => {
             description: ruleData.description,
             priority: ruleData.priority,
             background_image_url: ruleData.background_image_url,
+            background_images: ruleData.background_images,
             background_opacity: ruleData.background_opacity,
             icon_url: ruleData.icon_url,
             icon_name: ruleData.icon_name,
@@ -199,6 +232,12 @@ const Rules: React.FC = () => {
           result.usage_data = existingRule.usage_data;
         }
         
+        // Save carousel timer to localStorage
+        if (ruleData.carousel_timer) {
+          localStorage.setItem('rules_carouselTimer', String(ruleData.carousel_timer));
+          setCarouselTimer(ruleData.carousel_timer);
+        }
+        
         setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result as Rule } : rule));
         
         toast({
@@ -216,6 +255,7 @@ const Rules: React.FC = () => {
           title: ruleWithoutId.title,
           priority: ruleWithoutId.priority || 'medium',
           background_opacity: ruleWithoutId.background_opacity || 100,
+          background_images: ruleWithoutId.background_images || [],
           icon_color: ruleWithoutId.icon_color || '#FFFFFF',
           title_color: ruleWithoutId.title_color || '#FFFFFF',
           subtext_color: ruleWithoutId.subtext_color || '#FFFFFF',
@@ -291,6 +331,91 @@ const Rules: React.FC = () => {
     }
   };
 
+  const RuleCard: React.FC<{ rule: Rule }> = ({ rule }) => {
+    const {
+      visibleImage,
+      transitionImage,
+      isTransitioning
+    } = useImageCarousel({
+      images: rule.background_images || [],
+      globalCarouselIndex
+    });
+
+    return (
+      <Card 
+        key={rule.id}
+        className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
+      >
+        <div className="relative p-4">
+          <CardBackground 
+            visibleImage={visibleImage}
+            transitionImage={transitionImage}
+            isTransitioning={isTransitioning}
+            focalPointX={rule.focal_point_x}
+            focalPointY={rule.focal_point_y}
+            backgroundOpacity={rule.background_opacity}
+          />
+          
+          <div className="flex justify-between items-center mb-3 relative z-10">
+            <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
+            <Button
+              variant="destructive"
+              size="sm"
+              className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
+              onClick={() => handleRuleBroken(rule)}
+            >
+              Rule Broken
+            </Button>
+          </div>
+          
+          <div className="mb-4 relative z-10">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
+                <Check className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1 flex flex-col">
+                <div className="text-xl font-semibold">
+                  <HighlightedText
+                    text={rule.title}
+                    highlight={rule.highlight_effect}
+                    color={rule.title_color}
+                  />
+                </div>
+                
+                {rule.description && (
+                  <div className="text-sm mt-1">
+                    <HighlightedText
+                      text={rule.description}
+                      highlight={rule.highlight_effect}
+                      color={rule.subtext_color}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between mt-2 relative z-10">
+            <FrequencyTracker 
+              frequency={rule.frequency}
+              frequency_count={rule.frequency_count}
+              calendar_color={rule.calendar_color}
+              usage_data={rule.usage_data}
+            />
+            
+            <Button 
+              size="sm" 
+              className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
+              onClick={() => handleEditRule(rule)}
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
   return (
     <AppLayout onAddNewItem={handleAddRule}>
       <RewardsProvider>
@@ -308,80 +433,7 @@ const Rules: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {rules.map((rule) => (
-                <Card 
-                  key={rule.id}
-                  className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
-                >
-                  <div className="relative p-4">
-                    {rule.background_image_url && (
-                      <div 
-                        className="absolute inset-0 z-0" 
-                        style={{
-                          backgroundImage: `url(${rule.background_image_url})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
-                          opacity: (rule.background_opacity || 100) / 100
-                        }}
-                      />
-                    )}
-                    
-                    <div className="flex justify-between items-center mb-3 relative z-10">
-                      <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
-                        onClick={() => handleRuleBroken(rule)}
-                      >
-                        Rule Broken
-                      </Button>
-                    </div>
-                    
-                    <div className="mb-4 relative z-10">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-                          <Check className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1 flex flex-col">
-                          <div className="text-xl font-semibold">
-                            <HighlightedText
-                              text={rule.title}
-                              highlight={rule.highlight_effect}
-                              color={rule.title_color}
-                            />
-                          </div>
-                          
-                          {rule.description && (
-                            <div className="text-sm mt-1">
-                              <HighlightedText
-                                text={rule.description}
-                                highlight={rule.highlight_effect}
-                                color={rule.subtext_color}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mt-2 relative z-10">
-                      <FrequencyTracker 
-                        frequency={rule.frequency}
-                        frequency_count={rule.frequency_count}
-                        calendar_color={rule.calendar_color}
-                        usage_data={rule.usage_data}
-                      />
-                      
-                      <Button 
-                        size="sm" 
-                        className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
-                        onClick={() => handleEditRule(rule)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
+                <RuleCard key={rule.id} rule={rule} />
               ))}
             </div>
           )}
@@ -396,6 +448,8 @@ const Rules: React.FC = () => {
           ruleData={currentRule || undefined}
           onSave={handleSaveRule}
           onDelete={handleDeleteRule}
+          carouselTimer={carouselTimer}
+          setCarouselTimer={setCarouselTimer}
         />
       </RewardsProvider>
     </AppLayout>

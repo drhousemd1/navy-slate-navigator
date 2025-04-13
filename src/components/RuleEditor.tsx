@@ -9,6 +9,7 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
+  background_images?: string[];
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -25,6 +26,7 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  carousel_timer?: number;
 }
 
 interface RuleEditorProps {
@@ -33,6 +35,8 @@ interface RuleEditorProps {
   ruleData?: Partial<Rule>;
   onSave: (ruleData: Partial<Rule>) => void;
   onDelete?: (ruleId: string) => void;
+  carouselTimer?: number;
+  setCarouselTimer?: (seconds: number) => void;
 }
 
 const RuleEditor: React.FC<RuleEditorProps> = ({ 
@@ -40,9 +44,16 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   onClose, 
   ruleData, 
   onSave, 
-  onDelete 
+  onDelete,
+  carouselTimer = 5,
+  setCarouselTimer
 }) => {
   const handleSave = async (formData: Partial<Rule>) => {
+    // Add carousel timer to the saved data if it was changed
+    if (setCarouselTimer && formData.carousel_timer !== carouselTimer) {
+      setCarouselTimer(formData.carousel_timer || 5);
+    }
+    
     await onSave(formData);
     onClose();
   };
@@ -67,7 +78,10 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
         </DialogHeader>
         
         <RuleEditorForm
-          ruleData={ruleData}
+          ruleData={{
+            ...ruleData,
+            carousel_timer: carouselTimer
+          }}
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}
