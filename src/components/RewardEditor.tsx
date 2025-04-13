@@ -1,35 +1,84 @@
 
 import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { RewardEditorForm } from './reward-editor/RewardEditorForm';
-import { Reward } from '@/lib/rewardUtils';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 
 interface RewardEditorProps {
-  reward: Reward;
+  isOpen: boolean;
   onClose: () => void;
-  globalCarouselTimer: NodeJS.Timeout | null;
-  onSave: (data: any, index: number) => Promise<Reward>;
-  onDelete: (index: number) => Promise<boolean>;
+  rewardData?: any;
+  onSave: (rewardData: any) => void;
+  onDelete?: (id: number) => void;
 }
 
-export const RewardEditor: React.FC<RewardEditorProps> = ({
-  reward,
-  onClose,
-  globalCarouselTimer,
+const RewardEditor: React.FC<RewardEditorProps> = ({ 
+  isOpen, 
+  onClose, 
+  rewardData, 
   onSave,
-  onDelete,
+  onDelete
 }) => {
+  const queryClient = useQueryClient();
+  
+  const handleSave = async (formData: any) => {
+    console.log("RewardEditor handling save with form data:", formData);
+    try {
+      // For existing rewards, pass the existing ID along with the form data
+      const dataToSave = rewardData ? { ...formData, id: rewardData.id } : formData;
+      
+      await onSave(dataToSave);
+      
+      // Force a rewards data refresh after saving
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      
+      toast({
+        title: "Success",
+        description: "Reward saved successfully",
+      });
+      
+      // Important: Close the dialog after successful save
+      onClose();
+    } catch (error) {
+      console.error("Error in RewardEditor save handler:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save reward. Please try again.",
+        variant: "destructive",
+      });
+      // Don't close dialog if save failed
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg w-full max-w-3xl p-6">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        if (!open) {
+          console.log("Dialog closing via onOpenChange");
+          onClose();
+        }
+      }}
+    >
+      <DialogContent className="bg-navy border-light-navy text-white max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-white">
+            {rewardData ? 'Edit Reward' : 'Create New Reward'}
+          </DialogTitle>
+          <DialogDescription className="text-light-navy">
+            {rewardData ? 'Modify the existing reward' : 'Create a new reward to redeem'}
+          </DialogDescription>
+        </DialogHeader>
+        
         <RewardEditorForm
-          reward={reward}
-          onClose={onClose}
-          globalCarouselTimer={globalCarouselTimer}
-          onSave={onSave}
+          rewardData={rewardData}
+          onSave={handleSave}
+          onCancel={onClose}
           onDelete={onDelete}
         />
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
