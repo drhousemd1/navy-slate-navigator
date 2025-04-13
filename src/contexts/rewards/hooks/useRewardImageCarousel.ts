@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Reward } from '@/lib/rewardUtils';
 
-const useRewardImageCarousel = (reward: Reward, carouselIndex: number) => {
+export const useRewardImageCarousel = (reward: Reward, carouselIndex: number) => {
   const [fadeStage, setFadeStage] = useState<'fade-in' | 'fade-out'>('fade-in');
 
   useEffect(() => {
