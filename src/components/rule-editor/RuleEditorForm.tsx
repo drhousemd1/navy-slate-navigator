@@ -14,8 +14,6 @@ import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
-import HighlightEffectToggle from './HighlightEffectToggle';
-import { useRuleCarousel } from '../carousel/RuleCarouselContext';
 
 interface Rule {
   id?: string;
@@ -23,7 +21,6 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
-  background_images?: (string | null)[];
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -43,7 +40,6 @@ interface RuleFormValues {
   title: string;
   description: string;
   background_image_url?: string;
-  background_images?: (string | null)[];
   background_opacity: number;
   icon_url?: string;
   icon_name?: string;
@@ -64,35 +60,25 @@ interface RuleEditorFormProps {
   onSave: (ruleData: any) => void;
   onDelete?: (ruleId: string) => void;
   onCancel: () => void;
-  carouselTimer: number;
-  onCarouselTimerChange: (timer: number) => void;
 }
 
 const RuleEditorForm: React.FC<RuleEditorFormProps> = ({ 
   ruleData,
   onSave,
   onDelete,
-  onCancel,
-  carouselTimer,
-  onCarouselTimerChange
+  onCancel
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageSlots, setImageSlots] = useState<(string | null)[]>(
-    ruleData?.background_images || [null, null, null, null, null]
-  );
-  const [selectedBoxIndex, setSelectedBoxIndex] = useState<number>(0);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const { resync } = useRuleCarousel();
   
   const form = useForm<RuleFormValues>({
     defaultValues: {
       title: ruleData?.title || '',
       description: ruleData?.description || '',
       background_image_url: ruleData?.background_image_url,
-      background_images: ruleData?.background_images || [null, null, null, null, null],
       background_opacity: ruleData?.background_opacity || 100,
       title_color: ruleData?.title_color || '#FFFFFF',
       subtext_color: ruleData?.subtext_color || '#FFFFFF',
@@ -112,13 +98,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setImagePreview(ruleData?.background_image_url || null);
     setIconPreview(ruleData?.icon_url || null);
     setSelectedIconName(ruleData?.icon_name || null);
-    
-    if (ruleData?.background_images && ruleData.background_images.length > 0) {
-      setImageSlots(ruleData.background_images);
-    } else if (ruleData?.background_image_url) {
-      const newImageSlots = [ruleData.background_image_url, null, null, null, null];
-      setImageSlots(newImageSlots);
-    }
   }, [ruleData]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,16 +106,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        
-        const newImageSlots = [...imageSlots];
-        newImageSlots[selectedBoxIndex] = base64String;
-        setImageSlots(newImageSlots);
-        form.setValue('background_images', newImageSlots);
-        
-        if (selectedBoxIndex === 0) {
-          setImagePreview(base64String);
-          form.setValue('background_image_url', base64String);
-        }
+        setImagePreview(base64String);
+        form.setValue('background_image_url', base64String);
       };
       reader.readAsDataURL(file);
     }
@@ -198,12 +169,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         ...values,
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
-        highlight_effect: values.highlight_effect || false,
-        background_images: imageSlots,
+        highlight_effect: values.highlight_effect || false, // Ensure highlight_effect is properly set
       };
       
       await onSave(ruleToSave);
-      resync();
     } catch (error) {
       console.error('Error saving rule:', error);
       toast({
@@ -265,73 +234,21 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         </div>
         
         <div className="space-y-4">
-          <FormLabel className="text-white text-lg">Background Images</FormLabel>
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              {imageSlots.map((image, index) => (
-                <div
-                  key={index}
-                  className={`w-16 h-16 border-2 ${
-                    selectedBoxIndex === index ? 'border-blue-500' : 'border-gray-400'
-                  } rounded-md overflow-hidden cursor-pointer ${!image ? 'bg-gray-200' : ''}`}
-                  onClick={() => setSelectedBoxIndex(index)}
-                >
-                  {image && (
-                    <img
-                      src={image}
-                      alt={`Thumbnail ${index + 1}`}
-                      className="object-cover w-full h-full"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-            
-            <div className="text-right">
-              <p className="text-sm text-white mb-1">Carousel Timer</p>
-              <div className="flex items-center space-x-2">
-                <button
-                  type="button"
-                  onClick={() => onCarouselTimerChange(Math.max(1, carouselTimer - 1))}
-                  className="px-2 py-1 border rounded text-white"
-                >
-                  -
-                </button>
-                <span className="text-sm font-semibold text-white">{carouselTimer}s</span>
-                <button
-                  type="button"
-                  onClick={() => onCarouselTimerChange(carouselTimer + 1)}
-                  className="px-2 py-1 border rounded text-white"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-2">
-            <BackgroundImageSelector
-              control={form.control}
-              imagePreview={imageSlots[selectedBoxIndex]}
-              initialPosition={{ 
-                x: ruleData?.focal_point_x || 50, 
-                y: ruleData?.focal_point_y || 50 
-              }}
-              onRemoveImage={() => {
-                const newImageSlots = [...imageSlots];
-                newImageSlots[selectedBoxIndex] = null;
-                setImageSlots(newImageSlots);
-                form.setValue('background_images', newImageSlots);
-                
-                if (selectedBoxIndex === 0) {
-                  setImagePreview(null);
-                  form.setValue('background_image_url', undefined);
-                }
-              }}
-              onImageUpload={handleImageUpload}
-              setValue={form.setValue}
-            />
-          </div>
+          <FormLabel className="text-white text-lg">Background Image</FormLabel>
+          <BackgroundImageSelector
+            control={form.control}
+            imagePreview={imagePreview}
+            initialPosition={{ 
+              x: ruleData?.focal_point_x || 50, 
+              y: ruleData?.focal_point_y || 50 
+            }}
+            onRemoveImage={() => {
+              setImagePreview(null);
+              form.setValue('background_image_url', undefined);
+            }}
+            onImageUpload={handleImageUpload}
+            setValue={form.setValue}
+          />
         </div>
         
         <div className="space-y-4">
@@ -387,7 +304,24 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           />
         </div>
         
-        <HighlightEffectToggle control={form.control} />
+        <FormField
+          control={form.control}
+          name="highlight_effect"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between">
+              <div className="space-y-0.5">
+                <FormLabel className="text-white">Highlight Effect</FormLabel>
+                <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
         
         <div className="pt-4 w-full flex items-center justify-end gap-3">
           {ruleData?.id && onDelete && (
