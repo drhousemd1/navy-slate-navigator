@@ -1,6 +1,5 @@
 
 import React, { useEffect, useState } from 'react';
-import AppLayout from '../components/AppLayout';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +15,7 @@ import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import RuleBackground from '../components/rule/RuleBackground';
-import { useRuleImageCarousel } from '../components/rule/hooks/useRuleImageCarousel';
+import AppLayout from '../components/AppLayout';
 
 interface Rule {
   id: string;
@@ -90,7 +89,10 @@ const Rules: React.FC = () => {
           
           // Ensure background_images is an array
           if (!rule.background_images || !Array.isArray(rule.background_images)) {
-            rule.background_images = rule.background_image_url ? [rule.background_image_url] : [];
+            return { 
+              ...rule, 
+              background_images: rule.background_image_url ? [rule.background_image_url] : []
+            };
           }
           
           return rule;
@@ -229,14 +231,14 @@ const Rules: React.FC = () => {
           result.usage_data = existingRule.usage_data;
         }
         
-        setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result as Rule } : rule));
+        setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result } : rule));
         
         toast({
           title: 'Success',
           description: 'Rule updated successfully!',
         });
       } else {
-        const { id, ...ruleWithoutId } = ruleData;
+        const { id, ...ruleWithoutId } = ruleData as any;
         
         if (!ruleWithoutId.title) {
           throw new Error('Rule title is required');
@@ -284,6 +286,7 @@ const Rules: React.FC = () => {
       }
       
       setIsEditorOpen(false);
+      setCurrentRule(null);
     } catch (err) {
       console.error('Error saving rule:', err);
       toast({
@@ -343,36 +346,29 @@ const Rules: React.FC = () => {
                 const images = backgroundImages.length > 0 ? backgroundImages : 
                   (rule.background_image_url ? [rule.background_image_url] : []);
                 
-                const {
-                  visibleImage,
-                  transitionImage,
-                  isTransitioning
-                } = useRuleImageCarousel({
-                  images: images.filter(Boolean) as string[],
-                  globalCarouselIndex
-                });
-                
                 return (
                   <Card 
                     key={rule.id}
                     className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
                   >
                     <div className="relative p-4">
-                      <RuleBackground
-                        visibleImage={visibleImage}
-                        transitionImage={transitionImage}
-                        isTransitioning={isTransitioning}
-                        focalPointX={rule.focal_point_x}
-                        focalPointY={rule.focal_point_y}
-                        backgroundOpacity={rule.background_opacity}
-                      />
+                      {images.length > 0 && (
+                        <RuleBackground
+                          visibleImage={images[globalCarouselIndex % images.length] || null}
+                          transitionImage={images[(globalCarouselIndex + 1) % images.length] || null}
+                          isTransitioning={false}
+                          focalPointX={rule.focal_point_x}
+                          focalPointY={rule.focal_point_y}
+                          backgroundOpacity={rule.background_opacity}
+                        />
+                      )}
                       
                       <div className="flex justify-between items-center mb-3 relative z-10">
                         <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
                         <Button
                           variant="destructive"
                           size="sm"
-                          className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
+                          className="bg-red-500 text-white hover:bg-red-600 h-7 px-3"
                           onClick={() => handleRuleBroken(rule)}
                         >
                           Rule Broken

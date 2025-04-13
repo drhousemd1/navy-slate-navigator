@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface UseRuleImageCarouselProps {
   images: string[];
@@ -13,72 +13,93 @@ interface UseRuleImageCarouselResult {
 }
 
 export const useRuleImageCarousel = ({ 
-  images, 
-  globalCarouselIndex 
+  images = [], 
+  globalCarouselIndex = 0 
 }: UseRuleImageCarouselProps): UseRuleImageCarouselResult => {
   const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
+  
+  // Store the last index to prevent unnecessary transitions
+  const lastIndexRef = useRef<number>(0);
 
   // Initialize or update visible image when images array changes
   useEffect(() => {
-    if (images.length > 0) {
-      // Check if images array has changed
-      const imagesChanged = 
-        images.length !== previousImages.length || 
-        images.some((img, i) => previousImages[i] !== img);
-      
-      if (imagesChanged) {
-        setPreviousImages(images);
+    if (!images.length) {
+      setVisibleImage(null);
+      setTransitionImage(null);
+      setIsTransitioning(false);
+      setPreviousImages([]);
+      return;
+    }
+    
+    const imagesChanged = 
+      images.length !== previousImages.length || 
+      images.some((img, i) => previousImages[i] !== img);
+    
+    if (imagesChanged) {
+      setPreviousImages([...images]);
+      if (images.length > 0) {
         setVisibleImage(images[0]);
         setTransitionImage(null);
         setIsTransitioning(false);
       }
-    } else if (previousImages.length > 0 && images.length === 0) {
-      // Reset if we had images but now don't
-      setPreviousImages([]);
-      setVisibleImage(null);
-      setTransitionImage(null);
-      setIsTransitioning(false);
     }
-  }, [images]);
+  }, [images, previousImages]);
 
-  // Handle image transitions when global carousel index changes
+  // Handle image transitions based on globalCarouselIndex
   useEffect(() => {
-    if (!images.length || images.length <= 1) return;
+    if (!images.length || images.length <= 1) {
+      return;
+    }
     
-    const nextIndex = globalCarouselIndex % images.length;
-    const next = images[nextIndex];
+    // Prevent unnecessary transitions if the index hasn't changed
+    if (globalCarouselIndex === lastIndexRef.current) {
+      return;
+    }
     
-    if (next === visibleImage) return;
+    lastIndexRef.current = globalCarouselIndex;
     
-    const preload = new Image();
-    preload.src = next;
+    const currentIndex = globalCarouselIndex % images.length;
+    const nextIndex = (currentIndex + 1) % images.length;
     
-    preload.onload = () => {
-      setTransitionImage(next);
+    const currentImage = images[currentIndex];
+    const nextImage = images[nextIndex];
+    
+    if (!currentImage || currentImage === visibleImage) {
+      return;
+    }
+    
+    // Preload the next image to ensure smooth transition
+    const preloadImage = new Image();
+    preloadImage.src = currentImage;
+    
+    preloadImage.onload = () => {
+      setTransitionImage(currentImage);
       setIsTransitioning(false);
       
+      // Use requestAnimationFrame to ensure the browser has painted before starting transition
       requestAnimationFrame(() => {
+        // Small timeout to ensure the browser has time to process the opacity change
         setTimeout(() => {
           setIsTransitioning(true);
           
-          const timeout = setTimeout(() => {
-            setVisibleImage(next);
+          // After transition completes, update the visible image
+          const transitionDuration = 2000; // 2 seconds, matching CSS transition
+          setTimeout(() => {
+            setVisibleImage(currentImage);
             setTransitionImage(null);
             setIsTransitioning(false);
-          }, 2000);
-          
-          return () => clearTimeout(timeout);
-        }, 0);
+          }, transitionDuration);
+        }, 50);
       });
     };
     
-    preload.onerror = () => {
-      console.error("Failed to load image:", next);
-      // Try to continue with the next image anyway
-      setVisibleImage(next);
+    preloadImage.onerror = () => {
+      console.error("Failed to load image:", currentImage);
+      // Still update the visible image even if preloading fails
+      setVisibleImage(currentImage);
     };
   }, [globalCarouselIndex, images, visibleImage]);
 
@@ -88,3 +109,5 @@ export const useRuleImageCarousel = ({
     isTransitioning
   };
 };
+
+export default useRuleImageCarousel;
