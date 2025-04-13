@@ -39,6 +39,7 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  background_images?: (string | null)[];
 }
 
 const Rules: React.FC = () => {
@@ -47,7 +48,6 @@ const Rules: React.FC = () => {
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -65,6 +65,14 @@ const Rules: React.FC = () => {
           if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
             return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
           }
+          
+          if (!rule.background_images) {
+            return { 
+              ...rule, 
+              background_images: rule.background_image_url ? [rule.background_image_url] : []
+            };
+          }
+          
           return rule;
         });
         
@@ -169,13 +177,18 @@ const Rules: React.FC = () => {
       if (ruleData.id) {
         const existingRule = rules.find(rule => rule.id === ruleData.id);
         
+        let background_image_url = ruleData.background_image_url;
+        if (ruleData.background_images && ruleData.background_images.length > 0) {
+          background_image_url = ruleData.background_images[0];
+        }
+        
         const { data, error } = await supabase
           .from('rules')
           .update({
             title: ruleData.title,
             description: ruleData.description,
             priority: ruleData.priority,
-            background_image_url: ruleData.background_image_url,
+            background_image_url: background_image_url,
             background_opacity: ruleData.background_opacity,
             icon_url: ruleData.icon_url,
             icon_name: ruleData.icon_name,
@@ -188,6 +201,7 @@ const Rules: React.FC = () => {
             focal_point_y: ruleData.focal_point_y,
             frequency: ruleData.frequency,
             frequency_count: ruleData.frequency_count,
+            background_images: ruleData.background_images,
             updated_at: new Date().toISOString()
           })
           .eq('id', ruleData.id)
@@ -214,6 +228,11 @@ const Rules: React.FC = () => {
           throw new Error('Rule title is required');
         }
         
+        let background_image_url = ruleWithoutId.background_image_url;
+        if (ruleWithoutId.background_images && ruleWithoutId.background_images.length > 0) {
+          background_image_url = ruleWithoutId.background_images[0];
+        }
+        
         const newRule = {
           title: ruleWithoutId.title,
           priority: ruleWithoutId.priority || 'medium',
@@ -228,8 +247,9 @@ const Rules: React.FC = () => {
           frequency: ruleWithoutId.frequency || 'daily',
           frequency_count: ruleWithoutId.frequency_count || 3,
           usage_data: [0, 0, 0, 0, 0, 0, 0],
+          background_images: ruleWithoutId.background_images || [],
+          background_image_url: background_image_url,
           ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
-          ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
           ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
           ...(ruleWithoutId.icon_name && { icon_name: ruleWithoutId.icon_name }),
           created_at: new Date().toISOString(),
@@ -294,14 +314,12 @@ const Rules: React.FC = () => {
   };
 
   const RuleCard = ({ rule }: { rule: Rule }) => {
-    const validImages = (rule.background_images || [])
-      .filter(img => !!img) as string[];
-    
-    const fallbackImages = rule.background_image_url ? [rule.background_image_url] : [];
-    const images = validImages.length > 0 ? validImages : fallbackImages;
+    const validImages = rule.background_images && rule.background_images.length > 0
+      ? rule.background_images.filter(img => !!img) as string[]
+      : (rule.background_image_url ? [rule.background_image_url] : []);
     
     const { visibleImage, transitionImage, isTransitioning } = useRuleImageCarousel({
-      images
+      images: validImages
     });
 
     return (
