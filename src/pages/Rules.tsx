@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -17,7 +16,6 @@ import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { RuleCarouselProvider, useRuleCarousel } from '@/components/carousel/RuleCarouselContext';
 import RuleBackground from '../components/rule/RuleBackground';
-import { useRuleImageCarousel } from '../components/rule/hooks/useRuleImageCarousel';
 
 interface Rule {
   id: string;
@@ -54,6 +52,14 @@ const RulesContent = () => {
   const queryClient = useQueryClient();
   const { timer, setTimer, resyncFlag } = useRuleCarousel();
 
+  const [ruleCardsState, setRuleCardsState] = useState<{
+    [key: string]: {
+      visibleImage: string | null;
+      transitionImage: string | null;
+      isTransitioning: boolean;
+    }
+  }>({});
+
   useEffect(() => {
     const intervalId = setInterval(() => {
       setGlobalCarouselIndex(prev => prev + 1);
@@ -61,6 +67,60 @@ const RulesContent = () => {
     
     return () => clearInterval(intervalId);
   }, [timer, resyncFlag]);
+
+  useEffect(() => {
+    const newState = { ...ruleCardsState };
+    
+    rules.forEach(rule => {
+      const validImages = (rule.background_images || [])
+        .filter(img => img !== null) as string[];
+      
+      if (validImages.length === 0 && rule.background_image_url) {
+        validImages.push(rule.background_image_url);
+      }
+
+      if (!validImages.length) {
+        newState[rule.id] = {
+          visibleImage: null,
+          transitionImage: null,
+          isTransitioning: false
+        };
+        return;
+      }
+
+      const currentState = newState[rule.id] || {
+        visibleImage: validImages[0],
+        transitionImage: null,
+        isTransitioning: false
+      };
+
+      const nextIndex = globalCarouselIndex % validImages.length;
+      const nextImage = validImages[nextIndex];
+
+      if (nextImage === currentState.visibleImage) {
+        return;
+      }
+
+      newState[rule.id] = {
+        visibleImage: currentState.visibleImage,
+        transitionImage: nextImage,
+        isTransitioning: true
+      };
+
+      setTimeout(() => {
+        setRuleCardsState(prev => ({
+          ...prev,
+          [rule.id]: {
+            visibleImage: nextImage,
+            transitionImage: null,
+            isTransitioning: false
+          }
+        }));
+      }, 2000);
+    });
+    
+    setRuleCardsState(newState);
+  }, [globalCarouselIndex, rules]);
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -75,13 +135,11 @@ const RulesContent = () => {
         }
         
         const rulesWithUsageData = (data as Rule[] || []).map(rule => {
-          // Ensure usage_data is valid
           const validUsageData = 
             rule.usage_data && Array.isArray(rule.usage_data) && rule.usage_data.length === 7
               ? rule.usage_data
               : [0, 0, 0, 0, 0, 0, 0];
               
-          // Convert single background_image_url to background_images array if needed
           let backgroundImages = rule.background_images || [];
           if (!backgroundImages.length && rule.background_image_url) {
             backgroundImages = [rule.background_image_url, null, null, null, null];
@@ -336,19 +394,11 @@ const RulesContent = () => {
       ) : (
         <div className="space-y-4">
           {rules.map((rule) => {
-            // Filter out null images
-            const validImages = (rule.background_images || [])
-              .filter(img => img !== null) as string[];
-            
-            // Use single image for backward compatibility
-            if (validImages.length === 0 && rule.background_image_url) {
-              validImages.push(rule.background_image_url);
-            }
-
-            const { visibleImage, transitionImage, isTransitioning } = useRuleImageCarousel({
-              images: validImages,
-              globalCarouselIndex
-            });
+            const cardState = ruleCardsState[rule.id] || {
+              visibleImage: null,
+              transitionImage: null,
+              isTransitioning: false
+            };
 
             return (
               <Card 
@@ -357,9 +407,9 @@ const RulesContent = () => {
               >
                 <div className="relative p-4">
                   <RuleBackground
-                    visibleImage={visibleImage}
-                    transitionImage={transitionImage}
-                    isTransitioning={isTransitioning}
+                    visibleImage={cardState.visibleImage}
+                    transitionImage={cardState.transitionImage}
+                    isTransitioning={cardState.isTransitioning}
                     focalPointX={rule.focal_point_x}
                     focalPointY={rule.focal_point_y}
                     backgroundOpacity={rule.background_opacity}
@@ -441,7 +491,6 @@ const RulesContent = () => {
   );
 };
 
-// Wrapper component to provide carousel context
 const Rules: React.FC = () => {
   return (
     <AppLayout onAddNewItem={() => {}}>

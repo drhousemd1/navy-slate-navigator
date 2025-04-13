@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -310,6 +311,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           
           <div className="mt-2">
             <BackgroundImageSelector
+              control={form.control}
               imagePreview={imageSlots[selectedBoxIndex]}
               initialPosition={{ 
                 x: ruleData?.focal_point_x || 50, 
