@@ -1,5 +1,6 @@
-
 import React from 'react';
+import { Reward } from '@/lib/rewardUtils';
+import useRewardImageCarousel from '@/contexts/rewards/hooks/useRewardImageCarousel';
 import { Card } from './ui/card';
 import RewardHeader from './rewards/RewardHeader';
 import RewardContent from './rewards/RewardContent';
@@ -7,71 +8,39 @@ import RewardFooter from './rewards/RewardFooter';
 import { useToast } from '../hooks/use-toast';
 
 interface RewardCardProps {
-  title: string;
-  description: string;
-  cost: number;
-  supply: number;
-  iconName?: string;
-  iconColor?: string;
-  onBuy?: (cost: number) => void;
-  onUse?: () => void;
-  onEdit?: () => void;
-  backgroundImage?: string | null;
-  backgroundOpacity?: number;
-  focalPointX?: number;
-  focalPointY?: number;
-  highlight_effect?: boolean;
-  title_color?: string;
-  subtext_color?: string;
-  calendar_color?: string;
-  usageData?: boolean[];
-  frequencyCount?: number;
+  reward: Reward;
+  onEdit: () => void;
+  carouselIndex: number;
 }
 
-const RewardCard: React.FC<RewardCardProps> = ({
-  title,
-  description,
-  cost,
-  supply,
-  iconName = 'Gift',
-  iconColor = '#9b87f5',
-  onBuy,
-  onUse,
-  onEdit,
-  backgroundImage,
-  backgroundOpacity = 100,
-  focalPointX = 50,
-  focalPointY = 50,
-  highlight_effect = false,
-  title_color = '#FFFFFF',
-  subtext_color = '#8E9196',
-  calendar_color = '#7E69AB',
-  usageData = Array(7).fill(false)
-}) => {
+const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit, carouselIndex }) => {
   const { toast } = useToast();
+  const { backgroundUrl, fadeStage } = useRewardImageCarousel(reward, carouselIndex);
 
   const handleBuy = (cost: number) => {
-    if (onBuy) {
-      onBuy(cost);
+    if (reward.cost) {
+      toast({
+        title: "Buying is not yet implemented",
+        description: `Buying ${reward.title} for ${reward.cost} is not yet implemented.`,
+      });
     }
   };
 
   const handleUse = () => {
-    if (onUse) {
-      onUse();
-    }
+    toast({
+      title: "Using is not yet implemented",
+      description: `Using ${reward.title} is not yet implemented.`,
+    });
   };
 
   const handleEdit = () => {
-    if (onEdit) {
-      onEdit();
-    }
+    onEdit();
   };
 
-  const cardBorderStyle = supply > 0 
+  const cardBorderStyle = reward.supply > 0 
     ? {
-        borderColor: '#FEF7CD', // Changed from #FFD700 to #FEF7CD for a whiter yellow
-        boxShadow: '0 0 8px 2px rgba(254, 247, 205, 0.6)' // Updated shadow to match new color
+        borderColor: '#FEF7CD',
+        boxShadow: '0 0 8px 2px rgba(254, 247, 205, 0.6)'
       } 
     : {};
 
@@ -80,39 +49,37 @@ const RewardCard: React.FC<RewardCardProps> = ({
       className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy z-0"
       style={cardBorderStyle}
     >
-      {backgroundImage && (
-        <div 
-          className="absolute inset-0 z-0" 
-          style={{
-            backgroundImage: `url(${backgroundImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100,
-          }}
-        />
-      )}
+      <div 
+        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-500 ${fadeStage === 'fade-in' ? 'opacity-100' : 'opacity-0'} z-0`}
+        style={{ 
+          backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : 'none',
+          backgroundPosition: `${reward.focal_point_x || 50}% ${reward.focal_point_y || 50}%`,
+          opacity: (reward.background_opacity || 100) / 100,
+        }}
+      />
+      
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <RewardHeader
-          title={title}
-          supply={supply}
-          cost={cost}
+          title={reward.title}
+          supply={reward.supply}
+          cost={reward.cost}
           onBuy={handleBuy}
           onUse={handleUse}
         />
         
         <RewardContent
-          title={title}
-          description={description}
-          iconName={iconName}
-          iconColor={iconColor}
-          highlight_effect={highlight_effect}
-          title_color={title_color}
-          subtext_color={subtext_color}
+          title={reward.title}
+          description={reward.description || ''}
+          iconName={reward.icon_name}
+          iconColor={reward.icon_color}
+          highlight_effect={reward.highlight_effect}
+          title_color={reward.title_color}
+          subtext_color={reward.subtext_color}
         />
         
         <RewardFooter
-          usageData={usageData}
-          calendarColor={calendar_color}
+          usageData={Array(7).fill(false)}
+          calendarColor={reward.calendar_color || '#7E69AB'}
           onEdit={handleEdit}
         />
       </div>

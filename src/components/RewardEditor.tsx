@@ -1,22 +1,23 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { RewardEditorForm } from './reward-editor/RewardEditorForm';
+import RewardEditorForm from './reward-editor/RewardEditorForm';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+import { Reward } from '@/lib/rewardUtils';
 
 interface RewardEditorProps {
-  isOpen: boolean;
+  reward: Reward;
   onClose: () => void;
-  rewardData?: any;
-  onSave: (rewardData: any) => void;
-  onDelete?: (id: number) => void;
+  globalCarouselTimer: NodeJS.Timeout | null;
+  onSave: (rewardData: any, index: number | null) => Promise<Reward | null>;
+  onDelete: (index: number) => Promise<boolean>;
 }
 
 const RewardEditor: React.FC<RewardEditorProps> = ({ 
-  isOpen, 
+  reward, 
   onClose, 
-  rewardData, 
+  globalCarouselTimer,
   onSave,
   onDelete
 }) => {
@@ -26,9 +27,12 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
     console.log("RewardEditor handling save with form data:", formData);
     try {
       // For existing rewards, pass the existing ID along with the form data
-      const dataToSave = rewardData ? { ...formData, id: rewardData.id } : formData;
+      const dataToSave = { ...formData, id: reward.id };
       
-      await onSave(dataToSave);
+      // Find the index of the reward in the rewards array
+      const rewardIndex = queryClient.getQueryData<Reward[]>(['rewards'])?.findIndex(r => r.id === reward.id) || 0;
+      
+      await onSave(dataToSave, rewardIndex);
       
       // Force a rewards data refresh after saving
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
@@ -53,7 +57,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
 
   return (
     <Dialog 
-      open={isOpen} 
+      open={!!reward} 
       onOpenChange={(open) => {
         if (!open) {
           console.log("Dialog closing via onOpenChange");
@@ -64,18 +68,19 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
       <DialogContent className="bg-navy border-light-navy text-white max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white">
-            {rewardData ? 'Edit Reward' : 'Create New Reward'}
+            Edit Reward
           </DialogTitle>
           <DialogDescription className="text-light-navy">
-            {rewardData ? 'Modify the existing reward' : 'Create a new reward to redeem'}
+            Modify the existing reward
           </DialogDescription>
         </DialogHeader>
         
         <RewardEditorForm
-          rewardData={rewardData}
+          reward={reward}
           onSave={handleSave}
           onCancel={onClose}
           onDelete={onDelete}
+          globalCarouselTimer={globalCarouselTimer}
         />
       </DialogContent>
     </Dialog>
