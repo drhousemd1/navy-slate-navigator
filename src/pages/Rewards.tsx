@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '../components/AppLayout';
 import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
-import RewardCard from '@/components/RewardCard';
-import RewardEditor from '@/components/RewardEditor';
+import RewardsList from '@/components/rewards/RewardsList';
+import { RewardEditor } from '@/components/RewardEditor';
 
 interface RewardsContentProps {
   isEditorOpen: boolean;
@@ -13,6 +13,7 @@ interface RewardsContentProps {
 const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const { rewards, handleSaveReward, handleDeleteReward, isLoading, refetchRewards } = useRewards();
   const [editingReward, setEditingReward] = useState(null);
+  const [editingRewardIndex, setEditingRewardIndex] = useState<number | null>(null);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [globalCarouselTimer, setGlobalCarouselTimer] = useState<NodeJS.Timeout | null>(null);
 
@@ -36,6 +37,16 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     };
   }, [globalCarouselTimer, startGlobalTimer]);
 
+  const handleEditReward = (index: number) => {
+    setEditingReward(rewards[index]);
+    setEditingRewardIndex(index);
+  };
+
+  const handleCloseEditor = () => {
+    setEditingReward(null);
+    setEditingRewardIndex(null);
+  };
+
   if (isLoading && !rewards.length) {
     return (
       <div className="p-4 pt-6">
@@ -48,21 +59,12 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
 
   return (
     <div className="p-4 pt-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {rewards.map((reward) => (
-          <RewardCard
-            key={reward.id}
-            reward={reward}
-            onEdit={() => setEditingReward(reward)}
-            carouselIndex={globalCarouselIndex}
-          />
-        ))}
-      </div>
+      <RewardsList onEdit={handleEditReward} />
       
-      {editingReward && (
+      {editingReward && editingRewardIndex !== null && (
         <RewardEditor
           reward={editingReward}
-          onClose={() => setEditingReward(null)}
+          onClose={handleCloseEditor}
           globalCarouselTimer={globalCarouselTimer}
           onSave={handleSaveReward}
           onDelete={handleDeleteReward}

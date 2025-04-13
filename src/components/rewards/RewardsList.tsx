@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useRewards } from '../../contexts/RewardsContext';
-import RewardCard from '../RewardCard';
+import { RewardCard } from '../RewardCard';
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
@@ -52,6 +52,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           title_color={reward.title_color}
           subtext_color={reward.subtext_color}
           calendar_color={reward.calendar_color}
+          carouselIndex={index}
         />
       ))}
     </div>

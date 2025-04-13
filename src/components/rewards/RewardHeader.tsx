@@ -9,16 +9,20 @@ interface RewardHeaderProps {
   title: string;
   supply: number;
   cost: number;
-  onBuy: (cost: number) => void;
-  onUse: () => void;
+  onBuy: () => Promise<void>;
+  onUse: () => Promise<void>;
+  iconName?: string;
+  iconColor?: string;
 }
 
-const RewardHeader: React.FC<RewardHeaderProps> = ({
+export const RewardHeader: React.FC<RewardHeaderProps> = ({
   title,
   supply,
   cost,
   onBuy,
-  onUse
+  onUse,
+  iconName,
+  iconColor
 }) => {
   return (
     <div className="flex justify-between items-start mb-3">
@@ -33,7 +37,10 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
             variant="outline" 
             size="sm"
             className="p-1 h-7 text-blue-500 border-blue-500 hover:bg-blue-500/10 hover:text-blue-400 flex items-center gap-1"
-            onClick={onUse}
+            onClick={(e) => {
+              e.stopPropagation();
+              onUse();
+            }}
           >
             <Ticket className="h-4 w-4" />
             <span>Use</span>
@@ -47,7 +54,10 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
           variant="default"
           size="sm"
           className="bg-nav-active text-white hover:bg-nav-active/90 h-7"
-          onClick={() => onBuy(cost)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onBuy();
+          }}
         >
           Buy
         </Button>
