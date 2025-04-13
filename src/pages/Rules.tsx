@@ -14,8 +14,6 @@ import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
-import { RuleCarouselProvider, useRuleCarousel } from '@/components/carousel/RuleCarouselContext';
-import RuleBackground from '../components/rule/RuleBackground';
 
 interface Rule {
   id: string;
@@ -23,7 +21,6 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
-  background_images?: (string | null)[];
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -42,85 +39,13 @@ interface Rule {
   user_id?: string;
 }
 
-const RulesContent = () => {
+const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const queryClient = useQueryClient();
-  const { timer, setTimer, resyncFlag } = useRuleCarousel();
-
-  const [ruleCardsState, setRuleCardsState] = useState<{
-    [key: string]: {
-      visibleImage: string | null;
-      transitionImage: string | null;
-      isTransitioning: boolean;
-    }
-  }>({});
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setGlobalCarouselIndex(prev => prev + 1);
-    }, timer * 1000);
-    
-    return () => clearInterval(intervalId);
-  }, [timer, resyncFlag]);
-
-  useEffect(() => {
-    const newState = { ...ruleCardsState };
-    
-    rules.forEach(rule => {
-      const validImages = (rule.background_images || [])
-        .filter(img => img !== null) as string[];
-      
-      if (validImages.length === 0 && rule.background_image_url) {
-        validImages.push(rule.background_image_url);
-      }
-
-      if (!validImages.length) {
-        newState[rule.id] = {
-          visibleImage: null,
-          transitionImage: null,
-          isTransitioning: false
-        };
-        return;
-      }
-
-      const currentState = newState[rule.id] || {
-        visibleImage: validImages[0],
-        transitionImage: null,
-        isTransitioning: false
-      };
-
-      const nextIndex = globalCarouselIndex % validImages.length;
-      const nextImage = validImages[nextIndex];
-
-      if (nextImage === currentState.visibleImage) {
-        return;
-      }
-
-      newState[rule.id] = {
-        visibleImage: currentState.visibleImage,
-        transitionImage: nextImage,
-        isTransitioning: true
-      };
-
-      setTimeout(() => {
-        setRuleCardsState(prev => ({
-          ...prev,
-          [rule.id]: {
-            visibleImage: nextImage,
-            transitionImage: null,
-            isTransitioning: false
-          }
-        }));
-      }, 2000);
-    });
-    
-    setRuleCardsState(newState);
-  }, [globalCarouselIndex, rules]);
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -135,21 +60,10 @@ const RulesContent = () => {
         }
         
         const rulesWithUsageData = (data as Rule[] || []).map(rule => {
-          const validUsageData = 
-            rule.usage_data && Array.isArray(rule.usage_data) && rule.usage_data.length === 7
-              ? rule.usage_data
-              : [0, 0, 0, 0, 0, 0, 0];
-              
-          let backgroundImages = rule.background_images || [];
-          if (!backgroundImages.length && rule.background_image_url) {
-            backgroundImages = [rule.background_image_url, null, null, null, null];
+          if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
+            return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
           }
-          
-          return { 
-            ...rule, 
-            usage_data: validUsageData,
-            background_images: backgroundImages
-          };
+          return rule;
         });
         
         setRules(rulesWithUsageData);
@@ -260,7 +174,6 @@ const RulesContent = () => {
             description: ruleData.description,
             priority: ruleData.priority,
             background_image_url: ruleData.background_image_url,
-            background_images: ruleData.background_images,
             background_opacity: ruleData.background_opacity,
             icon_url: ruleData.icon_url,
             icon_name: ruleData.icon_name,
@@ -313,7 +226,6 @@ const RulesContent = () => {
           frequency: ruleWithoutId.frequency || 'daily',
           frequency_count: ruleWithoutId.frequency_count || 3,
           usage_data: [0, 0, 0, 0, 0, 0, 0],
-          background_images: ruleWithoutId.background_images || [],
           ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
           ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
           ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
@@ -380,124 +292,111 @@ const RulesContent = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <RulesHeader />
-      
-      {isLoading ? (
-        <div className="flex justify-center items-center py-10">
-          <Loader2 className="w-10 h-10 text-white animate-spin" />
-        </div>
-      ) : rules.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-white mb-4">No rules found. Create your first rule!</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {rules.map((rule) => {
-            const cardState = ruleCardsState[rule.id] || {
-              visibleImage: null,
-              transitionImage: null,
-              isTransitioning: false
-            };
-
-            return (
-              <Card 
-                key={rule.id}
-                className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
-              >
-                <div className="relative p-4">
-                  <RuleBackground
-                    visibleImage={cardState.visibleImage}
-                    transitionImage={cardState.transitionImage}
-                    isTransitioning={cardState.isTransitioning}
-                    focalPointX={rule.focal_point_x}
-                    focalPointY={rule.focal_point_y}
-                    backgroundOpacity={rule.background_opacity}
-                  />
-                  
-                  <div className="flex justify-between items-center mb-3 relative z-10">
-                    <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
-                      onClick={() => handleRuleBroken(rule)}
-                    >
-                      Rule Broken
-                    </Button>
-                  </div>
-                  
-                  <div className="mb-4 relative z-10">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-                        <Check className="w-6 h-6 text-white" />
-                      </div>
-                      <div className="flex-1 flex flex-col">
-                        <div className="text-xl font-semibold">
-                          <HighlightedText
-                            text={rule.title}
-                            highlight={rule.highlight_effect}
-                            color={rule.title_color}
-                          />
+    <AppLayout onAddNewItem={handleAddRule}>
+      <RewardsProvider>
+        <div className="container mx-auto px-4 py-6">
+          <RulesHeader />
+          
+          {isLoading ? (
+            <div className="flex justify-center items-center py-10">
+              <Loader2 className="w-10 h-10 text-white animate-spin" />
+            </div>
+          ) : rules.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-white mb-4">No rules found. Create your first rule!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {rules.map((rule) => (
+                <Card 
+                  key={rule.id}
+                  className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
+                >
+                  <div className="relative p-4">
+                    {rule.background_image_url && (
+                      <div 
+                        className="absolute inset-0 z-0" 
+                        style={{
+                          backgroundImage: `url(${rule.background_image_url})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
+                          opacity: (rule.background_opacity || 100) / 100
+                        }}
+                      />
+                    )}
+                    
+                    <div className="flex justify-between items-center mb-3 relative z-10">
+                      <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
+                        onClick={() => handleRuleBroken(rule)}
+                      >
+                        Rule Broken
+                      </Button>
+                    </div>
+                    
+                    <div className="mb-4 relative z-10">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
+                          <Check className="w-6 h-6 text-white" />
                         </div>
-                        
-                        {rule.description && (
-                          <div className="text-sm mt-1">
+                        <div className="flex-1 flex flex-col">
+                          <div className="text-xl font-semibold">
                             <HighlightedText
-                              text={rule.description}
+                              text={rule.title}
                               highlight={rule.highlight_effect}
-                              color={rule.subtext_color}
+                              color={rule.title_color}
                             />
                           </div>
-                        )}
+                          
+                          {rule.description && (
+                            <div className="text-sm mt-1">
+                              <HighlightedText
+                                text={rule.description}
+                                highlight={rule.highlight_effect}
+                                color={rule.subtext_color}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-2 relative z-10">
-                    <FrequencyTracker 
-                      frequency={rule.frequency}
-                      frequency_count={rule.frequency_count}
-                      calendar_color={rule.calendar_color}
-                      usage_data={rule.usage_data}
-                    />
                     
-                    <Button 
-                      size="sm" 
-                      className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
-                      onClick={() => handleEditRule(rule)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center justify-between mt-2 relative z-10">
+                      <FrequencyTracker 
+                        frequency={rule.frequency}
+                        frequency_count={rule.frequency_count}
+                        calendar_color={rule.calendar_color}
+                        usage_data={rule.usage_data}
+                      />
+                      
+                      <Button 
+                        size="sm" 
+                        className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
+                        onClick={() => handleEditRule(rule)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            );
-          })}
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
-      )}
-      
-      <RuleEditor
-        isOpen={isEditorOpen}
-        onClose={() => {
-          setIsEditorOpen(false);
-          setCurrentRule(null);
-        }}
-        ruleData={currentRule || undefined}
-        onSave={handleSaveRule}
-        onDelete={handleDeleteRule}
-      />
-    </div>
-  );
-};
-
-const Rules: React.FC = () => {
-  return (
-    <AppLayout onAddNewItem={() => {}}>
-      <RewardsProvider>
-        <RuleCarouselProvider>
-          <RulesContent />
-        </RuleCarouselProvider>
+        
+        <RuleEditor
+          isOpen={isEditorOpen}
+          onClose={() => {
+            setIsEditorOpen(false);
+            setCurrentRule(null);
+          }}
+          ruleData={currentRule || undefined}
+          onSave={handleSaveRule}
+          onDelete={handleDeleteRule}
+        />
       </RewardsProvider>
     </AppLayout>
   );
