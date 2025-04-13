@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Check, Plus, Loader2 } from 'lucide-react';
 import FrequencyTracker from '../components/task/FrequencyTracker';
 import PriorityBadge from '../components/task/PriorityBadge';
-import { useNavigate } from 'react-router-dom';
 import RuleEditor from '../components/RuleEditor';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
@@ -53,13 +53,31 @@ const Rules: React.FC = () => {
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
 
+  // Batch size for fetching rules to avoid timeouts
+  const batchSize = 12;
+
+  useEffect(() => {
+    const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
+    setCarouselTimer(savedTimer);
+    
+    const carouselIntervalId = setInterval(() => {
+      setGlobalCarouselIndex(prev => prev + 1);
+    }, savedTimer * 1000);
+    
+    return () => {
+      clearInterval(carouselIntervalId);
+    };
+  }, []);
+
   useEffect(() => {
     const fetchRules = async () => {
       try {
+        setIsLoading(true);
         const { data, error } = await supabase
           .from('rules')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .range(0, batchSize - 1); // Batching applied here
         
         if (error) {
           throw error;
@@ -92,22 +110,6 @@ const Rules: React.FC = () => {
     };
     
     fetchRules();
-    
-    const intervalId = setInterval(() => {
-      fetchRules();
-    }, 30000); // Refresh every 30 seconds
-    
-    const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
-    setCarouselTimer(savedTimer);
-    
-    const carouselIntervalId = setInterval(() => {
-      setGlobalCarouselIndex(prev => prev + 1);
-    }, savedTimer * 1000);
-    
-    return () => {
-      clearInterval(intervalId);
-      clearInterval(carouselIntervalId);
-    };
   }, []);
 
   const handleAddRule = () => {
