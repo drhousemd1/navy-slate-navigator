@@ -150,7 +150,11 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
                 alt={`Background ${index + 1}`} 
                 className="w-full h-full object-cover"
               />
-            ) : null}
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <Image className="w-8 h-8 text-gray-600" />
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -208,7 +212,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
               {onFocalPointChange && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="absolute bg-black bg-opacity-50 text-white px-4 py-2 rounded-full">
-                    Click and drag to adjust focal point
+                    Click to adjust focal point
                   </div>
                   
                   <div 
