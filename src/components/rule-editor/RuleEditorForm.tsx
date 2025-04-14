@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -136,43 +135,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     );
   }, [ruleData]);
 
-  // This is now exactly like TaskEditorForm.tsx's handleImageUpload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setImagePreview(base64String);
-        form.setValue('background_image_url', base64String);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  
-  const handleCarouselTimerChange = (newTimer: number) => {
-    setCarouselTimer(newTimer);
-    form.setValue('carousel_timer', newTimer);
-  };
-
-  const handleSelectImageSlot = (index: number) => {
-    setSelectedBoxIndex(index);
-    const imageUrl = imageSlots[index];
-    setImagePreview(imageUrl);
-    form.setValue('background_image_url', imageUrl || '');
-  };
-
-  const handleRemoveCurrentImage = () => {
-    if (selectedBoxIndex !== null) {
-      const updatedSlots = [...imageSlots];
-      updatedSlots[selectedBoxIndex] = null;
-      setImageSlots(updatedSlots);
-      setImagePreview(null);
-      form.setValue('background_image_url', '');
-      form.setValue('background_images', updatedSlots);
-    }
-  };
-
   const handleMultiImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -197,11 +159,35 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       updatedSlots[targetIndex!] = base64String;
       setImageSlots(updatedSlots);
       setImagePreview(base64String);
+      
+      // Update both form values
       form.setValue('background_image_url', base64String);
-      form.setValue('background_images', updatedSlots);
+      form.setValue('background_images', updatedSlots.filter(Boolean)); // Filter out null values
       form.setValue('background_opacity', 100);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleSelectImageSlot = (index: number) => {
+    setSelectedBoxIndex(index);
+    const imageUrl = imageSlots[index];
+    setImagePreview(imageUrl);
+    
+    // Important: Update background_image_url when changing selected slot
+    form.setValue('background_image_url', imageUrl || '');
+  };
+
+  const handleRemoveCurrentImage = () => {
+    if (selectedBoxIndex !== null) {
+      const updatedSlots = [...imageSlots];
+      updatedSlots[selectedBoxIndex] = null;
+      setImageSlots(updatedSlots);
+      setImagePreview(null);
+      
+      // Update both form values
+      form.setValue('background_image_url', '');
+      form.setValue('background_images', updatedSlots.filter(Boolean));
+    }
   };
 
   const handleIconUpload = () => {
@@ -256,7 +242,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setLoading(true);
     
     try {
-      // Filter valid image slots
+      // Filter valid image slots - ensure we only pass non-null values
       const validImageSlots = imageSlots
         .filter(slot => typeof slot === 'string' && slot.trim() !== '')
         .map(slot => {
@@ -280,7 +266,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         highlight_effect: values.highlight_effect || false,
         focal_point_x: position.x,
         focal_point_y: position.y,
-        background_images: validImageSlots.length > 0 ? validImageSlots : imagePreview ? [imagePreview] : [],
+        background_images: validImageSlots.length > 0 ? validImageSlots : [],
         carousel_timer: carouselTimer
       };
       
