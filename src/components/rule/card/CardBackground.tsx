@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 
 interface CardBackgroundProps {
   visibleImage: string | null;
@@ -18,7 +18,25 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   focalPointY = 0.5,
   backgroundOpacity = 100
 }) => {
-  if (!visibleImage && !transitionImage) return null;
+  // Debug logging
+  useEffect(() => {
+    console.log("CardBackground props:", {
+      visibleImage: visibleImage ? "Image URL exists" : "No image",
+      transitionImage: transitionImage ? "Transition image exists" : "No transition image",
+      isTransitioning,
+      focalPointX,
+      focalPointY,
+      backgroundOpacity
+    });
+  }, [visibleImage, transitionImage, isTransitioning, focalPointX, focalPointY, backgroundOpacity]);
+
+  if (!visibleImage && !transitionImage) {
+    console.log("No images to display in CardBackground");
+    return null;
+  }
+  
+  // Ensure we have valid opacity value
+  const safeOpacity = Math.max(0, Math.min(100, backgroundOpacity)) / 100;
   
   return (
     <>
@@ -26,13 +44,15 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
         <img
           src={visibleImage}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
+          className="absolute inset-0 w-full h-full object-cover z-0"
           style={{ 
             transition: 'opacity 2s ease-in-out',
             objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
-            opacity: backgroundOpacity / 100
+            opacity: safeOpacity
           }}
           draggable={false}
+          onLoad={() => console.log("Visible image loaded successfully")}
+          onError={() => console.error("Error loading visible image")}
         />
       )}
 
@@ -44,15 +64,17 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
           style={{ 
             transition: 'opacity 2s ease-in-out',
             objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
-            opacity: isTransitioning ? backgroundOpacity / 100 : 0
+            opacity: isTransitioning ? safeOpacity : 0
           }}
           draggable={false}
+          onLoad={() => console.log("Transition image loaded successfully")}
+          onError={() => console.error("Error loading transition image")}
         />
       )}
 
       <div
         className="absolute inset-0 bg-black z-5"
-        style={{ opacity: (100 - backgroundOpacity) / 100 }}
+        style={{ opacity: 1 - safeOpacity }}
       />
     </>
   );

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -54,15 +55,25 @@ const Rules: React.FC = () => {
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
 
+  // Debug the carousel timer
   useEffect(() => {
     const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
+    console.log("Initializing carousel timer from localStorage:", savedTimer);
     setCarouselTimer(savedTimer);
     
     const intervalId = setInterval(() => {
-      setGlobalCarouselIndex(prev => prev + 1);
+      setGlobalCarouselIndex(prev => {
+        console.log("Incrementing carousel index from", prev, "to", prev + 1);
+        return prev + 1;
+      });
     }, savedTimer * 1000);
     
-    return () => clearInterval(intervalId);
+    console.log("Carousel timer set to", savedTimer, "seconds");
+    
+    return () => {
+      console.log("Clearing carousel interval");
+      clearInterval(intervalId);
+    };
   }, [carouselTimer]);
 
   useEffect(() => {
@@ -337,7 +348,13 @@ const Rules: React.FC = () => {
   };
 
   const RuleCard: React.FC<{ rule: Rule }> = ({ rule }) => {
-    const filteredImages = (rule.background_images || []).filter(img => !!img);
+    console.log("Rendering RuleCard for rule:", rule.title);
+    console.log("Background images:", rule.background_images);
+    
+    // Make sure we only work with valid image URLs
+    const filteredImages = (rule.background_images || []).filter(img => !!img && img.trim() !== '');
+    
+    console.log("Filtered images:", filteredImages);
     
     const {
       visibleImage,
@@ -346,6 +363,12 @@ const Rules: React.FC = () => {
     } = useImageCarousel({
       images: filteredImages,
       globalCarouselIndex
+    });
+
+    console.log("Image carousel state:", {
+      visibleImage: visibleImage ? "Has value" : "null",
+      transitionImage: transitionImage ? "Has value" : "null",
+      isTransitioning
     });
 
     return (
