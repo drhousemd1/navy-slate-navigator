@@ -82,13 +82,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [localCarouselTimer, setLocalCarouselTimer] = useState(ruleData?.carousel_timer || carouselTimer);
-  const [backgroundImages, setBackgroundImages] = useState<(string | null)[]>(
-    Array.isArray(ruleData?.background_images) 
-      ? ruleData.background_images.map(img => img || null) 
-      : Array(5).fill(null)
-  );
+  const [backgroundImages, setBackgroundImages] = useState<string[]>(ruleData?.background_images || []);
   const [focalPointX, setFocalPointX] = useState(ruleData?.focal_point_x || 0.5);
   const [focalPointY, setFocalPointY] = useState(ruleData?.focal_point_y || 0.5);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   
   const form = useForm<RuleFormValues>({
     defaultValues: {
@@ -120,6 +117,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setLocalCarouselTimer(ruleData?.carousel_timer || carouselTimer);
     setFocalPointX(ruleData?.focal_point_x || 0.5);
     setFocalPointY(ruleData?.focal_point_y || 0.5);
+    setSelectedImageIndex(0);
   }, [ruleData, carouselTimer]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,10 +190,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   };
 
-  const handleBackgroundImagesChange = (images: (string | null)[]) => {
+  const handleBackgroundImagesChange = (images: string[]) => {
     console.log("Background images updated:", images);
     setBackgroundImages(images);
-    form.setValue('background_images', images.filter(Boolean) as string[]);
+    form.setValue('background_images', images);
   };
 
   const handleCarouselTimerChange = (seconds: number) => {
@@ -290,13 +288,17 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         </div>
         
         <ImageSelectionSection
-          backgroundImages={backgroundImages}
-          onImagesChange={handleBackgroundImagesChange}
-          carouselTimer={localCarouselTimer}
-          onCarouselTimerChange={handleCarouselTimerChange}
+          images={backgroundImages}
+          selectedImageIndex={selectedImageIndex}
+          setSelectedImageIndex={setSelectedImageIndex}
+          setImagePreview={setImagePreview}
+          handleImageUpload={handleImageUpload}
+          handleRemoveImage={handleRemoveImage}
           focalPointX={focalPointX}
           focalPointY={focalPointY}
           onFocalPointChange={handleFocalPointChange}
+          carouselTimer={localCarouselTimer}
+          setCarouselTimer={handleCarouselTimerChange}
         />
         
         <div className="space-y-4">
