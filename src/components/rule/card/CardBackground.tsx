@@ -20,14 +20,19 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
 }) => {
   // Debug logging
   useEffect(() => {
-    console.log("CardBackground props:", {
-      visibleImage: visibleImage ? "Image URL exists" : "No image",
-      transitionImage: transitionImage ? "Transition image exists" : "No transition image",
+    console.log("CardBackground rendering with props:", {
+      hasVisibleImage: Boolean(visibleImage),
+      hasTransitionImage: Boolean(transitionImage),
       isTransitioning,
       focalPointX,
       focalPointY,
       backgroundOpacity
     });
+    
+    if (visibleImage) {
+      console.log("Visible image preview:", typeof visibleImage === 'string' ? 
+        (visibleImage.substring(0, 100) + '...') : 'Not a string');
+    }
   }, [visibleImage, transitionImage, isTransitioning, focalPointX, focalPointY, backgroundOpacity]);
 
   if (!visibleImage && !transitionImage) {
@@ -52,7 +57,10 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
           }}
           draggable={false}
           onLoad={() => console.log("Visible image loaded successfully")}
-          onError={() => console.error("Error loading visible image")}
+          onError={(e) => {
+            console.error("Error loading visible image:", e);
+            console.error("Failed image URL:", visibleImage);
+          }}
         />
       )}
 
@@ -68,7 +76,10 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
           }}
           draggable={false}
           onLoad={() => console.log("Transition image loaded successfully")}
-          onError={() => console.error("Error loading transition image")}
+          onError={(e) => {
+            console.error("Error loading transition image:", e);
+            console.error("Failed image URL:", transitionImage);
+          }}
         />
       )}
 
