@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash, Image } from 'lucide-react';
@@ -26,7 +26,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   onFocalPointChange
 }) => {
   // Ensure we have exactly 5 slots for initialization
-  useEffect(() => {
+  React.useEffect(() => {
     // If the passed backgroundImages array doesn't have exactly 5 elements
     if (backgroundImages.length !== 5) {
       const normalizedImages = [...backgroundImages];
@@ -46,7 +46,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
     backgroundImages.length === 5 ? backgroundImages : [...backgroundImages].concat(Array(5 - backgroundImages.length).fill(''))
   );
   
-  useEffect(() => {
+  React.useEffect(() => {
     // Only update parent component when images actually change
     if (JSON.stringify(images) !== JSON.stringify(backgroundImages)) {
       onImagesChange(images);
@@ -141,7 +141,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
         </div>
       </div>
       
-      {/* Add image preview section that changes based on selected thumbnail */}
+      {/* Single image preview section that changes based on selected thumbnail */}
       <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
         {images[selectedImageIndex] ? (
           <div className="space-y-4">
