@@ -35,20 +35,17 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
     setImagePreview(images[index] || null); // Reset preview if empty
   };
 
-  const currentImage = selectedImageIndex !== null ? images[selectedImageIndex] : null;
-
   return (
     <div className="space-y-4">
-      <Label className="text-white text-lg">Background Image</Label>
-      <div className="flex justify-between items-end mb-4">
+      <div className="flex justify-between items-end">
         <div className="flex gap-2">
           {images.map((img, index) => (
             <div
               key={index}
-              onClick={() => handleSelectThumbnail(index)}
-              className={`w-16 h-16 border-2 rounded-md cursor-pointer overflow-hidden flex items-center justify-center ${
+              className={`w-16 h-16 border-2 rounded cursor-pointer overflow-hidden flex items-center justify-center ${
                 selectedImageIndex === index ? "border-cyan-300" : "border-gray-700"
               }`}
+              onClick={() => handleSelectThumbnail(index)}
             >
               {img ? (
                 <img
@@ -61,29 +58,26 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
           ))}
         </div>
 
-        <div className="flex flex-col items-start space-y-1">
-          <span className="text-sm text-white font-medium leading-tight">Carousel Timer</span>
-          <span className="text-xs text-slate-400">(Settings will be applied to all cards)</span>
-          <div className="flex items-center space-x-2">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setCarouselTimer(Math.max(1, carouselTimer - 1))}
-              className="px-3 py-1 bg-dark-navy text-white hover:bg-light-navy border border-light-navy"
-            >
-              –
-            </Button>
-            <div className="w-10 text-center text-white">{carouselTimer}</div>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setCarouselTimer(carouselTimer + 1)}
-              className="px-3 py-1 bg-dark-navy text-white hover:bg-light-navy border border-light-navy"
-            >
-              +
-            </Button>
-            <span className="text-sm text-slate-400">(s)</span>
-          </div>
+        {/* Carousel Timer UI */}
+        <div className="flex items-center gap-2">
+          <Label className="text-sm text-white">Carousel Timer</Label>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setCarouselTimer(carouselTimer - 1)}
+            className="bg-dark-navy text-white hover:bg-light-navy px-2 py-1 rounded"
+          >
+            -
+          </Button>
+          <span className="text-white text-sm">{carouselTimer}s</span>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setCarouselTimer(carouselTimer + 1)}
+            className="bg-dark-navy text-white hover:bg-light-navy px-2 py-1 rounded"
+          >
+            +
+          </Button>
         </div>
       </div>
     </div>
