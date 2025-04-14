@@ -337,14 +337,14 @@ const Rules: React.FC = () => {
   };
 
   const RuleCard: React.FC<{ rule: Rule }> = ({ rule }) => {
-    const backgroundImages = rule.background_images || [];
+    const filteredImages = (rule.background_images || []).filter(img => !!img);
     
     const {
       visibleImage,
       transitionImage,
       isTransitioning
     } = useImageCarousel({
-      images: backgroundImages,
+      images: filteredImages,
       globalCarouselIndex
     });
 

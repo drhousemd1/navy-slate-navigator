@@ -40,9 +40,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
         <img
           src={transitionImage}
           alt=""
-          className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
-            isTransitioning ? 'opacity-100' : 'opacity-0'
-          }`}
+          className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
           style={{ 
             transition: 'opacity 2s ease-in-out',
             objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
