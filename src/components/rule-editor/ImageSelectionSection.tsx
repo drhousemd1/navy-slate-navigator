@@ -14,6 +14,7 @@ interface ImageSelectionSectionProps {
   focalPointX?: number;
   focalPointY?: number;
   onFocalPointChange?: (x: number, y: number) => void;
+  setGlobalCarouselIndex: (index: number) => void;
 }
 
 const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
@@ -23,7 +24,8 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   onCarouselTimerChange,
   focalPointX = 0.5,
   focalPointY = 0.5,
-  onFocalPointChange
+  onFocalPointChange,
+  setGlobalCarouselIndex
 }) => {
   // Ensure we have exactly 5 slots for initialization
   useEffect(() => {
@@ -88,7 +90,10 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
             {images.map((image, index) => (
               <div
                 key={index}
-                onClick={() => selectImage(index)}
+                onClick={() => {
+                  selectImage(index);
+                  setGlobalCarouselIndex(index);
+                }}
                 className={`
                   w-16 h-16 border-2 rounded-md overflow-hidden cursor-pointer
                   ${selectedImageIndex === index 

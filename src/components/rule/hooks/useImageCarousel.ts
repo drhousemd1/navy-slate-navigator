@@ -16,13 +16,17 @@ export const useImageCarousel = ({
   images, 
   globalCarouselIndex 
 }: UseImageCarouselProps): UseImageCarouselResult => {
-  const filteredImages = images.filter(img => !!img);
+  const filteredImages = Array.isArray(images) 
+    ? images.filter(img => !!img) 
+    : [];
+    
   const [visibleImage, setVisibleImage] = useState<string | null>(
     filteredImages.length > 0 ? filteredImages[0] : null
   );
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
+  const [previousIndex, setPreviousIndex] = useState(globalCarouselIndex);
 
   // Initialize or update visible image when images array changes
   useEffect(() => {
@@ -34,7 +38,11 @@ export const useImageCarousel = ({
       
       if (imagesChanged) {
         setPreviousImages(filteredImages);
-        setVisibleImage(filteredImages[0]);
+        
+        // Set the initial visible image based on the globalCarouselIndex
+        const initialIndex = Math.min(globalCarouselIndex, filteredImages.length - 1);
+        setVisibleImage(filteredImages[initialIndex >= 0 ? initialIndex : 0]);
+        
         setTransitionImage(null);
         setIsTransitioning(false);
       }
@@ -45,14 +53,21 @@ export const useImageCarousel = ({
       setTransitionImage(null);
       setIsTransitioning(false);
     }
-  }, [filteredImages]);
+  }, [filteredImages, globalCarouselIndex]);
 
   // Handle image transitions based on the globalCarouselIndex
   useEffect(() => {
-    if (!filteredImages.length || filteredImages.length <= 1) return;
+    if (!filteredImages.length) return;
     
-    const nextIndex = globalCarouselIndex % filteredImages.length;
+    // Only proceed if the index has changed
+    if (globalCarouselIndex === previousIndex) return;
+    setPreviousIndex(globalCarouselIndex);
+    
+    const nextIndex = Math.min(globalCarouselIndex, filteredImages.length - 1);
+    if (nextIndex < 0 || nextIndex >= filteredImages.length) return;
+    
     const next = filteredImages[nextIndex];
+    if (!next) return;
     
     if (next === visibleImage) return;
     
@@ -82,7 +97,7 @@ export const useImageCarousel = ({
       console.error("Failed to load image:", next);
       setVisibleImage(next);
     };
-  }, [globalCarouselIndex, filteredImages, visibleImage]);
+  }, [globalCarouselIndex, filteredImages, visibleImage, previousIndex]);
 
   return {
     visibleImage,

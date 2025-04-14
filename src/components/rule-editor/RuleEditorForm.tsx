@@ -85,6 +85,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [backgroundImages, setBackgroundImages] = useState<string[]>(ruleData?.background_images || []);
   const [focalPointX, setFocalPointX] = useState(ruleData?.focal_point_x || 0.5);
   const [focalPointY, setFocalPointY] = useState(ruleData?.focal_point_y || 0.5);
+  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   
   const form = useForm<RuleFormValues>({
     defaultValues: {
@@ -284,6 +285,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           focalPointX={focalPointX}
           focalPointY={focalPointY}
           onFocalPointChange={handleFocalPointChange}
+          setGlobalCarouselIndex={setGlobalCarouselIndex}
         />
         
         <div className="space-y-4">
