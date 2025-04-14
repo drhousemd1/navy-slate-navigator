@@ -140,81 +140,8 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Image Preview with Focal Point */}
-      <div className="bg-gray-800 rounded-md p-4">
-        <div className="flex justify-between items-center mb-2">
-          <Label className="text-white">Image Preview</Label>
-          <div className="flex gap-2">
-            <input 
-              type="file" 
-              id="image-upload" 
-              accept="image/*" 
-              className="hidden" 
-              onChange={handleImageUpload}
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => document.getElementById('image-upload')?.click()}
-              className="bg-dark-navy text-white hover:bg-gray-700"
-            >
-              <Plus className="mr-1 w-4 h-4" /> Upload
-            </Button>
-            
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleRemoveImage}
-              disabled={!images[selectedImageIndex]}
-              className="bg-dark-navy text-white hover:bg-gray-700"
-            >
-              <Trash className="mr-1 w-4 h-4" /> Remove
-            </Button>
-          </div>
-        </div>
-        
-        <div 
-          className="w-full h-48 border border-gray-600 rounded-md relative overflow-hidden"
-          onClick={handleFocalPointChange}
-        >
-          {images[selectedImageIndex] ? (
-            <>
-              <img 
-                src={images[selectedImageIndex]} 
-                alt="Selected background" 
-                className="w-full h-full object-cover" 
-                style={{
-                  objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`
-                }}
-              />
-              
-              {onFocalPointChange && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="absolute bg-black bg-opacity-50 text-white px-4 py-2 rounded-full">
-                    Click to adjust focal point
-                  </div>
-                  
-                  <div 
-                    className="absolute w-8 h-8 rounded-full bg-white border-4 border-blue-500"
-                    style={{
-                      left: `calc(${focalPointX * 100}% - 16px)`,
-                      top: `calc(${focalPointY * 100}% - 16px)`
-                    }}
-                  />
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-gray-400 flex flex-col items-center justify-center h-full">
-              <Image className="w-12 h-12 mb-2" />
-              <span>No image selected</span>
-            </div>
-          )}
-        </div>
-      </div>
+      
+      {/* The image preview with focal point block has been removed as requested */}
     </div>
   );
 };
