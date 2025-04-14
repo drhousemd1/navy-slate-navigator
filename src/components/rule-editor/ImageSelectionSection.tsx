@@ -32,15 +32,6 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   control,
   imagePreview
 }) => {
-  const currentImage = selectedBoxIndex !== null ? imageSlots[selectedBoxIndex] : null;
-  
-  console.log("ImageSelectionSection rendering with:", {
-    selectedBoxIndex,
-    hasCurrentImage: Boolean(currentImage),
-    imageSlotCount: imageSlots.length,
-    nonEmptySlots: imageSlots.filter(Boolean).length
-  });
-
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Image</FormLabel>
@@ -107,7 +98,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
 
       <BackgroundImageSelector
         control={control}
-        imagePreview={currentImage}
+        imagePreview={imagePreview}
         initialPosition={position}
         onRemoveImage={onRemoveImage}
         onImageUpload={onImageUpload}

@@ -125,8 +125,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           newImageSlots[index] = img;
         }
       });
+      setSelectedBoxIndex(0);
     } else if (ruleData?.background_image_url) {
       newImageSlots[0] = ruleData.background_image_url;
+      setSelectedBoxIndex(0);
     }
     
     setImageSlots(newImageSlots);
