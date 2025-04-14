@@ -108,30 +108,32 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   });
 
   useEffect(() => {
-    setImagePreview(ruleData?.background_image_url || null);
     setIconPreview(ruleData?.icon_url || null);
     setSelectedIconName(ruleData?.icon_name || null);
-    setPosition({ 
-      x: ruleData?.focal_point_x || 50, 
-      y: ruleData?.focal_point_y || 50 
-    });
-    
-    // Initialize image slots
+    setPosition({ x: ruleData?.focal_point_x || 50, y: ruleData?.focal_point_y || 50 });
+
     const newImageSlots = [null, null, null, null, null];
-    
-    if (ruleData?.background_images && Array.isArray(ruleData.background_images) && ruleData.background_images.length > 0) {
+
+    if (ruleData?.background_images && ruleData.background_images.length > 0) {
       ruleData.background_images.forEach((img, index) => {
         if (index < newImageSlots.length && img) {
           newImageSlots[index] = img;
         }
       });
-      setSelectedBoxIndex(0);
     } else if (ruleData?.background_image_url) {
       newImageSlots[0] = ruleData.background_image_url;
-      setSelectedBoxIndex(0);
     }
-    
+
     setImageSlots(newImageSlots);
+
+    if (selectedBoxIndex === null) {
+      const firstImageIndex = newImageSlots.findIndex(img => img !== null);
+      setSelectedBoxIndex(firstImageIndex !== -1 ? firstImageIndex : null);
+    }
+
+    setImagePreview(
+      selectedBoxIndex !== null ? newImageSlots[selectedBoxIndex] : null
+    );
   }, [ruleData]);
 
   // This is now exactly like TaskEditorForm.tsx's handleImageUpload
