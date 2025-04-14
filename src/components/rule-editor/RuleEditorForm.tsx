@@ -1,5 +1,4 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,7 @@ import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
+import ImageSelectionSection from '../rule-editor/ImageSelectionSection';
 
 interface Rule {
   id?: string;
@@ -21,6 +21,7 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
+  background_images: string[];
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -34,12 +35,14 @@ interface Rule {
   frequency: 'daily' | 'weekly';
   frequency_count: number;
   usage_data?: number[];
+  carousel_timer: number;
 }
 
 interface RuleFormValues {
   title: string;
   description: string;
   background_image_url?: string;
+  background_images?: string[];
   background_opacity: number;
   icon_url?: string;
   icon_name?: string;
@@ -53,6 +56,7 @@ interface RuleFormValues {
   priority: 'low' | 'medium' | 'high';
   frequency: 'daily' | 'weekly';
   frequency_count: number;
+  carousel_timer?: number;
 }
 
 interface RuleEditorFormProps {
@@ -60,37 +64,47 @@ interface RuleEditorFormProps {
   onSave: (ruleData: any) => void;
   onDelete?: (ruleId: string) => void;
   onCancel: () => void;
+  carouselTimer?: number;
+  onCarouselTimerChange?: (value: number) => void;
 }
 
 const RuleEditorForm: React.FC<RuleEditorFormProps> = ({ 
   ruleData,
   onSave,
   onDelete,
-  onCancel
+  onCancel,
+  carouselTimer = 5,
+  onCarouselTimerChange
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [localCarouselTimer, setLocalCarouselTimer] = useState(ruleData?.carousel_timer || carouselTimer);
+  const [backgroundImages, setBackgroundImages] = useState<string[]>(ruleData?.background_images || []);
+  const [focalPointX, setFocalPointX] = useState(ruleData?.focal_point_x || 0.5);
+  const [focalPointY, setFocalPointY] = useState(ruleData?.focal_point_y || 0.5);
   
   const form = useForm<RuleFormValues>({
     defaultValues: {
       title: ruleData?.title || '',
       description: ruleData?.description || '',
       background_image_url: ruleData?.background_image_url,
+      background_images: ruleData?.background_images || [],
       background_opacity: ruleData?.background_opacity || 100,
       title_color: ruleData?.title_color || '#FFFFFF',
       subtext_color: ruleData?.subtext_color || '#FFFFFF',
       calendar_color: ruleData?.calendar_color || '#9c7abb',
       icon_color: ruleData?.icon_color || '#FFFFFF',
       highlight_effect: ruleData?.highlight_effect || false,
-      focal_point_x: ruleData?.focal_point_x || 50,
-      focal_point_y: ruleData?.focal_point_y || 50,
+      focal_point_x: ruleData?.focal_point_x || 0.5,
+      focal_point_y: ruleData?.focal_point_y || 0.5,
       priority: ruleData?.priority || 'medium',
       icon_name: ruleData?.icon_name,
       frequency: ruleData?.frequency || 'daily',
       frequency_count: ruleData?.frequency_count || 3,
+      carousel_timer: ruleData?.carousel_timer || carouselTimer,
     },
   });
 
@@ -98,7 +112,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setImagePreview(ruleData?.background_image_url || null);
     setIconPreview(ruleData?.icon_url || null);
     setSelectedIconName(ruleData?.icon_name || null);
-  }, [ruleData]);
+    setBackgroundImages(ruleData?.background_images || []);
+    setLocalCarouselTimer(ruleData?.carousel_timer || carouselTimer);
+    setFocalPointX(ruleData?.focal_point_x || 0.5);
+    setFocalPointY(ruleData?.focal_point_y || 0.5);
+  }, [ruleData, carouselTimer]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -161,6 +179,27 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   };
 
+  const handleBackgroundImagesChange = (images: string[]) => {
+    console.log("Background images updated:", images);
+    setBackgroundImages(images);
+    form.setValue('background_images', images);
+  };
+
+  const handleCarouselTimerChange = (seconds: number) => {
+    setLocalCarouselTimer(seconds);
+    form.setValue('carousel_timer', seconds);
+    if (onCarouselTimerChange) {
+      onCarouselTimerChange(seconds);
+    }
+  };
+
+  const handleFocalPointChange = (x: number, y: number) => {
+    setFocalPointX(x);
+    setFocalPointY(y);
+    form.setValue('focal_point_x', x);
+    form.setValue('focal_point_y', y);
+  };
+
   const handleSubmit = async (values: RuleFormValues) => {
     setLoading(true);
     
@@ -169,7 +208,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         ...values,
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
-        highlight_effect: values.highlight_effect || false, // Ensure highlight_effect is properly set
+        highlight_effect: values.highlight_effect || false,
+        background_images: backgroundImages,
+        carousel_timer: localCarouselTimer,
+        focal_point_x: focalPointX,
+        focal_point_y: focalPointY,
       };
       
       await onSave(ruleToSave);
@@ -233,8 +276,18 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <PrioritySelector control={form.control} />
         </div>
         
+        <ImageSelectionSection 
+          backgroundImages={backgroundImages}
+          onImagesChange={handleBackgroundImagesChange}
+          carouselTimer={localCarouselTimer}
+          onCarouselTimerChange={handleCarouselTimerChange}
+          focalPointX={focalPointX}
+          focalPointY={focalPointY}
+          onFocalPointChange={handleFocalPointChange}
+        />
+        
         <div className="space-y-4">
-          <FormLabel className="text-white text-lg">Background Image</FormLabel>
+          <FormLabel className="text-white text-lg">Legacy Background Image</FormLabel>
           <BackgroundImageSelector
             control={form.control}
             imagePreview={imagePreview}
