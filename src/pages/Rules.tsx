@@ -18,6 +18,7 @@ interface Rule {
   title: string;
   description: string | null;
   priority: 'low' | 'medium' | 'high';
+  points?: number;
   background_image_url?: string | null;
   background_opacity: number;
   icon_url?: string | null;
@@ -97,7 +98,7 @@ const Rules: React.FC = () => {
 
   const handleAddRule = () => {
     // Create a new empty rule with default values
-    const newRule: RuleCardData = {
+    const newRule: Rule = {
       id: '',
       title: 'New Rule',
       description: '',
@@ -181,9 +182,34 @@ const Rules: React.FC = () => {
     }
   };
 
+  // Convert RuleCardData to Rule type for the update function
   const handleUpdateRule = (updatedRule: RuleCardData) => {
+    // Convert RuleCardData to Rule
+    const ruleToUpdate: Rule = {
+      id: updatedRule.id,
+      title: updatedRule.title,
+      description: updatedRule.description || '',
+      priority: updatedRule.priority || 'medium',
+      points: updatedRule.points,
+      background_image_url: updatedRule.background_image_url,
+      background_opacity: updatedRule.background_opacity,
+      icon_url: updatedRule.icon_url,
+      icon_name: updatedRule.icon_name,
+      title_color: updatedRule.title_color,
+      subtext_color: updatedRule.subtext_color,
+      calendar_color: updatedRule.calendar_color,
+      icon_color: updatedRule.icon_color,
+      highlight_effect: updatedRule.highlight_effect,
+      focal_point_x: updatedRule.focal_point_x,
+      focal_point_y: updatedRule.focal_point_y,
+      frequency: updatedRule.frequency || 'daily',
+      frequency_count: updatedRule.frequency_count || 1,
+      usage_data: updatedRule.usage_data || [0, 0, 0, 0, 0, 0, 0],
+      background_images: updatedRule.background_images
+    };
+    
     setRules(rules.map(rule => 
-      rule.id === updatedRule.id ? {...rule, ...updatedRule} : rule
+      rule.id === ruleToUpdate.id ? ruleToUpdate : rule
     ));
   };
 
@@ -220,7 +246,7 @@ const Rules: React.FC = () => {
                   points={rule.points || 0}
                   globalCarouselIndex={globalCarouselIndex}
                   onUpdate={handleUpdateRule}
-                  card={rule as RuleCardData}
+                  card={rule as unknown as RuleCardData}
                 />
               ))}
             </div>
