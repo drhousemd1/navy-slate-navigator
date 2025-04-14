@@ -1,10 +1,6 @@
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import CustomIconsModal from '../task-editor/CustomIconsModal';
-import RecentIcons from '../task-editor/icons/RecentIcons';
-import IconsDialog from '../task-editor/icons/IconsDialog';
-import { updateRecentIcons } from '../task-editor/icons/recentIconsStorage';
+import React from 'react';
+import { Grid3X3, Clock, Gift, Trophy, Bell, AlertCircle, Smile, Ban, Star, Heart } from 'lucide-react';
 
 interface PredefinedIconsGridProps {
   selectedIconName: string | null;
@@ -12,79 +8,40 @@ interface PredefinedIconsGridProps {
   onSelectIcon: (iconName: string) => void;
 }
 
+const iconConfig = [
+  { name: 'grid-3x3', Component: Grid3X3 },
+  { name: 'clock', Component: Clock },
+  { name: 'gift', Component: Gift },
+  { name: 'trophy', Component: Trophy },
+  { name: 'bell', Component: Bell },
+  { name: 'alert-circle', Component: AlertCircle },
+  { name: 'smile', Component: Smile },
+  { name: 'ban', Component: Ban },
+  { name: 'star', Component: Star },
+  { name: 'heart', Component: Heart },
+];
+
 const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({ 
   selectedIconName, 
   iconColor, 
-  onSelectIcon
+  onSelectIcon 
 }) => {
-  const [isPresetsDialogOpen, setIsPresetsDialogOpen] = useState(false);
-  const [isCustomDialogOpen, setIsCustomDialogOpen] = useState(false);
-
-  const handleIconSelect = (iconName: string) => {
-    onSelectIcon(iconName);
-    
-    // Update recently used icons
-    updateRecentIcons({
-      name: iconName,
-      isCustom: false
-    });
-    
-    setIsPresetsDialogOpen(false);
-  };
-
-  const handleCustomIconSelect = (iconUrl: string) => {
-    // We pass the URL as the "iconName" to IconSelector, but RuleEditorForm will
-    // handle this by setting icon_url and clearing icon_name
-    onSelectIcon(`custom:${iconUrl}`);
-    
-    // Update recently used icons
-    updateRecentIcons({
-      name: 'custom',
-      isCustom: true,
-      url: iconUrl
-    });
-    
-    setIsCustomDialogOpen(false);
-  };
-
   return (
-    <div className="border-2 border-light-navy rounded-lg p-4 flex flex-col h-full">
-      <div className="space-y-3 mb-4">
-        <Button 
-          type="button"
-          className="w-full bg-light-navy hover:bg-navy text-white"
-          onClick={() => setIsPresetsDialogOpen(true)}
+    <div className="grid grid-cols-5 gap-2">
+      {iconConfig.map(({ name, Component }) => (
+        <div
+          key={name}
+          onClick={() => onSelectIcon(name)}
+          className={`
+            p-2 rounded-md cursor-pointer flex items-center justify-center border
+            ${selectedIconName === name 
+              ? 'border-[#FEF7CD] bg-navy shadow-[0_0_8px_2px_rgba(254,247,205,0.2)]'
+              : 'border-light-navy bg-dark-navy hover:border-white'}
+          `}
         >
-          Browse Presets
-        </Button>
-        
-        <Button 
-          type="button"
-          className="w-full bg-light-navy hover:bg-navy text-white"
-          onClick={() => setIsCustomDialogOpen(true)}
-        >
-          Browse Custom
-        </Button>
-      </div>
-      
-      <RecentIcons onSelectIcon={onSelectIcon} />
-
-      {/* Presets Dialog */}
-      <IconsDialog 
-        isOpen={isPresetsDialogOpen}
-        onClose={() => setIsPresetsDialogOpen(false)}
-        selectedIconName={selectedIconName}
-        iconColor={iconColor}
-        onSelectIcon={handleIconSelect}
-      />
-
-      {/* Custom Icons Modal */}
-      <CustomIconsModal 
-        isOpen={isCustomDialogOpen}
-        onClose={() => setIsCustomDialogOpen(false)}
-        onSelectIcon={handleCustomIconSelect}
-        iconColor={iconColor}
-      />
+          <Component style={{ color: iconColor }} className="h-6 w-6" />
+        </div>
+      ))}
     </div>
   );
 };
