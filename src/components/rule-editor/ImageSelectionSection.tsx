@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import BackgroundImageSelector from "@/components/task-editor/BackgroundImageSelector";
+import BackgroundImageSelector from "./BackgroundImageSelector";
 import { FormLabel } from "@/components/ui/form";
 import { Control } from "react-hook-form";
 
