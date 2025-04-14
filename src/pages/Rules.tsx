@@ -1,18 +1,19 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Loader2 } from 'lucide-react';
+import { Edit, Check, Plus, Loader2 } from 'lucide-react';
+import FrequencyTracker from '../components/task/FrequencyTracker';
+import PriorityBadge from '../components/task/PriorityBadge';
 import { useNavigate } from 'react-router-dom';
 import RuleEditor from '../components/RuleEditor';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
-import RulesHeader from '../components/rules/RulesHeader';
+import HighlightedText from '../components/task/HighlightedText';
+import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
-import RuleCard from '../components/rules/RuleCard';
-import { RuleCarouselProvider, useRuleCarousel } from '@/contexts/RuleCarouselContext';
 
 interface Rule {
   id: string;
@@ -20,7 +21,6 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
-  background_images: string[];
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -37,22 +37,19 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
-  carousel_timer: number;
 }
 
-const RulesContent: React.FC = () => {
+const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
-  const { globalCarouselIndex } = useRuleCarousel();
 
   useEffect(() => {
     const fetchRules = async () => {
       try {
-        console.log("Fetching rules from Supabase...");
         const { data, error } = await supabase
           .from('rules')
           .select('*')
@@ -62,49 +59,12 @@ const RulesContent: React.FC = () => {
           throw error;
         }
         
-        console.log("Rules data from Supabase:", data);
-        
         const rulesWithUsageData = (data as Rule[] || []).map(rule => {
-          let background_images = rule.background_images || [];
-          
-          if (!Array.isArray(background_images)) {
-            console.log("background_images is not an array, converting:", background_images);
-            try {
-              background_images = typeof background_images === 'string' 
-                ? JSON.parse(background_images) 
-                : [];
-            } catch (e) {
-              console.error("Failed to parse background_images:", e);
-              background_images = [];
-            }
-          }
-          
-          if (rule.background_image_url && 
-              !background_images.includes(rule.background_image_url)) {
-            background_images = [rule.background_image_url, ...background_images];
-            console.log("Added background_image_url to background_images array");
-          }
-          
-          background_images = background_images.filter(img => !!img && img.trim() !== '');
-          
-          console.log(`Rule ${rule.id} has ${background_images.length} background images`);
-          
           if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
-            return { 
-              ...rule, 
-              usage_data: [0, 0, 0, 0, 0, 0, 0],
-              background_images
-            };
+            return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
           }
-          
-          return {
-            ...rule,
-            background_images
-          };
+          return rule;
         });
-        
-        console.log("Processed rules with background images:", 
-          rulesWithUsageData.map(r => ({id: r.id, imageCount: r.background_images.length})));
         
         setRules(rulesWithUsageData);
       } catch (err) {
@@ -123,7 +83,7 @@ const RulesContent: React.FC = () => {
     
     const intervalId = setInterval(() => {
       fetchRules();
-    }, 30000);
+    }, 30000); // Refresh every 30 seconds
     
     return () => clearInterval(intervalId);
   }, []);
@@ -204,86 +164,67 @@ const RulesContent: React.FC = () => {
     try {
       let result;
       
-      console.log("Saving rule with data:", ruleData);
-      
-      const processedRuleData = {
-        ...ruleData,
-        carousel_timer: ruleData.carousel_timer || 5,
-      };
-      
-      if (processedRuleData.id) {
-        const existingRule = rules.find(rule => rule.id === processedRuleData.id);
-        
-        console.log("Updating existing rule:", processedRuleData.id);
-        console.log("Background images to save:", processedRuleData.background_images);
+      if (ruleData.id) {
+        const existingRule = rules.find(rule => rule.id === ruleData.id);
         
         const { data, error } = await supabase
           .from('rules')
           .update({
-            title: processedRuleData.title,
-            description: processedRuleData.description,
-            priority: processedRuleData.priority,
-            background_image_url: processedRuleData.background_image_url,
-            background_images: processedRuleData.background_images,
-            background_opacity: processedRuleData.background_opacity,
-            icon_url: processedRuleData.icon_url,
-            icon_name: processedRuleData.icon_name,
-            title_color: processedRuleData.title_color,
-            subtext_color: processedRuleData.subtext_color,
-            calendar_color: processedRuleData.calendar_color,
-            icon_color: processedRuleData.icon_color,
-            highlight_effect: processedRuleData.highlight_effect,
-            focal_point_x: processedRuleData.focal_point_x,
-            focal_point_y: processedRuleData.focal_point_y,
-            frequency: processedRuleData.frequency,
-            frequency_count: processedRuleData.frequency_count,
-            carousel_timer: processedRuleData.carousel_timer,
+            title: ruleData.title,
+            description: ruleData.description,
+            priority: ruleData.priority,
+            background_image_url: ruleData.background_image_url,
+            background_opacity: ruleData.background_opacity,
+            icon_url: ruleData.icon_url,
+            icon_name: ruleData.icon_name,
+            title_color: ruleData.title_color,
+            subtext_color: ruleData.subtext_color,
+            calendar_color: ruleData.calendar_color,
+            icon_color: ruleData.icon_color,
+            highlight_effect: ruleData.highlight_effect,
+            focal_point_x: ruleData.focal_point_x,
+            focal_point_y: ruleData.focal_point_y,
+            frequency: ruleData.frequency,
+            frequency_count: ruleData.frequency_count,
             updated_at: new Date().toISOString()
           })
-          .eq('id', processedRuleData.id)
+          .eq('id', ruleData.id)
           .select()
           .single();
           
         if (error) throw error;
         result = data;
         
-        console.log("Rule updated successfully:", result);
-        
         if (existingRule && existingRule.usage_data) {
           result.usage_data = existingRule.usage_data;
         }
         
-        setRules(rules.map(rule => rule.id === processedRuleData.id ? { ...rule, ...result as Rule } : rule));
+        setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result as Rule } : rule));
         
         toast({
           title: 'Success',
           description: 'Rule updated successfully!',
         });
       } else {
-        const { id, ...ruleWithoutId } = processedRuleData;
+        const { id, ...ruleWithoutId } = ruleData;
         
         if (!ruleWithoutId.title) {
           throw new Error('Rule title is required');
         }
         
-        console.log("Creating new rule");
-        console.log("Background images to save:", ruleWithoutId.background_images);
-        
         const newRule = {
           title: ruleWithoutId.title,
           priority: ruleWithoutId.priority || 'medium',
           background_opacity: ruleWithoutId.background_opacity || 100,
-          background_images: ruleWithoutId.background_images || [],
           icon_color: ruleWithoutId.icon_color || '#FFFFFF',
           title_color: ruleWithoutId.title_color || '#FFFFFF',
           subtext_color: ruleWithoutId.subtext_color || '#FFFFFF',
           calendar_color: ruleWithoutId.calendar_color || '#9c7abb',
           highlight_effect: ruleWithoutId.highlight_effect || false,
-          focal_point_x: ruleWithoutId.focal_point_x || 0.5,
-          focal_point_y: ruleWithoutId.focal_point_y || 0.5,
+          focal_point_x: ruleWithoutId.focal_point_x || 50,
+          focal_point_y: ruleWithoutId.focal_point_y || 50,
           frequency: ruleWithoutId.frequency || 'daily',
           frequency_count: ruleWithoutId.frequency_count || 3,
-          carousel_timer: ruleWithoutId.carousel_timer || 5,
           usage_data: [0, 0, 0, 0, 0, 0, 0],
           ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
           ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
@@ -302,8 +243,6 @@ const RulesContent: React.FC = () => {
           
         if (error) throw error;
         result = data;
-        
-        console.log("Rule created successfully:", result);
         
         setRules([result as Rule, ...rules]);
         
@@ -353,63 +292,111 @@ const RulesContent: React.FC = () => {
   };
 
   return (
-    <>
-      <div className="container mx-auto px-4 py-6">
-        <RulesHeader />
-        
-        {isLoading ? (
-          <div className="flex justify-center items-center py-10">
-            <Loader2 className="w-10 h-10 text-white animate-spin" />
-          </div>
-        ) : rules.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-white mb-4">No rules found. Create your first rule!</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {rules.map((rule) => (
-              <RuleCard 
-                key={rule.id} 
-                rule={rule} 
-                globalCarouselIndex={globalCarouselIndex}
-                onRuleBroken={handleRuleBroken}
-                onEdit={handleEditRule}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-      
-      <RuleEditor
-        isOpen={isEditorOpen}
-        onClose={() => {
-          setIsEditorOpen(false);
-          setCurrentRule(null);
-        }}
-        ruleData={currentRule || undefined}
-        onSave={handleSaveRule}
-        onDelete={handleDeleteRule}
-      />
-    </>
-  );
-};
-
-const Rules: React.FC = () => {
-  const handleAddRule = () => {
-    const rulesContent = document.getElementById('rules-content-component');
-    if (rulesContent) {
-      // This is just to trigger the handleAddRule in the RulesContent component
-      const event = new CustomEvent('add-rule');
-      rulesContent.dispatchEvent(event);
-    }
-  };
-
-  return (
     <AppLayout onAddNewItem={handleAddRule}>
       <RewardsProvider>
-        <RuleCarouselProvider>
-          <RulesContent />
-        </RuleCarouselProvider>
+        <div className="container mx-auto px-4 py-6">
+          <RulesHeader />
+          
+          {isLoading ? (
+            <div className="flex justify-center items-center py-10">
+              <Loader2 className="w-10 h-10 text-white animate-spin" />
+            </div>
+          ) : rules.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-white mb-4">No rules found. Create your first rule!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {rules.map((rule) => (
+                <Card 
+                  key={rule.id}
+                  className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
+                >
+                  <div className="relative p-4">
+                    {rule.background_image_url && (
+                      <div 
+                        className="absolute inset-0 z-0" 
+                        style={{
+                          backgroundImage: `url(${rule.background_image_url})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
+                          opacity: (rule.background_opacity || 100) / 100
+                        }}
+                      />
+                    )}
+                    
+                    <div className="flex justify-between items-center mb-3 relative z-10">
+                      <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
+                        onClick={() => handleRuleBroken(rule)}
+                      >
+                        Rule Broken
+                      </Button>
+                    </div>
+                    
+                    <div className="mb-4 relative z-10">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
+                          <Check className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1 flex flex-col">
+                          <div className="text-xl font-semibold">
+                            <HighlightedText
+                              text={rule.title}
+                              highlight={rule.highlight_effect}
+                              color={rule.title_color}
+                            />
+                          </div>
+                          
+                          {rule.description && (
+                            <div className="text-sm mt-1">
+                              <HighlightedText
+                                text={rule.description}
+                                highlight={rule.highlight_effect}
+                                color={rule.subtext_color}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-2 relative z-10">
+                      <FrequencyTracker 
+                        frequency={rule.frequency}
+                        frequency_count={rule.frequency_count}
+                        calendar_color={rule.calendar_color}
+                        usage_data={rule.usage_data}
+                      />
+                      
+                      <Button 
+                        size="sm" 
+                        className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
+                        onClick={() => handleEditRule(rule)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <RuleEditor
+          isOpen={isEditorOpen}
+          onClose={() => {
+            setIsEditorOpen(false);
+            setCurrentRule(null);
+          }}
+          ruleData={currentRule || undefined}
+          onSave={handleSaveRule}
+          onDelete={handleDeleteRule}
+        />
       </RewardsProvider>
     </AppLayout>
   );

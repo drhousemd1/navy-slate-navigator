@@ -7,7 +7,7 @@ import CardHeader from '@/components/throne/card/CardHeader';
 import CardContent from '@/components/throne/card/CardContent';
 import CardFooter from '@/components/throne/card/CardFooter';
 import { useCardData } from '@/components/throne/hooks/useCardData';
-import { useImageCarousel } from '@/hooks/useImageCarousel';
+import { useImageCarousel } from '@/components/throne/hooks/useImageCarousel';
 import { renderCardIcon } from '@/components/throne/utils/renderCardIcon';
 
 interface ThroneRoomCardProps {

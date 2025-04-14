@@ -2,7 +2,6 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import RuleEditorForm from './rule-editor/RuleEditorForm';
-import { useRuleCarousel } from '@/contexts/RuleCarouselContext';
 
 interface Rule {
   id?: string;
@@ -10,7 +9,6 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
-  background_images: string[];
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -27,7 +25,6 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
-  carousel_timer: number;
 }
 
 interface RuleEditorProps {
@@ -43,17 +40,10 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   onClose, 
   ruleData, 
   onSave, 
-  onDelete
+  onDelete 
 }) => {
-  const { carouselTimer, setCarouselTimer } = useRuleCarousel();
-
-  const handleSave = async (formData: any) => {
+  const handleSave = async (formData: Partial<Rule>) => {
     await onSave(formData);
-    
-    if (formData.carousel_timer) {
-      setCarouselTimer(formData.carousel_timer);
-    }
-    
     onClose();
   };
 
@@ -62,26 +52,6 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
       onDelete(ruleId);
       onClose(); // Ensure modal closes after deletion
     }
-  };
-
-  // Make sure we have a valid rule data object with necessary defaults
-  const enhancedRuleData = {
-    title: '',
-    description: '',
-    priority: 'medium' as const,
-    background_opacity: 100,
-    title_color: '#FFFFFF',
-    subtext_color: '#CCCCCC',
-    calendar_color: '#9c7abb',
-    icon_color: '#FFFFFF',
-    highlight_effect: false,
-    focal_point_x: 50,
-    focal_point_y: 50,
-    frequency: 'daily' as const,
-    frequency_count: 1,
-    background_images: Array(5).fill(''),
-    carousel_timer: carouselTimer,
-    ...ruleData // This will override defaults with any existing values
   };
 
   return (
@@ -97,7 +67,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
         </DialogHeader>
         
         <RuleEditorForm
-          ruleData={enhancedRuleData}
+          ruleData={ruleData}
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}
