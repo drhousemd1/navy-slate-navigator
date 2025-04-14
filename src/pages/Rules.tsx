@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -16,7 +15,6 @@ import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { RuleCarouselProvider, useRuleCarousel } from '@/contexts/RuleCarouselContext';
 import { getMondayBasedDay } from '@/lib/utils';
-import { useQueryClient } from '@tanstack/react-query';
 import RuleBackground from '@/components/Rules/RuleBackground';
 import RuleCardHeader from '@/components/Rules/RuleCardHeader';
 import RuleCardContent from '@/components/Rules/RuleCardContent';
