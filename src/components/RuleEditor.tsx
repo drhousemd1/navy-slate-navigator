@@ -9,7 +9,6 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
-  background_images: string[]; // Not optional
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -26,7 +25,6 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
-  carousel_timer: number; // Required, not optional
 }
 
 interface RuleEditorProps {
@@ -35,8 +33,6 @@ interface RuleEditorProps {
   ruleData?: Partial<Rule>;
   onSave: (ruleData: Partial<Rule>) => void;
   onDelete?: (ruleId: string) => void;
-  carouselTimer: number; // Required
-  setCarouselTimer: (seconds: number) => void; // Required
 }
 
 const RuleEditor: React.FC<RuleEditorProps> = ({ 
@@ -44,35 +40,10 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   onClose, 
   ruleData, 
   onSave, 
-  onDelete,
-  carouselTimer,
-  setCarouselTimer
+  onDelete 
 }) => {
   const handleSave = async (formData: Partial<Rule>) => {
-    // Create a copy of the form data to ensure we don't modify the original
-    const updatedFormData = { ...formData };
-    
-    // Ensure carousel_timer is set
-    updatedFormData.carousel_timer = formData.carousel_timer || carouselTimer;
-    
-    // Ensure background_images array always has 5 elements
-    if (updatedFormData.background_images) {
-      const images = [...updatedFormData.background_images];
-      while (images.length < 5) {
-        images.push('');
-      }
-      updatedFormData.background_images = images.slice(0, 5);
-    }
-    
-    // Update global carousel timer if it changed
-    if (updatedFormData.carousel_timer !== carouselTimer) {
-      setCarouselTimer(updatedFormData.carousel_timer);
-      
-      // Store carousel timer in localStorage for persistence
-      localStorage.setItem('rules_carouselTimer', String(updatedFormData.carousel_timer));
-    }
-    
-    await onSave(updatedFormData);
+    await onSave(formData);
     onClose();
   };
 
@@ -81,17 +52,6 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
       onDelete(ruleId);
       onClose(); // Ensure modal closes after deletion
     }
-  };
-
-  // Make sure we have a valid rule data object with carousel timer
-  const enhancedRuleData = ruleData ? {
-    ...ruleData,
-    carousel_timer: ruleData.carousel_timer || carouselTimer,
-    // Ensure background_images is initialized properly
-    background_images: ruleData.background_images || Array(5).fill('')
-  } : {
-    carousel_timer: carouselTimer,
-    background_images: Array(5).fill('')
   };
 
   return (
@@ -107,15 +67,10 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
         </DialogHeader>
         
         <RuleEditorForm
-          ruleData={enhancedRuleData}
+          ruleData={ruleData}
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}
-          carouselTimer={carouselTimer}
-          onCarouselTimerChange={(value) => {
-            // Pass carousel timer changes up to the parent component
-            setCarouselTimer(value);
-          }}
         />
       </DialogContent>
     </Dialog>
