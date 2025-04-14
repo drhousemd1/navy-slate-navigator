@@ -1,85 +1,147 @@
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import React, { useState, useEffect } from 'react';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Plus, Trash, Image } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { useModalImageHandling } from '../rule/hooks/useModalImageHandling';
 
 interface ImageSelectionSectionProps {
-  images: (string | null)[];
-  selectedImageIndex: number;
-  setSelectedImageIndex: (index: number) => void;
-  setImagePreview: (preview: string | null) => void;
-  handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleRemoveImage: () => void;
-  focalPointX: number;
-  focalPointY: number;
-  onFocalPointChange?: (x: number, y: number) => void;
+  backgroundImages: string[];
+  onImagesChange: (images: string[]) => void;
   carouselTimer: number;
-  setCarouselTimer: (value: number) => void;
+  onCarouselTimerChange: (seconds: number) => void;
+  focalPointX?: number;
+  focalPointY?: number;
+  onFocalPointChange?: (x: number, y: number) => void;
 }
 
 const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
-  images,
-  selectedImageIndex,
-  setSelectedImageIndex,
-  setImagePreview,
-  handleImageUpload,
-  handleRemoveImage,
-  focalPointX,
-  focalPointY,
-  onFocalPointChange,
+  backgroundImages = [],
+  onImagesChange,
   carouselTimer,
-  setCarouselTimer,
+  onCarouselTimerChange,
+  focalPointX = 0.5,
+  focalPointY = 0.5,
+  onFocalPointChange
 }) => {
-  const handleSelectThumbnail = (index: number) => {
-    setSelectedImageIndex(index);
-    setImagePreview(images[index] || null); // Reset preview if empty
+  // Ensure we have exactly 5 slots for initialization
+  useEffect(() => {
+    // If the passed backgroundImages array doesn't have exactly 5 elements
+    if (backgroundImages.length !== 5) {
+      const normalizedImages = [...backgroundImages];
+      while (normalizedImages.length < 5) {
+        normalizedImages.push('');
+      }
+      // Handle case where there are more than 5 images
+      if (normalizedImages.length > 5) {
+        normalizedImages.length = 5;
+      }
+      onImagesChange(normalizedImages);
+    }
+  }, []);
+  
+  // Use the modal image handling hook to manage image state
+  const { images, selectedImageIndex, selectImage, updateImage } = useModalImageHandling(
+    backgroundImages.length === 5 ? backgroundImages : [...backgroundImages].concat(Array(5 - backgroundImages.length).fill(''))
+  );
+  
+  useEffect(() => {
+    // Only update parent component when images actually change
+    if (JSON.stringify(images) !== JSON.stringify(backgroundImages)) {
+      onImagesChange(images);
+    }
+  }, [images]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      updateImage(base64String);
+    };
+    
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    updateImage('');
+  };
+
+  const handleFocalPointChange = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!onFocalPointChange) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    onFocalPointChange(x, y);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-end">
-        <div className="flex gap-2">
-          {images.map((img, index) => (
-            <div
-              key={index}
-              className={`w-16 h-16 border-2 rounded cursor-pointer overflow-hidden flex items-center justify-center ${
-                selectedImageIndex === index ? "border-cyan-300" : "border-gray-700"
-              }`}
-              onClick={() => handleSelectThumbnail(index)}
-            >
-              {img ? (
-                <img
-                  src={img}
-                  alt={`Thumbnail ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              ) : null}
-            </div>
-          ))}
+        <div>
+          <Label className="text-white text-lg">Background Images</Label>
+          <div className="flex gap-2 mt-2">
+            {images.map((image, index) => (
+              <div
+                key={index}
+                onClick={() => selectImage(index)}
+                className={`
+                  w-16 h-16 border-2 rounded-md overflow-hidden cursor-pointer
+                  ${selectedImageIndex === index 
+                    ? 'border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]' 
+                    : 'border-gray-600'}
+                  bg-gray-800
+                `}
+              >
+                {image ? (
+                  <img 
+                    src={image} 
+                    alt={`Background ${index + 1}`} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <Image className="w-8 h-8 text-gray-600" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-
-        {/* Carousel Timer UI */}
-        <div className="flex items-center gap-2">
-          <Label className="text-sm text-white">Carousel Timer</Label>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => setCarouselTimer(carouselTimer - 1)}
-            className="bg-dark-navy text-white hover:bg-light-navy px-2 py-1 rounded"
-          >
-            -
-          </Button>
-          <span className="text-white text-sm">{carouselTimer}s</span>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => setCarouselTimer(carouselTimer + 1)}
-            className="bg-dark-navy text-white hover:bg-light-navy px-2 py-1 rounded"
-          >
-            +
-          </Button>
+        
+        <div className="flex flex-col">
+          <div>
+            <h3 className="font-medium text-white">Carousel Timer</h3>
+            <p className="text-sm text-gray-300">(Time between image transitions)</p>
+          </div>
+          <div className="flex items-center mt-2">
+            <button
+              type="button"
+              onClick={() => onCarouselTimerChange(Math.max(1, carouselTimer - 1))}
+              className="bg-gray-800 hover:bg-gray-700 text-white rounded-l px-3 py-1"
+            >
+              –
+            </button>
+            <span className="bg-gray-900 text-white px-4 py-1">
+              {carouselTimer}
+            </span>
+            <button
+              type="button"
+              onClick={() => onCarouselTimerChange(carouselTimer + 1)}
+              className="bg-gray-800 hover:bg-gray-700 text-white rounded-r px-3 py-1"
+            >
+              +
+            </button>
+            <span className="text-white ml-2">(s)</span>
+          </div>
         </div>
       </div>
+      
+      {/* The image preview with focal point block has been removed as requested */}
     </div>
   );
 };
