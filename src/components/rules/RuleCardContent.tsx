@@ -23,6 +23,14 @@ const RuleCardContent = ({
     <div className="relative z-10 flex flex-col p-4 md:p-6 h-full transition-opacity duration-[2000ms]">
       <div className="flex justify-between items-start mb-3">
         <PriorityBadge priority={rule.priority} />
+        
+        {/* Moved Break button to the top right */}
+        <Button
+          onClick={onBreak}
+          className="bg-red-600 text-white hover:bg-red-700"
+        >
+          {isViolated ? 'Violated' : 'Rule Broken'}
+        </Button>
       </div>
       
       <div className="flex items-start mb-auto">
@@ -71,14 +79,6 @@ const RuleCardContent = ({
             className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
           >
             <Pencil className="h-4 w-4" />
-          </Button>
-          
-          <Button
-            onClick={onBreak}
-            className={`${isViolated ? 'bg-red-600' : 'bg-light-navy'} text-white`}
-          >
-            <Skull className="w-4 h-4 mr-1" />
-            {isViolated ? 'Violated' : 'Break'}
           </Button>
         </div>
       </div>
