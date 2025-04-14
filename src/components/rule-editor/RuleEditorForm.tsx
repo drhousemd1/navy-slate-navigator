@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -10,7 +9,6 @@ import { Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import ColorPickerField from '../task-editor/ColorPickerField';
 import PrioritySelector from '../task-editor/PrioritySelector';
-import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
@@ -171,26 +169,14 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
 
   const handleMultiImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    
-    // If no box selected, auto-select the first empty slot
-    let targetIndex = selectedBoxIndex;
-    if (targetIndex === null) {
-      const firstEmpty = imageSlots.findIndex((slot) => !slot);
-      if (firstEmpty === -1) {
-        targetIndex = 0;
-      } else {
-        targetIndex = firstEmpty;
-      }
-      setSelectedBoxIndex(targetIndex);
-    }
+    if (!file || selectedBoxIndex === null) return;
     
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
       
       const updatedSlots = [...imageSlots];
-      updatedSlots[targetIndex!] = base64String;
+      updatedSlots[selectedBoxIndex] = base64String;
       setImageSlots(updatedSlots);
       setImagePreview(base64String);
       form.setValue('background_image_url', base64String);

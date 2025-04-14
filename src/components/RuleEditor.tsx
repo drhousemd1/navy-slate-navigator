@@ -47,6 +47,9 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   // Enhance rule data with default values to prevent undefined errors
   const enhancedRuleData: Partial<Rule> = {
     background_images: [],
+    background_opacity: 100,
+    focal_point_x: 50,
+    focal_point_y: 50,
     ...ruleData
   };
 
