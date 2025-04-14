@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { getMondayBasedDay } from "./utils";
 
@@ -39,7 +38,26 @@ export const fetchRules = async (): Promise<Rule[]> => {
     throw error;
   }
 
-  return rules || [];
+  // Ensure the returned data conforms to our Rule interface
+  const typedRules: Rule[] = rules?.map(rule => ({
+    ...rule,
+    // Ensure priority is one of the allowed values
+    priority: (rule.priority as 'low' | 'medium' | 'high') || 'medium',
+    // Set default values for any properties that might be missing
+    usage_data: rule.usage_data || [0, 0, 0, 0, 0, 0, 0],
+    background_opacity: rule.background_opacity || 100,
+    highlight_effect: rule.highlight_effect || false,
+    focal_point_x: rule.focal_point_x || 50,
+    focal_point_y: rule.focal_point_y || 50,
+    frequency: (rule.frequency as 'daily' | 'weekly') || 'daily',
+    frequency_count: rule.frequency_count || 3,
+    title_color: rule.title_color || '#FFFFFF',
+    subtext_color: rule.subtext_color || '#FFFFFF',
+    calendar_color: rule.calendar_color || '#9c7abb',
+    icon_color: rule.icon_color || '#FFFFFF'
+  })) || [];
+
+  return typedRules;
 };
 
 export const deleteRule = async (ruleId: string): Promise<boolean> => {
