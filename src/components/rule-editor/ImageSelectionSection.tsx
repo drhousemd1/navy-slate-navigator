@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 interface ImageSelectionSectionProps {
-  backgroundImages: string[];
-  onImagesChange: (images: string[]) => void;
+  backgroundImages: (string | null)[];
+  onImagesChange: (images: (string | null)[]) => void;
   carouselTimer: number;
   onCarouselTimerChange: (timer: number) => void;
   focalPointX: number;
@@ -14,7 +14,7 @@ interface ImageSelectionSectionProps {
 }
 
 const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
-  backgroundImages = [],
+  backgroundImages,
   onImagesChange,
   carouselTimer,
   onCarouselTimerChange,
@@ -22,39 +22,36 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   focalPointY,
   onFocalPointChange,
 }) => {
-  const [selectedBoxIndex, setSelectedBoxIndex] = React.useState<number>(0);
+  const [selectedBoxIndex, setSelectedBoxIndex] = React.useState<number | null>(0);
 
   const handleSelect = (index: number) => {
     setSelectedBoxIndex(index);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
+    if (!e.target.files || selectedBoxIndex === null) return;
     const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      const updated = [...backgroundImages];
-      updated[selectedBoxIndex] = base64String;
-      onImagesChange(updated);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleRemove = () => {
+    const url = URL.createObjectURL(file);
     const updated = [...backgroundImages];
-    updated[selectedBoxIndex] = '';
+    updated[selectedBoxIndex] = url;
     onImagesChange(updated);
   };
 
-  const currentImage = backgroundImages[selectedBoxIndex] || null;
+  const handleRemove = () => {
+    if (selectedBoxIndex === null) return;
+    const updated = [...backgroundImages];
+    updated[selectedBoxIndex] = null;
+    onImagesChange(updated);
+  };
+
+  const currentImage = selectedBoxIndex !== null ? backgroundImages[selectedBoxIndex] : null;
 
   return (
     <div className="space-y-4">
-      <Label className="text-white text-lg">Background Images</Label>
+      <Label className="text-white text-lg">Background Image</Label>
       <div className="flex justify-between items-end mb-4">
         <div className="flex gap-2">
-          {Array.from({ length: 5 }).map((_, index) => (
+          {backgroundImages.map((img, index) => (
             <div
               key={index}
               onClick={() => handleSelect(index)}
@@ -62,9 +59,9 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
                 selectedBoxIndex === index ? "border-cyan-300" : "border-gray-700"
               }`}
             >
-              {backgroundImages[index] ? (
+              {img ? (
                 <img
-                  src={backgroundImages[index]}
+                  src={img}
                   alt={`Thumbnail ${index + 1}`}
                   className="w-full h-full object-cover"
                 />

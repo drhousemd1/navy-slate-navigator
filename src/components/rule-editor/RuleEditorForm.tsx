@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -14,7 +13,7 @@ import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
-import ImageSelectionSection from './ImageSelectionSection';
+import ImageSelectionSection from '../rule-editor/ImageSelectionSection';
 
 interface Rule {
   id?: string;
@@ -83,10 +82,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [localCarouselTimer, setLocalCarouselTimer] = useState(ruleData?.carousel_timer || carouselTimer);
-  const [backgroundImages, setBackgroundImages] = useState<string[]>(
+  const [backgroundImages, setBackgroundImages] = useState<(string | null)[]>(
     Array.isArray(ruleData?.background_images) 
-      ? ruleData.background_images.filter(Boolean) as string[]
-      : []
+      ? ruleData.background_images.map(img => img || null) 
+      : Array(5).fill(null)
   );
   const [focalPointX, setFocalPointX] = useState(ruleData?.focal_point_x || 0.5);
   const [focalPointY, setFocalPointY] = useState(ruleData?.focal_point_y || 0.5);
@@ -117,24 +116,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setImagePreview(ruleData?.background_image_url || null);
     setIconPreview(ruleData?.icon_url || null);
     setSelectedIconName(ruleData?.icon_name || null);
-    
-    // Ensure backgroundImages is always an array with valid strings
-    const images = Array.isArray(ruleData?.background_images) 
-      ? ruleData.background_images.filter(img => typeof img === 'string' && img.trim() !== '') as string[]
-      : [];
-    
-    // If we have a background_image_url and it's not in background_images, add it
-    if (ruleData?.background_image_url && 
-        !images.includes(ruleData.background_image_url)) {
-      images.unshift(ruleData.background_image_url);
-    }
-    
-    // Fill with empty strings to always have 5 slots
-    while (images.length < 5) {
-      images.push('');
-    }
-    
-    setBackgroundImages(images);
+    setBackgroundImages(ruleData?.background_images || []);
     setLocalCarouselTimer(ruleData?.carousel_timer || carouselTimer);
     setFocalPointX(ruleData?.focal_point_x || 0.5);
     setFocalPointY(ruleData?.focal_point_y || 0.5);
@@ -201,10 +183,19 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   };
 
-  const handleBackgroundImagesChange = (images: string[]) => {
+  const handleRemoveImage = () => {
+    if (selectedImageIndex >= 0 && selectedImageIndex < backgroundImages.length) {
+      const newImages = [...backgroundImages];
+      newImages[selectedImageIndex] = '';
+      setBackgroundImages(newImages);
+      setImagePreview(null);
+    }
+  };
+
+  const handleBackgroundImagesChange = (images: (string | null)[]) => {
     console.log("Background images updated:", images);
     setBackgroundImages(images);
-    form.setValue('background_images', images);
+    form.setValue('background_images', images.filter(Boolean) as string[]);
   };
 
   const handleCarouselTimerChange = (seconds: number) => {
@@ -298,7 +289,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <PrioritySelector control={form.control} />
         </div>
         
-        <ImageSelectionSection 
+        <ImageSelectionSection
           backgroundImages={backgroundImages}
           onImagesChange={handleBackgroundImagesChange}
           carouselTimer={localCarouselTimer}
