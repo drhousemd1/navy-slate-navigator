@@ -82,11 +82,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [localCarouselTimer, setLocalCarouselTimer] = useState(ruleData?.carousel_timer || carouselTimer);
-  const [backgroundImages, setBackgroundImages] = useState<(string | null)[]>(
-    Array.isArray(ruleData?.background_images) 
-      ? ruleData.background_images.map(img => img || null) 
-      : Array(5).fill(null)
-  );
+  const [backgroundImages, setBackgroundImages] = useState<string[]>(ruleData?.background_images || []);
   const [focalPointX, setFocalPointX] = useState(ruleData?.focal_point_x || 0.5);
   const [focalPointY, setFocalPointY] = useState(ruleData?.focal_point_y || 0.5);
   
@@ -183,19 +179,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   };
 
-  const handleRemoveImage = () => {
-    if (selectedImageIndex >= 0 && selectedImageIndex < backgroundImages.length) {
-      const newImages = [...backgroundImages];
-      newImages[selectedImageIndex] = '';
-      setBackgroundImages(newImages);
-      setImagePreview(null);
-    }
-  };
-
-  const handleBackgroundImagesChange = (images: (string | null)[]) => {
+  const handleBackgroundImagesChange = (images: string[]) => {
     console.log("Background images updated:", images);
     setBackgroundImages(images);
-    form.setValue('background_images', images.filter(Boolean) as string[]);
+    form.setValue('background_images', images);
   };
 
   const handleCarouselTimerChange = (seconds: number) => {
@@ -289,7 +276,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <PrioritySelector control={form.control} />
         </div>
         
-        <ImageSelectionSection
+        <ImageSelectionSection 
           backgroundImages={backgroundImages}
           onImagesChange={handleBackgroundImagesChange}
           carouselTimer={localCarouselTimer}
