@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Plus, Trash, Image } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useModalImageHandling } from '../rule/hooks/useModalImageHandling';
-import { useImageCarousel } from '../rule/hooks/useImageCarousel';
 
 interface ImageSelectionSectionProps {
   backgroundImages: string[];
@@ -48,15 +47,6 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   const { images, selectedImageIndex, selectImage, updateImage } = useModalImageHandling(
     backgroundImages.length === 5 ? backgroundImages : [...backgroundImages].concat(Array(5 - backgroundImages.length).fill(''))
   );
-  
-  // Add state for local carousel index
-  const [globalCarouselIndex, setLocalCarouselIndex] = useState(0);
-
-  // Add the image carousel hook
-  const { visibleImage } = useImageCarousel({
-    images: images[selectedImageIndex] ? [images[selectedImageIndex]] : [],
-    globalCarouselIndex,
-  });
   
   useEffect(() => {
     // Only update parent component when images actually change
@@ -103,7 +93,6 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
                 onClick={() => {
                   selectImage(index);
                   setGlobalCarouselIndex(index);
-                  setLocalCarouselIndex(0); // Reset local carousel for preview
                 }}
                 className={`
                   w-16 h-16 border-2 rounded-md overflow-hidden cursor-pointer
@@ -157,57 +146,9 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
         </div>
       </div>
       
-      {/* Image preview section */}
-      <div className="mt-4 border-2 border-gray-700 rounded-md overflow-hidden">
-        <div className="preview-box w-full h-48 flex items-center justify-center">
-          {visibleImage ? (
-            <img 
-              src={visibleImage} 
-              alt="Preview" 
-              className="w-full h-full object-cover"
-              onClick={handleFocalPointChange}
-            />
-          ) : (
-            <div className="placeholder flex flex-col items-center justify-center h-full bg-gray-800 text-gray-400">
-              <Image className="w-12 h-12 mb-2" />
-              <span>No image selected</span>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      <div className="flex gap-2 mt-4 justify-center">
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={() => document.getElementById('image-upload')?.click()}
-          className="bg-gray-800 hover:bg-gray-700 text-white flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Upload Image</span>
-          <input
-            id="image-upload"
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-        </Button>
-        
-        <Button 
-          type="button" 
-          variant="destructive" 
-          onClick={handleRemoveImage}
-          className="flex items-center gap-2"
-          disabled={!images[selectedImageIndex]}
-        >
-          <Trash className="w-4 h-4" />
-          <span>Remove</span>
-        </Button>
-      </div>
+      {/* The image preview with focal point block has been removed as requested */}
     </div>
   );
 };
 
 export default ImageSelectionSection;
-
