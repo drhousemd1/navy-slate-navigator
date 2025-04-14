@@ -1,21 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Check, Plus, Loader2 } from 'lucide-react';
-import FrequencyTracker from '../components/task/FrequencyTracker';
-import PriorityBadge from '../components/task/PriorityBadge';
+import { Plus, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import RuleEditor from '../components/RuleEditor';
+import RuleEditor from '../components/rule/RuleEditor';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
-import HighlightedText from '../components/task/HighlightedText';
 import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
-import CardBackground from '../components/rule/card/CardBackground';
-import { useImageCarousel } from '../components/rule/hooks/useImageCarousel';
+import RuleCard from '../components/rule/RuleCard';
+import { RuleCarouselProvider, useRuleCarousel } from '@/contexts/RuleCarouselContext';
 
 interface Rule {
   id: string;
@@ -23,7 +20,7 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
-  background_images: string[]; // Not optional
+  background_images: string[];
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -40,32 +37,17 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
-  carousel_timer: number; // Required, not optional
+  carousel_timer: number;
 }
 
-const Rules: React.FC = () => {
+const RulesContent: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
-  
-  const [carouselTimer, setCarouselTimer] = useState(5);
-  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
-
-  useEffect(() => {
-    const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
-    setCarouselTimer(savedTimer);
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setGlobalCarouselIndex(prevIndex => prevIndex + 1);
-    }, carouselTimer * 1000);
-    
-    return () => clearInterval(interval);
-  }, [carouselTimer]);
+  const { globalCarouselIndex } = useRuleCarousel();
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -271,9 +253,6 @@ const Rules: React.FC = () => {
           result.usage_data = existingRule.usage_data;
         }
         
-        localStorage.setItem('rules_carouselTimer', String(processedRuleData.carousel_timer));
-        setCarouselTimer(processedRuleData.carousel_timer);
-        
         setRules(rules.map(rule => rule.id === processedRuleData.id ? { ...rule, ...result as Rule } : rule));
         
         toast({
@@ -326,9 +305,6 @@ const Rules: React.FC = () => {
         
         console.log("Rule created successfully:", result);
         
-        localStorage.setItem('rules_carouselTimer', String(processedRuleData.carousel_timer));
-        setCarouselTimer(processedRuleData.carousel_timer);
-        
         setRules([result as Rule, ...rules]);
         
         toast({
@@ -376,125 +352,64 @@ const Rules: React.FC = () => {
     }
   };
 
-  const RuleCard: React.FC<{ rule: Rule }> = ({ rule }) => {
-    const filteredImages = (rule.background_images || [])
-      .filter(img => typeof img === 'string' && img.trim() !== '');
-    
-    const { visibleImage, transitionImage, isTransitioning } = useImageCarousel({
-      images: filteredImages,
-      globalCarouselIndex: globalCarouselIndex
-    });
-
-    return (
-      <Card 
-        key={rule.id}
-        className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden relative`}
-      >
-        <CardBackground 
-          visibleImage={visibleImage}
-          transitionImage={transitionImage}
-          isTransitioning={isTransitioning}
-          focalPointX={rule.focal_point_x}
-          focalPointY={rule.focal_point_y}
-          backgroundOpacity={rule.background_opacity}
-        />
+  return (
+    <>
+      <div className="container mx-auto px-4 py-6">
+        <RulesHeader />
         
-        <div className="relative p-4 z-10">
-          <div className="flex justify-between items-center mb-3">
-            <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
-            <Button
-              variant="destructive"
-              size="sm"
-              className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3"
-              onClick={() => handleRuleBroken(rule)}
-            >
-              Rule Broken
-            </Button>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-10">
+            <Loader2 className="w-10 h-10 text-white animate-spin" />
           </div>
-          
-          <div className="mb-4">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-                <Check className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1 flex flex-col">
-                <div className="text-xl font-semibold">
-                  <HighlightedText
-                    text={rule.title}
-                    highlight={rule.highlight_effect}
-                    color={rule.title_color}
-                  />
-                </div>
-                
-                {rule.description && (
-                  <div className="text-sm mt-1">
-                    <HighlightedText
-                      text={rule.description}
-                      highlight={rule.highlight_effect}
-                      color={rule.subtext_color}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+        ) : rules.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-white mb-4">No rules found. Create your first rule!</p>
           </div>
-          
-          <div className="flex items-center justify-between mt-2">
-            <FrequencyTracker 
-              frequency={rule.frequency}
-              frequency_count={rule.frequency_count}
-              calendar_color={rule.calendar_color}
-              usage_data={rule.usage_data}
-            />
-            
-            <Button 
-              size="sm" 
-              className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
-              onClick={() => handleEditRule(rule)}
-            >
-              <Edit className="w-4 h-4" />
-            </Button>
+        ) : (
+          <div className="space-y-4">
+            {rules.map((rule) => (
+              <RuleCard 
+                key={rule.id} 
+                rule={rule} 
+                globalCarouselIndex={globalCarouselIndex}
+                onRuleBroken={handleRuleBroken}
+                onEdit={handleEditRule}
+              />
+            ))}
           </div>
-        </div>
-      </Card>
-    );
+        )}
+      </div>
+      
+      <RuleEditor
+        isOpen={isEditorOpen}
+        onClose={() => {
+          setIsEditorOpen(false);
+          setCurrentRule(null);
+        }}
+        ruleData={currentRule || undefined}
+        onSave={handleSaveRule}
+        onDelete={handleDeleteRule}
+      />
+    </>
+  );
+};
+
+const Rules: React.FC = () => {
+  const handleAddRule = () => {
+    const rulesContent = document.getElementById('rules-content-component');
+    if (rulesContent) {
+      // This is just to trigger the handleAddRule in the RulesContent component
+      const event = new CustomEvent('add-rule');
+      rulesContent.dispatchEvent(event);
+    }
   };
 
   return (
     <AppLayout onAddNewItem={handleAddRule}>
       <RewardsProvider>
-        <div className="container mx-auto px-4 py-6">
-          <RulesHeader />
-          
-          {isLoading ? (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="w-10 h-10 text-white animate-spin" />
-            </div>
-          ) : rules.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-white mb-4">No rules found. Create your first rule!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {rules.map((rule) => (
-                <RuleCard key={rule.id} rule={rule} />
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <RuleEditor
-          isOpen={isEditorOpen}
-          onClose={() => {
-            setIsEditorOpen(false);
-            setCurrentRule(null);
-          }}
-          ruleData={currentRule || undefined}
-          onSave={handleSaveRule}
-          onDelete={handleDeleteRule}
-          carouselTimer={carouselTimer}
-          setCarouselTimer={setCarouselTimer}
-        />
+        <RuleCarouselProvider>
+          <RulesContent />
+        </RuleCarouselProvider>
       </RewardsProvider>
     </AppLayout>
   );
