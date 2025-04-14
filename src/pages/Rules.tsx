@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2 } from 'lucide-react';
@@ -10,7 +10,6 @@ import { RewardsProvider } from '@/contexts/RewardsContext';
 import { v4 as uuidv4 } from 'uuid';
 import RuleCard from '@/components/rule/RuleCard';
 import { RuleCardData } from '@/components/rule/hooks/useRuleCardData';
-
 interface Rule {
   id: string;
   title: string;
@@ -36,69 +35,63 @@ interface Rule {
   updated_at?: string;
   user_id?: string;
 }
-
 const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [rules, setRules] = useState<Rule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
-
-  const fetchRules = useMemo(() => async () => {
-    try {
-      setIsLoading(true);
-      console.log("Fetching rules from Supabase...");
-      const {
-        data,
-        error
-      } = await supabase.from('rules').select('*').order('created_at', {
-        ascending: false
-      });
-      if (error) {
-        throw error;
-      }
-      const rulesWithUsageData = (data as Rule[] || []).map(rule => {
-        if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
-          return {
-            ...rule,
-            usage_data: [0, 0, 0, 0, 0, 0, 0]
-          };
-        }
-        return rule;
-      });
-      setRules(rulesWithUsageData);
-    } catch (err) {
-      console.error('Error fetching rules:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch rules. Please try again.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
+    const fetchRules = async () => {
+      try {
+        setIsLoading(true);
+        console.log("Fetching rules from Supabase...");
+        const {
+          data,
+          error
+        } = await supabase.from('rules').select('*').order('created_at', {
+          ascending: false
+        });
+        if (error) {
+          throw error;
+        }
+        const rulesWithUsageData = (data as Rule[] || []).map(rule => {
+          if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
+            return {
+              ...rule,
+              usage_data: [0, 0, 0, 0, 0, 0, 0]
+            };
+          }
+          return rule;
+        });
+        setRules(rulesWithUsageData);
+      } catch (err) {
+        console.error('Error fetching rules:', err);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch rules. Please try again.',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
     fetchRules();
-
     const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
-
-    const carouselIntervalId = setInterval(() => {
+    const intervalId = setInterval(() => {
       setGlobalCarouselIndex(prev => prev + 1);
     }, savedTimer * 1000);
 
-    const refreshIntervalId = setInterval(() => {
+    // Refresh rules every 30 seconds
+    const refreshInterval = setInterval(() => {
       fetchRules();
-    }, 60000);
-
+    }, 30000);
     return () => {
-      clearInterval(carouselIntervalId);
-      clearInterval(refreshIntervalId);
+      clearInterval(intervalId);
+      clearInterval(refreshInterval);
     };
   }, []);
-
   const handleAddRule = async () => {
     try {
       const newRule = {
@@ -139,18 +132,19 @@ const Rules: React.FC = () => {
       });
     }
   };
-
   const handleUpdateRule = (updatedRule: RuleCardData) => {
+    // Convert RuleCardData to Rule format
     const updatedRuleInFormat: Rule = {
       ...updatedRule,
       description: updatedRule.description || '',
+      // Add any missing properties needed by the Rule interface
       points: 0,
       background_images: updatedRule.background_images || []
     };
     setRules(rules.map(rule => rule.id === updatedRule.id ? updatedRuleInFormat : rule));
   };
-
   const handleRuleBroken = (rule: RuleCardData) => {
+    // Convert RuleCardData to Rule format for the state update
     const updatedRule = rules.find(r => r.id === rule.id);
     if (updatedRule) {
       const newUsageData = [...rule.usage_data];
@@ -160,42 +154,24 @@ const Rules: React.FC = () => {
       } : r));
     }
   };
-
-  return (
-    <AppLayout onAddNewItem={handleAddRule}>
+  return <AppLayout onAddNewItem={handleAddRule}>
       <RewardsProvider>
         <div className="container mx-auto px-4 py-6">
           <RulesHeader />
           
-          {isLoading ? (
-            <div className="flex justify-center items-center py-10">
+          <div className="flex justify-end mb-6">
+            
+          </div>
+          
+          {isLoading ? <div className="flex justify-center items-center py-10">
               <Loader2 className="w-10 h-10 text-white animate-spin" />
-            </div>
-          ) : rules.length === 0 ? (
-            <div className="text-center py-10">
+            </div> : rules.length === 0 ? <div className="text-center py-10">
               <p className="text-white mb-4">No rules found. Create your first rule!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {rules.map(rule => (
-                <RuleCard 
-                  key={rule.id} 
-                  id={rule.id} 
-                  title={rule.title} 
-                  description={rule.description || ''} 
-                  priority={rule.priority} 
-                  globalCarouselIndex={globalCarouselIndex} 
-                  onUpdate={handleUpdateRule} 
-                  onRuleBroken={handleRuleBroken} 
-                  rule={rule as RuleCardData} 
-                />
-              ))}
-            </div>
-          )}
+            </div> : <div className="space-y-4">
+              {rules.map(rule => <RuleCard key={rule.id} id={rule.id} title={rule.title} description={rule.description || ''} priority={rule.priority} globalCarouselIndex={globalCarouselIndex} onUpdate={handleUpdateRule} onRuleBroken={handleRuleBroken} rule={rule as RuleCardData} />)}
+            </div>}
         </div>
       </RewardsProvider>
-    </AppLayout>
-  );
+    </AppLayout>;
 };
-
 export default Rules;
