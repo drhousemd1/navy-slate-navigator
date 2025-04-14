@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -80,6 +80,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(ruleData?.carousel_timer || 5);
   const [backgroundImages, setBackgroundImages] = useState<string[]>(ruleData?.background_images || []);
+  const [focalPointX, setFocalPointX] = useState(ruleData?.focal_point_x || 0.5);
+  const [focalPointY, setFocalPointY] = useState(ruleData?.focal_point_y || 0.5);
   
   const form = useForm<RuleFormValues>({
     defaultValues: {
@@ -93,8 +95,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       calendar_color: ruleData?.calendar_color || '#9c7abb',
       icon_color: ruleData?.icon_color || '#FFFFFF',
       highlight_effect: ruleData?.highlight_effect || false,
-      focal_point_x: ruleData?.focal_point_x || 50,
-      focal_point_y: ruleData?.focal_point_y || 50,
+      focal_point_x: ruleData?.focal_point_x || 0.5,
+      focal_point_y: ruleData?.focal_point_y || 0.5,
       priority: ruleData?.priority || 'medium',
       icon_name: ruleData?.icon_name,
       frequency: ruleData?.frequency || 'daily',
@@ -109,6 +111,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setSelectedIconName(ruleData?.icon_name || null);
     setBackgroundImages(ruleData?.background_images || []);
     setCarouselTimer(ruleData?.carousel_timer || 5);
+    setFocalPointX(ruleData?.focal_point_x || 0.5);
+    setFocalPointY(ruleData?.focal_point_y || 0.5);
   }, [ruleData]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,6 +186,13 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     form.setValue('carousel_timer', seconds);
   };
 
+  const handleFocalPointChange = (x: number, y: number) => {
+    setFocalPointX(x);
+    setFocalPointY(y);
+    form.setValue('focal_point_x', x);
+    form.setValue('focal_point_y', y);
+  };
+
   const handleSubmit = async (values: RuleFormValues) => {
     setLoading(true);
     
@@ -193,6 +204,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         highlight_effect: values.highlight_effect || false,
         background_images: backgroundImages,
         carousel_timer: carouselTimer,
+        focal_point_x: focalPointX,
+        focal_point_y: focalPointY,
       };
       
       await onSave(ruleToSave);
@@ -261,6 +274,9 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           onImagesChange={handleBackgroundImagesChange}
           carouselTimer={carouselTimer}
           onCarouselTimerChange={handleCarouselTimerChange}
+          focalPointX={focalPointX}
+          focalPointY={focalPointY}
+          onFocalPointChange={handleFocalPointChange}
         />
         
         <div className="space-y-4">
