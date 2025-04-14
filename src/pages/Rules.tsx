@@ -24,7 +24,7 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
-  background_images?: string[];
+  background_images: string[]; // Not optional
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -41,7 +41,7 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
-  carousel_timer?: number;
+  carousel_timer: number; // Required, not optional
 }
 
 const Rules: React.FC = () => {
@@ -197,32 +197,39 @@ const Rules: React.FC = () => {
     try {
       let result;
       
-      if (ruleData.id) {
-        const existingRule = rules.find(rule => rule.id === ruleData.id);
+      // Add this line to ensure carousel_timer is properly handled
+      const processedRuleData = {
+        ...ruleData,
+        carousel_timer: ruleData.carousel_timer || 5, // Default to 5 seconds if not provided
+      };
+      
+      if (processedRuleData.id) {
+        const existingRule = rules.find(rule => rule.id === processedRuleData.id);
         
         const { data, error } = await supabase
           .from('rules')
           .update({
-            title: ruleData.title,
-            description: ruleData.description,
-            priority: ruleData.priority,
-            background_image_url: ruleData.background_image_url,
-            background_images: ruleData.background_images,
-            background_opacity: ruleData.background_opacity,
-            icon_url: ruleData.icon_url,
-            icon_name: ruleData.icon_name,
-            title_color: ruleData.title_color,
-            subtext_color: ruleData.subtext_color,
-            calendar_color: ruleData.calendar_color,
-            icon_color: ruleData.icon_color,
-            highlight_effect: ruleData.highlight_effect,
-            focal_point_x: ruleData.focal_point_x,
-            focal_point_y: ruleData.focal_point_y,
-            frequency: ruleData.frequency,
-            frequency_count: ruleData.frequency_count,
+            title: processedRuleData.title,
+            description: processedRuleData.description,
+            priority: processedRuleData.priority,
+            background_image_url: processedRuleData.background_image_url,
+            background_images: processedRuleData.background_images,
+            background_opacity: processedRuleData.background_opacity,
+            icon_url: processedRuleData.icon_url,
+            icon_name: processedRuleData.icon_name,
+            title_color: processedRuleData.title_color,
+            subtext_color: processedRuleData.subtext_color,
+            calendar_color: processedRuleData.calendar_color,
+            icon_color: processedRuleData.icon_color,
+            highlight_effect: processedRuleData.highlight_effect,
+            focal_point_x: processedRuleData.focal_point_x,
+            focal_point_y: processedRuleData.focal_point_y,
+            frequency: processedRuleData.frequency,
+            frequency_count: processedRuleData.frequency_count,
+            carousel_timer: processedRuleData.carousel_timer, // Make sure to include this
             updated_at: new Date().toISOString()
           })
-          .eq('id', ruleData.id)
+          .eq('id', processedRuleData.id)
           .select()
           .single();
           
@@ -234,19 +241,17 @@ const Rules: React.FC = () => {
         }
         
         // Save carousel timer to localStorage
-        if (ruleData.carousel_timer) {
-          localStorage.setItem('rules_carouselTimer', String(ruleData.carousel_timer));
-          setCarouselTimer(ruleData.carousel_timer);
-        }
+        localStorage.setItem('rules_carouselTimer', String(processedRuleData.carousel_timer));
+        setCarouselTimer(processedRuleData.carousel_timer);
         
-        setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result as Rule } : rule));
+        setRules(rules.map(rule => rule.id === processedRuleData.id ? { ...rule, ...result as Rule } : rule));
         
         toast({
           title: 'Success',
           description: 'Rule updated successfully!',
         });
       } else {
-        const { id, ...ruleWithoutId } = ruleData;
+        const { id, ...ruleWithoutId } = processedRuleData;
         
         if (!ruleWithoutId.title) {
           throw new Error('Rule title is required');
@@ -262,10 +267,11 @@ const Rules: React.FC = () => {
           subtext_color: ruleWithoutId.subtext_color || '#FFFFFF',
           calendar_color: ruleWithoutId.calendar_color || '#9c7abb',
           highlight_effect: ruleWithoutId.highlight_effect || false,
-          focal_point_x: ruleWithoutId.focal_point_x || 50,
-          focal_point_y: ruleWithoutId.focal_point_y || 50,
+          focal_point_x: ruleWithoutId.focal_point_x || 0.5,
+          focal_point_y: ruleWithoutId.focal_point_y || 0.5,
           frequency: ruleWithoutId.frequency || 'daily',
           frequency_count: ruleWithoutId.frequency_count || 3,
+          carousel_timer: ruleWithoutId.carousel_timer || 5, // Make sure to include this
           usage_data: [0, 0, 0, 0, 0, 0, 0],
           ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
           ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
@@ -284,6 +290,10 @@ const Rules: React.FC = () => {
           
         if (error) throw error;
         result = data;
+        
+        // Save carousel timer to localStorage when creating a new rule too
+        localStorage.setItem('rules_carouselTimer', String(processedRuleData.carousel_timer));
+        setCarouselTimer(processedRuleData.carousel_timer);
         
         setRules([result as Rule, ...rules]);
         
@@ -333,43 +343,46 @@ const Rules: React.FC = () => {
   };
 
   const RuleCard: React.FC<{ rule: Rule }> = ({ rule }) => {
+    // Filter out empty strings from background_images array
+    const backgroundImages = (rule.background_images || []).filter(Boolean);
+    
     const {
       visibleImage,
       transitionImage,
       isTransitioning
     } = useImageCarousel({
-      images: rule.background_images || [],
+      images: backgroundImages,
       globalCarouselIndex
     });
 
     return (
       <Card 
         key={rule.id}
-        className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
+        className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden relative`}
       >
-        <div className="relative p-4">
-          <CardBackground 
-            visibleImage={visibleImage}
-            transitionImage={transitionImage}
-            isTransitioning={isTransitioning}
-            focalPointX={rule.focal_point_x}
-            focalPointY={rule.focal_point_y}
-            backgroundOpacity={rule.background_opacity}
-          />
-          
-          <div className="flex justify-between items-center mb-3 relative z-10">
+        <CardBackground 
+          visibleImage={visibleImage}
+          transitionImage={transitionImage}
+          isTransitioning={isTransitioning}
+          focalPointX={rule.focal_point_x}
+          focalPointY={rule.focal_point_y}
+          backgroundOpacity={rule.background_opacity}
+        />
+        
+        <div className="relative p-4 z-10">
+          <div className="flex justify-between items-center mb-3">
             <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
             <Button
               variant="destructive"
               size="sm"
-              className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
+              className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3"
               onClick={() => handleRuleBroken(rule)}
             >
               Rule Broken
             </Button>
           </div>
           
-          <div className="mb-4 relative z-10">
+          <div className="mb-4">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
                 <Check className="w-6 h-6 text-white" />
@@ -396,7 +409,7 @@ const Rules: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex items-center justify-between mt-2 relative z-10">
+          <div className="flex items-center justify-between mt-2">
             <FrequencyTracker 
               frequency={rule.frequency}
               frequency_count={rule.frequency_count}

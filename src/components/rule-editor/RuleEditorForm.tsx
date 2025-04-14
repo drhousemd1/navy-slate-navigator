@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -22,7 +21,7 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
-  background_images?: string[];
+  background_images: string[];
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -36,7 +35,7 @@ interface Rule {
   frequency: 'daily' | 'weekly';
   frequency_count: number;
   usage_data?: number[];
-  carousel_timer?: number;
+  carousel_timer: number;
 }
 
 interface RuleFormValues {
