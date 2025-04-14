@@ -2,47 +2,60 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface RuleCarouselContextType {
-  globalCarouselIndex: number;
   carouselTimer: number;
-  setCarouselTimer: (timer: number) => void;
+  setCarouselTimer: (value: number) => void;
+  globalCarouselIndex: number;
+  incrementCarouselIndex: () => void;
 }
 
-const RuleCarouselContext = createContext<RuleCarouselContextType>({
-  globalCarouselIndex: 0,
+const defaultContext: RuleCarouselContextType = {
   carouselTimer: 5,
   setCarouselTimer: () => {},
-});
+  globalCarouselIndex: 0,
+  incrementCarouselIndex: () => {},
+};
+
+const RuleCarouselContext = createContext<RuleCarouselContextType>(defaultContext);
 
 export const useRuleCarousel = () => useContext(RuleCarouselContext);
 
 export const RuleCarouselProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
+  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
+  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
 
-  // Load timer setting from localStorage when component mounts
+  const incrementCarouselIndex = () => {
+    setGlobalCarouselIndex(prevIndex => prevIndex + 1);
+  };
+
   useEffect(() => {
-    const savedTimer = localStorage.getItem('ruleCarouselTimer');
-    if (savedTimer) {
-      setCarouselTimer(parseInt(savedTimer, 10));
+    // Clear any existing interval
+    if (timerInterval) {
+      clearInterval(timerInterval);
     }
-  }, []);
 
-  // Save timer setting to localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem('ruleCarouselTimer', carouselTimer.toString());
-  }, [carouselTimer]);
-
-  // Increment the global carousel index at the specified interval
-  useEffect(() => {
+    // Set up a new interval based on the current timer value
     const interval = setInterval(() => {
-      setGlobalCarouselIndex(prevIndex => prevIndex + 1);
+      incrementCarouselIndex();
     }, carouselTimer * 1000);
 
-    return () => clearInterval(interval);
+    setTimerInterval(interval);
+
+    // Clean up on unmount or when timer changes
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [carouselTimer]);
 
   return (
-    <RuleCarouselContext.Provider value={{ globalCarouselIndex, carouselTimer, setCarouselTimer }}>
+    <RuleCarouselContext.Provider 
+      value={{ 
+        carouselTimer, 
+        setCarouselTimer, 
+        globalCarouselIndex, 
+        incrementCarouselIndex 
+      }}
+    >
       {children}
     </RuleCarouselContext.Provider>
   );
