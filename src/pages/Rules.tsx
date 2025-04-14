@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -40,7 +41,6 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
-  carousel_timer?: number;
 }
 
 const Rules: React.FC = () => {
@@ -51,6 +51,7 @@ const Rules: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
   
+  // Add carousel state
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
 
@@ -78,6 +79,7 @@ const Rules: React.FC = () => {
         }
         
         const rulesWithUsageData = (data as Rule[] || []).map(rule => {
+          // Convert single background_image_url to background_images array if needed
           let background_images = rule.background_images || [];
           if (rule.background_image_url && !background_images.includes(rule.background_image_url)) {
             background_images = [rule.background_image_url, ...background_images];
@@ -113,7 +115,7 @@ const Rules: React.FC = () => {
     
     const intervalId = setInterval(() => {
       fetchRules();
-    }, 30000);
+    }, 30000); // Refresh every 30 seconds
     
     return () => clearInterval(intervalId);
   }, []);
@@ -230,6 +232,7 @@ const Rules: React.FC = () => {
           result.usage_data = existingRule.usage_data;
         }
         
+        // Save carousel timer to localStorage
         if (ruleData.carousel_timer) {
           localStorage.setItem('rules_carouselTimer', String(ruleData.carousel_timer));
           setCarouselTimer(ruleData.carousel_timer);
