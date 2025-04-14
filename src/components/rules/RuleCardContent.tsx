@@ -1,6 +1,8 @@
+
 import React from 'react';
 import { Rule } from '@/lib/ruleUtils';
 import { Button } from '../ui/button';
+import { Pencil } from 'lucide-react';
 import RuleIcon from '../rule/RuleIcon';
 import FrequencyTracker from '../rule/FrequencyTracker';
 import HighlightedText from '../rule/HighlightedText';
