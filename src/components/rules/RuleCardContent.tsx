@@ -1,8 +1,6 @@
-
 import React from 'react';
 import { Rule } from '@/lib/ruleUtils';
 import { Button } from '../ui/button';
-import { Pencil, Skull } from 'lucide-react';
 import RuleIcon from '../rule/RuleIcon';
 import FrequencyTracker from '../rule/FrequencyTracker';
 import HighlightedText from '../task/HighlightedText';
@@ -23,6 +21,14 @@ const RuleCardContent = ({
     <div className="relative z-10 flex flex-col p-4 md:p-6 h-full transition-opacity duration-[2000ms]">
       <div className="flex justify-between items-start mb-3">
         <PriorityBadge priority={rule.priority} />
+        
+        <Button
+          onClick={onBreak}
+          variant="destructive"
+          className="bg-red-600 text-white hover:bg-red-700"
+        >
+          {isViolated ? 'Rule Broken' : 'Break'}
+        </Button>
       </div>
       
       <div className="flex items-start mb-auto">
@@ -54,38 +60,6 @@ const RuleCardContent = ({
           </div>
         </div>
       </div>
-      
-      <div className="flex items-center justify-between mt-4">
-        {rule.usage_data && (
-          <FrequencyTracker 
-            usage_data={rule.usage_data}
-            calendar_color={rule.calendar_color}
-          />
-        )}
-        
-        <div className="flex space-x-2 ml-auto">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onEdit}
-            className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          
-          <Button
-            onClick={onBreak}
-            className={`${isViolated ? 'bg-red-600' : 'bg-light-navy'} text-white`}
-          >
-            <Skull className="w-4 h-4 mr-1" />
-            {isViolated ? 'Violated' : 'Break'}
-          </Button>
-        </div>
-      </div>
-      
-      {isViolated && (
-        <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
-      )}
     </div>
   );
 };
