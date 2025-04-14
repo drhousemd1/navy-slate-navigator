@@ -76,6 +76,64 @@ interface SupabaseCardData {
   frequency_count: number | null;
 }
 
+// Helper function to safely convert Json array to string array
+const jsonToStringArray = (jsonValue: Json | null): string[] => {
+  if (!jsonValue) return [];
+  
+  // If it's already an array, filter out non-string values and convert to strings
+  if (Array.isArray(jsonValue)) {
+    return jsonValue
+      .filter(item => item !== null && item !== undefined)
+      .map(item => String(item));
+  }
+  
+  // If it's an object with numeric keys, try to convert it to an array
+  if (typeof jsonValue === 'object' && jsonValue !== null) {
+    try {
+      const values = Object.values(jsonValue);
+      return values
+        .filter(item => item !== null && item !== undefined)
+        .map(item => String(item));
+    } catch (e) {
+      console.error('Error converting Json object to string array:', e);
+    }
+  }
+  
+  return [];
+};
+
+// Helper function to safely convert Json array to number array
+const jsonToNumberArray = (jsonValue: Json | null): number[] => {
+  if (!jsonValue) return [];
+  
+  // If it's already an array, filter out non-number values and convert to numbers
+  if (Array.isArray(jsonValue)) {
+    return jsonValue
+      .filter(item => item !== null && item !== undefined)
+      .map(item => {
+        const num = Number(item);
+        return isNaN(num) ? 0 : num;
+      });
+  }
+  
+  // If it's an object with numeric keys, try to convert it to an array
+  if (typeof jsonValue === 'object' && jsonValue !== null) {
+    try {
+      const values = Object.values(jsonValue);
+      return values
+        .filter(item => item !== null && item !== undefined)
+        .map(item => {
+          const num = Number(item);
+          return isNaN(num) ? 0 : num;
+        });
+    } catch (e) {
+      console.error('Error converting Json object to number array:', e);
+    }
+  }
+  
+  return [];
+};
+
 export const useRuleCardData = ({
   id,
   title,
@@ -140,40 +198,41 @@ export const useRuleCardData = ({
           const supabaseData = data as SupabaseCardData;
           
           // Transform data from Supabase to match our expected format
-          const savedCard = {
-            ...data,
-            // Ensure points is a number with fallback to default
+          const savedCard: RuleCardData = {
+            id: supabaseData.id,
+            title: supabaseData.title,
+            description: supabaseData.description || '',
             points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
             priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
-            background_images: Array.isArray(supabaseData.background_images) 
-              ? supabaseData.background_images 
-              : [],
-            usage_data: Array.isArray(supabaseData.usage_data) 
-              ? supabaseData.usage_data 
-              : [1, 2, 0, 3, 1, 0, 2]
+            background_image_url: supabaseData.background_image_url || undefined,
+            background_images: jsonToStringArray(supabaseData.background_images),
+            background_opacity: supabaseData.background_opacity || 80,
+            focal_point_x: supabaseData.focal_point_x || 50,
+            focal_point_y: supabaseData.focal_point_y || 50,
+            title_color: supabaseData.title_color || '#FFFFFF',
+            subtext_color: supabaseData.subtext_color || '#8E9196',
+            calendar_color: supabaseData.calendar_color || '#7E69AB',
+            icon_url: supabaseData.icon_url || undefined,
+            icon_name: supabaseData.icon_name || undefined,
+            icon_color: supabaseData.icon_color || '#FFFFFF',
+            highlight_effect: supabaseData.highlight_effect || false,
+            usage_data: jsonToNumberArray(supabaseData.usage_data),
+            frequency: (supabaseData.frequency as 'daily' | 'weekly') || 'daily',
+            frequency_count: supabaseData.frequency_count || 1,
+            created_at: supabaseData.created_at || undefined,
+            updated_at: supabaseData.updated_at || undefined,
+            user_id: supabaseData.user_id || undefined
           };
           
           console.log("Transformed rule data:", savedCard);
           
-          setCardData({
-            ...cardData,
-            ...savedCard
-          });
+          setCardData(savedCard);
           
           // Set images from background_images or single background_image_url
-          let imageArray: string[] = [];
-          if (Array.isArray(savedCard.background_images)) {
-            imageArray = savedCard.background_images.filter(img => typeof img === 'string') as string[];
-          } else if (typeof savedCard.background_images === 'object' && savedCard.background_images !== null) {
-            // Try to convert JSON object to array if possible
-            const bgImages = (savedCard.background_images as unknown) as Json[];
-            if (Array.isArray(bgImages)) {
-              imageArray = bgImages.filter(item => typeof item === 'string') as string[];
-            }
-          }
+          let imageArray = jsonToStringArray(supabaseData.background_images);
           
-          if (imageArray.length === 0 && savedCard.background_image_url) {
-            imageArray = [savedCard.background_image_url];
+          if (imageArray.length === 0 && supabaseData.background_image_url) {
+            imageArray = [supabaseData.background_image_url];
           }
           
           console.log("Setting images array:", imageArray);
@@ -270,11 +329,7 @@ export const useRuleCardData = ({
   // Ensure usageData is always an array of numbers
   const usageData = Array.isArray(cardData.usage_data) 
     ? cardData.usage_data as number[]
-    : typeof cardData.usage_data === 'object' && cardData.usage_data !== null
-      ? Object.values(cardData.usage_data).map(val => 
-          typeof val === 'number' ? val : 0
-        ) 
-      : [0, 0, 0, 0, 0, 0, 0];
+    : [0, 0, 0, 0, 0, 0, 0];
 
   return {
     cardData,
