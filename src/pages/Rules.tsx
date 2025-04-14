@@ -41,6 +41,7 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  carousel_timer?: number;
 }
 
 const Rules: React.FC = () => {
