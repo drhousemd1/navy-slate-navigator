@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -130,7 +129,9 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        setImagePreview(base64String);
+        const newBackgroundImages = [...backgroundImages];
+        newBackgroundImages[globalCarouselIndex] = base64String;
+        setBackgroundImages(newBackgroundImages);
         form.setValue('background_image_url', base64String);
       };
       reader.readAsDataURL(file);
