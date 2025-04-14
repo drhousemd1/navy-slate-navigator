@@ -41,9 +41,14 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
     }
   }, []);
   
+  // Initialize the images array properly to avoid undefined errors
+  const initialImages = backgroundImages && backgroundImages.length > 0 
+    ? [...backgroundImages] 
+    : Array(5).fill('');
+
   // Use the modal image handling hook to manage image state
   const { images, selectedImageIndex, selectImage, updateImage } = useModalImageHandling(
-    backgroundImages.length === 5 ? backgroundImages : [...backgroundImages].concat(Array(5 - backgroundImages.length).fill(''))
+    initialImages.length === 5 ? initialImages : initialImages.concat(Array(5 - initialImages.length).fill(''))
   );
   
   useEffect(() => {
@@ -141,7 +146,78 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
         </div>
       </div>
       
-      {/* The image preview with focal point block has been removed as requested */}
+      {/* Image upload/preview section */}
+      <div className="mt-4 p-4 border-2 border-dashed border-gray-600 rounded-lg bg-gray-800/50">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-white font-medium">
+            {selectedImageIndex !== -1 ? `Image ${selectedImageIndex + 1}` : 'Select an image slot above'}
+          </span>
+          <div className="flex gap-2">
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="bg-dark-navy hover:bg-navy border-gray-600 text-white"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Upload
+              </Button>
+            </label>
+            {images[selectedImageIndex] && (
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={handleRemoveImage}
+                className="bg-red-900/50 hover:bg-red-900 border-none"
+              >
+                <Trash className="w-4 h-4 mr-1" />
+                Remove
+              </Button>
+            )}
+          </div>
+        </div>
+        
+        {/* Image preview */}
+        {selectedImageIndex !== -1 && (
+          <div 
+            className="relative w-full h-40 bg-gray-900 rounded-md overflow-hidden"
+            onClick={handleFocalPointChange}
+          >
+            {images[selectedImageIndex] ? (
+              <>
+                <img 
+                  src={images[selectedImageIndex]} 
+                  alt="Selected background" 
+                  className="w-full h-full object-cover"
+                />
+                {onFocalPointChange && (
+                  <div 
+                    className="absolute w-6 h-6 rounded-full border-2 border-white bg-blue-500/50 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ 
+                      left: `${focalPointX * 100}%`, 
+                      top: `${focalPointY * 100}%` 
+                    }}
+                  />
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                <Image className="w-12 h-12 mb-2" />
+                <p>No image selected</p>
+                <p className="text-sm">(Click 'Upload' to add an image)</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
