@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -134,6 +134,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setImageSlots(newImageSlots);
   }, [ruleData]);
 
+  // This is now exactly like TaskEditorForm.tsx's handleImageUpload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
