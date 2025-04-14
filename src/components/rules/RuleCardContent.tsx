@@ -27,7 +27,8 @@ const RuleCardContent = ({
         {/* Moved Break button to the top right */}
         <Button
           onClick={onBreak}
-          className="bg-red-600 text-white hover:bg-red-700"
+          size="sm"
+          className="bg-red-600 text-white hover:bg-red-700 h-7"
         >
           {isViolated ? 'Violated' : 'Rule Broken'}
         </Button>
