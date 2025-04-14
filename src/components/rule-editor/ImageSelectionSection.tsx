@@ -51,7 +51,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
     if (JSON.stringify(images) !== JSON.stringify(backgroundImages)) {
       onImagesChange(images);
     }
-  }, [images]);
+  }, [images, backgroundImages, onImagesChange]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -141,7 +141,53 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
         </div>
       </div>
       
-      {/* The image preview with focal point block has been removed as requested */}
+      {/* Add image preview section that changes based on selected thumbnail */}
+      <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
+        {images[selectedImageIndex] ? (
+          <div className="space-y-4">
+            <div 
+              className="relative w-full h-48 rounded-lg overflow-hidden"
+              onClick={handleFocalPointChange}
+            >
+              <img
+                src={images[selectedImageIndex]}
+                alt="Preview"
+                className="object-cover w-full h-full"
+                style={{
+                  objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
+                }}
+              />
+              {onFocalPointChange && (
+                <div 
+                  className="absolute rounded-full w-4 h-4 bg-white border-2 border-blue-500 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{
+                    left: `${focalPointX * 100}%`,
+                    top: `${focalPointY * 100}%`
+                  }}
+                />
+              )}
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleRemoveImage}
+              className="bg-dark-navy text-white hover:bg-light-navy"
+            >
+              Remove Image
+            </Button>
+          </div>
+        ) : (
+          <div className="relative h-32 flex flex-col items-center justify-center">
+            <p className="text-light-navy">Click to upload or drag and drop</p>
+            <input
+              type="file"
+              accept="image/*"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              onChange={handleImageUpload}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
