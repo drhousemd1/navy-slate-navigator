@@ -9,7 +9,7 @@ export const useImageCarousel = (images: string[], timer: number) => {
   );
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Reset visible image if images array changes
@@ -44,8 +44,6 @@ export const useImageCarousel = (images: string[], timer: number) => {
           setTransitionImage(null);
           setIsTransitioning(false);
         }, 1000); // Match the transition duration
-        
-        return () => clearTimeout(timeout);
       };
     };
     
