@@ -1,43 +1,86 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from 'react';
 
 interface UseImageCarouselProps {
   images: string[];
   globalCarouselIndex: number;
 }
 
-export const useImageCarousel = ({
-  images,
-  globalCarouselIndex
-}: UseImageCarouselProps) => {
-  const filteredImages = images.filter(Boolean);
-  const [visibleImage, setVisibleImage] = useState<string | null>(filteredImages[0] || null);
+interface UseImageCarouselResult {
+  visibleImage: string | null;
+  transitionImage: string | null;
+  isTransitioning: boolean;
+}
+
+export const useImageCarousel = ({ 
+  images, 
+  globalCarouselIndex 
+}: UseImageCarouselProps): UseImageCarouselResult => {
+  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const prevIndexRef = useRef(globalCarouselIndex);
+  const [previousImages, setPreviousImages] = useState<string[]>([]);
 
+  // Initialize or update visible image when images array changes
   useEffect(() => {
-    if (filteredImages.length === 0) return;
-    if (filteredImages.length === 1) return;
-    if (globalCarouselIndex === prevIndexRef.current) return;
-
-    prevIndexRef.current = globalCarouselIndex;
-    
-    const newIndex = globalCarouselIndex % filteredImages.length;
-    const nextImage = filteredImages[newIndex];
-    
-    // Always transition to the next image even if it's the same as current
-    setTransitionImage(visibleImage);
-    setVisibleImage(nextImage);
-    setIsTransitioning(true);
-
-    const timer = setTimeout(() => {
+    if (images.length > 0) {
+      // Check if images array has changed
+      const imagesChanged = 
+        images.length !== previousImages.length || 
+        images.some((img, i) => previousImages[i] !== img);
+      
+      if (imagesChanged) {
+        setPreviousImages(images);
+        setVisibleImage(images[0]);
+        setTransitionImage(null);
+        setIsTransitioning(false);
+      }
+    } else if (previousImages.length > 0 && images.length === 0) {
+      // Reset if we had images but now don't
+      setPreviousImages([]);
+      setVisibleImage(null);
       setTransitionImage(null);
       setIsTransitioning(false);
-    }, 700);
+    }
+  }, [images]);
 
-    return () => clearTimeout(timer);
-  }, [globalCarouselIndex, filteredImages, visibleImage]);
+  // Handle image transitions when global carousel index changes
+  useEffect(() => {
+    if (!images.length || images.length <= 1) return;
+    
+    const nextIndex = globalCarouselIndex % images.length;
+    const next = images[nextIndex];
+    
+    if (next === visibleImage) return;
+    
+    const preload = new Image();
+    preload.src = next;
+    
+    preload.onload = () => {
+      setTransitionImage(next);
+      setIsTransitioning(false);
+      
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setIsTransitioning(true);
+          
+          const timeout = setTimeout(() => {
+            setVisibleImage(next);
+            setTransitionImage(null);
+            setIsTransitioning(false);
+          }, 2000);
+          
+          return () => clearTimeout(timeout);
+        }, 0);
+      });
+    };
+    
+    preload.onerror = () => {
+      console.error("Failed to load image:", next);
+      // Try to continue with the next image anyway
+      setVisibleImage(next);
+    };
+  }, [globalCarouselIndex, images, visibleImage]);
 
   return {
     visibleImage,
