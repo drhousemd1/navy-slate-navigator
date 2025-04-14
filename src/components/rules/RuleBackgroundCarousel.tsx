@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useRuleImageCarousel } from '../rule/hooks/useRuleImageCarousel';
+import { useImageCarousel } from '@/components/hooks/useImageCarousel';
 
 interface RuleBackgroundCarouselProps {
   backgroundImages?: (string | null)[] | null;
@@ -21,56 +21,41 @@ const RuleBackgroundCarousel: React.FC<RuleBackgroundCarouselProps> = ({
   focalPointY = 50,
   globalCarouselIndex = 0
 }) => {
-  const allImages: (string | null)[] =
-    backgroundImages && backgroundImages.length > 0
-      ? backgroundImages
-      : backgroundImageUrl
-      ? [backgroundImageUrl]
-      : [];
-  
+  const allImages = backgroundImages?.length
+    ? backgroundImages
+    : backgroundImageUrl
+    ? [backgroundImageUrl]
+    : [];
+
   const filteredImages = allImages.filter((img): img is string => !!img);
 
   const {
     visibleImage,
     transitionImage,
     isTransitioning
-  } = useRuleImageCarousel({
+  } = useImageCarousel({
     images: filteredImages,
     globalCarouselIndex
   });
 
-  // Default placeholder image if both images are null (prevents layout shifts)
-  const defaultImage = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+  const defaultImage = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
   return (
     <>
-      {/* Always render the visible image element, even if src is empty */}
       <img
         src={visibleImage || defaultImage}
         alt=""
-        className="absolute inset-0 w-full h-full object-cover z-0"
-        style={{
-          objectPosition: `${focalPointX}% ${focalPointY}%`,
-          opacity: visibleImage ? backgroundOpacity / 100 : 0,
-          transition: 'opacity 2s ease-in-out'
-        }}
-        aria-hidden="true"
-        draggable={false}
+        className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-500 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+        style={{ objectPosition: `${focalPointX}% ${focalPointY}%`, opacity: backgroundOpacity / 100 }}
       />
-
-      {/* Always render the transition image element, even if src is empty */}
-      <img
-        src={transitionImage || defaultImage}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-        style={{
-          objectPosition: `${focalPointX}% ${focalPointY}%`,
-          opacity: isTransitioning ? backgroundOpacity / 100 : 0,
-          transition: 'opacity 2s ease-in-out'
-        }}
-        aria-hidden="true"
-        draggable={false}
-      />
+      {transitionImage && (
+        <img
+          src={transitionImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover z-0 opacity-100"
+          style={{ objectPosition: `${focalPointX}% ${focalPointY}%`, opacity: backgroundOpacity / 100 }}
+        />
+      )}
     </>
   );
 };
