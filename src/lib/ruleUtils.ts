@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { getMondayBasedDay } from "./utils";
 
@@ -43,8 +44,8 @@ export const fetchRules = async (): Promise<Rule[]> => {
     ...rule,
     // Ensure priority is one of the allowed values
     priority: (rule.priority as 'low' | 'medium' | 'high') || 'medium',
-    // Set default values for any properties that might be missing
-    usage_data: rule.usage_data || [0, 0, 0, 0, 0, 0, 0],
+    // Ensure usage_data is an array of numbers
+    usage_data: Array.isArray(rule.usage_data) ? rule.usage_data.map(Number) : [0, 0, 0, 0, 0, 0, 0],
     background_opacity: rule.background_opacity || 100,
     highlight_effect: rule.highlight_effect || false,
     focal_point_x: rule.focal_point_x || 50,
