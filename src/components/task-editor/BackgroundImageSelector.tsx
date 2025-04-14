@@ -1,10 +1,11 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Upload } from 'lucide-react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import ImageFocalPointControl from '@/components/encyclopedia/image/ImageFocalPointControl';
-import { Button } from "@/components/ui/button";
 
 interface BackgroundImageSelectorProps {
   control: Control<any>;
@@ -121,19 +122,44 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
 
   return (
     <div className="space-y-4">
-      {!imagePreview && (
-        <div className="relative h-32 flex flex-col items-center justify-center border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
-          <Upload className="h-10 w-10 text-light-navy mb-2" />
-          <p className="text-light-navy">Click to upload or drag and drop</p>
-          <input
-            type="file"
-            accept="image/*"
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            onChange={onImageUpload}
-          />
-        </div>
-      )}
-      
+      <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
+        {imagePreview ? (
+          <div className="space-y-4">
+            <div 
+              ref={imageContainerRef}
+              className="relative w-full h-48 rounded-lg overflow-hidden"
+            >
+              <ImageFocalPointControl
+                imagePreview={imagePreview}
+                position={position}
+                opacity={opacity}
+                isDragging={isDragging}
+                onMouseDown={handleMouseDown}
+                onTouchStart={handleTouchStart}
+              />
+            </div>
+            <Button 
+              type="button"
+              variant="secondary" 
+              onClick={onRemoveImage}
+              className="bg-dark-navy text-white hover:bg-light-navy"
+            >
+              Remove Image
+            </Button>
+          </div>
+        ) : (
+          <div className="relative h-32 flex flex-col items-center justify-center">
+            <Upload className="h-10 w-10 text-light-navy mb-2" />
+            <p className="text-light-navy">Click to upload or drag and drop</p>
+            <input
+              type="file"
+              accept="image/*"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              onChange={onImageUpload}
+            />
+          </div>
+        )}
+      </div>
       {imagePreview && (
         <FormField
           control={control}
