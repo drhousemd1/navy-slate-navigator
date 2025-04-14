@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -169,14 +170,26 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
 
   const handleMultiImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || selectedBoxIndex === null) return;
+    if (!file) return;
+    
+    // If no box selected, auto-select the first empty slot
+    let targetIndex = selectedBoxIndex;
+    if (targetIndex === null) {
+      const firstEmpty = imageSlots.findIndex((slot) => !slot);
+      if (firstEmpty === -1) {
+        targetIndex = 0;
+      } else {
+        targetIndex = firstEmpty;
+      }
+      setSelectedBoxIndex(targetIndex);
+    }
     
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
       
       const updatedSlots = [...imageSlots];
-      updatedSlots[selectedBoxIndex] = base64String;
+      updatedSlots[targetIndex!] = base64String;
       setImageSlots(updatedSlots);
       setImagePreview(base64String);
       form.setValue('background_image_url', base64String);
