@@ -25,6 +25,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
   setValue
 }) => {
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ 
     x: initialPosition?.x ?? 50, 
@@ -100,6 +101,13 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     updatePosition(e.touches[0].clientX, e.touches[0].clientY);
   };
 
+  const handleUploadClick = () => {
+    // Trigger the hidden file input
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) updatePosition(e.clientX, e.clientY);
@@ -162,10 +170,11 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
             </Button>
           </div>
         ) : (
-          <div className="relative h-32 flex flex-col items-center justify-center">
+          <div className="relative h-32 flex flex-col items-center justify-center cursor-pointer" onClick={handleUploadClick}>
             <Upload className="h-10 w-10 text-light-navy mb-2" />
             <p className="text-light-navy">Click to upload or drag and drop</p>
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"

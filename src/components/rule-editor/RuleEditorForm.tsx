@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -125,11 +126,13 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
 
     if (selectedBoxIndex === null) {
       const firstImageIndex = newImageSlots.findIndex(img => img !== null);
-      setSelectedBoxIndex(firstImageIndex !== -1 ? firstImageIndex : null);
+      setSelectedBoxIndex(firstImageIndex !== -1 ? firstImageIndex : 0);
     }
 
     setImagePreview(
-      selectedBoxIndex !== null ? newImageSlots[selectedBoxIndex] : null
+      selectedBoxIndex !== null && selectedBoxIndex < newImageSlots.length 
+        ? newImageSlots[selectedBoxIndex] 
+        : newImageSlots[0]
     );
   }, [ruleData]);
 
@@ -142,30 +145,37 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // If no box selected, auto-select the first empty slot
+    // If no box selected, auto-select the first empty slot or slot 0
     let targetIndex = selectedBoxIndex;
     if (targetIndex === null) {
       const firstEmpty = imageSlots.findIndex((slot) => !slot);
-      if (firstEmpty === -1) {
-        targetIndex = 0;
-      } else {
-        targetIndex = firstEmpty;
-      }
-      setSelectedBoxIndex(targetIndex);
+      targetIndex = firstEmpty !== -1 ? firstEmpty : 0;
     }
     
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
       
+      // Make a copy of the image slots array
       const updatedSlots = [...imageSlots];
-      updatedSlots[targetIndex!] = base64String;
+      // Update the selected slot with the new image
+      updatedSlots[targetIndex as number] = base64String;
       setImageSlots(updatedSlots);
+      
+      // Update the preview to show the new image
       setImagePreview(base64String);
+      setSelectedBoxIndex(targetIndex);
       
       // Update both form values
       form.setValue('background_image_url', base64String);
-      form.setValue('background_images', updatedSlots.filter(Boolean)); // Filter out null values
+      
+      // Make a clean array (no nulls) for background_images
+      const filteredImages = updatedSlots.filter(Boolean) as string[];
+      form.setValue('background_images', filteredImages);
+      
+      console.log("Updated image slots after upload:", updatedSlots);
+      
+      // Ensure opacity is set to 100% for new images
       form.setValue('background_opacity', 100);
     };
     reader.readAsDataURL(file);
@@ -185,11 +195,24 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       const updatedSlots = [...imageSlots];
       updatedSlots[selectedBoxIndex] = null;
       setImageSlots(updatedSlots);
-      setImagePreview(null);
       
-      // Update both form values
-      form.setValue('background_image_url', '');
-      form.setValue('background_images', updatedSlots.filter(Boolean));
+      // After removing, select another image if available
+      const nextImageIndex = updatedSlots.findIndex(img => img !== null);
+      if (nextImageIndex !== -1) {
+        setSelectedBoxIndex(nextImageIndex);
+        setImagePreview(updatedSlots[nextImageIndex]);
+        form.setValue('background_image_url', updatedSlots[nextImageIndex] || '');
+      } else {
+        setSelectedBoxIndex(0);
+        setImagePreview(null);
+        form.setValue('background_image_url', '');
+      }
+      
+      // Update background_images with filtered array (no nulls)
+      const filteredImages = updatedSlots.filter(Boolean) as string[];
+      form.setValue('background_images', filteredImages);
+      
+      console.log("Updated image slots after removal:", updatedSlots);
     }
   };
 
@@ -245,7 +268,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setLoading(true);
     
     try {
-      // Filter valid image slots - ensure we only pass non-null values
+      // Get all valid image slots - ensure we only pass non-null values
       const validImageSlots = imageSlots
         .filter(slot => typeof slot === 'string' && slot.trim() !== '')
         .map(slot => {
@@ -262,6 +285,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         })
         .filter(Boolean) as string[];
       
+      console.log("Saving rule with valid image slots:", validImageSlots);
+      
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
@@ -269,7 +294,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         highlight_effect: values.highlight_effect || false,
         focal_point_x: position.x,
         focal_point_y: position.y,
-        background_images: validImageSlots.length > 0 ? validImageSlots : [],
+        background_images: validImageSlots,
         carousel_timer: carouselTimer
       };
       
