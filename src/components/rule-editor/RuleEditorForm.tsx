@@ -1,29 +1,46 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Save, Image, Plus } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { Rule } from '@/lib/ruleUtils';
-import { useRuleCarousel } from '@/contexts/RuleCarouselContext';
-import NumberField from './NumberField';
 import ColorPickerField from './ColorPickerField';
 import PrioritySelector from './PrioritySelector';
-import FrequencySelector from './FrequencySelector';
-import BackgroundImageSelector from './BackgroundImageSelector';
 import IconSelector from './IconSelector';
 import PredefinedIconsGrid from './PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
+import { useRuleCarousel } from '@/contexts/RuleCarouselContext';
+import ImageSelectionSection from './ImageSelectionSection';
+
+interface Rule {
+  id?: string;
+  title: string;
+  description: string | null;
+  priority: 'low' | 'medium' | 'high';
+  background_image_url?: string | null;
+  background_opacity: number;
+  icon_url?: string | null;
+  icon_name?: string | null;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  icon_color: string;
+  highlight_effect: boolean;
+  focal_point_x: number;
+  focal_point_y: number;
+  frequency: 'daily' | 'weekly';
+  frequency_count: number;
+  usage_data?: number[];
+  background_images?: (string | null)[] | null;
+  carousel_timer?: number;
+}
 
 interface RuleFormValues {
   title: string;
   description: string;
-  points: number;
-  frequency: 'daily' | 'weekly';
-  frequency_count: number;
   background_image_url?: string;
   background_opacity: number;
   icon_url?: string;
@@ -36,7 +53,9 @@ interface RuleFormValues {
   focal_point_x: number;
   focal_point_y: number;
   priority: 'low' | 'medium' | 'high';
-  background_images?: string[];
+  frequency: 'daily' | 'weekly';
+  frequency_count: number;
+  background_images?: (string | null)[] | null;
   carousel_timer?: number;
 }
 
@@ -53,118 +72,158 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   onDelete,
   onCancel
 }) => {
-  const { carouselTimer, setCarouselTimer } = useRuleCarousel();
-  
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
-  const [backgroundImages, setBackgroundImages] = useState<string[]>(
-    ruleData?.background_images || []
-  );
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
+  const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
+  const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(0);
+  const [position, setPosition] = useState({ x: 50, y: 50 });
+
+  const { carouselTimer, setCarouselTimer } = useRuleCarousel();
   
   const form = useForm<RuleFormValues>({
     defaultValues: {
       title: ruleData?.title || '',
       description: ruleData?.description || '',
-      points: ruleData?.points || 5,
-      frequency: (ruleData?.frequency as 'daily' | 'weekly') || 'daily',
-      frequency_count: ruleData?.frequency_count || 1,
-      background_image_url: ruleData?.background_image_url,
+      background_image_url: ruleData?.background_image_url || '',
       background_opacity: ruleData?.background_opacity || 100,
       title_color: ruleData?.title_color || '#FFFFFF',
-      subtext_color: ruleData?.subtext_color || '#8E9196',
-      calendar_color: ruleData?.calendar_color || '#7E69AB',
-      icon_color: ruleData?.icon_color || '#9b87f5',
+      subtext_color: ruleData?.subtext_color || '#FFFFFF',
+      calendar_color: ruleData?.calendar_color || '#9c7abb',
+      icon_color: ruleData?.icon_color || '#FFFFFF',
       highlight_effect: ruleData?.highlight_effect || false,
       focal_point_x: ruleData?.focal_point_x || 50,
       focal_point_y: ruleData?.focal_point_y || 50,
       priority: ruleData?.priority || 'medium',
-      icon_name: ruleData?.icon_name,
-      background_images: ruleData?.background_images || [],
-      carousel_timer: carouselTimer,
+      icon_name: ruleData?.icon_name || '',
+      frequency: ruleData?.frequency || 'daily',
+      frequency_count: ruleData?.frequency_count || 3,
+      background_images: ruleData?.background_images || [null, null, null, null, null],
+      carousel_timer: ruleData?.carousel_timer || carouselTimer,
     },
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     setIconPreview(ruleData?.icon_url || null);
     setSelectedIconName(ruleData?.icon_name || null);
-    
-    if (ruleData?.background_images && ruleData.background_images.length > 0) {
-      setBackgroundImages(ruleData.background_images);
+    setPosition({ x: ruleData?.focal_point_x || 50, y: ruleData?.focal_point_y || 50 });
+
+    const newImageSlots = [null, null, null, null, null];
+
+    if (ruleData?.background_images?.length) {
+      ruleData.background_images.forEach((img, i) => {
+        if (i < 5 && img) newImageSlots[i] = img;
+      });
     } else if (ruleData?.background_image_url) {
-      setBackgroundImages([ruleData.background_image_url]);
-    } else {
-      setBackgroundImages([]);
+      newImageSlots[0] = ruleData.background_image_url;
+    }
+
+    setImageSlots(newImageSlots);
+
+    const firstImageIndex = newImageSlots.findIndex(img => img !== null);
+    const initialSelectedIndex = firstImageIndex !== -1 ? firstImageIndex : 0;
+    setSelectedBoxIndex(initialSelectedIndex);
+    
+    setImagePreview(newImageSlots[initialSelectedIndex] || null);
+    
+    if (newImageSlots[initialSelectedIndex]) {
+      form.setValue('background_image_url', newImageSlots[initialSelectedIndex]);
     }
     
-    setSelectedImageIndex(0);
-    
-    const previewImage = ruleData?.background_images?.[0] || ruleData?.background_image_url || null;
-    setImagePreview(previewImage);
-  }, [ruleData]);
+    console.log("RuleEditorForm initialized with:", { 
+      imageSlots: newImageSlots, 
+      selectedIndex: initialSelectedIndex,
+      backgroundImagesFromData: ruleData?.background_images
+    });
+  }, [ruleData, form]);
 
-  React.useEffect(() => {
-    if (!ruleData) {
-      setSelectedImageIndex(0);
-      setBackgroundImages([]);
-    }
-  }, [taData]);
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        
-        const newImages = [...backgroundImages];
-        if (selectedImageIndex < newImages.length) {
-          newImages[selectedImageIndex] = base64String;
-        } else {
-          newImages.push(base64String);
-        }
-        
-        setBackgroundImages(newImages);
-        form.setValue('background_images', newImages);
-        
-        setImagePreview(base64String);
-        form.setValue('background_image_url', base64String);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleCarouselTimerChange = (newValue: number) => {
+    setCarouselTimer(newValue);
+    form.setValue('carousel_timer', newValue);
   };
 
-  const handleSelectThumbnail = (index: number) => {
-    setSelectedImageIndex(index);
+  const handleMultiImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     
-    if (index < backgroundImages.length) {
-      setImagePreview(backgroundImages[index]);
-    } else {
-      setImagePreview(null);
+    let targetIndex = selectedBoxIndex;
+    if (targetIndex === null) {
+      const firstEmpty = imageSlots.findIndex((slot) => !slot);
+      targetIndex = firstEmpty !== -1 ? firstEmpty : 0;
     }
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      
+      const updatedSlots = [...imageSlots];
+      updatedSlots[targetIndex as number] = base64String;
+      
+      console.log("Updating image slots with new upload at index:", targetIndex);
+      
+      setImageSlots(updatedSlots);
+      setSelectedBoxIndex(targetIndex);
+      setImagePreview(base64String);
+      
+      form.setValue('background_image_url', base64String);
+      
+      const filteredImages = updatedSlots.filter(Boolean) as string[];
+      form.setValue('background_images', filteredImages);
+      
+      console.log("Updated image slots after upload:", {
+        updatedSlots,
+        filteredImages,
+        targetIndex,
+        currentImagePreview: base64String
+      });
+      
+      form.setValue('background_opacity', 100);
+    };
+    reader.readAsDataURL(file);
+    
+    e.target.value = '';
+  };
+
+  const handleSelectImageSlot = (index: number) => {
+    console.log("Selecting image slot:", index);
+    
+    setSelectedBoxIndex(index);
+    const imageUrl = imageSlots[index];
+    setImagePreview(imageUrl);
+    
+    form.setValue('background_image_url', imageUrl || '');
   };
 
   const handleRemoveCurrentImage = () => {
-    const newImages = [...backgroundImages];
-    
-    if (selectedImageIndex < newImages.length) {
-      newImages.splice(selectedImageIndex, 1);
-      setBackgroundImages(newImages);
-      form.setValue('background_images', newImages);
+    if (selectedBoxIndex !== null) {
+      console.log("Removing image from slot:", selectedBoxIndex);
       
-      if (newImages.length > 0) {
-        const newIndex = Math.min(selectedImageIndex, newImages.length - 1);
-        setSelectedImageIndex(newIndex);
-        setImagePreview(newImages[newIndex]);
+      const updatedSlots = [...imageSlots];
+      updatedSlots[selectedBoxIndex] = null;
+      setImageSlots(updatedSlots);
+      
+      const nextImageIndex = updatedSlots.findIndex(img => img !== null);
+      if (nextImageIndex !== -1) {
+        setSelectedBoxIndex(nextImageIndex);
+        setImagePreview(updatedSlots[nextImageIndex]);
+        form.setValue('background_image_url', updatedSlots[nextImageIndex] || '');
       } else {
-        setSelectedImageIndex(0);
+        setSelectedBoxIndex(0);
         setImagePreview(null);
-        form.setValue('background_image_url', undefined);
+        form.setValue('background_image_url', '');
       }
+      
+      const filteredImages = updatedSlots.filter(Boolean) as string[];
+      form.setValue('background_images', filteredImages);
+      
+      console.log("Updated image slots after removal:", {
+        updatedSlots,
+        nextSelectedIndex: nextImageIndex !== -1 ? nextImageIndex : 0,
+        filteredImagesCount: filteredImages.length
+      });
     }
   };
 
@@ -220,13 +279,38 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setLoading(true);
     
     try {
+      const validImageSlots = imageSlots
+        .filter(slot => typeof slot === 'string' && slot.trim() !== '')
+        .map(slot => {
+          if (!slot) return null;
+          try {
+            if (slot.startsWith('data:image') || slot.startsWith('http')) {
+              return slot;
+            } else {
+              return null;
+            }
+          } catch (e) {
+            return null;
+          }
+        })
+        .filter(Boolean) as string[];
+      
+      console.log("Saving rule with valid image slots:", validImageSlots);
+      
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
-        background_images: backgroundImages,
-        carousel_timer: carouselTimer,
+        highlight_effect: values.highlight_effect || false,
+        focal_point_x: position.x,
+        focal_point_y: position.y,
+        background_images: validImageSlots,
+        carousel_timer: carouselTimer
       };
+      
+      if (validImageSlots.length > 0) {
+        ruleToSave.background_image_url = validImageSlots[0];
+      }
       
       await onSave(ruleToSave);
     } catch (error) {
@@ -241,39 +325,17 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   };
 
-  const incrementPoints = () => {
-    const currentPoints = form.getValues('points');
-    form.setValue('points', currentPoints + 1);
-  };
-
-  const decrementPoints = () => {
-    const currentPoints = form.getValues('points');
-    form.setValue('points', Math.max(0, currentPoints - 1));
-  };
-
-  const incrementFrequencyCount = () => {
-    const currentCount = form.getValues('frequency_count');
-    form.setValue('frequency_count', currentCount + 1);
-  };
-
-  const decrementFrequencyCount = () => {
-    const currentCount = form.getValues('frequency_count');
-    if (currentCount > 1) {
-      form.setValue('frequency_count', currentCount - 1);
-    }
-  };
-
-  const handleCarouselTimerChange = (newValue: number) => {
-    setCarouselTimer(newValue);
-    form.setValue('carousel_timer', newValue);
-  };
-
   const handleDelete = () => {
     if (ruleData?.id && onDelete) {
       onDelete(ruleData.id);
       setIsDeleteDialogOpen(false);
     }
   };
+
+  useEffect(() => {
+    form.setValue('focal_point_x', position.x);
+    form.setValue('focal_point_y', position.y);
+  }, [position, form]);
 
   return (
     <Form {...form}>
@@ -314,116 +376,21 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <PrioritySelector control={form.control} />
-          
-          <NumberField
-            control={form.control}
-            name="points"
-            label="Points"
-            onIncrement={incrementPoints}
-            onDecrement={decrementPoints}
-            minValue={0}
-          />
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FrequencySelector control={form.control} />
-          
-          <NumberField
-            control={form.control}
-            name="frequency_count"
-            label="Times per period"
-            onIncrement={incrementFrequencyCount}
-            onDecrement={decrementFrequencyCount}
-            minValue={1}
-          />
-        </div>
-        
-        <div className="space-y-4">
-          <FormLabel className="text-white text-lg">Background Images</FormLabel>
-          
-          <div className="flex justify-between items-end mb-4">
-            <div className="flex gap-2">
-              {[0, 1, 2, 3, 4].map((index) => {
-                const imageUrl = backgroundImages[index] || '';
-                return (
-                  <div
-                    key={index}
-                    onClick={() => handleSelectThumbnail(index)}
-                    className={`w-12 h-12 rounded-md cursor-pointer transition-all
-                      ${selectedImageIndex === index
-                        ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
-                        : 'bg-dark-navy border border-light-navy hover:border-white'}
-                    `}
-                  >
-                    {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        className="w-full h-full object-cover rounded-md"
-                        alt="Background thumbnail"
-                        onError={(e) => {
-                          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTMgNEg4LjhDNy4xMTk4NCA0IDUuNzM5NjggNC44Mi40LjJWMjBIMTZWMTVIMjAuNkMyMS45MjU1IDE1IDIzIDE2LjA3NDUgMjMgMTcuNFYyMEg0VjE3LjRDNyAxNi4wNzQ1IDguMDc0NTIgMTUgOS40IDE1SDEzVjRaIiBzdHJva2U9IiM0QjU1NjMiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0xOSA4QzE5IDkuMTA0NTcgMTguMTA0NiAxMCAxNyAxMEMxNS44OTU0IDEwIDE1IDkuMTA0NTcgMTUgOEMxNSA2Ljg5NTQzIDE1Ljg5NTQgNiAxNyA2QzE4LjEwNDYgNiAxOSA2Ljg5NTQzIDE5IDhaIiBmaWxsPSIjNEI1NTYzIi8+PC9zdmc+';
-                        }}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full w-full text-light-navy">
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            
-            <div className="flex flex-col items-start ml-4">
-              <label className="text-sm text-white mb-1">
-                Carousel Timer
-                <span className="block text-xs text-muted-foreground">
-                  (Time between image transitions)
-                </span>
-              </label>
-              <div className="flex items-center space-x-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newTime = Math.max(3, carouselTimer - 1);
-                    handleCarouselTimerChange(newTime);
-                  }}
-                  className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy w-8 h-8 flex items-center justify-center rounded-md"
-                >
-                  –
-                </button>
 
-                <div className="w-12 text-center text-white">
-                  {carouselTimer}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newTime = Math.min(20, carouselTimer + 1);
-                    handleCarouselTimerChange(newTime);
-                  }}
-                  className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy w-8 h-8 flex items-center justify-center rounded-md"
-                >
-                  +
-                </button>
-
-                <span className="text-white text-sm ml-1">(s)</span>
-              </div>
-            </div>
-          </div>
-          
-          <BackgroundImageSelector
-            control={form.control}
-            imagePreview={imagePreview}
-            initialPosition={{ 
-              x: ruleData?.focal_point_x || 50, 
-              y: ruleData?.focal_point_y || 50 
-            }}
-            onRemoveImage={handleRemoveCurrentImage}
-            onImageUpload={handleImageUpload}
-            setValue={form.setValue}
-          />
-        </div>
+        <ImageSelectionSection
+          imagePreview={imagePreview}
+          imageSlots={imageSlots}
+          selectedBoxIndex={selectedBoxIndex}
+          carouselTimer={carouselTimer}
+          onCarouselTimerChange={handleCarouselTimerChange}
+          onSelectImageSlot={handleSelectImageSlot}
+          onRemoveImage={handleRemoveCurrentImage}
+          onImageUpload={handleMultiImageUpload}
+          setValue={form.setValue}
+          position={position}
+          control={form.control}
+        />
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Rule Icon</FormLabel>
