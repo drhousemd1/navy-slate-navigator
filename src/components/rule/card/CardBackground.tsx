@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 
 interface CardBackgroundProps {
   visibleImage: string | null;
@@ -18,7 +18,25 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   focalPointY = 0.5,
   backgroundOpacity = 100
 }) => {
+  // Debug logging
+  useEffect(() => {
+    console.log("CardBackground rendering with props:", {
+      hasVisibleImage: Boolean(visibleImage),
+      hasTransitionImage: Boolean(transitionImage),
+      isTransitioning,
+      focalPointX,
+      focalPointY,
+      backgroundOpacity
+    });
+    
+    if (visibleImage) {
+      console.log("Visible image preview:", typeof visibleImage === 'string' ? 
+        (visibleImage.substring(0, 100) + '...') : 'Not a string');
+    }
+  }, [visibleImage, transitionImage, isTransitioning, focalPointX, focalPointY, backgroundOpacity]);
+
   if (!visibleImage && !transitionImage) {
+    console.log("No images to display in CardBackground");
     return null;
   }
   
@@ -38,6 +56,11 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
             opacity: safeOpacity
           }}
           draggable={false}
+          onLoad={() => console.log("Visible image loaded successfully")}
+          onError={(e) => {
+            console.error("Error loading visible image:", e);
+            console.error("Failed image URL:", visibleImage);
+          }}
         />
       )}
 
@@ -52,6 +75,11 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
             opacity: isTransitioning ? safeOpacity : 0
           }}
           draggable={false}
+          onLoad={() => console.log("Transition image loaded successfully")}
+          onError={(e) => {
+            console.error("Error loading transition image:", e);
+            console.error("Failed image URL:", transitionImage);
+          }}
         />
       )}
 

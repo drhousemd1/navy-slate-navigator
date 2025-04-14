@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -54,18 +55,25 @@ const Rules: React.FC = () => {
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
 
+  // Debug the carousel timer
   useEffect(() => {
     const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
     console.log("Initializing carousel timer from localStorage:", savedTimer);
     setCarouselTimer(savedTimer);
     
     const intervalId = setInterval(() => {
-      setGlobalCarouselIndex(prev => prev + 1);
+      setGlobalCarouselIndex(prev => {
+        console.log("Incrementing carousel index from", prev, "to", prev + 1);
+        return prev + 1;
+      });
     }, savedTimer * 1000);
     
     console.log("Carousel timer set to", savedTimer, "seconds");
     
-    return () => clearInterval(intervalId);
+    return () => {
+      console.log("Clearing carousel interval");
+      clearInterval(intervalId);
+    };
   }, [carouselTimer]);
 
   useEffect(() => {
@@ -84,10 +92,12 @@ const Rules: React.FC = () => {
         console.log("Rules data from Supabase:", data);
         
         const rulesWithUsageData = (data as Rule[] || []).map(rule => {
+          // Ensure background_images is an array
           let background_images = rule.background_images || [];
           
+          // Convert to array if it's not already
           if (!Array.isArray(background_images)) {
-            console.log("Converting background_images to array:", background_images);
+            console.log("background_images is not an array, converting:", background_images);
             try {
               background_images = typeof background_images === 'string' 
                 ? JSON.parse(background_images) 
@@ -98,17 +108,19 @@ const Rules: React.FC = () => {
             }
           }
           
+          // Add background_image_url to background_images if it exists and isn't already included
           if (rule.background_image_url && 
               !background_images.includes(rule.background_image_url)) {
             background_images = [rule.background_image_url, ...background_images];
-            console.log(`Added background_image_url to rule ${rule.id}`);
+            console.log("Added background_image_url to background_images array");
           }
           
+          // Filter out null, undefined, or empty string values
           background_images = background_images.filter(img => !!img && img.trim() !== '');
           
-          console.log(`Rule ${rule.id} has ${background_images.length} background images:`, 
-            background_images.map(img => img.substring(0, 30) + '...'));
+          console.log(`Rule ${rule.id} has ${background_images.length} background images`);
           
+          // Ensure usage_data is a valid array of 7 items
           if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
             return { 
               ...rule, 
@@ -225,7 +237,6 @@ const Rules: React.FC = () => {
       let result;
       
       console.log("Saving rule with data:", ruleData);
-      console.log("Background images to save:", ruleData.background_images);
       
       const processedRuleData = {
         ...ruleData,
@@ -235,7 +246,8 @@ const Rules: React.FC = () => {
       if (processedRuleData.id) {
         const existingRule = rules.find(rule => rule.id === processedRuleData.id);
         
-        console.log("Updating rule with background images:", processedRuleData.background_images);
+        console.log("Updating existing rule:", processedRuleData.id);
+        console.log("Background images to save:", processedRuleData.background_images);
         
         const { data, error } = await supabase
           .from('rules')
@@ -289,7 +301,8 @@ const Rules: React.FC = () => {
           throw new Error('Rule title is required');
         }
         
-        console.log("Creating new rule with background images:", processedRuleData.background_images);
+        console.log("Creating new rule");
+        console.log("Background images to save:", ruleWithoutId.background_images);
         
         const newRule = {
           title: ruleWithoutId.title,
@@ -379,12 +392,14 @@ const Rules: React.FC = () => {
 
   const RuleCard: React.FC<{ rule: Rule }> = ({ rule }) => {
     console.log("Rendering RuleCard for rule:", rule.title);
-    console.log("Background images:", rule.background_images);
+    console.log("Background images array:", rule.background_images);
     
+    // Make sure we only work with valid image URLs
     const filteredImages = (rule.background_images || [])
       .filter(img => typeof img === 'string' && img.trim() !== '');
     
-    console.log("Filtered images for card:", filteredImages);
+    console.log("Filtered images for rule:", rule.title, filteredImages.length, 
+      filteredImages.map(img => img.substring(0, 30) + '...'));
     
     const {
       visibleImage,
@@ -395,12 +410,10 @@ const Rules: React.FC = () => {
       globalCarouselIndex
     });
 
-    console.log("Card carousel state:", {
+    console.log("Image carousel state for rule:", rule.title, {
       hasVisibleImage: Boolean(visibleImage),
       hasTransitionImage: Boolean(transitionImage),
-      isTransitioning,
-      focalPointX: rule.focal_point_x,
-      focalPointY: rule.focal_point_y
+      isTransitioning
     });
 
     return (
