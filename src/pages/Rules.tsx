@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,11 +52,22 @@ const Rules: React.FC = () => {
   const queryClient = useQueryClient();
   
   const [carouselTimer, setCarouselTimer] = useState(5);
+  // Add global carousel index state
+  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
 
   useEffect(() => {
     const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
   }, []);
+
+  // Add effect to increment the global carousel index based on timer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGlobalCarouselIndex(prevIndex => prevIndex + 1);
+    }, carouselTimer * 1000);
+    
+    return () => clearInterval(interval);
+  }, [carouselTimer]);
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -371,7 +382,11 @@ const Rules: React.FC = () => {
     const filteredImages = (rule.background_images || [])
       .filter(img => typeof img === 'string' && img.trim() !== '');
     
-    const currentImage = useImageCarousel(filteredImages, carouselTimer);
+    // Update to pass the globalCarouselIndex to useImageCarousel
+    const currentImage = useImageCarousel({
+      images: filteredImages,
+      globalCarouselIndex: globalCarouselIndex
+    });
 
     return (
       <Card 
