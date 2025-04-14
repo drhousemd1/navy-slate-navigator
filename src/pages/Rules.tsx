@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -52,7 +51,6 @@ const Rules: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
   
-  // Add carousel state
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
 
@@ -80,7 +78,6 @@ const Rules: React.FC = () => {
         }
         
         const rulesWithUsageData = (data as Rule[] || []).map(rule => {
-          // Convert single background_image_url to background_images array if needed
           let background_images = rule.background_images || [];
           if (rule.background_image_url && !background_images.includes(rule.background_image_url)) {
             background_images = [rule.background_image_url, ...background_images];
@@ -197,10 +194,9 @@ const Rules: React.FC = () => {
     try {
       let result;
       
-      // Add this line to ensure carousel_timer is properly handled
       const processedRuleData = {
         ...ruleData,
-        carousel_timer: ruleData.carousel_timer || 5, // Default to 5 seconds if not provided
+        carousel_timer: ruleData.carousel_timer || 5,
       };
       
       if (processedRuleData.id) {
@@ -226,7 +222,7 @@ const Rules: React.FC = () => {
             focal_point_y: processedRuleData.focal_point_y,
             frequency: processedRuleData.frequency,
             frequency_count: processedRuleData.frequency_count,
-            carousel_timer: processedRuleData.carousel_timer, // Make sure to include this
+            carousel_timer: processedRuleData.carousel_timer,
             updated_at: new Date().toISOString()
           })
           .eq('id', processedRuleData.id)
@@ -240,7 +236,6 @@ const Rules: React.FC = () => {
           result.usage_data = existingRule.usage_data;
         }
         
-        // Save carousel timer to localStorage
         localStorage.setItem('rules_carouselTimer', String(processedRuleData.carousel_timer));
         setCarouselTimer(processedRuleData.carousel_timer);
         
@@ -271,7 +266,7 @@ const Rules: React.FC = () => {
           focal_point_y: ruleWithoutId.focal_point_y || 0.5,
           frequency: ruleWithoutId.frequency || 'daily',
           frequency_count: ruleWithoutId.frequency_count || 3,
-          carousel_timer: ruleWithoutId.carousel_timer || 5, // Make sure to include this
+          carousel_timer: ruleWithoutId.carousel_timer || 5,
           usage_data: [0, 0, 0, 0, 0, 0, 0],
           ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
           ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
@@ -291,7 +286,6 @@ const Rules: React.FC = () => {
         if (error) throw error;
         result = data;
         
-        // Save carousel timer to localStorage when creating a new rule too
         localStorage.setItem('rules_carouselTimer', String(processedRuleData.carousel_timer));
         setCarouselTimer(processedRuleData.carousel_timer);
         
@@ -343,8 +337,7 @@ const Rules: React.FC = () => {
   };
 
   const RuleCard: React.FC<{ rule: Rule }> = ({ rule }) => {
-    // Filter out empty strings from background_images array
-    const backgroundImages = (rule.background_images || []).filter(Boolean);
+    const backgroundImages = rule.background_images || [];
     
     const {
       visibleImage,

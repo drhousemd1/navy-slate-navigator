@@ -102,8 +102,8 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
       <div className="flex justify-between items-start">
         <Label className="text-white text-lg">Background Images</Label>
         
-        <div className="flex flex-col items-start">
-          <div className="text-left">
+        <div className="flex flex-col">
+          <div>
             <h3 className="font-medium text-white">Carousel Timer</h3>
             <p className="text-sm text-gray-300">(Time between image transitions)</p>
           </div>
@@ -111,17 +111,17 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
             <button
               type="button"
               onClick={() => onCarouselTimerChange(Math.max(1, carouselTimer - 1))}
-              className="bg-gray-700 hover:bg-gray-600 text-white rounded-l px-3 py-1"
+              className="bg-gray-800 hover:bg-gray-700 text-white rounded-l px-3 py-1"
             >
               –
             </button>
-            <span className="bg-gray-800 text-white px-4 py-1">
+            <span className="bg-gray-900 text-white px-4 py-1">
               {carouselTimer}
             </span>
             <button
               type="button"
               onClick={() => onCarouselTimerChange(carouselTimer + 1)}
-              className="bg-gray-700 hover:bg-gray-600 text-white rounded-r px-3 py-1"
+              className="bg-gray-800 hover:bg-gray-700 text-white rounded-r px-3 py-1"
             >
               +
             </button>
@@ -139,7 +139,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
             className={`
               w-16 h-16 border-2 rounded-md overflow-hidden cursor-pointer
               ${selectedImageIndex === index 
-                ? 'border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]' 
+                ? 'border-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]' 
                 : 'border-gray-600'}
               bg-gray-800
             `}
