@@ -394,8 +394,8 @@ const Rules: React.FC = () => {
           visibleImage={visibleImage}
           transitionImage={transitionImage}
           isTransitioning={isTransitioning}
-          focalPointX={rule.focal_point_x * 100}
-          focalPointY={rule.focal_point_y * 100}
+          focalPointX={rule.focal_point_x}
+          focalPointY={rule.focal_point_y}
           backgroundOpacity={rule.background_opacity}
         />
         
