@@ -116,7 +116,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
         </div>
       </div>
 
-      {/* Hidden input for file uploads, controlled separately */}
+      {/* Hidden input for file uploads - now using the triggerFileInput handler */}
       <input
         ref={fileInputRef}
         type="file"
@@ -130,7 +130,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
         imagePreview={currentImage}
         initialPosition={position}
         onRemoveImage={onRemoveImage}
-        onImageUpload={onImageUpload}
+        onImageUpload={triggerFileInput}
         setValue={setValue}
       />
     </div>
