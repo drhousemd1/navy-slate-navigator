@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import BackgroundImageSelector from "./BackgroundImageSelector";
 import { FormLabel } from "@/components/ui/form";
@@ -32,18 +32,25 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   control,
   imagePreview
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   // Get current image from slots based on selected index
   const currentImage = selectedBoxIndex !== null && selectedBoxIndex < imageSlots.length 
     ? imageSlots[selectedBoxIndex] 
     : null;
   
-  console.log("ImageSelectionSection rendering with:", {
-    selectedBoxIndex,
-    hasCurrentImage: Boolean(currentImage),
-    imageSlotCount: imageSlots.length,
-    nonEmptySlots: imageSlots.filter(Boolean).length,
-    imageSlots
-  });
+  const handleBoxClick = (index: number) => {
+    onSelectImageSlot(index);
+  };
+
+  const triggerFileInput = () => {
+    // Only reset and trigger the file input if we have a proper reference
+    if (fileInputRef.current) {
+      // Reset the file input to allow selecting the same file again
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -53,7 +60,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
           {imageSlots.map((imageUrl, index) => (
             <div
               key={index}
-              onClick={() => onSelectImageSlot(index)}
+              onClick={() => handleBoxClick(index)}
               className={`w-12 h-12 rounded-md cursor-pointer transition-all
                 ${selectedBoxIndex === index
                   ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
@@ -108,6 +115,15 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Hidden input for file uploads, controlled separately */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onImageUpload}
+      />
 
       <BackgroundImageSelector
         control={control}

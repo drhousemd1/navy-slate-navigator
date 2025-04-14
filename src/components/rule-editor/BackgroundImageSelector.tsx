@@ -60,11 +60,9 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
       
       // If we have a valid opacity value from the form, use it
       if (typeof formOpacity === 'number') {
-        console.log("Setting opacity from form value:", formOpacity);
         setOpacity(formOpacity);
       } else if (imagePreview) {
         // Only set default if we have an image but no opacity value
-        console.log("Setting default opacity for new image to 100");
         setValue('background_opacity', 100);
         setOpacity(100);
       }
@@ -137,7 +135,6 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
 
   const handleOpacityChange = (values: number[]) => {
     const opacityValue = values[0];
-    console.log("Slider changing opacity to:", opacityValue);
     setOpacity(opacityValue);
     setValue('background_opacity', opacityValue);
   };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -73,12 +72,12 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   onDelete,
   onCancel
 }) => {
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(0);
   const [position, setPosition] = useState({ x: 50, y: 50 });
@@ -108,38 +107,38 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   });
 
   useEffect(() => {
-    setIconPreview(ruleData?.icon_url || null);
-    setSelectedIconName(ruleData?.icon_name || null);
-    setPosition({ x: ruleData?.focal_point_x || 50, y: ruleData?.focal_point_y || 50 });
+    if (!ruleData) return;
+    
+    setIconPreview(ruleData.icon_url || null);
+    setSelectedIconName(ruleData.icon_name || null);
+    setPosition({ 
+      x: ruleData.focal_point_x || 50, 
+      y: ruleData.focal_point_y || 50 
+    });
 
     const newImageSlots = [null, null, null, null, null];
-
-    if (ruleData?.background_images?.length) {
+    
+    if (Array.isArray(ruleData.background_images) && ruleData.background_images.length > 0) {
       ruleData.background_images.forEach((img, i) => {
         if (i < 5 && img) newImageSlots[i] = img;
       });
-    } else if (ruleData?.background_image_url) {
+    } else if (ruleData.background_image_url) {
       newImageSlots[0] = ruleData.background_image_url;
     }
-
+    
     setImageSlots(newImageSlots);
-
+    
     const firstImageIndex = newImageSlots.findIndex(img => img !== null);
     const initialSelectedIndex = firstImageIndex !== -1 ? firstImageIndex : 0;
     setSelectedBoxIndex(initialSelectedIndex);
-    
     setImagePreview(newImageSlots[initialSelectedIndex] || null);
-    
-    if (newImageSlots[initialSelectedIndex]) {
-      form.setValue('background_image_url', newImageSlots[initialSelectedIndex]);
-    }
     
     console.log("RuleEditorForm initialized with:", { 
       imageSlots: newImageSlots, 
       selectedIndex: initialSelectedIndex,
-      backgroundImagesFromData: ruleData?.background_images
+      backgroundImagesFromData: ruleData.background_images
     });
-  }, [ruleData, form]);
+  }, [ruleData]);
 
   const handleCarouselTimerChange = (newValue: number) => {
     setCarouselTimer(newValue);
@@ -150,39 +149,31 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    let targetIndex = selectedBoxIndex;
-    if (targetIndex === null) {
-      const firstEmpty = imageSlots.findIndex((slot) => !slot);
-      targetIndex = firstEmpty !== -1 ? firstEmpty : 0;
-    }
+    const targetIndex = selectedBoxIndex !== null ? selectedBoxIndex : 0;
     
     const reader = new FileReader();
+    
     reader.onloadend = () => {
       const base64String = reader.result as string;
       
       const updatedSlots = [...imageSlots];
-      updatedSlots[targetIndex as number] = base64String;
+      updatedSlots[targetIndex] = base64String;
       
-      console.log("Updating image slots with new upload at index:", targetIndex);
+      console.log(`Uploading image to slot ${targetIndex}`);
       
       setImageSlots(updatedSlots);
-      setSelectedBoxIndex(targetIndex);
       setImagePreview(base64String);
       
       form.setValue('background_image_url', base64String);
+      form.setValue('background_images', updatedSlots);
       
-      const filteredImages = updatedSlots.filter(Boolean) as string[];
-      form.setValue('background_images', filteredImages);
-      
-      console.log("Updated image slots after upload:", {
+      console.log("Image upload complete - updated state:", {
         updatedSlots,
-        filteredImages,
         targetIndex,
-        currentImagePreview: base64String
+        previewSet: base64String ? true : false
       });
-      
-      form.setValue('background_opacity', 100);
     };
+    
     reader.readAsDataURL(file);
     
     e.target.value = '';
@@ -207,23 +198,21 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       setImageSlots(updatedSlots);
       
       const nextImageIndex = updatedSlots.findIndex(img => img !== null);
+      
       if (nextImageIndex !== -1) {
         setSelectedBoxIndex(nextImageIndex);
         setImagePreview(updatedSlots[nextImageIndex]);
         form.setValue('background_image_url', updatedSlots[nextImageIndex] || '');
       } else {
-        setSelectedBoxIndex(0);
         setImagePreview(null);
         form.setValue('background_image_url', '');
       }
       
-      const filteredImages = updatedSlots.filter(Boolean) as string[];
-      form.setValue('background_images', filteredImages);
+      form.setValue('background_images', updatedSlots);
       
       console.log("Updated image slots after removal:", {
         updatedSlots,
-        nextSelectedIndex: nextImageIndex !== -1 ? nextImageIndex : 0,
-        filteredImagesCount: filteredImages.length
+        nextSelectedIndex: nextImageIndex !== -1 ? nextImageIndex : selectedBoxIndex
       });
     }
   };
