@@ -52,7 +52,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
     // Create a copy of the form data to ensure we don't modify the original
     const updatedFormData = { ...formData };
     
-    // Make sure carousel_timer is set
+    // Ensure carousel_timer is set
     updatedFormData.carousel_timer = formData.carousel_timer || carouselTimer;
     
     // Ensure background_images array always has 5 elements
@@ -67,6 +67,9 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
     // Update global carousel timer if it changed
     if (updatedFormData.carousel_timer !== carouselTimer) {
       setCarouselTimer(updatedFormData.carousel_timer);
+      
+      // Store carousel timer in localStorage for persistence
+      localStorage.setItem('rules_carouselTimer', String(updatedFormData.carousel_timer));
     }
     
     await onSave(updatedFormData);
@@ -108,6 +111,11 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}
+          carouselTimer={carouselTimer}
+          onCarouselTimerChange={(value) => {
+            // Pass carousel timer changes up to the parent component
+            setCarouselTimer(value);
+          }}
         />
       </DialogContent>
     </Dialog>

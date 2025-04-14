@@ -64,20 +64,24 @@ interface RuleEditorFormProps {
   onSave: (ruleData: any) => void;
   onDelete?: (ruleId: string) => void;
   onCancel: () => void;
+  carouselTimer?: number;
+  onCarouselTimerChange?: (value: number) => void;
 }
 
 const RuleEditorForm: React.FC<RuleEditorFormProps> = ({ 
   ruleData,
   onSave,
   onDelete,
-  onCancel
+  onCancel,
+  carouselTimer = 5,
+  onCarouselTimerChange
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [carouselTimer, setCarouselTimer] = useState(ruleData?.carousel_timer || 5);
+  const [localCarouselTimer, setLocalCarouselTimer] = useState(ruleData?.carousel_timer || carouselTimer);
   const [backgroundImages, setBackgroundImages] = useState<string[]>(ruleData?.background_images || []);
   const [focalPointX, setFocalPointX] = useState(ruleData?.focal_point_x || 0.5);
   const [focalPointY, setFocalPointY] = useState(ruleData?.focal_point_y || 0.5);
@@ -100,7 +104,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       icon_name: ruleData?.icon_name,
       frequency: ruleData?.frequency || 'daily',
       frequency_count: ruleData?.frequency_count || 3,
-      carousel_timer: ruleData?.carousel_timer || 5,
+      carousel_timer: ruleData?.carousel_timer || carouselTimer,
     },
   });
 
@@ -109,10 +113,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setIconPreview(ruleData?.icon_url || null);
     setSelectedIconName(ruleData?.icon_name || null);
     setBackgroundImages(ruleData?.background_images || []);
-    setCarouselTimer(ruleData?.carousel_timer || 5);
+    setLocalCarouselTimer(ruleData?.carousel_timer || carouselTimer);
     setFocalPointX(ruleData?.focal_point_x || 0.5);
     setFocalPointY(ruleData?.focal_point_y || 0.5);
-  }, [ruleData]);
+  }, [ruleData, carouselTimer]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -181,8 +185,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   };
 
   const handleCarouselTimerChange = (seconds: number) => {
-    setCarouselTimer(seconds);
+    setLocalCarouselTimer(seconds);
     form.setValue('carousel_timer', seconds);
+    if (onCarouselTimerChange) {
+      onCarouselTimerChange(seconds);
+    }
   };
 
   const handleFocalPointChange = (x: number, y: number) => {
@@ -202,7 +209,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         icon_name: selectedIconName || undefined,
         highlight_effect: values.highlight_effect || false,
         background_images: backgroundImages,
-        carousel_timer: carouselTimer,
+        carousel_timer: localCarouselTimer,
         focal_point_x: focalPointX,
         focal_point_y: focalPointY,
       };
@@ -271,7 +278,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         <ImageSelectionSection 
           backgroundImages={backgroundImages}
           onImagesChange={handleBackgroundImagesChange}
-          carouselTimer={carouselTimer}
+          carouselTimer={localCarouselTimer}
           onCarouselTimerChange={handleCarouselTimerChange}
           focalPointX={focalPointX}
           focalPointY={focalPointY}
