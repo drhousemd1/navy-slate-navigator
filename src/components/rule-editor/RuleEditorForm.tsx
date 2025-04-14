@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Save, Image, Plus, Sparkles } from 'lucide-react';
+import { Save, Image, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import DeleteRuleDialog from './DeleteRuleDialog';
 import { useRuleCarousel } from '@/contexts/RuleCarouselContext';
@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 
 // Define form schema using zod
 const formSchema = z.object({
@@ -45,7 +44,7 @@ interface RuleEditorFormProps {
     description?: string | null;
     priority?: 'low' | 'medium' | 'high';
     background_image_url?: string | null;
-    background_images?: string[];
+    background_images: string[];
     background_opacity?: number;
     icon_url?: string | null;
     icon_name?: string | null;
@@ -80,6 +79,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
+  // Initialize backgroundImages with empty array if not provided
   const [backgroundImages, setBackgroundImages] = useState<string[]>(
     ruleData.background_images || []
   );
@@ -448,7 +448,45 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderNumberField('frequency_count', 'Times per period', incrementFrequencyCount, decrementFrequencyCount, 1)}
+          <FormField
+            control={form.control}
+            name="frequency_count"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Times per period</FormLabel>
+                <FormControl>
+                  <div className="flex items-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0 border-light-navy text-white"
+                      onClick={decrementFrequencyCount}
+                      disabled={field.value <= 1}
+                    >
+                      -
+                    </Button>
+                    <Input
+                      {...field}
+                      type="number"
+                      className="h-8 w-14 mx-2 text-center bg-dark-navy border-light-navy text-white"
+                      disabled
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0 border-light-navy text-white"
+                      onClick={incrementFrequencyCount}
+                    >
+                      +
+                    </Button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           
           <FormField
             control={form.control}
@@ -614,10 +652,102 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {renderColorPickerField('title_color', 'Title Color')}
-          {renderColorPickerField('subtext_color', 'Subtext Color')}
-          {renderColorPickerField('calendar_color', 'Calendar Color')}
-          {renderColorPickerField('icon_color', 'Icon Color')}
+          <FormField
+            control={form.control}
+            name="title_color"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Title Color</FormLabel>
+                <FormControl>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="color"
+                      className="w-12 h-10 p-1 bg-transparent border-light-navy"
+                      {...field}
+                    />
+                    <Input
+                      type="text"
+                      className="flex-1 bg-dark-navy border-light-navy text-white"
+                      {...field}
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="subtext_color"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Subtext Color</FormLabel>
+                <FormControl>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="color"
+                      className="w-12 h-10 p-1 bg-transparent border-light-navy"
+                      {...field}
+                    />
+                    <Input
+                      type="text"
+                      className="flex-1 bg-dark-navy border-light-navy text-white"
+                      {...field}
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="calendar_color"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Calendar Color</FormLabel>
+                <FormControl>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="color"
+                      className="w-12 h-10 p-1 bg-transparent border-light-navy"
+                      {...field}
+                    />
+                    <Input
+                      type="text"
+                      className="flex-1 bg-dark-navy border-light-navy text-white"
+                      {...field}
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="icon_color"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Icon Color</FormLabel>
+                <FormControl>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="color"
+                      className="w-12 h-10 p-1 bg-transparent border-light-navy"
+                      {...field}
+                    />
+                    <Input
+                      type="text"
+                      className="flex-1 bg-dark-navy border-light-navy text-white"
+                      {...field}
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         
         <div className="pt-4 w-full flex items-center justify-end gap-3">

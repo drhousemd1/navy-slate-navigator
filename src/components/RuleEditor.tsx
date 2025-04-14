@@ -45,7 +45,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   onSave, 
   onDelete
 }) => {
-  const { setCarouselTimer } = useRuleCarousel();
+  const { carouselTimer, setCarouselTimer } = useRuleCarousel();
 
   const handleSave = async (formData: any) => {
     await onSave(formData);
@@ -64,6 +64,26 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
     }
   };
 
+  // Make sure we have a valid rule data object with necessary defaults
+  const enhancedRuleData = {
+    title: '',
+    description: '',
+    priority: 'medium' as const,
+    background_opacity: 100,
+    title_color: '#FFFFFF',
+    subtext_color: '#CCCCCC',
+    calendar_color: '#9c7abb',
+    icon_color: '#FFFFFF',
+    highlight_effect: false,
+    focal_point_x: 50,
+    focal_point_y: 50,
+    frequency: 'daily' as const,
+    frequency_count: 1,
+    background_images: Array(5).fill(''),
+    carousel_timer: carouselTimer,
+    ...ruleData // This will override defaults with any existing values
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-navy border-light-navy text-white">
@@ -77,7 +97,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
         </DialogHeader>
         
         <RuleEditorForm
-          ruleData={ruleData}
+          ruleData={enhancedRuleData}
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}
