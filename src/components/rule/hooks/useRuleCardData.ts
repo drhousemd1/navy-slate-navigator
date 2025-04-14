@@ -26,7 +26,7 @@ export interface RuleCardData {
   frequency_count: number;
   created_at?: string;
   updated_at?: string;
-  user_id?: string;
+  user_id?: string | null;
 }
 
 interface UseRuleCardDataProps {
@@ -74,6 +74,20 @@ interface SupabaseRuleData {
   updated_at: string | null;
   user_id: string | null;
 }
+
+// Helper function to convert Json array to string array
+const jsonArrayToStringArray = (jsonArray: Json | null): string[] => {
+  if (!jsonArray) return [];
+  if (!Array.isArray(jsonArray)) return [];
+  return jsonArray.filter(item => typeof item === 'string') as string[];
+};
+
+// Helper function to convert Json array to number array
+const jsonArrayToNumberArray = (jsonArray: Json | null): number[] => {
+  if (!jsonArray) return [0, 0, 0, 0, 0, 0, 0];
+  if (!Array.isArray(jsonArray)) return [0, 0, 0, 0, 0, 0, 0];
+  return jsonArray.map(val => typeof val === 'number' ? val : 0);
+};
 
 export const useRuleCardData = ({
   id,
@@ -141,41 +155,41 @@ export const useRuleCardData = ({
           const supabaseData = data as SupabaseRuleData;
           
           // Transform data from Supabase to match our expected format
-          const savedCard = {
-            ...data,
-            // Ensure proper type conversion
+          const transformedCardData: RuleCardData = {
+            id: supabaseData.id,
+            title: supabaseData.title,
+            description: supabaseData.description || '',
             priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
-            background_images: Array.isArray(supabaseData.background_images) 
-              ? supabaseData.background_images 
-              : [],
-            usage_data: Array.isArray(supabaseData.usage_data) 
-              ? supabaseData.usage_data 
-              : [0, 0, 0, 0, 0, 0, 0],
+            background_image_url: supabaseData.background_image_url,
+            background_images: jsonArrayToStringArray(supabaseData.background_images),
+            background_opacity: supabaseData.background_opacity || 80,
+            focal_point_x: supabaseData.focal_point_x || 50,
+            focal_point_y: supabaseData.focal_point_y || 50,
+            title_color: supabaseData.title_color || '#FFFFFF',
+            subtext_color: supabaseData.subtext_color || '#8E9196',
+            calendar_color: supabaseData.calendar_color || '#7E69AB',
+            icon_url: supabaseData.icon_url,
+            icon_name: supabaseData.icon_name,
+            icon_color: supabaseData.icon_color || '#FFFFFF',
+            highlight_effect: supabaseData.highlight_effect || false,
+            usage_data: jsonArrayToNumberArray(supabaseData.usage_data),
             frequency: (supabaseData.frequency as 'daily' | 'weekly') || 'daily',
-            frequency_count: typeof supabaseData.frequency_count === 'number' ? supabaseData.frequency_count : 3
+            frequency_count: typeof supabaseData.frequency_count === 'number' ? supabaseData.frequency_count : 3,
+            created_at: supabaseData.created_at || undefined,
+            updated_at: supabaseData.updated_at || undefined,
+            user_id: supabaseData.user_id
           };
           
-          console.log("Transformed rule data:", savedCard);
+          console.log("Transformed rule data:", transformedCardData);
           
-          setCardData({
-            ...cardData,
-            ...savedCard
-          });
+          setCardData(transformedCardData);
           
           // Set images from background_images or single background_image_url
           let imageArray: string[] = [];
-          if (Array.isArray(savedCard.background_images)) {
-            imageArray = savedCard.background_images.filter(img => typeof img === 'string') as string[];
-          } else if (typeof savedCard.background_images === 'object' && savedCard.background_images !== null) {
-            // Try to convert JSON object to array if possible
-            const bgImages = (savedCard.background_images as unknown) as Json[];
-            if (Array.isArray(bgImages)) {
-              imageArray = bgImages.filter(item => typeof item === 'string') as string[];
-            }
-          }
-          
-          if (imageArray.length === 0 && savedCard.background_image_url) {
-            imageArray = [savedCard.background_image_url];
+          if (transformedCardData.background_images && transformedCardData.background_images.length > 0) {
+            imageArray = transformedCardData.background_images;
+          } else if (transformedCardData.background_image_url) {
+            imageArray = [transformedCardData.background_image_url];
           }
           
           console.log("Setting images array:", imageArray);
@@ -238,6 +252,7 @@ export const useRuleCardData = ({
         .upsert({
           ...newCardData,
           // Explicitly add required fields
+          title: newCardData.title, // Ensure title is always included
           frequency: newCardData.frequency || 'daily',
           frequency_count: typeof newCardData.frequency_count === 'number' ? newCardData.frequency_count : 3
         }, { 

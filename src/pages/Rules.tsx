@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -102,11 +101,11 @@ const Rules: React.FC = () => {
 
   const handleAddRule = async () => {
     try {
-      const newRule: Partial<Rule> = {
+      const newRule = {
         id: uuidv4(),
         title: 'New Rule',
         description: 'This is a new rule. Click edit to customize it.',
-        priority: 'medium',
+        priority: 'medium' as const,
         background_opacity: 80,
         focal_point_x: 50,
         focal_point_y: 50,
@@ -115,7 +114,7 @@ const Rules: React.FC = () => {
         calendar_color: '#7E69AB',
         icon_color: '#FFFFFF',
         highlight_effect: false,
-        frequency: 'daily',
+        frequency: 'daily' as const,
         frequency_count: 3,
         usage_data: [0, 0, 0, 0, 0, 0, 0],
         background_images: []
@@ -152,7 +151,8 @@ const Rules: React.FC = () => {
       ...updatedRule,
       description: updatedRule.description || '',
       // Add any missing properties needed by the Rule interface
-      points: 0 // Add this to match the Rule interface
+      points: 0,
+      background_images: updatedRule.background_images || []
     };
     
     setRules(rules.map(rule => 
