@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -55,14 +54,13 @@ const Rules: React.FC = () => {
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
 
-  // Fixed useEffect to use seconds instead of milliseconds
   useEffect(() => {
     const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
     
     const intervalId = setInterval(() => {
       setGlobalCarouselIndex(prev => prev + 1);
-    }, savedTimer * 1000); // Use seconds (multiply by 1000 to convert to milliseconds)
+    }, savedTimer * 1000);
     
     return () => clearInterval(intervalId);
   }, [carouselTimer]);
@@ -115,7 +113,7 @@ const Rules: React.FC = () => {
     
     const intervalId = setInterval(() => {
       fetchRules();
-    }, 30000); // Refresh every 30 seconds
+    }, 30000);
     
     return () => clearInterval(intervalId);
   }, []);
@@ -339,7 +337,6 @@ const Rules: React.FC = () => {
   };
 
   const RuleCard: React.FC<{ rule: Rule }> = ({ rule }) => {
-    // Use all background images, including empty strings
     const backgroundImages = rule.background_images || [];
     
     const {
