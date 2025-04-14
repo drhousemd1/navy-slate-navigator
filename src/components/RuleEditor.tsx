@@ -46,16 +46,28 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
 
   // Enhance rule data with default values to prevent undefined errors
   const enhancedRuleData: Partial<Rule> = {
-    background_images: [],
     background_opacity: 100,
     focal_point_x: 50,
     focal_point_y: 50,
-    ...ruleData
+    ...ruleData,
+    // Ensure background_images is a valid array
+    background_images: Array.isArray(ruleData?.background_images) 
+      ? ruleData.background_images 
+      : ruleData?.background_image_url 
+        ? [ruleData.background_image_url] 
+        : []
   };
 
   const handleSave = async (formData: Partial<Rule>) => {
     if (formData.carousel_timer) {
       setCarouselTimer(formData.carousel_timer);
+    }
+    
+    // Make sure background_images is an array of strings (no nulls)
+    if (formData.background_images) {
+      formData.background_images = formData.background_images.filter(
+        (img): img is string => typeof img === 'string' && img.trim() !== ''
+      );
     }
     
     await onSave(formData);

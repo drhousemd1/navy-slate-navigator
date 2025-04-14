@@ -21,13 +21,16 @@ const RuleBackgroundCarousel: React.FC<RuleBackgroundCarouselProps> = ({
   focalPointY = 50,
   globalCarouselIndex = 0
 }) => {
-  const allImages = backgroundImages?.length
-    ? backgroundImages
-    : backgroundImageUrl
-    ? [backgroundImageUrl]
-    : [];
+  // Ensure we have a valid array of images
+  const allImages = backgroundImages?.filter((img): img is string => Boolean(img)) || [];
+  
+  // Add backgroundImageUrl if it exists and isn't already in allImages
+  if (backgroundImageUrl && !allImages.includes(backgroundImageUrl)) {
+    allImages.unshift(backgroundImageUrl);
+  }
 
-  const filteredImages = allImages.filter((img): img is string => !!img);
+  // Filter out any null or empty strings
+  const filteredImages = allImages.filter(img => !!img);
 
   const {
     visibleImage,

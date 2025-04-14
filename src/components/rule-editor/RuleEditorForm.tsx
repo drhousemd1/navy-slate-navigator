@@ -273,6 +273,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         carousel_timer: carouselTimer
       };
       
+      // Make sure we set a single background_image_url to the first image for backwards compatibility
+      if (validImageSlots.length > 0) {
+        ruleToSave.background_image_url = validImageSlots[0];
+      }
+      
       await onSave(ruleToSave);
     } catch (error) {
       console.error('Error saving rule:', error);
