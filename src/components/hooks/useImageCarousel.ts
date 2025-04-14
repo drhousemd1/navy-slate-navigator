@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 interface UseImageCarouselProps {
   images: string[];
   globalCarouselIndex: number;
+  carouselTimer?: number;
 }
 
 interface UseImageCarouselResult {
@@ -14,7 +15,8 @@ interface UseImageCarouselResult {
 
 export const useImageCarousel = ({
   images,
-  globalCarouselIndex
+  globalCarouselIndex,
+  carouselTimer = 5
 }: UseImageCarouselProps): UseImageCarouselResult => {
   const filteredImages = images.filter((img): img is string => !!img);
   const [visibleImage, setVisibleImage] = useState<string | null>(
@@ -23,6 +25,7 @@ export const useImageCarousel = ({
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const prevGlobalIndexRef = useRef(globalCarouselIndex);
+  const transitionDuration = 2000; // Fixed transition duration
 
   useEffect(() => {
     if (filteredImages.length <= 1) return;
@@ -33,10 +36,6 @@ export const useImageCarousel = ({
     const currentIndex = filteredImages.indexOf(visibleImage || filteredImages[0]);
     const nextIndex = (currentIndex + 1) % filteredImages.length;
     const nextImage = filteredImages[nextIndex];
-
-    // CRITICAL FIX: Remove the condition that prevents transitions
-    // when the next image is the same as the current one
-    // if (nextImage === visibleImage) return;
 
     const preloadImage = new Image();
     preloadImage.src = nextImage;
@@ -51,7 +50,7 @@ export const useImageCarousel = ({
           setVisibleImage(nextImage);
           setTransitionImage(null);
           setIsTransitioning(false);
-        }, 2000);
+        }, transitionDuration);
 
         return () => clearTimeout(timeout);
       });

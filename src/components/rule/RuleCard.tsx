@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Edit, Check } from 'lucide-react';
 import RuleEditModal from './RuleEditModal';
 import CardBackground from './CardBackground';
 import { useRuleCardData, RuleCardData } from './hooks/useRuleCardData';
-import { useImageCarousel } from './hooks/useImageCarousel';
+import { useImageCarousel } from '../hooks/useImageCarousel';
 import { renderRuleIcon } from './utils/renderRuleIcon';
 import { toast } from "@/hooks/use-toast";
 import FrequencyTracker from '../task/FrequencyTracker';
@@ -25,6 +24,7 @@ interface RuleProps {
   onUpdate?: (updated: RuleCardData) => void;
   onRuleBroken?: (rule: RuleCardData) => void;
   rule?: RuleCardData;
+  carouselTimer?: number;
 }
 
 const RuleCard: React.FC<RuleProps> = ({
@@ -35,11 +35,12 @@ const RuleCard: React.FC<RuleProps> = ({
   globalCarouselIndex,
   onUpdate,
   onRuleBroken,
-  rule
+  rule,
+  carouselTimer = 5
 }) => {
   const navigate = useNavigate();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [carouselTimer, setCarouselTimer] = useState(5);
+  const [localCarouselTimer, setLocalCarouselTimer] = useState(carouselTimer);
 
   const {
     cardData,
@@ -63,7 +64,11 @@ const RuleCard: React.FC<RuleProps> = ({
     visibleImage,
     transitionImage,
     isTransitioning
-  } = useImageCarousel({ images, globalCarouselIndex });
+  } = useImageCarousel({ 
+    images, 
+    globalCarouselIndex,
+    carouselTimer: localCarouselTimer
+  });
 
   const handleOpenEditModal = () => setIsEditModalOpen(true);
   const handleCloseEditModal = () => setIsEditModalOpen(false);
@@ -115,13 +120,11 @@ const RuleCard: React.FC<RuleProps> = ({
         console.log('Rule violation recorded successfully');
       }
       
-      // Update local state
       const updatedCardData = {
         ...cardData,
         usage_data: newUsageData
       };
       
-      // If onRuleBroken is provided (from parent), call it
       if (onRuleBroken) {
         onRuleBroken(updatedCardData);
       }
@@ -145,7 +148,6 @@ const RuleCard: React.FC<RuleProps> = ({
 
   const handleDeleteRule = async (ruleId: string) => {
     try {
-      // Delete from Supabase
       const { error } = await supabase
         .from('rules')
         .delete()
@@ -161,13 +163,11 @@ const RuleCard: React.FC<RuleProps> = ({
         return;
       }
       
-      // Notify about the deletion
       toast({
         title: "Rule Deleted",
         description: "The rule has been deleted",
       });
       
-      // Close the modal
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Error deleting rule:", error);
@@ -180,8 +180,7 @@ const RuleCard: React.FC<RuleProps> = ({
   };
 
   const handleCarouselTimerChange = (newValue: number) => {
-    setCarouselTimer(newValue);
-    // Store carousel timer in localStorage for now as it's a global setting
+    setLocalCarouselTimer(newValue);
     localStorage.setItem("rules_carouselTimer", newValue.toString());
   };
 
@@ -268,7 +267,7 @@ const RuleCard: React.FC<RuleProps> = ({
         }}
         onDelete={handleDeleteRule}
         localStorageKey="rules"
-        carouselTimer={carouselTimer}
+        carouselTimer={localCarouselTimer}
         onCarouselTimerChange={handleCarouselTimerChange}
       />
     </>
