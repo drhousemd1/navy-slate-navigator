@@ -82,7 +82,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [localCarouselTimer, setLocalCarouselTimer] = useState(ruleData?.carousel_timer || carouselTimer);
-  const [backgroundImages, setBackgroundImages] = useState<string[]>(ruleData?.background_images || []);
+  const [backgroundImages, setBackgroundImages] = useState<string[]>(
+    Array.isArray(ruleData?.background_images) && ruleData?.background_images.length > 0 
+      ? ruleData.background_images 
+      : Array(5).fill('')
+  );
   const [focalPointX, setFocalPointX] = useState(ruleData?.focal_point_x || 0.5);
   const [focalPointY, setFocalPointY] = useState(ruleData?.focal_point_y || 0.5);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
@@ -117,7 +121,16 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   useEffect(() => {
     setIconPreview(ruleData?.icon_url || null);
     setSelectedIconName(ruleData?.icon_name || null);
-    setBackgroundImages(ruleData?.background_images || []);
+    
+    const initialImages = Array.isArray(ruleData?.background_images) && ruleData?.background_images.length > 0 
+      ? [...ruleData.background_images]
+      : Array(5).fill('');
+    
+    while (initialImages.length < 5) {
+      initialImages.push('');
+    }
+    
+    setBackgroundImages(initialImages.slice(0, 5));
     setLocalCarouselTimer(ruleData?.carousel_timer || carouselTimer);
     setFocalPointX(ruleData?.focal_point_x || 0.5);
     setFocalPointY(ruleData?.focal_point_y || 0.5);
@@ -298,7 +311,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <FormLabel className="text-white text-lg">Legacy Background Image</FormLabel>
           <BackgroundImageSelector
             control={form.control}
-            imagePreview={visibleImage}
+            imagePreview={backgroundImages[globalCarouselIndex] === '' ? null : visibleImage}
             initialPosition={{ 
               x: ruleData?.focal_point_x || 50, 
               y: ruleData?.focal_point_y || 50 
@@ -307,6 +320,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
               const updatedImages = [...backgroundImages];
               updatedImages[globalCarouselIndex] = '';
               setBackgroundImages(updatedImages);
+              form.setValue('background_images', updatedImages);
               form.setValue('background_image_url', undefined);
             }}
             onImageUpload={handleImageUpload}
