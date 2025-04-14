@@ -9,41 +9,73 @@ export const useImageCarousel = (images: string[], timer: number) => {
   );
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [previousImages, setPreviousImages] = useState<string[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Initialize or update visible image when images array changes
   useEffect(() => {
-    // Reset visible image if images array changes
     if (filteredImages.length > 0) {
-      setVisibleImage(filteredImages[0]);
-      setCurrentImageIndex(0);
-    } else {
+      // Check if images array has changed
+      const imagesChanged = 
+        filteredImages.length !== previousImages.length || 
+        filteredImages.some((img, i) => previousImages[i] !== img);
+      
+      if (imagesChanged) {
+        setPreviousImages(filteredImages);
+        setVisibleImage(filteredImages[0]);
+        setCurrentImageIndex(0);
+        setTransitionImage(null);
+        setIsTransitioning(false);
+      }
+    } else if (previousImages.length > 0 && filteredImages.length === 0) {
+      // Reset if we had images but now don't
+      setPreviousImages([]);
       setVisibleImage(null);
+      setTransitionImage(null);
+      setIsTransitioning(false);
     }
-  }, [images]);
+  }, [filteredImages]);
 
+  // Handle image transitions based on the timer
   useEffect(() => {
     // Only set up interval if we have multiple images
     if (filteredImages.length <= 1) return;
     
     const transitionToNextImage = () => {
       const nextIndex = (currentImageIndex + 1) % filteredImages.length;
-      const nextImage = filteredImages[nextIndex];
+      const next = filteredImages[nextIndex];
+      
+      if (next === visibleImage) return;
       
       // Preload the next image
-      const preloadImage = new Image();
-      preloadImage.src = nextImage;
+      const preload = new Image();
+      preload.src = next;
       
-      preloadImage.onload = () => {
-        setTransitionImage(nextImage);
-        setIsTransitioning(true);
+      preload.onload = () => {
+        setTransitionImage(next);
+        setIsTransitioning(false);
         
-        // After transition completes, update the visible image
-        const timeout = setTimeout(() => {
-          setVisibleImage(nextImage);
-          setCurrentImageIndex(nextIndex);
-          setTransitionImage(null);
-          setIsTransitioning(false);
-        }, 1000); // Match the transition duration
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            setIsTransitioning(true);
+            
+            const timeout = setTimeout(() => {
+              setVisibleImage(next);
+              setCurrentImageIndex(nextIndex);
+              setTransitionImage(null);
+              setIsTransitioning(false);
+            }, 2000); // Match the transition duration
+            
+            return () => clearTimeout(timeout);
+          }, 0);
+        });
+      };
+      
+      preload.onerror = () => {
+        console.error("Failed to load image:", next);
+        // Try to continue with the next image anyway
+        setVisibleImage(next);
+        setCurrentImageIndex(nextIndex);
       };
     };
     
@@ -57,7 +89,7 @@ export const useImageCarousel = (images: string[], timer: number) => {
         intervalRef.current = null;
       }
     };
-  }, [filteredImages, timer, currentImageIndex]);
+  }, [filteredImages, timer, currentImageIndex, visibleImage]);
 
   return {
     visibleImage,
