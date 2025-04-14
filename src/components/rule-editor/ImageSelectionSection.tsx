@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash, Image } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useModalImageHandling } from '../rule/hooks/useModalImageHandling';
 
 interface ImageSelectionSectionProps {
   backgroundImages: string[];
@@ -24,7 +25,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   focalPointY = 0.5,
   onFocalPointChange
 }) => {
-  // Ensure we have exactly 5 slots at initialization time
+  // Ensure we have exactly 5 slots for initialization
   useEffect(() => {
     // If the passed backgroundImages array doesn't have exactly 5 elements
     if (backgroundImages.length !== 5) {
@@ -40,20 +41,17 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
     }
   }, []);
   
-  // Find first non-empty image index, or default to 0
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(
-    backgroundImages.findIndex(img => img) >= 0 
-      ? backgroundImages.findIndex(img => img) 
-      : 0
+  // Use the modal image handling hook to manage image state
+  const { images, selectedImageIndex, selectImage, updateImage } = useModalImageHandling(
+    backgroundImages.length === 5 ? backgroundImages : [...backgroundImages].concat(Array(5 - backgroundImages.length).fill(''))
   );
   
-  // Initialize images array with exactly 5 slots
-  const images = [...backgroundImages];
-  while (images.length < 5) {
-    images.push('');
-  }
-  // Ensure we never have more than 5 slots
-  const normalizedImages = images.slice(0, 5);
+  useEffect(() => {
+    // Only update parent component when images actually change
+    if (JSON.stringify(images) !== JSON.stringify(backgroundImages)) {
+      onImagesChange(images);
+    }
+  }, [images]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,30 +60,14 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      const newImages = [...normalizedImages];
-      newImages[selectedImageIndex] = base64String;
-      
-      // Always pass all 5 slots, including empty ones
-      onImagesChange(newImages);
+      updateImage(base64String);
     };
     
     reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = () => {
-    const newImages = [...normalizedImages];
-    newImages[selectedImageIndex] = '';
-    
-    // Always pass all 5 slots, including empty ones
-    onImagesChange(newImages);
-    
-    // Select next available image if any
-    const nextAvailableIndex = newImages.findIndex(img => img);
-    if (nextAvailableIndex >= 0) {
-      setSelectedImageIndex(nextAvailableIndex);
-    } else {
-      setSelectedImageIndex(0);
-    }
+    updateImage('');
   };
 
   const handleFocalPointChange = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -132,10 +114,10 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
       
       {/* Thumbnails - always show exactly 5 */}
       <div className="flex gap-2">
-        {normalizedImages.map((image, index) => (
+        {images.map((image, index) => (
           <div
             key={index}
-            onClick={() => setSelectedImageIndex(index)}
+            onClick={() => selectImage(index)}
             className={`
               w-16 h-16 border-2 rounded-md overflow-hidden cursor-pointer
               ${selectedImageIndex === index 
@@ -186,7 +168,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
               size="sm"
               variant="outline"
               onClick={handleRemoveImage}
-              disabled={!normalizedImages[selectedImageIndex]}
+              disabled={!images[selectedImageIndex]}
               className="bg-dark-navy text-white hover:bg-gray-700"
             >
               <Trash className="mr-1 w-4 h-4" /> Remove
@@ -198,10 +180,10 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
           className="w-full h-48 border border-gray-600 rounded-md relative overflow-hidden"
           onClick={handleFocalPointChange}
         >
-          {normalizedImages[selectedImageIndex] ? (
+          {images[selectedImageIndex] ? (
             <>
               <img 
-                src={normalizedImages[selectedImageIndex]} 
+                src={images[selectedImageIndex]} 
                 alt="Selected background" 
                 className="w-full h-full object-cover" 
                 style={{

@@ -180,6 +180,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   };
 
   const handleBackgroundImagesChange = (images: string[]) => {
+    console.log("Background images updated:", images);
     setBackgroundImages(images);
     form.setValue('background_images', images);
   };
