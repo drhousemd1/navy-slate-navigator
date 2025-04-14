@@ -94,7 +94,6 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
                 onClick={() => handleImageSelect(index)}
                 className={`
                   w-16 h-16 border-2 rounded-md overflow-hidden cursor-pointer
-                  flex items-center justify-center 
                   ${selectedImageIndex === index 
                     ? 'border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]' 
                     : 'border-gray-600'}
@@ -116,24 +115,42 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
             ))}
           </div>
           
-          <div className="flex items-center gap-2">
-            <Label htmlFor="carousel-timer" className="text-white whitespace-nowrap">
-              Timer (sec):
-            </Label>
-            <Input
-              id="carousel-timer"
-              type="number"
-              min="1"
-              max="60"
-              value={carouselTimer}
-              onChange={(e) => onCarouselTimerChange(parseInt(e.target.value) || 5)}
-              className="w-20 bg-dark-navy border-light-navy text-white"
-            />
+          <div className="flex flex-col items-end">
+            <div className="text-right">
+              <Label htmlFor="carousel-timer" className="text-white font-medium">
+                Carousel Timer
+              </Label>
+              <p className="text-xs text-gray-300">(Time between transitions)</p>
+            </div>
+            <div className="flex items-center mt-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => onCarouselTimerChange(Math.max(1, carouselTimer - 1))}
+                className="bg-gray-700 hover:bg-gray-600 text-white rounded-l px-3 py-1 h-8"
+              >
+                –
+              </Button>
+              <span className="bg-gray-800 text-white px-4 py-1 h-8 flex items-center">
+                {carouselTimer}
+              </span>
+              <Button
+                type="button"
+                size="sm" 
+                variant="outline"
+                onClick={() => onCarouselTimerChange(carouselTimer + 1)}
+                className="bg-gray-700 hover:bg-gray-600 text-white rounded-r px-3 py-1 h-8"
+              >
+                +
+              </Button>
+              <span className="text-sm text-white ml-2">(s)</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-gray-800 rounded-md p-4">
+      <div className="mt-4 border border-gray-700 rounded-md p-4 bg-gray-900">
         <div className="flex justify-between items-center mb-2">
           <Label className="text-white">Image Preview</Label>
           <div className="flex gap-2">
@@ -149,7 +166,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
               size="sm"
               variant="outline"
               onClick={() => document.getElementById('image-upload')?.click()}
-              className="bg-dark-navy text-white hover:bg-gray-700"
+              className="bg-gray-700 text-white hover:bg-gray-600 flex items-center"
             >
               <Plus className="mr-1 w-4 h-4" /> Upload
             </Button>
@@ -160,28 +177,30 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
               variant="outline"
               onClick={handleRemoveImage}
               disabled={!imagePreview}
-              className="bg-dark-navy text-white hover:bg-gray-700"
+              className="bg-gray-700 text-white hover:bg-gray-600 flex items-center"
             >
               <Trash className="mr-1 w-4 h-4" /> Remove
             </Button>
           </div>
         </div>
         
-        <div 
-          className="w-full h-48 border border-gray-600 rounded-md flex items-center justify-center overflow-hidden"
-        >
-          {imagePreview ? (
-            <img 
-              src={imagePreview} 
-              alt="Selected background" 
-              className="w-full h-full object-contain" 
-            />
-          ) : (
-            <div className="text-gray-400 flex flex-col items-center justify-center">
-              <Image className="w-12 h-12 mb-2" />
-              <span>No image selected</span>
-            </div>
-          )}
+        <div className="mt-4 relative">
+          <div 
+            className="w-full h-64 bg-gray-800 rounded-md relative overflow-hidden"
+          >
+            {imagePreview ? (
+              <img 
+                src={imagePreview} 
+                alt="Selected background" 
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              <div className="text-gray-400 flex flex-col items-center justify-center h-full">
+                <Image className="w-12 h-12 mb-2" />
+                <span>No image selected</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
