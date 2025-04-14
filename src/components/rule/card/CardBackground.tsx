@@ -2,7 +2,11 @@
 import React from 'react';
 
 interface CardBackgroundProps {
-  currentImage: string | null;
+  currentImage: {
+    visibleImage: string | null;
+    transitionImage: string | null;
+    isTransitioning: boolean;
+  };
   focalPointX: number;
   focalPointY: number;
   backgroundOpacity: number;
@@ -14,29 +18,43 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   focalPointY = 0.5,
   backgroundOpacity = 100
 }) => {
-  if (!currentImage) {
-    return null;
-  }
-  
   // Ensure we have valid opacity value
   const safeOpacity = Math.max(0, Math.min(100, backgroundOpacity)) / 100;
   
   return (
     <>
-      {currentImage && (
+      {/* Visible base image */}
+      {currentImage.visibleImage && (
         <img
-          src={currentImage}
+          src={currentImage.visibleImage}
           alt=""
           className="absolute inset-0 w-full h-full object-cover z-0"
           style={{ 
-            transition: 'opacity 0.5s ease-in-out',
             objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
-            opacity: safeOpacity
+            opacity: safeOpacity,
+            transition: 'opacity 1s ease-in-out'
           }}
           draggable={false}
         />
       )}
 
+      {/* Transition image that fades in */}
+      {currentImage.transitionImage && (
+        <img
+          src={currentImage.transitionImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover z-10"
+          style={{ 
+            objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
+            opacity: currentImage.isTransitioning ? safeOpacity : 0,
+            transition: 'opacity 1s ease-in-out',
+            pointerEvents: 'none'
+          }}
+          draggable={false}
+        />
+      )}
+
+      {/* Background overlay for opacity control */}
       <div
         className="absolute inset-0 bg-black z-5"
         style={{ opacity: 1 - safeOpacity }}
