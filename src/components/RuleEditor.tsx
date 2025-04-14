@@ -25,7 +25,6 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
-  background_images?: (string | null)[];
 }
 
 interface RuleEditorProps {

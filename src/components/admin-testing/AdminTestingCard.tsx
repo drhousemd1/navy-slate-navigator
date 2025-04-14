@@ -7,7 +7,7 @@ import CardHeader from '@/components/admin-testing/card/CardHeader';
 import CardContent from '@/components/admin-testing/card/CardContent';
 import CardFooter from '@/components/admin-testing/card/CardFooter';
 import { useAdminCardData } from '@/components/admin-testing/hooks/useAdminCardData';
-import { useEnhancedImageCarousel } from '@/components/hooks/useEnhancedImageCarousel';
+import { useImageCarousel } from '@/components/admin-testing/hooks/useImageCarousel';
 import { renderCardIcon } from '@/components/admin-testing/utils/renderCardIcon';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
@@ -60,10 +60,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     visibleImage,
     transitionImage,
     isTransitioning
-  } = useEnhancedImageCarousel({ 
-    images, 
-    globalCarouselIndex
-  });
+  } = useImageCarousel({ images, globalCarouselIndex });
 
   const handleOpenEditModal = () => setIsEditModalOpen(true);
   const handleCloseEditModal = () => setIsEditModalOpen(false);

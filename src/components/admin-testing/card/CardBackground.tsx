@@ -1,6 +1,5 @@
 
 import React from 'react';
-import EnhancedCardBackground from '@/components/shared/EnhancedCardBackground';
 
 interface CardBackgroundProps {
   visibleImage: string | null;
@@ -19,15 +18,39 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   focalPointY = 50,
   backgroundOpacity = 100
 }) => {
+  if (!visibleImage && !transitionImage) return null;
+
   return (
-    <EnhancedCardBackground
-      visibleImage={visibleImage}
-      transitionImage={transitionImage}
-      isTransitioning={isTransitioning}
-      focalPointX={focalPointX}
-      focalPointY={focalPointY}
-      backgroundOpacity={backgroundOpacity}
-    />
+    <>
+      {visibleImage && (
+        <img
+          src={visibleImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
+          style={{
+            transition: 'opacity 2s ease-in-out',
+            objectPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: backgroundOpacity / 100
+          }}
+          draggable={false}
+        />
+      )}
+      {transitionImage && (
+        <img
+          src={transitionImage}
+          alt=""
+          className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
+            isTransitioning ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={{
+            transition: 'opacity 2s ease-in-out',
+            objectPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: isTransitioning ? backgroundOpacity / 100 : 0
+          }}
+          draggable={false}
+        />
+      )}
+    </>
   );
 };
 
