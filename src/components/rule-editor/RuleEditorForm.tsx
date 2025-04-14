@@ -14,6 +14,8 @@ import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
+import { useRuleCarousel } from '@/contexts/RuleCarouselContext';
+import ImageSelectionSection from './ImageSelectionSection';
 
 interface Rule {
   id?: string;
@@ -34,6 +36,8 @@ interface Rule {
   frequency: 'daily' | 'weekly';
   frequency_count: number;
   usage_data?: number[];
+  background_images?: (string | null)[] | null;
+  carousel_timer?: number;
 }
 
 interface RuleFormValues {
@@ -53,6 +57,8 @@ interface RuleFormValues {
   priority: 'low' | 'medium' | 'high';
   frequency: 'daily' | 'weekly';
   frequency_count: number;
+  background_images?: (string | null)[] | null;
+  carousel_timer?: number;
 }
 
 interface RuleEditorFormProps {
@@ -74,11 +80,17 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
+  const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
+  const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
+  const [position, setPosition] = useState({ x: 50, y: 50 });
+
+  const { carouselTimer, setCarouselTimer } = useRuleCarousel();
+  
   const form = useForm<RuleFormValues>({
     defaultValues: {
       title: ruleData?.title || '',
       description: ruleData?.description || '',
-      background_image_url: ruleData?.background_image_url,
+      background_image_url: ruleData?.background_image_url || '',
       background_opacity: ruleData?.background_opacity || 100,
       title_color: ruleData?.title_color || '#FFFFFF',
       subtext_color: ruleData?.subtext_color || '#FFFFFF',
@@ -88,9 +100,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       focal_point_x: ruleData?.focal_point_x || 50,
       focal_point_y: ruleData?.focal_point_y || 50,
       priority: ruleData?.priority || 'medium',
-      icon_name: ruleData?.icon_name,
+      icon_name: ruleData?.icon_name || '',
       frequency: ruleData?.frequency || 'daily',
       frequency_count: ruleData?.frequency_count || 3,
+      background_images: ruleData?.background_images || [null, null, null, null, null],
+      carousel_timer: ruleData?.carousel_timer || carouselTimer,
     },
   });
 
@@ -98,6 +112,25 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setImagePreview(ruleData?.background_image_url || null);
     setIconPreview(ruleData?.icon_url || null);
     setSelectedIconName(ruleData?.icon_name || null);
+    setPosition({ 
+      x: ruleData?.focal_point_x || 50, 
+      y: ruleData?.focal_point_y || 50 
+    });
+    
+    // Initialize image slots
+    const newImageSlots = [null, null, null, null, null];
+    
+    if (ruleData?.background_images && Array.isArray(ruleData.background_images) && ruleData.background_images.length > 0) {
+      ruleData.background_images.forEach((img, index) => {
+        if (index < newImageSlots.length && img) {
+          newImageSlots[index] = img;
+        }
+      });
+    } else if (ruleData?.background_image_url) {
+      newImageSlots[0] = ruleData.background_image_url;
+    }
+    
+    setImageSlots(newImageSlots);
   }, [ruleData]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,6 +144,60 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       };
       reader.readAsDataURL(file);
     }
+  };
+  
+  const handleCarouselTimerChange = (newTimer: number) => {
+    setCarouselTimer(newTimer);
+    form.setValue('carousel_timer', newTimer);
+  };
+
+  const handleSelectImageSlot = (index: number) => {
+    setSelectedBoxIndex(index);
+    const imageUrl = imageSlots[index];
+    setImagePreview(imageUrl);
+    form.setValue('background_image_url', imageUrl || '');
+  };
+
+  const handleRemoveCurrentImage = () => {
+    if (selectedBoxIndex !== null) {
+      const updatedSlots = [...imageSlots];
+      updatedSlots[selectedBoxIndex] = null;
+      setImageSlots(updatedSlots);
+      setImagePreview(null);
+      form.setValue('background_image_url', '');
+      form.setValue('background_images', updatedSlots);
+    }
+  };
+
+  const handleMultiImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // If no box selected, auto-select the first empty slot
+    let targetIndex = selectedBoxIndex;
+    if (targetIndex === null) {
+      const firstEmpty = imageSlots.findIndex((slot) => !slot);
+      if (firstEmpty === -1) {
+        targetIndex = 0;
+      } else {
+        targetIndex = firstEmpty;
+      }
+      setSelectedBoxIndex(targetIndex);
+    }
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      
+      const updatedSlots = [...imageSlots];
+      updatedSlots[targetIndex!] = base64String;
+      setImageSlots(updatedSlots);
+      setImagePreview(base64String);
+      form.setValue('background_image_url', base64String);
+      form.setValue('background_images', updatedSlots);
+      form.setValue('background_opacity', 100);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleIconUpload = () => {
@@ -165,11 +252,32 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setLoading(true);
     
     try {
+      // Filter valid image slots
+      const validImageSlots = imageSlots
+        .filter(slot => typeof slot === 'string' && slot.trim() !== '')
+        .map(slot => {
+          if (!slot) return null;
+          try {
+            if (slot.startsWith('data:image') || slot.startsWith('http')) {
+              return slot;
+            } else {
+              return null;
+            }
+          } catch (e) {
+            return null;
+          }
+        })
+        .filter(Boolean) as string[];
+      
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
-        highlight_effect: values.highlight_effect || false, // Ensure highlight_effect is properly set
+        highlight_effect: values.highlight_effect || false,
+        focal_point_x: position.x,
+        focal_point_y: position.y,
+        background_images: validImageSlots.length > 0 ? validImageSlots : imagePreview ? [imagePreview] : [],
+        carousel_timer: carouselTimer
       };
       
       await onSave(ruleToSave);
@@ -191,6 +299,12 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       setIsDeleteDialogOpen(false);
     }
   };
+
+  // Set form values when position changes
+  useEffect(() => {
+    form.setValue('focal_point_x', position.x);
+    form.setValue('focal_point_y', position.y);
+  }, [position, form]);
 
   return (
     <Form {...form}>
@@ -232,24 +346,20 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <PrioritySelector control={form.control} />
         </div>
-        
-        <div className="space-y-4">
-          <FormLabel className="text-white text-lg">Background Image</FormLabel>
-          <BackgroundImageSelector
-            control={form.control}
-            imagePreview={imagePreview}
-            initialPosition={{ 
-              x: ruleData?.focal_point_x || 50, 
-              y: ruleData?.focal_point_y || 50 
-            }}
-            onRemoveImage={() => {
-              setImagePreview(null);
-              form.setValue('background_image_url', undefined);
-            }}
-            onImageUpload={handleImageUpload}
-            setValue={form.setValue}
-          />
-        </div>
+
+        <ImageSelectionSection
+          imagePreview={imagePreview}
+          imageSlots={imageSlots}
+          selectedBoxIndex={selectedBoxIndex}
+          carouselTimer={carouselTimer}
+          onCarouselTimerChange={handleCarouselTimerChange}
+          onSelectImageSlot={handleSelectImageSlot}
+          onRemoveImage={handleRemoveCurrentImage}
+          onImageUpload={handleMultiImageUpload}
+          setValue={form.setValue}
+          position={position}
+          control={form.control}
+        />
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Rule Icon</FormLabel>

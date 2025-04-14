@@ -2,6 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import RuleEditorForm from './rule-editor/RuleEditorForm';
+import { useRuleCarousel } from '@/contexts/RuleCarouselContext';
 
 interface Rule {
   id?: string;
@@ -22,9 +23,8 @@ interface Rule {
   frequency: 'daily' | 'weekly';
   frequency_count: number;
   usage_data?: number[];
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string;
+  background_images?: (string | null)[] | null;
+  carousel_timer?: number;
 }
 
 interface RuleEditorProps {
@@ -42,7 +42,19 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   onSave, 
   onDelete 
 }) => {
+  const { setCarouselTimer } = useRuleCarousel();
+
+  // Enhance rule data with default values to prevent undefined errors
+  const enhancedRuleData: Partial<Rule> = {
+    background_images: [],
+    ...ruleData
+  };
+
   const handleSave = async (formData: Partial<Rule>) => {
+    if (formData.carousel_timer) {
+      setCarouselTimer(formData.carousel_timer);
+    }
+    
     await onSave(formData);
     onClose();
   };
@@ -59,15 +71,15 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
       <DialogContent className="bg-navy border-light-navy text-white">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white">
-            {ruleData?.id ? 'Edit Rule' : 'Create New Rule'}
+            {enhancedRuleData?.id ? 'Edit Rule' : 'Create New Rule'}
           </DialogTitle>
           <DialogDescription className="text-light-navy">
-            {ruleData?.id ? 'Modify the existing rule' : 'Create a new rule to track'}
+            {enhancedRuleData?.id ? 'Modify the existing rule' : 'Create a new rule to track'}
           </DialogDescription>
         </DialogHeader>
         
         <RuleEditorForm
-          ruleData={ruleData}
+          ruleData={enhancedRuleData}
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}
