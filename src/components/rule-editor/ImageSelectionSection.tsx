@@ -32,7 +32,10 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   control,
   imagePreview
 }) => {
-  const currentImage = selectedBoxIndex !== null ? imageSlots[selectedBoxIndex] : null;
+  // Get current image from slots based on selected index
+  const currentImage = selectedBoxIndex !== null && selectedBoxIndex < imageSlots.length 
+    ? imageSlots[selectedBoxIndex] 
+    : null;
   
   console.log("ImageSelectionSection rendering with:", {
     selectedBoxIndex,

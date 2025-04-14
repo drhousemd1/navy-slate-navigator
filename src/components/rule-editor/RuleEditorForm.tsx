@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -80,7 +79,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
-  const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
+  const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(0);
   const [position, setPosition] = useState({ x: 50, y: 50 });
 
   const { carouselTimer, setCarouselTimer } = useRuleCarousel();
@@ -124,17 +123,22 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
 
     setImageSlots(newImageSlots);
 
-    if (selectedBoxIndex === null) {
-      const firstImageIndex = newImageSlots.findIndex(img => img !== null);
-      setSelectedBoxIndex(firstImageIndex !== -1 ? firstImageIndex : 0);
+    const firstImageIndex = newImageSlots.findIndex(img => img !== null);
+    const initialSelectedIndex = firstImageIndex !== -1 ? firstImageIndex : 0;
+    setSelectedBoxIndex(initialSelectedIndex);
+    
+    setImagePreview(newImageSlots[initialSelectedIndex] || null);
+    
+    if (newImageSlots[initialSelectedIndex]) {
+      form.setValue('background_image_url', newImageSlots[initialSelectedIndex]);
     }
-
-    setImagePreview(
-      selectedBoxIndex !== null && selectedBoxIndex < newImageSlots.length 
-        ? newImageSlots[selectedBoxIndex] 
-        : newImageSlots[0]
-    );
-  }, [ruleData]);
+    
+    console.log("RuleEditorForm initialized with:", { 
+      imageSlots: newImageSlots, 
+      selectedIndex: initialSelectedIndex,
+      backgroundImagesFromData: ruleData?.background_images
+    });
+  }, [ruleData, form]);
 
   const handleCarouselTimerChange = (newValue: number) => {
     setCarouselTimer(newValue);
@@ -145,7 +149,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // If no box selected, auto-select the first empty slot or slot 0
     let targetIndex = selectedBoxIndex;
     if (targetIndex === null) {
       const firstEmpty = imageSlots.findIndex((slot) => !slot);
@@ -156,47 +159,52 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     reader.onloadend = () => {
       const base64String = reader.result as string;
       
-      // Make a copy of the image slots array
       const updatedSlots = [...imageSlots];
-      // Update the selected slot with the new image
       updatedSlots[targetIndex as number] = base64String;
+      
+      console.log("Updating image slots with new upload at index:", targetIndex);
+      
       setImageSlots(updatedSlots);
-      
-      // Update the preview to show the new image
-      setImagePreview(base64String);
       setSelectedBoxIndex(targetIndex);
+      setImagePreview(base64String);
       
-      // Update both form values
       form.setValue('background_image_url', base64String);
       
-      // Make a clean array (no nulls) for background_images
       const filteredImages = updatedSlots.filter(Boolean) as string[];
       form.setValue('background_images', filteredImages);
       
-      console.log("Updated image slots after upload:", updatedSlots);
+      console.log("Updated image slots after upload:", {
+        updatedSlots,
+        filteredImages,
+        targetIndex,
+        currentImagePreview: base64String
+      });
       
-      // Ensure opacity is set to 100% for new images
       form.setValue('background_opacity', 100);
     };
     reader.readAsDataURL(file);
+    
+    e.target.value = '';
   };
 
   const handleSelectImageSlot = (index: number) => {
+    console.log("Selecting image slot:", index);
+    
     setSelectedBoxIndex(index);
     const imageUrl = imageSlots[index];
     setImagePreview(imageUrl);
     
-    // Important: Update background_image_url when changing selected slot
     form.setValue('background_image_url', imageUrl || '');
   };
 
   const handleRemoveCurrentImage = () => {
     if (selectedBoxIndex !== null) {
+      console.log("Removing image from slot:", selectedBoxIndex);
+      
       const updatedSlots = [...imageSlots];
       updatedSlots[selectedBoxIndex] = null;
       setImageSlots(updatedSlots);
       
-      // After removing, select another image if available
       const nextImageIndex = updatedSlots.findIndex(img => img !== null);
       if (nextImageIndex !== -1) {
         setSelectedBoxIndex(nextImageIndex);
@@ -208,11 +216,14 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         form.setValue('background_image_url', '');
       }
       
-      // Update background_images with filtered array (no nulls)
       const filteredImages = updatedSlots.filter(Boolean) as string[];
       form.setValue('background_images', filteredImages);
       
-      console.log("Updated image slots after removal:", updatedSlots);
+      console.log("Updated image slots after removal:", {
+        updatedSlots,
+        nextSelectedIndex: nextImageIndex !== -1 ? nextImageIndex : 0,
+        filteredImagesCount: filteredImages.length
+      });
     }
   };
 
@@ -268,7 +279,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setLoading(true);
     
     try {
-      // Get all valid image slots - ensure we only pass non-null values
       const validImageSlots = imageSlots
         .filter(slot => typeof slot === 'string' && slot.trim() !== '')
         .map(slot => {
@@ -298,7 +308,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         carousel_timer: carouselTimer
       };
       
-      // Make sure we set a single background_image_url to the first image for backwards compatibility
       if (validImageSlots.length > 0) {
         ruleToSave.background_image_url = validImageSlots[0];
       }
@@ -323,7 +332,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   };
 
-  // Set form values when position changes
   useEffect(() => {
     form.setValue('focal_point_x', position.x);
     form.setValue('focal_point_y', position.y);
