@@ -20,17 +20,6 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
 }) => {
   return (
     <div className="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-      {transitionImage && isTransitioning && (
-        <img
-          src={transitionImage}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
-          style={{
-            objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
-            opacity: backgroundOpacity / 100
-          }}
-        />
-      )}
       {visibleImage && (
         <img
           src={visibleImage}
@@ -39,6 +28,17 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
           style={{
             objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
             opacity: backgroundOpacity / 100
+          }}
+        />
+      )}
+      {transitionImage && isTransitioning && (
+        <img
+          src={transitionImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+          style={{
+            objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
+            opacity: isTransitioning ? backgroundOpacity / 100 : 0
           }}
         />
       )}

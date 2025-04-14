@@ -33,7 +33,7 @@ export const useImageCarousel = ({
 
       return () => clearTimeout(timer);
     }
-  }, [globalCarouselIndex, filteredImages]);
+  }, [globalCarouselIndex, filteredImages, visibleImage]);
 
   return {
     visibleImage,
