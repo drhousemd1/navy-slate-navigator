@@ -2,7 +2,7 @@
 import React from 'react';
 import { Rule } from '@/lib/ruleUtils';
 import { Button } from '../ui/button';
-import { Pencil, Check, Skull } from 'lucide-react';
+import { Pencil, Skull } from 'lucide-react';
 
 const RuleCardContent = ({
   rule,
