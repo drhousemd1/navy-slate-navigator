@@ -1,12 +1,10 @@
-
 import React from 'react';
 import { Rule } from '@/lib/ruleUtils';
 import { Button } from '../ui/button';
-import { Pencil, Skull } from 'lucide-react';
 import RuleIcon from '../rule/RuleIcon';
 import FrequencyTracker from '../rule/FrequencyTracker';
-import HighlightedText from '../task/HighlightedText';
-import PriorityBadge from '../task/PriorityBadge';
+import HighlightedText from '../rule/HighlightedText';
+import PriorityBadge from '../rule/PriorityBadge';
 
 const RuleCardContent = ({
   rule,
@@ -24,7 +22,6 @@ const RuleCardContent = ({
       <div className="flex justify-between items-start mb-3">
         <PriorityBadge priority={rule.priority} />
         
-        {/* Moved Break button to the top right */}
         <Button
           onClick={onBreak}
           size="sm"

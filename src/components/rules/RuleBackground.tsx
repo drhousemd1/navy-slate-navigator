@@ -1,6 +1,6 @@
 
 import React from 'react';
-import RuleBackgroundCarousel from './RuleBackgroundCarousel';
+import RuleBackgroundCarousel from '../rule/RuleBackgroundCarousel';
 
 interface RuleBackgroundProps {
   backgroundImages?: (string | null)[] | null;
