@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Rule } from '@/lib/ruleUtils';
 import { Button } from '../ui/button';
@@ -27,7 +28,7 @@ const RuleCardContent = ({
           variant="destructive"
           className="bg-red-600 text-white hover:bg-red-700"
         >
-          {isViolated ? 'Rule Broken' : 'Break'}
+          Rule Broken
         </Button>
       </div>
       
