@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -79,7 +78,10 @@ interface SupabaseRuleData {
 const jsonArrayToStringArray = (jsonArray: Json | null): string[] => {
   if (!jsonArray) return [];
   if (!Array.isArray(jsonArray)) return [];
-  return jsonArray.filter(item => typeof item === 'string') as string[];
+  
+  return jsonArray.filter((item): item is string => 
+    typeof item === 'string'
+  );
 };
 
 // Helper function to convert Json array to number array

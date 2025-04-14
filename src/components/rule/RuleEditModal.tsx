@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { toast } from '@/hooks/use-toast';
 import { RuleCardData } from './hooks/useRuleCardData';
 
-// Import our modular components
 import BasicDetailsSection from '@/components/admin-testing/edit-modal/BasicDetailsSection';
 import ImageSelectionSection from '@/components/rule-editor/ImageSelectionSection';
 import IconSelectionSection from '@/components/admin-testing/edit-modal/IconSelectionSection';
@@ -24,7 +23,6 @@ interface RuleEditModalProps {
   onCarouselTimerChange: (timer: number) => void;
 }
 
-// Define a specific type for the form values to prevent infinite type instantiation
 type RuleFormValues = {
   id: string;
   title: string;
@@ -72,7 +70,6 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({
     localStorage.setItem(`${localStorageKey}_carouselTimer`, String(carouselTimer));
   }, [carouselTimer, localStorageKey]);
   
-  // Use the explicit form values type to prevent infinite type instantiation
   const form = useForm<RuleFormValues>({
     defaultValues: {
       id: ruleData?.id || '',
@@ -141,7 +138,6 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({
         console.log("Loading background_images into slots:", ruleData.background_images);
         ruleData.background_images.forEach((img, index) => {
           if (index < newImageSlots.length && img) {
-            // Fix for substring error - ensure img is a string before using substring
             const imgStr = typeof img === 'string' ? img : '';
             const imgDisplay = imgStr ? (imgStr.substring(0, 50) + '...') : '[Non-string]';
             
@@ -150,7 +146,6 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({
           }
         });
       } else if (ruleData.background_image_url) {
-        // Fix for substring error - ensure background_image_url is a string
         const bgImgUrl = ruleData.background_image_url;
         const bgImgPreview = typeof bgImgUrl === 'string' ? 
           (bgImgUrl.substring(0, 50) + '...') : 
@@ -172,12 +167,10 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // If no box selected, auto-select the first empty slot
     let targetIndex = selectedBoxIndex;
     if (targetIndex === null) {
       const firstEmpty = imageSlots.findIndex((slot) => !slot);
       if (firstEmpty === -1) {
-        // All slots are full, select the first one
         targetIndex = 0;
       } else {
         targetIndex = firstEmpty;
@@ -237,7 +230,6 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({
       updatedSlots[selectedBoxIndex] = null;
       setImageSlots(updatedSlots);
       
-      // Clear preview but keep the selected box highlighted
       setImagePreview(null);
       form.setValue('background_image_url', '');
       
@@ -313,31 +305,15 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({
   const onSubmit = async (data: RuleFormValues) => {
     try {
       setIsSaving(true);
-      console.log("Saving rule data:", data);
       
-      // Validate image slots before saving
       const validImageSlots = imageSlots
-        .filter(slot => typeof slot === 'string' && slot.trim() !== '')
-        .map(slot => {
-          // Additional validation to ensure it's a valid data URL or image URL
-          if (!slot) return null;
-          try {
-            if (slot.startsWith('data:image') || slot.startsWith('http')) {
-              return slot;
-            } else {
-              console.warn("Invalid image data in slot:", typeof slot === 'string' ? slot.substring(0, 30) : String(slot));
-              return null;
-            }
-          } catch (e) {
-            console.error("Error validating image slot:", e);
-            return null;
-          }
-        })
-        .filter(Boolean) as string[];
+        .filter((slot): slot is string => typeof slot === 'string' && slot.trim() !== '')
+        .filter(slot => 
+          slot.startsWith('data:image') || 
+          slot.startsWith('http') || 
+          slot.startsWith('https')
+        );
       
-      console.log(`Found ${validImageSlots.length} valid image slots after validation`);
-      
-      // Ensure background_image_url is set to the current imagePreview
       const updatedData: RuleCardData = {
         ...data,
         background_image_url: imagePreview || '',
@@ -345,31 +321,12 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({
         icon_name: selectedIconName || '',
         focal_point_x: position.x,
         focal_point_y: position.y,
-        background_images: validImageSlots.length > 0 ? validImageSlots : imagePreview ? [imagePreview] : [],
+        background_images: validImageSlots.length > 0 
+          ? validImageSlots 
+          : (imagePreview ? [imagePreview] : []),
       };
       
-      const backgroundImagesLength = Array.isArray(updatedData.background_images) 
-        ? updatedData.background_images.length 
-        : 0;
-      
-      console.log("Transformed data ready for save:", {
-        id: updatedData.id,
-        title: updatedData.title,
-        imageCount: backgroundImagesLength,
-        hasBackgroundImageUrl: Boolean(updatedData.background_image_url),
-        backgroundImageUrlPreview: updatedData.background_image_url ? 
-          (typeof updatedData.background_image_url === 'string' ? 
-            updatedData.background_image_url.substring(0, 30) + '...' : 
-            String(updatedData.background_image_url)) 
-          : 'none'
-      });
-      
       await onSave(updatedData);
-      
-      toast({
-        title: "Success",
-        description: "Rule settings saved successfully",
-      });
       
       onClose();
     } catch (error) {
