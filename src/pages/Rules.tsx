@@ -52,7 +52,6 @@ const Rules: React.FC = () => {
   const queryClient = useQueryClient();
   
   const [carouselTimer, setCarouselTimer] = useState(5);
-  // Add global carousel index state
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
 
   useEffect(() => {
@@ -60,7 +59,6 @@ const Rules: React.FC = () => {
     setCarouselTimer(savedTimer);
   }, []);
 
-  // Add effect to increment the global carousel index based on timer
   useEffect(() => {
     const interval = setInterval(() => {
       setGlobalCarouselIndex(prevIndex => prevIndex + 1);
@@ -382,8 +380,7 @@ const Rules: React.FC = () => {
     const filteredImages = (rule.background_images || [])
       .filter(img => typeof img === 'string' && img.trim() !== '');
     
-    // Update to pass the globalCarouselIndex to useImageCarousel
-    const currentImage = useImageCarousel({
+    const { visibleImage, transitionImage, isTransitioning } = useImageCarousel({
       images: filteredImages,
       globalCarouselIndex: globalCarouselIndex
     });
@@ -394,9 +391,11 @@ const Rules: React.FC = () => {
         className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden relative`}
       >
         <CardBackground 
-          currentImage={currentImage}
-          focalPointX={rule.focal_point_x}
-          focalPointY={rule.focal_point_y}
+          visibleImage={visibleImage}
+          transitionImage={transitionImage}
+          isTransitioning={isTransitioning}
+          focalPointX={rule.focal_point_x * 100}
+          focalPointY={rule.focal_point_y * 100}
           backgroundOpacity={rule.background_opacity}
         />
         

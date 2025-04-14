@@ -2,63 +2,54 @@
 import React from 'react';
 
 interface CardBackgroundProps {
-  currentImage: {
-    visibleImage: string | null;
-    transitionImage: string | null;
-    isTransitioning: boolean;
-  };
-  focalPointX: number;
-  focalPointY: number;
-  backgroundOpacity: number;
+  visibleImage: string | null;
+  transitionImage: string | null;
+  isTransitioning: boolean;
+  focalPointX?: number;
+  focalPointY?: number;
+  backgroundOpacity?: number;
 }
 
 const CardBackground: React.FC<CardBackgroundProps> = ({
-  currentImage,
-  focalPointX = 0.5,
-  focalPointY = 0.5,
+  visibleImage,
+  transitionImage,
+  isTransitioning,
+  focalPointX = 50,
+  focalPointY = 50,
   backgroundOpacity = 100
 }) => {
-  // Ensure we have valid opacity value
-  const safeOpacity = Math.max(0, Math.min(100, backgroundOpacity)) / 100;
-  
+  if (!visibleImage && !transitionImage) return null;
+
   return (
     <>
-      {/* Visible base image */}
-      {currentImage.visibleImage && (
+      {visibleImage && (
         <img
-          src={currentImage.visibleImage}
+          src={visibleImage}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover z-0"
-          style={{ 
-            objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
-            opacity: safeOpacity,
-            transition: 'opacity 1s ease-in-out'
+          className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
+          style={{
+            transition: 'opacity 2s ease-in-out',
+            objectPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: backgroundOpacity / 100
           }}
           draggable={false}
         />
       )}
-
-      {/* Transition image that fades in */}
-      {currentImage.transitionImage && (
+      {transitionImage && (
         <img
-          src={currentImage.transitionImage}
+          src={transitionImage}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover z-10"
-          style={{ 
-            objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
-            opacity: currentImage.isTransitioning ? safeOpacity : 0,
-            transition: 'opacity 1s ease-in-out',
-            pointerEvents: 'none'
+          className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
+            isTransitioning ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={{
+            transition: 'opacity 2s ease-in-out',
+            objectPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: isTransitioning ? backgroundOpacity / 100 : 0
           }}
           draggable={false}
         />
       )}
-
-      {/* Background overlay for opacity control */}
-      <div
-        className="absolute inset-0 bg-black z-5"
-        style={{ opacity: 1 - safeOpacity }}
-      />
     </>
   );
 };
