@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -113,7 +112,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       setSelectedImageIndex(0);
       setBackgroundImages([]);
     }
-  }, [ruleData]);
+  }, [taData]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
