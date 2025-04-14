@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -14,6 +15,7 @@ import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
 import ImageSelectionSection from '../rule-editor/ImageSelectionSection';
+import { useImageCarousel } from "../rule/hooks/useImageCarousel";
 
 interface Rule {
   id?: string;
@@ -76,7 +78,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   carouselTimer = 5,
   onCarouselTimerChange
 }) => {
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -86,6 +87,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [focalPointX, setFocalPointX] = useState(ruleData?.focal_point_x || 0.5);
   const [focalPointY, setFocalPointY] = useState(ruleData?.focal_point_y || 0.5);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
+  
+  const { visibleImage } = useImageCarousel({
+    images: backgroundImages,
+    globalCarouselIndex
+  });
   
   const form = useForm<RuleFormValues>({
     defaultValues: {
@@ -110,7 +116,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   });
 
   useEffect(() => {
-    setImagePreview(ruleData?.background_image_url || null);
     setIconPreview(ruleData?.icon_url || null);
     setSelectedIconName(ruleData?.icon_name || null);
     setBackgroundImages(ruleData?.background_images || []);
@@ -292,13 +297,15 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <FormLabel className="text-white text-lg">Legacy Background Image</FormLabel>
           <BackgroundImageSelector
             control={form.control}
-            imagePreview={imagePreview}
+            imagePreview={visibleImage}
             initialPosition={{ 
               x: ruleData?.focal_point_x || 50, 
               y: ruleData?.focal_point_y || 50 
             }}
             onRemoveImage={() => {
-              setImagePreview(null);
+              setBackgroundImages(backgroundImages.map((img, idx) => 
+                idx === globalCarouselIndex ? '' : img
+              ));
               form.setValue('background_image_url', undefined);
             }}
             onImageUpload={handleImageUpload}
