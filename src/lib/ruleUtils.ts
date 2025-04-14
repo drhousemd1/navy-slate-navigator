@@ -47,10 +47,11 @@ export async function fetchRules(): Promise<Rule[]> {
     return [];
   }
 
-  // Ensure the priority field conforms to the expected union type
+  // Ensure the returned data conforms to the Rule interface
   return (data || []).map(rule => ({
     ...rule,
-    priority: (rule.priority as 'low' | 'medium' | 'high') || 'medium'
+    priority: (rule.priority as 'low' | 'medium' | 'high') || 'medium',
+    frequency: (rule.frequency as 'daily' | 'weekly') || 'daily'
   }));
 }
 
@@ -66,10 +67,11 @@ export async function getRuleById(id: string): Promise<Rule | null> {
     return null;
   }
 
-  // Ensure the priority field conforms to the expected union type
+  // Ensure the returned data conforms to the Rule interface
   return data ? {
     ...data,
-    priority: (data.priority as 'low' | 'medium' | 'high') || 'medium'
+    priority: (data.priority as 'low' | 'medium' | 'high') || 'medium',
+    frequency: (data.frequency as 'daily' | 'weekly') || 'daily'
   } : null;
 }
 
