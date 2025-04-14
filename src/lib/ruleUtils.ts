@@ -47,7 +47,11 @@ export async function fetchRules(): Promise<Rule[]> {
     return [];
   }
 
-  return data || [];
+  // Ensure the priority field conforms to the expected union type
+  return (data || []).map(rule => ({
+    ...rule,
+    priority: (rule.priority as 'low' | 'medium' | 'high') || 'medium'
+  }));
 }
 
 export async function getRuleById(id: string): Promise<Rule | null> {
@@ -62,7 +66,11 @@ export async function getRuleById(id: string): Promise<Rule | null> {
     return null;
   }
 
-  return data;
+  // Ensure the priority field conforms to the expected union type
+  return data ? {
+    ...data,
+    priority: (data.priority as 'low' | 'medium' | 'high') || 'medium'
+  } : null;
 }
 
 export async function deleteRule(id: string): Promise<boolean> {
@@ -97,11 +105,13 @@ export async function updateRuleViolation(id: string, isViolated: boolean): Prom
     
     if (userId) {
       const { error: historyError } = await supabase
-        .from('rule_violation_history')
+        .from('rule_violations')
         .insert({
           rule_id: id,
           user_id: userId,
-          violated_at: new Date().toISOString()
+          violation_date: new Date().toISOString(),
+          day_of_week: getMondayBasedDay(),
+          week_number: getISOWeekNumber()
         });
         
       if (historyError) {
@@ -111,6 +121,17 @@ export async function updateRuleViolation(id: string, isViolated: boolean): Prom
   }
 
   return true;
+}
+
+// Function to get the current ISO week number (YYYY-WW format)
+function getISOWeekNumber(): string {
+  const now = new Date();
+  const date = new Date(now.getTime());
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+  const week1 = new Date(date.getFullYear(), 0, 4);
+  const weekNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+  return `${date.getFullYear()}-${weekNum.toString().padStart(2, '0')}`;
 }
 
 export function getMondayBasedDay(): number {
