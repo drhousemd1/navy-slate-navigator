@@ -81,8 +81,37 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-start">
-        <Label className="text-white text-lg">Background Images</Label>
+      <div className="flex justify-between items-end">
+        <div>
+          <Label className="text-white text-lg">Background Images</Label>
+          <div className="flex gap-2 mt-2">
+            {images.map((image, index) => (
+              <div
+                key={index}
+                onClick={() => selectImage(index)}
+                className={`
+                  w-16 h-16 border-2 rounded-md overflow-hidden cursor-pointer
+                  ${selectedImageIndex === index 
+                    ? 'border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]' 
+                    : 'border-gray-600'}
+                  bg-gray-800
+                `}
+              >
+                {image ? (
+                  <img 
+                    src={image} 
+                    alt={`Background ${index + 1}`} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <Image className="w-8 h-8 text-gray-600" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
         
         <div className="flex flex-col">
           <div>
@@ -110,35 +139,6 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
             <span className="text-white ml-2">(s)</span>
           </div>
         </div>
-      </div>
-      
-      {/* Thumbnails - always show exactly 5 */}
-      <div className="flex gap-2">
-        {images.map((image, index) => (
-          <div
-            key={index}
-            onClick={() => selectImage(index)}
-            className={`
-              w-16 h-16 border-2 rounded-md overflow-hidden cursor-pointer
-              ${selectedImageIndex === index 
-                ? 'border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]' 
-                : 'border-gray-600'}
-              bg-gray-800
-            `}
-          >
-            {image ? (
-              <img 
-                src={image} 
-                alt={`Background ${index + 1}`} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <Image className="w-8 h-8 text-gray-600" />
-              </div>
-            )}
-          </div>
-        ))}
       </div>
 
       {/* Image Preview with Focal Point */}
