@@ -290,11 +290,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   };
 
-  const handleCarouselTimerChange = (newTimer: number) => {
-    setCarouselTimer(newTimer);
-    form.setValue('carousel_timer', newTimer);
-  };
-
   // Set form values when position changes
   useEffect(() => {
     form.setValue('focal_point_x', position.x);
