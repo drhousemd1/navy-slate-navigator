@@ -51,19 +51,12 @@ const Rules: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
   
-  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
 
   useEffect(() => {
     const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
-    
-    const intervalId = setInterval(() => {
-      setGlobalCarouselIndex(prev => prev + 1);
-    }, savedTimer * 1000);
-    
-    return () => clearInterval(intervalId);
-  }, [carouselTimer]);
+  }, []);
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -378,14 +371,7 @@ const Rules: React.FC = () => {
     const filteredImages = (rule.background_images || [])
       .filter(img => typeof img === 'string' && img.trim() !== '');
     
-    const {
-      visibleImage,
-      transitionImage,
-      isTransitioning
-    } = useImageCarousel({
-      images: filteredImages,
-      globalCarouselIndex
-    });
+    const currentImage = useImageCarousel(filteredImages, carouselTimer);
 
     return (
       <Card 
@@ -393,9 +379,7 @@ const Rules: React.FC = () => {
         className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden relative`}
       >
         <CardBackground 
-          visibleImage={visibleImage}
-          transitionImage={transitionImage}
-          isTransitioning={isTransitioning}
+          currentImage={currentImage}
           focalPointX={rule.focal_point_x}
           focalPointY={rule.focal_point_y}
           backgroundOpacity={rule.background_opacity}

@@ -2,23 +2,19 @@
 import React from 'react';
 
 interface CardBackgroundProps {
-  visibleImage: string | null;
-  transitionImage: string | null;
-  isTransitioning: boolean;
+  currentImage: string | null;
   focalPointX: number;
   focalPointY: number;
   backgroundOpacity: number;
 }
 
 const CardBackground: React.FC<CardBackgroundProps> = ({
-  visibleImage,
-  transitionImage,
-  isTransitioning,
+  currentImage,
   focalPointX = 0.5,
   focalPointY = 0.5,
   backgroundOpacity = 100
 }) => {
-  if (!visibleImage && !transitionImage) {
+  if (!currentImage) {
     return null;
   }
   
@@ -27,29 +23,15 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   
   return (
     <>
-      {visibleImage && (
+      {currentImage && (
         <img
-          src={visibleImage}
+          src={currentImage}
           alt=""
           className="absolute inset-0 w-full h-full object-cover z-0"
           style={{ 
-            transition: 'opacity 2s ease-in-out',
+            transition: 'opacity 0.5s ease-in-out',
             objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
             opacity: safeOpacity
-          }}
-          draggable={false}
-        />
-      )}
-
-      {transitionImage && (
-        <img
-          src={transitionImage}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-          style={{ 
-            transition: 'opacity 2s ease-in-out',
-            objectPosition: `${focalPointX * 100}% ${focalPointY * 100}%`,
-            opacity: isTransitioning ? safeOpacity : 0
           }}
           draggable={false}
         />
