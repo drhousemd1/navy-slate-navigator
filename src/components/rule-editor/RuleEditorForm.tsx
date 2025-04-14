@@ -135,6 +135,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     );
   }, [ruleData]);
 
+  const handleCarouselTimerChange = (newValue: number) => {
+    setCarouselTimer(newValue);
+    form.setValue('carousel_timer', newValue);
+  };
+
   const handleMultiImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
