@@ -304,9 +304,9 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
               y: ruleData?.focal_point_y || 50 
             }}
             onRemoveImage={() => {
-              setBackgroundImages(backgroundImages.map((img, idx) => 
-                idx === globalCarouselIndex ? '' : img
-              ));
+              const updatedImages = [...backgroundImages];
+              updatedImages[globalCarouselIndex] = '';
+              setBackgroundImages(updatedImages);
               form.setValue('background_image_url', undefined);
             }}
             onImageUpload={handleImageUpload}

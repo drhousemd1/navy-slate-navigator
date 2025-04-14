@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 
 interface UseImageCarouselProps {
@@ -16,12 +15,13 @@ export const useImageCarousel = ({
   images, 
   globalCarouselIndex 
 }: UseImageCarouselProps): UseImageCarouselResult => {
+  // Only filter out null/undefined values, but keep empty strings
   const filteredImages = Array.isArray(images) 
-    ? images.filter(img => !!img) 
+    ? images.map(img => img === null ? '' : img)
     : [];
     
   const [visibleImage, setVisibleImage] = useState<string | null>(
-    filteredImages.length > 0 ? filteredImages[0] : null
+    filteredImages.length > 0 && filteredImages[0] ? filteredImages[0] : null
   );
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -41,8 +41,11 @@ export const useImageCarousel = ({
         
         // Set the initial visible image based on the globalCarouselIndex
         const initialIndex = Math.min(globalCarouselIndex, filteredImages.length - 1);
-        setVisibleImage(filteredImages[initialIndex >= 0 ? initialIndex : 0]);
+        const initialImage = initialIndex >= 0 && filteredImages[initialIndex] 
+          ? filteredImages[initialIndex] 
+          : null;
         
+        setVisibleImage(initialImage);
         setTransitionImage(null);
         setIsTransitioning(false);
       }
@@ -66,10 +69,20 @@ export const useImageCarousel = ({
     const nextIndex = Math.min(globalCarouselIndex, filteredImages.length - 1);
     if (nextIndex < 0 || nextIndex >= filteredImages.length) return;
     
+    // Important change: Check if the selected index exists in the array,
+    // but allow empty strings to be processed (setting visibleImage to null)
     const next = filteredImages[nextIndex];
-    if (!next) return;
     
-    if (next === visibleImage) return;
+    // Key change: Don't abort if next === visibleImage
+    // Always update when the index changes
+    
+    // Handle empty string case separately (no transition animation)
+    if (!next) {
+      setVisibleImage(null);
+      setTransitionImage(null);
+      setIsTransitioning(false);
+      return;
+    }
     
     const preload = new Image();
     preload.src = next;
