@@ -67,6 +67,8 @@ const RuleCardContent = ({
       <div className="flex items-center justify-between mt-4">
         {rule.usage_data && (
           <FrequencyTracker 
+            frequency={rule.frequency || 'daily'}
+            frequency_count={rule.frequency_count || 3}
             usage_data={rule.usage_data}
             calendar_color={rule.calendar_color}
           />

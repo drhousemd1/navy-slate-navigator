@@ -3,28 +3,28 @@ import React from 'react';
 import { Calendar } from 'lucide-react';
 import { getMondayBasedDay } from '@/lib/utils';
 
-interface RuleFrequencyTrackerProps {
-  usage_data: number[];        // Array of 7 elements (0 = not broken, 1 = broken)
-  calendar_color: string;      // Color used for filled circles
+interface FrequencyTrackerProps {
+  frequency: 'daily' | 'weekly';
+  frequency_count: number;
+  calendar_color: string;
+  usage_data?: number[];
 }
 
-const FrequencyTracker: React.FC<RuleFrequencyTrackerProps> = ({
-  usage_data,
+const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({
+  frequency,
+  frequency_count,
   calendar_color,
+  usage_data = [],
 }) => {
-  const currentDay = getMondayBasedDay(); // 0 = Monday, 6 = Sunday
+  const currentDayOfWeek = getMondayBasedDay();
 
   return (
     <div className="flex space-x-1 items-center">
-      <Calendar
-        className="h-4 w-4 mr-1"
-        style={{ color: calendar_color }}
-      />
+      <Calendar className="h-4 w-4 mr-1" style={{ color: calendar_color }} />
       <div className="flex space-x-1">
-        {Array.from({ length: 7 }, (_, i) => {
-          const isUsed = usage_data?.[i] > 0;
-          const isCurrent = i === currentDay;
-
+        {Array.from({ length: 7 }).map((_, i) => {
+          const isCurrentDay = frequency === 'daily' && i === currentDayOfWeek;
+          const isUsed = usage_data[i] > 0 || i < frequency_count;
           return (
             <div
               key={i}
@@ -32,7 +32,7 @@ const FrequencyTracker: React.FC<RuleFrequencyTrackerProps> = ({
               style={{
                 backgroundColor: isUsed ? calendar_color : 'transparent',
                 borderColor: isUsed ? 'transparent' : calendar_color,
-                boxShadow: isCurrent ? `0 0 0 1px ${calendar_color}` : 'none',
+                boxShadow: isCurrentDay ? `0 0 0 1px ${calendar_color}` : 'none',
               }}
             />
           );
