@@ -13,7 +13,6 @@ import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
-import ImageSelectionSection from '../rule-editor/ImageSelectionSection';
 
 interface Rule {
   id?: string;
@@ -275,16 +274,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <PrioritySelector control={form.control} />
         </div>
-        
-        <ImageSelectionSection 
-          backgroundImages={backgroundImages}
-          onImagesChange={handleBackgroundImagesChange}
-          carouselTimer={localCarouselTimer}
-          onCarouselTimerChange={handleCarouselTimerChange}
-          focalPointX={focalPointX}
-          focalPointY={focalPointY}
-          onFocalPointChange={handleFocalPointChange}
-        />
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Legacy Background Image</FormLabel>
