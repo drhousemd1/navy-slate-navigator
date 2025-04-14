@@ -139,7 +139,7 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
             className={`
               w-16 h-16 border-2 rounded-md overflow-hidden cursor-pointer
               ${selectedImageIndex === index 
-                ? 'border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]' 
+                ? 'border-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]' 
                 : 'border-gray-600'}
               bg-gray-800
             `}
