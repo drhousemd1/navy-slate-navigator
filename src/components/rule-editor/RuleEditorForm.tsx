@@ -13,8 +13,9 @@ import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
-import ImageSelectionSection from '../rule-editor/ImageSelectionSection';
-import { useImageCarousel } from "../rule/hooks/useImageCarousel";
+import RuleImageSelectionSection from './RuleImageSelectionSection';
+import { useImageCarousel } from "@/hooks/useImageCarousel";
+import { useRuleCarousel } from '@/contexts/RuleCarouselContext';
 
 interface Rule {
   id?: string;
@@ -65,18 +66,16 @@ interface RuleEditorFormProps {
   onSave: (ruleData: any) => void;
   onDelete?: (ruleId: string) => void;
   onCancel: () => void;
-  carouselTimer?: number;
-  onCarouselTimerChange?: (value: number) => void;
 }
 
 const RuleEditorForm: React.FC<RuleEditorFormProps> = ({ 
   ruleData,
   onSave,
   onDelete,
-  onCancel,
-  carouselTimer = 5,
-  onCarouselTimerChange
+  onCancel
 }) => {
+  const { carouselTimer, setCarouselTimer, setGlobalCarouselIndex } = useRuleCarousel();
+  
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -85,11 +84,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [backgroundImages, setBackgroundImages] = useState<string[]>(ruleData?.background_images || []);
   const [focalPointX, setFocalPointX] = useState(ruleData?.focal_point_x || 0.5);
   const [focalPointY, setFocalPointY] = useState(ruleData?.focal_point_y || 0.5);
-  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   
   const { visibleImage } = useImageCarousel({
     images: backgroundImages,
-    globalCarouselIndex
+    globalCarouselIndex: selectedImageIndex
   });
   
   const form = useForm<RuleFormValues>({
@@ -130,7 +129,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       reader.onloadend = () => {
         const base64String = reader.result as string;
         const newBackgroundImages = [...backgroundImages];
-        newBackgroundImages[globalCarouselIndex] = base64String;
+        newBackgroundImages[selectedImageIndex] = base64String;
         setBackgroundImages(newBackgroundImages);
         form.setValue('background_image_url', base64String);
       };
@@ -195,9 +194,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const handleCarouselTimerChange = (seconds: number) => {
     setLocalCarouselTimer(seconds);
     form.setValue('carousel_timer', seconds);
-    if (onCarouselTimerChange) {
-      onCarouselTimerChange(seconds);
-    }
+    setCarouselTimer(seconds);
   };
 
   const handleFocalPointChange = (x: number, y: number) => {
@@ -283,7 +280,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <PrioritySelector control={form.control} />
         </div>
         
-        <ImageSelectionSection 
+        <RuleImageSelectionSection 
           backgroundImages={backgroundImages}
           onImagesChange={handleBackgroundImagesChange}
           carouselTimer={localCarouselTimer}

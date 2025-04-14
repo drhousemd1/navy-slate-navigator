@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import PriorityBadge from '../task/PriorityBadge';
 import HighlightedText from '../task/HighlightedText';
 import FrequencyTracker from '../task/FrequencyTracker';
-import CardBackground from './card/CardBackground';
-import { useImageCarousel } from './hooks/useImageCarousel';
+import RuleBackground from './RuleBackground';
+import { useImageCarousel } from '@/hooks/useImageCarousel';
 
 interface Rule {
   id: string;
@@ -57,7 +57,7 @@ const RuleCard: React.FC<RuleCardProps> = ({
     <Card 
       className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden relative`}
     >
-      <CardBackground 
+      <RuleBackground 
         visibleImage={visibleImage}
         transitionImage={transitionImage}
         isTransitioning={isTransitioning}

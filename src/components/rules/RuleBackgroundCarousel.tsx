@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useImageCarousel } from '@/components/hooks/useImageCarousel';
+import { useImageCarousel } from '@/hooks/useImageCarousel';
 
 interface RuleBackgroundCarouselProps {
   backgroundImages?: (string | null)[] | null;

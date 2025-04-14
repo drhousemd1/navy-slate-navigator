@@ -1,7 +1,7 @@
 
 import React from 'react';
 
-interface CardBackgroundProps {
+interface RuleBackgroundProps {
   visibleImage: string | null;
   transitionImage: string | null;
   isTransitioning: boolean;
@@ -10,7 +10,7 @@ interface CardBackgroundProps {
   backgroundOpacity?: number;
 }
 
-const CardBackground: React.FC<CardBackgroundProps> = ({
+const RuleBackground: React.FC<RuleBackgroundProps> = ({
   visibleImage,
   transitionImage,
   isTransitioning,
@@ -54,4 +54,4 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   );
 };
 
-export default CardBackground;
+export default RuleBackground;

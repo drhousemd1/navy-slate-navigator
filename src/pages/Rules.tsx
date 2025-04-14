@@ -4,14 +4,14 @@ import AppLayout from '../components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import RuleEditor from '../components/rule/RuleEditor';
+import RuleEditor from '../components/RuleEditor';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
-import RulesHeader from '../components/rule/RulesHeader';
+import RulesHeader from '../components/rules/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
-import RuleCard from '../components/rule/RuleCard';
+import RuleCard from '../components/rules/RuleCard';
 import { RuleCarouselProvider, useRuleCarousel } from '@/contexts/RuleCarouselContext';
 
 interface Rule {

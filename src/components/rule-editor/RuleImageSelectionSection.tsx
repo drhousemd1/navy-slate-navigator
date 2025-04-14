@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Image } from 'lucide-react';
-import { useModalImageHandling } from '../rule/hooks/useModalImageHandling';
 
 interface RuleImageSelectionSectionProps {
   backgroundImages: string[];
@@ -41,17 +40,34 @@ const RuleImageSelectionSection: React.FC<RuleImageSelectionSectionProps> = ({
     }
   }, []);
   
-  // Use the modal image handling hook to manage image state
-  const { images, selectedImageIndex, selectImage, updateImage } = useModalImageHandling(
-    backgroundImages.length === 5 ? backgroundImages : [...backgroundImages].concat(Array(5 - backgroundImages.length).fill(''))
-  );
+  // Local state for image management
+  const [images, setImages] = useState(backgroundImages);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   
+  // Update local state when props change
   useEffect(() => {
-    // Only update parent component when images actually change
+    if (JSON.stringify(images) !== JSON.stringify(backgroundImages)) {
+      setImages(backgroundImages);
+    }
+  }, [backgroundImages]);
+  
+  // Update parent component when local state changes
+  useEffect(() => {
     if (JSON.stringify(images) !== JSON.stringify(backgroundImages)) {
       onImagesChange(images);
     }
   }, [images]);
+  
+  const selectImage = (index: number) => {
+    setSelectedImageIndex(index);
+    setGlobalCarouselIndex(index);
+  };
+  
+  const updateImage = (imageUrl: string) => {
+    const updatedImages = [...images];
+    updatedImages[selectedImageIndex] = imageUrl;
+    setImages(updatedImages);
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,7 +93,6 @@ const RuleImageSelectionSection: React.FC<RuleImageSelectionSectionProps> = ({
                 key={index}
                 onClick={() => {
                   selectImage(index);
-                  setGlobalCarouselIndex(index);
                 }}
                 className={`
                   w-16 h-16 border-2 rounded-md overflow-hidden cursor-pointer

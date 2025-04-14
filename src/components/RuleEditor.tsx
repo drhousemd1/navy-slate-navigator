@@ -2,6 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import RuleEditorForm from './rule-editor/RuleEditorForm';
+import { useRuleCarousel } from '@/contexts/RuleCarouselContext';
 
 interface Rule {
   id?: string;
@@ -9,7 +10,7 @@ interface Rule {
   description: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
-  background_images: string[]; // Not optional
+  background_images: string[];
   background_opacity: number;
   icon_url?: string | null;
   icon_name?: string | null;
@@ -26,7 +27,7 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
-  carousel_timer: number; // Required, not optional
+  carousel_timer: number;
 }
 
 interface RuleEditorProps {
@@ -35,8 +36,6 @@ interface RuleEditorProps {
   ruleData?: Partial<Rule>;
   onSave: (ruleData: Partial<Rule>) => void;
   onDelete?: (ruleId: string) => void;
-  carouselTimer: number; // Required
-  setCarouselTimer: (seconds: number) => void; // Required
 }
 
 const RuleEditor: React.FC<RuleEditorProps> = ({ 
@@ -45,9 +44,9 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   ruleData, 
   onSave, 
   onDelete,
-  carouselTimer,
-  setCarouselTimer
 }) => {
+  const { carouselTimer, setCarouselTimer } = useRuleCarousel();
+
   const handleSave = async (formData: Partial<Rule>) => {
     // Create a copy of the form data to ensure we don't modify the original
     const updatedFormData = { ...formData };
@@ -67,9 +66,6 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
     // Update global carousel timer if it changed
     if (updatedFormData.carousel_timer !== carouselTimer) {
       setCarouselTimer(updatedFormData.carousel_timer);
-      
-      // Store carousel timer in localStorage for persistence
-      localStorage.setItem('rules_carouselTimer', String(updatedFormData.carousel_timer));
     }
     
     await onSave(updatedFormData);
@@ -111,11 +107,6 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}
-          carouselTimer={carouselTimer}
-          onCarouselTimerChange={(value) => {
-            // Pass carousel timer changes up to the parent component
-            setCarouselTimer(value);
-          }}
         />
       </DialogContent>
     </Dialog>
