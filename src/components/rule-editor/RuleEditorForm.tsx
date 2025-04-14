@@ -276,15 +276,72 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <PrioritySelector control={form.control} />
         </div>
         
-        <ImageSelectionSection 
-          backgroundImages={backgroundImages}
-          onImagesChange={handleBackgroundImagesChange}
-          carouselTimer={localCarouselTimer}
-          onCarouselTimerChange={handleCarouselTimerChange}
-          focalPointX={focalPointX}
-          focalPointY={focalPointY}
-          onFocalPointChange={handleFocalPointChange}
-        />
+        {/* REMOVING the ImageSelectionSection component which contains the duplicate Image Preview */}
+        {/* Instead, keeping only background images array management */}
+        <div className="space-y-4">
+          <FormLabel className="text-white text-lg">Background Images</FormLabel>
+          <div className="flex gap-2 mt-2">
+            {backgroundImages.map((image, index) => (
+              <div
+                key={index}
+                onClick={() => {
+                  // Keep functionality to select the image
+                  setBackgroundImages(prev => {
+                    const newImages = [...prev];
+                    // Just update selection, don't show preview
+                    return newImages;
+                  });
+                }}
+                className={`
+                  w-16 h-16 border-2 rounded-md overflow-hidden cursor-pointer
+                  border-gray-600
+                  bg-gray-800
+                `}
+              >
+                {image ? (
+                  <img 
+                    src={image} 
+                    alt={`Background ${index + 1}`} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          
+          <div className="flex flex-col items-start mt-4">
+            <h3 className="font-medium text-white">Carousel Timer</h3>
+            <p className="text-sm text-gray-300">(Time between image transitions)</p>
+            <div className="flex items-center mt-2">
+              <button
+                type="button"
+                onClick={() => handleCarouselTimerChange(Math.max(1, localCarouselTimer - 1))}
+                className="bg-gray-800 hover:bg-gray-700 text-white rounded-l px-3 py-1"
+              >
+                –
+              </button>
+              <span className="bg-gray-900 text-white px-4 py-1">
+                {localCarouselTimer}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleCarouselTimerChange(localCarouselTimer + 1)}
+                className="bg-gray-800 hover:bg-gray-700 text-white rounded-r px-3 py-1"
+              >
+                +
+              </button>
+              <span className="text-white ml-2">(s)</span>
+            </div>
+          </div>
+        </div>
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Legacy Background Image</FormLabel>
