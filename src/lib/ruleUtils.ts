@@ -1,6 +1,5 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
 import { getMondayBasedDay } from "./utils";
 
 export interface Rule {
@@ -24,131 +23,87 @@ export interface Rule {
   usage_data: number[];
   background_images?: (string | null)[] | null;
   carousel_timer?: number;
+  user_id?: string;
   created_at?: string;
   updated_at?: string;
 }
 
-export const getCurrentDayOfWeek = (): number => {
-  return getMondayBasedDay();
-};
-
 export const fetchRules = async (): Promise<Rule[]> => {
+  const { data: rules, error } = await supabase
+    .from('rules')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching rules:', error);
+    throw error;
+  }
+
+  return rules || [];
+};
+
+export const deleteRule = async (ruleId: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('rules')
+    .delete()
+    .eq('id', ruleId);
+
+  if (error) {
+    console.error('Error deleting rule:', error);
+    throw error;
+  }
+
+  return true;
+};
+
+export const updateRuleViolation = async (ruleId: string, isViolated: boolean): Promise<boolean> => {
+  if (!isViolated) return false;
+  
+  // Get the current day of week (0 = Monday, 6 = Sunday)
+  const dayOfWeek = getMondayBasedDay();
+  
+  // Calculate week number in YYYY-WW format
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const diff = now.getTime() - start.getTime();
+  const oneWeek = 604800000;
+  const weekNumber = Math.floor(diff / oneWeek) + 1;
+  const weekYear = `${now.getFullYear()}-${weekNumber.toString().padStart(2, '0')}`;
+  
   try {
-    const { data, error } = await supabase
-      .from('rules')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching rules:', error);
-      toast({
-        title: 'Error fetching rules',
-        description: error.message,
-        variant: 'destructive',
+    // Insert a new rule violation record
+    const { error } = await supabase
+      .from('rule_violations')
+      .insert({
+        rule_id: ruleId,
+        day_of_week: dayOfWeek,
+        week_number: weekYear
       });
-      return [];
-    }
+      
+    if (error) throw error;
     
-    const processedRules = (data as Rule[]).map(rule => {
-      if (!rule.usage_data) {
-        rule.usage_data = Array(7).fill(0);
-      }
-      
-      if (rule.background_image_url && (!rule.background_images || rule.background_images.length === 0)) {
-        rule.background_images = [rule.background_image_url];
-      }
-      
-      if (!rule.carousel_timer) {
-        rule.carousel_timer = 5; // Default timer value
-      }
-      
-      return rule;
-    });
-    
-    return processedRules;
-  } catch (err) {
-    console.error('Unexpected error fetching rules:', err);
-    toast({
-      title: 'Error fetching rules',
-      description: 'Could not fetch rules',
-      variant: 'destructive',
-    });
-    return [];
-  }
-};
-
-export const updateRuleViolation = async (id: string, violated: boolean): Promise<boolean> => {
-  try {
-    const { data: ruleData, error: ruleError } = await supabase
+    // Update the rule's usage_data to mark the day as violated
+    const { data: rule } = await supabase
       .from('rules')
-      .select('*')
-      .eq('id', id)
+      .select('usage_data')
+      .eq('id', ruleId)
       .single();
-    
-    if (ruleError) throw ruleError;
-    
-    const rule = ruleData as Rule;
-    
-    const usage_data = rule.usage_data || Array(7).fill(0);
-    
-    if (violated) {
-      const dayOfWeek = getCurrentDayOfWeek();
-      usage_data[dayOfWeek] = 1;
       
-      // Record violation in rule_violations table
-      const { error: violationError } = await supabase
-        .from('rule_violations')
-        .insert({
-          rule_id: id,
-          violation_date: new Date().toISOString(),
-          day_of_week: new Date().getDay(),
-          week_number: `${new Date().getFullYear()}-${Math.floor(new Date().getDate() / 7)}`
-        });
+    if (rule) {
+      const usageData = rule.usage_data || Array(7).fill(0);
+      usageData[dayOfWeek] = 1; // Mark as violated for the current day
+      
+      const { error: updateError } = await supabase
+        .from('rules')
+        .update({ usage_data: usageData })
+        .eq('id', ruleId);
         
-      if (violationError) {
-        console.error('Error recording rule violation:', violationError);
-      }
+      if (updateError) throw updateError;
     }
     
-    const { error } = await supabase
-      .from('rules')
-      .update({ 
-        usage_data,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id);
-    
-    if (error) throw error;
-    
     return true;
-  } catch (err: any) {
-    console.error('Error updating rule violation:', err);
-    toast({
-      title: 'Error updating rule',
-      description: err.message || 'Could not update rule violation status',
-      variant: 'destructive',
-    });
-    return false;
-  }
-};
-
-export const deleteRule = async (id: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('rules')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    
-    return true;
-  } catch (err: any) {
-    console.error('Error deleting rule:', err);
-    toast({
-      title: 'Error deleting rule',
-      description: err.message || 'Could not delete rule',
-      variant: 'destructive',
-    });
-    return false;
+  } catch (err) {
+    console.error('Error recording rule violation:', err);
+    throw err;
   }
 };

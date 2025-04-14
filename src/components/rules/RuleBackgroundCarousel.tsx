@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useRuleImageCarousel } from '@/components/rule/hooks/useRuleImageCarousel';
+import { useRuleImageCarousel } from '../rule/hooks/useRuleImageCarousel';
 
 interface RuleBackgroundCarouselProps {
   backgroundImages?: (string | null)[] | null;
