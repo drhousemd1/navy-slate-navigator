@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 interface UseImageCarouselProps {
   images: string[];
@@ -20,17 +20,6 @@ export const useImageCarousel = ({
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
-  const transitionTimerRef = useRef<number | null>(null);
-  const preloadedImages = useRef<Set<string>>(new Set());
-
-  // Clear transition timer when component unmounts
-  useEffect(() => {
-    return () => {
-      if (transitionTimerRef.current !== null) {
-        clearTimeout(transitionTimerRef.current);
-      }
-    };
-  }, []);
 
   // Initialize or update visible image when images array changes
   useEffect(() => {
@@ -45,15 +34,6 @@ export const useImageCarousel = ({
         setVisibleImage(images[0]);
         setTransitionImage(null);
         setIsTransitioning(false);
-        
-        // Preload all images in the array
-        images.forEach(img => {
-          if (img && !preloadedImages.current.has(img)) {
-            const preloadImg = new Image();
-            preloadImg.src = img;
-            preloadedImages.current.add(img);
-          }
-        });
       }
     } else if (previousImages.length > 0 && images.length === 0) {
       // Reset if we had images but now don't
@@ -61,45 +41,54 @@ export const useImageCarousel = ({
       setVisibleImage(null);
       setTransitionImage(null);
       setIsTransitioning(false);
-      preloadedImages.current.clear();
     }
   }, [images]);
 
   // Handle image transitions when global carousel index changes
   useEffect(() => {
-    if (!images.length || images.length <= 1) return;
+    // Don't perform transitions if we have no images or just one image
+    if (!images.length) return;
+    
+    // For single image, ensure it's set as visible but don't do transitions
+    if (images.length === 1) {
+      if (visibleImage !== images[0]) {
+        setVisibleImage(images[0]);
+      }
+      return;
+    }
     
     const nextIndex = globalCarouselIndex % images.length;
     const next = images[nextIndex];
     
-    // Skip if trying to transition to the same image
     if (next === visibleImage) return;
     
-    // Clear any existing transition timer
-    if (transitionTimerRef.current !== null) {
-      clearTimeout(transitionTimerRef.current);
-      transitionTimerRef.current = null;
-    }
+    const preload = new Image();
+    preload.src = next;
     
-    // Start new transition
-    setTransitionImage(next);
-    setIsTransitioning(false);
+    preload.onload = () => {
+      setTransitionImage(next);
+      setIsTransitioning(false);
+      
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setIsTransitioning(true);
+          
+          const timeout = setTimeout(() => {
+            setVisibleImage(next);
+            setTransitionImage(null);
+            setIsTransitioning(false);
+          }, 2000); // Restored to 2000ms (2 seconds)
+          
+          return () => clearTimeout(timeout);
+        }, 0);
+      });
+    };
     
-    // Use requestAnimationFrame for smoother transitions
-    requestAnimationFrame(() => {
-      // Short delay before starting transition
-      setTimeout(() => {
-        setIsTransitioning(true);
-        
-        // Complete transition after animation
-        transitionTimerRef.current = window.setTimeout(() => {
-          setVisibleImage(next);
-          setTransitionImage(null);
-          setIsTransitioning(false);
-          transitionTimerRef.current = null;
-        }, 2000) as unknown as number; // Changed back to 2000ms
-      }, 50);
-    });
+    preload.onerror = () => {
+      console.error("Failed to load image:", next);
+      // Try to continue with the next image anyway
+      setVisibleImage(next);
+    };
   }, [globalCarouselIndex, images, visibleImage]);
 
   return {
