@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { getPublicImageUrl } from '@/lib/getImageUrl';
 
 interface CardBackgroundProps {
@@ -9,7 +9,6 @@ interface CardBackgroundProps {
   focalPointX?: number;
   focalPointY?: number;
   backgroundOpacity?: number;
-  onImageLoad?: () => void; // Add the image load callback
 }
 
 const CardBackground: React.FC<CardBackgroundProps> = ({
@@ -18,8 +17,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   isTransitioning,
   focalPointX = 50,
   focalPointY = 50,
-  backgroundOpacity = 100,
-  onImageLoad
+  backgroundOpacity = 100
 }) => {
   // Default placeholder image to prevent layout shifts
   const placeholderImage = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
@@ -33,22 +31,6 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   const visibleSrc = processImageSource(visibleImage);
   const transitionSrc = processImageSource(transitionImage);
 
-  // Preload the visible image
-  useEffect(() => {
-    if (!visibleImage) return;
-    
-    const img = new Image();
-    img.src = visibleSrc;
-    img.onload = () => {
-      if (onImageLoad) onImageLoad(); // Only call after image is fully loaded
-    };
-    
-    // Handle case where image is already cached
-    if (img.complete) {
-      if (onImageLoad) onImageLoad();
-    }
-  }, [visibleSrc, onImageLoad]);
-
   return (
     <>
       {/* Always render the base image with a conditional source */}
@@ -59,7 +41,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
         style={{
           objectPosition: `${focalPointX}% ${focalPointY}%`,
           opacity: visibleImage ? backgroundOpacity / 100 : 0,
-          transition: 'opacity 2s ease-in-out'
+          transition: 'opacity 2s ease-in-out' // Kept at 2 seconds
         }}
         draggable={false}
         aria-hidden="true"
@@ -74,7 +56,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
         style={{
           objectPosition: `${focalPointX}% ${focalPointY}%`,
           opacity: isTransitioning ? backgroundOpacity / 100 : 0,
-          transition: 'opacity 2s ease-in-out'
+          transition: 'opacity 2s ease-in-out' // Kept at 2 seconds
         }}
         draggable={false}
         aria-hidden="true"

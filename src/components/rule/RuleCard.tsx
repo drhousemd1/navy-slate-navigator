@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Check } from 'lucide-react';
@@ -26,7 +26,6 @@ interface RuleProps {
   rule?: RuleCardData;
   carouselTimer?: number;
   onCarouselTimerChange?: (timer: number) => void;
-  onFullyLoaded?: () => void; // Callback for when the card is fully loaded
 }
 
 const RuleCard: React.FC<RuleProps> = ({
@@ -39,12 +38,10 @@ const RuleCard: React.FC<RuleProps> = ({
   onRuleBroken,
   rule,
   carouselTimer = 5,
-  onCarouselTimerChange,
-  onFullyLoaded
+  onCarouselTimerChange
 }) => {
   const navigate = useNavigate();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(false); // State for fade-in animation
 
   const {
     cardData,
@@ -69,14 +66,6 @@ const RuleCard: React.FC<RuleProps> = ({
     transitionImage,
     isTransitioning
   } = useImageCarousel({ images, globalCarouselIndex });
-
-  // Handle the image load event
-  const handleImageLoad = () => {
-    setIsVisible(true);
-    setTimeout(() => {
-      if (onFullyLoaded) onFullyLoaded();
-    }, 500); // Match the fade-in duration
-  };
 
   const handleOpenEditModal = () => setIsEditModalOpen(true);
   const handleCloseEditModal = () => setIsEditModalOpen(false);
@@ -197,9 +186,7 @@ const RuleCard: React.FC<RuleProps> = ({
 
   return (
     <>
-      <Card className={`transition-opacity duration-500 ${
-        isVisible ? "opacity-100" : "opacity-0"
-      } bg-dark-navy border-2 ${cardData.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}>
+      <Card className={`bg-dark-navy border-2 ${cardData.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}>
         <div className="relative p-4">
           <CardBackground
             visibleImage={visibleImage}
@@ -208,7 +195,6 @@ const RuleCard: React.FC<RuleProps> = ({
             focalPointX={cardData.focal_point_x}
             focalPointY={cardData.focal_point_y}
             backgroundOpacity={cardData.background_opacity}
-            onImageLoad={handleImageLoad}
           />
           
           <div className="flex justify-between items-center mb-3 relative z-10">
