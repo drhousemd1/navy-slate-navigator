@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -138,7 +139,6 @@ const PunishmentsContent: React.FC = () => {
         onClose={() => setIsEditorOpen(false)}
         punishmentData={currentPunishment}
         onSave={handleSavePunishment}
-        onDelete={handleDeletePunishment}
       />
     </div>
   );
