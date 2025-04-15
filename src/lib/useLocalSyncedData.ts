@@ -18,8 +18,9 @@ export function useLocalSyncedData<T>({ key, fetcher }: UseLocalSyncedDataOption
       const local = localStorage.getItem(key);
       if (local) {
         const parsed = JSON.parse(local);
-        if (Array.isArray(parsed)) {
-          setData(parsed);
+        if (parsed !== null && typeof parsed === 'object') {
+          // Safely set data with the expected type
+          setData(parsed as unknown as T);
           setLoading(false);
         }
       }
