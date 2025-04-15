@@ -61,21 +61,21 @@ export const usePunishmentImageCarousel = ({
     
     if (next === visibleImage) return;
     
-    try {
-      // Preload the next image
-      const preload = new Image();
-      preload.src = next;
+    // Preload the next image
+    const preload = new Image();
+    preload.src = next;
+    
+    const handleLoad = () => {
+      setTransitionImage(next);
+      setIsTransitioning(false);
       
-      const handleLoad = () => {
-        setTransitionImage(next);
-        setIsTransitioning(false);
-        
-        // Use a safer approach for transitions
+      // Use requestAnimationFrame for smoother transitions
+      requestAnimationFrame(() => {
         setTimeout(() => {
           setIsTransitioning(true);
           
-          // Apply a shorter transition effect duration
-          const transitionDuration = 1000; // 1 second for transition
+          // Apply the transition effect duration
+          const transitionDuration = 2000; // 2 seconds for transition
           
           const timeout = setTimeout(() => {
             setVisibleImage(next);
@@ -84,28 +84,24 @@ export const usePunishmentImageCarousel = ({
           }, transitionDuration);
           
           return () => clearTimeout(timeout);
-        }, 50);
-      };
-      
-      const handleError = () => {
-        console.error("Failed to load image:", next);
-        // Try to continue with the next image anyway
-        setVisibleImage(next);
-      };
-      
-      preload.onload = handleLoad;
-      preload.onerror = handleError;
-      
-      // Clean up in case component unmounts before image loads
-      return () => {
-        preload.onload = null;
-        preload.onerror = null;
-      };
-    } catch (error) {
-      console.error("Error during punishment image transition:", error);
-      // Fallback to direct update without transition
+        }, 0);
+      });
+    };
+    
+    const handleError = () => {
+      console.error("Failed to load image:", next);
+      // Try to continue with the next image anyway
       setVisibleImage(next);
-    }
+    };
+    
+    preload.onload = handleLoad;
+    preload.onerror = handleError;
+    
+    // Clean up in case component unmounts before image loads
+    return () => {
+      preload.onload = null;
+      preload.onerror = null;
+    };
   }, [globalCarouselIndex, images, visibleImage]);
 
   return {
