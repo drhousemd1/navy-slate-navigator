@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { PunishmentsContextType } from './types';
+import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem } from './types';
 import { usePunishmentOperations } from './usePunishmentOperations';
 
 const PunishmentsContext = createContext<PunishmentsContextType | undefined>(undefined);
@@ -52,17 +52,24 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [operations.punishments]);
 
+  // Define a getPunishmentHistory function that matches the type
+  const getPunishmentHistory = (punishmentId: string): PunishmentHistoryItem[] => {
+    return operations.punishmentHistory.filter(item => item.punishment_id === punishmentId);
+  };
+
   const contextValue: PunishmentsContextType = {
     ...operations,
     globalCarouselTimer,
     setGlobalCarouselTimer,
-    // This provides the interface expected by the context type
+    // Make sure functions match the expected types
     applyPunishment: operations.applyPunishment,
     createPunishment: operations.createPunishment,
+    updatePunishment: operations.updatePunishment,
+    deletePunishment: operations.deletePunishment,
     // Add a refresh function for manual refresh
     refresh: fetchWithRetry,
-    // Empty array for getPunishmentHistory to match the type
-    getPunishmentHistory: () => [] 
+    // Use our implementation for getPunishmentHistory
+    getPunishmentHistory
   };
 
   return (
