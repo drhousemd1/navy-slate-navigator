@@ -62,14 +62,15 @@ export const useImageCarousel = ({
     
     if (next === visibleImage) return;
     
-    const preload = new Image();
-    preload.src = next;
-    
-    preload.onload = () => {
-      setTransitionImage(next);
-      setIsTransitioning(false);
+    try {
+      const preload = new Image();
+      preload.src = next;
       
-      requestAnimationFrame(() => {
+      preload.onload = () => {
+        setTransitionImage(next);
+        setIsTransitioning(false);
+        
+        // Use a safer approach for animation frames
         setTimeout(() => {
           setIsTransitioning(true);
           
@@ -77,18 +78,22 @@ export const useImageCarousel = ({
             setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
-          }, 2000); // Restored to 2000ms (2 seconds)
+          }, 1000); // Reduced to 1 second for stability
           
           return () => clearTimeout(timeout);
-        }, 0);
-      });
-    };
-    
-    preload.onerror = () => {
-      console.error("Failed to load image:", next);
-      // Try to continue with the next image anyway
+        }, 50);
+      };
+      
+      preload.onerror = () => {
+        console.error("Failed to load image:", next);
+        // Try to continue with the next image anyway
+        setVisibleImage(next);
+      };
+    } catch (error) {
+      console.error("Error during image transition:", error);
+      // Fallback to direct update without transition
       setVisibleImage(next);
-    };
+    }
   }, [globalCarouselIndex, images, visibleImage]);
 
   return {
