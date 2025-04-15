@@ -82,7 +82,11 @@ const Rules: React.FC = () => {
         return;
       }
 
-      setRules(prev => [...prev, ...newRules]);
+      setRules(prev => {
+        const existingIds = new Set(prev.map(r => r.id));
+        const deduped = newRules.filter(r => !existingIds.has(r.id));
+        return [...prev, ...deduped];
+      });
       rulesRef.current = [...rulesRef.current, ...newRules];
       fetchIndexRef.current += 10;
     } catch (err) {
