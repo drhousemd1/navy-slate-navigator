@@ -13,7 +13,7 @@ export const usePunishmentApply = ({
   setTotalPointsDeducted
 }: UsePunishmentApplyProps) => {
   
-  const applyPunishment = async (punishmentData: Partial<PunishmentHistoryItem>) => {
+  const applyPunishment = async (punishmentData: Partial<PunishmentHistoryItem>): Promise<void> => {
     try {
       // Insert into punishment_history table
       const { data, error } = await supabase
@@ -57,7 +57,7 @@ export const usePunishmentApply = ({
         console.warn('Failed to update punishment history cache:', cacheError);
       }
       
-      return data;
+      // Changed to return void instead of data
     } catch (error) {
       console.error('Error applying punishment:', error);
       toast({

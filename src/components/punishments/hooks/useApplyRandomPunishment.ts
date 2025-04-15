@@ -1,14 +1,12 @@
 
 import { useState } from 'react';
 import { usePunishments } from '@/contexts/PunishmentsContext';
-import { useRewards } from '@/contexts/RewardsContext';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
 
 export const useApplyRandomPunishment = (onClose: () => void) => {
   const [isApplying, setIsApplying] = useState(false);
   const { applyPunishment } = usePunishments();
-  const { setTotalPoints } = useRewards();
   
   const handlePunish = async (selectedPunishment: PunishmentData | null) => {
     if (!selectedPunishment || !selectedPunishment.id) return;
