@@ -13,17 +13,17 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const operations = usePunishmentOperations();
   
   useEffect(() => {
-    // Fetch data on initial load
+    // Use Promise.catch to handle errors better and prevent unhandled rejections
     operations.fetchPunishments().catch(err => {
       console.error("Error in initial punishment fetch:", err);
       // Error is already handled inside fetchPunishments
     });
-  }, [operations]);
+  }, []);
 
   // Find the first punishment with a custom timer or use default
   useEffect(() => {
     if (operations.punishments.length > 0) {
-      // Try to get timer from localStorage first
+      // Try to get timer from localStorage first (similar to Rules page)
       const savedTimer = parseInt(localStorage.getItem('punishments_carouselTimer') || '5', 10);
       
       if (!isNaN(savedTimer) && savedTimer > 0 && savedTimer <= 30) {
@@ -43,7 +43,7 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const contextValue: PunishmentsContextType = {
     ...operations,
     globalCarouselTimer,
-    setGlobalCarouselTimer,
+    setGlobalCarouselTimer
   };
 
   return (

@@ -1,9 +1,7 @@
 
-import React, { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from '../types';
-import { useLocalSyncedData } from '@/hooks/useLocalSyncedData';
 
 interface UsePunishmentFetchProps {
   setPunishments: (punishments: PunishmentData[]) => void;
@@ -24,24 +22,25 @@ export const usePunishmentFetch = ({
   setTotalPointsDeducted
 }: UsePunishmentFetchProps) => {
   
-  // Use the local sync data hook for punishments
-  const { 
-    data: localPunishments,
-    loading: isFetchingPunishments,
-    error: punishmentsError,
-    refetch: refetchPunishments
-  } = useLocalSyncedData<PunishmentData>({
-    cacheKey: 'punishments',
-    fetchFn: async () => {
-      const { data: punishmentsData, error: punishmentsError } = await supabase
+  // Reduced batch size to prevent timeouts
+  const BATCH_SIZE = 6;
+  const MAX_BATCHES = 2; // Limit to just 12 items total initially
+  
+  const fetchPunishments = async () => {
+    try {
+      setLoading(true);
+      
+      // First, get just the most recent punishments (optimized query)
+      const { data: recentPunishments, error: recentError } = await supabase
         .from('punishments')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(12);
       
-      if (punishmentsError) throw punishmentsError;
+      if (recentError) throw recentError;
       
       // Process punishments data
-      return (punishmentsData || []).map(punishment => {
+      const cleanedPunishments = (recentPunishments || []).map(punishment => {
         let backgroundImages: string[] = [];
         
         if (punishment.background_images) {
@@ -63,85 +62,60 @@ export const usePunishmentFetch = ({
               : 5
         };
       });
-    },
-    onError: (error) => {
-      console.error('Error fetching punishments:', error);
-      setError(error);
-    }
-  });
-  
-  // Use the local sync data hook for punishment history
-  const {
-    data: localPunishmentHistory,
-    loading: isFetchingHistory,
-    error: historyError,
-    refetch: refetchHistory
-  } = useLocalSyncedData<PunishmentHistoryItem>({
-    cacheKey: 'punishment_history',
-    fetchFn: async () => {
+      
+      setPunishments(cleanedPunishments);
+      
+      // Get a small sample of history data
       const { data: historyData, error: historyError } = await supabase
         .from('punishment_history')
         .select('*')
         .order('applied_date', { ascending: false })
-        .limit(50);
+        .limit(20);
       
       if (historyError) throw historyError;
       
-      return historyData || [];
-    },
-    onError: (error) => {
-      console.error('Error fetching punishment history:', error);
-      // Don't set global error for history errors - it's not critical
-    }
-  });
-  
-  // Update state whenever local data changes
-  useEffect(() => {
-    if (localPunishments) {
-      setPunishments(localPunishments);
-    }
-    
-    if (localPunishmentHistory) {
-      setPunishmentHistory(localPunishmentHistory);
+      setPunishmentHistory(historyData || []);
       
-      // Calculate total points deducted
-      const totalDeducted = localPunishmentHistory.reduce(
-        (sum, item) => sum + item.points_deducted, 
-        0
-      );
+      const totalDeducted = (historyData || []).reduce((sum, item) => sum + item.points_deducted, 0);
       setTotalPointsDeducted(totalDeducted);
+      
+      setLoading(false);
+      
+      // Optionally load more data in the background after initial display
+      loadAdditionalDataInBackground();
+      
+    } catch (err: any) {
+      console.error('Error fetching punishments:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch punishments'));
+      toast({
+        title: "Error",
+        description: "Failed to load punishments. Please try again.",
+        variant: "destructive",
+      });
+      setLoading(false);
     }
-    
-    // Update loading state based on both data fetches
-    setLoading(isFetchingPunishments || isFetchingHistory);
-    
-    // Set error state (prioritize punishments error over history error)
-    if (punishmentsError) {
-      setError(punishmentsError);
-    } else if (historyError) {
-      setError(historyError);
-    } else {
-      setError(null);
+  };
+  
+  // Load additional data without blocking the UI
+  const loadAdditionalDataInBackground = async () => {
+    try {
+      // Get more history data if needed
+      const { data: moreHistoryData, error: moreHistoryError } = await supabase
+        .from('punishment_history')
+        .select('*')
+        .order('applied_date', { ascending: false })
+        .range(20, 49);
+      
+      if (!moreHistoryError && moreHistoryData && moreHistoryData.length > 0) {
+        setPunishmentHistory((prev: PunishmentHistoryItem[]) => [...prev, ...moreHistoryData]);
+        
+        const totalDeducted = [...moreHistoryData].reduce((sum, item) => sum + item.points_deducted, 0);
+        setTotalPointsDeducted((prev: number) => prev + totalDeducted);
+      }
+    } catch (error) {
+      console.warn('Background data loading encountered an issue:', error);
+      // Don't show error to user since this is background loading
     }
-  }, [
-    localPunishments, 
-    localPunishmentHistory, 
-    isFetchingPunishments, 
-    isFetchingHistory,
-    punishmentsError,
-    historyError,
-    setPunishments,
-    setPunishmentHistory,
-    setLoading,
-    setError,
-    setTotalPointsDeducted
-  ]);
-
-  const fetchPunishments = async () => {
-    await Promise.all([
-      refetchPunishments(),
-      refetchHistory()
-    ]);
   };
 
   return { fetchPunishments };
