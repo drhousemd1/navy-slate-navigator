@@ -7,31 +7,17 @@ import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts/PunishmentsContext';
 import PunishmentEditor from '../components/PunishmentEditor';
-import { supabase } from "@/integrations/supabase/client";
-import { useLocalSyncedData } from "@/lib/useLocalSyncedData";
-import { toast } from "@/hooks/use-toast";
-
-const fetchPunishmentsFromSupabase = async (): Promise<PunishmentData[]> => {
-  const { data, error } = await supabase.from("punishments").select("*").order("created_at", { ascending: false });
-  if (error || !data) {
-    console.error("Error fetching punishments:", error);
-    throw error || new Error("No data returned from Supabase");
-  }
-  return data as PunishmentData[];
-};
 
 const PunishmentsContent: React.FC = () => {
   const { 
-    loading: contextLoading, 
+    punishments, 
+    loading, 
+    createPunishment, 
+    updatePunishment,
+    deletePunishment,
     globalCarouselTimer 
   } = usePunishments();
   
-  const { data: punishments, loading: dataLoading, error, retry } = useLocalSyncedData<PunishmentData[]>({
-    key: "punishments",
-    fetcher: fetchPunishmentsFromSupabase,
-    cacheEnabled: true, // Enable caching but with size limits
-  });
-
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const [cleanupDone, setCleanupDone] = useState(false);
@@ -39,7 +25,6 @@ const PunishmentsContent: React.FC = () => {
   
   // Add global carousel index state
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
-  const loading = contextLoading || dataLoading;
 
   // Effect to increment the global carousel index using the global timer from context
   useEffect(() => {
@@ -53,13 +38,13 @@ const PunishmentsContent: React.FC = () => {
   // Effect to delete dummy punishment cards
   useEffect(() => {
     const removeDummyPunishments = async () => {
-      if (!loading && !cleanupDone && punishments && punishments.length > 0) {
+      if (!loading && !cleanupDone && punishments.length > 0) {
         const dummyTitles = ["Late to Meeting", "Missed Deadline", "Breaking Rules"];
         
         for (const punishment of punishments) {
           if (dummyTitles.includes(punishment.title) && punishment.id) {
             console.log(`Removing dummy punishment: ${punishment.title}`);
-            await handleDeletePunishment(punishment.id);
+            await deletePunishment(punishment.id);
           }
         }
         
@@ -68,7 +53,7 @@ const PunishmentsContent: React.FC = () => {
     };
     
     removeDummyPunishments();
-  }, [loading, punishments, cleanupDone]);
+  }, [loading, punishments, deletePunishment, cleanupDone]);
 
   useEffect(() => {
     const handleAddNewPunishment = () => {
@@ -111,136 +96,67 @@ const PunishmentsContent: React.FC = () => {
     try {
       if (data.id) {
         // Update existing punishment
-        const { error: updateError } = await supabase.from("punishments").update(data).eq("id", data.id);
-        if (updateError) throw updateError;
+        await updatePunishment(data.id, data);
       } else {
         // Create new punishment
-        const { data: created, error } = await supabase.from("punishments").insert(data).select().single();
-        if (error || !created) throw error || new Error("Create failed");
-        data = created as PunishmentData;
+        await createPunishment(data);
       }
-      
-      toast({
-        title: "Success",
-        description: data.id ? "Punishment updated" : "New punishment created",
-      });
-      
       setIsEditorOpen(false);
-      
-      // Refresh the data
-      retry();
-      
     } catch (error) {
       console.error("Error saving punishment:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save punishment. Please try again.",
-        variant: "destructive",
-      });
+      throw error;
     }
-  };
-
-  const handleDeletePunishment = async (id: string): Promise<void> => {
-    try {
-      const { error } = await supabase.from("punishments").delete().eq("id", id);
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Punishment deleted successfully",
-      });
-      
-      // Refresh the data
-      retry();
-      
-    } catch (error) {
-      console.error("Error deleting punishment:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete punishment",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="h-32 bg-navy animate-pulse rounded-lg"></div>
-          ))}
-        </div>
-      );
-    }
-    
-    if (error) {
-      return (
-        <div className="text-center py-12 text-gray-400">
-          <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
-          <h3 className="text-xl font-semibold mb-2">Error Loading Punishments</h3>
-          <p>Could not load punishments. Please try again later.</p>
-          <button 
-            onClick={retry} 
-            className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
-          >
-            Retry
-          </button>
-        </div>
-      );
-    }
-    
-    if (!punishments || punishments.length === 0) {
-      return (
-        <div className="text-center py-12 text-gray-400">
-          <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
-          <h3 className="text-xl font-semibold mb-2">No Punishments Yet</h3>
-          <p>Create your first punishment to deduct points for undesirable behaviors.</p>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="space-y-4">
-        {punishments.map(punishment => (
-          <PunishmentCard
-            key={punishment.id}
-            id={punishment.id}
-            title={punishment.title}
-            description={punishment.description || ''}
-            points={punishment.points}
-            icon={getIconComponent(punishment.icon_name || 'Skull')}
-            icon_name={punishment.icon_name}
-            icon_color={punishment.icon_color}
-            title_color={punishment.title_color}
-            subtext_color={punishment.subtext_color}
-            calendar_color={punishment.calendar_color}
-            highlight_effect={punishment.highlight_effect}
-            background_image_url={punishment.background_image_url}
-            background_opacity={punishment.background_opacity}
-            focal_point_x={punishment.focal_point_x}
-            focal_point_y={punishment.focal_point_y}
-            background_images={punishment.background_images}
-            carousel_timer={globalCarouselTimer}
-            globalCarouselIndex={globalCarouselIndex}
-          />
-        ))}
-      </div>
-    );
   };
 
   return (
     <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
       <PunishmentsHeader />
       
-      {renderContent()}
+      {loading ? (
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="h-32 bg-navy animate-pulse rounded-lg"></div>
+          ))}
+        </div>
+      ) : punishments.length === 0 ? (
+        <div className="text-center py-12 text-gray-400">
+          <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
+          <h3 className="text-xl font-semibold mb-2">No Punishments Yet</h3>
+          <p>Create your first punishment to deduct points for undesirable behaviors.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {punishments.map(punishment => (
+            <PunishmentCard
+              key={punishment.id}
+              id={punishment.id}
+              title={punishment.title}
+              description={punishment.description || ''}
+              points={punishment.points}
+              icon={getIconComponent(punishment.icon_name || 'Skull')}
+              icon_name={punishment.icon_name}
+              icon_color={punishment.icon_color}
+              title_color={punishment.title_color}
+              subtext_color={punishment.subtext_color}
+              calendar_color={punishment.calendar_color}
+              highlight_effect={punishment.highlight_effect}
+              background_image_url={punishment.background_image_url}
+              background_opacity={punishment.background_opacity}
+              focal_point_x={punishment.focal_point_x}
+              focal_point_y={punishment.focal_point_y}
+              background_images={punishment.background_images}
+              carousel_timer={globalCarouselTimer} // Use the global timer from context
+              globalCarouselIndex={globalCarouselIndex}
+            />
+          ))}
+        </div>
+      )}
       
       <PunishmentEditor 
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
         punishmentData={currentPunishment}
         onSave={handleSavePunishment}
-        onDelete={handleDeletePunishment}
       />
     </div>
   );
