@@ -45,12 +45,11 @@ const Rules: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
-  const [visibleCount, setVisibleCount] = useState(0); // ADD THIS
   
   const rulesRef = useRef<Rule[]>([]);
   const intervalRef = useRef<number | null>(null);
-  const fetchIndexRef = useRef(0);
-  const hasMoreRef = useRef(true);
+  const fetchIndexRef = useRef(0); // Add this line
+  const hasMoreRef = useRef(true); // Add this line
   
   const fetchRules = useCallback(async () => {
     try {
@@ -162,23 +161,6 @@ const Rules: React.FC = () => {
     };
   }, [carouselTimer]);
 
-  // After rules are fetched, begin revealing them one at a time
-  useEffect(() => {
-    if (rules.length === 0) return;
-
-    setVisibleCount(0); // reset
-    let index = 0;
-    const interval = setInterval(() => {
-      index++;
-      setVisibleCount(index);
-      if (index >= rules.length) {
-        clearInterval(interval);
-      }
-    }, 100); // 100ms between each card
-
-    return () => clearInterval(interval);
-  }, [rules]);
-
   const handleAddRule = async () => {
     try {
       const newRule = {
@@ -262,7 +244,7 @@ const Rules: React.FC = () => {
             </div> : rules.length === 0 ? <div className="text-center py-10">
               <p className="text-white mb-4">No rules found. Create your first rule!</p>
             </div> : <div className="space-y-4">
-              {rules.slice(0, visibleCount).map(rule => <RuleCard 
+              {rules.map(rule => <RuleCard 
                 key={rule.id} 
                 id={rule.id} 
                 title={rule.title} 
