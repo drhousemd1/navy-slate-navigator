@@ -18,7 +18,7 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       console.error("Error in initial punishment fetch:", err);
       // Error is already handled inside fetchPunishments
     });
-  }, []);
+  }, [operations]);
 
   // Find the first punishment with a custom timer or use default
   useEffect(() => {
@@ -43,7 +43,7 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const contextValue: PunishmentsContextType = {
     ...operations,
     globalCarouselTimer,
-    setGlobalCarouselTimer
+    setGlobalCarouselTimer,
   };
 
   return (

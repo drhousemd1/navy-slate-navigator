@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useRewards } from '@/contexts/RewardsContext';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -12,7 +11,6 @@ interface UsePunishmentApplyProps {
 
 export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
   const [isApplying, setIsApplying] = useState(false);
-  const { deductPoints } = useRewards();
   const { applyPunishment } = usePunishments();
   
   /**
@@ -40,9 +38,6 @@ export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
       
       // Call the context function to update both Supabase and local state
       await applyPunishment(punishmentData);
-      
-      // Deduct points from the user's total
-      await deductPoints(points);
       
       toast({
         title: "Punishment Applied",
