@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -23,7 +22,6 @@ const PunishmentsContent: React.FC = () => {
   const { 
     globalCarouselTimer 
   } = usePunishments();
-  
   const { data: punishments, loading } = useLocalSyncedData<PunishmentData[]>({
     key: "punishments",
     fetcher: fetchPunishmentsFromSupabase,
@@ -31,13 +29,10 @@ const PunishmentsContent: React.FC = () => {
   
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
-  const [cleanupDone, setCleanupDone] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Add global carousel index state
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Effect to increment the global carousel index using the global timer from context
+  // Effect to increment the global carousel index
   useEffect(() => {
     const interval = setInterval(() => {
       setGlobalCarouselIndex(prevIndex => prevIndex + 1);
@@ -46,42 +41,38 @@ const PunishmentsContent: React.FC = () => {
     return () => clearInterval(interval);
   }, [globalCarouselTimer]);
 
-  // Effect to delete dummy punishment cards
-  useEffect(() => {
-    const removeDummyPunishments = async () => {
-      if (!loading && !cleanupDone && punishments && punishments.length > 0) {
-        const dummyTitles = ["Late to Meeting", "Missed Deadline", "Breaking Rules"];
-        
-        for (const punishment of punishments) {
-          if (dummyTitles.includes(punishment.title) && punishment.id) {
-            console.log(`Removing dummy punishment: ${punishment.title}`);
-            await handleDeletePunishment(punishment.id);
-          }
-        }
-        
-        setCleanupDone(true);
+  const handleSavePunishment = async (data: PunishmentData): Promise<void> => {
+    try {
+      if (data.id) {
+        await supabase.from("punishments").update(data).eq("id", data.id);
+      } else {
+        const { data: created } = await supabase.from("punishments").insert(data).select().single();
+        data = created as PunishmentData;
       }
-    };
-    
-    removeDummyPunishments();
-  }, [loading, punishments, cleanupDone]);
 
-  useEffect(() => {
-    const handleAddNewPunishment = () => {
-      handleAddNewPunishmentClick();
-    };
+      const existing = punishments || [];
+      const updatedList = [...existing.filter(p => p.id !== data.id), data];
+      localStorage.setItem("punishments", JSON.stringify(updatedList));
 
-    const currentContainer = containerRef.current;
-    if (currentContainer) {
-      currentContainer.addEventListener('add-new-punishment', handleAddNewPunishment);
+      setIsEditorOpen(false);
+    } catch (error) {
+      console.error("Error saving punishment:", error);
+      throw error;
     }
+  };
 
-    return () => {
-      if (currentContainer) {
-        currentContainer.removeEventListener('add-new-punishment', handleAddNewPunishment);
-      }
-    };
-  }, []);
+  const handleDeletePunishment = async (id: string): Promise<void> => {
+    try {
+      await supabase.from("punishments").delete().eq("id", id);
+
+      const existing = punishments || [];
+      const updatedList = existing.filter(p => p.id !== id);
+      localStorage.setItem("punishments", JSON.stringify(updatedList));
+    } catch (error) {
+      console.error("Error deleting punishment:", error);
+      throw error;
+    }
+  };
 
   const getIconComponent = (iconName: string) => {
     switch(iconName) {
@@ -95,48 +86,6 @@ const PunishmentsContent: React.FC = () => {
         return <Zap className="h-5 w-5 text-white" />;
       default:
         return <Skull className="h-5 w-5 text-white" />;
-    }
-  };
-
-  const handleAddNewPunishmentClick = () => {
-    setCurrentPunishment(undefined);
-    setIsEditorOpen(true);
-  };
-
-  const handleSavePunishment = async (data: PunishmentData): Promise<void> => {
-    try {
-      if (data.id) {
-        // Update existing punishment
-        await supabase.from("punishments").update(data).eq("id", data.id);
-      } else {
-        // Create new punishment
-        const { data: created } = await supabase.from("punishments").insert(data).select().single();
-        data = created as PunishmentData;
-      }
-
-      // Update localStorage after successful save
-      const existing = punishments || [];
-      const updatedList = [...existing.filter(p => p.id !== data.id), data];
-      localStorage.setItem("punishments", JSON.stringify(updatedList));
-      
-      setIsEditorOpen(false);
-    } catch (error) {
-      console.error("Error saving punishment:", error);
-      throw error;
-    }
-  };
-
-  const handleDeletePunishment = async (id: string): Promise<void> => {
-    try {
-      await supabase.from("punishments").delete().eq("id", id);
-      
-      // Update localStorage after successful delete
-      const existing = punishments || [];
-      const updatedList = existing.filter(p => p.id !== id);
-      localStorage.setItem("punishments", JSON.stringify(updatedList));
-    } catch (error) {
-      console.error("Error deleting punishment:", error);
-      throw error;
     }
   };
 
