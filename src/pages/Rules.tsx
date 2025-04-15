@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -87,12 +88,14 @@ const Rules: React.FC = () => {
     }
   }, []);
   
+  // Initialize carousel timer from localStorage and start initial interval
   useEffect(() => {
     fetchRules();
     
     const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
     
+    // Initial interval setup
     const intervalId = setInterval(() => {
       setGlobalCarouselIndex(prev => prev + 1);
     }, savedTimer * 1000);
@@ -107,16 +110,23 @@ const Rules: React.FC = () => {
     };
   }, [fetchRules]);
   
+  // Update interval whenever carouselTimer changes
   useEffect(() => {
+    // Clear existing interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
     
+    // Create new interval with updated timer value
     const newIntervalId = setInterval(() => {
       setGlobalCarouselIndex(prev => prev + 1);
     }, carouselTimer * 1000);
     
     intervalRef.current = newIntervalId as unknown as number;
+    
+    // Save timer to localStorage to persist across refreshes
+    localStorage.setItem('rules_carouselTimer', carouselTimer.toString());
     
     return () => {
       if (intervalRef.current) {
@@ -126,10 +136,11 @@ const Rules: React.FC = () => {
     };
   }, [carouselTimer]);
   
+  // Set up polling for rule changes
   useEffect(() => {
     const refreshInterval = setInterval(() => {
       fetchRules();
-    }, 30000);
+    }, 30000); // 30-second refresh interval
     
     return () => {
       clearInterval(refreshInterval);
@@ -198,6 +209,12 @@ const Rules: React.FC = () => {
     }
   };
 
+  // Add handler for carousel timer changes
+  const handleCarouselTimerChange = (newTimer: number) => {
+    console.log(`Updating global carousel timer to ${newTimer} seconds`);
+    setCarouselTimer(newTimer);
+  };
+
   return <AppLayout onAddNewItem={handleAddRule}>
       <RewardsProvider>
         <div className="container mx-auto px-4 py-6">
@@ -212,7 +229,19 @@ const Rules: React.FC = () => {
             </div> : rules.length === 0 ? <div className="text-center py-10">
               <p className="text-white mb-4">No rules found. Create your first rule!</p>
             </div> : <div className="space-y-4">
-              {rules.map(rule => <RuleCard key={rule.id} id={rule.id} title={rule.title} description={rule.description || ''} priority={rule.priority} globalCarouselIndex={globalCarouselIndex} onUpdate={handleUpdateRule} onRuleBroken={handleRuleBroken} rule={rule as RuleCardData} />)}
+              {rules.map(rule => <RuleCard 
+                key={rule.id} 
+                id={rule.id} 
+                title={rule.title} 
+                description={rule.description || ''} 
+                priority={rule.priority} 
+                globalCarouselIndex={globalCarouselIndex} 
+                onUpdate={handleUpdateRule} 
+                onRuleBroken={handleRuleBroken} 
+                rule={rule as RuleCardData}
+                carouselTimer={carouselTimer}
+                onCarouselTimerChange={handleCarouselTimerChange} 
+              />)}
             </div>}
         </div>
       </RewardsProvider>

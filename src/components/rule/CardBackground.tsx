@@ -18,38 +18,38 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   focalPointY = 50,
   backgroundOpacity = 100
 }) => {
-  if (!visibleImage && !transitionImage) return null;
+  // Default placeholder image to prevent layout shifts
+  const placeholderImage = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
   return (
     <>
-      {visibleImage && (
-        <img
-          src={visibleImage}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
-          style={{
-            transition: 'opacity 2s ease-in-out',
-            objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100
-          }}
-          draggable={false}
-        />
-      )}
-      {transitionImage && (
-        <img
-          src={transitionImage}
-          alt=""
-          className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
-            isTransitioning ? 'opacity-100' : 'opacity-0'
-          }`}
-          style={{
-            transition: 'opacity 2s ease-in-out',
-            objectPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: isTransitioning ? backgroundOpacity / 100 : 0
-          }}
-          draggable={false}
-        />
-      )}
+      {/* Always render the base image with a conditional source */}
+      <img
+        src={visibleImage || placeholderImage}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover z-0"
+        style={{
+          objectPosition: `${focalPointX}% ${focalPointY}%`,
+          opacity: visibleImage ? backgroundOpacity / 100 : 0,
+          transition: 'opacity 2s ease-in-out'
+        }}
+        draggable={false}
+        aria-hidden="true"
+      />
+      
+      {/* Always render the transition image with a conditional source */}
+      <img
+        src={transitionImage || placeholderImage}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+        style={{
+          objectPosition: `${focalPointX}% ${focalPointY}%`,
+          opacity: isTransitioning ? backgroundOpacity / 100 : 0,
+          transition: 'opacity 2s ease-in-out'
+        }}
+        draggable={false}
+        aria-hidden="true"
+      />
     </>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +24,8 @@ interface RuleProps {
   onUpdate?: (updated: RuleCardData) => void;
   onRuleBroken?: (rule: RuleCardData) => void;
   rule?: RuleCardData;
+  carouselTimer?: number;
+  onCarouselTimerChange?: (timer: number) => void;
 }
 
 const RuleCard: React.FC<RuleProps> = ({
@@ -35,11 +36,12 @@ const RuleCard: React.FC<RuleProps> = ({
   globalCarouselIndex,
   onUpdate,
   onRuleBroken,
-  rule
+  rule,
+  carouselTimer = 5,
+  onCarouselTimerChange
 }) => {
   const navigate = useNavigate();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [carouselTimer, setCarouselTimer] = useState(5);
 
   const {
     cardData,
@@ -115,13 +117,11 @@ const RuleCard: React.FC<RuleProps> = ({
         console.log('Rule violation recorded successfully');
       }
       
-      // Update local state
       const updatedCardData = {
         ...cardData,
         usage_data: newUsageData
       };
       
-      // If onRuleBroken is provided (from parent), call it
       if (onRuleBroken) {
         onRuleBroken(updatedCardData);
       }
@@ -145,7 +145,6 @@ const RuleCard: React.FC<RuleProps> = ({
 
   const handleDeleteRule = async (ruleId: string) => {
     try {
-      // Delete from Supabase
       const { error } = await supabase
         .from('rules')
         .delete()
@@ -161,13 +160,11 @@ const RuleCard: React.FC<RuleProps> = ({
         return;
       }
       
-      // Notify about the deletion
       toast({
         title: "Rule Deleted",
         description: "The rule has been deleted",
       });
       
-      // Close the modal
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Error deleting rule:", error);
@@ -180,9 +177,11 @@ const RuleCard: React.FC<RuleProps> = ({
   };
 
   const handleCarouselTimerChange = (newValue: number) => {
-    setCarouselTimer(newValue);
-    // Store carousel timer in localStorage for now as it's a global setting
-    localStorage.setItem("rules_carouselTimer", newValue.toString());
+    console.log(`Rule card changing carousel timer to ${newValue} seconds`);
+    
+    if (onCarouselTimerChange) {
+      onCarouselTimerChange(newValue);
+    }
   };
 
   return (

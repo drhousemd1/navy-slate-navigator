@@ -46,7 +46,16 @@ export const useImageCarousel = ({
 
   // Handle image transitions when global carousel index changes
   useEffect(() => {
-    if (!images.length || images.length <= 1) return;
+    // Don't perform transitions if we have no images or just one image
+    if (!images.length) return;
+    
+    // For single image, ensure it's set as visible but don't do transitions
+    if (images.length === 1) {
+      if (visibleImage !== images[0]) {
+        setVisibleImage(images[0]);
+      }
+      return;
+    }
     
     const nextIndex = globalCarouselIndex % images.length;
     const next = images[nextIndex];
@@ -68,7 +77,7 @@ export const useImageCarousel = ({
             setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
-          }, 2000);
+          }, 2000); // Fixed 2-second transition duration
           
           return () => clearTimeout(timeout);
         }, 0);
