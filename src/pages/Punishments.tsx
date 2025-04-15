@@ -179,7 +179,6 @@ const PunishmentsContent: React.FC = () => {
               background_images={punishment.background_images}
               carousel_timer={globalCarouselTimer}
               globalCarouselIndex={globalCarouselIndex}
-              onDelete={() => handleDeletePunishment(punishment.id)}
             />
           ))}
         </div>
@@ -190,6 +189,7 @@ const PunishmentsContent: React.FC = () => {
         onClose={() => setIsEditorOpen(false)}
         punishmentData={currentPunishment}
         onSave={handleSavePunishment}
+        onDelete={handleDeletePunishment}
       />
     </div>
   );
