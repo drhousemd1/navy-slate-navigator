@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, memo } from 'react';
+import React from 'react';
 import { getPublicImageUrl } from '@/lib/getImageUrl';
 
 interface CardBackgroundProps {
@@ -11,7 +11,7 @@ interface CardBackgroundProps {
   backgroundOpacity?: number;
 }
 
-const CardBackground: React.FC<CardBackgroundProps> = memo(({
+const CardBackground: React.FC<CardBackgroundProps> = ({
   visibleImage,
   transitionImage,
   isTransitioning,
@@ -19,13 +19,9 @@ const CardBackground: React.FC<CardBackgroundProps> = memo(({
   focalPointY = 50,
   backgroundOpacity = 100
 }) => {
-  // Default placeholder image to prevent layout shifts - 1x1 transparent gif
+  // Default placeholder image to prevent layout shifts
   const placeholderImage = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
   
-  // State to track if images are loaded to prevent layout shifts
-  const [visibleImageLoaded, setVisibleImageLoaded] = useState(false);
-  const [transitionImageLoaded, setTransitionImageLoaded] = useState(false);
-
   // Process image sources to ensure they're valid URLs
   const processImageSource = (src: string | null) => {
     if (!src) return placeholderImage;
@@ -35,62 +31,39 @@ const CardBackground: React.FC<CardBackgroundProps> = memo(({
   const visibleSrc = processImageSource(visibleImage);
   const transitionSrc = processImageSource(transitionImage);
 
-  // Reset loaded state when images change
-  useEffect(() => {
-    setVisibleImageLoaded(!!visibleImage);
-  }, [visibleImage]);
-
-  useEffect(() => {
-    setTransitionImageLoaded(!!transitionImage);
-  }, [transitionImage]);
-
-  // Common image style settings
-  const imageStyle = {
-    objectPosition: `${focalPointX}% ${focalPointY}%`,
-    opacity: backgroundOpacity / 100,
-    transition: 'opacity 0.5s ease-in-out', // Keep original transition time
-    willChange: 'opacity', // Hint for browser optimization
-  };
-
   return (
     <>
-      {/* Base image */}
+      {/* Always render the base image with a conditional source */}
       <img
         src={visibleSrc}
         alt=""
         className="absolute inset-0 w-full h-full object-cover z-0"
         style={{
-          ...imageStyle,
-          opacity: visibleImageLoaded ? backgroundOpacity / 100 : 0,
+          objectPosition: `${focalPointX}% ${focalPointY}%`,
+          opacity: visibleImage ? backgroundOpacity / 100 : 0,
+          transition: 'opacity 2s ease-in-out'
         }}
         draggable={false}
         aria-hidden="true"
         loading="lazy"
-        decoding="async" // Let browser optimize image decoding
-        onLoad={() => setVisibleImageLoaded(true)}
       />
       
-      {/* Transition image - only render when needed */}
-      {transitionImage && (
-        <img
-          src={transitionSrc}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-          style={{
-            ...imageStyle,
-            opacity: isTransitioning && transitionImageLoaded ? backgroundOpacity / 100 : 0,
-          }}
-          draggable={false}
-          aria-hidden="true"
-          loading="lazy"
-          decoding="async"
-          onLoad={() => setTransitionImageLoaded(true)}
-        />
-      )}
+      {/* Always render the transition image with a conditional source */}
+      <img
+        src={transitionSrc}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+        style={{
+          objectPosition: `${focalPointX}% ${focalPointY}%`,
+          opacity: isTransitioning ? backgroundOpacity / 100 : 0,
+          transition: 'opacity 2s ease-in-out'
+        }}
+        draggable={false}
+        aria-hidden="true"
+        loading="lazy"
+      />
     </>
   );
-});
-
-CardBackground.displayName = 'CardBackground';
+};
 
 export default CardBackground;
