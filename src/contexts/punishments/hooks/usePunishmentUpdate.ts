@@ -12,19 +12,17 @@ interface UsePunishmentUpdateProps {
  */
 export const usePunishmentUpdate = ({ setPunishments }: UsePunishmentUpdateProps) => {
   
-  const updatePunishment = async (id: string, punishmentData: Partial<PunishmentData>): Promise<PunishmentData> => {
+  const updatePunishment = async (id: string, punishmentData: PunishmentData): Promise<void> => {
     try {
       const { id: _, ...dataToUpdate } = punishmentData;
       
       console.log("Updating punishment with ID:", id);
       console.log("Data to update:", dataToUpdate);
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('punishments')
         .update(dataToUpdate)
-        .eq('id', id)
-        .select() // Add this line to return the updated data
-        .single();
+        .eq('id', id);
       
       if (error) throw error;
       
@@ -39,9 +37,6 @@ export const usePunishmentUpdate = ({ setPunishments }: UsePunishmentUpdateProps
         title: "Success",
         description: "Punishment updated successfully",
       });
-
-      // Return the updated punishment data
-      return { ...data, id } as PunishmentData;
     } catch (error) {
       console.error('Error updating punishment:', error);
       toast({

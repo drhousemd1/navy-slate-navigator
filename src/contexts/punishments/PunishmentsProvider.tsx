@@ -1,6 +1,6 @@
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem } from './types';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { PunishmentsContextType } from './types';
 import { usePunishmentOperations } from './usePunishmentOperations';
 
 const PunishmentsContext = createContext<PunishmentsContextType | undefined>(undefined);
@@ -10,27 +10,15 @@ const DEFAULT_CAROUSEL_TIMER = 5;
 
 export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [globalCarouselTimer, setGlobalCarouselTimer] = useState(DEFAULT_CAROUSEL_TIMER);
-  const [isLoading, setIsLoading] = useState(false);
   const operations = usePunishmentOperations();
   
-  // Enhanced fetch with retry logic
-  const fetchWithRetry = useCallback(async () => {
-    if (isLoading) return; // Prevent multiple simultaneous fetches
-    
-    setIsLoading(true);
-    try {
-      await operations.fetchPunishments();
-    } catch (error) {
-      console.error("Initial punishment fetch failed:", error);
-      // Error is already handled inside fetchPunishments
-    } finally {
-      setIsLoading(false);
-    }
-  }, [operations, isLoading]);
-  
   useEffect(() => {
-    fetchWithRetry();
-  }, [fetchWithRetry]);
+    // Use Promise.catch to handle errors better and prevent unhandled rejections
+    operations.fetchPunishments().catch(err => {
+      console.error("Error in initial punishment fetch:", err);
+      // Error is already handled inside fetchPunishments
+    });
+  }, []);
 
   // Find the first punishment with a custom timer or use default
   useEffect(() => {
@@ -52,24 +40,10 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [operations.punishments]);
 
-  // Define a getPunishmentHistory function that matches the type
-  const getPunishmentHistory = (punishmentId: string): PunishmentHistoryItem[] => {
-    return operations.punishmentHistory.filter(item => item.punishment_id === punishmentId);
-  };
-
   const contextValue: PunishmentsContextType = {
     ...operations,
     globalCarouselTimer,
-    setGlobalCarouselTimer,
-    // Make sure functions match the expected types
-    applyPunishment: operations.applyPunishment,
-    createPunishment: operations.createPunishment,
-    updatePunishment: operations.updatePunishment,
-    deletePunishment: operations.deletePunishment,
-    // Add a refresh function for manual refresh
-    refresh: fetchWithRetry,
-    // Use our implementation for getPunishmentHistory
-    getPunishmentHistory
+    setGlobalCarouselTimer
   };
 
   return (

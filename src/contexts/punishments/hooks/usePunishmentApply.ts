@@ -16,19 +16,8 @@ export const usePunishmentApply = ({
   setTotalPointsDeducted 
 }: UsePunishmentApplyProps) => {
   
-  const applyPunishment = async (punishmentId: string): Promise<void> => {
+  const applyPunishment = async (punishmentId: string, points: number): Promise<void> => {
     try {
-      // Get the punishment data to get points
-      const { data: punishmentData, error: punishmentError } = await supabase
-        .from('punishments')
-        .select('points')
-        .eq('id', punishmentId)
-        .single();
-      
-      if (punishmentError) throw punishmentError;
-      
-      const points = punishmentData.points;
-      
       const today = new Date();
       const dayOfWeek = today.getDay();
       

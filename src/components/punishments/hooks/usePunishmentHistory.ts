@@ -8,10 +8,9 @@ interface UsePunishmentHistoryProps {
 }
 
 export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
-  const { punishmentHistory, getPunishmentHistory } = usePunishments();
+  const { getPunishmentHistory } = usePunishments();
   
   const getHistory = (): PunishmentHistoryItem[] => {
-    // Use the getPunishmentHistory function from context
     return id ? getPunishmentHistory(id) : [];
   };
   
