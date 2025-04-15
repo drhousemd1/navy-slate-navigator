@@ -5,10 +5,10 @@ import { PunishmentData, PunishmentHistoryItem } from '../types';
 
 interface UsePunishmentFetchProps {
   setPunishments: (punishments: PunishmentData[]) => void;
-  setPunishmentHistory: (history: PunishmentHistoryItem[]) => void;
+  setPunishmentHistory: (history: PunishmentHistoryItem[] | ((prev: PunishmentHistoryItem[]) => PunishmentHistoryItem[])) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: Error | null) => void;
-  setTotalPointsDeducted: (total: number) => void;
+  setTotalPointsDeducted: (total: number | ((prev: number) => number)) => void;
 }
 
 /**
@@ -107,10 +107,10 @@ export const usePunishmentFetch = ({
         .range(20, 49);
       
       if (!moreHistoryError && moreHistoryData && moreHistoryData.length > 0) {
-        setPunishmentHistory(prev => [...prev, ...moreHistoryData]);
+        setPunishmentHistory((prev: PunishmentHistoryItem[]) => [...prev, ...moreHistoryData]);
         
         const totalDeducted = [...moreHistoryData].reduce((sum, item) => sum + item.points_deducted, 0);
-        setTotalPointsDeducted(prev => prev + totalDeducted);
+        setTotalPointsDeducted((prev: number) => prev + totalDeducted);
       }
     } catch (error) {
       console.warn('Background data loading encountered an issue:', error);
