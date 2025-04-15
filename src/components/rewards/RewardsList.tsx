@@ -30,8 +30,9 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
     }))
   );
 
+  // Changed from grid to flex column layout with gap
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 max-w-3xl mx-auto">
       {rewards.map((reward, index) => (
         <RewardCard
           key={reward.id}

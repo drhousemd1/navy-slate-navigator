@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { usePunishments, PunishmentData } from '@/contexts/PunishmentsContext';
 
 interface UsePunishmentEditorProps {
@@ -10,10 +10,9 @@ export const usePunishmentEditor = ({ id }: UsePunishmentEditorProps) => {
   const { updatePunishment, deletePunishment } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   
-  const handleEdit = useCallback(() => {
-    console.log("Edit button clicked for punishment ID:", id);
+  const handleEdit = () => {
     setIsEditorOpen(true);
-  }, [id]);
+  };
 
   const handleSavePunishment = async (updatedPunishment: PunishmentData) => {
     if (!id) return Promise.resolve();
