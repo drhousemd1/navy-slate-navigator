@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2 } from 'lucide-react';
@@ -44,21 +43,8 @@ const Rules: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
-  
-  // Use refs to prevent stale closures in intervals
-  const carouselTimerRef = useRef(carouselTimer);
-  const rulesRef = useRef(rules);
-  
-  // Update refs when state changes
-  useEffect(() => {
-    carouselTimerRef.current = carouselTimer;
-  }, [carouselTimer]);
-  
-  useEffect(() => {
-    rulesRef.current = rules;
-  }, [rules]);
 
-  const fetchRules = useCallback(async () => {
+  const fetchRules = useMemo(() => async () => {
     try {
       setIsLoading(true);
       console.log("Fetching rules from Supabase...");
@@ -94,31 +80,24 @@ const Rules: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Initial fetch
     fetchRules();
-    
-    // Set carousel timer from localStorage if available
+
     const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
-    carouselTimerRef.current = savedTimer;
-    
-    // Set up intervals
-    const carouselInterval = setInterval(() => {
+
+    const carouselIntervalId = setInterval(() => {
       setGlobalCarouselIndex(prev => prev + 1);
-    }, carouselTimerRef.current * 1000);
-    
-    // Less frequent rule refresh - every 2 minutes instead of 30 seconds
-    const refreshInterval = setInterval(() => {
-      console.log("Scheduled refresh of rules");
+    }, savedTimer * 1000);
+
+    const refreshIntervalId = setInterval(() => {
       fetchRules();
-    }, 120000); // 2 minutes
-    
-    // Clean up intervals on unmount
+    }, 60000);
+
     return () => {
-      clearInterval(carouselInterval);
-      clearInterval(refreshInterval);
+      clearInterval(carouselIntervalId);
+      clearInterval(refreshIntervalId);
     };
-  }, []); // Empty dependency array - only run once
+  }, []);
 
   const handleAddRule = async () => {
     try {
@@ -146,7 +125,7 @@ const Rules: React.FC = () => {
       } = await supabase.from('rules').insert(newRule).select().single();
       if (error) throw error;
       const createdRule = data as Rule;
-      setRules([createdRule, ...rulesRef.current]);
+      setRules([createdRule, ...rules]);
       toast({
         title: 'Success',
         description: 'Rule created successfully!'
@@ -162,59 +141,61 @@ const Rules: React.FC = () => {
   };
 
   const handleUpdateRule = (updatedRule: RuleCardData) => {
-    // Convert RuleCardData to Rule format
     const updatedRuleInFormat: Rule = {
       ...updatedRule,
       description: updatedRule.description || '',
-      // Add any missing properties needed by the Rule interface
       points: 0,
       background_images: updatedRule.background_images || []
     };
-    setRules(rulesRef.current.map(rule => rule.id === updatedRule.id ? updatedRuleInFormat : rule));
+    setRules(rules.map(rule => rule.id === updatedRule.id ? updatedRuleInFormat : rule));
   };
 
   const handleRuleBroken = (rule: RuleCardData) => {
-    // Convert RuleCardData to Rule format for the state update
-    const updatedRule = rulesRef.current.find(r => r.id === rule.id);
+    const updatedRule = rules.find(r => r.id === rule.id);
     if (updatedRule) {
       const newUsageData = [...rule.usage_data];
-      setRules(rulesRef.current.map(r => r.id === rule.id ? {
+      setRules(rules.map(r => r.id === rule.id ? {
         ...r,
         usage_data: newUsageData
       } : r));
     }
   };
 
-  return <AppLayout onAddNewItem={handleAddRule}>
+  return (
+    <AppLayout onAddNewItem={handleAddRule}>
       <RewardsProvider>
         <div className="container mx-auto px-4 py-6">
           <RulesHeader />
           
-          <div className="flex justify-end mb-6">
-            
-          </div>
-          
-          {isLoading ? <div className="flex justify-center items-center py-10">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-10">
               <Loader2 className="w-10 h-10 text-white animate-spin" />
-            </div> : rules.length === 0 ? <div className="text-center py-10">
+            </div>
+          ) : rules.length === 0 ? (
+            <div className="text-center py-10">
               <p className="text-white mb-4">No rules found. Create your first rule!</p>
-            </div> : <div className="space-y-4">
-              {rules.map(rule => <RuleCard 
-                key={rule.id} 
-                id={rule.id} 
-                title={rule.title} 
-                description={rule.description || ''} 
-                priority={rule.priority} 
-                globalCarouselIndex={globalCarouselIndex} 
-                onUpdate={handleUpdateRule} 
-                onRuleBroken={handleRuleBroken} 
-                rule={rule as RuleCardData}
-                carouselTimer={carouselTimer} 
-              />)}
-            </div>}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {rules.map(rule => (
+                <RuleCard 
+                  key={rule.id} 
+                  id={rule.id} 
+                  title={rule.title} 
+                  description={rule.description || ''} 
+                  priority={rule.priority} 
+                  globalCarouselIndex={globalCarouselIndex} 
+                  onUpdate={handleUpdateRule} 
+                  onRuleBroken={handleRuleBroken} 
+                  rule={rule as RuleCardData} 
+                />
+              ))}
+            </div>
+          )}
         </div>
       </RewardsProvider>
-    </AppLayout>;
+    </AppLayout>
+  );
 };
 
 export default Rules;

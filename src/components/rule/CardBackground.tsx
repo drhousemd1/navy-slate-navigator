@@ -8,7 +8,6 @@ interface CardBackgroundProps {
   focalPointX?: number;
   focalPointY?: number;
   backgroundOpacity?: number;
-  transitionDuration?: number;
 }
 
 const CardBackground: React.FC<CardBackgroundProps> = ({
@@ -17,12 +16,9 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   isTransitioning,
   focalPointX = 50,
   focalPointY = 50,
-  backgroundOpacity = 100,
-  transitionDuration = 2000
+  backgroundOpacity = 100
 }) => {
   if (!visibleImage && !transitionImage) return null;
-
-  const transitionStyle = `opacity ${transitionDuration}ms ease-in-out`;
 
   return (
     <>
@@ -32,7 +28,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
           alt=""
           className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
           style={{
-            transition: transitionStyle,
+            transition: 'opacity 2s ease-in-out',
             objectPosition: `${focalPointX}% ${focalPointY}%`,
             opacity: backgroundOpacity / 100
           }}
@@ -47,7 +43,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
             isTransitioning ? 'opacity-100' : 'opacity-0'
           }`}
           style={{
-            transition: transitionStyle,
+            transition: 'opacity 2s ease-in-out',
             objectPosition: `${focalPointX}% ${focalPointY}%`,
             opacity: isTransitioning ? backgroundOpacity / 100 : 0
           }}
