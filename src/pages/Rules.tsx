@@ -45,34 +45,24 @@ const Rules: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
-  const [visibleCount, setVisibleCount] = useState(0);
   
   const rulesRef = useRef<Rule[]>([]);
   const intervalRef = useRef<number | null>(null);
-  const fetchingRef = useRef(false);
-  const hasMoreRef = useRef(true);
+  const fetchIndexRef = useRef(0); // Add this line
+  const hasMoreRef = useRef(true); // Add this line
   
   const fetchRules = useCallback(async () => {
-    // If already fetching or no more rules to fetch, don't fetch again
-    if (fetchingRef.current || !hasMoreRef.current) {
-      return;
-    }
-
     try {
-      fetchingRef.current = true;
-      setIsLoading(true);
-      
-      console.log("Fetching rules from Supabase...");
-      
-      // Use a more efficient query that only gets what we need in a single request
-      // with a reasonable limit to avoid timeout issues
+      const from = fetchIndexRef.current;
+      const to = from + 9;
+
+      console.log("Fetching rules from Supabase...", from, to);
       const {
         data,
         error
-      } = await supabase.from('rules')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
+      } = await supabase.from('rules').select('*').order('created_at', {
+        ascending: false
+      }).range(from, to);
       
       if (error) {
         throw error;
@@ -90,15 +80,16 @@ const Rules: React.FC = () => {
       
       if (newRules.length === 0) {
         hasMoreRef.current = false;
+        return;
       }
 
-      setRules(newRules);
-      rulesRef.current = newRules;
-      
-      if (visibleCount === 0 && newRules.length > 0) {
-        setVisibleCount(1); // Start showing the first rule
-      }
-      
+      setRules(prev => {
+        const existingIds = new Set(prev.map(r => r.id));
+        const deduped = newRules.filter(r => !existingIds.has(r.id));
+        return [...prev, ...deduped];
+      });
+      rulesRef.current = [...rulesRef.current, ...newRules];
+      fetchIndexRef.current += 10;
     } catch (err) {
       console.error('Error fetching rules:', err);
       toast({
@@ -108,17 +99,23 @@ const Rules: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
-      fetchingRef.current = false;
     }
-  }, [visibleCount]);
+  }, []);
   
   // Initialize carousel timer from localStorage and start initial interval
   useEffect(() => {
-    const loadRules = async () => {
-      await fetchRules();
+    const loadAll = async () => {
+      await fetchRules(); // initial batch
+      const lazyLoad = async () => {
+        while (hasMoreRef.current) {
+          await new Promise((res) => setTimeout(res, 250));
+          await fetchRules();
+        }
+      };
+      lazyLoad();
     };
 
-    loadRules();
+    loadAll();
     
     const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
@@ -183,20 +180,15 @@ const Rules: React.FC = () => {
         frequency_count: 3,
         usage_data: [0, 0, 0, 0, 0, 0, 0],
         background_images: [],
-        background_image_path: null
+        background_image_path: null // Add new field with default null value
       };
-      
       const {
         data,
         error
       } = await supabase.from('rules').insert(newRule).select().single();
-      
       if (error) throw error;
       const createdRule = data as Rule;
-      
-      // Add the new rule to the beginning of the rules array
-      setRules(prevRules => [createdRule, ...prevRules]);
-      
+      setRules([createdRule, ...rules]);
       toast({
         title: 'Success',
         description: 'Rule created successfully!'
@@ -232,14 +224,6 @@ const Rules: React.FC = () => {
     }
   };
 
-  // Handler for when a rule card is fully loaded
-  const handleRuleFullyLoaded = useCallback(() => {
-    // Increment visible count to show next card with a slight delay
-    setTimeout(() => {
-      setVisibleCount(prev => Math.min(prev + 1, rules.length));
-    }, 100);
-  }, [rules.length]);
-
   // Add handler for carousel timer changes
   const handleCarouselTimerChange = (newTimer: number) => {
     console.log(`Updating global carousel timer to ${newTimer} seconds`);
@@ -255,36 +239,25 @@ const Rules: React.FC = () => {
             
           </div>
           
-          {isLoading && rules.length === 0 ? (
-            <div className="flex justify-center items-center py-10">
+          {isLoading ? <div className="flex justify-center items-center py-10">
               <Loader2 className="w-10 h-10 text-white animate-spin" />
-            </div>
-          ) : rules.length === 0 ? (
-            <div className="text-center py-10">
+            </div> : rules.length === 0 ? <div className="text-center py-10">
               <p className="text-white mb-4">No rules found. Create your first rule!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {rules.map((rule, index) => (
-                index < visibleCount && (
-                  <RuleCard 
-                    key={rule.id} 
-                    id={rule.id} 
-                    title={rule.title} 
-                    description={rule.description || ''} 
-                    priority={rule.priority} 
-                    globalCarouselIndex={globalCarouselIndex} 
-                    onUpdate={handleUpdateRule} 
-                    onRuleBroken={handleRuleBroken} 
-                    rule={rule as RuleCardData}
-                    carouselTimer={carouselTimer}
-                    onCarouselTimerChange={handleCarouselTimerChange}
-                    onFullyLoaded={handleRuleFullyLoaded}
-                  />
-                )
-              ))}
-            </div>
-          )}
+            </div> : <div className="space-y-4">
+              {rules.map(rule => <RuleCard 
+                key={rule.id} 
+                id={rule.id} 
+                title={rule.title} 
+                description={rule.description || ''} 
+                priority={rule.priority} 
+                globalCarouselIndex={globalCarouselIndex} 
+                onUpdate={handleUpdateRule} 
+                onRuleBroken={handleRuleBroken} 
+                rule={rule as RuleCardData}
+                carouselTimer={carouselTimer}
+                onCarouselTimerChange={handleCarouselTimerChange} 
+              />)}
+            </div>}
         </div>
       </RewardsProvider>
     </AppLayout>;
