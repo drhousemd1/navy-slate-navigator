@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Check } from 'lucide-react';
@@ -26,6 +27,7 @@ interface RuleProps {
   rule?: RuleCardData;
   carouselTimer?: number;
   onCarouselTimerChange?: (timer: number) => void;
+  onFullyLoaded?: () => void; // Add callback prop for loading notification
 }
 
 const RuleCard: React.FC<RuleProps> = ({
@@ -38,10 +40,12 @@ const RuleCard: React.FC<RuleProps> = ({
   onRuleBroken,
   rule,
   carouselTimer = 5,
-  onCarouselTimerChange
+  onCarouselTimerChange,
+  onFullyLoaded
 }) => {
   const navigate = useNavigate();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false); // Add state for fade-in animation
 
   const {
     cardData,
@@ -66,6 +70,20 @@ const RuleCard: React.FC<RuleProps> = ({
     transitionImage,
     isTransitioning
   } = useImageCarousel({ images, globalCarouselIndex });
+
+  // Effect to handle fade-in animation and notify parent when loaded
+  useEffect(() => {
+    // Trigger fade-in animation
+    const timeout = setTimeout(() => {
+      setIsVisible(true);
+      // After fade duration, notify parent that this card is fully loaded
+      setTimeout(() => {
+        if (onFullyLoaded) onFullyLoaded();
+      }, 500); // matches fade duration
+    }, 0);
+
+    return () => clearTimeout(timeout);
+  }, [onFullyLoaded]);
 
   const handleOpenEditModal = () => setIsEditModalOpen(true);
   const handleCloseEditModal = () => setIsEditModalOpen(false);
@@ -186,7 +204,9 @@ const RuleCard: React.FC<RuleProps> = ({
 
   return (
     <>
-      <Card className={`bg-dark-navy border-2 ${cardData.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}>
+      <Card className={`transition-opacity duration-500 ${
+        isVisible ? "opacity-100" : "opacity-0"
+      } bg-dark-navy border-2 ${cardData.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}>
         <div className="relative p-4">
           <CardBackground
             visibleImage={visibleImage}

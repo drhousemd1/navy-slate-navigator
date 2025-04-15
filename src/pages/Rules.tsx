@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -45,12 +44,13 @@ const Rules: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
-  
+  const [visibleCount, setVisibleCount] = useState(0);
+
   const rulesRef = useRef<Rule[]>([]);
   const intervalRef = useRef<number | null>(null);
-  const fetchIndexRef = useRef(0); // Add this line
-  const hasMoreRef = useRef(true); // Add this line
-  
+  const fetchIndexRef = useRef(0);
+  const hasMoreRef = useRef(true);
+
   const fetchRules = useCallback(async () => {
     try {
       const from = fetchIndexRef.current;
@@ -101,11 +101,10 @@ const Rules: React.FC = () => {
       setIsLoading(false);
     }
   }, []);
-  
-  // Initialize carousel timer from localStorage and start initial interval
+
   useEffect(() => {
     const loadAll = async () => {
-      await fetchRules(); // initial batch
+      await fetchRules();
       const lazyLoad = async () => {
         while (hasMoreRef.current) {
           await new Promise((res) => setTimeout(res, 250));
@@ -120,7 +119,6 @@ const Rules: React.FC = () => {
     const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
     
-    // Initial interval setup
     const intervalId = setInterval(() => {
       setGlobalCarouselIndex(prev => prev + 1);
     }, savedTimer * 1000);
@@ -134,23 +132,25 @@ const Rules: React.FC = () => {
       }
     };
   }, [fetchRules]);
-  
-  // Update interval whenever carouselTimer changes
+
   useEffect(() => {
-    // Clear existing interval
+    if (rules.length > 0 && visibleCount === 0) {
+      setVisibleCount(1);
+    }
+  }, [rules]);
+
+  useEffect(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
     
-    // Create new interval with updated timer value
     const newIntervalId = setInterval(() => {
       setGlobalCarouselIndex(prev => prev + 1);
     }, carouselTimer * 1000);
     
     intervalRef.current = newIntervalId as unknown as number;
     
-    // Save timer to localStorage to persist across refreshes
     localStorage.setItem('rules_carouselTimer', carouselTimer.toString());
     
     return () => {
@@ -180,7 +180,7 @@ const Rules: React.FC = () => {
         frequency_count: 3,
         usage_data: [0, 0, 0, 0, 0, 0, 0],
         background_images: [],
-        background_image_path: null // Add new field with default null value
+        background_image_path: null
       };
       const {
         data,
@@ -224,11 +224,14 @@ const Rules: React.FC = () => {
     }
   };
 
-  // Add handler for carousel timer changes
   const handleCarouselTimerChange = (newTimer: number) => {
     console.log(`Updating global carousel timer to ${newTimer} seconds`);
     setCarouselTimer(newTimer);
   };
+
+  const handleCardLoaded = useCallback(() => {
+    setVisibleCount(prev => prev + 1);
+  }, []);
 
   return <AppLayout onAddNewItem={handleAddRule}>
       <RewardsProvider>
@@ -244,7 +247,7 @@ const Rules: React.FC = () => {
             </div> : rules.length === 0 ? <div className="text-center py-10">
               <p className="text-white mb-4">No rules found. Create your first rule!</p>
             </div> : <div className="space-y-4">
-              {rules.map(rule => <RuleCard 
+              {rules.slice(0, visibleCount).map(rule => <RuleCard 
                 key={rule.id} 
                 id={rule.id} 
                 title={rule.title} 
@@ -255,7 +258,8 @@ const Rules: React.FC = () => {
                 onRuleBroken={handleRuleBroken} 
                 rule={rule as RuleCardData}
                 carouselTimer={carouselTimer}
-                onCarouselTimerChange={handleCarouselTimerChange} 
+                onCarouselTimerChange={handleCarouselTimerChange}
+                onFullyLoaded={handleCardLoaded}
               />)}
             </div>}
         </div>
