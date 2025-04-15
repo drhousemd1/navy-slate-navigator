@@ -48,7 +48,7 @@ const CardBackground: React.FC<CardBackgroundProps> = memo(({
   const imageStyle = {
     objectPosition: `${focalPointX}% ${focalPointY}%`,
     opacity: backgroundOpacity / 100,
-    transition: 'opacity 0.5s ease-in-out', // Reduced transition time for better performance
+    transition: 'opacity 0.5s ease-in-out', // Keep original transition time
     willChange: 'opacity', // Hint for browser optimization
   };
 

@@ -97,7 +97,7 @@ export const useImageCarousel = ({
           setTransitionImage(null);
           setIsTransitioning(false);
           transitionTimerRef.current = null;
-        }, 1000) as unknown as number; // Shortened from 2000ms to 1000ms
+        }, 2000) as unknown as number; // Changed back to 2000ms
       }, 50);
     });
   }, [globalCarouselIndex, images, visibleImage]);
