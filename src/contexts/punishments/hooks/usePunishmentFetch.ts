@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from '../types';
@@ -22,20 +21,19 @@ export const usePunishmentFetch = ({
   setTotalPointsDeducted
 }: UsePunishmentFetchProps) => {
   
-  // Reduced batch size to prevent timeouts
-  const BATCH_SIZE = 6;
-  const MAX_BATCHES = 2; // Limit to just 12 items total initially
+  // Optimize for faster initial load - show 12 items immediately
+  const INITIAL_BATCH_SIZE = 12;
   
   const fetchPunishments = async () => {
     try {
       setLoading(true);
       
-      // First, get just the most recent punishments (optimized query)
+      // First, get initial punishments (12 most recent)
       const { data: recentPunishments, error: recentError } = await supabase
         .from('punishments')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(12);
+        .limit(INITIAL_BATCH_SIZE);
       
       if (recentError) throw recentError;
       
@@ -65,12 +63,12 @@ export const usePunishmentFetch = ({
       
       setPunishments(cleanedPunishments);
       
-      // Get a small sample of history data
+      // Get initial history data - keep small for fast loading
       const { data: historyData, error: historyError } = await supabase
         .from('punishment_history')
         .select('*')
         .order('applied_date', { ascending: false })
-        .limit(20);
+        .limit(15); // Reduced from 20 to load faster
       
       if (historyError) throw historyError;
       
@@ -79,10 +77,13 @@ export const usePunishmentFetch = ({
       const totalDeducted = (historyData || []).reduce((sum, item) => sum + item.points_deducted, 0);
       setTotalPointsDeducted(totalDeducted);
       
+      // Show content immediately
       setLoading(false);
       
-      // Optionally load more data in the background after initial display
-      loadAdditionalDataInBackground();
+      // Then load more data in the background with a delay to prevent database overload
+      setTimeout(() => {
+        loadAdditionalDataInBackground();
+      }, 2000); // 2 second delay to let the UI stabilize
       
     } catch (err: any) {
       console.error('Error fetching punishments:', err);
@@ -99,18 +100,29 @@ export const usePunishmentFetch = ({
   // Load additional data without blocking the UI
   const loadAdditionalDataInBackground = async () => {
     try {
-      // Get more history data if needed
+      console.log("Starting background data load");
+      
+      // Get more history data in background
       const { data: moreHistoryData, error: moreHistoryError } = await supabase
         .from('punishment_history')
         .select('*')
         .order('applied_date', { ascending: false })
-        .range(20, 49);
+        .range(15, 30); // Get the next 15 records
       
       if (!moreHistoryError && moreHistoryData && moreHistoryData.length > 0) {
-        setPunishmentHistory((prev: PunishmentHistoryItem[]) => [...prev, ...moreHistoryData]);
+        console.log(`Loaded ${moreHistoryData.length} additional history items in background`);
         
-        const totalDeducted = [...moreHistoryData].reduce((sum, item) => sum + item.points_deducted, 0);
+        setPunishmentHistory((prev: PunishmentHistoryItem[]) => {
+          // Avoid duplicates by checking IDs
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = moreHistoryData.filter(item => !existingIds.has(item.id));
+          return [...prev, ...newItems];
+        });
+        
+        const totalDeducted = moreHistoryData.reduce((sum, item) => sum + item.points_deducted, 0);
         setTotalPointsDeducted((prev: number) => prev + totalDeducted);
+      } else {
+        console.log("No additional history items to load or reached the end");
       }
     } catch (error) {
       console.warn('Background data loading encountered an issue:', error);

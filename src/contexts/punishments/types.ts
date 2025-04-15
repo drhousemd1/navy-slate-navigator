@@ -1,5 +1,5 @@
 
-export type PunishmentData = {
+export interface PunishmentData {
   id?: string;
   title: string;
   description?: string;
@@ -14,31 +14,33 @@ export type PunishmentData = {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  background_images?: (string | null)[] | null;
+  background_images?: string[];
   carousel_timer?: number;
-};
+  created_at?: string;
+  updated_at?: string;
+}
 
-export type PunishmentHistoryItem = {
+export interface PunishmentHistoryItem {
   id: string;
-  punishment_id: string;
-  applied_date: string;
-  day_of_week: number;
+  punishment_id?: string;
   points_deducted: number;
-};
+  applied_date?: string;
+  day_of_week: number;
+}
 
 export interface PunishmentsContextType {
   punishments: PunishmentData[];
   punishmentHistory: PunishmentHistoryItem[];
   loading: boolean;
   error: Error | null;
-  globalCarouselTimer: number;
-  setGlobalCarouselTimer: (timer: number) => void;
-  fetchPunishments: () => Promise<void>;
-  createPunishment: (punishmentData: PunishmentData) => Promise<string>;
-  updatePunishment: (id: string, punishmentData: PunishmentData) => Promise<void>;
-  deletePunishment: (id: string) => Promise<void>;
-  applyPunishment: (punishmentId: string, points: number) => Promise<void>;
-  getPunishmentHistory: (punishmentId: string) => PunishmentHistoryItem[];
   totalPointsDeducted: number;
+  globalCarouselTimer: number;
+  setGlobalCarouselTimer: (value: number) => void;
+  fetchPunishments: () => Promise<void>;
+  createPunishment: (data: PunishmentData) => Promise<PunishmentData>;
+  updatePunishment: (id: string, data: Partial<PunishmentData>) => Promise<PunishmentData>;
+  deletePunishment: (id: string) => Promise<void>;
+  applyPunishment: (punishment: PunishmentData) => Promise<void>;
+  getPunishmentHistory: () => PunishmentHistoryItem[];
+  refresh?: () => Promise<void>; // New refresh function
 }
-

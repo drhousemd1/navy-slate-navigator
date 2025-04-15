@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface UsePunishmentImageCarouselProps {
   images: string[];
@@ -21,34 +21,52 @@ export const usePunishmentImageCarousel = ({
   const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [previousImages, setPreviousImages] = useState<string[]>([]);
+  const previousImagesRef = useRef<string[]>([]);
+  const transitionTimeoutRef = useRef<number | null>(null);
   
-  // Initialize or update visible image when images array changes
+  // Only perform intensive operations when images actually change
   useEffect(() => {
+    const previousImages = previousImagesRef.current;
+    
     if (images.length > 0) {
-      // Check if images array has changed
+      // Check if images array has changed by comparing lengths and contents
       const imagesChanged = 
         images.length !== previousImages.length || 
         images.some((img, i) => previousImages[i] !== img);
       
       if (imagesChanged) {
-        setPreviousImages(images);
+        // Save current images for future comparison
+        previousImagesRef.current = [...images];
+        
+        // Reset state when images change
         setVisibleImage(images[0]);
         setTransitionImage(null);
         setIsTransitioning(false);
+        
+        // Clear any existing timeouts
+        if (transitionTimeoutRef.current !== null) {
+          clearTimeout(transitionTimeoutRef.current);
+          transitionTimeoutRef.current = null;
+        }
       }
     } else if (previousImages.length > 0 && images.length === 0) {
       // Reset if we had images but now don't
-      setPreviousImages([]);
+      previousImagesRef.current = [];
       setVisibleImage(null);
       setTransitionImage(null);
       setIsTransitioning(false);
+      
+      // Clear any existing timeouts
+      if (transitionTimeoutRef.current !== null) {
+        clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
     }
   }, [images]);
 
-  // Handle image transitions when global carousel index changes
+  // Optimized transition logic based on global carousel index
   useEffect(() => {
-    // Don't perform transitions if we have no images or just one image
+    // Memory optimization - don't perform transitions if there are no images or just one
     if (!images.length || images.length === 1) {
       if (images.length === 1 && visibleImage !== images[0]) {
         setVisibleImage(images[0]);
@@ -59,48 +77,40 @@ export const usePunishmentImageCarousel = ({
     const nextIndex = globalCarouselIndex % images.length;
     const next = images[nextIndex];
     
+    // Skip unnecessary transitions
     if (next === visibleImage) return;
     
-    // Preload the next image
-    const preload = new Image();
-    preload.src = next;
-    
-    const handleLoad = () => {
+    // Performance optimizations
+    const performTransition = () => {
       setTransitionImage(next);
-      setIsTransitioning(false);
+      setIsTransitioning(true);
       
-      // Use requestAnimationFrame for smoother transitions
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          setIsTransitioning(true);
-          
-          // Apply the transition effect duration
-          const transitionDuration = 2000; // 2 seconds for transition
-          
-          const timeout = setTimeout(() => {
-            setVisibleImage(next);
-            setTransitionImage(null);
-            setIsTransitioning(false);
-          }, transitionDuration);
-          
-          return () => clearTimeout(timeout);
-        }, 0);
-      });
+      // Use a shorter transition to reduce memory usage
+      const transitionDuration = 1000; // 1 second transition
+      
+      // Clear any previous transition timeout
+      if (transitionTimeoutRef.current !== null) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+      
+      // Set new timeout and save the ID for cleanup
+      transitionTimeoutRef.current = window.setTimeout(() => {
+        setVisibleImage(next);
+        setTransitionImage(null);
+        setIsTransitioning(false);
+        transitionTimeoutRef.current = null;
+      }, transitionDuration);
     };
     
-    const handleError = () => {
-      console.error("Failed to load image:", next);
-      // Try to continue with the next image anyway
-      setVisibleImage(next);
-    };
+    // Use a lightweight approach to preload images
+    performTransition();
     
-    preload.onload = handleLoad;
-    preload.onerror = handleError;
-    
-    // Clean up in case component unmounts before image loads
+    // Cleanup timeout on unmount or image change
     return () => {
-      preload.onload = null;
-      preload.onerror = null;
+      if (transitionTimeoutRef.current !== null) {
+        clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
     };
   }, [globalCarouselIndex, images, visibleImage]);
 

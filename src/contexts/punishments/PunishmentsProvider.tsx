@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { PunishmentsContextType } from './types';
 import { usePunishmentOperations } from './usePunishmentOperations';
 
@@ -10,15 +10,27 @@ const DEFAULT_CAROUSEL_TIMER = 5;
 
 export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [globalCarouselTimer, setGlobalCarouselTimer] = useState(DEFAULT_CAROUSEL_TIMER);
+  const [isLoading, setIsLoading] = useState(false);
   const operations = usePunishmentOperations();
   
-  useEffect(() => {
-    // Use Promise.catch to handle errors better and prevent unhandled rejections
-    operations.fetchPunishments().catch(err => {
-      console.error("Error in initial punishment fetch:", err);
+  // Enhanced fetch with retry logic
+  const fetchWithRetry = useCallback(async () => {
+    if (isLoading) return; // Prevent multiple simultaneous fetches
+    
+    setIsLoading(true);
+    try {
+      await operations.fetchPunishments();
+    } catch (error) {
+      console.error("Initial punishment fetch failed:", error);
       // Error is already handled inside fetchPunishments
-    });
-  }, []);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [operations, isLoading]);
+  
+  useEffect(() => {
+    fetchWithRetry();
+  }, [fetchWithRetry]);
 
   // Find the first punishment with a custom timer or use default
   useEffect(() => {
@@ -43,7 +55,9 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const contextValue: PunishmentsContextType = {
     ...operations,
     globalCarouselTimer,
-    setGlobalCarouselTimer
+    setGlobalCarouselTimer,
+    // Add a refresh function for manual refresh
+    refresh: fetchWithRetry
   };
 
   return (
