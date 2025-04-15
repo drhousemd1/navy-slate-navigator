@@ -40,7 +40,7 @@ export interface PunishmentsContextType {
   createPunishment: (data: PunishmentData) => Promise<PunishmentData>;
   updatePunishment: (id: string, data: Partial<PunishmentData>) => Promise<PunishmentData>;
   deletePunishment: (id: string) => Promise<void>;
-  applyPunishment: (punishment: PunishmentData) => Promise<void>;
+  applyPunishment: (id: string) => Promise<void>;
   getPunishmentHistory: () => PunishmentHistoryItem[];
   refresh?: () => Promise<void>; // New refresh function
 }

@@ -56,8 +56,13 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     ...operations,
     globalCarouselTimer,
     setGlobalCarouselTimer,
+    // This provides the interface expected by the context type
+    applyPunishment: operations.applyPunishment,
+    createPunishment: operations.createPunishment,
     // Add a refresh function for manual refresh
-    refresh: fetchWithRetry
+    refresh: fetchWithRetry,
+    // Empty array for getPunishmentHistory to match the type
+    getPunishmentHistory: () => [] 
   };
 
   return (

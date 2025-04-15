@@ -21,7 +21,8 @@ export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
       const newTotal = totalPoints - points;
       setTotalPoints(newTotal);
       
-      await applyPunishment(id, points);
+      // Only pass the id as required by type definition
+      await applyPunishment(id);
     } catch (error) {
       console.error('Error applying punishment:', error);
       setTotalPoints(totalPoints);
