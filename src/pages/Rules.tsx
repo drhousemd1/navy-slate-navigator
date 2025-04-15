@@ -19,6 +19,7 @@ interface Rule {
   priority: 'low' | 'medium' | 'high';
   points?: number;
   background_image_url?: string | null;
+  background_image_path?: string | null;
   background_images?: string[];
   background_opacity: number;
   icon_url?: string | null;
@@ -178,7 +179,8 @@ const Rules: React.FC = () => {
         frequency: 'daily' as const,
         frequency_count: 3,
         usage_data: [0, 0, 0, 0, 0, 0, 0],
-        background_images: []
+        background_images: [],
+        background_image_path: null // Add new field with default null value
       };
       const {
         data,

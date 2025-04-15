@@ -12,6 +12,9 @@ import ColorSettingsSection from '@/components/admin-testing/edit-modal/ColorSet
 import HighlightEffectToggle from '@/components/admin-testing/edit-modal/HighlightEffectToggle';
 import ModalActions from '@/components/admin-testing/edit-modal/ModalActions';
 
+import { uploadImageToStorage } from '@/lib/uploadImage';
+import { getPublicImageUrl } from '@/lib/getImageUrl';
+
 interface RuleEditModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -163,7 +166,7 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({
     }
   }, [isOpen, ruleData, form]);
   
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
@@ -314,16 +317,28 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({
           slot.startsWith('https')
         );
       
+      let imagePath: string | null = null;
+      
+      if (imagePreview && imagePreview.startsWith('data:image')) {
+        imagePath = await uploadImageToStorage(imagePreview);
+        console.log(`Uploaded image to storage, new path: ${imagePath}`);
+      } else if (ruleData.background_image_path) {
+        imagePath = ruleData.background_image_path;
+      }
+      
+      const imageUrl = imagePath ? getPublicImageUrl(imagePath) : imagePreview;
+      
       const updatedData: RuleCardData = {
         ...data,
-        background_image_url: imagePreview || '',
+        background_image_url: imageUrl,
+        background_image_path: imagePath,
         icon_url: iconPreview || '',
         icon_name: selectedIconName || '',
         focal_point_x: position.x,
         focal_point_y: position.y,
         background_images: validImageSlots.length > 0 
           ? validImageSlots 
-          : (imagePreview ? [imagePreview] : []),
+          : (imageUrl ? [imageUrl] : []),
       };
       
       await onSave(updatedData);

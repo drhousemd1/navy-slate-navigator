@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { getPublicImageUrl } from '@/lib/getImageUrl';
 
 interface CardBackgroundProps {
   visibleImage: string | null;
@@ -20,12 +21,21 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
 }) => {
   // Default placeholder image to prevent layout shifts
   const placeholderImage = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+  
+  // Process image sources to ensure they're valid URLs
+  const processImageSource = (src: string | null) => {
+    if (!src) return placeholderImage;
+    return src;
+  };
+
+  const visibleSrc = processImageSource(visibleImage);
+  const transitionSrc = processImageSource(transitionImage);
 
   return (
     <>
       {/* Always render the base image with a conditional source */}
       <img
-        src={visibleImage || placeholderImage}
+        src={visibleSrc}
         alt=""
         className="absolute inset-0 w-full h-full object-cover z-0"
         style={{
@@ -35,11 +45,12 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
         }}
         draggable={false}
         aria-hidden="true"
+        loading="lazy"
       />
       
       {/* Always render the transition image with a conditional source */}
       <img
-        src={transitionImage || placeholderImage}
+        src={transitionSrc}
         alt=""
         className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
         style={{
@@ -49,6 +60,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
         }}
         draggable={false}
         aria-hidden="true"
+        loading="lazy"
       />
     </>
   );

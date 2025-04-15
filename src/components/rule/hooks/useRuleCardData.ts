@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { Json } from '@/integrations/supabase/types';
+import { getPublicImageUrl } from '@/lib/getImageUrl';
 
 export interface RuleCardData {
   id: string;
@@ -9,6 +11,7 @@ export interface RuleCardData {
   description: string;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
+  background_image_path?: string | null;
   background_images?: string[];
   background_opacity: number;
   focal_point_x: number;
@@ -37,6 +40,7 @@ interface UseRuleCardDataProps {
   icon_name?: string;
   background_images?: string[];
   background_image_url?: string;
+  background_image_path?: string;
   frequency?: 'daily' | 'weekly';
   frequency_count?: number;
 }
@@ -55,6 +59,7 @@ interface SupabaseRuleData {
   description: string | null;
   priority: string | null;
   background_image_url: string | null;
+  background_image_path: string | null;
   background_images: Json | null;
   background_opacity: number | null;
   focal_point_x: number | null;
@@ -100,6 +105,7 @@ export const useRuleCardData = ({
   icon_name,
   background_images = [],
   background_image_url,
+  background_image_path,
   frequency = 'daily',
   frequency_count = 3
 }: UseRuleCardDataProps): UseRuleCardDataResult => {
@@ -111,6 +117,7 @@ export const useRuleCardData = ({
     icon_url,
     icon_name,
     background_image_url,
+    background_image_path,
     background_images: background_images,
     background_opacity: 80,
     focal_point_x: 50,
@@ -156,13 +163,24 @@ export const useRuleCardData = ({
           // Cast data to our helper type to handle type conversions
           const supabaseData = data as SupabaseRuleData;
           
+          // Get background image URL from path if it exists
+          let backgroundImageUrl = supabaseData.background_image_url;
+          
+          if (supabaseData.background_image_path) {
+            const publicUrl = getPublicImageUrl(supabaseData.background_image_path);
+            if (publicUrl) {
+              backgroundImageUrl = publicUrl;
+            }
+          }
+          
           // Transform data from Supabase to match our expected format
           const transformedCardData: RuleCardData = {
             id: supabaseData.id,
             title: supabaseData.title,
             description: supabaseData.description || '',
             priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
-            background_image_url: supabaseData.background_image_url,
+            background_image_url: backgroundImageUrl,
+            background_image_path: supabaseData.background_image_path,
             background_images: jsonArrayToStringArray(supabaseData.background_images),
             background_opacity: supabaseData.background_opacity || 80,
             focal_point_x: supabaseData.focal_point_x || 50,
