@@ -47,22 +47,27 @@ const Rules: React.FC = () => {
   
   const rulesRef = useRef<Rule[]>([]);
   const intervalRef = useRef<number | null>(null);
+  const fetchIndexRef = useRef(0); // Add this line
+  const hasMoreRef = useRef(true); // Add this line
   
   const fetchRules = useCallback(async () => {
     try {
-      console.log("Fetching rules from Supabase...");
+      const from = fetchIndexRef.current;
+      const to = from + 9;
+
+      console.log("Fetching rules from Supabase...", from, to);
       const {
         data,
         error
       } = await supabase.from('rules').select('*').order('created_at', {
         ascending: false
-      });
+      }).range(from, to);
       
       if (error) {
         throw error;
       }
       
-      const rulesWithUsageData = (data as Rule[] || []).map(rule => {
+      const newRules = (data as Rule[] || []).map(rule => {
         if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
           return {
             ...rule,
@@ -72,10 +77,14 @@ const Rules: React.FC = () => {
         return rule;
       });
       
-      if (JSON.stringify(rulesWithUsageData) !== JSON.stringify(rulesRef.current)) {
-        setRules(rulesWithUsageData);
-        rulesRef.current = rulesWithUsageData;
+      if (newRules.length === 0) {
+        hasMoreRef.current = false;
+        return;
       }
+
+      setRules(prev => [...prev, ...newRules]);
+      rulesRef.current = [...rulesRef.current, ...newRules];
+      fetchIndexRef.current += 10;
     } catch (err) {
       console.error('Error fetching rules:', err);
       toast({
@@ -90,7 +99,18 @@ const Rules: React.FC = () => {
   
   // Initialize carousel timer from localStorage and start initial interval
   useEffect(() => {
-    fetchRules();
+    const loadAll = async () => {
+      await fetchRules(); // initial batch
+      const lazyLoad = async () => {
+        while (hasMoreRef.current) {
+          await new Promise((res) => setTimeout(res, 250));
+          await fetchRules();
+        }
+      };
+      lazyLoad();
+    };
+
+    loadAll();
     
     const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
@@ -135,17 +155,6 @@ const Rules: React.FC = () => {
       }
     };
   }, [carouselTimer]);
-  
-  // Set up polling for rule changes
-  useEffect(() => {
-    const refreshInterval = setInterval(() => {
-      fetchRules();
-    }, 30000); // 30-second refresh interval
-    
-    return () => {
-      clearInterval(refreshInterval);
-    };
-  }, [fetchRules]);
 
   const handleAddRule = async () => {
     try {
