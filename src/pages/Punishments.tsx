@@ -9,12 +9,13 @@ import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts
 import PunishmentEditor from '../components/PunishmentEditor';
 import { supabase } from "@/integrations/supabase/client";
 import { useLocalSyncedData } from "@/lib/useLocalSyncedData";
+import { toast } from "@/hooks/use-toast";
 
 const fetchPunishmentsFromSupabase = async (): Promise<PunishmentData[]> => {
   const { data, error } = await supabase.from("punishments").select("*").order("created_at", { ascending: false });
-  if (error) {
+  if (error || !data) {
     console.error("Error fetching punishments:", error);
-    throw error;
+    throw error || new Error("No data returned from Supabase");
   }
   return data as PunishmentData[];
 };
@@ -25,7 +26,7 @@ const PunishmentsContent: React.FC = () => {
     globalCarouselTimer 
   } = usePunishments();
   
-  const { data: punishments, loading: dataLoading } = useLocalSyncedData<PunishmentData[]>({
+  const { data: punishments, loading: dataLoading, error } = useLocalSyncedData<PunishmentData[]>({
     key: "punishments",
     fetcher: fetchPunishmentsFromSupabase,
   });
@@ -109,11 +110,12 @@ const PunishmentsContent: React.FC = () => {
     try {
       if (data.id) {
         // Update existing punishment
-        await supabase.from("punishments").update(data).eq("id", data.id);
+        const { error: updateError } = await supabase.from("punishments").update(data).eq("id", data.id);
+        if (updateError) throw updateError;
       } else {
         // Create new punishment
         const { data: created, error } = await supabase.from("punishments").insert(data).select().single();
-        if (error) throw error;
+        if (error || !created) throw error || new Error("Create failed");
         data = created as PunishmentData;
       }
 
@@ -122,24 +124,43 @@ const PunishmentsContent: React.FC = () => {
       const updatedList = [...existing.filter(p => p.id !== data.id), data];
       localStorage.setItem("punishments", JSON.stringify(updatedList));
       
+      toast({
+        title: "Success",
+        description: data.id ? "Punishment updated" : "New punishment created",
+      });
+      
       setIsEditorOpen(false);
     } catch (error) {
       console.error("Error saving punishment:", error);
-      throw error;
+      toast({
+        title: "Error",
+        description: "Failed to save punishment. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleDeletePunishment = async (id: string): Promise<void> => {
     try {
-      await supabase.from("punishments").delete().eq("id", id);
+      const { error } = await supabase.from("punishments").delete().eq("id", id);
+      if (error) throw error;
       
       // Update localStorage
       const existing = punishments || [];
       const updatedList = existing.filter(p => p.id !== id);
       localStorage.setItem("punishments", JSON.stringify(updatedList));
+      
+      toast({
+        title: "Success",
+        description: "Punishment deleted successfully",
+      });
     } catch (error) {
       console.error("Error deleting punishment:", error);
-      throw error;
+      toast({
+        title: "Error",
+        description: "Failed to delete punishment",
+        variant: "destructive",
+      });
     }
   };
 
