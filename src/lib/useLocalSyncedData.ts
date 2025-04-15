@@ -6,12 +6,14 @@ interface UseLocalSyncedDataOptions<T> {
   key: string;
   fetcher: () => Promise<T>;
   timeoutMs?: number;
+  cacheEnabled?: boolean; // Add option to disable caching
 }
 
 export function useLocalSyncedData<T>({ 
   key, 
   fetcher,
-  timeoutMs = 5000 // Default timeout of 5 seconds
+  timeoutMs = 5000, // Default timeout of 5 seconds
+  cacheEnabled = true // Enable caching by default
 }: UseLocalSyncedDataOptions<T>) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,26 +21,33 @@ export function useLocalSyncedData<T>({
 
   const fetchWithTimeout = useCallback(async () => {
     try {
-      // First try to load from localStorage
-      try {
-        const local = localStorage.getItem(key);
-        if (local) {
-          const parsed = JSON.parse(local);
-          if (parsed !== null && typeof parsed === 'object') {
-            // Safely set data with the expected type
-            setData(parsed as unknown as T);
-            setLoading(false);
+      // First try to load from localStorage if cache is enabled
+      if (cacheEnabled) {
+        try {
+          const local = localStorage.getItem(key);
+          if (local) {
+            const parsed = JSON.parse(local);
+            if (parsed !== null && typeof parsed === 'object') {
+              // Safely set data with the expected type
+              setData(parsed as unknown as T);
+              setLoading(false);
+            }
           }
+        } catch (e) {
+          console.error(`Invalid JSON in localStorage for key "${key}"`, e);
+          // Clear invalid localStorage data
+          try {
+            localStorage.removeItem(key);
+          } catch (storageError) {
+            console.warn("Could not clear localStorage", storageError);
+          }
+          
+          toast({
+            title: "Warning",
+            description: "Cached data was corrupted and has been reset",
+            variant: "destructive",
+          });
         }
-      } catch (e) {
-        console.error(`Invalid JSON in localStorage for key "${key}"`, e);
-        // Clear invalid localStorage data
-        localStorage.removeItem(key);
-        toast({
-          title: "Warning",
-          description: "Cached data was corrupted and has been reset",
-          variant: "destructive",
-        });
       }
 
       // Then fetch fresh data with timeout
@@ -54,7 +63,23 @@ export function useLocalSyncedData<T>({
 
       setData(freshData);
       setError(null);
-      localStorage.setItem(key, JSON.stringify(freshData));
+      
+      // Try to save to localStorage if cache enabled
+      if (cacheEnabled) {
+        try {
+          // First check approximate size to avoid quota errors
+          const dataString = JSON.stringify(freshData);
+          // Only cache if the data is relatively small (< 3MB)
+          if (dataString.length < 3000000) {
+            localStorage.setItem(key, dataString);
+          } else {
+            console.warn(`Data for key "${key}" too large for localStorage (${dataString.length} bytes)`);
+          }
+        } catch (storageError) {
+          console.warn(`Could not save to localStorage: ${storageError}`);
+          // Failure to cache shouldn't break functionality
+        }
+      }
     } catch (err) {
       console.error(`Failed to fetch ${key} from Supabase`, err);
       setError(err instanceof Error ? err : new Error(`Failed to fetch ${key}`));
@@ -70,7 +95,7 @@ export function useLocalSyncedData<T>({
     } finally {
       setLoading(false);
     }
-  }, [key, fetcher, timeoutMs]);
+  }, [key, fetcher, timeoutMs, cacheEnabled]);
 
   useEffect(() => {
     fetchWithTimeout();

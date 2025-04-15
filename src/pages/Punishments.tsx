@@ -29,6 +29,7 @@ const PunishmentsContent: React.FC = () => {
   const { data: punishments, loading: dataLoading, error, retry } = useLocalSyncedData<PunishmentData[]>({
     key: "punishments",
     fetcher: fetchPunishmentsFromSupabase,
+    cacheEnabled: true, // Enable caching but with size limits
   });
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -118,11 +119,6 @@ const PunishmentsContent: React.FC = () => {
         if (error || !created) throw error || new Error("Create failed");
         data = created as PunishmentData;
       }
-
-      // Update localStorage
-      const existing = punishments || [];
-      const updatedList = [...existing.filter(p => p.id !== data.id), data];
-      localStorage.setItem("punishments", JSON.stringify(updatedList));
       
       toast({
         title: "Success",
@@ -148,12 +144,6 @@ const PunishmentsContent: React.FC = () => {
     try {
       const { error } = await supabase.from("punishments").delete().eq("id", id);
       if (error) throw error;
-      
-      // Update localStorage
-      if (punishments) {
-        const updatedList = punishments.filter(p => p.id !== id);
-        localStorage.setItem("punishments", JSON.stringify(updatedList));
-      }
       
       toast({
         title: "Success",
@@ -250,6 +240,7 @@ const PunishmentsContent: React.FC = () => {
         onClose={() => setIsEditorOpen(false)}
         punishmentData={currentPunishment}
         onSave={handleSavePunishment}
+        onDelete={handleDeletePunishment}
       />
     </div>
   );
