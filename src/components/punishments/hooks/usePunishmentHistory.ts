@@ -8,13 +8,11 @@ interface UsePunishmentHistoryProps {
 }
 
 export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
-  const { punishmentHistory } = usePunishments();
+  const { punishmentHistory, getPunishmentHistory } = usePunishments();
   
   const getHistory = (): PunishmentHistoryItem[] => {
-    // Instead of calling getPunishmentHistory, we'll filter the history directly
-    return id 
-      ? punishmentHistory.filter(item => item.punishment_id === id)
-      : [];
+    // Use the getPunishmentHistory function from context
+    return id ? getPunishmentHistory(id) : [];
   };
   
   const getWeekData = (): number[] => {
