@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -5,6 +6,7 @@ import TaskCard from '../components/TaskCard';
 import TaskEditor from '../components/TaskEditor';
 import TasksHeader from '../components/task/TasksHeader';
 import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
+import { TaskCarouselProvider, useTaskCarousel } from '../contexts/TaskCarouselContext';
 import { 
   fetchTasks, 
   Task, 
@@ -26,7 +28,10 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
-
+  
+  // Use the global carousel index from the context (just like in Punishments.tsx)
+  const { carouselTimer, globalCarouselIndex } = useTaskCarousel();
+  
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
@@ -168,7 +173,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
           const { data: authData } = await supabase.auth.getUser();
           const userId = authData.user?.id || 'anonymous';
           
-          // Log the completion to history
           const { error: insertError } = await supabase
             .from('task_completion_history')
             .insert({
@@ -181,7 +185,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
             console.error('Error inserting into task_completion_history:', insertError.message);
           } else {
             console.log('Logged task completion to history');
-            // Make sure we invalidate weekly metrics data when a task is completed
             queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
           }
           
@@ -234,6 +237,8 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
               icon_color={task.icon_color}
               onEdit={() => handleEditTask(task)}
               onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
+              backgroundImages={task.background_images}
+              sharedImageIndex={globalCarouselIndex}
             />
           ))}
         </div>
@@ -263,12 +268,14 @@ const Tasks: React.FC = () => {
   
   return (
     <AppLayout onAddNewItem={handleNewTask}>
-      <RewardsProvider>
-        <TasksContent 
-          isEditorOpen={isEditorOpen}
-          setIsEditorOpen={setIsEditorOpen}
-        />
-      </RewardsProvider>
+      <TaskCarouselProvider>
+        <RewardsProvider>
+          <TasksContent 
+            isEditorOpen={isEditorOpen}
+            setIsEditorOpen={setIsEditorOpen}
+          />
+        </RewardsProvider>
+      </TaskCarouselProvider>
     </AppLayout>
   );
 };

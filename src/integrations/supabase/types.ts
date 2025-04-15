@@ -265,8 +265,10 @@ export type Database = {
       punishments: {
         Row: {
           background_image_url: string | null
+          background_images: Json | null
           background_opacity: number | null
           calendar_color: string | null
+          carousel_timer: Json | null
           created_at: string | null
           description: string | null
           focal_point_x: number | null
@@ -283,8 +285,10 @@ export type Database = {
         }
         Insert: {
           background_image_url?: string | null
+          background_images?: Json | null
           background_opacity?: number | null
           calendar_color?: string | null
+          carousel_timer?: Json | null
           created_at?: string | null
           description?: string | null
           focal_point_x?: number | null
@@ -301,8 +305,10 @@ export type Database = {
         }
         Update: {
           background_image_url?: string | null
+          background_images?: Json | null
           background_opacity?: number | null
           calendar_color?: string | null
+          carousel_timer?: Json | null
           created_at?: string | null
           description?: string | null
           focal_point_x?: number | null
@@ -448,7 +454,9 @@ export type Database = {
       }
       rules: {
         Row: {
+          background_image_path: string | null
           background_image_url: string | null
+          background_images: Json | null
           background_opacity: number
           calendar_color: string
           created_at: string
@@ -471,7 +479,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          background_image_path?: string | null
           background_image_url?: string | null
+          background_images?: Json | null
           background_opacity?: number
           calendar_color?: string
           created_at?: string
@@ -494,7 +504,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          background_image_path?: string | null
           background_image_url?: string | null
+          background_images?: Json | null
           background_opacity?: number
           calendar_color?: string
           created_at?: string
@@ -550,8 +562,10 @@ export type Database = {
       tasks: {
         Row: {
           background_image_url: string | null
+          background_images: Json | null
           background_opacity: number
           calendar_color: string
+          carousel_timer: number | null
           completed: boolean
           created_at: string
           description: string | null
@@ -575,8 +589,10 @@ export type Database = {
         }
         Insert: {
           background_image_url?: string | null
+          background_images?: Json | null
           background_opacity?: number
           calendar_color?: string
+          carousel_timer?: number | null
           completed?: boolean
           created_at?: string
           description?: string | null
@@ -600,8 +616,10 @@ export type Database = {
         }
         Update: {
           background_image_url?: string | null
+          background_images?: Json | null
           background_opacity?: number
           calendar_color?: string
+          carousel_timer?: number | null
           completed?: boolean
           created_at?: string
           description?: string | null

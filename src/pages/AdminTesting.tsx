@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -47,7 +46,6 @@ const AdminTesting = () => {
         setIsLoading(true);
         console.log("Fetching cards from Supabase...");
         
-        // Check if the supabase client is properly initialized
         if (!supabase) {
           console.error("Supabase client is not initialized!");
           toast({
@@ -96,7 +94,6 @@ const AdminTesting = () => {
           setCards(formattedCards);
         } else {
           console.log("No cards found in the database, creating a default card");
-          // If no cards are found, create a default one
           await handleAddCard();
         }
       } catch (error) {
@@ -204,7 +201,7 @@ const AdminTesting = () => {
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold text-white mb-6">Admin Testing Panel</h1>
         
-        <div className="bg-red-500 text-white p-6 mb-6 rounded-lg">
+        <div className="bg-orange-600 text-white p-6 mb-6 rounded-lg">
           <h2 className="text-3xl font-bold">ADMIN TESTING PAGE</h2>
           <p>This page is for testing admin functionality only.</p>
         </div>
@@ -212,7 +209,7 @@ const AdminTesting = () => {
         <div className="flex justify-end mb-6">
           <Button 
             onClick={handleAddCard}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-green-500 hover:bg-green-600 text-white"
           >
             <Plus className="mr-2 h-4 w-4" />
             Add New Card
@@ -247,7 +244,6 @@ const AdminTesting = () => {
           </div>
         )}
         
-        {/* Activity Data Reset Section */}
         <div className="mt-12">
           <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Data Management</h2>
           <ActivityDataReset />
