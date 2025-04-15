@@ -1,10 +1,11 @@
 
 import React from 'react';
+import CardBackground from '@/components/rule/CardBackground';
 import { usePunishmentImageCarousel } from './hooks/usePunishmentImageCarousel';
 
 interface PunishmentBackgroundCarouselProps {
-  backgroundImages?: (string | null)[] | null;
-  backgroundImageUrl?: string;
+  backgroundImages?: (string | null)[];
+  backgroundImageUrl?: string | null;
   carouselTimer?: number;
   backgroundOpacity?: number;
   focalPointX?: number;
@@ -16,64 +17,48 @@ const PunishmentBackgroundCarousel: React.FC<PunishmentBackgroundCarouselProps> 
   backgroundImages = [],
   backgroundImageUrl,
   carouselTimer = 5,
-  backgroundOpacity = 100,
+  backgroundOpacity = 50,
   focalPointX = 50,
   focalPointY = 50,
   globalCarouselIndex = 0
 }) => {
-  const allImages: (string | null)[] =
-    backgroundImages && backgroundImages.length > 0
-      ? backgroundImages
-      : backgroundImageUrl
-      ? [backgroundImageUrl]
-      : [];
-
-  const filteredImages = allImages.filter((img): img is string => !!img);
-
-  const {
-    visibleImage,
-    transitionImage,
+  // Combine single backgroundImageUrl with array if provided
+  const allImages = backgroundImageUrl 
+    ? [backgroundImageUrl, ...(backgroundImages || [])] 
+    : backgroundImages || [];
+    
+  // Filter out null values and empty strings
+  const validImages = allImages.filter(Boolean);
+  
+  const { 
+    currentImage,
+    nextImage,
     isTransitioning
   } = usePunishmentImageCarousel({
-    images: filteredImages,
-    carouselTimer,
-    globalCarouselIndex
+    images: validImages,
+    initialIndex: 0,
+    transitionDuration: 2000, // 2 seconds for transition
+    displayDuration: carouselTimer * 1000,
+    globalIndex: globalCarouselIndex
   });
 
-  // Default placeholder image if both images are null (prevents layout shifts)
-  const defaultImage = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+  if (!validImages || validImages.length === 0) {
+    // Render nothing if no valid images
+    return null;
+  }
 
   return (
-    <>
-      {/* Always render the visible image element, even if src is empty */}
-      <img
-        src={visibleImage || defaultImage}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover z-0"
-        style={{
-          objectPosition: `${focalPointX}% ${focalPointY}%`,
-          opacity: visibleImage ? backgroundOpacity / 100 : 0,
-          transition: 'opacity 2s ease-in-out'
-        }}
-        aria-hidden="true"
-        draggable={false}
+    <div className="absolute inset-0 overflow-hidden">
+      <CardBackground
+        visibleImage={currentImage}
+        transitionImage={nextImage}
+        isTransitioning={isTransitioning}
+        focalPointX={focalPointX}
+        focalPointY={focalPointY}
+        backgroundOpacity={backgroundOpacity}
       />
-
-      {/* Always render the transition image element, even if src is empty */}
-      <img
-        src={transitionImage || defaultImage}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-        style={{
-          objectPosition: `${focalPointX}% ${focalPointY}%`,
-          opacity: isTransitioning ? backgroundOpacity / 100 : 0,
-          transition: 'opacity 2s ease-in-out'
-        }}
-        aria-hidden="true"
-        draggable={false}
-      />
-    </>
+    </div>
   );
 };
 
-export default PunishmentBackgroundCarousel;
+export default React.memo(PunishmentBackgroundCarousel);

@@ -1,8 +1,7 @@
 
 import { useState } from 'react';
-import { useRewards } from '@/contexts/RewardsContext';
 import { usePunishments } from '@/contexts/PunishmentsContext';
-import { usePunishmentToast } from './usePunishmentToast';
+import { toast } from '@/hooks/use-toast';
 
 interface UsePunishmentApplyProps {
   id?: string;
@@ -10,24 +9,56 @@ interface UsePunishmentApplyProps {
 }
 
 export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
-  const { totalPoints, setTotalPoints } = useRewards();
+  const [isApplying, setIsApplying] = useState(false);
   const { applyPunishment } = usePunishments();
-  const { showErrorToast } = usePunishmentToast();
   
+  /**
+   * Handle applying a punishment, deducting points, and recording in history
+   */
   const handlePunish = async () => {
-    if (!id) return;
+    if (!id) {
+      console.error("Cannot apply punishment: No ID provided");
+      return;
+    }
     
     try {
-      const newTotal = totalPoints - points;
-      setTotalPoints(newTotal);
+      setIsApplying(true);
       
-      await applyPunishment(id, points);
+      // Get current day of week (0-6, Sunday is 0)
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      
+      // First record this in the punishment history
+      const punishmentData = {
+        punishment_id: id,
+        points_deducted: points,
+        day_of_week: dayOfWeek
+      };
+      
+      // Call the context function to update both Supabase and local state
+      await applyPunishment(punishmentData);
+      
+      toast({
+        title: "Punishment Applied",
+        description: `${points} points have been deducted`
+      });
+      
+      setIsApplying(false);
     } catch (error) {
-      console.error('Error applying punishment:', error);
-      setTotalPoints(totalPoints);
-      showErrorToast("Failed to apply punishment. Please try again.");
+      console.error("Error applying punishment:", error);
+      
+      toast({
+        title: "Error",
+        description: "Failed to apply punishment. Please try again.",
+        variant: "destructive"
+      });
+      
+      setIsApplying(false);
     }
   };
   
-  return { handlePunish };
+  return {
+    handlePunish,
+    isApplying
+  };
 };

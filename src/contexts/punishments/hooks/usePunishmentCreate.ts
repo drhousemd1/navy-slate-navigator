@@ -12,7 +12,7 @@ interface UsePunishmentCreateProps {
  */
 export const usePunishmentCreate = ({ setPunishments }: UsePunishmentCreateProps) => {
   
-  const createPunishment = async (punishmentData: PunishmentData): Promise<string> => {
+  const createPunishment = async (punishmentData: PunishmentData): Promise<PunishmentData> => {
     try {
       let backgroundImages = punishmentData.background_images;
       if (backgroundImages && Array.isArray(backgroundImages)) {
@@ -53,7 +53,7 @@ export const usePunishmentCreate = ({ setPunishments }: UsePunishmentCreateProps
         description: "Punishment created successfully",
       });
       
-      return data.id;
+      return newPunishment;
     } catch (error) {
       console.error('Error creating punishment:', error);
       toast({
