@@ -41,7 +41,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
         style={{
           objectPosition: `${focalPointX}% ${focalPointY}%`,
           opacity: visibleImage ? backgroundOpacity / 100 : 0,
-          transition: 'opacity 2s ease-in-out'
+          transition: 'opacity 2s ease-in-out' // Kept at 2 seconds
         }}
         draggable={false}
         aria-hidden="true"
@@ -56,7 +56,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
         style={{
           objectPosition: `${focalPointX}% ${focalPointY}%`,
           opacity: isTransitioning ? backgroundOpacity / 100 : 0,
-          transition: 'opacity 2s ease-in-out'
+          transition: 'opacity 2s ease-in-out' // Kept at 2 seconds
         }}
         draggable={false}
         aria-hidden="true"
