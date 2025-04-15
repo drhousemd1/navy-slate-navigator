@@ -26,7 +26,7 @@ const PunishmentsContent: React.FC = () => {
     globalCarouselTimer 
   } = usePunishments();
   
-  const { data: punishments, loading: dataLoading, error } = useLocalSyncedData<PunishmentData[]>({
+  const { data: punishments, loading: dataLoading, error, retry } = useLocalSyncedData<PunishmentData[]>({
     key: "punishments",
     fetcher: fetchPunishmentsFromSupabase,
   });
@@ -130,6 +130,10 @@ const PunishmentsContent: React.FC = () => {
       });
       
       setIsEditorOpen(false);
+      
+      // Refresh the data
+      retry();
+      
     } catch (error) {
       console.error("Error saving punishment:", error);
       toast({
@@ -146,14 +150,19 @@ const PunishmentsContent: React.FC = () => {
       if (error) throw error;
       
       // Update localStorage
-      const existing = punishments || [];
-      const updatedList = existing.filter(p => p.id !== id);
-      localStorage.setItem("punishments", JSON.stringify(updatedList));
+      if (punishments) {
+        const updatedList = punishments.filter(p => p.id !== id);
+        localStorage.setItem("punishments", JSON.stringify(updatedList));
+      }
       
       toast({
         title: "Success",
         description: "Punishment deleted successfully",
       });
+      
+      // Refresh the data
+      retry();
+      
     } catch (error) {
       console.error("Error deleting punishment:", error);
       toast({
@@ -164,49 +173,77 @@ const PunishmentsContent: React.FC = () => {
     }
   };
 
-  return (
-    <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
-      <PunishmentsHeader />
-      
-      {loading ? (
+  const renderContent = () => {
+    if (loading) {
+      return (
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="h-32 bg-navy animate-pulse rounded-lg"></div>
           ))}
         </div>
-      ) : punishments?.length === 0 ? (
+      );
+    }
+    
+    if (error) {
+      return (
+        <div className="text-center py-12 text-gray-400">
+          <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
+          <h3 className="text-xl font-semibold mb-2">Error Loading Punishments</h3>
+          <p>Could not load punishments. Please try again later.</p>
+          <button 
+            onClick={retry} 
+            className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    
+    if (!punishments || punishments.length === 0) {
+      return (
         <div className="text-center py-12 text-gray-400">
           <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
           <h3 className="text-xl font-semibold mb-2">No Punishments Yet</h3>
           <p>Create your first punishment to deduct points for undesirable behaviors.</p>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {punishments.map(punishment => (
-            <PunishmentCard
-              key={punishment.id}
-              id={punishment.id}
-              title={punishment.title}
-              description={punishment.description || ''}
-              points={punishment.points}
-              icon={getIconComponent(punishment.icon_name || 'Skull')}
-              icon_name={punishment.icon_name}
-              icon_color={punishment.icon_color}
-              title_color={punishment.title_color}
-              subtext_color={punishment.subtext_color}
-              calendar_color={punishment.calendar_color}
-              highlight_effect={punishment.highlight_effect}
-              background_image_url={punishment.background_image_url}
-              background_opacity={punishment.background_opacity}
-              focal_point_x={punishment.focal_point_x}
-              focal_point_y={punishment.focal_point_y}
-              background_images={punishment.background_images}
-              carousel_timer={globalCarouselTimer}
-              globalCarouselIndex={globalCarouselIndex}
-            />
-          ))}
-        </div>
-      )}
+      );
+    }
+    
+    return (
+      <div className="space-y-4">
+        {punishments.map(punishment => (
+          <PunishmentCard
+            key={punishment.id}
+            id={punishment.id}
+            title={punishment.title}
+            description={punishment.description || ''}
+            points={punishment.points}
+            icon={getIconComponent(punishment.icon_name || 'Skull')}
+            icon_name={punishment.icon_name}
+            icon_color={punishment.icon_color}
+            title_color={punishment.title_color}
+            subtext_color={punishment.subtext_color}
+            calendar_color={punishment.calendar_color}
+            highlight_effect={punishment.highlight_effect}
+            background_image_url={punishment.background_image_url}
+            background_opacity={punishment.background_opacity}
+            focal_point_x={punishment.focal_point_x}
+            focal_point_y={punishment.focal_point_y}
+            background_images={punishment.background_images}
+            carousel_timer={globalCarouselTimer}
+            globalCarouselIndex={globalCarouselIndex}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
+      <PunishmentsHeader />
+      
+      {renderContent()}
       
       <PunishmentEditor 
         isOpen={isEditorOpen}
