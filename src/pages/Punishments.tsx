@@ -7,16 +7,27 @@ import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts/PunishmentsContext';
 import PunishmentEditor from '../components/PunishmentEditor';
+import { supabase } from "@/integrations/supabase/client";
+import { useLocalSyncedData } from "@/lib/useLocalSyncedData";
+
+const fetchPunishmentsFromSupabase = async (): Promise<PunishmentData[]> => {
+  const { data, error } = await supabase.from("punishments").select("*").order("created_at", { ascending: false });
+  if (error) {
+    console.error("Error fetching punishments:", error);
+    throw error;
+  }
+  return data as PunishmentData[];
+};
 
 const PunishmentsContent: React.FC = () => {
   const { 
-    punishments, 
-    loading, 
-    createPunishment, 
-    updatePunishment,
-    deletePunishment,
     globalCarouselTimer 
   } = usePunishments();
+  
+  const { data: punishments, loading } = useLocalSyncedData<PunishmentData[]>({
+    key: "punishments",
+    fetcher: fetchPunishmentsFromSupabase,
+  });
   
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
@@ -38,13 +49,13 @@ const PunishmentsContent: React.FC = () => {
   // Effect to delete dummy punishment cards
   useEffect(() => {
     const removeDummyPunishments = async () => {
-      if (!loading && !cleanupDone && punishments.length > 0) {
+      if (!loading && !cleanupDone && punishments && punishments.length > 0) {
         const dummyTitles = ["Late to Meeting", "Missed Deadline", "Breaking Rules"];
         
         for (const punishment of punishments) {
           if (dummyTitles.includes(punishment.title) && punishment.id) {
             console.log(`Removing dummy punishment: ${punishment.title}`);
-            await deletePunishment(punishment.id);
+            await handleDeletePunishment(punishment.id);
           }
         }
         
@@ -53,7 +64,7 @@ const PunishmentsContent: React.FC = () => {
     };
     
     removeDummyPunishments();
-  }, [loading, punishments, deletePunishment, cleanupDone]);
+  }, [loading, punishments, cleanupDone]);
 
   useEffect(() => {
     const handleAddNewPunishment = () => {
@@ -96,14 +107,35 @@ const PunishmentsContent: React.FC = () => {
     try {
       if (data.id) {
         // Update existing punishment
-        await updatePunishment(data.id, data);
+        await supabase.from("punishments").update(data).eq("id", data.id);
       } else {
         // Create new punishment
-        await createPunishment(data);
+        const { data: created } = await supabase.from("punishments").insert(data).select().single();
+        data = created as PunishmentData;
       }
+
+      // Update localStorage after successful save
+      const existing = punishments || [];
+      const updatedList = [...existing.filter(p => p.id !== data.id), data];
+      localStorage.setItem("punishments", JSON.stringify(updatedList));
+      
       setIsEditorOpen(false);
     } catch (error) {
       console.error("Error saving punishment:", error);
+      throw error;
+    }
+  };
+
+  const handleDeletePunishment = async (id: string): Promise<void> => {
+    try {
+      await supabase.from("punishments").delete().eq("id", id);
+      
+      // Update localStorage after successful delete
+      const existing = punishments || [];
+      const updatedList = existing.filter(p => p.id !== id);
+      localStorage.setItem("punishments", JSON.stringify(updatedList));
+    } catch (error) {
+      console.error("Error deleting punishment:", error);
       throw error;
     }
   };
@@ -118,7 +150,7 @@ const PunishmentsContent: React.FC = () => {
             <div key={index} className="h-32 bg-navy animate-pulse rounded-lg"></div>
           ))}
         </div>
-      ) : punishments.length === 0 ? (
+      ) : !punishments || punishments.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
           <h3 className="text-xl font-semibold mb-2">No Punishments Yet</h3>
@@ -145,8 +177,9 @@ const PunishmentsContent: React.FC = () => {
               focal_point_x={punishment.focal_point_x}
               focal_point_y={punishment.focal_point_y}
               background_images={punishment.background_images}
-              carousel_timer={globalCarouselTimer} // Use the global timer from context
+              carousel_timer={globalCarouselTimer}
               globalCarouselIndex={globalCarouselIndex}
+              onDelete={() => handleDeletePunishment(punishment.id)}
             />
           ))}
         </div>
