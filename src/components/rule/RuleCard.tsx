@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,7 @@ interface RuleProps {
   rule?: RuleCardData;
   carouselTimer?: number;
   onCarouselTimerChange?: (timer: number) => void;
-  onFullyLoaded?: () => void; // Add callback prop for loading notification
+  onFullyLoaded?: () => void; // Callback for when the card is fully loaded
 }
 
 const RuleCard: React.FC<RuleProps> = ({
@@ -45,7 +44,7 @@ const RuleCard: React.FC<RuleProps> = ({
 }) => {
   const navigate = useNavigate();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(false); // Add state for fade-in animation
+  const [isVisible, setIsVisible] = useState(false); // State for fade-in animation
 
   const {
     cardData,
@@ -71,19 +70,13 @@ const RuleCard: React.FC<RuleProps> = ({
     isTransitioning
   } = useImageCarousel({ images, globalCarouselIndex });
 
-  // Effect to handle fade-in animation and notify parent when loaded
-  useEffect(() => {
-    // Trigger fade-in animation
-    const timeout = setTimeout(() => {
-      setIsVisible(true);
-      // After fade duration, notify parent that this card is fully loaded
-      setTimeout(() => {
-        if (onFullyLoaded) onFullyLoaded();
-      }, 500); // matches fade duration
-    }, 0);
-
-    return () => clearTimeout(timeout);
-  }, [onFullyLoaded]);
+  // Handle the image load event
+  const handleImageLoad = () => {
+    setIsVisible(true);
+    setTimeout(() => {
+      if (onFullyLoaded) onFullyLoaded();
+    }, 500); // Match the fade-in duration
+  };
 
   const handleOpenEditModal = () => setIsEditModalOpen(true);
   const handleCloseEditModal = () => setIsEditModalOpen(false);
@@ -215,6 +208,7 @@ const RuleCard: React.FC<RuleProps> = ({
             focalPointX={cardData.focal_point_x}
             focalPointY={cardData.focal_point_y}
             backgroundOpacity={cardData.background_opacity}
+            onImageLoad={handleImageLoad}
           />
           
           <div className="flex justify-between items-center mb-3 relative z-10">

@@ -9,6 +9,7 @@ interface CardBackgroundProps {
   focalPointX?: number;
   focalPointY?: number;
   backgroundOpacity?: number;
+  onImageLoad?: () => void; // Add the image load callback
 }
 
 const CardBackground: React.FC<CardBackgroundProps> = ({
@@ -17,7 +18,8 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   isTransitioning,
   focalPointX = 50,
   focalPointY = 50,
-  backgroundOpacity = 100
+  backgroundOpacity = 100,
+  onImageLoad
 }) => {
   // Default placeholder image to prevent layout shifts
   const placeholderImage = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
@@ -41,11 +43,12 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
         style={{
           objectPosition: `${focalPointX}% ${focalPointY}%`,
           opacity: visibleImage ? backgroundOpacity / 100 : 0,
-          transition: 'opacity 2s ease-in-out' // Kept at 2 seconds
+          transition: 'opacity 2s ease-in-out'
         }}
         draggable={false}
         aria-hidden="true"
         loading="lazy"
+        onLoad={onImageLoad} // Add the onImageLoad callback here
       />
       
       {/* Always render the transition image with a conditional source */}
@@ -56,7 +59,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
         style={{
           objectPosition: `${focalPointX}% ${focalPointY}%`,
           opacity: isTransitioning ? backgroundOpacity / 100 : 0,
-          transition: 'opacity 2s ease-in-out' // Kept at 2 seconds
+          transition: 'opacity 2s ease-in-out'
         }}
         draggable={false}
         aria-hidden="true"
