@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { getPublicImageUrl } from '@/lib/getImageUrl';
 
 interface CardBackgroundProps {
@@ -33,6 +33,22 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
   const visibleSrc = processImageSource(visibleImage);
   const transitionSrc = processImageSource(transitionImage);
 
+  // Preload the visible image
+  useEffect(() => {
+    if (!visibleImage) return;
+    
+    const img = new Image();
+    img.src = visibleSrc;
+    img.onload = () => {
+      if (onImageLoad) onImageLoad(); // Only call after image is fully loaded
+    };
+    
+    // Handle case where image is already cached
+    if (img.complete) {
+      if (onImageLoad) onImageLoad();
+    }
+  }, [visibleSrc, onImageLoad]);
+
   return (
     <>
       {/* Always render the base image with a conditional source */}
@@ -48,7 +64,6 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
         draggable={false}
         aria-hidden="true"
         loading="lazy"
-        onLoad={onImageLoad} // Add the onImageLoad callback here
       />
       
       {/* Always render the transition image with a conditional source */}
