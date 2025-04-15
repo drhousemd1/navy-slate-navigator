@@ -1,74 +1,112 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 
 interface UsePunishmentImageCarouselProps {
   images: string[];
-  initialIndex?: number;
-  transitionDuration?: number;
-  displayDuration?: number;
-  globalIndex?: number;
+  carouselTimer?: number;
+  globalCarouselIndex?: number;
 }
 
-interface ImageCarouselState {
-  currentImage: string | null;
-  nextImage: string | null;
+interface UsePunishmentImageCarouselResult {
+  visibleImage: string | null;
+  transitionImage: string | null;
   isTransitioning: boolean;
-  hasMultipleImages: boolean;
 }
 
-export const usePunishmentImageCarousel = ({
-  images = [],
-  initialIndex = 0,
-  transitionDuration = 2000,
-  displayDuration = 5000,
-  globalIndex = 0
-}: UsePunishmentImageCarouselProps): ImageCarouselState => {
-  // Normalize images array by filtering out nulls and empty strings
-  const validImages = useMemo(() => {
-    return Array.isArray(images) ? images.filter(Boolean) : [];
-  }, [images]);
-  
-  const hasMultipleImages = validImages.length > 1;
-  
-  const [currentIndex, setCurrentIndex] = useState(
-    initialIndex % (validImages.length || 1)
-  );
+export const usePunishmentImageCarousel = ({ 
+  images, 
+  carouselTimer = 5, 
+  globalCarouselIndex = 0 
+}: UsePunishmentImageCarouselProps): UsePunishmentImageCarouselResult => {
+  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
+  const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [nextIndex, setNextIndex] = useState<number | null>(null);
-
-  // Effect to handle image transitions based on global index
+  const [previousImages, setPreviousImages] = useState<string[]>([]);
+  
+  // Initialize or update visible image when images array changes
   useEffect(() => {
-    if (!hasMultipleImages) return;
-    
-    // Calculate the next index based on the global index
-    const newIndex = globalIndex % validImages.length;
-    
-    // If it's different from the current, start transition
-    if (newIndex !== currentIndex) {
-      setNextIndex(newIndex);
-      setIsTransitioning(true);
+    if (images.length > 0) {
+      // Check if images array has changed
+      const imagesChanged = 
+        images.length !== previousImages.length || 
+        images.some((img, i) => previousImages[i] !== img);
       
-      // After transition duration, update the current index and reset
-      const timer = setTimeout(() => {
-        setCurrentIndex(newIndex);
+      if (imagesChanged) {
+        setPreviousImages(images);
+        setVisibleImage(images[0]);
+        setTransitionImage(null);
         setIsTransitioning(false);
-        setNextIndex(null);
-      }, transitionDuration);
-      
-      return () => clearTimeout(timer);
+      }
+    } else if (previousImages.length > 0 && images.length === 0) {
+      // Reset if we had images but now don't
+      setPreviousImages([]);
+      setVisibleImage(null);
+      setTransitionImage(null);
+      setIsTransitioning(false);
     }
-  }, [globalIndex, validImages, hasMultipleImages, currentIndex, transitionDuration]);
+  }, [images]);
 
-  // Get current and next image URLs
-  const currentImage = validImages.length > 0 ? validImages[currentIndex] : null;
-  const nextImage = nextIndex !== null && validImages.length > 0 
-    ? validImages[nextIndex] 
-    : null;
+  // Handle image transitions when global carousel index changes
+  useEffect(() => {
+    // Don't perform transitions if we have no images or just one image
+    if (!images.length || images.length === 1) {
+      if (images.length === 1 && visibleImage !== images[0]) {
+        setVisibleImage(images[0]);
+      }
+      return;
+    }
+    
+    const nextIndex = globalCarouselIndex % images.length;
+    const next = images[nextIndex];
+    
+    if (next === visibleImage) return;
+    
+    // Preload the next image
+    const preload = new Image();
+    preload.src = next;
+    
+    const handleLoad = () => {
+      setTransitionImage(next);
+      setIsTransitioning(false);
+      
+      // Use requestAnimationFrame for smoother transitions
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setIsTransitioning(true);
+          
+          // Apply the transition effect duration
+          const transitionDuration = 2000; // 2 seconds for transition
+          
+          const timeout = setTimeout(() => {
+            setVisibleImage(next);
+            setTransitionImage(null);
+            setIsTransitioning(false);
+          }, transitionDuration);
+          
+          return () => clearTimeout(timeout);
+        }, 0);
+      });
+    };
+    
+    const handleError = () => {
+      console.error("Failed to load image:", next);
+      // Try to continue with the next image anyway
+      setVisibleImage(next);
+    };
+    
+    preload.onload = handleLoad;
+    preload.onerror = handleError;
+    
+    // Clean up in case component unmounts before image loads
+    return () => {
+      preload.onload = null;
+      preload.onerror = null;
+    };
+  }, [globalCarouselIndex, images, visibleImage]);
 
   return {
-    currentImage,
-    nextImage,
-    isTransitioning,
-    hasMultipleImages
+    visibleImage,
+    transitionImage,
+    isTransitioning
   };
 };

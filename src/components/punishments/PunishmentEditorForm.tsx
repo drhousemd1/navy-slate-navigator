@@ -10,7 +10,7 @@ import PunishmentFormProvider, { PunishmentFormValues } from './form/PunishmentF
 import { usePunishmentIcon } from './hooks/usePunishmentIcon';
 import { usePunishmentBackground } from './hooks/usePunishmentBackground';
 import { useDeleteDialog } from './hooks/useDeleteDialog';
-import { v4 as uuidv4 } from 'uuid';
+import { useForm } from 'react-hook-form';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
@@ -62,13 +62,16 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     try {
       // Ensure we have all required fields
       const dataToSave: PunishmentData = {
-        id: punishmentData?.id || uuidv4(), // Generate a new UUID if this is a new punishment
         ...values,
         icon_name: selectedIconName,
         background_image_url: imagePreview,
         title: values.title || 'Unnamed Punishment', // Ensure title is not empty
         points: values.points || 0, // Ensure points is not undefined
       };
+      
+      if (punishmentData?.id) {
+        dataToSave.id = punishmentData.id;
+      }
       
       await onSave(dataToSave);
     } catch (error) {
