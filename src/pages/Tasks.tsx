@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -122,7 +121,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       ) : (
         <div className="space-y-4">
           {tasks.map(task => (
-            <div key={task.id} className="animate-slow-fade-in">
+            <div key={task.id} className="slow-fade-in">
               <TaskCard
                 title={task.title}
                 description={task.description}
@@ -186,4 +185,3 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
-
