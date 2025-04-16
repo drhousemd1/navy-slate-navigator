@@ -19,6 +19,7 @@ const ActivityDataReset = () => {
       setIsResetting(true);
       console.log("Resetting all activity data...");
 
+      // Define fixed tables with proper typing
       const tables = [
         { name: 'task_completion_history', column: 'id' },
         { name: 'rule_violations', column: 'id' },
@@ -27,8 +28,9 @@ const ActivityDataReset = () => {
       ];
 
       for (const { name, column } of tables) {
+        // Type assertion to ensure name is treated as a valid table name
         const { error, count } = await supabase
-          .from(name)
+          .from(name as any)
           .delete()
           .neq(column, '00000000-0000-0000-0000-000000000000')
           .select('*', { count: 'exact' });
