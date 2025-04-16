@@ -1,33 +1,34 @@
 
 import { useState } from 'react';
-import { useRewards } from '@/contexts/RewardsContext';
-import { usePunishments } from '@/contexts/PunishmentsContext';
 import { usePunishmentToast } from './usePunishmentToast';
 
 interface UsePunishmentApplyProps {
   id?: string;
   points: number;
+  applyPunishment?: (punishmentId: string, points: number) => Promise<void>;
 }
 
-export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
-  const { totalPoints, setTotalPoints } = useRewards();
-  const { applyPunishment } = usePunishments();
-  const { showErrorToast } = usePunishmentToast();
-  
+export const usePunishmentApply = ({ id, points, applyPunishment }: UsePunishmentApplyProps) => {
+  const [isApplying, setIsApplying] = useState(false);
+  const toast = usePunishmentToast();
+
   const handlePunish = async () => {
-    if (!id) return;
+    if (!id || isApplying || !applyPunishment) return;
     
+    setIsApplying(true);
     try {
-      const newTotal = totalPoints - points;
-      setTotalPoints(newTotal);
-      
       await applyPunishment(id, points);
+      // Success toast is handled in the mutation
     } catch (error) {
-      console.error('Error applying punishment:', error);
-      setTotalPoints(totalPoints);
-      showErrorToast("Failed to apply punishment. Please try again.");
+      console.error("Error applying punishment:", error);
+      toast.showErrorToast("Failed to apply punishment. Please try again.");
+    } finally {
+      setIsApplying(false);
     }
   };
-  
-  return { handlePunish };
+
+  return {
+    handlePunish,
+    isApplying
+  };
 };

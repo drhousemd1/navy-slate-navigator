@@ -1,36 +1,29 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
 import { Clock, Skull, Bomb, Zap, Plus } from 'lucide-react';
 import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
-import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts/PunishmentsContext';
+import { PunishmentData } from '@/contexts/punishments/types';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
 
 const PunishmentsContent: React.FC = () => {
-  const { punishments, loading, expectedCardCount, createPunishment, updatePunishment, error } = usePunishments();
+  const { 
+    punishments, 
+    loading, 
+    expectedCardCount, 
+    createPunishment, 
+    updatePunishment, 
+    error 
+  } = usePunishmentsQuery();
+  
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleAddNewPunishment = () => {
-      handleAddNewPunishmentClick();
-    };
-
-    const currentContainer = containerRef.current;
-    if (currentContainer) {
-      currentContainer.addEventListener('add-new-punishment', handleAddNewPunishment);
-    }
-
-    return () => {
-      if (currentContainer) {
-        currentContainer.removeEventListener('add-new-punishment', handleAddNewPunishment);
-      }
-    };
-  }, []);
 
   const getIconComponent = (iconName: string) => {
     switch(iconName) {
@@ -154,9 +147,7 @@ const Punishments: React.FC = () => {
       }
     }}>
       <RewardsProvider>
-        <PunishmentsProvider>
-          <PunishmentsContent />
-        </PunishmentsProvider>
+        <PunishmentsContent />
       </RewardsProvider>
     </AppLayout>
   );

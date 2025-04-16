@@ -5,11 +5,11 @@ import { useRewards } from '../../contexts/RewardsContext';
 import { Box, Coins, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
 import RandomPunishmentSelector from './RandomPunishmentSelector';
-import { usePunishments } from '@/contexts/PunishmentsContext';
+import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
 
 const PunishmentsHeader: React.FC = () => {
   const { totalPoints, totalRewardsSupply } = useRewards();
-  const { punishments } = usePunishments();
+  const { punishments } = usePunishmentsQuery();
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
 
   return (
