@@ -13,8 +13,6 @@ const PunishmentsContent: React.FC = () => {
   const { punishments, loading, createPunishment, updatePunishment, error } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
-  const [initializing, setInitializing] = useState(false);
-  const samplePunishmentsCreated = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,72 +31,6 @@ const PunishmentsContent: React.FC = () => {
       }
     };
   }, []);
-
-  // Improved sample punishment creation with sequential creation
-  useEffect(() => {
-    const createSamplePunishment = async (punishment: PunishmentData) => {
-      try {
-        await createPunishment(punishment);
-        return true;
-      } catch (err) {
-        console.error("Error creating sample punishment:", err);
-        return false;
-      }
-    };
-    
-    const initSamplePunishments = async () => {
-      if (!loading && punishments.length === 0 && !initializing && !samplePunishmentsCreated.current) {
-        setInitializing(true);
-        samplePunishmentsCreated.current = true;
-        
-        const samplePunishments = [
-          {
-            title: "Late to Meeting",
-            description: "Being late to scheduled meetings",
-            points: 10,
-            icon_name: "Clock",
-            icon_color: "#ea384c"
-          },
-          {
-            title: "Missed Deadline",
-            description: "Missing agreed upon deadlines",
-            points: 15,
-            icon_name: "Bomb",
-            icon_color: "#f97316"
-          },
-          {
-            title: "Breaking Rules",
-            description: "Violation of established rules",
-            points: 20,
-            icon_name: "Skull",
-            icon_color: "#7c3aed"
-          }
-        ];
-
-        // Create punishments one at a time with delay between
-        let allSuccess = true;
-        for (const punishment of samplePunishments) {
-          const success = await createSamplePunishment(punishment);
-          if (!success) {
-            allSuccess = false;
-            break;
-          }
-          // Add delay between creations to avoid race conditions
-          await new Promise(resolve => setTimeout(resolve, 600));
-        }
-        
-        console.log("Sample punishments creation completed:", allSuccess ? "Successfully" : "With errors");
-        setInitializing(false);
-      }
-    };
-
-    // Only attempt to create sample punishments after a delay to ensure DB is ready
-    const timer = setTimeout(() => {
-      initSamplePunishments();
-    }, 1500);
-    
-    return () => clearTimeout(timer);
-  }, [loading, punishments.length, createPunishment, initializing]);
 
   const getIconComponent = (iconName: string) => {
     switch(iconName) {
@@ -138,7 +70,7 @@ const PunishmentsContent: React.FC = () => {
     <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
       <PunishmentsHeader />
       
-      {loading || initializing ? (
+      {loading ? (
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="h-32 bg-navy animate-pulse rounded-lg"></div>

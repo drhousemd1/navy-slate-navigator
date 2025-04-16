@@ -12,7 +12,7 @@ export const useApplyRandomPunishment = (onClose: () => void) => {
     if (!punishment || !punishment.id) {
       toast({
         title: "Error",
-        description: "Cannot apply punishment. Please try again.",
+        description: "Cannot apply punishment. Please select a valid punishment.",
         variant: "destructive",
       });
       return;

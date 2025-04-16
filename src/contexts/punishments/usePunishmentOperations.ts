@@ -8,7 +8,7 @@ import { PunishmentData, PunishmentHistoryItem } from './types';
 const CACHE_KEY = "punishments_cache";
 const HISTORY_CACHE_KEY = "punishment_history_cache";
 const TOTAL_POINTS_CACHE_KEY = "punishment_total_points";
-const CACHE_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes cache expiry
+const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes cache expiry
 
 export const usePunishmentOperations = () => {
   // Get cache expiry timestamp
@@ -78,7 +78,7 @@ export const usePunishmentOperations = () => {
     setPunishments(newPunishments);
     try {
       const cacheString = JSON.stringify(newPunishments);
-      if (cacheString.length < 1000000) { // Only cache if data is reasonable size
+      if (cacheString.length < 500000) { // Only cache if data is reasonable size
         localStorage.setItem(CACHE_KEY, cacheString);
         localStorage.setItem(CACHE_KEY + "_expiry", (Date.now() + CACHE_EXPIRY_MS).toString());
       }
@@ -92,7 +92,8 @@ export const usePunishmentOperations = () => {
     setPunishmentHistory(prev => {
       const updatedHistory = typeof newHistory === 'function' ? newHistory(prev) : newHistory;
       try {
-        const historyToCache = updatedHistory.slice(0, 50); // Limit number of items to prevent quota issues
+        // Only cache the most recent 30 history items to prevent quota issues
+        const historyToCache = updatedHistory.slice(0, 30);
         localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(historyToCache));
         localStorage.setItem(HISTORY_CACHE_KEY + "_expiry", (Date.now() + CACHE_EXPIRY_MS).toString());
       } catch (e) {
@@ -130,22 +131,12 @@ export const usePunishmentOperations = () => {
     }
 
     try {
-      // Fetch punishments from Supabase with improved timeout handling
-      const fetchPromise = supabase
+      // Fetch punishments from Supabase
+      const { data: punishmentsData, error: punishmentsError } = await supabase
         .from('punishments')
         .select('*')
-        .order('created_at', { ascending: true });
-      
-      // Create a timeout promise that rejects after 5 seconds
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Request timed out")), 8000);
-      });
-      
-      // Race the fetch against the timeout
-      const { data: punishmentsData, error: punishmentsError } = await Promise.race([
-        fetchPromise,
-        timeoutPromise
-      ]) as any;
+        .order('created_at', { ascending: true })
+        .timeout(10000); // 10 second timeout
       
       if (punishmentsError) throw punishmentsError;
       
@@ -153,19 +144,12 @@ export const usePunishmentOperations = () => {
         updatePunishments(punishmentsData);
       }
       
-      // Fetch punishment history with pagination to reduce data size
-      const historyFetchPromise = supabase
+      // Separately fetch punishment history with pagination
+      const { data: historyData, error: historyError } = await supabase
         .from('punishment_history')
         .select('*')
         .order('applied_date', { ascending: false })
-        .limit(50); // Limit to recent history
-      
-      const { data: historyData, error: historyError } = await Promise.race([
-        historyFetchPromise,
-        new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("History request timed out")), 8000);
-        })
-      ]) as any;
+        .limit(30); // Limit to recent history
       
       if (historyError) throw historyError;
       
@@ -197,14 +181,9 @@ export const usePunishmentOperations = () => {
     }
   };
 
-  // Rest of operations with improved error handling
+  // CRUD operations with optimistic updates 
   const createPunishment = async (punishmentData: PunishmentData): Promise<string> => {
     try {
-      // Optimistically update the local state first for better UX
-      const tempId = `temp-${Date.now()}`;
-      const tempPunishment = { ...punishmentData, id: tempId };
-      updatePunishments([...punishments, tempPunishment]);
-      
       const { data, error } = await supabase
         .from('punishments')
         .insert(punishmentData)
@@ -213,10 +192,8 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
-      // Update with the real data from the server
-      updatePunishments(punishments.map(p => 
-        p.id === tempId ? data : p
-      ));
+      // Update the local state with the new punishment
+      updatePunishments([...punishments, data]);
       
       toast({
         title: "Success",
@@ -226,9 +203,6 @@ export const usePunishmentOperations = () => {
       return data.id;
     } catch (error) {
       console.error('Error creating punishment:', error);
-      
-      // Remove the temporary punishment on error
-      updatePunishments(punishments.filter(p => !p.id?.toString().startsWith('temp-')));
       
       toast({
         title: "Error",
@@ -243,7 +217,7 @@ export const usePunishmentOperations = () => {
     try {
       const { id: _, ...dataToUpdate } = punishmentData;
       
-      // Optimistically update local state and cache
+      // Optimistically update local state
       const updatedPunishments = punishments.map(punishment => 
         punishment.id === id ? { ...punishment, ...dataToUpdate } : punishment
       );
@@ -263,7 +237,7 @@ export const usePunishmentOperations = () => {
     } catch (error) {
       console.error('Error updating punishment:', error);
       
-      // Revert to original data on error by refetching
+      // Revert to original data on error
       fetchPunishments();
       
       toast({
@@ -277,10 +251,7 @@ export const usePunishmentOperations = () => {
 
   const deletePunishment = async (id: string): Promise<void> => {
     try {
-      // Store the punishment data before removal for potential rollback
-      const punishmentToDelete = punishments.find(p => p.id === id);
-      
-      // Optimistically update local state and cache
+      // Optimistically update local state
       const filteredPunishments = punishments.filter(punishment => punishment.id !== id);
       updatePunishments(filteredPunishments);
       
@@ -328,7 +299,7 @@ export const usePunishmentOperations = () => {
         points_deducted: points
       };
       
-      // Optimistically update local state and cache
+      // Optimistically update local state
       updateTotalPointsDeducted(prev => prev + points);
       
       const { data, error } = await supabase
