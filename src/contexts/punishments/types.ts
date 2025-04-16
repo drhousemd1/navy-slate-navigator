@@ -28,12 +28,8 @@ export interface PunishmentsContextType {
   punishments: PunishmentData[];
   punishmentHistory: PunishmentHistoryItem[];
   loading: boolean;
-  currentCardLoading: boolean;
   error: Error | null;
   fetchPunishments: () => Promise<void>;
-  fetchSinglePunishment: (id?: string) => Promise<void>;
-  fetchNextPunishment: () => Promise<PunishmentData | null>;
-  fetchPunishmentById: (id: string) => Promise<PunishmentData | null>;
   createPunishment: (punishmentData: PunishmentData) => Promise<string>;
   updatePunishment: (id: string, punishmentData: PunishmentData) => Promise<void>;
   deletePunishment: (id: string) => Promise<void>;

@@ -6,7 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { useCallback } from 'react';
 
 export const useApplyRandomPunishment = (onClose: () => void) => {
-  const { applyPunishment, fetchPunishmentById } = usePunishments();
+  const { applyPunishment } = usePunishments();
   const { showAppliedToast } = usePunishmentToast();
   
   const handlePunish = useCallback(async (punishment: PunishmentData | null) => {
@@ -20,12 +20,8 @@ export const useApplyRandomPunishment = (onClose: () => void) => {
     }
 
     try {
-      // Make sure we have the latest data by fetching the punishment directly
-      const latestPunishment = await fetchPunishmentById(punishment.id);
-      const pointsToDeduct = latestPunishment?.points || punishment.points;
-      
-      await applyPunishment(punishment.id, pointsToDeduct);
-      showAppliedToast(punishment.title, pointsToDeduct);
+      await applyPunishment(punishment.id, punishment.points);
+      showAppliedToast(punishment.title, punishment.points);
       onClose();
     } catch (error) {
       console.error("Error applying punishment:", error);
@@ -35,7 +31,7 @@ export const useApplyRandomPunishment = (onClose: () => void) => {
         variant: "destructive",
       });
     }
-  }, [applyPunishment, fetchPunishmentById, showAppliedToast, onClose]);
+  }, [applyPunishment, showAppliedToast, onClose]);
   
   return { handlePunish };
 };
