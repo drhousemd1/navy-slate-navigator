@@ -1,9 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { usePunishments, PunishmentData } from '@/contexts/PunishmentsContext';
+import { PunishmentData } from '@/contexts/punishments/types';
 
 export const useRandomPunishmentSelection = (isOpen: boolean) => {
-  const { punishments } = usePunishments();
   const [selectedPunishment, setSelectedPunishment] = useState<PunishmentData | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
 
@@ -15,7 +14,7 @@ export const useRandomPunishmentSelection = (isOpen: boolean) => {
     }
   }, [isOpen]);
 
-  const selectRandomPunishment = () => {
+  const selectRandomPunishment = async (punishments: PunishmentData[]) => {
     if (punishments.length === 0) return;
     
     setIsSelecting(true);
@@ -33,9 +32,21 @@ export const useRandomPunishmentSelection = (isOpen: boolean) => {
     }, 1000);
   };
 
+  // Function to get the current punishment or return null
+  const getCurrentPunishment = () => {
+    return selectedPunishment;
+  };
+
+  // Function to handle rerolling (selecting a new random punishment)
+  const handleReroll = (punishments: PunishmentData[]) => {
+    selectRandomPunishment(punishments);
+  };
+
   return {
     selectedPunishment,
     isSelecting,
-    selectRandomPunishment
+    selectRandomPunishment,
+    getCurrentPunishment,
+    handleReroll
   };
 };

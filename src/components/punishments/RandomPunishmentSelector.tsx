@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import { Shuffle } from 'lucide-react';
@@ -22,16 +22,28 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
   const {
     selectedPunishment,
     isSelecting,
+    selectRandomPunishment,
     getCurrentPunishment,
     handleReroll
-  } = useRandomPunishmentSelection(punishments, isOpen);
+  } = useRandomPunishmentSelection(isOpen);
   
   const { handlePunish } = useApplyRandomPunishment(onClose);
+  
+  // Auto-select a random punishment when opened
+  useEffect(() => {
+    if (isOpen && punishments.length > 0 && !isSelecting && !selectedPunishment) {
+      selectRandomPunishment(punishments);
+    }
+  }, [isOpen, punishments, isSelecting, selectedPunishment, selectRandomPunishment]);
   
   const currentPunishment = getCurrentPunishment();
   
   const onPunishClick = () => {
     handlePunish(selectedPunishment);
+  };
+  
+  const onRerollClick = () => {
+    handleReroll(punishments);
   };
   
   return (
@@ -58,7 +70,7 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
             isSelecting={isSelecting}
             selectedPunishment={selectedPunishment}
             onPunish={onPunishClick}
-            onReroll={handleReroll}
+            onReroll={onRerollClick}
             onCancel={onClose}
           />
         </div>

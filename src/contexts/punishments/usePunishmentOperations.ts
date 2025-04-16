@@ -136,7 +136,7 @@ export const usePunishmentOperations = () => {
         .from('punishments')
         .select('*')
         .order('created_at', { ascending: true })
-        .timeout(10000); // 10 second timeout
+        .abortSignal(AbortSignal.timeout(10000)); // Use AbortSignal instead of .timeout()
       
       if (punishmentsError) throw punishmentsError;
       

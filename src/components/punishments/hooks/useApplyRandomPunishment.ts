@@ -2,7 +2,7 @@
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { usePunishmentToast } from './usePunishmentToast';
-import { toast } from '@/hooks/use-toast';
+import { toast } from "@/hooks/use-toast";
 
 export const useApplyRandomPunishment = (onClose: () => void) => {
   const { applyPunishment } = usePunishments();
