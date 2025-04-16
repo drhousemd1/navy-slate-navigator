@@ -34,7 +34,18 @@ const PunishmentsContent: React.FC = () => {
     };
   }, []);
 
+  // Improved sample punishment creation with sequential creation
   useEffect(() => {
+    const createSamplePunishment = async (punishment: PunishmentData) => {
+      try {
+        await createPunishment(punishment);
+        return true;
+      } catch (err) {
+        console.error("Error creating sample punishment:", err);
+        return false;
+      }
+    };
+    
     const initSamplePunishments = async () => {
       if (!loading && punishments.length === 0 && !initializing && !samplePunishmentsCreated.current) {
         setInitializing(true);
@@ -63,28 +74,28 @@ const PunishmentsContent: React.FC = () => {
             icon_color: "#7c3aed"
           }
         ];
-        
-        try {
-          for (const punishment of samplePunishments) {
-            try {
-              await createPunishment(punishment);
-              await new Promise(resolve => setTimeout(resolve, 300));
-            } catch (err) {
-              console.error("Error creating sample punishment:", err);
-            }
+
+        // Create punishments one at a time with delay between
+        let allSuccess = true;
+        for (const punishment of samplePunishments) {
+          const success = await createSamplePunishment(punishment);
+          if (!success) {
+            allSuccess = false;
+            break;
           }
-          console.log("Sample punishments creation completed");
-        } catch (error) {
-          console.error("Error batch creating sample punishments:", error);
-        } finally {
-          setInitializing(false);
+          // Add delay between creations to avoid race conditions
+          await new Promise(resolve => setTimeout(resolve, 600));
         }
+        
+        console.log("Sample punishments creation completed:", allSuccess ? "Successfully" : "With errors");
+        setInitializing(false);
       }
     };
-    
+
+    // Only attempt to create sample punishments after a delay to ensure DB is ready
     const timer = setTimeout(() => {
       initSamplePunishments();
-    }, 1000);
+    }, 1500);
     
     return () => clearTimeout(timer);
   }, [loading, punishments.length, createPunishment, initializing]);
@@ -150,29 +161,38 @@ const PunishmentsContent: React.FC = () => {
           <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
           <h3 className="text-xl font-semibold mb-2">No Punishments Yet</h3>
           <p>Create your first punishment to deduct points for undesirable behaviors.</p>
+          <Button
+            onClick={handleAddNewPunishmentClick}
+            className="mt-4 bg-navy hover:bg-light-navy flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Punishment
+          </Button>
         </div>
       ) : (
         <div className="space-y-4">
-          {punishments.map(punishment => (
-            <PunishmentCard
-              key={punishment.id}
-              id={punishment.id}
-              title={punishment.title}
-              description={punishment.description || ''}
-              points={punishment.points}
-              icon={getIconComponent(punishment.icon_name || 'Skull')}
-              icon_name={punishment.icon_name}
-              icon_color={punishment.icon_color}
-              title_color={punishment.title_color}
-              subtext_color={punishment.subtext_color}
-              calendar_color={punishment.calendar_color}
-              highlight_effect={punishment.highlight_effect}
-              background_image_url={punishment.background_image_url}
-              background_opacity={punishment.background_opacity}
-              focal_point_x={punishment.focal_point_x}
-              focal_point_y={punishment.focal_point_y}
-            />
-          ))}
+          {punishments
+            .filter(punishment => punishment.id && !String(punishment.id).startsWith('temp-'))
+            .map(punishment => (
+              <PunishmentCard
+                key={punishment.id}
+                id={punishment.id}
+                title={punishment.title}
+                description={punishment.description || ''}
+                points={punishment.points}
+                icon={getIconComponent(punishment.icon_name || 'Skull')}
+                icon_name={punishment.icon_name}
+                icon_color={punishment.icon_color}
+                title_color={punishment.title_color}
+                subtext_color={punishment.subtext_color}
+                calendar_color={punishment.calendar_color}
+                highlight_effect={punishment.highlight_effect}
+                background_image_url={punishment.background_image_url}
+                background_opacity={punishment.background_opacity}
+                focal_point_x={punishment.focal_point_x}
+                focal_point_y={punishment.focal_point_y}
+              />
+            ))}
         </div>
       )}
       

@@ -4,10 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from './types';
 
+// Reduced cache time to prevent quota issues
 const CACHE_KEY = "punishments_cache";
 const HISTORY_CACHE_KEY = "punishment_history_cache";
 const TOTAL_POINTS_CACHE_KEY = "punishment_total_points";
-const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes cache expiry
+const CACHE_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes cache expiry
 
 export const usePunishmentOperations = () => {
   // Get cache expiry timestamp
@@ -72,23 +73,27 @@ export const usePunishmentOperations = () => {
   const [loading, setLoading] = useState<boolean>(punishments.length === 0);
   const [error, setError] = useState<Error | null>(null);
 
-  // Update local storage when punishments change
+  // Update local storage with throttling to prevent quota errors
   const updatePunishments = useCallback((newPunishments: PunishmentData[]) => {
     setPunishments(newPunishments);
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(newPunishments));
-      localStorage.setItem(CACHE_KEY + "_expiry", (Date.now() + CACHE_EXPIRY_MS).toString());
+      const cacheString = JSON.stringify(newPunishments);
+      if (cacheString.length < 1000000) { // Only cache if data is reasonable size
+        localStorage.setItem(CACHE_KEY, cacheString);
+        localStorage.setItem(CACHE_KEY + "_expiry", (Date.now() + CACHE_EXPIRY_MS).toString());
+      }
     } catch (e) {
       console.error("Error caching punishments:", e);
     }
   }, []);
 
-  // Update local storage when history changes
+  // Update local storage when history changes, with size limits
   const updatePunishmentHistory = useCallback((newHistory: PunishmentHistoryItem[] | ((prev: PunishmentHistoryItem[]) => PunishmentHistoryItem[])) => {
     setPunishmentHistory(prev => {
       const updatedHistory = typeof newHistory === 'function' ? newHistory(prev) : newHistory;
       try {
-        localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(updatedHistory));
+        const historyToCache = updatedHistory.slice(0, 50); // Limit number of items to prevent quota issues
+        localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(historyToCache));
         localStorage.setItem(HISTORY_CACHE_KEY + "_expiry", (Date.now() + CACHE_EXPIRY_MS).toString());
       } catch (e) {
         console.error("Error caching punishment history:", e);
@@ -115,7 +120,7 @@ export const usePunishmentOperations = () => {
     // If we already have cached data, don't show loading indicator
     const hasCache = punishments.length > 0;
     
-    // Skip fetching if we have valid cached data
+    // Skip fetching if we have valid cached data and no force refresh
     if (hasCache && isCacheValid()) {
       return;
     }
@@ -125,7 +130,7 @@ export const usePunishmentOperations = () => {
     }
 
     try {
-      // Fetch punishments from Supabase with timeout handling
+      // Fetch punishments from Supabase with improved timeout handling
       const fetchPromise = supabase
         .from('punishments')
         .select('*')
@@ -133,7 +138,7 @@ export const usePunishmentOperations = () => {
       
       // Create a timeout promise that rejects after 5 seconds
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Request timed out")), 10000);
+        setTimeout(() => reject(new Error("Request timed out")), 8000);
       });
       
       // Race the fetch against the timeout
@@ -148,16 +153,17 @@ export const usePunishmentOperations = () => {
         updatePunishments(punishmentsData);
       }
       
-      // Fetch punishment history from Supabase with similar timeout handling
+      // Fetch punishment history with pagination to reduce data size
       const historyFetchPromise = supabase
         .from('punishment_history')
         .select('*')
-        .order('applied_date', { ascending: false });
+        .order('applied_date', { ascending: false })
+        .limit(50); // Limit to recent history
       
       const { data: historyData, error: historyError } = await Promise.race([
         historyFetchPromise,
         new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("History request timed out")), 10000);
+          setTimeout(() => reject(new Error("History request timed out")), 8000);
         })
       ]) as any;
       
@@ -182,7 +188,7 @@ export const usePunishmentOperations = () => {
       if (!hasCache) {
         toast({
           title: "Connection Error",
-          description: "Could not load punishments from server. Using cached data.",
+          description: "Could not load punishments from server. Using cached data if available.",
           variant: "destructive",
         });
       }
@@ -191,8 +197,14 @@ export const usePunishmentOperations = () => {
     }
   };
 
+  // Rest of operations with improved error handling
   const createPunishment = async (punishmentData: PunishmentData): Promise<string> => {
     try {
+      // Optimistically update the local state first for better UX
+      const tempId = `temp-${Date.now()}`;
+      const tempPunishment = { ...punishmentData, id: tempId };
+      updatePunishments([...punishments, tempPunishment]);
+      
       const { data, error } = await supabase
         .from('punishments')
         .insert(punishmentData)
@@ -201,8 +213,10 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
-      // Optimistically update the local state and cache
-      updatePunishments([...punishments, data]);
+      // Update with the real data from the server
+      updatePunishments(punishments.map(p => 
+        p.id === tempId ? data : p
+      ));
       
       toast({
         title: "Success",
@@ -212,6 +226,10 @@ export const usePunishmentOperations = () => {
       return data.id;
     } catch (error) {
       console.error('Error creating punishment:', error);
+      
+      // Remove the temporary punishment on error
+      updatePunishments(punishments.filter(p => !p.id?.toString().startsWith('temp-')));
+      
       toast({
         title: "Error",
         description: "Failed to create punishment. Please try again.",
@@ -259,6 +277,9 @@ export const usePunishmentOperations = () => {
 
   const deletePunishment = async (id: string): Promise<void> => {
     try {
+      // Store the punishment data before removal for potential rollback
+      const punishmentToDelete = punishments.find(p => p.id === id);
+      
       // Optimistically update local state and cache
       const filteredPunishments = punishments.filter(punishment => punishment.id !== id);
       updatePunishments(filteredPunishments);
