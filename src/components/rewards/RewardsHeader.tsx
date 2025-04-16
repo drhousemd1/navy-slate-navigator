@@ -7,8 +7,6 @@ import { useRewardsQuery } from '@/hooks/useRewardsQuery';
 const RewardsHeader: React.FC = () => {
   const { points, totalRewardsSupply, refetchPoints } = useRewardsQuery();
 
-  // Refresh points when component mounts - handled by the hook now
-
   return (
     <div className="flex items-center mb-6">
       <h1 className="text-base font-semibold text-white mr-auto">My Rewards</h1>
