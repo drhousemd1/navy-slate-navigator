@@ -3,12 +3,13 @@ import { usePunishments } from '@/contexts/PunishmentsContext';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { usePunishmentToast } from './usePunishmentToast';
 import { toast } from "@/hooks/use-toast";
+import { useCallback } from 'react';
 
 export const useApplyRandomPunishment = (onClose: () => void) => {
   const { applyPunishment } = usePunishments();
   const { showAppliedToast } = usePunishmentToast();
   
-  const handlePunish = async (punishment: PunishmentData | null) => {
+  const handlePunish = useCallback(async (punishment: PunishmentData | null) => {
     if (!punishment || !punishment.id) {
       toast({
         title: "Error",
@@ -30,7 +31,7 @@ export const useApplyRandomPunishment = (onClose: () => void) => {
         variant: "destructive",
       });
     }
-  };
+  }, [applyPunishment, showAppliedToast, onClose]);
   
   return { handlePunish };
 };

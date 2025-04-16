@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PunishmentData } from '@/contexts/punishments/types';
 
 export const useRandomPunishmentSelection = (isOpen: boolean) => {
@@ -14,33 +14,42 @@ export const useRandomPunishmentSelection = (isOpen: boolean) => {
     }
   }, [isOpen]);
 
-  const selectRandomPunishment = async (punishments: PunishmentData[]) => {
-    if (punishments.length === 0) return;
+  const selectRandomPunishment = useCallback(async (punishments: PunishmentData[]) => {
+    if (!punishments || punishments.length === 0) {
+      setIsSelecting(false);
+      return;
+    }
     
     setIsSelecting(true);
     
     // Set timeout to simulate selection process
     setTimeout(() => {
-      const availablePunishments = punishments.filter(p => p.id && !String(p.id).startsWith('temp-'));
-      
-      if (availablePunishments.length > 0) {
-        const randomIndex = Math.floor(Math.random() * availablePunishments.length);
-        setSelectedPunishment(availablePunishments[randomIndex]);
+      try {
+        const availablePunishments = punishments.filter(p => p.id && !String(p.id).startsWith('temp-'));
+        
+        if (availablePunishments.length > 0) {
+          const randomIndex = Math.floor(Math.random() * availablePunishments.length);
+          setSelectedPunishment(availablePunishments[randomIndex]);
+        } else {
+          console.log("No available punishments to select from");
+        }
+      } catch (error) {
+        console.error("Error selecting random punishment:", error);
+      } finally {
+        setIsSelecting(false);
       }
-      
-      setIsSelecting(false);
     }, 1000);
-  };
+  }, []);
 
   // Function to get the current punishment or return null
-  const getCurrentPunishment = () => {
+  const getCurrentPunishment = useCallback(() => {
     return selectedPunishment;
-  };
+  }, [selectedPunishment]);
 
   // Function to handle rerolling (selecting a new random punishment)
-  const handleReroll = (punishments: PunishmentData[]) => {
+  const handleReroll = useCallback((punishments: PunishmentData[]) => {
     selectRandomPunishment(punishments);
-  };
+  }, [selectRandomPunishment]);
 
   return {
     selectedPunishment,
