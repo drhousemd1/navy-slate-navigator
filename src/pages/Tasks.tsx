@@ -9,6 +9,7 @@ import { RewardsProvider } from '../contexts/RewardsContext';
 import { useTasksQuery } from '../hooks/useTasksQuery';
 import { Task } from '../lib/taskUtils';
 import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface TasksContentProps {
   isEditorOpen: boolean;
@@ -106,7 +107,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       {isLoading ? (
         <div className="flex flex-col space-y-4">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-48 bg-navy/40 animate-pulse rounded-lg border-2 border-[#00f0ff]/40" />
+            <Skeleton key={n} className="h-48 bg-navy/0 animate-pulse rounded-lg border-2 border-[#00f0ff]/0" />
           ))}
         </div>
       ) : error ? (
@@ -121,7 +122,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       ) : (
         <div className="space-y-4">
           {tasks.map(task => (
-            <div key={task.id} className="animate-[fade-in_2s_ease-out]">
+            <div key={task.id} className="animate-slow-fade-in">
               <TaskCard
                 title={task.title}
                 description={task.description}
@@ -185,3 +186,4 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
+
