@@ -40,7 +40,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
 };
 
 // Create a new reward
-export const createReward = async (rewardData: Partial<Reward>): Promise<Reward> => {
+export const createReward = async (rewardData: Partial<Reward> & { title: string }): Promise<Reward> => {
   try {
     const { data, error } = await supabase
       .from('rewards')
@@ -428,7 +428,7 @@ export const useRewardsQuery = () => {
     totalRewardsSupply,
     refetchRewards: () => queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] }),
     refetchPoints,
-    createReward: (data: Partial<Reward>) => createRewardMutation.mutateAsync(data),
+    createReward: (data: Partial<Reward> & { title: string }) => createRewardMutation.mutateAsync(data),
     updateReward: (id: string, data: Partial<Reward>) => updateRewardMutation.mutateAsync({ ...data, id }),
     deleteReward: (id: string) => deleteRewardMutation.mutateAsync(id),
     buyReward: (rewardId: string, cost: number) => buyRewardMutation.mutateAsync({ rewardId, cost }),
