@@ -8,9 +8,10 @@ import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts/PunishmentsContext';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const PunishmentsContent: React.FC = () => {
-  const { punishments, loading, createPunishment, updatePunishment, error } = usePunishments();
+  const { punishments, loading, expectedCardCount, createPunishment, updatePunishment, error } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -66,17 +67,22 @@ const PunishmentsContent: React.FC = () => {
     }
   };
 
+  // Calculate how many skeletons to show when loading
+  const renderSkeletons = () => {
+    // If we already have some cards loaded, only show loading for missing ones
+    const loadedCount = punishments.length;
+    const remainingToLoad = Math.max(1, expectedCardCount - loadedCount);
+    
+    return Array.from({ length: remainingToLoad }).map((_, index) => (
+      <Skeleton key={`skeleton-${index}`} className="h-32 bg-navy animate-pulse rounded-lg" />
+    ));
+  };
+
   return (
     <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
       <PunishmentsHeader />
       
-      {loading ? (
-        <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="h-32 bg-navy animate-pulse rounded-lg"></div>
-          ))}
-        </div>
-      ) : error ? (
+      {error && !punishments.length ? (
         <div className="text-center py-12 text-gray-400">
           <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
           <h3 className="text-xl font-semibold mb-2">Error Loading Punishments</h3>
@@ -88,7 +94,7 @@ const PunishmentsContent: React.FC = () => {
             Refresh Page
           </Button>
         </div>
-      ) : punishments.length === 0 ? (
+      ) : punishments.length === 0 && !loading ? (
         <div className="text-center py-12 text-gray-400">
           <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
           <h3 className="text-xl font-semibold mb-2">No Punishments Yet</h3>
@@ -103,6 +109,7 @@ const PunishmentsContent: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Render already loaded punishments */}
           {punishments
             .filter(punishment => punishment.id && !String(punishment.id).startsWith('temp-'))
             .map(punishment => (
@@ -125,6 +132,9 @@ const PunishmentsContent: React.FC = () => {
                 focal_point_y={punishment.focal_point_y}
               />
             ))}
+          
+          {/* Show loading skeletons for remaining cards */}
+          {loading && renderSkeletons()}
         </div>
       )}
       

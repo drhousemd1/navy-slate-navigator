@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -70,9 +69,13 @@ export const usePunishmentOperations = () => {
     return 0;
   });
 
+  // Track active loading state (true while actively fetching a card)
   const [loading, setLoading] = useState<boolean>(punishments.length === 0);
+  // Track how many cards we expect to load (for incremental skeleton display)
+  const [expectedCardCount, setExpectedCardCount] = useState<number>(punishments.length || 1);
   const [error, setError] = useState<Error | null>(null);
   const fetchingInProgressRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Update local storage with throttling to prevent quota errors
   const updatePunishments = useCallback((newPunishments: PunishmentData[]) => {
@@ -118,16 +121,41 @@ export const usePunishmentOperations = () => {
     });
   }, []);
 
-  const fetchPunishmentsBatch = async (offset: number, limit: number): Promise<PunishmentData[]> => {
-    const { data, error } = await supabase
-      .from('punishments')
-      .select('*')
-      .order('created_at', { ascending: true })
-      .range(offset, offset + limit - 1)
-      .abortSignal(AbortSignal.timeout(5000));
+  // First, get the count of total cards to set proper expectations for loading UI
+  const fetchCardCount = async (): Promise<number> => {
+    try {
+      const { count, error } = await supabase
+        .from('punishments')
+        .select('*', { count: 'exact', head: true })
+        .abortSignal(AbortSignal.timeout(3000));
+      
+      if (error) throw error;
+      return count || 0;
+    } catch (e) {
+      console.error("Error fetching card count:", e);
+      return 0; // Default to 0 if count fetch fails
+    }
+  };
 
-    if (error) throw error;
-    return data || [];
+  // Fetch a single punishment by index
+  const fetchSinglePunishment = async (index: number): Promise<PunishmentData | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('punishments')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .range(index, index)
+        .abortSignal(abortControllerRef.current?.signal || AbortSignal.timeout(5000));
+      
+      if (error) throw error;
+      return data?.[0] || null;
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        console.log('Fetch aborted');
+        return null;
+      }
+      throw e;
+    }
   };
 
   const fetchPunishments = async () => {
@@ -147,36 +175,47 @@ export const usePunishmentOperations = () => {
     
     fetchingInProgressRef.current = true;
     
-    if (!hasCache) {
-      setLoading(true);
+    // Cancel any existing fetch
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
-
+    abortControllerRef.current = new AbortController();
+    
+    // Always show loading for empty state, but don't clear existing cards
+    setLoading(true);
+    
     try {
-      // Clear existing punishments if we're doing a full refresh
-      if (!hasCache) {
-        updatePunishments([]);
-      }
+      // Start with empty array for fresh fetch or keep existing cards for incremental fetch
+      const currentPunishments = hasCache ? [...punishments] : [];
       
-      // Fetch punishments one by one with a small batch size to avoid timeouts
-      const batchSize = 1; // Fetch one at a time
-      let offset = 0;
-      let hasMore = true;
-      const allPunishments: PunishmentData[] = [...punishments];
+      // First, get the count of total cards to adjust our UI expectations
+      const totalCount = await fetchCardCount();
+      setExpectedCardCount(totalCount > 0 ? totalCount : 1); // Minimum 1 for UI
       
-      while (hasMore) {
-        const batch = await fetchPunishmentsBatch(offset, batchSize);
+      // Start at index of current punishments length (for incremental loading)
+      let currentIndex = currentPunishments.length;
+      
+      // Continue fetching until we've loaded all cards
+      while (currentIndex < totalCount) {
+        // Fetch the next card
+        const card = await fetchSinglePunishment(currentIndex);
         
-        if (batch.length > 0) {
-          // Add the new batch and update state incrementally
-          allPunishments.push(...batch);
-          updatePunishments([...allPunishments]);
-          offset += batch.length;
+        // If we got a card and we're still in loading mode, add it
+        if (card && fetchingInProgressRef.current) {
+          const newPunishments = [...currentPunishments, card];
+          updatePunishments(newPunishments);
+          currentPunishments.push(card);
+          currentIndex++;
+          
+          // Add a small delay between fetches for better UI progress visibility
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } else if (!fetchingInProgressRef.current) {
+          // Fetching was cancelled, exit loop
+          break;
         } else {
-          hasMore = false;
+          // No card found or end of results
+          currentIndex++;
         }
-        
-        // Add a small delay to avoid overwhelming the connection
-        await new Promise(resolve => setTimeout(resolve, 50));
       }
       
       // Separately fetch punishment history
@@ -214,6 +253,7 @@ export const usePunishmentOperations = () => {
     } finally {
       setLoading(false);
       fetchingInProgressRef.current = false;
+      abortControllerRef.current = null;
     }
   };
 
@@ -377,6 +417,7 @@ export const usePunishmentOperations = () => {
     punishmentHistory,
     loading,
     error,
+    expectedCardCount,
     totalPointsDeducted,
     fetchPunishments,
     createPunishment,
