@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -8,13 +7,13 @@ import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts/PunishmentsContext';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 
 const PunishmentsContent: React.FC = () => {
-  const { punishments, loading, createPunishment, updatePunishment } = usePunishments();
+  const { punishments, loading, createPunishment, error } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const [initializing, setInitializing] = useState(false);
+  const samplePunishmentsCreated = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,8 +35,9 @@ const PunishmentsContent: React.FC = () => {
 
   useEffect(() => {
     const initSamplePunishments = async () => {
-      if (!loading && punishments.length === 0 && !initializing) {
+      if (!loading && punishments.length === 0 && !initializing && !samplePunishmentsCreated.current) {
         setInitializing(true);
+        samplePunishmentsCreated.current = true;
         
         const samplePunishments = [
           {
@@ -65,18 +65,27 @@ const PunishmentsContent: React.FC = () => {
         
         try {
           for (const punishment of samplePunishments) {
-            await createPunishment(punishment);
+            try {
+              await createPunishment(punishment);
+              await new Promise(resolve => setTimeout(resolve, 300));
+            } catch (err) {
+              console.error("Error creating sample punishment:", err);
+            }
           }
-          console.log("Sample punishments created successfully");
+          console.log("Sample punishments creation completed");
         } catch (error) {
-          console.error("Error creating sample punishments:", error);
+          console.error("Error batch creating sample punishments:", error);
         } finally {
           setInitializing(false);
         }
       }
     };
     
-    initSamplePunishments();
+    const timer = setTimeout(() => {
+      initSamplePunishments();
+    }, 1000);
+    
+    return () => clearTimeout(timer);
   }, [loading, punishments.length, createPunishment, initializing]);
 
   const getIconComponent = (iconName: string) => {
@@ -102,10 +111,8 @@ const PunishmentsContent: React.FC = () => {
   const handleSavePunishment = async (data: PunishmentData): Promise<void> => {
     try {
       if (data.id) {
-        // Update existing punishment
         await updatePunishment(data.id, data);
       } else {
-        // Create new punishment
         await createPunishment(data);
       }
       setIsEditorOpen(false);
@@ -124,6 +131,18 @@ const PunishmentsContent: React.FC = () => {
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="h-32 bg-navy animate-pulse rounded-lg"></div>
           ))}
+        </div>
+      ) : error ? (
+        <div className="text-center py-12 text-gray-400">
+          <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
+          <h3 className="text-xl font-semibold mb-2">Error Loading Punishments</h3>
+          <p>There was a problem loading your punishments. Please try refreshing the page.</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-navy hover:bg-light-navy"
+          >
+            Refresh Page
+          </Button>
         </div>
       ) : punishments.length === 0 ? (
         <div className="text-center py-12 text-gray-400">

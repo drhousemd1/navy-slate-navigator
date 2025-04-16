@@ -7,13 +7,28 @@ import { PunishmentData, PunishmentHistoryItem } from './types';
 const CACHE_KEY = "punishments_cache";
 const HISTORY_CACHE_KEY = "punishment_history_cache";
 const TOTAL_POINTS_CACHE_KEY = "punishment_total_points";
+const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes cache expiry
 
 export const usePunishmentOperations = () => {
-  // Initialize punishments from cache if available
+  // Get cache expiry timestamp
+  const getCacheExpiry = () => {
+    try {
+      return parseInt(localStorage.getItem(CACHE_KEY + "_expiry") || "0", 10);
+    } catch (e) {
+      return 0;
+    }
+  };
+
+  // Check if cache is still valid
+  const isCacheValid = () => {
+    return Date.now() < getCacheExpiry();
+  };
+
+  // Initialize punishments from cache if available and valid
   const [punishments, setPunishments] = useState<PunishmentData[]>(() => {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
+      if (cached && isCacheValid()) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) return parsed;
       }
@@ -28,7 +43,7 @@ export const usePunishmentOperations = () => {
   const [punishmentHistory, setPunishmentHistory] = useState<PunishmentHistoryItem[]>(() => {
     try {
       const cached = localStorage.getItem(HISTORY_CACHE_KEY);
-      if (cached) {
+      if (cached && isCacheValid()) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) return parsed;
       }
@@ -43,7 +58,7 @@ export const usePunishmentOperations = () => {
   const [totalPointsDeducted, setTotalPointsDeducted] = useState<number>(() => {
     try {
       const cached = localStorage.getItem(TOTAL_POINTS_CACHE_KEY);
-      if (cached) {
+      if (cached && isCacheValid()) {
         const parsed = parseInt(cached, 10);
         if (!isNaN(parsed)) return parsed;
       }
@@ -62,6 +77,7 @@ export const usePunishmentOperations = () => {
     setPunishments(newPunishments);
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(newPunishments));
+      localStorage.setItem(CACHE_KEY + "_expiry", (Date.now() + CACHE_EXPIRY_MS).toString());
     } catch (e) {
       console.error("Error caching punishments:", e);
     }
@@ -73,6 +89,7 @@ export const usePunishmentOperations = () => {
       const updatedHistory = typeof newHistory === 'function' ? newHistory(prev) : newHistory;
       try {
         localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(updatedHistory));
+        localStorage.setItem(HISTORY_CACHE_KEY + "_expiry", (Date.now() + CACHE_EXPIRY_MS).toString());
       } catch (e) {
         console.error("Error caching punishment history:", e);
       }
@@ -86,6 +103,7 @@ export const usePunishmentOperations = () => {
       const updatedTotal = typeof newTotal === 'function' ? newTotal(prev) : newTotal;
       try {
         localStorage.setItem(TOTAL_POINTS_CACHE_KEY, updatedTotal.toString());
+        localStorage.setItem(TOTAL_POINTS_CACHE_KEY + "_expiry", (Date.now() + CACHE_EXPIRY_MS).toString());
       } catch (e) {
         console.error("Error caching total points:", e);
       }
@@ -96,16 +114,33 @@ export const usePunishmentOperations = () => {
   const fetchPunishments = async () => {
     // If we already have cached data, don't show loading indicator
     const hasCache = punishments.length > 0;
+    
+    // Skip fetching if we have valid cached data
+    if (hasCache && isCacheValid()) {
+      return;
+    }
+    
     if (!hasCache) {
       setLoading(true);
     }
 
     try {
-      // Fetch punishments from Supabase
-      const { data: punishmentsData, error: punishmentsError } = await supabase
+      // Fetch punishments from Supabase with timeout handling
+      const fetchPromise = supabase
         .from('punishments')
         .select('*')
         .order('created_at', { ascending: true });
+      
+      // Create a timeout promise that rejects after 5 seconds
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Request timed out")), 10000);
+      });
+      
+      // Race the fetch against the timeout
+      const { data: punishmentsData, error: punishmentsError } = await Promise.race([
+        fetchPromise,
+        timeoutPromise
+      ]) as any;
       
       if (punishmentsError) throw punishmentsError;
       
@@ -113,11 +148,18 @@ export const usePunishmentOperations = () => {
         updatePunishments(punishmentsData);
       }
       
-      // Fetch punishment history from Supabase
-      const { data: historyData, error: historyError } = await supabase
+      // Fetch punishment history from Supabase with similar timeout handling
+      const historyFetchPromise = supabase
         .from('punishment_history')
         .select('*')
         .order('applied_date', { ascending: false });
+      
+      const { data: historyData, error: historyError } = await Promise.race([
+        historyFetchPromise,
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("History request timed out")), 10000);
+        })
+      ]) as any;
       
       if (historyError) throw historyError;
       
@@ -126,7 +168,7 @@ export const usePunishmentOperations = () => {
         
         // Calculate total points deducted
         const totalDeducted = historyData.reduce(
-          (sum, item) => sum + item.points_deducted, 0
+          (sum: number, item: PunishmentHistoryItem) => sum + item.points_deducted, 0
         );
         updateTotalPointsDeducted(totalDeducted);
       }
@@ -159,6 +201,7 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
+      // Optimistically update the local state and cache
       updatePunishments([...punishments, data]);
       
       toast({
@@ -182,9 +225,6 @@ export const usePunishmentOperations = () => {
     try {
       const { id: _, ...dataToUpdate } = punishmentData;
       
-      console.log("Updating punishment with ID:", id);
-      console.log("Data to update:", dataToUpdate);
-      
       // Optimistically update local state and cache
       const updatedPunishments = punishments.map(punishment => 
         punishment.id === id ? { ...punishment, ...dataToUpdate } : punishment
@@ -205,7 +245,7 @@ export const usePunishmentOperations = () => {
     } catch (error) {
       console.error('Error updating punishment:', error);
       
-      // Revert to original data on error
+      // Revert to original data on error by refetching
       fetchPunishments();
       
       toast({
