@@ -27,8 +27,6 @@ export interface Task {
   last_completed_date?: string;
   usage_data?: number[];
   created_at?: string;
-  background_images?: string[];
-  carousel_timer?: number;
 }
 
 export const getLocalDateString = (): string => {
@@ -81,14 +79,6 @@ export const fetchTasks = async (): Promise<Task[]> => {
         task.usage_data = Array(7).fill(0);
       }
       
-      if (task.background_image_url && (!task.background_images || task.background_images.length === 0)) {
-        task.background_images = [task.background_image_url];
-      }
-      
-      if (!task.carousel_timer) {
-        task.carousel_timer = 5; // Default timer value
-      }
-      
       if (task.completed && task.frequency === 'daily' && !wasCompletedToday(task)) {
         return { ...task, completed: false };
       }
@@ -113,8 +103,6 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     console.log('Saving task with icon name:', task.icon_name);
     console.log('Saving task with icon color:', task.icon_color);
     console.log('Saving task with usage_data:', task.usage_data);
-    console.log('Saving task with background_images:', task.background_images);
-    console.log('Saving task with carousel_timer:', task.carousel_timer);
     
     const usage_data = task.usage_data || Array(7).fill(0);
     const now = new Date().toISOString();
@@ -143,8 +131,6 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           icon_color: task.icon_color,
           last_completed_date: task.last_completed_date,
           usage_data: usage_data,
-          background_images: task.background_images,
-          carousel_timer: task.carousel_timer,
           updated_at: now,
         })
         .eq('id', task.id)
@@ -177,8 +163,6 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           icon_color: task.icon_color,
           last_completed_date: null,
           usage_data: usage_data,
-          background_images: task.background_images,
-          carousel_timer: task.carousel_timer,
           created_at: now,
         })
         .select()

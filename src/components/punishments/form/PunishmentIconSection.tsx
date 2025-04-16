@@ -25,6 +25,8 @@ const PunishmentIconSection: React.FC<PunishmentIconSectionProps> = ({
   // Ensure iconColor is never undefined
   const safeIconColor = iconColor || '#ea384c';
   
+  console.log('PunishmentIconSection rendering with iconColor:', safeIconColor);
+  
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Punishment Icon</FormLabel>
