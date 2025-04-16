@@ -1,11 +1,12 @@
 
 import { useState } from 'react';
 import { usePunishmentToast } from './usePunishmentToast';
+import { PunishmentHistoryItem } from '@/contexts/punishments/types';
 
 interface UsePunishmentApplyProps {
   id?: string;
   points: number;
-  applyPunishment?: (punishmentId: string, points: number) => Promise<void>;
+  applyPunishment?: (punishmentId: string, points: number) => Promise<PunishmentHistoryItem | void>;
 }
 
 export const usePunishmentApply = ({ id, points, applyPunishment }: UsePunishmentApplyProps) => {
