@@ -1,11 +1,11 @@
 
-import { usePunishments } from '@/contexts/PunishmentsContext';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { usePunishmentToast } from './usePunishmentToast';
 import { toast } from "@/hooks/use-toast";
+import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
 
 export const useApplyRandomPunishment = (onClose: () => void) => {
-  const { applyPunishment } = usePunishments();
+  const { applyPunishment } = usePunishmentsQuery();
   const { showAppliedToast } = usePunishmentToast();
   
   const handlePunish = async (punishment: PunishmentData | null) => {

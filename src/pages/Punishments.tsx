@@ -4,6 +4,7 @@ import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
 import { Clock, Skull, Bomb, Zap, Plus } from 'lucide-react';
 import { RewardsProvider } from '../contexts/RewardsContext';
+import { PunishmentsProvider } from '../contexts/punishments/PunishmentsProvider';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentData } from '@/contexts/punishments/types';
 import PunishmentEditor from '../components/PunishmentEditor';
@@ -146,9 +147,11 @@ const Punishments: React.FC = () => {
         content.dispatchEvent(event);
       }
     }}>
-      <RewardsProvider>
-        <PunishmentsContent />
-      </RewardsProvider>
+      <PunishmentsProvider>
+        <RewardsProvider>
+          <PunishmentsContent />
+        </RewardsProvider>
+      </PunishmentsProvider>
     </AppLayout>
   );
 };

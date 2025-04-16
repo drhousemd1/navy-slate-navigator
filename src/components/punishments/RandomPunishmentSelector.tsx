@@ -1,12 +1,12 @@
 
 import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
-import { usePunishments } from '@/contexts/PunishmentsContext';
 import { Shuffle } from 'lucide-react';
 import { useRandomPunishmentSelection } from './hooks/useRandomPunishmentSelection';
 import { useApplyRandomPunishment } from './hooks/useApplyRandomPunishment';
 import RandomPunishmentCard from './RandomPunishmentCard';
 import RandomPunishmentActions from './RandomPunishmentActions';
+import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
 
 interface RandomPunishmentSelectorProps {
   isOpen: boolean;
@@ -17,7 +17,7 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
   isOpen, 
   onClose 
 }) => {
-  const { punishments } = usePunishments();
+  const { punishments } = usePunishmentsQuery();
   
   const {
     selectedPunishment,
