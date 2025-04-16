@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
@@ -33,7 +32,7 @@ const ActivityDataReset = () => {
           .from(name as any)
           .delete()
           .neq(column, '00000000-0000-0000-0000-000000000000')
-          .select('*', { count: 'exact' });
+          .select('count');
 
         if (error) {
           throw new Error(`Failed to delete from ${name}: ${error.message}`);
