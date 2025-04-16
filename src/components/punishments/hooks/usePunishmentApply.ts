@@ -2,19 +2,20 @@
 import { useState } from 'react';
 import { usePunishmentToast } from './usePunishmentToast';
 import { PunishmentHistoryItem } from '@/contexts/punishments/types';
+import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
 
 interface UsePunishmentApplyProps {
   id?: string;
   points: number;
-  applyPunishment?: (punishmentId: string, points: number) => Promise<PunishmentHistoryItem | void>;
 }
 
-export const usePunishmentApply = ({ id, points, applyPunishment }: UsePunishmentApplyProps) => {
+export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
   const [isApplying, setIsApplying] = useState(false);
   const toast = usePunishmentToast();
+  const { applyPunishment } = usePunishmentsQuery();
 
   const handlePunish = async () => {
-    if (!id || isApplying || !applyPunishment) return;
+    if (!id || isApplying) return;
     
     setIsApplying(true);
     try {

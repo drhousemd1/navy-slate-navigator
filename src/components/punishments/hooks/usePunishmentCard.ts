@@ -2,7 +2,6 @@
 import { usePunishmentHistory } from './usePunishmentHistory';
 import { usePunishmentApply } from './usePunishmentApply';
 import { usePunishmentEditor } from './usePunishmentEditor';
-import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
 
 interface UsePunishmentCardProps {
   id?: string;
@@ -10,9 +9,8 @@ interface UsePunishmentCardProps {
 }
 
 export const usePunishmentCard = ({ id, points }: UsePunishmentCardProps) => {
-  const { getPunishmentHistory, applyPunishment } = usePunishmentsQuery();
-  const history = usePunishmentHistory({ id, getPunishmentHistory });
-  const apply = usePunishmentApply({ id, points, applyPunishment });
+  const history = usePunishmentHistory({ id });
+  const apply = usePunishmentApply({ id, points });
   const editor = usePunishmentEditor({ id });
 
   const weekData = history.getWeekData();

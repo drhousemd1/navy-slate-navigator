@@ -2,16 +2,18 @@
 import { useMemo } from 'react';
 import { PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { generateMondayBasedWeekDates, convertToMondayBasedIndex } from '@/lib/utils';
+import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
 
 interface UsePunishmentHistoryProps {
   id?: string;
-  getPunishmentHistory?: (id: string) => PunishmentHistoryItem[];
 }
 
-export const usePunishmentHistory = ({ id, getPunishmentHistory }: UsePunishmentHistoryProps) => {
-  // If no getPunishmentHistory function is provided, return empty data
+export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
+  const { getPunishmentHistory } = usePunishmentsQuery();
+  
+  // Get punishment history for this specific punishment
   const punishmentHistory = useMemo(() => {
-    if (!id || !getPunishmentHistory) return [];
+    if (!id) return [];
     return getPunishmentHistory(id);
   }, [id, getPunishmentHistory]);
 
