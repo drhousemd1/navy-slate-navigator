@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -67,14 +66,12 @@ const PunishmentsContent: React.FC = () => {
     }
   };
 
-  // Calculate how many skeletons to show when loading
   const renderSkeletons = () => {
-    // If we already have some cards loaded, only show loading for missing ones
     const loadedCount = punishments.length;
     const remainingToLoad = Math.max(1, expectedCardCount - loadedCount);
     
     return Array.from({ length: remainingToLoad }).map((_, index) => (
-      <Skeleton key={`skeleton-${index}`} className="h-32 bg-navy animate-pulse rounded-lg" />
+      <Skeleton key={`skeleton-${index}`} className="h-32 animate-pulse rounded-lg invisible" />
     ));
   };
 
@@ -109,31 +106,30 @@ const PunishmentsContent: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Render already loaded punishments */}
           {punishments
             .filter(punishment => punishment.id && !String(punishment.id).startsWith('temp-'))
-            .map(punishment => (
-              <PunishmentCard
-                key={punishment.id}
-                id={punishment.id}
-                title={punishment.title}
-                description={punishment.description || ''}
-                points={punishment.points}
-                icon={getIconComponent(punishment.icon_name || 'Skull')}
-                icon_name={punishment.icon_name}
-                icon_color={punishment.icon_color}
-                title_color={punishment.title_color}
-                subtext_color={punishment.subtext_color}
-                calendar_color={punishment.calendar_color}
-                highlight_effect={punishment.highlight_effect}
-                background_image_url={punishment.background_image_url}
-                background_opacity={punishment.background_opacity}
-                focal_point_x={punishment.focal_point_x}
-                focal_point_y={punishment.focal_point_y}
-              />
+            .map((punishment, index) => (
+              <div key={punishment.id} className="slow-fade-in">
+                <PunishmentCard
+                  id={punishment.id}
+                  title={punishment.title}
+                  description={punishment.description || ''}
+                  points={punishment.points}
+                  icon={getIconComponent(punishment.icon_name || 'Skull')}
+                  icon_name={punishment.icon_name}
+                  icon_color={punishment.icon_color}
+                  title_color={punishment.title_color}
+                  subtext_color={punishment.subtext_color}
+                  calendar_color={punishment.calendar_color}
+                  highlight_effect={punishment.highlight_effect}
+                  background_image_url={punishment.background_image_url}
+                  background_opacity={punishment.background_opacity}
+                  focal_point_x={punishment.focal_point_x}
+                  focal_point_y={punishment.focal_point_y}
+                />
+              </div>
             ))}
           
-          {/* Show loading skeletons for remaining cards */}
           {loading && renderSkeletons()}
         </div>
       )}

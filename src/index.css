@@ -151,4 +151,15 @@
   .hide-scrollbar::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
   }
+  
+  /* Slow fade-in animation */
+  .slow-fade-in {
+    opacity: 0;
+    animation: slow-fade-in 2s ease-in forwards;
+  }
+  
+  @keyframes slow-fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
 }
