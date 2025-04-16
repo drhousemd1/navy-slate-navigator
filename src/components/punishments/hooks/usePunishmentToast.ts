@@ -1,7 +1,5 @@
 
 import { toast } from "@/hooks/use-toast";
-import { Skull } from "lucide-react";
-import React from "react";
 
 export const usePunishmentToast = () => {
   const showAppliedToast = (title: string, points: number) => {

@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from './types';
@@ -72,6 +72,7 @@ export const usePunishmentOperations = () => {
 
   const [loading, setLoading] = useState<boolean>(punishments.length === 0);
   const [error, setError] = useState<Error | null>(null);
+  const fetchingInProgressRef = useRef(false);
 
   // Update local storage with throttling to prevent quota errors
   const updatePunishments = useCallback((newPunishments: PunishmentData[]) => {
@@ -117,6 +118,18 @@ export const usePunishmentOperations = () => {
     });
   }, []);
 
+  const fetchPunishmentsBatch = async (offset: number, limit: number): Promise<PunishmentData[]> => {
+    const { data, error } = await supabase
+      .from('punishments')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .range(offset, offset + limit - 1)
+      .abortSignal(AbortSignal.timeout(5000));
+
+    if (error) throw error;
+    return data || [];
+  };
+
   const fetchPunishments = async () => {
     // If we already have cached data, don't show loading indicator
     const hasCache = punishments.length > 0;
@@ -126,25 +139,47 @@ export const usePunishmentOperations = () => {
       return;
     }
     
+    // Prevent concurrent fetches
+    if (fetchingInProgressRef.current) {
+      console.log('Fetching already in progress, skipping duplicate request');
+      return;
+    }
+    
+    fetchingInProgressRef.current = true;
+    
     if (!hasCache) {
       setLoading(true);
     }
 
     try {
-      // Fetch punishments from Supabase
-      const { data: punishmentsData, error: punishmentsError } = await supabase
-        .from('punishments')
-        .select('*')
-        .order('created_at', { ascending: true })
-        .abortSignal(AbortSignal.timeout(10000)); // Use AbortSignal instead of .timeout()
-      
-      if (punishmentsError) throw punishmentsError;
-      
-      if (punishmentsData) {
-        updatePunishments(punishmentsData);
+      // Clear existing punishments if we're doing a full refresh
+      if (!hasCache) {
+        updatePunishments([]);
       }
       
-      // Separately fetch punishment history with pagination
+      // Fetch punishments one by one with a small batch size to avoid timeouts
+      const batchSize = 1; // Fetch one at a time
+      let offset = 0;
+      let hasMore = true;
+      const allPunishments: PunishmentData[] = [...punishments];
+      
+      while (hasMore) {
+        const batch = await fetchPunishmentsBatch(offset, batchSize);
+        
+        if (batch.length > 0) {
+          // Add the new batch and update state incrementally
+          allPunishments.push(...batch);
+          updatePunishments([...allPunishments]);
+          offset += batch.length;
+        } else {
+          hasMore = false;
+        }
+        
+        // Add a small delay to avoid overwhelming the connection
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      
+      // Separately fetch punishment history
       const { data: historyData, error: historyError } = await supabase
         .from('punishment_history')
         .select('*')
@@ -178,6 +213,7 @@ export const usePunishmentOperations = () => {
       }
     } finally {
       setLoading(false);
+      fetchingInProgressRef.current = false;
     }
   };
 
