@@ -93,82 +93,83 @@ const Rules: React.FC = () => {
               <p className="text-white mb-4">No rules found. Create your first rule!</p>
             </div>
           ) : (
-            <div className="space-y-4 animate-fade-in">
+            <div className="space-y-4">
               {rules.map((rule) => (
-                <Card 
-                  key={rule.id}
-                  className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
-                >
-                  <div className="relative p-4">
-                    {rule.background_image_url && (
-                      <div 
-                        className="absolute inset-0 z-0" 
-                        style={{
-                          backgroundImage: `url(${rule.background_image_url})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
-                          opacity: (rule.background_opacity || 100) / 100
-                        }}
-                      />
-                    )}
-                    
-                    <div className="flex justify-between items-center mb-3 relative z-10">
-                      <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
-                        onClick={() => handleRuleBroken(rule)}
-                      >
-                        Rule Broken
-                      </Button>
-                    </div>
-                    
-                    <div className="mb-4 relative z-10">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-                          <Check className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1 flex flex-col">
-                          <div className="text-xl font-semibold">
-                            <HighlightedText
-                              text={rule.title}
-                              highlight={rule.highlight_effect}
-                              color={rule.title_color}
-                            />
+                <div key={rule.id} className="slow-fade-in">
+                  <Card 
+                    className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
+                  >
+                    <div className="relative p-4">
+                      {rule.background_image_url && (
+                        <div 
+                          className="absolute inset-0 z-0" 
+                          style={{
+                            backgroundImage: `url(${rule.background_image_url})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
+                            opacity: (rule.background_opacity || 100) / 100
+                          }}
+                        />
+                      )}
+                      
+                      <div className="flex justify-between items-center mb-3 relative z-10">
+                        <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
+                          onClick={() => handleRuleBroken(rule)}
+                        >
+                          Rule Broken
+                        </Button>
+                      </div>
+                      
+                      <div className="mb-4 relative z-10">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
+                            <Check className="w-6 h-6 text-white" />
                           </div>
-                          
-                          {rule.description && (
-                            <div className="text-sm mt-1">
+                          <div className="flex-1 flex flex-col">
+                            <div className="text-xl font-semibold">
                               <HighlightedText
-                                text={rule.description}
+                                text={rule.title}
                                 highlight={rule.highlight_effect}
-                                color={rule.subtext_color}
+                                color={rule.title_color}
                               />
                             </div>
-                          )}
+                            
+                            {rule.description && (
+                              <div className="text-sm mt-1">
+                                <HighlightedText
+                                  text={rule.description}
+                                  highlight={rule.highlight_effect}
+                                  color={rule.subtext_color}
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mt-2 relative z-10">
-                      <FrequencyTracker 
-                        frequency={rule.frequency}
-                        frequency_count={rule.frequency_count}
-                        calendar_color={rule.calendar_color}
-                        usage_data={rule.usage_data}
-                      />
                       
-                      <Button 
-                        size="sm" 
-                        className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
-                        onClick={() => handleEditRule(rule)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-between mt-2 relative z-10">
+                        <FrequencyTracker 
+                          frequency={rule.frequency}
+                          frequency_count={rule.frequency_count}
+                          calendar_color={rule.calendar_color}
+                          usage_data={rule.usage_data}
+                        />
+                        
+                        <Button 
+                          size="sm" 
+                          className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
+                          onClick={() => handleEditRule(rule)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+                </div>
               ))}
             </div>
           )}
