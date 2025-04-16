@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -9,7 +10,7 @@ import PunishmentEditor from '../components/PunishmentEditor';
 import { Button } from '@/components/ui/button';
 
 const PunishmentsContent: React.FC = () => {
-  const { punishments, loading, createPunishment, error } = usePunishments();
+  const { punishments, loading, createPunishment, updatePunishment, error } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const [initializing, setInitializing] = useState(false);
