@@ -1,13 +1,14 @@
 
 import { useState } from 'react';
-import { usePunishments, PunishmentData } from '@/contexts/PunishmentsContext';
+import { PunishmentData } from '@/contexts/punishments/types';
+import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
 
 interface UsePunishmentEditorProps {
   id?: string;
 }
 
 export const usePunishmentEditor = ({ id }: UsePunishmentEditorProps) => {
-  const { updatePunishment, deletePunishment } = usePunishments();
+  const { updatePunishment, deletePunishment } = usePunishmentsQuery();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   
   const handleEdit = () => {
