@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -72,6 +71,7 @@ export const usePunishmentOperations = () => {
 
   const [loading, setLoading] = useState<boolean>(punishments.length === 0);
   const [error, setError] = useState<Error | null>(null);
+  const [currentCardLoading, setCurrentCardLoading] = useState<boolean>(false);
 
   // Update local storage with throttling to prevent quota errors
   const updatePunishments = useCallback((newPunishments: PunishmentData[]) => {
@@ -117,6 +117,109 @@ export const usePunishmentOperations = () => {
     });
   }, []);
 
+  // Fetch a single punishment by ID
+  const fetchPunishmentById = async (id: string): Promise<PunishmentData | null> => {
+    try {
+      setCurrentCardLoading(true);
+      console.log("Fetching punishment with ID:", id);
+      
+      const { data, error } = await supabase
+        .from('punishments')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching single punishment:', error);
+        return null;
+      }
+      
+      return data;
+    } catch (err) {
+      console.error('Error in fetchPunishmentById:', err);
+      return null;
+    } finally {
+      setCurrentCardLoading(false);
+    }
+  };
+
+  // Fetch first punishment (or a specific one if ID is provided)
+  const fetchSinglePunishment = async (id?: string) => {
+    try {
+      setCurrentCardLoading(true);
+      
+      // Query for first punishment or specific one
+      const query = supabase
+        .from('punishments')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .limit(1);
+      
+      // If ID is provided, filter by that ID
+      const { data, error } = id 
+        ? await query.eq('id', id)
+        : await query;
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        // If we don't already have this punishment, add it
+        const exists = punishments.some(p => p.id === data[0].id);
+        if (!exists) {
+          updatePunishments([...punishments, data[0]]);
+        }
+        
+        console.log("Successfully fetched single punishment:", data[0].title);
+      }
+    } catch (err) {
+      console.error('Error fetching single punishment:', err);
+      setError(err instanceof Error ? err : new Error("Failed to fetch punishment"));
+    } finally {
+      setCurrentCardLoading(false);
+    }
+  };
+
+  // Load the next punishment that isn't already in the punishments array
+  const fetchNextPunishment = async () => {
+    if (currentCardLoading) return;
+    
+    try {
+      setCurrentCardLoading(true);
+      
+      // Get IDs of punishments we already have
+      const existingIds = punishments.map(p => p.id);
+      
+      // Query for a punishment we don't already have
+      const { data, error } = await supabase
+        .from('punishments')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .not('id', 'in', `(${existingIds.join(',')})`)
+        .limit(1);
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        updatePunishments([...punishments, data[0]]);
+        console.log("Successfully fetched next punishment:", data[0].title);
+        return data[0];
+      } else {
+        console.log("No more punishments to fetch");
+        return null;
+      }
+    } catch (err) {
+      console.error('Error fetching next punishment:', err);
+      setError(err instanceof Error ? err : new Error("Failed to fetch next punishment"));
+      return null;
+    } finally {
+      setCurrentCardLoading(false);
+    }
+  };
+
   const fetchPunishments = async () => {
     // If we already have cached data, don't show loading indicator
     const hasCache = punishments.length > 0;
@@ -131,18 +234,8 @@ export const usePunishmentOperations = () => {
     }
 
     try {
-      // Fetch punishments from Supabase
-      const { data: punishmentsData, error: punishmentsError } = await supabase
-        .from('punishments')
-        .select('*')
-        .order('created_at', { ascending: true })
-        .abortSignal(AbortSignal.timeout(10000)); // Use AbortSignal instead of .timeout()
-      
-      if (punishmentsError) throw punishmentsError;
-      
-      if (punishmentsData) {
-        updatePunishments(punishmentsData);
-      }
+      // Instead of loading all, just get the first punishment
+      await fetchSinglePunishment();
       
       // Separately fetch punishment history with pagination
       const { data: historyData, error: historyError } = await supabase
@@ -340,9 +433,13 @@ export const usePunishmentOperations = () => {
     punishments,
     punishmentHistory,
     loading,
+    currentCardLoading,
     error,
     totalPointsDeducted,
     fetchPunishments,
+    fetchSinglePunishment,
+    fetchNextPunishment,
+    fetchPunishmentById,
     createPunishment,
     updatePunishment,
     deletePunishment,

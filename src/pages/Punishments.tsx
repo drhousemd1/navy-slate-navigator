@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -10,11 +11,30 @@ import { Button } from '@/components/ui/button';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 const PunishmentsContent: React.FC = () => {
-  const { punishments, loading, createPunishment, updatePunishment, error } = usePunishments();
+  const { 
+    punishments, 
+    loading, 
+    currentCardLoading,
+    fetchSinglePunishment,
+    fetchNextPunishment,
+    createPunishment, 
+    updatePunishment, 
+    error 
+  } = usePunishments();
+  
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
+  // Initial load of first punishment
+  useEffect(() => {
+    if (punishments.length === 0 && !loading) {
+      fetchSinglePunishment();
+    }
+  }, [punishments.length, loading, fetchSinglePunishment]);
+
+  // Handle "Add New Punishment" event listener
   useEffect(() => {
     const handleAddNewPunishment = () => {
       handleAddNewPunishmentClick();
@@ -66,27 +86,36 @@ const PunishmentsContent: React.FC = () => {
     }
   };
 
-  if (loading) {
+  const handleLoadNextPunishment = async () => {
+    if (loadingMore || currentCardLoading) return;
+    
+    setLoadingMore(true);
+    try {
+      await fetchNextPunishment();
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  if (loading && punishments.length === 0) {
     return (
       <div className="space-y-4">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="h-32 bg-navy animate-pulse rounded-lg"></div>
-        ))}
+        <div className="h-32 bg-navy animate-pulse rounded-lg"></div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && punishments.length === 0) {
     return (
       <div className="text-center py-12 text-gray-400">
         <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
         <h3 className="text-xl font-semibold mb-2">Error Loading Punishments</h3>
         <p>{error.message || "There was a problem loading your punishments. Please try refreshing the page."}</p>
         <Button 
-          onClick={() => window.location.reload()} 
+          onClick={() => fetchSinglePunishment()} 
           className="mt-4 bg-navy hover:bg-light-navy"
         >
-          Refresh Page
+          Try Again
         </Button>
       </div>
     );
@@ -110,7 +139,7 @@ const PunishmentsContent: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" ref={containerRef}>
       {punishments
         .filter(punishment => punishment.id && !String(punishment.id).startsWith('temp-'))
         .map(punishment => (
@@ -134,6 +163,25 @@ const PunishmentsContent: React.FC = () => {
             />
           </ErrorBoundary>
         ))}
+        
+      {punishments.length > 0 && (
+        <div className="flex justify-center py-4">
+          <Button 
+            onClick={handleLoadNextPunishment}
+            disabled={loadingMore || currentCardLoading}
+            className="bg-navy hover:bg-light-navy"
+          >
+            {loadingMore || currentCardLoading ? "Loading..." : "Load Next Punishment"}
+          </Button>
+        </div>
+      )}
+      
+      <PunishmentEditor
+        isOpen={isEditorOpen}
+        onClose={() => setIsEditorOpen(false)}
+        punishmentData={currentPunishment}
+        onSave={handleSavePunishment}
+      />
     </div>
   );
 };
