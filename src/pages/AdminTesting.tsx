@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -205,13 +206,24 @@ const AdminTesting = () => {
   };
 
   const toggleReorderMode = () => {
+    console.log("Toggling reorder mode:", !isReorderMode);
     setIsReorderMode(!isReorderMode);
     if (isReorderMode) {
       saveCardOrder();
     }
   };
 
+  const onDragStart = () => {
+    console.log("Drag started");
+    // Add a class to the body to disable text selection during drag
+    document.body.classList.add('dragging-active');
+  };
+  
   const onDragEnd = (result: DropResult) => {
+    console.log("Drag ended:", result);
+    // Remove the drag class
+    document.body.classList.remove('dragging-active');
+    
     const { destination, source } = result;
 
     if (!destination || 
@@ -229,6 +241,7 @@ const AdminTesting = () => {
       order: index
     }));
 
+    console.log("Cards after reordering:", updatedCards);
     setCards(updatedCards);
   };
 
@@ -314,7 +327,7 @@ const AdminTesting = () => {
             <p>Unable to load cards. Please try refreshing the page.</p>
           </div>
         ) : (
-          <DragDropContext onDragEnd={onDragEnd}>
+          <DragDropContext onDragEnd={onDragEnd} onDragStart={onDragStart}>
             <Droppable droppableId="cards" isDropDisabled={!isReorderMode}>
               {(provided) => (
                 <div 
@@ -339,9 +352,9 @@ const AdminTesting = () => {
                             zIndex: snapshot.isDragging ? 9999 : 'auto'
                           }}
                           className={`
-                            ${snapshot.isDragging ? "opacity-80" : "opacity-100"} 
-                            ${isReorderMode ? "cursor-move touch-manipulation" : ""}
-                            relative
+                            ${snapshot.isDragging ? "dragging" : ""} 
+                            ${isReorderMode ? "draggable-card" : ""}
+                            relative transition-all duration-200
                           `}
                         >
                           <AdminTestingCard

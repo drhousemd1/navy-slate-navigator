@@ -165,13 +165,24 @@
 
   /* Drag and drop styles */
   .draggable-card {
-    cursor: move;
-    touch-action: none;
+    cursor: move !important;
+    touch-action: none !important;
+    user-select: none !important;
   }
   
   .dragging {
-    opacity: 0.8;
-    z-index: 9999;
-    pointer-events: auto;
+    opacity: 0.8 !important;
+    z-index: 9999 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+    transform: scale(1.02) !important;
+  }
+  
+  .drag-handle {
+    cursor: grab !important;
+    pointer-events: auto !important;
+  }
+  
+  .drag-handle:active {
+    cursor: grabbing !important;
   }
 }
