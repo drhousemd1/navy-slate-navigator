@@ -164,17 +164,15 @@
 
   /* Drag and drop styles */
   .dragging {
-    opacity: 0.7 !important;
-    z-index: 9999 !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
-    transform: scale(1.02) !important;
-    cursor: grabbing !important;
-    user-select: none !important;
+    opacity: 0.7;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    transform: scale(1.02);
+    z-index: 9999;
   }
   
-  /* Required for react-beautiful-dnd to work properly */
-  .dragging-active,
-  .dragging-active * {
+  /* When dragging is active, change cursor behavior */
+  body.dragging-active,
+  body.dragging-active * {
     cursor: grabbing !important;
     user-select: none !important;
   }
