@@ -116,41 +116,61 @@ export const useAdminCardData = ({
           // Cast data to our helper type to handle type conversions
           const supabaseData = data as SupabaseCardData;
           
-          // Transform data from Supabase to match our expected format
-          const savedCard = {
-            ...data,
-            // Ensure points is a number with fallback to default
-            points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
-            priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
-            background_images: Array.isArray(supabaseData.background_images) 
-              ? supabaseData.background_images 
-              : [],
-            usage_data: Array.isArray(supabaseData.usage_data) 
-              ? supabaseData.usage_data 
-              : [1, 2, 0, 3, 1, 0, 2]
-          };
+          // Extract usage data and ensure it's an array of numbers
+          let usageDataArray: number[] = [1, 2, 0, 3, 1, 0, 2]; // Default
           
-          console.log("Transformed card data:", savedCard);
-          
-          setCardData({
-            ...cardData,
-            ...savedCard
-          });
-          
-          // Set images from background_images or single background_image_url
-          let imageArray: string[] = [];
-          if (Array.isArray(savedCard.background_images)) {
-            imageArray = savedCard.background_images.filter(img => typeof img === 'string') as string[];
-          } else if (typeof savedCard.background_images === 'object' && savedCard.background_images !== null) {
-            // Try to convert JSON object to array if possible
-            const bgImages = (savedCard.background_images as unknown) as Json[];
-            if (Array.isArray(bgImages)) {
-              imageArray = bgImages.filter(item => typeof item === 'string') as string[];
+          if (supabaseData.usage_data) {
+            if (Array.isArray(supabaseData.usage_data)) {
+              // Convert all items to numbers
+              usageDataArray = supabaseData.usage_data.map(item => 
+                typeof item === 'number' ? item : 0
+              );
+            } else if (typeof supabaseData.usage_data === 'object') {
+              // Handle case where it might be an object with numeric values
+              usageDataArray = Object.values(supabaseData.usage_data as Record<string, unknown>)
+                .map(value => typeof value === 'number' ? value : 0);
             }
           }
           
-          if (imageArray.length === 0 && savedCard.background_image_url) {
-            imageArray = [savedCard.background_image_url];
+          // Extract background images
+          let backgroundImagesArray: string[] = [];
+          if (Array.isArray(supabaseData.background_images)) {
+            backgroundImagesArray = supabaseData.background_images
+              .filter(img => typeof img === 'string') as string[];
+          }
+          
+          // Transform data from Supabase to match our expected format
+          const transformedData: AdminTestingCardData = {
+            id: supabaseData.id,
+            title: supabaseData.title,
+            description: supabaseData.description || '',
+            priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
+            points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
+            background_image_url: supabaseData.background_image_url,
+            background_images: backgroundImagesArray,
+            background_opacity: supabaseData.background_opacity || 80,
+            focal_point_x: supabaseData.focal_point_x || 50,
+            focal_point_y: supabaseData.focal_point_y || 50,
+            title_color: supabaseData.title_color || '#FFFFFF',
+            subtext_color: supabaseData.subtext_color || '#8E9196',
+            calendar_color: supabaseData.calendar_color || '#7E69AB',
+            icon_url: supabaseData.icon_url,
+            icon_name: supabaseData.icon_name || '',
+            icon_color: supabaseData.icon_color || '#FFFFFF',
+            highlight_effect: supabaseData.highlight_effect || false,
+            usage_data: usageDataArray,
+            order: supabaseData.order || 0
+          };
+          
+          console.log("Transformed card data:", transformedData);
+          
+          setCardData(transformedData);
+          
+          // Set images from background_images or single background_image_url
+          let imageArray: string[] = backgroundImagesArray;
+          
+          if (imageArray.length === 0 && supabaseData.background_image_url) {
+            imageArray = [supabaseData.background_image_url];
           }
           
           console.log("Setting images array:", imageArray);
@@ -247,12 +267,8 @@ export const useAdminCardData = ({
 
   // Ensure usageData is always an array of numbers
   const usageData = Array.isArray(cardData.usage_data) 
-    ? cardData.usage_data as number[]
-    : typeof cardData.usage_data === 'object' && cardData.usage_data !== null
-      ? Object.values(cardData.usage_data).map(val => 
-          typeof val === 'number' ? val : 0
-        ) 
-      : [0, 0, 0, 0, 0, 0, 0];
+    ? cardData.usage_data 
+    : [0, 0, 0, 0, 0, 0, 0];
 
   return {
     cardData,
