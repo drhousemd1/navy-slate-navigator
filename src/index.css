@@ -163,15 +163,12 @@
   }
 
   /* Drag and drop styles */
-  .draggable-card {
-    cursor: move !important;
-  }
-  
   .dragging {
     opacity: 0.8 !important;
     z-index: 9999 !important;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
     transform: scale(1.02) !important;
+    cursor: grabbing !important;
   }
   
   /* Required for react-beautiful-dnd to work properly */

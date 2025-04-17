@@ -124,9 +124,14 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   return (
     <>
-      <Card className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}>
+      <Card 
+        className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}
+        data-testid="admin-card"
+      >
         {isReorderMode && (
-          <div className="absolute top-2 right-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center">
+          <div 
+            className="absolute top-2 right-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center"
+          >
             <MoveVertical className="h-4 w-4" />
           </div>
         )}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -215,11 +214,13 @@ const AdminTesting = () => {
 
   const onDragStart = (start: any) => {
     console.log("Drag started:", start);
+    document.body.style.cursor = 'grabbing';
     document.body.classList.add('dragging-active');
   };
   
   const onDragEnd = (result: DropResult) => {
     console.log("Drag ended:", result);
+    document.body.style.cursor = 'default';
     document.body.classList.remove('dragging-active');
     
     const { destination, source } = result;
@@ -289,6 +290,8 @@ const AdminTesting = () => {
     }
   };
 
+  console.log("Render admin testing page, reorder mode:", isReorderMode);
+
   return (
     <AppLayout>
       <div className="container mx-auto p-4">
@@ -328,8 +331,15 @@ const AdminTesting = () => {
             <p>Unable to load cards. Please try refreshing the page.</p>
           </div>
         ) : (
-          <DragDropContext onDragEnd={onDragEnd} onDragStart={onDragStart}>
-            <Droppable droppableId="cards" isDropDisabled={!isReorderMode}>
+          <DragDropContext 
+            onDragEnd={onDragEnd} 
+            onDragStart={onDragStart}
+          >
+            <Droppable 
+              droppableId="cards" 
+              isDropDisabled={!isReorderMode}
+              direction="horizontal"
+            >
               {(provided) => (
                 <div 
                   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -356,6 +366,8 @@ const AdminTesting = () => {
                             ${snapshot.isDragging ? "dragging" : ""} 
                             relative transition-all duration-200
                           `}
+                          data-is-dragging={snapshot.isDragging}
+                          data-reorder-mode={isReorderMode}
                         >
                           <AdminTestingCard
                             key={card.id}
