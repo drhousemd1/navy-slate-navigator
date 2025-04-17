@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -51,7 +50,6 @@ const AdminTesting = () => {
         setIsLoading(true);
         console.log("Fetching cards from Supabase...");
         
-        // Check if the supabase client is properly initialized
         if (!supabase) {
           console.error("Supabase client is not initialized!");
           toast({
@@ -102,7 +100,6 @@ const AdminTesting = () => {
           setCards(formattedCards);
         } else {
           console.log("No cards found in the database, creating a default card");
-          // If no cards are found, create a default one
           await handleAddCard();
         }
       } catch (error) {
@@ -146,7 +143,7 @@ const AdminTesting = () => {
       highlight_effect: false,
       usage_data: [0, 0, 0, 0, 0, 0, 0],
       background_images: [],
-      order: cards.length // Set order to the current length of cards array
+      order: cards.length
     };
     
     try {
@@ -210,7 +207,6 @@ const AdminTesting = () => {
   const toggleReorderMode = () => {
     setIsReorderMode(!isReorderMode);
     if (isReorderMode) {
-      // Save the current order when exiting reorder mode
       saveCardOrder();
     }
   };
@@ -218,7 +214,6 @@ const AdminTesting = () => {
   const onDragEnd = (result: DropResult) => {
     const { destination, source } = result;
 
-    // If dropped outside the list or no change in position
     if (!destination || 
         (destination.droppableId === source.droppableId && 
          destination.index === source.index)) {
@@ -229,7 +224,6 @@ const AdminTesting = () => {
     const [movedCard] = reorderedCards.splice(source.index, 1);
     reorderedCards.splice(destination.index, 0, movedCard);
 
-    // Update the order property for each card based on its new position
     const updatedCards = reorderedCards.map((card, index) => ({
       ...card,
       order: index
@@ -243,13 +237,11 @@ const AdminTesting = () => {
       setIsSavingOrder(true);
       console.log("Saving card order to database");
 
-      // Prepare updates for each card
       const updates = cards.map(card => ({
         id: card.id,
         order: card.order
       }));
 
-      // Update each card in the database
       for (const update of updates) {
         const { error } = await supabase
           .from('admin_testing_cards')
@@ -342,8 +334,15 @@ const AdminTesting = () => {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className={`${snapshot.isDragging ? "opacity-50" : "opacity-100"} 
-                                    ${isReorderMode ? "cursor-move transition-transform transform hover:scale-[1.01]" : ""}`}
+                          style={{
+                            ...provided.draggableProps.style,
+                            zIndex: snapshot.isDragging ? 9999 : 'auto'
+                          }}
+                          className={`
+                            ${snapshot.isDragging ? "opacity-80" : "opacity-100"} 
+                            ${isReorderMode ? "cursor-move touch-manipulation" : ""}
+                            relative
+                          `}
                         >
                           <AdminTestingCard
                             key={card.id}
@@ -368,7 +367,6 @@ const AdminTesting = () => {
           </DragDropContext>
         )}
         
-        {/* Activity Data Reset Section */}
         <div className="mt-12">
           <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Data Management</h2>
           <ActivityDataReset />

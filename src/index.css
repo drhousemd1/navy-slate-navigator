@@ -162,4 +162,16 @@
     0% { opacity: 0; }
     100% { opacity: 1; }
   }
+
+  /* Drag and drop styles */
+  .draggable-card {
+    cursor: move;
+    touch-action: none;
+  }
+  
+  .dragging {
+    opacity: 0.8;
+    z-index: 9999;
+    pointer-events: auto;
+  }
 }

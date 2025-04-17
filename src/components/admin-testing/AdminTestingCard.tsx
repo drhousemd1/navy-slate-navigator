@@ -126,11 +126,11 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     <>
       <Card className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}>
         {isReorderMode && (
-          <div className="absolute top-2 right-2 z-30 bg-amber-500 text-white p-1 rounded-md">
+          <div className="absolute top-2 right-2 z-30 bg-amber-500 text-white p-1 rounded-md flex items-center">
             <MoveVertical className="h-4 w-4" />
           </div>
         )}
-        <CardBackground
+        <CardBackground 
           visibleImage={visibleImage}
           transitionImage={transitionImage}
           isTransitioning={isTransitioning}
@@ -138,7 +138,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
           focalPointY={cardData.focal_point_y}
           backgroundOpacity={cardData.background_opacity}
         />
-        <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
+        <div className="relative z-20 flex flex-col p-4 md:p-6 h-full pointer-events-auto">
           <CardHeader priority={cardData.priority || priority} points={cardData.points || points} />
           <CardContent
             title={cardData.title}
