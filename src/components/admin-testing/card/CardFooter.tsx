@@ -18,7 +18,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
   isReorderMode = false
 }) => {
   return (
-    <div className={`flex items-center justify-between mt-auto pt-2 ${isReorderMode ? 'pointer-events-none' : 'pointer-events-auto'}`}>
+    <div className="flex items-center justify-between mt-auto pt-2">
       <WeeklyUsageTracker
         frequency="weekly"
         frequency_count={1}

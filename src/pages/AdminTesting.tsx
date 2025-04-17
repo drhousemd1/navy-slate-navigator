@@ -213,15 +213,13 @@ const AdminTesting = () => {
     }
   };
 
-  const onDragStart = () => {
-    console.log("Drag started");
-    // Add a class to the body to disable text selection during drag
+  const onDragStart = (start: any) => {
+    console.log("Drag started:", start);
     document.body.classList.add('dragging-active');
   };
   
   const onDragEnd = (result: DropResult) => {
     console.log("Drag ended:", result);
-    // Remove the drag class
     document.body.classList.remove('dragging-active');
     
     const { destination, source } = result;
@@ -229,9 +227,12 @@ const AdminTesting = () => {
     if (!destination || 
         (destination.droppableId === source.droppableId && 
          destination.index === source.index)) {
+      console.log("No valid destination or same position - skipping reorder");
       return;
     }
 
+    console.log(`Moving card from index ${source.index} to index ${destination.index}`);
+    
     const reorderedCards = Array.from(cards);
     const [movedCard] = reorderedCards.splice(source.index, 1);
     reorderedCards.splice(destination.index, 0, movedCard);
@@ -353,7 +354,6 @@ const AdminTesting = () => {
                           }}
                           className={`
                             ${snapshot.isDragging ? "dragging" : ""} 
-                            ${isReorderMode ? "draggable-card" : ""}
                             relative transition-all duration-200
                           `}
                         >

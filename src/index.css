@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -166,8 +165,6 @@
   /* Drag and drop styles */
   .draggable-card {
     cursor: move !important;
-    touch-action: none !important;
-    user-select: none !important;
   }
   
   .dragging {
@@ -177,12 +174,9 @@
     transform: scale(1.02) !important;
   }
   
-  .drag-handle {
-    cursor: grab !important;
-    pointer-events: auto !important;
-  }
-  
-  .drag-handle:active {
+  /* Required for react-beautiful-dnd to work properly */
+  .dragging-active {
     cursor: grabbing !important;
+    user-select: none !important;
   }
 }
