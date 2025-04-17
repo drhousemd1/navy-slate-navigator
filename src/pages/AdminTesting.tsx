@@ -5,10 +5,11 @@ import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
 import ActivityDataReset from '@/components/admin-testing/ActivityDataReset';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, MoveVertical } from 'lucide-react';
 import { AdminTestingCardData } from '@/components/admin-testing/defaultAdminTestingCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
 interface SupabaseCardData {
   id: string;
@@ -32,6 +33,7 @@ interface SupabaseCardData {
   created_at: string | null;
   updated_at: string | null;
   user_id: string | null;
+  order: number | null;
 }
 
 const AdminTesting = () => {
@@ -40,6 +42,8 @@ const AdminTesting = () => {
   const [carouselTimer, setCarouselTimer] = useState(5);
   const [isLoading, setIsLoading] = useState(true);
   const [cardsFetched, setCardsFetched] = useState(false);
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -60,7 +64,8 @@ const AdminTesting = () => {
 
         const { data, error } = await supabase
           .from('admin_testing_cards')
-          .select('*');
+          .select('*')
+          .order('order', { ascending: true });
         
         if (error) {
           console.error('Error fetching cards from Supabase:', error);
@@ -89,7 +94,8 @@ const AdminTesting = () => {
             icon_color: card.icon_color || '#FFFFFF',
             highlight_effect: card.highlight_effect || false,
             usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0],
-            background_images: Array.isArray(card.background_images) ? card.background_images : []
+            background_images: Array.isArray(card.background_images) ? card.background_images : [],
+            order: card.order || 0
           })) as AdminTestingCardData[];
           
           console.log("Formatted cards:", formattedCards);
@@ -139,7 +145,8 @@ const AdminTesting = () => {
       icon_color: '#FFFFFF',
       highlight_effect: false,
       usage_data: [0, 0, 0, 0, 0, 0, 0],
-      background_images: []
+      background_images: [],
+      order: cards.length // Set order to the current length of cards array
     };
     
     try {
@@ -171,7 +178,8 @@ const AdminTesting = () => {
         ...data,
         priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
         points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
-        background_images: Array.isArray(supabaseData.background_images) ? supabaseData.background_images : []
+        background_images: Array.isArray(supabaseData.background_images) ? supabaseData.background_images : [],
+        order: supabaseData.order || cards.length
       } as AdminTestingCardData;
       
       setCards(prevCards => [...prevCards, formattedCard]);
@@ -199,6 +207,82 @@ const AdminTesting = () => {
     ));
   };
 
+  const toggleReorderMode = () => {
+    setIsReorderMode(!isReorderMode);
+    if (isReorderMode) {
+      // Save the current order when exiting reorder mode
+      saveCardOrder();
+    }
+  };
+
+  const onDragEnd = (result: DropResult) => {
+    const { destination, source } = result;
+
+    // If dropped outside the list or no change in position
+    if (!destination || 
+        (destination.droppableId === source.droppableId && 
+         destination.index === source.index)) {
+      return;
+    }
+
+    const reorderedCards = Array.from(cards);
+    const [movedCard] = reorderedCards.splice(source.index, 1);
+    reorderedCards.splice(destination.index, 0, movedCard);
+
+    // Update the order property for each card based on its new position
+    const updatedCards = reorderedCards.map((card, index) => ({
+      ...card,
+      order: index
+    }));
+
+    setCards(updatedCards);
+  };
+
+  const saveCardOrder = async () => {
+    try {
+      setIsSavingOrder(true);
+      console.log("Saving card order to database");
+
+      // Prepare updates for each card
+      const updates = cards.map(card => ({
+        id: card.id,
+        order: card.order
+      }));
+
+      // Update each card in the database
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('admin_testing_cards')
+          .update({ order: update.order })
+          .eq('id', update.id);
+
+        if (error) {
+          console.error('Error updating card order:', error);
+          toast({
+            title: "Error",
+            description: `Failed to save card order: ${error.message}`,
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: "Card order saved successfully",
+      });
+    } catch (error) {
+      console.error('Error in saveCardOrder:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while saving card order",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="container mx-auto p-4">
@@ -209,10 +293,18 @@ const AdminTesting = () => {
           <p>This page is for testing admin functionality only.</p>
         </div>
         
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-end gap-2 mb-6">
+          <Button 
+            onClick={toggleReorderMode}
+            className={isReorderMode ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}
+          >
+            <MoveVertical className="mr-2 h-4 w-4" />
+            {isReorderMode ? "Save Order" : "Reorder Cards"}
+          </Button>
           <Button 
             onClick={handleAddCard}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            disabled={isReorderMode}
           >
             <Plus className="mr-2 h-4 w-4" />
             Add New Card
@@ -230,21 +322,50 @@ const AdminTesting = () => {
             <p>Unable to load cards. Please try refreshing the page.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cards.map(card => (
-              <AdminTestingCard
-                key={card.id}
-                card={card}
-                id={card.id}
-                title={card.title}
-                description={card.description}
-                priority={card.priority}
-                points={card.points}
-                globalCarouselIndex={globalCarouselIndex}
-                onUpdate={handleUpdateCard}
-              />
-            ))}
-          </div>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="cards" isDropDisabled={!isReorderMode}>
+              {(provided) => (
+                <div 
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                >
+                  {cards.map((card, index) => (
+                    <Draggable 
+                      key={card.id} 
+                      draggableId={card.id} 
+                      index={index}
+                      isDragDisabled={!isReorderMode}
+                    >
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          className={`${snapshot.isDragging ? "opacity-50" : "opacity-100"} 
+                                    ${isReorderMode ? "cursor-move transition-transform transform hover:scale-[1.01]" : ""}`}
+                        >
+                          <AdminTestingCard
+                            key={card.id}
+                            card={card}
+                            id={card.id}
+                            title={card.title}
+                            description={card.description}
+                            priority={card.priority}
+                            points={card.points}
+                            globalCarouselIndex={globalCarouselIndex}
+                            onUpdate={handleUpdateCard}
+                            isReorderMode={isReorderMode}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         )}
         
         {/* Activity Data Reset Section */}

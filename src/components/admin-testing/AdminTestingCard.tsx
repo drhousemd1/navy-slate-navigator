@@ -12,6 +12,7 @@ import { renderCardIcon } from '@/components/admin-testing/utils/renderCardIcon'
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { AdminTestingCardData } from "./defaultAdminTestingCards";
+import { MoveVertical } from 'lucide-react';
 
 export interface AdminTestingCardProps {
   title: string;
@@ -23,6 +24,7 @@ export interface AdminTestingCardProps {
   globalCarouselIndex: number;
   onUpdate?: (updated: AdminTestingCardData) => void;
   card?: AdminTestingCardData;
+  isReorderMode?: boolean;
 }
 
 const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
@@ -34,7 +36,8 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   points = 5,
   globalCarouselIndex,
   onUpdate,
-  card
+  card,
+  isReorderMode = false
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
@@ -62,7 +65,12 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     isTransitioning
   } = useImageCarousel({ images, globalCarouselIndex });
 
-  const handleOpenEditModal = () => setIsEditModalOpen(true);
+  const handleOpenEditModal = () => {
+    if (!isReorderMode) {
+      setIsEditModalOpen(true);
+    }
+  };
+  
   const handleCloseEditModal = () => setIsEditModalOpen(false);
 
   const iconComponent = renderCardIcon({
@@ -116,7 +124,12 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   return (
     <>
-      <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
+      <Card className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}>
+        {isReorderMode && (
+          <div className="absolute top-2 right-2 z-30 bg-amber-500 text-white p-1 rounded-md">
+            <MoveVertical className="h-4 w-4" />
+          </div>
+        )}
         <CardBackground
           visibleImage={visibleImage}
           transitionImage={transitionImage}
@@ -139,6 +152,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
             calendarColor={cardData.calendar_color || '#7E69AB'}
             usageData={usageData}
             onEditClick={handleOpenEditModal}
+            isReorderMode={isReorderMode}
           />
         </div>
       </Card>

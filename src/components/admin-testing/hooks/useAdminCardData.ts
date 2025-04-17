@@ -15,6 +15,7 @@ interface UseAdminCardDataProps {
   icon_name?: string;
   background_images?: string[];
   background_image_url?: string;
+  order?: number;
 }
 
 interface UseAdminCardDataResult {
@@ -47,6 +48,7 @@ interface SupabaseCardData {
   created_at: string | null;
   updated_at: string | null;
   user_id: string | null;
+  order: number | null;
 }
 
 export const useAdminCardData = ({
@@ -58,7 +60,8 @@ export const useAdminCardData = ({
   icon_url,
   icon_name,
   background_images = [],
-  background_image_url
+  background_image_url,
+  order = 0
 }: UseAdminCardDataProps): UseAdminCardDataResult => {
   const [cardData, setCardData] = useState<AdminTestingCardData>({
     id,
@@ -78,7 +81,8 @@ export const useAdminCardData = ({
     calendar_color: '#7E69AB',
     icon_color: '#FFFFFF',
     highlight_effect: false,
-    usage_data: [1, 2, 0, 3, 1, 0, 2]
+    usage_data: [1, 2, 0, 3, 1, 0, 2],
+    order
   });
 
   const [images, setImages] = useState<string[]>([]);
@@ -208,8 +212,9 @@ export const useAdminCardData = ({
         .from('admin_testing_cards')
         .upsert({
           ...newCardData,
-          // Explicitly add points to ensure it's included in the upsert
-          points: typeof newCardData.points === 'number' ? newCardData.points : 0
+          // Explicitly add points and order to ensure they're included in the upsert
+          points: typeof newCardData.points === 'number' ? newCardData.points : 0,
+          order: typeof newCardData.order === 'number' ? newCardData.order : 0
         }, { 
           onConflict: 'id',
           ignoreDuplicates: false 

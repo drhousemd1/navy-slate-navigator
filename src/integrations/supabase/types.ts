@@ -24,6 +24,7 @@ export type Database = {
           icon_name: string | null
           icon_url: string | null
           id: string
+          order: number | null
           points: number | null
           priority: string | null
           subtext_color: string | null
@@ -47,6 +48,7 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id: string
+          order?: number | null
           points?: number | null
           priority?: string | null
           subtext_color?: string | null
@@ -70,6 +72,7 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id?: string
+          order?: number | null
           points?: number | null
           priority?: string | null
           subtext_color?: string | null
