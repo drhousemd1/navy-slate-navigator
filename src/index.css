@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -169,10 +170,12 @@
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
     transform: scale(1.02) !important;
     cursor: grabbing !important;
+    user-select: none !important;
   }
   
   /* Required for react-beautiful-dnd to work properly */
-  .dragging-active {
+  .dragging-active,
+  .dragging-active * {
     cursor: grabbing !important;
     user-select: none !important;
   }

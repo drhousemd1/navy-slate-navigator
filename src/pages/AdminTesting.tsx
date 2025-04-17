@@ -342,7 +342,7 @@ const AdminTesting = () => {
             >
               {(provided) => (
                 <div 
-                  className="flex flex-col gap-6 w-full"
+                  className="vertical-draggable"
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                 >
@@ -360,6 +360,7 @@ const AdminTesting = () => {
                           {...provided.dragHandleProps}
                           style={{
                             ...provided.draggableProps.style,
+                            userSelect: 'none',
                             zIndex: snapshot.isDragging ? 9999 : 'auto'
                           }}
                           className={`
@@ -369,22 +370,18 @@ const AdminTesting = () => {
                           data-is-dragging={snapshot.isDragging}
                           data-reorder-mode={isReorderMode}
                         >
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full">
-                            <div className="col-span-1">
-                              <AdminTestingCard
-                                key={card.id}
-                                card={card}
-                                id={card.id}
-                                title={card.title}
-                                description={card.description}
-                                priority={card.priority}
-                                points={card.points}
-                                globalCarouselIndex={globalCarouselIndex}
-                                onUpdate={handleUpdateCard}
-                                isReorderMode={isReorderMode}
-                              />
-                            </div>
-                          </div>
+                          <AdminTestingCard
+                            key={card.id}
+                            card={card}
+                            id={card.id}
+                            title={card.title}
+                            description={card.description}
+                            priority={card.priority}
+                            points={card.points}
+                            globalCarouselIndex={globalCarouselIndex}
+                            onUpdate={handleUpdateCard}
+                            isReorderMode={isReorderMode}
+                          />
                         </div>
                       )}
                     </Draggable>

@@ -127,10 +127,12 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
       <Card 
         className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}
         data-testid="admin-card"
+        style={{ userSelect: isReorderMode ? 'none' : 'auto' }}
       >
         {isReorderMode && (
           <div 
             className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center"
+            style={{ userSelect: 'none' }}
           >
             <MoveVertical className="h-4 w-4 mr-1" /> 
             <span className="text-xs">Drag to reorder</span>
