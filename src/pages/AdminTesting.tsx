@@ -342,7 +342,7 @@ const AdminTesting = () => {
             >
               {(provided) => (
                 <div 
-                  className="vertical-draggable"
+                  className="flex flex-col gap-6 w-full"
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                 >
@@ -360,15 +360,9 @@ const AdminTesting = () => {
                           {...provided.dragHandleProps}
                           style={{
                             ...provided.draggableProps.style,
-                            userSelect: 'none',
-                            zIndex: snapshot.isDragging ? 9999 : 'auto'
+                            userSelect: 'none'
                           }}
-                          className={`
-                            ${snapshot.isDragging ? "dragging" : ""} 
-                            relative transition-all duration-200 w-full
-                          `}
-                          data-is-dragging={snapshot.isDragging}
-                          data-reorder-mode={isReorderMode}
+                          className={snapshot.isDragging ? "dragging" : ""}
                         >
                           <AdminTestingCard
                             key={card.id}
