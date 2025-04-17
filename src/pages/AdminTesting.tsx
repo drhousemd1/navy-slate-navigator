@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -213,8 +212,8 @@ const AdminTesting = () => {
     }
   };
 
-  const onDragStart = (start: any) => {
-    console.log("Drag started:", start);
+  const onDragStart = () => {
+    console.log("Drag started");
     document.body.style.cursor = 'grabbing';
     document.body.classList.add('dragging-active');
   };
@@ -359,28 +358,24 @@ const AdminTesting = () => {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
+                          className={snapshot.isDragging ? 'dragging' : ''}
                           style={{
                             ...provided.draggableProps.style,
                             userSelect: 'none'
                           }}
                         >
-                          <div className={`
-                            transition-opacity duration-500 ease-out 
-                            ${snapshot.isDragging ? 'opacity-70' : 'opacity-100'}
-                          `}>
-                            <AdminTestingCard
-                              key={card.id}
-                              card={card}
-                              id={card.id}
-                              title={card.title}
-                              description={card.description}
-                              priority={card.priority}
-                              points={card.points}
-                              globalCarouselIndex={globalCarouselIndex}
-                              onUpdate={handleUpdateCard}
-                              isReorderMode={isReorderMode}
-                            />
-                          </div>
+                          <AdminTestingCard
+                            key={card.id}
+                            card={card}
+                            id={card.id}
+                            title={card.title}
+                            description={card.description}
+                            priority={card.priority}
+                            points={card.points}
+                            globalCarouselIndex={globalCarouselIndex}
+                            onUpdate={handleUpdateCard}
+                            isReorderMode={isReorderMode}
+                          />
                         </div>
                       )}
                     </Draggable>

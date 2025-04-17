@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
@@ -82,7 +81,6 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   const handleDeleteCard = async (cardId: string) => {
     try {
-      // Delete from Supabase
       const { error } = await supabase
         .from('admin_testing_cards')
         .delete()
@@ -98,13 +96,11 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         return;
       }
       
-      // Notify about the deletion
       toast({
         title: "Card Deleted",
         description: "The admin testing card has been deleted",
       });
       
-      // Close the modal
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Error deleting card:", error);
@@ -118,7 +114,6 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   const handleCarouselTimerChange = (newValue: number) => {
     setCarouselTimer(newValue);
-    // Store carousel timer in localStorage for now as it's a global setting
     localStorage.setItem("adminTestingCards_carouselTimer", newValue.toString());
   };
 
@@ -127,12 +122,10 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
       <Card 
         className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}
         data-testid="admin-card"
-        style={{ userSelect: isReorderMode ? 'none' : 'auto' }}
       >
         {isReorderMode && (
           <div 
             className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center"
-            style={{ userSelect: 'none' }}
           >
             <MoveVertical className="h-4 w-4 mr-1" /> 
             <span className="text-xs">Drag to reorder</span>
