@@ -40,8 +40,3 @@
 .read-the-docs {
   color: #888;
 }
-/* Prevent any text highlighting during drag */
-.dragging-active,
-.dragging-active * {
-  user-select: none;
-}
