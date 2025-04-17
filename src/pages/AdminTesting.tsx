@@ -207,7 +207,11 @@ const AdminTesting = () => {
   const toggleReorderMode = () => {
     console.log("Toggling reorder mode:", !isReorderMode);
     setIsReorderMode(!isReorderMode);
-    if (isReorderMode) {
+    
+    if (!isReorderMode) {
+      document.body.classList.add('dragging-active');
+    } else {
+      document.body.classList.remove('dragging-active');
       saveCardOrder();
     }
   };
@@ -215,13 +219,11 @@ const AdminTesting = () => {
   const onDragStart = () => {
     console.log("Drag started");
     document.body.style.cursor = 'grabbing';
-    document.body.classList.add('dragging-active');
   };
   
   const onDragEnd = (result: DropResult) => {
     console.log("Drag ended:", result);
     document.body.style.cursor = 'default';
-    document.body.classList.remove('dragging-active');
     
     const { destination, source } = result;
 
@@ -235,7 +237,9 @@ const AdminTesting = () => {
     console.log(`Moving card from index ${source.index} to index ${destination.index}`);
     
     const reorderedCards = Array.from(cards);
+    
     const [movedCard] = reorderedCards.splice(source.index, 1);
+    
     reorderedCards.splice(destination.index, 0, movedCard);
 
     const updatedCards = reorderedCards.map((card, index) => ({
@@ -336,7 +340,7 @@ const AdminTesting = () => {
             onDragStart={onDragStart}
           >
             <Droppable 
-              droppableId="cards" 
+              droppableId="admin-cards" 
               isDropDisabled={!isReorderMode}
               direction="vertical"
             >
