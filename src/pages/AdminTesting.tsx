@@ -400,11 +400,16 @@ const AdminTesting = () => {
                             dragHandleProps={provided.dragHandleProps}
                             dragStyle={provided.draggableProps.style}
                             isDragging={snapshot.isDragging}
+                            key={card.id}
                             card={card}
                             id={card.id}
                             title={card.title}
                             description={card.description}
-                            reorderMode={isReorderMode}
+                            priority={card.priority}
+                            points={card.points}
+                            globalCarouselIndex={globalCarouselIndex}
+                            onUpdate={handleUpdateCard}
+                            isReorderMode={isReorderMode}
                           />
                         )}
                       </Draggable>
