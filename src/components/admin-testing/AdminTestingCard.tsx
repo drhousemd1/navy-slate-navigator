@@ -1,3 +1,4 @@
+
 import React, { useState, forwardRef } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
@@ -133,8 +134,8 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
         {...dragHandleProps}
         style={dragStyle}
         className={`relative overflow-hidden border-2 ${
-          isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
-        } bg-navy min-h-[200px] transition-all ${isDragging ? 'shadow-xl opacity-90' : ''}`}
+          isReorderMode ? 'border-amber-500 cursor-grab active:cursor-grabbing' : 'border-[#00f0ff]'
+        } bg-navy min-h-[200px] ${isDragging ? 'shadow-xl opacity-90 z-10' : ''}`}
         data-testid="admin-card"
         data-card-id={id}
       >

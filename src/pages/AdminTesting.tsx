@@ -255,9 +255,6 @@ const AdminTesting = () => {
     console.log("Drag started:", result);
     setIsDragging(true);
     draggedItemId.current = result.draggableId;
-    
-    lockBody();
-    
     document.body.classList.add('dragging-active');
   };
 
@@ -265,18 +262,10 @@ const AdminTesting = () => {
     console.log("Drag ended:", result);
     setIsDragging(false);
     draggedItemId.current = null;
-    
-    unlockBody();
-    
     document.body.classList.remove('dragging-active');
 
-    if (!result.destination) {
-      return;
-    }
-
-    if (result.destination.index === result.source.index) {
-      return;
-    }
+    if (!result.destination) return;
+    if (result.destination.index === result.source.index) return;
 
     const reordered = Array.from(cards);
     const [removed] = reordered.splice(result.source.index, 1);
@@ -288,10 +277,7 @@ const AdminTesting = () => {
     }));
 
     setCards(updatedCards);
-    
-    if (isReorderMode) {
-      saveCardOrder();
-    }
+    if (isReorderMode) saveCardOrder();
   };
 
   const saveCardOrder = async () => {
@@ -339,35 +325,6 @@ const AdminTesting = () => {
 
   console.log("Render admin testing page, reorder mode:", isReorderMode);
 
-  const handleDragStart = (start: DragStart) => {
-    setIsDragging(true);
-    draggedItemId.current = start.draggableId;
-    document.body.style.cursor = 'grabbing';
-    document.body.classList.add('dragging-active');
-  };
-
-  const handleDragEnd = (result: DropResult) => {
-    setIsDragging(false);
-    draggedItemId.current = null;
-    document.body.style.cursor = '';
-    document.body.classList.remove('dragging-active');
-
-    if (!result.destination) return;
-    if (result.destination.index === result.source.index) return;
-
-    const reordered = Array.from(cards);
-    const [removed] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, removed);
-
-    const updatedCards = reordered.map((card, index) => ({
-      ...card,
-      order: index
-    }));
-
-    setCards(updatedCards);
-    if (isReorderMode) saveCardOrder();
-  };
-
   return (
     <AppLayout>
       <div className="container mx-auto p-4">
@@ -404,8 +361,8 @@ const AdminTesting = () => {
           </div>
         ) : (
           <DragDropContext
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
           >
             <Droppable droppableId="admin-cards">
               {(provided, snapshot) => (
