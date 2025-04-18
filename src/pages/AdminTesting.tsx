@@ -8,7 +8,7 @@ import { Plus, MoveVertical } from 'lucide-react';
 import { AdminTestingCardData } from '@/components/admin-testing/defaultAdminTestingCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 interface SupabaseCardData {
   id: string;
