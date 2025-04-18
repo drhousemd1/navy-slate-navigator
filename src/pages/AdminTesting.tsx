@@ -219,11 +219,15 @@ const AdminTesting = () => {
   const onDragStart = () => {
     console.log("Drag started");
     document.body.style.cursor = 'grabbing';
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
   };
   
   const onDragEnd = (result: DropResult) => {
     console.log("Drag ended:", result);
     document.body.style.cursor = 'default';
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
     
     if (!result.destination) {
       console.log("No valid destination - skipping reorder");
