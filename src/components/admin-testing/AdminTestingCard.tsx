@@ -3,6 +3,9 @@ import React, { useRef, useLayoutEffect, useState } from 'react';
 
 interface Props {
   card: any;
+  id: string;
+  title: string;
+  description: string;
   reorderMode: boolean;
   isDragging?: boolean;
   draggableProps?: any;
@@ -15,9 +18,11 @@ const AdminTestingCard = React.forwardRef<HTMLDivElement, Props>(
     const internalRef = useRef<HTMLDivElement>(null);
     const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
 
+    // Measure the card's height when reorderMode toggles (prevents jump)
     useLayoutEffect(() => {
       if (internalRef.current) {
-        setMeasuredHeight(internalRef.current.getBoundingClientRect().height);
+        const height = internalRef.current.getBoundingClientRect().height;
+        setMeasuredHeight(height);
       }
     }, [card, reorderMode]);
 
@@ -36,14 +41,17 @@ const AdminTestingCard = React.forwardRef<HTMLDivElement, Props>(
         }}
         className={`card relative w-full ${reorderMode ? 'border-2 border-orange-400' : ''}`}
       >
+        {/* Drag Banner */}
         {reorderMode && (
           <div className="drag-banner pointer-events-none absolute top-0 left-0 w-full h-6 bg-orange-500 text-xs text-white flex items-center px-2 z-10">
             ⬍ Drag to reorder
           </div>
         )}
+
+        {/* Card Content */}
         <div className="p-4 pt-8">
-          <h3 className="text-lg font-bold text-white">New Card</h3>
-          <p className="text-sm text-gray-300">This is a new admin testing card.</p>
+          <h3 className="text-lg font-bold text-white">{card.title || 'New Card'}</h3>
+          <p className="text-sm text-gray-300">{card.description || 'This is a new admin testing card.'}</p>
         </div>
       </div>
     );
@@ -51,3 +59,4 @@ const AdminTestingCard = React.forwardRef<HTMLDivElement, Props>(
 );
 
 export default AdminTestingCard;
+
