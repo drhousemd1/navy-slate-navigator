@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
 import ActivityDataReset from '@/components/admin-testing/ActivityDataReset';
@@ -35,29 +35,36 @@ interface SupabaseCardData {
   order: number | null;
 }
 
-let scrollY = 0;
-const preventTouchMove = (e: TouchEvent) => e.preventDefault();
-
+// Improved body locking mechanism
 const lockBody = () => {
-  scrollY = window.scrollY;
-  document.body.style.position = 'fixed';
+  const scrollY = window.scrollY;
+  document.body.classList.add('body-fixed');
   document.body.style.top = `-${scrollY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.width = '100%';
-  document.body.style.overflow = 'hidden';
-  document.body.style.touchAction = 'none';
+  
+  // Prevent touch events from causing scroll during drag
+  document.addEventListener('touchmove', preventTouchMove, { passive: false });
 };
 
 const unlockBody = () => {
-  document.body.style.position = '';
+  const scrollY = Math.abs(parseInt(document.body.style.top || '0', 10));
+  document.body.classList.remove('body-fixed');
   document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.width = '';
-  document.body.style.overflow = '';
-  document.body.style.touchAction = '';
-  window.scrollTo(0, scrollY);
+  
+  // Re-enable touch events
+  document.removeEventListener('touchmove', preventTouchMove);
+  
+  // Restore scroll position
+  window.scrollTo({
+    top: scrollY,
+    behavior: 'auto'
+  });
+};
+
+const preventTouchMove = (e: TouchEvent) => {
+  // Only prevent default on non-scrollable elements
+  if (!(e.target as HTMLElement).closest('.scrollable')) {
+    e.preventDefault();
+  }
 };
 
 const AdminTesting = () => {
@@ -68,6 +75,8 @@ const AdminTesting = () => {
   const [cardsFetched, setCardsFetched] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const draggedItemId = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -233,29 +242,48 @@ const AdminTesting = () => {
 
   const toggleReorderMode = () => {
     console.log("Toggling reorder mode:", !isReorderMode);
-    setIsReorderMode(!isReorderMode);
     
-    if (!isReorderMode) {
-      document.body.classList.add('dragging-active');
-    } else {
+    if (isReorderMode) {
       document.body.classList.remove('dragging-active');
       saveCardOrder();
+    } else {
+      document.body.classList.add('dragging-active');
     }
+    
+    setIsReorderMode(!isReorderMode);
   };
 
-  const onDragStart = () => {
-    console.log("Drag started");
-    document.body.style.cursor = 'grabbing';
+  const onDragStart = (result: any) => {
+    const { draggableId } = result;
+    console.log("Drag started for item:", draggableId);
+    
+    // Lock the body to prevent scrolling
     lockBody();
+    setIsDragging(true);
+    draggedItemId.current = draggableId;
+    
+    // Add grabbing class for better cursor handling
+    document.body.classList.add('grabbing');
   };
   
   const onDragEnd = (result: DropResult) => {
     console.log("Drag ended:", result);
-    document.body.style.cursor = 'default';
-    unlockBody();
     
+    // Unlock the body and reset states
+    unlockBody();
+    setIsDragging(false);
+    draggedItemId.current = null;
+    document.body.classList.remove('grabbing');
+    
+    // Skip if no destination
     if (!result.destination) {
       console.log("No valid destination - skipping reorder");
+      return;
+    }
+
+    // Only process if position actually changed
+    if (result.destination.index === result.source.index) {
+      console.log("Position unchanged - skipping reorder");
       return;
     }
 
@@ -367,9 +395,9 @@ const AdminTesting = () => {
               isDropDisabled={!isReorderMode}
               direction="vertical"
             >
-              {(provided) => (
+              {(provided, snapshot) => (
                 <div 
-                  className="flex flex-col gap-6 w-full"
+                  className={`flex flex-col gap-6 w-full ${snapshot.isDraggingOver ? 'is-dragging-over' : ''}`}
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                 >
@@ -385,7 +413,14 @@ const AdminTesting = () => {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          style={{...provided.draggableProps.style}}
+                          className={`transition-all duration-200 ${snapshot.isDragging ? 'dragging z-50' : ''}`}
+                          style={{
+                            ...provided.draggableProps.style,
+                            // Prevent horizontal movement when dragging
+                            transform: provided.draggableProps.style?.transform
+                              ? provided.draggableProps.style.transform.replace(/translate\((-?\d+)px,\s*(-?\d+)px\)/, (_, __, y) => `translate(0px, ${y}px)`)
+                              : undefined,
+                          }}
                         >
                           <AdminTestingCard
                             key={card.id}
@@ -403,7 +438,9 @@ const AdminTesting = () => {
                       )}
                     </Draggable>
                   ))}
-                  {provided.placeholder}
+                  {provided.placeholder && (
+                    <div className="drag-placeholder h-32"></div>
+                  )}
                 </div>
               )}
             </Droppable>
