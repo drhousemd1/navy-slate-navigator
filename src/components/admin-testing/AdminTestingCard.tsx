@@ -1,4 +1,5 @@
-import React, { useState, forwardRef, useEffect, useRef } from 'react';
+
+import React, { useState, forwardRef, useLayoutEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
 import CardBackground from '@/components/admin-testing/card/CardBackground';
@@ -49,7 +50,7 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
   const cardRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState<number | null>(null);
+  const heightRef = useRef<number | null>(null);
 
   const {
     cardData,
@@ -74,10 +75,11 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
     isTransitioning
   } = useImageCarousel({ images, globalCarouselIndex });
 
-  useEffect(() => {
+  // Use useLayoutEffect to measure height before browser paint
+  useLayoutEffect(() => {
     if (cardRef.current) {
-      const measuredHeight = cardRef.current.getBoundingClientRect().height;
-      setHeight(measuredHeight);
+      const height = cardRef.current.getBoundingClientRect().height;
+      heightRef.current = height;
     }
   }, [cardData, isReorderMode]);
 
@@ -146,9 +148,12 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
         {...dragHandleProps}
         style={{
           ...dragStyle,
-          height: isDragging ? height || 'auto' : 'auto',
+          height: isDragging ? `${heightRef.current}px` : undefined,
+          transition: isDragging ? 'none' : undefined
         }}
-        className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy ${isDragging ? 'dragging' : ''}`}
+        className={`relative overflow-hidden border-2 ${
+          isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
+        } bg-navy ${isDragging ? 'dragging' : ''}`}
         data-testid="admin-card"
         data-card-id={id}
       >
