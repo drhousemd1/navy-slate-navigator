@@ -339,6 +339,33 @@ const AdminTesting = () => {
 
   console.log("Render admin testing page, reorder mode:", isReorderMode);
 
+  const handleDragStart = (start: DragStart) => {
+    setIsDragging(true);
+    draggedItemId.current = start.draggableId;
+    document.body.classList.add('dragging-active');
+  };
+
+  const handleDragEnd = (result: DropResult) => {
+    setIsDragging(false);
+    draggedItemId.current = null;
+    document.body.classList.remove('dragging-active');
+
+    if (!result.destination) return;
+    if (result.destination.index === result.source.index) return;
+
+    const reordered = Array.from(cards);
+    const [removed] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, removed);
+
+    const updatedCards = reordered.map((card, index) => ({
+      ...card,
+      order: index
+    }));
+
+    setCards(updatedCards);
+    if (isReorderMode) saveCardOrder();
+  };
+
   return (
     <AppLayout>
       <div className="container mx-auto p-4">
@@ -374,53 +401,50 @@ const AdminTesting = () => {
             <p>No cards found. Click the "Add New Card" button to create one.</p>
           </div>
         ) : (
-          <div ref={cardsContainerRef} className="scrollable">
-            <DragDropContext
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-            >
-              <Droppable droppableId="admin-cards" isDropDisabled={!isReorderMode}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="grid gap-4"
-                    style={{ minHeight: cards.length ? undefined : '200px' }}
-                  >
-                    {cards.map((card, index) => (
-                      <Draggable
-                        key={card.id}
-                        draggableId={card.id}
-                        index={index}
-                        isDragDisabled={!isReorderMode}
-                      >
-                        {(provided, snapshot) => (
-                          <AdminTestingCard
-                            ref={provided.innerRef}
-                            draggableProps={provided.draggableProps}
-                            dragHandleProps={provided.dragHandleProps}
-                            dragStyle={provided.draggableProps.style}
-                            isDragging={snapshot.isDragging}
-                            key={card.id}
-                            card={card}
-                            id={card.id}
-                            title={card.title}
-                            description={card.description}
-                            priority={card.priority}
-                            points={card.points}
-                            globalCarouselIndex={globalCarouselIndex}
-                            onUpdate={handleUpdateCard}
-                            isReorderMode={isReorderMode}
-                          />
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
-          </div>
+          <DragDropContext
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <Droppable droppableId="admin-cards" isDropDisabled={!isReorderMode}>
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="grid gap-6"
+                >
+                  {cards.map((card, index) => (
+                    <Draggable
+                      key={card.id}
+                      draggableId={card.id}
+                      index={index}
+                      isDragDisabled={!isReorderMode}
+                    >
+                      {(provided, snapshot) => (
+                        <AdminTestingCard
+                          ref={provided.innerRef}
+                          draggableProps={provided.draggableProps}
+                          dragHandleProps={provided.dragHandleProps}
+                          dragStyle={provided.draggableProps.style}
+                          isDragging={snapshot.isDragging}
+                          key={card.id}
+                          card={card}
+                          id={card.id}
+                          title={card.title}
+                          description={card.description}
+                          priority={card.priority}
+                          points={card.points}
+                          globalCarouselIndex={globalCarouselIndex}
+                          onUpdate={handleUpdateCard}
+                          isReorderMode={isReorderMode}
+                        />
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         )}
         
         <div className="mt-12">

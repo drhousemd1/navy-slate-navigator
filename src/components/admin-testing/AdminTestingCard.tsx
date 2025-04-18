@@ -133,19 +133,17 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
         {...dragHandleProps}
         style={{
           ...dragStyle,
-          touchAction: isDragging ? 'none' : undefined,
           transform: dragStyle?.transform,
+          opacity: isDragging ? 0.9 : 1,
         }}
         className={`relative overflow-hidden border-2 ${
           isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
-        } bg-navy min-h-[200px] ${isDragging ? 'dragging' : ''}`}
+        } bg-navy min-h-[200px] ${isDragging ? 'dragging shadow-xl' : ''}`}
         data-testid="admin-card"
         data-card-id={id}
       >
         {isReorderMode && (
-          <div 
-            className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center"
-          >
+          <div className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center">
             <MoveVertical className="h-4 w-4 mr-1" /> 
             <span className="text-xs">Drag to reorder</span>
           </div>
@@ -183,12 +181,7 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}
         cardData={cardData}
-        onSave={(updated) => {
-          handleSaveCard(updated);
-          if (onUpdate) {
-            onUpdate(updated);
-          }
-        }}
+        onSave={handleSaveCard}
         onDelete={handleDeleteCard}
         localStorageKey="adminTestingCards"
         carouselTimer={carouselTimer}
