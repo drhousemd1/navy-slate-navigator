@@ -1,4 +1,3 @@
-
 import React, { useState, forwardRef } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
@@ -31,7 +30,7 @@ export interface AdminTestingCardProps {
   isDragging?: boolean;
 }
 
-const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
+const AdminTestingCard = forwardRef<HTMLDivElement, AdminTestingCardProps>(({
   title,
   description,
   icon,
@@ -42,9 +41,7 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
   onUpdate,
   card,
   isReorderMode = false,
-  draggableProps,
   dragHandleProps,
-  dragStyle,
   isDragging
 }, ref) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -130,12 +127,10 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
     <>
       <Card 
         ref={ref}
-        {...draggableProps}
         {...dragHandleProps}
-        style={dragStyle}
         className={`relative overflow-hidden border-2 ${
           isReorderMode ? 'border-amber-500 cursor-grab active:cursor-grabbing' : 'border-[#00f0ff]'
-        } bg-navy min-h-[200px] ${isDragging ? 'shadow-xl opacity-90 z-10' : ''}`}
+        } bg-navy min-h-[200px] w-full ${isDragging ? 'shadow-xl' : ''}`}
         data-testid="admin-card"
         data-card-id={id}
       >

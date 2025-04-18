@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -370,11 +369,7 @@ const AdminTesting = () => {
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="flex flex-col gap-6 w-full max-w-4xl mx-auto"
-                  style={{
-                    minWidth: '100%',
-                    overflowX: 'hidden'
-                  }}
+                  className="space-y-6 w-full"
                 >
                   {cards.map((card, index) => (
                     <Draggable
@@ -384,31 +379,22 @@ const AdminTesting = () => {
                       isDragDisabled={!isReorderMode}
                     >
                       {(provided, snapshot) => (
-                        <AdminTestingCard
-                          ref={provided.innerRef}
-                          draggableProps={{
-                            ...provided.draggableProps,
-                            style: {
-                              ...provided.draggableProps.style,
-                              width: '100%',
-                              left: 'auto',
-                              top: 'auto'
-                            }
-                          }}
-                          dragHandleProps={provided.dragHandleProps}
-                          dragStyle={provided.draggableProps.style}
-                          isDragging={snapshot.isDragging}
-                          key={card.id}
-                          card={card}
-                          id={card.id}
-                          title={card.title}
-                          description={card.description}
-                          priority={card.priority}
-                          points={card.points}
-                          globalCarouselIndex={globalCarouselIndex}
-                          onUpdate={handleUpdateCard}
-                          isReorderMode={isReorderMode}
-                        />
+                        <div className="w-full" ref={provided.innerRef} {...provided.draggableProps}>
+                          <AdminTestingCard
+                            dragHandleProps={provided.dragHandleProps}
+                            isDragging={snapshot.isDragging}
+                            key={card.id}
+                            card={card}
+                            id={card.id}
+                            title={card.title}
+                            description={card.description}
+                            priority={card.priority}
+                            points={card.points}
+                            globalCarouselIndex={globalCarouselIndex}
+                            onUpdate={handleUpdateCard}
+                            isReorderMode={isReorderMode}
+                          />
+                        </div>
                       )}
                     </Draggable>
                   ))}
