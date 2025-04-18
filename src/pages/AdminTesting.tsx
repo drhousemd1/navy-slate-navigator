@@ -225,24 +225,18 @@ const AdminTesting = () => {
     console.log("Drag ended:", result);
     document.body.style.cursor = 'default';
     
-    const { destination, source } = result;
-
-    if (!destination || 
-        (destination.droppableId === source.droppableId && 
-         destination.index === source.index)) {
-      console.log("No valid destination or same position - skipping reorder");
+    if (!result.destination) {
+      console.log("No valid destination - skipping reorder");
       return;
     }
 
-    console.log(`Moving card from index ${source.index} to index ${destination.index}`);
+    console.log(`Moving card from index ${result.source.index} to index ${result.destination.index}`);
     
-    const reorderedCards = Array.from(cards);
-    
-    const [movedCard] = reorderedCards.splice(source.index, 1);
-    
-    reorderedCards.splice(destination.index, 0, movedCard);
+    const reordered = Array.from(cards);
+    const [movedCard] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, movedCard);
 
-    const updatedCards = reorderedCards.map((card, index) => ({
+    const updatedCards = reordered.map((card, index) => ({
       ...card,
       order: index
     }));
