@@ -376,6 +376,7 @@ const AdminTesting = () => {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
+                    className="flex flex-col gap-y-3 overflow-x-hidden"
                   >
                     {cards.map((card, index) => (
                       <Draggable
@@ -389,14 +390,7 @@ const AdminTesting = () => {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            style={{
-                              ...provided.draggableProps.style,
-                              ...(snapshot.isDragging ? {
-                                height: 'auto',
-                                zIndex: 9999,
-                                position: 'relative' as const
-                              } : {})
-                            }}
+                            style={provided.draggableProps.style}
                             data-card-id={card.id}
                           >
                             <AdminTestingCard
