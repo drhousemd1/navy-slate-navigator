@@ -401,7 +401,7 @@ const AdminTesting = () => {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="space-y-6"
+                    className="flex flex-col gap-y-3"
                   >
                     {cards.map((card, index) => (
                       <Draggable
