@@ -342,12 +342,14 @@ const AdminTesting = () => {
   const handleDragStart = (start: DragStart) => {
     setIsDragging(true);
     draggedItemId.current = start.draggableId;
+    document.body.style.cursor = 'grabbing';
     document.body.classList.add('dragging-active');
   };
 
   const handleDragEnd = (result: DropResult) => {
     setIsDragging(false);
     draggedItemId.current = null;
+    document.body.style.cursor = '';
     document.body.classList.remove('dragging-active');
 
     if (!result.destination) return;
@@ -405,12 +407,12 @@ const AdminTesting = () => {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <Droppable droppableId="admin-cards" isDropDisabled={!isReorderMode}>
+            <Droppable droppableId="admin-cards">
               {(provided, snapshot) => (
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="grid gap-6"
+                  className="flex flex-col gap-6"
                 >
                   {cards.map((card, index) => (
                     <Draggable

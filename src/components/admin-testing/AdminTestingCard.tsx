@@ -131,14 +131,10 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
         ref={ref}
         {...draggableProps}
         {...dragHandleProps}
-        style={{
-          ...dragStyle,
-          transform: dragStyle?.transform,
-          opacity: isDragging ? 0.9 : 1,
-        }}
+        style={dragStyle}
         className={`relative overflow-hidden border-2 ${
           isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
-        } bg-navy min-h-[200px] ${isDragging ? 'dragging shadow-xl' : ''}`}
+        } bg-navy min-h-[200px] transition-all ${isDragging ? 'shadow-xl opacity-90' : ''}`}
         data-testid="admin-card"
         data-card-id={id}
       >
