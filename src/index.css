@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -164,13 +165,10 @@
 
   /* Improved drag and drop styles */
   .dragging {
-    @apply opacity-95 shadow-2xl z-[9999];
+    @apply opacity-90 shadow-xl z-[9999];
     touch-action: none !important;
     will-change: transform;
     cursor: grabbing !important;
-    position: relative !important;
-    transform: translate3d(0, 0, 0);
-    pointer-events: auto !important;
   }
   
   /* Make the placeholder visually clear */
@@ -190,51 +188,12 @@
   /* Style for cards when in reorder mode */
   .dragging-active [data-card-id] {
     cursor: grab !important;
-    position: relative;
-    transform: translate3d(0, 0, 0);
-    will-change: transform;
-    transition: transform 0.1s ease;
   }
   
   /* Style for the dragged item */
   .dragging-active .dragging {
     cursor: grabbing !important;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
-    position: relative !important;
-    z-index: 9999 !important;
-  }
-  
-  /* Create a stacking context for each card */
-  [data-card-id] {
-    position: relative;
-    z-index: 1;
-    transform: translate3d(0, 0, 0);
-  }
-  
-  /* Ensure proper z-index order during drag operations */
-  [data-rbd-draggable-id] {
-    position: relative;
-    z-index: 1;
-  }
-  
-  /* Fix for dragged item overlapping issues */
-  [data-rbd-draggable-context-id] {
-    position: relative;
-    z-index: auto !important;
-  }
-  
-  /* Force hardware acceleration and prevent layering issues */
-  [data-rbd-drag-handle-draggable-id] {
-    transform: translate3d(0, 0, 0);
-  }
-  
-  /* Ensure placeholder takes exact space */
-  [data-rbd-placeholder-context-id] {
-    min-height: 0 !important;
-    pointer-events: none;
-    z-index: 0 !important;
-    transition: none !important;
-    transform: translateZ(0);
   }
 }
 
