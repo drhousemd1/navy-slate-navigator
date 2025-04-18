@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -194,6 +193,11 @@
   .dragging-active .dragging {
     cursor: grabbing !important;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
+  }
+  
+  /* Card dragging styles */
+  .card.dragging {
+    transition: none !important;
   }
 }
 
