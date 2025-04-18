@@ -222,22 +222,20 @@ const AdminTesting = () => {
   };
 
   const lockBody = () => {
-    const scrollY = window.scrollY;
-    document.body.style.top = `-${scrollY}px`;
+    document.body.style.overflow = 'hidden';
     document.body.classList.add('body-fixed', 'no-select');
     document.addEventListener('touchmove', preventTouchMove, { passive: false });
   };
 
   const unlockBody = () => {
-    const scrollY = Math.abs(parseInt(document.body.style.top || '0', 10));
+    document.body.style.overflow = '';
     document.body.classList.remove('body-fixed', 'no-select');
-    document.body.style.top = '';
     document.removeEventListener('touchmove', preventTouchMove);
-    window.scrollTo(0, scrollY);
   };
 
   const preventTouchMove = (e: TouchEvent) => {
-    if (isDragging && !e.target?.closest('.scrollable')) {
+    const target = e.target as HTMLElement;
+    if (isDragging && !target?.closest?.('.scrollable')) {
       e.preventDefault();
     }
   };
@@ -246,12 +244,14 @@ const AdminTesting = () => {
     console.log("Drag started:", result);
     setIsDragging(true);
     lockBody();
+    draggedItemId.current = result.draggableId;
   };
 
   const onDragEnd = (result: DropResult) => {
     console.log("Drag ended:", result);
     setIsDragging(false);
     unlockBody();
+    draggedItemId.current = null;
 
     if (!result.destination) {
       return;
@@ -376,16 +376,8 @@ const AdminTesting = () => {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className={snapshot.isDragging ? 'dragging' : ''}
-                          style={{
-                            ...provided.draggableProps.style,
-                            transform: provided.draggableProps.style?.transform
-                              ? provided.draggableProps.style.transform.replace(
-                                  /translate\((-?\d+)px,\s*(-?\d+)px\)/, 
-                                  (_, __, y) => `translate(0px, ${y}px)`
-                                )
-                              : undefined,
-                          }}
+                          className={`transition-transform duration-200 ${snapshot.isDragging ? 'dragging' : ''}`}
+                          style={provided.draggableProps.style}
                         >
                           <AdminTestingCard
                             key={card.id}

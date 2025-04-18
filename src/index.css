@@ -164,18 +164,22 @@
 
   /* Drag and drop styles */
   .dragging {
-    @apply opacity-70 shadow-lg transform scale-[1.02] z-[9999] cursor-grabbing;
-    pointer-events: none;
+    @apply opacity-80 shadow-lg z-[9999];
+    pointer-events: none !important;
+    touch-action: none !important;
+    user-select: none !important;
   }
   
   .drag-placeholder {
-    @apply h-32 rounded-lg border-2 border-dashed border-amber-500/50 bg-amber-500/20 mb-6 transition-all duration-200;
+    @apply h-32 rounded-lg border-2 border-dashed border-amber-500/50 bg-amber-500/20 mb-6;
   }
   
   /* Prevent text selection during drag */
   .no-select {
-    user-select: none;
-    -webkit-user-select: none;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
   }
 }
 
@@ -189,7 +193,10 @@ html, body {
 
 /* Fixed body class */
 body.body-fixed {
-  @apply fixed w-full overflow-hidden;
+  @apply fixed w-full;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden !important;
 }
