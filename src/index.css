@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -162,16 +163,18 @@
     100% { opacity: 1; }
   }
 
-  /* Drag and drop styles */
+  /* Improved drag and drop styles */
   .dragging {
-    @apply opacity-80 shadow-lg z-[9999];
-    pointer-events: none !important;
+    @apply opacity-90 shadow-xl z-[9999];
     touch-action: none !important;
-    user-select: none !important;
+    will-change: transform;
+    cursor: grabbing !important;
   }
   
+  /* Make the placeholder visually clear */
   .drag-placeholder {
-    @apply h-32 rounded-lg border-2 border-dashed border-amber-500/50 bg-amber-500/20 mb-6;
+    @apply h-32 rounded-lg border-2 border-dashed border-amber-500/70 bg-amber-500/30 mb-6;
+    transition: all 0.2s ease;
   }
   
   /* Prevent text selection during drag */
@@ -180,6 +183,17 @@
     -webkit-user-select: none !important;
     -moz-user-select: none !important;
     -ms-user-select: none !important;
+  }
+  
+  /* Style for cards when in reorder mode */
+  .dragging-active [data-card-id] {
+    cursor: grab !important;
+  }
+  
+  /* Style for the dragged item */
+  .dragging-active .dragging {
+    cursor: grabbing !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
   }
 }
 
@@ -191,12 +205,21 @@ html, body {
   touch-action: pan-y pinch-zoom;
 }
 
-/* Fixed body class */
+/* Scrollable container during drag */
+.scrollable {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fixed body class - improved version */
 body.body-fixed {
-  @apply fixed w-full;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100%;
+  position: fixed;
   overflow: hidden !important;
+}
+
+/* Make sure the placeholder space stays exact */
+[data-rbd-placeholder-context-id] {
+  transition: none !important;
+  min-height: 0 !important;
 }
