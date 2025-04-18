@@ -374,7 +374,7 @@ const AdminTesting = () => {
             <p>No cards found. Click the "Add New Card" button to create one.</p>
           </div>
         ) : (
-          <div ref={cardsContainerRef} className="scrollable relative">
+          <div ref={cardsContainerRef} className="scrollable">
             <DragDropContext
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
@@ -384,7 +384,8 @@ const AdminTesting = () => {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="flex flex-col gap-y-3"
+                    className="grid gap-4"
+                    style={{ minHeight: cards.length ? undefined : '200px' }}
                   >
                     {cards.map((card, index) => (
                       <Draggable

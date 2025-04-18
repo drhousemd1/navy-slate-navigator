@@ -1,5 +1,4 @@
-
-import React, { useState, forwardRef, useLayoutEffect, useRef } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
 import CardBackground from '@/components/admin-testing/card/CardBackground';
@@ -49,8 +48,6 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
 }, ref) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const heightRef = useRef<number | null>(null);
 
   const {
     cardData,
@@ -74,14 +71,6 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
     transitionImage,
     isTransitioning
   } = useImageCarousel({ images, globalCarouselIndex });
-
-  // Use useLayoutEffect to measure height before browser paint
-  useLayoutEffect(() => {
-    if (cardRef.current) {
-      const height = cardRef.current.getBoundingClientRect().height;
-      heightRef.current = height;
-    }
-  }, [cardData, isReorderMode]);
 
   const handleOpenEditModal = () => {
     if (!isReorderMode) {
@@ -139,21 +128,17 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
   return (
     <>
       <Card 
-        ref={(node) => {
-          cardRef.current = node;
-          if (typeof ref === 'function') ref(node);
-          else if (ref) ref.current = node;
-        }}
+        ref={ref}
         {...draggableProps}
         {...dragHandleProps}
         style={{
           ...dragStyle,
-          height: isDragging ? `${heightRef.current}px` : undefined,
-          transition: isDragging ? 'none' : undefined
+          touchAction: isDragging ? 'none' : undefined,
+          transform: dragStyle?.transform,
         }}
         className={`relative overflow-hidden border-2 ${
           isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
-        } bg-navy ${isDragging ? 'dragging' : ''}`}
+        } bg-navy min-h-[200px] ${isDragging ? 'dragging' : ''}`}
         data-testid="admin-card"
         data-card-id={id}
       >
@@ -165,6 +150,7 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
             <span className="text-xs">Drag to reorder</span>
           </div>
         )}
+        
         <CardBackground 
           visibleImage={visibleImage}
           transitionImage={transitionImage}
@@ -173,6 +159,7 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
           focalPointY={cardData.focal_point_y}
           backgroundOpacity={cardData.background_opacity}
         />
+        
         <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
           <CardHeader priority={cardData.priority || priority} points={cardData.points || points} />
           <CardContent
@@ -191,6 +178,7 @@ const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
           />
         </div>
       </Card>
+      
       <AdminTestingEditModal
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}
