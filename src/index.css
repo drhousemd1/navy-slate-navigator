@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -182,4 +183,9 @@
 /* Prevent sideways overscroll while dragging */
 body, html {
   overscroll-behavior-x: contain;
+}
+
+/* Disable iOS/Safari overscroll bounce everywhere */
+html, body, #root {
+  overscroll-behavior: none;
 }

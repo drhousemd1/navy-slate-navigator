@@ -35,6 +35,33 @@ interface SupabaseCardData {
   order: number | null;
 }
 
+let scrollY = 0;
+const preventTouchMove = (e: TouchEvent) => e.preventDefault();
+
+const lockBody = () => {
+  scrollY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+  document.body.addEventListener('touchmove', preventTouchMove, { passive: false });
+};
+
+const unlockBody = () => {
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  document.body.style.overflow = '';
+  document.body.style.touchAction = '';
+  window.scrollTo(0, scrollY);
+  document.body.removeEventListener('touchmove', preventTouchMove);
+};
+
 const AdminTesting = () => {
   const [cards, setCards] = useState<AdminTestingCardData[]>([]);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
@@ -89,6 +116,8 @@ const AdminTesting = () => {
             title_color: card.title_color || '#FFFFFF',
             subtext_color: card.subtext_color || '#8E9196',
             calendar_color: card.calendar_color || '#7E69AB',
+            icon_url: card.icon_url || null,
+            icon_name: card.icon_name || null,
             icon_color: card.icon_color || '#FFFFFF',
             highlight_effect: card.highlight_effect || false,
             usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0],
@@ -219,15 +248,13 @@ const AdminTesting = () => {
   const onDragStart = () => {
     console.log("Drag started");
     document.body.style.cursor = 'grabbing';
-    document.body.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
+    lockBody();
   };
   
   const onDragEnd = (result: DropResult) => {
     console.log("Drag ended:", result);
     document.body.style.cursor = 'default';
-    document.body.style.overflow = '';
-    document.body.style.touchAction = '';
+    unlockBody();
     
     if (!result.destination) {
       console.log("No valid destination - skipping reorder");
