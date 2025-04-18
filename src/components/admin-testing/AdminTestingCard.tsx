@@ -129,7 +129,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
       >
         {isReorderMode && (
           <div 
-            className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center"
+            className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center pointer-events-none"
             style={isDragging ? { pointerEvents: 'none' } : undefined}
           >
             <MoveVertical className="h-4 w-4 mr-1" /> 
