@@ -47,7 +47,6 @@ const lockBody = () => {
   document.body.style.width = '100%';
   document.body.style.overflow = 'hidden';
   document.body.style.touchAction = 'none';
-  document.body.addEventListener('touchmove', preventTouchMove, { passive: false });
 };
 
 const unlockBody = () => {
@@ -59,7 +58,6 @@ const unlockBody = () => {
   document.body.style.overflow = '';
   document.body.style.touchAction = '';
   window.scrollTo(0, scrollY);
-  document.body.removeEventListener('touchmove', preventTouchMove);
 };
 
 const AdminTesting = () => {
