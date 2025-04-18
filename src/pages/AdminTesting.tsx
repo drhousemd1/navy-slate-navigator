@@ -8,7 +8,7 @@ import { Plus, MoveVertical } from 'lucide-react';
 import { AdminTestingCardData } from '@/components/admin-testing/defaultAdminTestingCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult, DragStart } from '@hello-pangea/dnd';
 
 interface SupabaseCardData {
   id: string;
@@ -34,38 +34,6 @@ interface SupabaseCardData {
   user_id: string | null;
   order: number | null;
 }
-
-// Improved body locking mechanism
-const lockBody = () => {
-  const scrollY = window.scrollY;
-  document.body.classList.add('body-fixed');
-  document.body.style.top = `-${scrollY}px`;
-  
-  // Prevent touch events from causing scroll during drag
-  document.addEventListener('touchmove', preventTouchMove, { passive: false });
-};
-
-const unlockBody = () => {
-  const scrollY = Math.abs(parseInt(document.body.style.top || '0', 10));
-  document.body.classList.remove('body-fixed');
-  document.body.style.top = '';
-  
-  // Re-enable touch events
-  document.removeEventListener('touchmove', preventTouchMove);
-  
-  // Restore scroll position
-  window.scrollTo({
-    top: scrollY,
-    behavior: 'auto'
-  });
-};
-
-const preventTouchMove = (e: TouchEvent) => {
-  // Only prevent default on non-scrollable elements
-  if (!(e.target as HTMLElement).closest('.scrollable')) {
-    e.preventDefault();
-  }
-};
 
 const AdminTesting = () => {
   const [cards, setCards] = useState<AdminTestingCardData[]>([]);
@@ -253,53 +221,56 @@ const AdminTesting = () => {
     setIsReorderMode(!isReorderMode);
   };
 
-  const onDragStart = (result: any) => {
-    const { draggableId } = result;
-    console.log("Drag started for item:", draggableId);
-    
-    // Lock the body to prevent scrolling
-    lockBody();
-    setIsDragging(true);
-    draggedItemId.current = draggableId;
-    
-    // Add grabbing class for better cursor handling
-    document.body.classList.add('grabbing');
+  const lockBody = () => {
+    const scrollY = window.scrollY;
+    document.body.style.top = `-${scrollY}px`;
+    document.body.classList.add('body-fixed', 'no-select');
+    document.addEventListener('touchmove', preventTouchMove, { passive: false });
   };
-  
+
+  const unlockBody = () => {
+    const scrollY = Math.abs(parseInt(document.body.style.top || '0', 10));
+    document.body.classList.remove('body-fixed', 'no-select');
+    document.body.style.top = '';
+    document.removeEventListener('touchmove', preventTouchMove);
+    window.scrollTo(0, scrollY);
+  };
+
+  const preventTouchMove = (e: TouchEvent) => {
+    if (isDragging && !e.target?.closest('.scrollable')) {
+      e.preventDefault();
+    }
+  };
+
+  const onDragStart = (result: DragStart) => {
+    console.log("Drag started:", result);
+    setIsDragging(true);
+    lockBody();
+  };
+
   const onDragEnd = (result: DropResult) => {
     console.log("Drag ended:", result);
-    
-    // Unlock the body and reset states
-    unlockBody();
     setIsDragging(false);
-    draggedItemId.current = null;
-    document.body.classList.remove('grabbing');
-    
-    // Skip if no destination
+    unlockBody();
+
     if (!result.destination) {
-      console.log("No valid destination - skipping reorder");
       return;
     }
 
-    // Only process if position actually changed
-    if (result.destination.index === result.source.index) {
-      console.log("Position unchanged - skipping reorder");
-      return;
-    }
-
-    console.log(`Moving card from index ${result.source.index} to index ${result.destination.index}`);
-    
     const reordered = Array.from(cards);
-    const [movedCard] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, movedCard);
+    const [removed] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, removed);
 
     const updatedCards = reordered.map((card, index) => ({
       ...card,
       order: index
     }));
 
-    console.log("Cards after reordering:", updatedCards);
     setCards(updatedCards);
+    
+    if (isReorderMode) {
+      saveCardOrder();
+    }
   };
 
   const saveCardOrder = async () => {
@@ -381,30 +352,22 @@ const AdminTesting = () => {
           <div className="text-center text-white p-8">
             <p>No cards found. Click the "Add New Card" button to create one.</p>
           </div>
-        ) : cards.length === 0 && !cardsFetched ? (
-          <div className="text-center text-white p-8">
-            <p>Unable to load cards. Please try refreshing the page.</p>
-          </div>
         ) : (
-          <DragDropContext 
-            onDragEnd={onDragEnd} 
+          <DragDropContext
             onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
           >
-            <Droppable 
-              droppableId="admin-cards" 
-              isDropDisabled={!isReorderMode}
-              direction="vertical"
-            >
+            <Droppable droppableId="admin-cards" isDropDisabled={!isReorderMode}>
               {(provided, snapshot) => (
-                <div 
-                  className={`flex flex-col gap-6 w-full ${snapshot.isDraggingOver ? 'is-dragging-over' : ''}`}
+                <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
+                  className="space-y-6"
                 >
                   {cards.map((card, index) => (
-                    <Draggable 
-                      key={card.id} 
-                      draggableId={card.id} 
+                    <Draggable
+                      key={card.id}
+                      draggableId={card.id}
                       index={index}
                       isDragDisabled={!isReorderMode}
                     >
@@ -413,12 +376,14 @@ const AdminTesting = () => {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className={`transition-all duration-200 ${snapshot.isDragging ? 'dragging z-50' : ''}`}
+                          className={snapshot.isDragging ? 'dragging' : ''}
                           style={{
                             ...provided.draggableProps.style,
-                            // Prevent horizontal movement when dragging
                             transform: provided.draggableProps.style?.transform
-                              ? provided.draggableProps.style.transform.replace(/translate\((-?\d+)px,\s*(-?\d+)px\)/, (_, __, y) => `translate(0px, ${y}px)`)
+                              ? provided.draggableProps.style.transform.replace(
+                                  /translate\((-?\d+)px,\s*(-?\d+)px\)/, 
+                                  (_, __, y) => `translate(0px, ${y}px)`
+                                )
                               : undefined,
                           }}
                         >
@@ -438,9 +403,7 @@ const AdminTesting = () => {
                       )}
                     </Draggable>
                   ))}
-                  {provided.placeholder && (
-                    <div className="drag-placeholder h-32"></div>
-                  )}
+                  {provided.placeholder}
                 </div>
               )}
             </Droppable>
