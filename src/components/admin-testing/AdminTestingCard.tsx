@@ -1,4 +1,5 @@
-import React, { useState, forwardRef } from 'react';
+
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
 import CardBackground from '@/components/admin-testing/card/CardBackground';
@@ -24,13 +25,9 @@ export interface AdminTestingCardProps {
   onUpdate?: (updated: AdminTestingCardData) => void;
   card?: AdminTestingCardData;
   isReorderMode?: boolean;
-  draggableProps?: any;
-  dragHandleProps?: any;
-  dragStyle?: any;
-  isDragging?: boolean;
 }
 
-const AdminTestingCard = forwardRef<HTMLDivElement, AdminTestingCardProps>(({
+const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   title,
   description,
   icon,
@@ -40,10 +37,8 @@ const AdminTestingCard = forwardRef<HTMLDivElement, AdminTestingCardProps>(({
   globalCarouselIndex,
   onUpdate,
   card,
-  isReorderMode = false,
-  dragHandleProps,
-  isDragging
-}, ref) => {
+  isReorderMode = false
+}) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
 
@@ -126,21 +121,17 @@ const AdminTestingCard = forwardRef<HTMLDivElement, AdminTestingCardProps>(({
   return (
     <>
       <Card 
-        ref={ref}
-        {...dragHandleProps}
-        className={`relative overflow-hidden border-2 ${
-          isReorderMode ? 'border-amber-500 cursor-grab active:cursor-grabbing' : 'border-[#00f0ff]'
-        } bg-navy min-h-[200px] w-full ${isDragging ? 'shadow-xl' : ''}`}
+        className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}
         data-testid="admin-card"
-        data-card-id={id}
       >
         {isReorderMode && (
-          <div className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center">
+          <div 
+            className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center"
+          >
             <MoveVertical className="h-4 w-4 mr-1" /> 
             <span className="text-xs">Drag to reorder</span>
           </div>
         )}
-        
         <CardBackground 
           visibleImage={visibleImage}
           transitionImage={transitionImage}
@@ -149,7 +140,6 @@ const AdminTestingCard = forwardRef<HTMLDivElement, AdminTestingCardProps>(({
           focalPointY={cardData.focal_point_y}
           backgroundOpacity={cardData.background_opacity}
         />
-        
         <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
           <CardHeader priority={cardData.priority || priority} points={cardData.points || points} />
           <CardContent
@@ -168,12 +158,16 @@ const AdminTestingCard = forwardRef<HTMLDivElement, AdminTestingCardProps>(({
           />
         </div>
       </Card>
-      
       <AdminTestingEditModal
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}
         cardData={cardData}
-        onSave={handleSaveCard}
+        onSave={(updated) => {
+          handleSaveCard(updated);
+          if (onUpdate) {
+            onUpdate(updated);
+          }
+        }}
         onDelete={handleDeleteCard}
         localStorageKey="adminTestingCards"
         carouselTimer={carouselTimer}
@@ -181,8 +175,6 @@ const AdminTestingCard = forwardRef<HTMLDivElement, AdminTestingCardProps>(({
       />
     </>
   );
-});
-
-AdminTestingCard.displayName = 'AdminTestingCard';
+};
 
 export default AdminTestingCard;
