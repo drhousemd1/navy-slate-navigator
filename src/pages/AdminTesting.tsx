@@ -223,10 +223,12 @@ const AdminTesting = () => {
 
   const lockBody = () => {
     scrollPositionRef.current = window.scrollY;
+    
     document.body.style.position = 'fixed';
     document.body.style.top = `-${scrollPositionRef.current}px`;
     document.body.style.width = '100%';
     document.body.classList.add('no-select');
+    
     document.addEventListener('touchmove', preventTouchMove, { passive: false });
   };
 
@@ -235,7 +237,9 @@ const AdminTesting = () => {
     document.body.style.top = '';
     document.body.style.width = '';
     document.body.classList.remove('no-select');
+    
     window.scrollTo(0, scrollPositionRef.current);
+    
     document.removeEventListener('touchmove', preventTouchMove);
   };
 
@@ -251,7 +255,9 @@ const AdminTesting = () => {
     console.log("Drag started:", result);
     setIsDragging(true);
     draggedItemId.current = result.draggableId;
+    
     lockBody();
+    
     document.body.classList.add('dragging-active');
   };
 
@@ -259,9 +265,11 @@ const AdminTesting = () => {
     console.log("Drag ended:", result);
     setIsDragging(false);
     draggedItemId.current = null;
-    unlockBody();
-    document.body.classList.remove('dragging-active');
     
+    unlockBody();
+    
+    document.body.classList.remove('dragging-active');
+
     if (!result.destination) {
       return;
     }
@@ -280,10 +288,6 @@ const AdminTesting = () => {
     }));
 
     setCards(updatedCards);
-    
-    if (isReorderMode) {
-      saveCardOrder();
-    }
   };
 
   const saveCardOrder = async () => {
@@ -376,7 +380,7 @@ const AdminTesting = () => {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="flex flex-col gap-y-3 overflow-x-hidden"
+                    className="space-y-6"
                   >
                     {cards.map((card, index) => (
                       <Draggable
@@ -385,29 +389,39 @@ const AdminTesting = () => {
                         index={index}
                         isDragDisabled={!isReorderMode}
                       >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            style={provided.draggableProps.style}
-                            data-card-id={card.id}
-                          >
-                            <AdminTestingCard
-                              key={card.id}
-                              card={card}
-                              id={card.id}
-                              title={card.title}
-                              description={card.description}
-                              priority={card.priority}
-                              points={card.points}
-                              globalCarouselIndex={globalCarouselIndex}
-                              onUpdate={handleUpdateCard}
-                              isReorderMode={isReorderMode}
-                              isDragging={snapshot.isDragging}
-                            />
-                          </div>
-                        )}
+                        {(provided, snapshot) => {
+                          return (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              data-card-id={card.id}
+                              className={`${snapshot.isDragging ? 'dragging' : ''}`}
+                              style={{
+                                ...provided.draggableProps.style,
+                                zIndex: snapshot.isDragging ? 9999 : 1,
+                                position: snapshot.isDragging ? 'relative' : 'relative',
+                                transform: provided.draggableProps.style?.transform,
+                                transition: snapshot.isDragging 
+                                  ? provided.draggableProps.style?.transition 
+                                  : 'transform 0.1s ease-out'
+                              }}
+                            >
+                              <AdminTestingCard
+                                key={card.id}
+                                card={card}
+                                id={card.id}
+                                title={card.title}
+                                description={card.description}
+                                priority={card.priority}
+                                points={card.points}
+                                globalCarouselIndex={globalCarouselIndex}
+                                onUpdate={handleUpdateCard}
+                                isReorderMode={isReorderMode}
+                              />
+                            </div>
+                          );
+                        }}
                       </Draggable>
                     ))}
                     {provided.placeholder}

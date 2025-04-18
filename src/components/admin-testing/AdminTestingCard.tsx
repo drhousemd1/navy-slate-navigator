@@ -25,7 +25,6 @@ export interface AdminTestingCardProps {
   onUpdate?: (updated: AdminTestingCardData) => void;
   card?: AdminTestingCardData;
   isReorderMode?: boolean;
-  isDragging?: boolean;
 }
 
 const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
@@ -38,8 +37,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   globalCarouselIndex,
   onUpdate,
   card,
-  isReorderMode = false,
-  isDragging = false
+  isReorderMode = false
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
@@ -123,14 +121,12 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   return (
     <>
       <Card 
-        className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy ${isDragging ? 'dragging' : ''}`}
+        className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}
         data-testid="admin-card"
-        style={isDragging ? { zIndex: 1000 } : undefined}
       >
         {isReorderMode && (
           <div 
-            className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center pointer-events-none"
-            style={isDragging ? { pointerEvents: 'none' } : undefined}
+            className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center"
           >
             <MoveVertical className="h-4 w-4 mr-1" /> 
             <span className="text-xs">Drag to reorder</span>
