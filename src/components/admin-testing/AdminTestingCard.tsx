@@ -1,148 +1,180 @@
-import React, { useState, useEffect } from "react";
-import { v4 as uuidv4 } from "uuid";
-import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 
-import AppLayout from "@/components/AppLayout";
-import AdminTestingCard from "@/components/admin-testing/AdminTestingCard";
-import AdminTestingCardEditModal from "@/components/admin-testing/AdminTestingCardEditModal";
-import { defaultAdminTestingCards, AdminTestingCardData } from "@/components/admin-testing/defaultAdminTestingCards";
-import { getIconComponent } from "@/lib/iconLibrary";
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react';
+import { Card } from '@/components/ui/card';
+import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
+import CardBackground from '@/components/admin-testing/card/CardBackground';
+import CardHeader from '@/components/admin-testing/card/CardHeader';
+import CardContent from '@/components/admin-testing/card/CardContent';
+import CardFooter from '@/components/admin-testing/card/CardFooter';
+import { useAdminCardData } from '@/components/admin-testing/hooks/useAdminCardData';
+import { useImageCarousel } from '@/components/admin-testing/hooks/useImageCarousel';
+import { renderCardIcon } from '@/components/admin-testing/utils/renderCardIcon';
+import { toast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
+import { AdminTestingCardData } from "./defaultAdminTestingCards";
+import { MoveVertical } from 'lucide-react';
 
-const AdminTesting: React.FC = () => {
-  const [cards, setCards] = useState<AdminTestingCardData[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<AdminTestingCardData | null>(null);
-  const [isReorderMode, setIsReorderMode] = useState(false);
-  const [globalCarouselIndex] = useState(0); // passed to each card
+export interface AdminTestingCardProps {
+  title: string;
+  description: string;
+  icon?: React.ReactNode;
+  id: string;
+  priority?: 'low' | 'medium' | 'high';
+  points?: number;
+  globalCarouselIndex: number;
+  onUpdate?: (updated: AdminTestingCardData) => void;
+  card?: AdminTestingCardData;
+  isReorderMode?: boolean;
+}
 
-  useEffect(() => {
-    setCards(defaultAdminTestingCards);
-  }, []);
+const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
+  title,
+  description,
+  icon,
+  id,
+  priority = 'medium',
+  points = 5,
+  globalCarouselIndex,
+  onUpdate,
+  card,
+  isReorderMode = false
+}) => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [carouselTimer, setCarouselTimer] = useState(5);
 
-  const handleEditCard = (card: AdminTestingCardData) => {
-    setSelectedCard(card);
-    setIsModalOpen(true);
+  const {
+    cardData,
+    images,
+    usageData,
+    handleSaveCard
+  } = useAdminCardData({ 
+    id: card?.id || id, 
+    title: card?.title || title, 
+    description: card?.description || description, 
+    priority: card?.priority || priority,
+    points: card?.points || points,
+    icon_url: card?.icon_url,
+    icon_name: card?.icon_name || "",
+    background_images: card?.background_images as string[] || [],
+    background_image_url: card?.background_image_url
+  });
+
+  const {
+    visibleImage,
+    transitionImage,
+    isTransitioning
+  } = useImageCarousel({ images, globalCarouselIndex });
+
+  const handleOpenEditModal = () => {
+    if (!isReorderMode) {
+      setIsEditModalOpen(true);
+    }
   };
+  
+  const handleCloseEditModal = () => setIsEditModalOpen(false);
 
-  const handleSaveCard = (updatedCard: AdminTestingCardData) => {
-    setCards(prev => {
-      const existingIndex = prev.findIndex(c => c.id === updatedCard.id);
-      if (existingIndex !== -1) {
-        const updated = [...prev];
-        updated[existingIndex] = updatedCard;
-        return updated;
-      } else {
-        return [...prev, updatedCard];
+  const iconComponent = renderCardIcon({
+    iconUrl: cardData.icon_url,
+    iconName: cardData.icon_name,
+    iconColor: cardData.icon_color,
+    fallbackIcon: icon
+  });
+
+  const handleDeleteCard = async (cardId: string) => {
+    try {
+      const { error } = await supabase
+        .from('admin_testing_cards')
+        .delete()
+        .eq('id', cardId);
+      
+      if (error) {
+        console.error("Error deleting card from Supabase:", error);
+        toast({
+          title: "Error",
+          description: `Failed to delete card: ${error.message}`,
+          variant: "destructive"
+        });
+        return;
       }
-    });
-    setIsModalOpen(false);
-    setSelectedCard(null);
+      
+      toast({
+        title: "Card Deleted",
+        description: "The admin testing card has been deleted",
+      });
+      
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error("Error deleting card:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete card",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleAddNewCard = () => {
-    const newCard: AdminTestingCardData = {
-      id: uuidv4(),
-      title: "New Card",
-      description: "",
-      points: 0,
-      icon_name: "CirclePlus",
-      icon_color: "#ffffff",
-      title_color: "#ffffff",
-      subtext_color: "#ffffff",
-      calendar_color: "#ffffff",
-      highlight_effect: "none",
-      background_image_url: "",
-      background_opacity: 0.5,
-      focal_point_x: 0.5,
-      focal_point_y: 0.5
-    };
-    setCards(prev => [...prev, newCard]);
-  };
-
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-
-    const reordered = Array.from(cards);
-    const [movedCard] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, movedCard);
-
-    setCards(reordered);
+  const handleCarouselTimerChange = (newValue: number) => {
+    setCarouselTimer(newValue);
+    localStorage.setItem("adminTestingCards_carouselTimer", newValue.toString());
   };
 
   return (
-    <AppLayout onAddNewItem={handleAddNewCard}>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">Admin Testing</h1>
-        <Button onClick={() => setIsReorderMode(prev => !prev)}>
-          {isReorderMode ? "Done" : "Reorder"}
-        </Button>
-      </div>
-
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId="adminCards">
-          {(provided) => (
-            <div
-              {...provided.droppableProps}
-              ref={provided.innerRef}
-              className="space-y-4"
-            >
-              {cards.map((card, index) => (
-                <Draggable
-                  key={card.id}
-                  draggableId={card.id}
-                  index={index}
-                  isDragDisabled={!isReorderMode}
-                >
-                  {(provided) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                    >
-                      <AdminTestingCard
-                        id={card.id}
-                        title={card.title}
-                        description={card.description}
-                        points={card.points}
-                        icon={getIconComponent(card.icon_name || "CirclePlus")}
-                        icon_name={card.icon_name}
-                        icon_color={card.icon_color}
-                        title_color={card.title_color}
-                        subtext_color={card.subtext_color}
-                        calendar_color={card.calendar_color}
-                        highlight_effect={card.highlight_effect}
-                        background_image_url={card.background_image_url}
-                        background_opacity={card.background_opacity}
-                        focal_point_x={card.focal_point_x}
-                        focal_point_y={card.focal_point_y}
-                        globalCarouselIndex={globalCarouselIndex}
-                        card={card}
-                        onUpdate={handleSaveCard}
-                        isReorderMode={isReorderMode}
-                        onEdit={() => handleEditCard(card)}
-                      />
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
-
-      <AdminTestingCardEditModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedCard(null);
+    <>
+      <Card 
+        className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}
+        data-testid="admin-card"
+      >
+        {isReorderMode && (
+          <div 
+            className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center"
+          >
+            <MoveVertical className="h-4 w-4 mr-1" /> 
+            <span className="text-xs">Drag to reorder</span>
+          </div>
+        )}
+        <CardBackground 
+          visibleImage={visibleImage}
+          transitionImage={transitionImage}
+          isTransitioning={isTransitioning}
+          focalPointX={cardData.focal_point_x}
+          focalPointY={cardData.focal_point_y}
+          backgroundOpacity={cardData.background_opacity}
+        />
+        <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
+          <CardHeader priority={cardData.priority || priority} points={cardData.points || points} />
+          <CardContent
+            title={cardData.title}
+            description={cardData.description}
+            iconComponent={iconComponent}
+            titleColor={cardData.title_color}
+            subtextColor={cardData.subtext_color}
+            highlightEffect={cardData.highlight_effect}
+          />
+          <CardFooter
+            calendarColor={cardData.calendar_color || '#7E69AB'}
+            usageData={usageData}
+            onEditClick={handleOpenEditModal}
+            isReorderMode={isReorderMode}
+          />
+        </div>
+      </Card>
+      <AdminTestingEditModal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        cardData={cardData}
+        onSave={(updated) => {
+          handleSaveCard(updated);
+          if (onUpdate) {
+            onUpdate(updated);
+          }
         }}
-        cardData={selectedCard}
-        onSave={handleSaveCard}
+        onDelete={handleDeleteCard}
+        localStorageKey="adminTestingCards"
+        carouselTimer={carouselTimer}
+        onCarouselTimerChange={handleCarouselTimerChange}
       />
-    </AppLayout>
+    </>
   );
 };
 
-export default AdminTesting;
+export default AdminTestingCard;
