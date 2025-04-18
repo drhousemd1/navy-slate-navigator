@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -327,7 +328,7 @@ const AdminTesting = () => {
 
   return (
     <AppLayout>
-      <div className="container mx-auto p-4">
+      <div className="container mx-auto p-4 max-w-4xl">
         <h1 className="text-2xl font-bold text-white mb-6">Admin Testing Panel</h1>
         
         <div className="bg-red-500 text-white p-6 mb-6 rounded-lg">
@@ -369,7 +370,11 @@ const AdminTesting = () => {
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="flex flex-col gap-6"
+                  className="flex flex-col gap-6 w-full max-w-4xl mx-auto"
+                  style={{
+                    minWidth: '100%',
+                    overflowX: 'hidden'
+                  }}
                 >
                   {cards.map((card, index) => (
                     <Draggable
@@ -381,7 +386,15 @@ const AdminTesting = () => {
                       {(provided, snapshot) => (
                         <AdminTestingCard
                           ref={provided.innerRef}
-                          draggableProps={provided.draggableProps}
+                          draggableProps={{
+                            ...provided.draggableProps,
+                            style: {
+                              ...provided.draggableProps.style,
+                              width: '100%',
+                              left: 'auto',
+                              top: 'auto'
+                            }
+                          }}
                           dragHandleProps={provided.dragHandleProps}
                           dragStyle={provided.draggableProps.style}
                           isDragging={snapshot.isDragging}
