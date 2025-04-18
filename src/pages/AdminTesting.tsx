@@ -356,11 +356,7 @@ const AdminTesting = () => {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className={snapshot.isDragging ? 'dragging' : ''}
-                          style={{
-                            ...provided.draggableProps.style,
-                            userSelect: 'none'
-                          }}
+                          style={{...provided.draggableProps.style}}
                         >
                           <AdminTestingCard
                             key={card.id}
