@@ -256,9 +256,8 @@ const AdminTesting = () => {
     setIsDragging(true);
     draggedItemId.current = result.draggableId;
     
-    lockBody();
-    
     document.body.classList.add('dragging-active');
+    lockBody();
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -266,17 +265,11 @@ const AdminTesting = () => {
     setIsDragging(false);
     draggedItemId.current = null;
     
-    unlockBody();
-    
     document.body.classList.remove('dragging-active');
+    unlockBody();
 
-    if (!result.destination) {
-      return;
-    }
-
-    if (result.destination.index === result.source.index) {
-      return;
-    }
+    if (!result.destination) return;
+    if (result.destination.index === result.source.index) return;
 
     const reordered = Array.from(cards);
     const [removed] = reordered.splice(result.source.index, 1);
@@ -390,22 +383,24 @@ const AdminTesting = () => {
                         isDragDisabled={!isReorderMode}
                       >
                         {(provided, snapshot) => {
+                          const style = {
+                            ...provided.draggableProps.style,
+                            zIndex: snapshot.isDragging ? 9999 : 'auto',
+                            position: snapshot.isDragging ? 'relative' : 'relative',
+                            transform: provided.draggableProps.style?.transform,
+                            transition: snapshot.isDragging 
+                              ? provided.draggableProps.style?.transition 
+                              : 'transform 0.2s ease-out'
+                          };
+
                           return (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
+                              style={style}
                               data-card-id={card.id}
                               className={`${snapshot.isDragging ? 'dragging' : ''}`}
-                              style={{
-                                ...provided.draggableProps.style,
-                                zIndex: snapshot.isDragging ? 9999 : 1,
-                                position: snapshot.isDragging ? 'relative' : 'relative',
-                                transform: provided.draggableProps.style?.transform,
-                                transition: snapshot.isDragging 
-                                  ? provided.draggableProps.style?.transition 
-                                  : 'transform 0.1s ease-out'
-                              }}
                             >
                               <AdminTestingCard
                                 key={card.id}
