@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
 import CardBackground from '@/components/admin-testing/card/CardBackground';
@@ -25,9 +25,13 @@ export interface AdminTestingCardProps {
   onUpdate?: (updated: AdminTestingCardData) => void;
   card?: AdminTestingCardData;
   isReorderMode?: boolean;
+  draggableProps?: any;
+  dragHandleProps?: any;
+  dragStyle?: any;
+  isDragging?: boolean;
 }
 
-const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
+const AdminTestingCard = forwardRef<HTMLElement, AdminTestingCardProps>(({
   title,
   description,
   icon,
@@ -37,8 +41,12 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   globalCarouselIndex,
   onUpdate,
   card,
-  isReorderMode = false
-}) => {
+  isReorderMode = false,
+  draggableProps,
+  dragHandleProps,
+  dragStyle,
+  isDragging
+}, ref) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
 
@@ -121,8 +129,13 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   return (
     <>
       <Card 
-        className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}
+        ref={ref}
+        {...draggableProps}
+        {...dragHandleProps}
+        style={dragStyle}
+        className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy ${isDragging ? 'dragging' : ''}`}
         data-testid="admin-card"
+        data-card-id={id}
       >
         {isReorderMode && (
           <div 
@@ -175,6 +188,8 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
       />
     </>
   );
-};
+});
+
+AdminTestingCard.displayName = 'AdminTestingCard';
 
 export default AdminTestingCard;

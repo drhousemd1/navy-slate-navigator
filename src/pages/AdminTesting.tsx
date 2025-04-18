@@ -221,40 +221,31 @@ const AdminTesting = () => {
     setIsReorderMode(!isReorderMode);
   };
 
-  // Improved body lock that preserves scroll position
   const lockBody = () => {
-    // Store current scroll position
     scrollPositionRef.current = window.scrollY;
     
-    // Apply a fixed position to the body to prevent scrolling
     document.body.style.position = 'fixed';
     document.body.style.top = `-${scrollPositionRef.current}px`;
     document.body.style.width = '100%';
     document.body.classList.add('no-select');
     
-    // Prevent default touch move behavior
     document.addEventListener('touchmove', preventTouchMove, { passive: false });
   };
 
   const unlockBody = () => {
-    // Remove fixed position and restore scroll
     document.body.style.position = '';
     document.body.style.top = '';
     document.body.style.width = '';
     document.body.classList.remove('no-select');
     
-    // Restore scroll position
     window.scrollTo(0, scrollPositionRef.current);
     
-    // Remove touch move handler
     document.removeEventListener('touchmove', preventTouchMove);
   };
 
   const preventTouchMove = (e: TouchEvent) => {
     const target = e.target as HTMLElement;
     
-    // Only prevent default if we're dragging and not in a scrollable area
-    // This allows scrolling in scrollable containers even during drag
     if (isDragging && !target?.closest?.('.scrollable')) {
       e.preventDefault();
     }
@@ -265,10 +256,8 @@ const AdminTesting = () => {
     setIsDragging(true);
     draggedItemId.current = result.draggableId;
     
-    // Lock body to prevent scrolling, but preserve position
     lockBody();
     
-    // Add a class to the body to indicate dragging state
     document.body.classList.add('dragging-active');
   };
 
@@ -277,38 +266,32 @@ const AdminTesting = () => {
     setIsDragging(false);
     draggedItemId.current = null;
     
-    // Unlock body scrolling
     unlockBody();
     
-    // Remove dragging state class
     document.body.classList.remove('dragging-active');
 
-    // If there's no destination, the drop was cancelled
     if (!result.destination) {
       return;
     }
 
-    // Only reorder if the position changed
     if (result.destination.index === result.source.index) {
       return;
     }
 
-    // Create a copy of the cards array and perform the reorder
     const reordered = Array.from(cards);
     const [removed] = reordered.splice(result.source.index, 1);
     reordered.splice(result.destination.index, 0, removed);
 
-    // Update order property in each card
     const updatedCards = reordered.map((card, index) => ({
       ...card,
       order: index
     }));
 
-    // Update the state with the new order
     setCards(updatedCards);
     
-    // Note: We don't auto-save after each drag anymore
-    // The user must click "Save Order" to persist changes
+    if (isReorderMode) {
+      saveCardOrder();
+    }
   };
 
   const saveCardOrder = async () => {
@@ -410,36 +393,25 @@ const AdminTesting = () => {
                         index={index}
                         isDragDisabled={!isReorderMode}
                       >
-                        {(provided, snapshot) => {
-                          // Create the draggable element
-                          return (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`${snapshot.isDragging ? 'dragging' : ''}`}
-                              style={{
-                                ...provided.draggableProps.style,
-                                // Keep original height when dragging to prevent layout shifts
-                                ...(snapshot.isDragging ? { height: 'auto', zIndex: 9999 } : {})
-                              }}
-                              data-card-id={card.id}
-                            >
-                              <AdminTestingCard
-                                key={card.id}
-                                card={card}
-                                id={card.id}
-                                title={card.title}
-                                description={card.description}
-                                priority={card.priority}
-                                points={card.points}
-                                globalCarouselIndex={globalCarouselIndex}
-                                onUpdate={handleUpdateCard}
-                                isReorderMode={isReorderMode}
-                              />
-                            </div>
-                          );
-                        }}
+                        {(provided, snapshot) => (
+                          <AdminTestingCard
+                            ref={provided.innerRef}
+                            draggableProps={provided.draggableProps}
+                            dragHandleProps={provided.dragHandleProps}
+                            dragStyle={provided.draggableProps.style}
+                            isDragging={snapshot.isDragging}
+                            key={card.id}
+                            card={card}
+                            id={card.id}
+                            title={card.title}
+                            description={card.description}
+                            priority={card.priority}
+                            points={card.points}
+                            globalCarouselIndex={globalCarouselIndex}
+                            onUpdate={handleUpdateCard}
+                            isReorderMode={isReorderMode}
+                          />
+                        )}
                       </Draggable>
                     ))}
                     {provided.placeholder}
