@@ -33,7 +33,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const queryClient = useQueryClient();
   
   const { 
-    tasks, 
+    tasks = [], 
     isLoading, 
     error, 
     saveTask, 
@@ -121,9 +121,9 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
 
   // Prefetch images to improve perceived performance
   useEffect(() => {
-    if (tasks.length > 0 && !isLoading) {
+    if (tasks && tasks.length > 0 && !isLoading) {
       tasks.forEach(task => {
-        if (task.background_image_url) {
+        if (task && task.background_image_url) {
           const img = new Image();
           img.src = task.background_image_url;
         }
@@ -143,7 +143,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
           <p className="mb-2">Failed to load tasks</p>
           <p className="text-sm">{error.message}</p>
         </div>
-      ) : tasks.length === 0 ? (
+      ) : (!tasks || tasks.length === 0) ? (
         <div className="text-center py-10">
           <p className="text-light-navy mb-4">No tasks found. Create your first task to get started!</p>
         </div>

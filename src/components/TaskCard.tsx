@@ -60,7 +60,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   icon_color = '#9b87f5'
 }) => {
   const currentDayOfWeek = getCurrentDayOfWeek();
-  const currentCompletions = usage_data[currentDayOfWeek] || 0;
+  const safeUsageData = usage_data || Array(7).fill(0);
+  const currentCompletions = safeUsageData[currentDayOfWeek] || 0;
   const maxCompletions = frequency_count || 1;
   const isFullyCompleted = currentCompletions >= maxCompletions;
   
@@ -148,7 +149,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               frequency={frequency} 
               frequency_count={frequency_count} 
               calendar_color={calendar_color}
-              usage_data={usage_data}
+              usage_data={safeUsageData}
             />
           )}
           

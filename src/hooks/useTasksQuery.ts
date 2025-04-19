@@ -21,17 +21,17 @@ const CACHED_TASKS_KEY = 'cached_tasks';
 const getCachedTasks = (): Task[] | null => {
   try {
     const cachedData = localStorage.getItem(CACHED_TASKS_KEY);
-    return cachedData ? JSON.parse(cachedData) : null;
+    return cachedData ? JSON.parse(cachedData) : [];
   } catch (err) {
     console.error('Error reading cached tasks:', err);
-    return null;
+    return [];
   }
 };
 
 // Save tasks to localStorage
 const saveCachedTasks = (tasks: Task[]) => {
   try {
-    localStorage.setItem(CACHED_TASKS_KEY, JSON.stringify(tasks));
+    localStorage.setItem(CACHED_TASKS_KEY, JSON.stringify(tasks || []));
   } catch (err) {
     console.error('Error caching tasks:', err);
   }
@@ -80,7 +80,7 @@ export const fetchTasks = async (): Promise<Task[]> => {
       return [];
     }
     
-    const processedTasks = (data as Task[]).map(task => {
+    const processedTasks = (data || []).map(task => {
       if (!task.usage_data) {
         task.usage_data = Array(7).fill(0);
       }
