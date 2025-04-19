@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -331,13 +330,16 @@ const AdminTesting = () => {
         </div>
         
         <div className="flex justify-end gap-2 mb-6">
-          <Button 
+          <img 
+            src="/lovable-uploads/4df3c2bc-d557-4ac5-9b0c-0e76f31b924a.png"
+            alt={isReorderMode ? "Save Order" : "Reorder Cards"}
             onClick={toggleReorderMode}
-            className={isReorderMode ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}
-          >
-            <MoveVertical className="mr-2 h-4 w-4" />
-            {isReorderMode ? "Save Order" : "Reorder Cards"}
-          </Button>
+            className={`h-12 w-12 cursor-pointer transition-opacity hover:opacity-80 ${
+              isReorderMode ? 'opacity-50' : 'opacity-100'
+            }`}
+            role="button"
+            aria-label={isReorderMode ? "Save Order" : "Reorder Cards"}
+          />
           <Button 
             onClick={handleAddCard}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
