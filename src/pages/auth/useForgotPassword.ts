@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';  {/* unified import from '@/contexts/auth' */}
 import { toast } from '@/hooks/use-toast';
 
 export function useForgotPassword() {
