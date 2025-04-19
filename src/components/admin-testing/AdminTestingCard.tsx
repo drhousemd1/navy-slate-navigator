@@ -20,6 +20,7 @@ export interface AdminTestingCardProps {
   id?: string;
   title?: string;
   description?: string | null;
+  icon?: React.ReactNode;               // ← ensure we include this
   priority?: 'low' | 'medium' | 'high';
   points?: number;
   globalCarouselIndex?: number;
@@ -32,6 +33,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   id,
   title,
   description,
+  icon,                                // ← destructure icon here
   priority = 'medium',
   points = 5,
   globalCarouselIndex = 0,
@@ -57,6 +59,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     cardData,
     images,
     usageData,
+    isTransitioning,
     handleSaveCard,
   } = useAdminCardData({
     id: card?.id || id || '',
@@ -72,22 +75,14 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   });
 
   // ─── Image carousel ────────────────────────────────────────────────
-  // Ensure we never pass undefined to the carousel
-  const {
-    visibleImage,
-    transitionImage,
-    isTransitioning,
-  } = useImageCarousel({
-    images: images || [],
-    globalCarouselIndex,
-  });
+  const { visibleImage, transitionImage } = useImageCarousel(images || [], globalCarouselIndex, carouselTimer);
 
   // ─── Rendered icon ──────────────────────────────────────────────────
   const iconComponent = renderCardIcon({
     iconUrl: cardData.icon_url,
     iconName: cardData.icon_name,
     iconColor: cardData.icon_color,
-    fallbackIcon: icon,
+    fallbackIcon: icon,                // ← now uses the prop
   });
 
   // ─── Handlers ───────────────────────────────────────────────────────
@@ -97,18 +92,12 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         .from('admin_testing_cards')
         .delete()
         .eq('id', cardId);
-      if (error) {
-        toast({
-          title: 'Error',
-          description: `Failed to delete card: ${error.message}`,
-          variant: 'destructive',
-        });
-      }
+      if (error) throw error;
     } catch (err: any) {
       console.error('Error deleting card:', err);
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred.',
+        description: `Failed to delete card: ${err.message}`,
         variant: 'destructive',
       });
     }
@@ -116,10 +105,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   const handleCarouselTimerChange = (newValue: number) => {
     setCarouselTimer(newValue);
-    localStorage.setItem(
-      'adminTestingCards_carouselTimer',
-      newValue.toString()
-    );
+    localStorage.setItem('adminTestingCards_carouselTimer', newValue.toString());
   };
 
   return (
