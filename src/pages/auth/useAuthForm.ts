@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/AuthContext'; 
@@ -34,7 +33,7 @@ export function useAuthForm() {
   const updateFormState = (updates: Partial<AuthFormState>) => {
     setFormState(prevState => ({ ...prevState, ...updates }));
   };
-
+  
   const handleLoginSubmit = async (e: React.FormEvent, rememberMe: boolean) => {
     e.preventDefault();
     updateFormState({ loading: true, loginError: null });
