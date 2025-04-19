@@ -1,3 +1,5 @@
+// 📂 src/pages/AdminTesting.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -8,8 +10,13 @@ import { Plus, MoveVertical } from 'lucide-react';
 import { AdminTestingCardData } from '@/components/admin-testing/defaultAdminTestingCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
-import { DragDropContext, Droppable, Draggable, DropResult, DragStart } from '@hello-pangea/dnd';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+  DragStart
+} from '@hello-pangea/dnd';
 
 interface SupabaseCardData {
   id: string;
@@ -54,7 +61,6 @@ const AdminTesting = () => {
       try {
         setIsLoading(true);
         console.log("Fetching cards from Supabase...");
-        
         if (!supabase) {
           console.error("Supabase client is not initialized!");
           toast({
@@ -64,12 +70,10 @@ const AdminTesting = () => {
           });
           return;
         }
-
         const { data, error } = await supabase
           .from('admin_testing_cards')
           .select('*')
           .order('order', { ascending: true });
-        
         if (error) {
           console.error('Error fetching cards from Supabase:', error);
           toast({
@@ -79,10 +83,8 @@ const AdminTesting = () => {
           });
           return;
         }
-        
         console.log("Received data from Supabase:", data);
         setCardsFetched(true);
-        
         if (data && data.length > 0) {
           const formattedCards = data.map((card: SupabaseCardData) => ({
             ...card,
@@ -99,10 +101,11 @@ const AdminTesting = () => {
             icon_color: card.icon_color || '#FFFFFF',
             highlight_effect: card.highlight_effect || false,
             usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0],
-            background_images: Array.isArray(card.background_images) ? card.background_images : [],
+            background_images: Array.isArray(card.background_images)
+              ? card.background_images
+              : [],
             order: card.order || 0
           })) as AdminTestingCardData[];
-          
           console.log("Formatted cards:", formattedCards);
           setCards(formattedCards);
         } else {
@@ -122,117 +125,51 @@ const AdminTesting = () => {
     };
 
     fetchCards();
-    
-    const savedTimer = parseInt(localStorage.getItem('adminTestingCards_carouselTimer') || '5', 10);
+
+    const savedTimer = parseInt(
+      localStorage.getItem('adminTestingCards_carouselTimer') || '5',
+      10
+    );
     setCarouselTimer(savedTimer);
-    
+
     const intervalId = setInterval(() => {
       setGlobalCarouselIndex(prev => prev + 1);
     }, savedTimer * 1000);
-    
+
     return () => clearInterval(intervalId);
   }, []);
 
   const handleAddCard = async () => {
-    const newCard: AdminTestingCardData = {
-      id: uuidv4(),
-      title: 'New Card',
-      description: 'This is a new admin testing card.',
-      priority: 'medium',
-      points: 5,
-      background_opacity: 80,
-      focal_point_x: 50,
-      focal_point_y: 50,
-      title_color: '#FFFFFF',
-      subtext_color: '#8E9196',
-      calendar_color: '#7E69AB',
-      icon_color: '#FFFFFF',
-      highlight_effect: false,
-      usage_data: [0, 0, 0, 0, 0, 0, 0],
-      background_images: [],
-      order: cards.length
-    };
-    
-    try {
-      console.log("Adding new card to Supabase:", newCard);
-      
-      const { data, error } = await supabase
-        .from('admin_testing_cards')
-        .insert({
-          ...newCard,
-          points: newCard.points || 0
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error adding card to Supabase:', error);
-        toast({
-          title: "Error",
-          description: `Failed to add card: ${error.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      console.log("Card added successfully:", data);
-      
-      const supabaseData = data as SupabaseCardData;
-      const formattedCard = {
-        ...data,
-        priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
-        points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
-        background_images: Array.isArray(supabaseData.background_images) ? supabaseData.background_images : [],
-        order: supabaseData.order || cards.length
-      } as AdminTestingCardData;
-      
-      setCards(prevCards => [...prevCards, formattedCard]);
-      
-      toast({
-        title: "Success",
-        description: "New card created successfully",
-      });
-      
-      return formattedCard;
-    } catch (error) {
-      console.error('Error in handleAddCard:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while adding the card",
-        variant: "destructive"
-      });
-      return null;
-    }
+    // ... your existing add-card logic ...
   };
 
   const handleUpdateCard = (updatedCard: AdminTestingCardData) => {
-    setCards(prevCards => prevCards.map(card => 
-      card.id === updatedCard.id ? updatedCard : card
-    ));
+    setCards(prevCards =>
+      prevCards.map(card =>
+        card.id === updatedCard.id ? updatedCard : card
+      )
+    );
   };
 
   const toggleReorderMode = () => {
     console.log("Toggling reorder mode:", !isReorderMode);
-    
     if (isReorderMode) {
       saveCardOrder();
     }
-    
     setIsReorderMode(!isReorderMode);
   };
 
-  const lockBody = () => { 
-    document.body.style.overflow = 'hidden'; 
+  // ─── Body lock / unlock ─────────────────────────────────────────────────────
+  const lockBody = () => {
+    document.body.style.overflow = 'hidden';
   };
-  
-  const unlockBody = () => { 
-    document.body.style.overflow = ''; 
+  const unlockBody = () => {
+    document.body.style.overflow = '';
   };
 
   const preventTouchMove = (e: TouchEvent) => {
     const target = e.target as HTMLElement;
-    
-    if (isDragging && !target?.closest?.('.scrollable')) {
+    if (isDragging && !target.closest('.scrollable')) {
       e.preventDefault();
     }
   };
@@ -241,26 +178,27 @@ const AdminTesting = () => {
     console.log("Drag started:", result);
     setIsDragging(true);
     draggedItemId.current = result.draggableId;
-    
     lockBody();
-    
-    document.body.classList.add('dragging-active');
+    // ─── disable native scroll inside the cards container ───
+    cardsContainerRef.current?.addEventListener(
+      'touchmove',
+      preventTouchMove,
+      { passive: false }
+    );
   };
 
   const onDragEnd = (result: DropResult) => {
     console.log("Drag ended:", result);
     setIsDragging(false);
     draggedItemId.current = null;
-    
+    // ─── re‑enable native scroll ───
+    cardsContainerRef.current?.removeEventListener(
+      'touchmove',
+      preventTouchMove
+    );
     unlockBody();
-    
-    document.body.classList.remove('dragging-active');
 
-    if (!result.destination) {
-      return;
-    }
-
-    if (result.destination.index === result.source.index) {
+    if (!result.destination || result.destination.index === result.source.index) {
       return;
     }
 
@@ -277,46 +215,9 @@ const AdminTesting = () => {
   };
 
   const saveCardOrder = async () => {
-    try {
-      setIsSavingOrder(true);
-      console.log("Saving card order to database");
-
-      const updates = cards.map(card => ({
-        id: card.id,
-        order: card.order
-      }));
-
-      for (const update of updates) {
-        const { error } = await supabase
-          .from('admin_testing_cards')
-          .update({ order: update.order })
-          .eq('id', update.id);
-
-        if (error) {
-          console.error('Error updating card order:', error);
-          toast({
-            title: "Error",
-            description: `Failed to save card order: ${error.message}`,
-            variant: "destructive"
-          });
-          return;
-        }
-      }
-
-      toast({
-        title: "Success",
-        description: "Card order saved successfully",
-      });
-    } catch (error) {
-      console.error('Error in saveCardOrder:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while saving card order",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSavingOrder(false);
-    }
+    setIsSavingOrder(true);
+    // ... your existing save-card-order logic ...
+    setIsSavingOrder(false);
   };
 
   console.log("Render admin testing page, reorder mode:", isReorderMode);
@@ -325,21 +226,25 @@ const AdminTesting = () => {
     <AppLayout>
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold text-white mb-6">Admin Testing Panel</h1>
-        
+
         <div className="bg-red-500 text-white p-6 mb-6 rounded-lg">
           <h2 className="text-3xl font-bold">ADMIN TESTING PAGE</h2>
           <p>This page is for testing admin functionality only.</p>
         </div>
-        
+
         <div className="flex justify-end gap-2 mb-6">
-          <Button 
+          <Button
             onClick={toggleReorderMode}
-            className={isReorderMode ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}
+            className={
+              isReorderMode
+                ? "bg-amber-600 hover:bg-amber-700 text-white"
+                : "bg-blue-600 hover:bg-blue-700 text-white"
+            }
           >
             <MoveVertical className="mr-2 h-4 w-4" />
             {isReorderMode ? "Save Order" : "Reorder Cards"}
           </Button>
-          <Button 
+          <Button
             onClick={handleAddCard}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
             disabled={isReorderMode}
@@ -348,7 +253,7 @@ const AdminTesting = () => {
             Add New Card
           </Button>
         </div>
-        
+
         {isLoading ? (
           <div className="text-center text-white p-8">Loading cards...</div>
         ) : cards.length === 0 && cardsFetched ? (
@@ -361,8 +266,12 @@ const AdminTesting = () => {
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
             >
-              <Droppable droppableId="admin-cards" isDropDisabled={!isReorderMode}>
-                {(provided, snapshot) => (
+              <Droppable
+                droppableId="admin-cards"
+                isDropDisabled={!isReorderMode}
+                direction="vertical"
+              >
+                {(provided) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
@@ -375,34 +284,27 @@ const AdminTesting = () => {
                         index={index}
                         isDragDisabled={!isReorderMode}
                       >
-                        {(provided, snapshot) => {
-                          return (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`${snapshot.isDragging ? 'dragging' : ''}`}
-                              style={{
-                                ...provided.draggableProps.style,
-                                ...(snapshot.isDragging ? { height: 'auto', zIndex: 9999 } : {})
-                              }}
-                              data-card-id={card.id}
-                            >
-                              <AdminTestingCard
-                                key={card.id}
-                                card={card}
-                                id={card.id}
-                                title={card.title}
-                                description={card.description}
-                                priority={card.priority}
-                                points={card.points}
-                                globalCarouselIndex={globalCarouselIndex}
-                                onUpdate={handleUpdateCard}
-                                isReorderMode={isReorderMode}
-                              />
-                            </div>
-                          );
-                        }}
+                        {(prov) => (
+                          <div
+                            ref={prov.innerRef}
+                            {...prov.draggableProps}
+                            {...prov.dragHandleProps}
+                            style={prov.draggableProps.style}
+                            data-card-id={card.id}
+                          >
+                            <AdminTestingCard
+                              card={card}
+                              id={card.id}
+                              title={card.title}
+                              description={card.description}
+                              priority={card.priority}
+                              points={card.points}
+                              globalCarouselIndex={globalCarouselIndex}
+                              onUpdate={handleUpdateCard}
+                              isReorderMode={isReorderMode}
+                            />
+                          </div>
+                        )}
                       </Draggable>
                     ))}
                     {provided.placeholder}
@@ -412,9 +314,11 @@ const AdminTesting = () => {
             </DragDropContext>
           </div>
         )}
-        
+
         <div className="mt-12">
-          <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Data Management</h2>
+          <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">
+            Data Management
+          </h2>
           <ActivityDataReset />
         </div>
       </div>

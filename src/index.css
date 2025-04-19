@@ -1,3 +1,5 @@
+/* 📂 src/index.css */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,211 +16,36 @@
     --popover-foreground: 222.2 84% 4.9%;
 
     --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary-foreground: 215.8 40% 15.1%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 206.7 60.0% 14.9%;
+    --secondary-foreground: 213.3 19.3% 17.1%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
     --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent-foreground: 215.4 16.3% 46.9%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 214.3 31% 91.4%;
+    --input: 214.3 31% 91.4%;
 
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-    
-    --neon-glow: #00FFF7;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
+/* Remove any old dragging-active or no-select rules before this section */
 
-  body {
-    @apply bg-dark-navy text-foreground antialiased overflow-x-hidden min-h-screen;
-    font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
-  }
-
-  #root {
-    @apply flex flex-col min-h-screen max-w-none m-0 p-0 w-full;
-  }
-}
-
-/* Custom navigation animations */
-@layer components {
-  .nav-item {
-    @apply transition-all duration-300 ease-in-out;
-  }
-  
-  .nav-item.active {
-    @apply text-nav-active;
-  }
-  
-  .nav-item:not(.active) {
-    @apply text-nav-inactive;
-  }
-  
-  .nav-item:hover:not(.active) {
-    @apply text-white opacity-80;
-  }
-  
-  /* Neon effect for active navigation items */
-  .neon-text {
-    color: var(--neon-glow);
-    text-shadow: 0 0 5px var(--neon-glow), 0 0 10px var(--neon-glow);
-  }
-  
-  .neon-icon {
-    filter: drop-shadow(0 0 2px var(--neon-glow));
-  }
-
-  /* Highlighter effect */
-  .highlighter {
-    display: inline;
-    background-color: rgba(245, 245, 209, 0.7);
-    padding: 1px 4px;
-    border-radius: 4px;
-    width: fit-content;
-    max-width: fit-content;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-    line-height: 1.6;
-  }
-  
-  /* Hide scrollbar utility */
-  .hide-scrollbar {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none;  /* IE and Edge */
-  }
-  
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
-  }
-  
-  /* Slow fade-in animation */
-  .slow-fade-in {
-    opacity: 0;
-    animation: slow-fade-in 2s ease-in forwards;
-  }
-  
-  @keyframes slow-fade-in {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-  }
-
-  /* Improved drag and drop styles */
-  .dragging {
-    @apply opacity-90 shadow-xl z-[9999];
-    touch-action: none !important;
-    will-change: transform;
-    cursor: grabbing !important;
-  }
-  
-  /* Make the placeholder visually clear */
-  .drag-placeholder {
-    @apply h-32 rounded-lg border-2 border-dashed border-amber-500/70 bg-amber-500/30 mb-6;
-    transition: all 0.2s ease;
-  }
-  
-  /* Prevent text selection during drag */
-  .no-select {
-    user-select: none !important;
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-  }
-  
-  /* Style for cards when in reorder mode */
-  .dragging-active [data-card-id] {
-    cursor: grab !important;
-  }
-  
-  /* Style for the dragged item */
-  .dragging-active .dragging {
-    cursor: grabbing !important;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
-  }
-}
-
-/* Prevent sideways overscroll */
-html, body {
-  @apply overflow-x-hidden;
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y pinch-zoom;
-}
-
-/* Scrollable container during drag */
+/* Prevent pull-to-refresh and overscroll within your scrollable container */
 .scrollable {
   overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
 }
 
-/* Fixed body class - improved version */
-body.body-fixed {
-  width: 100%;
-  position: fixed;
-  overflow: hidden !important;
-}
-
-/* Make sure the placeholder space stays exact */
-[data-rbd-placeholder-context-id] {
-  transition: none !important;
-  min-height: 0 !important;
-}
+/* Additional global rules below, if any */

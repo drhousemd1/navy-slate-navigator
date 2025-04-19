@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
@@ -15,23 +14,23 @@ import { AdminTestingCardData } from "./defaultAdminTestingCards";
 import { MoveVertical } from 'lucide-react';
 
 export interface AdminTestingCardProps {
-  title: string;
-  description: string;
+  id?: string;
+  title?: string;
+  description?: string | null;
   icon?: React.ReactNode;
-  id: string;
   priority?: 'low' | 'medium' | 'high';
   points?: number;
-  globalCarouselIndex: number;
-  onUpdate?: (updated: AdminTestingCardData) => void;
+  globalCarouselIndex?: number;
+  onUpdate?: (card: AdminTestingCardData) => void;
   card?: AdminTestingCardData;
   isReorderMode?: boolean;
 }
 
 const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
+  id,
   title,
   description,
   icon,
-  id,
   priority = 'medium',
   points = 5,
   globalCarouselIndex,
@@ -44,6 +43,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const [fixedHeight, setFixedHeight] = useState<number | undefined>();
 
+  // Freeze card height the moment Re-order mode toggles on
   useLayoutEffect(() => {
     if (isReorderMode && cardRef.current) {
       setFixedHeight(cardRef.current.getBoundingClientRect().height);
@@ -56,32 +56,25 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     cardData,
     images,
     usageData,
+    isTransitioning,
     handleSaveCard
-  } = useAdminCardData({ 
-    id: card?.id || id, 
-    title: card?.title || title, 
-    description: card?.description || description, 
+  } = useAdminCardData({
+    id: card?.id || id || '',
+    title: card?.title || title || '',
+    description: card?.description ?? description,
     priority: card?.priority || priority,
     points: card?.points || points,
-    icon_url: card?.icon_url,
-    icon_name: card?.icon_name || "",
-    background_images: card?.background_images as string[] || [],
-    background_image_url: card?.background_image_url
+    icon_url: cardData.icon_url,
+    icon_name: cardData.icon_name || '',
+    icon_color: cardData.icon_color || '#FFFFFF',
+    background_images: cardData.background_images,
+    background_image_url: cardData.background_image_url
   });
 
   const {
     visibleImage,
-    transitionImage,
-    isTransitioning
-  } = useImageCarousel({ images, globalCarouselIndex });
-
-  const handleOpenEditModal = () => {
-    if (!isReorderMode) {
-      setIsEditModalOpen(true);
-    }
-  };
-  
-  const handleCloseEditModal = () => setIsEditModalOpen(false);
+    transitionImage
+  } = useImageCarousel(images, globalCarouselIndex || 0, carouselTimer);
 
   const iconComponent = renderCardIcon({
     iconUrl: cardData.icon_url,
@@ -96,28 +89,18 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         .from('admin_testing_cards')
         .delete()
         .eq('id', cardId);
-      
       if (error) {
-        console.error("Error deleting card from Supabase:", error);
         toast({
           title: "Error",
           description: `Failed to delete card: ${error.message}`,
           variant: "destructive"
         });
-        return;
       }
-      
-      toast({
-        title: "Card Deleted",
-        description: "The admin testing card has been deleted",
-      });
-      
-      setIsEditModalOpen(false);
-    } catch (error) {
-      console.error("Error deleting card:", error);
+    } catch (err) {
+      console.error("Error deleting card:", err);
       toast({
         title: "Error",
-        description: "Failed to delete card",
+        description: "An unexpected error occurred.",
         variant: "destructive"
       });
     }
@@ -130,49 +113,49 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   return (
     <>
-      <Card 
+      <Card
         ref={cardRef}
-        className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}
         data-testid="admin-card"
-        style={fixedHeight ? {height: fixedHeight} : {}}
+        style={fixedHeight ? { height: fixedHeight } : {}}
+        className={`relative overflow-hidden border-2 ${
+          isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
+        } bg-navy`}
       >
         {isReorderMode && (
-          <div 
-            className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center"
+          <div
+            className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center pointer-events-none"
           >
-            <MoveVertical className="h-4 w-4 mr-1" /> 
+            <MoveVertical className="h-4 w-4 mr-1" />
             <span className="text-xs">Drag to reorder</span>
           </div>
         )}
-        <CardBackground 
+
+        <CardBackground
           visibleImage={visibleImage}
           transitionImage={transitionImage}
           isTransitioning={isTransitioning}
-          focalPointX={cardData.focal_point_x}
-          focalPointY={cardData.focal_point_y}
-          backgroundOpacity={cardData.background_opacity}
         />
-        <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
-          <CardHeader priority={cardData.priority || priority} points={cardData.points || points} />
-          <CardContent
-            title={cardData.title}
-            description={cardData.description}
-            iconComponent={iconComponent}
-            titleColor={cardData.title_color}
-            subtextColor={cardData.subtext_color}
-            highlightEffect={cardData.highlight_effect}
-          />
-          <CardFooter
-            calendarColor={cardData.calendar_color || '#7E69AB'}
-            usageData={usageData}
-            onEditClick={handleOpenEditModal}
-            isReorderMode={isReorderMode}
-          />
-        </div>
+
+        <CardHeader
+          title={cardData.title}
+          titleColor={cardData.title_color}
+          subtextColor={cardData.subtext_color}
+        />
+
+        <CardContent
+          description={cardData.description}
+          priority={cardData.priority}
+          points={cardData.points}
+          icon={iconComponent}
+        />
+
+        <CardFooter usageData={usageData} calendarColor={cardData.calendar_color} />
+
       </Card>
+
       <AdminTestingEditModal
         isOpen={isEditModalOpen}
-        onClose={handleCloseEditModal}
+        onClose={() => setIsEditModalOpen(false)}
         cardData={cardData}
         onSave={(updated) => {
           handleSaveCard(updated);
