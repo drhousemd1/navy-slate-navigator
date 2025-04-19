@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
@@ -12,7 +11,6 @@ import { renderCardIcon } from '@/components/admin-testing/utils/renderCardIcon'
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { AdminTestingCardData } from "./defaultAdminTestingCards";
-import { MoveVertical } from 'lucide-react';
 
 export interface AdminTestingCardProps {
   title: string;
@@ -121,14 +119,18 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   return (
     <>
       <Card 
-        className={`relative overflow-hidden border-2 ${
+        className={`relative overflow-hidden border-2 bg-navy drag-item ${
           isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
-        } bg-navy drag-item`}
+        }`}
         data-testid="admin-card"
       >
         {isReorderMode && (
-          <div className="absolute top-2 left-2 z-50 bg-amber-500/90 text-white p-1.5 rounded-md flex items-center shadow-md">
-            <MoveVertical className="h-4 w-4 mr-1" /> 
+          <div className="absolute top-2 left-2 z-50 bg-amber-500/90 text-white p-1.5 rounded-md flex items-center gap-1.5 shadow-md">
+            <img 
+              src="/lovable-uploads/d5dce2e0-fb15-4e5f-9f26-2fb3ce55f0f9.png" 
+              alt="Reorder" 
+              className="w-4 h-4"
+            />
             <span className="text-xs font-medium">Drag to reorder</span>
           </div>
         )}
@@ -150,12 +152,14 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
             subtextColor={cardData.subtext_color}
             highlightEffect={cardData.highlight_effect}
           />
-          <CardFooter
-            calendarColor={cardData.calendar_color || '#7E69AB'}
-            usageData={usageData}
-            onEditClick={handleOpenEditModal}
-            isReorderMode={isReorderMode}
-          />
+          <div className="mt-auto">
+            <CardFooter
+              calendarColor={cardData.calendar_color || '#7E69AB'}
+              usageData={usageData}
+              onEditClick={handleOpenEditModal}
+              isReorderMode={isReorderMode}
+            />
+          </div>
         </div>
       </Card>
       <AdminTestingEditModal
