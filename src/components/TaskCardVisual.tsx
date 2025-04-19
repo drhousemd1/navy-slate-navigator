@@ -10,7 +10,6 @@ interface TaskCardVisualProps {
   title: string;
   description: string;
   background_image_url?: string;
-  backgroundImage?: string; // For backward compatibility
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
@@ -27,7 +26,6 @@ const TaskCardVisual: React.FC<TaskCardVisualProps> = ({
   title,
   description,
   background_image_url,
-  backgroundImage, // For backward compatibility
   background_opacity = 100,
   focal_point_x = 50,
   focal_point_y = 50,
@@ -39,15 +37,13 @@ const TaskCardVisual: React.FC<TaskCardVisualProps> = ({
   subtext_color = '#8E9196',
   icon_color = '#9b87f5'
 }) => {
-  const actualBackgroundImage = background_image_url || backgroundImage;
-  
   return (
-    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!actualBackgroundImage ? 'bg-navy' : ''}`}>
-      {actualBackgroundImage && (
+    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!background_image_url ? 'bg-navy' : ''}`}>
+      {background_image_url && (
         <div 
           className="absolute inset-0 w-full h-full z-0"
           style={{
-            backgroundImage: `url(${actualBackgroundImage})`,
+            backgroundImage: `url(${background_image_url})`,
             backgroundSize: 'cover',
             backgroundPosition: `${focal_point_x}% ${focal_point_y}%`,
             opacity: background_opacity / 100,
