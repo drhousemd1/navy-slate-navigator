@@ -1,4 +1,3 @@
-// 📂 src/components/admin-testing/AdminTestingCard.tsx
 
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { Card } from '@/components/ui/card';
@@ -12,153 +11,176 @@ import { useImageCarousel } from '@/components/admin-testing/hooks/useImageCarou
 import { renderCardIcon } from '@/components/admin-testing/utils/renderCardIcon';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
-import { AdminTestingCardData } from './defaultAdminTestingCards';
+import { AdminTestingCardData } from "./defaultAdminTestingCards";
 import { MoveVertical } from 'lucide-react';
 
 export interface AdminTestingCardProps {
-  card: AdminTestingCardData;
-  id?: string;
-  title?: string;
-  description?: string | null;
-  icon?: React.ReactNode;               // ← ensure we include this
+  title: string;
+  description: string;
+  icon?: React.ReactNode;
+  id: string;
   priority?: 'low' | 'medium' | 'high';
   points?: number;
-  globalCarouselIndex?: number;
-  onUpdate?: (card: AdminTestingCardData) => void;
+  globalCarouselIndex: number;
+  onUpdate?: (updated: AdminTestingCardData) => void;
+  card?: AdminTestingCardData;
   isReorderMode?: boolean;
 }
 
 const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
-  card,
-  id,
   title,
   description,
-  icon,                                // ← destructure icon here
+  icon,
+  id,
   priority = 'medium',
   points = 5,
-  globalCarouselIndex = 0,
+  globalCarouselIndex,
   onUpdate,
-  isReorderMode = false,
+  card,
+  isReorderMode = false
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
-
-  // ─── Height‑lock logic ─────────────────────────────────────────────
   const cardRef = useRef<HTMLDivElement>(null);
-  const [fixedHeight, setFixedHeight] = useState<number | undefined>();
+  const [fixedHeight, setFixedHeight] = useState<number | null>(null);
+
   useLayoutEffect(() => {
     if (isReorderMode && cardRef.current) {
       setFixedHeight(cardRef.current.getBoundingClientRect().height);
     } else {
-      setFixedHeight(undefined);
+      setFixedHeight(null);
     }
   }, [isReorderMode]);
 
-  // ─── Card data hook ────────────────────────────────────────────────
   const {
     cardData,
     images,
     usageData,
-    isTransitioning,
-    handleSaveCard,
-  } = useAdminCardData({
-    id: card?.id || id || '',
-    title: card?.title || title || '',
-    description: card?.description ?? description,
+    handleSaveCard
+  } = useAdminCardData({ 
+    id: card?.id || id, 
+    title: card?.title || title, 
+    description: card?.description || description, 
     priority: card?.priority || priority,
     points: card?.points || points,
-    icon_url: card?.icon_url || '',
-    icon_name: card?.icon_name || '',
-    icon_color: card?.icon_color || '#FFFFFF',
-    background_images: card?.background_images || [],
-    background_image_url: card?.background_image_url || null,
+    icon_url: card?.icon_url,
+    icon_name: card?.icon_name || "",
+    background_images: card?.background_images as string[] || [],
+    background_image_url: card?.background_image_url
   });
 
-  // ─── Image carousel ────────────────────────────────────────────────
-  const { visibleImage, transitionImage } = useImageCarousel(images || [], globalCarouselIndex, carouselTimer);
+  const {
+    visibleImage,
+    transitionImage,
+    isTransitioning
+  } = useImageCarousel({ images, globalCarouselIndex });
 
-  // ─── Rendered icon ──────────────────────────────────────────────────
+  const handleOpenEditModal = () => {
+    if (!isReorderMode) {
+      setIsEditModalOpen(true);
+    }
+  };
+  
+  const handleCloseEditModal = () => setIsEditModalOpen(false);
+
   const iconComponent = renderCardIcon({
     iconUrl: cardData.icon_url,
     iconName: cardData.icon_name,
     iconColor: cardData.icon_color,
-    fallbackIcon: icon,                // ← now uses the prop
+    fallbackIcon: icon
   });
 
-  // ─── Handlers ───────────────────────────────────────────────────────
   const handleDeleteCard = async (cardId: string) => {
     try {
       const { error } = await supabase
         .from('admin_testing_cards')
         .delete()
         .eq('id', cardId);
-      if (error) throw error;
-    } catch (err: any) {
-      console.error('Error deleting card:', err);
+      
+      if (error) {
+        console.error("Error deleting card from Supabase:", error);
+        toast({
+          title: "Error",
+          description: `Failed to delete card: ${error.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       toast({
-        title: 'Error',
-        description: `Failed to delete card: ${err.message}`,
-        variant: 'destructive',
+        title: "Card Deleted",
+        description: "The admin testing card has been deleted",
+      });
+      
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error("Error deleting card:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete card",
+        variant: "destructive"
       });
     }
   };
 
   const handleCarouselTimerChange = (newValue: number) => {
     setCarouselTimer(newValue);
-    localStorage.setItem('adminTestingCards_carouselTimer', newValue.toString());
+    localStorage.setItem("adminTestingCards_carouselTimer", newValue.toString());
   };
 
   return (
     <>
-      <Card
+      <Card 
         ref={cardRef}
+        className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}
         data-testid="admin-card"
         style={fixedHeight ? { height: fixedHeight } : undefined}
-        className={`relative overflow-hidden border-2 ${
-          isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
-        } bg-navy`}
       >
         {isReorderMode && (
-          <div className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center pointer-events-none">
-            <MoveVertical className="h-4 w-4 mr-1" />
+          <div 
+            className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center"
+          >
+            <MoveVertical className="h-4 w-4 mr-1" /> 
             <span className="text-xs">Drag to reorder</span>
           </div>
         )}
-
-        <CardBackground
+        <CardBackground 
           visibleImage={visibleImage}
           transitionImage={transitionImage}
           isTransitioning={isTransitioning}
+          focalPointX={cardData.focal_point_x}
+          focalPointY={cardData.focal_point_y}
+          backgroundOpacity={cardData.background_opacity}
         />
-
-        <CardHeader
-          title={cardData.title}
-          titleColor={cardData.title_color}
-          subtextColor={cardData.subtext_color}
-        />
-
-        <CardContent
-          description={cardData.description}
-          priority={cardData.priority}
-          points={cardData.points}
-          icon={iconComponent}
-        />
-
-        <CardFooter
-          usageData={usageData}
-          calendarColor={cardData.calendar_color}
-        />
+        <div className="relative z-20 flex flex-col p-4 md:p-6 h-full">
+          <CardHeader priority={cardData.priority || priority} points={cardData.points || points} />
+          <CardContent
+            title={cardData.title}
+            description={cardData.description}
+            iconComponent={iconComponent}
+            titleColor={cardData.title_color}
+            subtextColor={cardData.subtext_color}
+            highlightEffect={cardData.highlight_effect}
+          />
+          <CardFooter
+            calendarColor={cardData.calendar_color || '#7E69AB'}
+            usageData={usageData}
+            onEditClick={handleOpenEditModal}
+            isReorderMode={isReorderMode}
+          />
+        </div>
       </Card>
-
       <AdminTestingEditModal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={handleCloseEditModal}
         cardData={cardData}
         onSave={(updated) => {
           handleSaveCard(updated);
-          if (onUpdate) onUpdate(updated);
+          if (onUpdate) {
+            onUpdate(updated);
+          }
         }}
-        onDelete={() => handleDeleteCard(cardData.id)}
+        onDelete={handleDeleteCard}
         localStorageKey="adminTestingCards"
         carouselTimer={carouselTimer}
         onCarouselTimerChange={handleCarouselTimerChange}
