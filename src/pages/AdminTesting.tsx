@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -222,8 +223,13 @@ const AdminTesting = () => {
   };
 
   const preventTouchMove = (e: TouchEvent) => {
-    if (isDragging && !e.target?.closest?.('.scrollable')) {
-      e.preventDefault();
+    // Fix the TypeScript error by properly checking if e.target is an HTMLElement
+    // before calling closest() method on it
+    if (isDragging && e.target) {
+      const target = e.target as HTMLElement;
+      if (!target.closest?.('.scrollable')) {
+        e.preventDefault();
+      }
     }
   };
 
