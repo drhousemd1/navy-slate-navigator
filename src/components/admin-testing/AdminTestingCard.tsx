@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
@@ -123,12 +124,10 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         className={`relative overflow-hidden border-2 bg-navy drag-item ${
           isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
         }`}
-        style={{ height: '250px' }}
         data-testid="admin-card"
       >
         {isReorderMode && (
-          <div className="absolute top-2 left-2 z-50 bg-amber-500/90 text-white p-1.5 rounded-md flex items-center shadow-md" 
-               style={{ height: '28px' }}>
+          <div className="absolute top-2 left-2 z-50 bg-amber-500/90 text-white p-1.5 rounded-md flex items-center shadow-md">
             <MoveVertical className="h-4 w-4 mr-1" /> 
             <span className="text-xs font-medium">Drag to reorder</span>
           </div>
