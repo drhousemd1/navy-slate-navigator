@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -223,11 +222,8 @@ const AdminTesting = () => {
   };
 
   const preventTouchMove = (e: TouchEvent) => {
-    // Fix the TypeScript error by properly checking if e.target is an HTMLElement
-    // before calling closest() method on it
-    if (isDragging && e.target) {
-      const target = e.target as HTMLElement;
-      if (!target.closest?.('.scrollable')) {
+    if (isDragging && e.target instanceof HTMLElement) {
+      if (!e.target.closest('.scrollable')) {
         e.preventDefault();
       }
     }
@@ -236,6 +232,17 @@ const AdminTesting = () => {
   const onDragStart = (result: DragStart) => {
     setIsDragging(true);
     draggedItemId.current = result.draggableId;
+    
+    // Store the scroll position
+    if (cardsContainerRef.current) {
+      scrollPositionRef.current = cardsContainerRef.current.scrollTop;
+    }
+    
+    // Get and store the card height for placeholder
+    const draggedCard = document.querySelector(`[data-rbd-draggable-id="${result.draggableId}"]`);
+    if (draggedCard) {
+      document.documentElement.style.setProperty('--card-height', `${draggedCard.clientHeight}px`);
+    }
     
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
@@ -249,6 +256,9 @@ const AdminTesting = () => {
     document.body.style.overflow = '';
     document.body.style.touchAction = '';
     document.removeEventListener('touchmove', preventTouchMove);
+    
+    // Reset the card height variable
+    document.documentElement.style.removeProperty('--card-height');
     
     if (!result.destination || result.destination.index === result.source.index) {
       return;
@@ -351,7 +361,10 @@ const AdminTesting = () => {
             <Droppable droppableId="admin-cards" isDropDisabled={!isReorderMode}>
               {(provided, snapshot) => (
                 <div
-                  ref={provided.innerRef}
+                  ref={(el) => {
+                    provided.innerRef(el);
+                    cardsContainerRef.current = el;
+                  }}
                   {...provided.droppableProps}
                   className="flex flex-col gap-y-6"
                 >
@@ -367,7 +380,10 @@ const AdminTesting = () => {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className={snapshot.isDragging ? 'dragging' : ''}
+                          className={`drag-item ${snapshot.isDragging ? 'dragging' : ''}`}
+                          style={{
+                            ...provided.draggableProps.style,
+                          }}
                         >
                           <AdminTestingCard
                             key={card.id}

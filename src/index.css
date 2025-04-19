@@ -100,7 +100,6 @@
   }
 }
 
-/* Custom navigation animations */
 @layer components {
   .nav-item {
     @apply transition-all duration-300 ease-in-out;
@@ -167,6 +166,7 @@
     transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
     transform-origin: 50% 50%;
     position: relative;
+    will-change: transform;
   }
   
   .drag-item.dragging {
@@ -182,6 +182,8 @@
     border: 2px dashed theme('colors.amber.600');
     margin: 1.5rem 0;
     border-radius: 0.5rem;
+    min-height: inherit;
+    height: var(--card-height);
   }
 
   /* Remove old drag styles */
@@ -218,5 +220,6 @@ body.body-fixed {
 /* Make sure the placeholder space stays exact */
 [data-rbd-placeholder-context-id] {
   transition: none !important;
-  min-height: 0 !important;
+  margin: 0 !important;
+  min-height: var(--card-height) !important;
 }
