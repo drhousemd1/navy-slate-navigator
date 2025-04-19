@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, clearAuthState, initializeSupabaseClient } from '@/integrations/supabase/client';
+import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { useAuthOperations } from './useAuthOperations';
 import { useUserProfile } from './useUserProfile';
 
@@ -148,11 +148,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log("AuthContext: Setting up auth state listener");
     
-    // Initialize Supabase client with persisted auth preference
-    const client = initializeSupabaseClient();
-    
-    // Set up the auth state change listener
-    const { data: { subscription } } = client.auth.onAuthStateChange(
+    // Set up the auth state change listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         console.log('Auth state change event:', event);
         
@@ -194,7 +191,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // Initial load of auth state
-    client.auth.getSession()
+    console.log("AuthContext: Checking for existing session");
+    supabase.auth.getSession()
       .then(({ data: { session } }) => {
         if (session) {
           console.log("Found existing session:", session.user.email);

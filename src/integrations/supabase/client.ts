@@ -16,20 +16,15 @@ const getPersistedAuth = () => {
   }
 };
 
-// Initialize the Supabase client with proper auth configuration
-export const initializeSupabaseClient = (persistSession = getPersistedAuth()) => {
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession,
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      detectSessionInUrl: true
-    }
-  });
-};
-
 // Create a properly configured client
-export const supabase = initializeSupabaseClient();
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: getPersistedAuth(),
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+  }
+});
 
 // Helper function to check if a session exists (for debugging)
 export const checkSession = async () => {
@@ -57,3 +52,4 @@ export const clearAuthState = async () => {
     console.log("Auth state successfully cleared");
   }
 };
+
