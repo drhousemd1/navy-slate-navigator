@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -164,36 +163,34 @@
   }
 
   /* Improved drag and drop styles */
-  .dragging {
-    @apply opacity-90 shadow-xl z-[9999];
-    touch-action: none !important;
-    will-change: transform;
-    cursor: grabbing !important;
+  .drag-item {
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+    transform-origin: 50% 50%;
+    position: relative;
   }
   
-  /* Make the placeholder visually clear */
+  .drag-item.dragging {
+    opacity: 0.9;
+    pointer-events: auto;
+    transform: scale(1.02);
+    z-index: 50;
+  }
+  
   .drag-placeholder {
-    @apply h-32 rounded-lg border-2 border-dashed border-amber-500/70 bg-amber-500/30 mb-6;
-    transition: all 0.2s ease;
+    opacity: 0.2;
+    background: theme('colors.amber.500');
+    border: 2px dashed theme('colors.amber.600');
+    margin: 1.5rem 0;
+    border-radius: 0.5rem;
   }
-  
-  /* Prevent text selection during drag */
+
+  /* Remove old drag styles */
+  .dragging,
+  .dragging-active,
   .no-select {
-    user-select: none !important;
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-  }
-  
-  /* Style for cards when in reorder mode */
-  .dragging-active [data-card-id] {
-    cursor: grab !important;
-  }
-  
-  /* Style for the dragged item */
-  .dragging-active .dragging {
-    cursor: grabbing !important;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
+    /* Override any existing drag styles */
+    transition: none;
+    touch-action: none;
   }
 }
 
