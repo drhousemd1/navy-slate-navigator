@@ -5,7 +5,7 @@ import { Reward } from '@/lib/rewardUtils';
 import { toast } from '@/hooks/use-toast';
 
 // Keys for React Query cache
-const REWARDS_KEY = 'rewards';
+const REWARDS_KEY = ['rewards'];
 
 // Get rewards count for loading expectations
 export const getRewardsCount = async (): Promise<number> => {
@@ -143,7 +143,7 @@ export const useRewardsQuery = () => {
     isLoading,
     error
   } = useQuery({
-    queryKey: [REWARDS_KEY],
+    queryKey: REWARDS_KEY,
     queryFn: fetchRewards,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
@@ -153,7 +153,7 @@ export const useRewardsQuery = () => {
   const {
     data: expectedCardCount = rewards.length || 1,
   } = useQuery({
-    queryKey: [REWARDS_KEY, 'count'],
+    queryKey: [...REWARDS_KEY, 'count'],
     queryFn: getRewardsCount,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -178,7 +178,7 @@ export const useRewardsQuery = () => {
     onSuccess: (newReward) => {
       // Update the cache with new reward
       queryClient.setQueryData(
-        [REWARDS_KEY],
+        REWARDS_KEY,
         (oldData: Reward[] = []) => [...oldData, newReward]
       );
       
@@ -201,14 +201,14 @@ export const useRewardsQuery = () => {
     mutationFn: updateReward,
     onMutate: async (updatedReward) => {
       // Cancel outgoing refetches to avoid overwriting our optimistic update
-      await queryClient.cancelQueries({ queryKey: [REWARDS_KEY] });
+      await queryClient.cancelQueries({ queryKey: REWARDS_KEY });
       
       // Snapshot the previous value
-      const previousRewards = queryClient.getQueryData<Reward[]>([REWARDS_KEY]) || [];
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_KEY) || [];
       
       // Optimistically update the cache with the new value
       queryClient.setQueryData(
-        [REWARDS_KEY],
+        REWARDS_KEY,
         (oldData: Reward[] = []) => oldData.map(reward => 
           reward.id === updatedReward.id ? { ...reward, ...updatedReward } : reward
         )
@@ -226,7 +226,7 @@ export const useRewardsQuery = () => {
     onError: (error, _, context) => {
       // Rollback to previous value
       if (context?.previousRewards) {
-        queryClient.setQueryData([REWARDS_KEY], context.previousRewards);
+        queryClient.setQueryData(REWARDS_KEY, context.previousRewards);
       }
       
       toast({
@@ -237,7 +237,7 @@ export const useRewardsQuery = () => {
     },
     onSettled: () => {
       // Always refetch after error or success to make sure our local data is in sync with the server
-      queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] });
+      queryClient.invalidateQueries({ queryKey: REWARDS_KEY });
     }
   });
 
@@ -246,14 +246,14 @@ export const useRewardsQuery = () => {
     mutationFn: deleteReward,
     onMutate: async (id) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: [REWARDS_KEY] });
+      await queryClient.cancelQueries({ queryKey: REWARDS_KEY });
       
       // Snapshot the previous values
-      const previousRewards = queryClient.getQueryData<Reward[]>([REWARDS_KEY]) || [];
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_KEY) || [];
       
       // Optimistically update caches
       queryClient.setQueryData(
-        [REWARDS_KEY],
+        REWARDS_KEY,
         (oldData: Reward[] = []) => oldData.filter(reward => reward.id !== id)
       );
       
@@ -268,7 +268,7 @@ export const useRewardsQuery = () => {
     onError: (error, _, context) => {
       // Rollback to previous values
       if (context?.previousRewards) {
-        queryClient.setQueryData([REWARDS_KEY], context.previousRewards);
+        queryClient.setQueryData(REWARDS_KEY, context.previousRewards);
       }
       
       toast({
@@ -279,7 +279,7 @@ export const useRewardsQuery = () => {
     },
     onSettled: () => {
       // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] });
+      queryClient.invalidateQueries({ queryKey: REWARDS_KEY });
     }
   });
 
@@ -309,18 +309,18 @@ export const useRewardsQuery = () => {
     },
     onMutate: async ({ rewardId, cost }) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: [REWARDS_KEY] });
+      await queryClient.cancelQueries({ queryKey: REWARDS_KEY });
       await queryClient.cancelQueries({ queryKey: ['profile', 'points'] });
       
       // Snapshot the previous values
-      const previousRewards = queryClient.getQueryData<Reward[]>([REWARDS_KEY]) || [];
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_KEY) || [];
       const previousPoints = queryClient.getQueryData<number>(['profile', 'points']) || 0;
       
       // Optimistically update caches
       queryClient.setQueryData(['profile', 'points'], previousPoints - cost);
       
       queryClient.setQueryData(
-        [REWARDS_KEY],
+        REWARDS_KEY,
         (oldData: Reward[] = []) => oldData.map(reward => 
           reward.id === rewardId ? { ...reward, supply: reward.supply + 1 } : reward
         )
@@ -337,7 +337,7 @@ export const useRewardsQuery = () => {
     onError: (error, _, context) => {
       // Rollback to previous values
       if (context?.previousRewards) {
-        queryClient.setQueryData([REWARDS_KEY], context.previousRewards);
+        queryClient.setQueryData(REWARDS_KEY, context.previousRewards);
       }
       if (context?.previousPoints) {
         queryClient.setQueryData(['profile', 'points'], context.previousPoints);
@@ -351,7 +351,7 @@ export const useRewardsQuery = () => {
     },
     onSettled: () => {
       // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] });
+      queryClient.invalidateQueries({ queryKey: REWARDS_KEY });
       queryClient.invalidateQueries({ queryKey: ['profile', 'points'] });
     }
   });
@@ -377,14 +377,14 @@ export const useRewardsQuery = () => {
     },
     onMutate: async (rewardId) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: [REWARDS_KEY] });
+      await queryClient.cancelQueries({ queryKey: REWARDS_KEY });
       
       // Snapshot the previous values
-      const previousRewards = queryClient.getQueryData<Reward[]>([REWARDS_KEY]) || [];
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_KEY) || [];
       
       // Optimistically update caches
       queryClient.setQueryData(
-        [REWARDS_KEY],
+        REWARDS_KEY,
         (oldData: Reward[] = []) => oldData.map(reward => 
           reward.id === rewardId ? { ...reward, supply: reward.supply - 1 } : reward
         )
@@ -401,7 +401,7 @@ export const useRewardsQuery = () => {
     onError: (error, _, context) => {
       // Rollback to previous values
       if (context?.previousRewards) {
-        queryClient.setQueryData([REWARDS_KEY], context.previousRewards);
+        queryClient.setQueryData(REWARDS_KEY, context.previousRewards);
       }
       
       toast({
@@ -412,7 +412,7 @@ export const useRewardsQuery = () => {
     },
     onSettled: () => {
       // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] });
+      queryClient.invalidateQueries({ queryKey: REWARDS_KEY });
     }
   });
 
@@ -426,7 +426,7 @@ export const useRewardsQuery = () => {
     expectedCardCount,
     points,
     totalRewardsSupply,
-    refetchRewards: () => queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] }),
+    refetchRewards: () => queryClient.invalidateQueries({ queryKey: REWARDS_KEY }),
     refetchPoints,
     createReward: (data: Partial<Reward> & { title: string }) => createRewardMutation.mutateAsync(data),
     updateReward: (id: string, data: Partial<Reward>) => updateRewardMutation.mutateAsync({ ...data, id }),
