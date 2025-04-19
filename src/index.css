@@ -1,9 +1,11 @@
 /* 📂 src/index.css */
 
+/* 1. Tailwind directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* 2. Your root CSS variables */
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -30,22 +32,20 @@
     --accent: 210 40% 96.1%;
     --accent-foreground: 215.4 16.3% 46.9%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
     --border: 214.3 31% 91.4%;
     --input: 214.3 31% 91.4%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
   }
 }
 
-/* Remove any old dragging-active or no-select rules before this section */
+/* 3. Ensure React‑DnD placeholder keeps the correct gap */
+[data-rbd-placeholder-context-id] {
+  transition: none !important;
+  min-height: 0 !important;
+}
 
-/* Prevent pull-to-refresh and overscroll within your scrollable container */
+/* 4. Prevent native pull‑to‑refresh / overscroll during drag */
 .scrollable {
   overscroll-behavior: contain;
 }
 
-/* Additional global rules below, if any */
+/* 5. (Keep any additional global styles you need below) */
