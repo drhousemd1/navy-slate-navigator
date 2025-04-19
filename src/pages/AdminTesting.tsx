@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -333,9 +332,13 @@ const AdminTesting = () => {
         <div className="flex justify-end gap-2 mb-6">
           <Button 
             onClick={toggleReorderMode}
-            className={isReorderMode ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}
+            className={`flex items-center gap-2 ${isReorderMode ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
           >
-            <MoveVertical className="mr-2 h-4 w-4" />
+            <img 
+              src="/lovable-uploads/b04a1a6d-f35f-4f94-b625-d4028df44812.png"
+              alt="Reorder Cards"
+              className="h-5 w-5"
+            />
             {isReorderMode ? "Save Order" : "Reorder Cards"}
           </Button>
           <Button 

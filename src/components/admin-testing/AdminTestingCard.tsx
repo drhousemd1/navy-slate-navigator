@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
@@ -127,9 +126,13 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         data-testid="admin-card"
       >
         {isReorderMode && (
-          <div className="absolute top-2 left-2 z-50 bg-amber-500/90 text-white p-1.5 rounded-md flex items-center shadow-md">
-            <MoveVertical className="h-4 w-4 mr-1" /> 
-            <span className="text-xs font-medium">Drag to reorder</span>
+          <div className="absolute top-2 left-2 z-50 bg-amber-500/90 text-white px-3 py-2 rounded-md flex items-center gap-2 shadow-md">
+            <img 
+              src="/lovable-uploads/b04a1a6d-f35f-4f94-b625-d4028df44812.png"
+              alt="Drag to reorder"
+              className="h-5 w-5"
+            />
+            <span className="text-xs font-semibold tracking-wide">Drag to reorder</span>
           </div>
         )}
         <CardBackground 
