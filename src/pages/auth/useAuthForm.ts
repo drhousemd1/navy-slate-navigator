@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/AuthContext'; 
@@ -12,6 +13,7 @@ export function useAuthForm() {
     loading: false,
     loginError: null
   });
+  
   const { signIn, signUp, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -33,7 +35,7 @@ export function useAuthForm() {
     setFormState(prevState => ({ ...prevState, ...updates }));
   };
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent, rememberMe: boolean) => {
     e.preventDefault();
     updateFormState({ loading: true, loginError: null });
 
@@ -48,7 +50,7 @@ export function useAuthForm() {
       
       console.log("Login attempt with email:", formState.email);
       
-      const { error } = await signIn(formState.email, formState.password);
+      const { error } = await signIn(formState.email, formState.password, rememberMe);
       
       if (error) {
         console.error("Login error:", error);

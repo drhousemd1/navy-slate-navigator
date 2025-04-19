@@ -7,16 +7,22 @@ import { toast } from '@/hooks/use-toast';
 const SUPABASE_URL = "https://ronqvzihpffgowyscgfm.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvbnF2emlocGZmZ293eXNjZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4NzM0NzIsImV4cCI6MjA1ODQ0OTQ3Mn0.28ftEjZYpnYOywnRdRbRRg5UKD31VPpuZ00mJH8IQtM";
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+// Get persisted auth preference from localStorage
+const getPersistedAuth = () => {
+  try {
+    return localStorage.getItem('rememberMe') === 'true';
+  } catch {
+    return false;
+  }
+};
 
 // Create a properly configured client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     autoRefreshToken: true,
-    persistSession: true,
+    persistSession: getPersistedAuth(),
     detectSessionInUrl: true,
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   }
 });
 
@@ -30,7 +36,6 @@ export const checkSession = async () => {
 // Debug helper to clear any corrupted auth state
 export const clearAuthState = async () => {
   if (typeof window !== 'undefined') {
-    // Clear any local storage items that might be causing issues
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key?.includes('supabase') || key?.includes('auth')) {
@@ -40,7 +45,6 @@ export const clearAuthState = async () => {
     }
   }
   
-  // Sign out completely to reset auth state
   const { error } = await supabase.auth.signOut({ scope: 'global' });
   if (error) {
     console.error("Error clearing auth state:", error);
@@ -48,3 +52,4 @@ export const clearAuthState = async () => {
     console.log("Auth state successfully cleared");
   }
 };
+
