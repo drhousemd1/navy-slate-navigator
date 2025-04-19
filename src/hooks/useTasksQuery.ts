@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -6,22 +7,6 @@ import { Task } from '@/lib/taskUtils';
 import * as React from 'react';
 
 const TASKS_CACHE_KEY = 'tasks';
-
-export const fetchTasks = async (): Promise<Task[]> => {
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  
-  // Convert the data from Supabase to match the Task type
-  return (data || []).map(task => ({
-    ...task,
-    frequency: task.frequency as 'daily' | 'weekly',
-    usage_data: Array.isArray(task.usage_data) ? task.usage_data : Array(7).fill(0)
-  })) as Task[];
-};
 
 export const useTasksQuery = () => {
   const queryClient = useQueryClient();
@@ -33,14 +18,30 @@ export const useTasksQuery = () => {
     error
   } = useQuery({
     ...queryConfig,
-    queryFn: fetchTasks,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching tasks:', error);
+        throw error;
+      }
+      
+      // Convert the data from Supabase to match the Task type
+      return (data || []).map(task => ({
+        ...task,
+        frequency: task.frequency as 'daily' | 'weekly',
+        usage_data: Array.isArray(task.usage_data) ? task.usage_data : Array(7).fill(0)
+      })) as Task[];
+    },
     initialData: () => {
       try {
         const cached = localStorage.getItem(TASKS_CACHE_KEY);
         if (cached) {
           const { data, timestamp } = JSON.parse(cached);
           if (Date.now() - timestamp < 60 * 60 * 1000) {
-            // Make sure we properly cast the data
             return (data || []).map((task: any) => ({
               ...task,
               frequency: task.frequency as 'daily' | 'weekly',
