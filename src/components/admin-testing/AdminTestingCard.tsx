@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
@@ -121,7 +120,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   return (
     <>
       <Card 
-        className={`relative overflow-hidden border-2 ${
+        className={`relative overflow-hidden border-2 min-h-[280px] transition-all duration-300 ${
           isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
         } bg-navy drag-item`}
         data-testid="admin-card"
@@ -150,12 +149,14 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
             subtextColor={cardData.subtext_color}
             highlightEffect={cardData.highlight_effect}
           />
-          <CardFooter
-            calendarColor={cardData.calendar_color || '#7E69AB'}
-            usageData={usageData}
-            onEditClick={handleOpenEditModal}
-            isReorderMode={isReorderMode}
-          />
+          <div className="mt-auto pt-4">
+            <CardFooter
+              calendarColor={cardData.calendar_color || '#7E69AB'}
+              usageData={usageData}
+              onEditClick={handleOpenEditModal}
+              isReorderMode={isReorderMode}
+            />
+          </div>
         </div>
       </Card>
       <AdminTestingEditModal
