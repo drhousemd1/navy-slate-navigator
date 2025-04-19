@@ -34,14 +34,14 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   description,
   priority = 'medium',
   points = 5,
-  globalCarouselIndex,
+  globalCarouselIndex = 0,
   onUpdate,
   isReorderMode = false,
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
 
-  // Freeze height when reorder mode toggles
+  // ─── Height‑lock logic ─────────────────────────────────────────────
   const cardRef = useRef<HTMLDivElement>(null);
   const [fixedHeight, setFixedHeight] = useState<number | undefined>();
   useLayoutEffect(() => {
@@ -52,12 +52,11 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     }
   }, [isReorderMode]);
 
-  // Use card prop values (not uninitialized cardData) here
+  // ─── Card data hook ────────────────────────────────────────────────
   const {
     cardData,
     images,
     usageData,
-    isTransitioning,
     handleSaveCard,
   } = useAdminCardData({
     id: card?.id || id || '',
@@ -72,19 +71,26 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     background_image_url: card?.background_image_url || null,
   });
 
-  const { visibleImage, transitionImage } = useImageCarousel(
-    images,
-    globalCarouselIndex || 0,
-    carouselTimer
-  );
+  // ─── Image carousel ────────────────────────────────────────────────
+  // Ensure we never pass undefined to the carousel
+  const {
+    visibleImage,
+    transitionImage,
+    isTransitioning,
+  } = useImageCarousel({
+    images: images || [],
+    globalCarouselIndex,
+  });
 
+  // ─── Rendered icon ──────────────────────────────────────────────────
   const iconComponent = renderCardIcon({
     iconUrl: cardData.icon_url,
     iconName: cardData.icon_name,
     iconColor: cardData.icon_color,
-    fallbackIcon: null,
+    fallbackIcon: icon,
   });
 
+  // ─── Handlers ───────────────────────────────────────────────────────
   const handleDeleteCard = async (cardId: string) => {
     try {
       const { error } = await supabase
@@ -93,24 +99,27 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         .eq('id', cardId);
       if (error) {
         toast({
-          title: "Error",
+          title: 'Error',
           description: `Failed to delete card: ${error.message}`,
-          variant: "destructive",
+          variant: 'destructive',
         });
       }
     } catch (err: any) {
-      console.error("Error deleting card:", err);
+      console.error('Error deleting card:', err);
       toast({
-        title: "Error",
-        description: "An unexpected error occurred.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'An unexpected error occurred.',
+        variant: 'destructive',
       });
     }
   };
 
   const handleCarouselTimerChange = (newValue: number) => {
     setCarouselTimer(newValue);
-    localStorage.setItem("adminTestingCards_carouselTimer", newValue.toString());
+    localStorage.setItem(
+      'adminTestingCards_carouselTimer',
+      newValue.toString()
+    );
   };
 
   return (
