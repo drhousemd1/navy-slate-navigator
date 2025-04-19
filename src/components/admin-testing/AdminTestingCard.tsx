@@ -42,13 +42,13 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
   const cardRef = useRef<HTMLDivElement>(null);
-  const [fixedHeight, setFixedHeight] = useState<number | null>(null);
+  const [fixedHeight, setFixedHeight] = useState<number | undefined>();
 
   useLayoutEffect(() => {
     if (isReorderMode && cardRef.current) {
       setFixedHeight(cardRef.current.getBoundingClientRect().height);
     } else {
-      setFixedHeight(null);
+      setFixedHeight(undefined);
     }
   }, [isReorderMode]);
 
@@ -134,7 +134,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         ref={cardRef}
         className={`relative overflow-hidden border-2 ${isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'} bg-navy`}
         data-testid="admin-card"
-        style={fixedHeight ? { height: fixedHeight } : undefined}
+        style={fixedHeight ? {height: fixedHeight} : {}}
       >
         {isReorderMode && (
           <div 
