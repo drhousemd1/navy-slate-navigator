@@ -1,145 +1,188 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { 
-  Task, 
-  saveTask, 
-  updateTaskCompletion, 
-  deleteTask,
-  wasCompletedToday
-} from '@/lib/taskUtils';
+import { useQueryConfig } from './useQueryConfig';
+import { Task } from '@/lib/taskUtils';
 
-// Keys for React Query cache
-const TASKS_KEY = 'tasks';
-const TASK_COMPLETIONS_KEY = 'task-completions';
+const TASKS_CACHE_KEY = 'tasks';
 
-// Fetch all tasks
 export const fetchTasks = async (): Promise<Task[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .order('created_at', { ascending: true });
-    
-    if (error) {
-      console.error('Error fetching tasks:', error);
-      toast({
-        title: 'Error fetching tasks',
-        description: error.message,
-        variant: 'destructive',
-      });
-      return [];
-    }
-    
-    const processedTasks = (data as Task[]).map(task => {
-      if (!task.usage_data) {
-        task.usage_data = Array(7).fill(0);
-      }
-      
-      if (task.completed && task.frequency === 'daily' && !wasCompletedToday(task)) {
-        return { ...task, completed: false };
-      }
-      return task;
-    });
-    
-    return processedTasks;
-  } catch (err) {
-    console.error('Unexpected error fetching tasks:', err);
-    toast({
-      title: 'Error fetching tasks',
-      description: 'Could not fetch tasks',
-      variant: 'destructive',
-    });
-    return [];
-  }
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
 };
 
-// Main hook for task operations
 export const useTasksQuery = () => {
   const queryClient = useQueryClient();
-  
-  // Query for fetching all tasks
+  const queryConfig = useQueryConfig<Task[]>([TASKS_CACHE_KEY]);
+
   const {
     data: tasks = [],
     isLoading,
-    error,
-    refetch: refetchTasks
+    error
   } = useQuery({
-    queryKey: [TASKS_KEY],
+    ...queryConfig,
+    queryKey: [TASKS_CACHE_KEY],
     queryFn: fetchTasks,
-    staleTime: 10000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true
+    initialData: () => {
+      try {
+        const cached = localStorage.getItem(TASKS_CACHE_KEY);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < 60 * 60 * 1000) {
+            return data;
+          }
+        }
+      } catch (e) {
+        console.error('Error loading cached tasks:', e);
+      }
+      return [];
+    },
   });
 
-  // Mutation for saving a task (create or update)
-  const saveTaskMutation = useMutation({
-    mutationFn: saveTask,
-    onSuccess: (savedTask) => {
-      queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
-      toast({
-        title: 'Success',
-        description: `Task ${savedTask?.id ? 'updated' : 'created'} successfully!`,
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save task. Please try again.',
-        variant: 'destructive',
-      });
+  React.useEffect(() => {
+    if (tasks.length > 0) {
+      try {
+        localStorage.setItem(
+          TASKS_CACHE_KEY,
+          JSON.stringify({
+            data: tasks,
+            timestamp: Date.now(),
+          })
+        );
+      } catch (e) {
+        console.error('Error caching tasks:', e);
+      }
     }
-  });
+  }, [tasks]);
 
-  // Mutation for toggling task completion
-  const toggleCompletionMutation = useMutation({
-    mutationFn: ({ taskId, completed }: { taskId: string, completed: boolean }) => 
-      updateTaskCompletion(taskId, completed),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
-      queryClient.invalidateQueries({ queryKey: [TASK_COMPLETIONS_KEY] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['profile', 'points'] });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update task. Please try again.',
-        variant: 'destructive',
+  const saveTask = async (taskData: Task): Promise<Task | null> => {
+    try {
+      if (!taskData) {
+        throw new Error('Task data is required');
+      }
+  
+      const isNewTask = !taskData.id;
+  
+      const { data, error } = await supabase
+        .from('tasks')
+        .upsert(
+          {
+            ...taskData,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        )
+        .select()
+        .single();
+  
+      if (error) {
+        throw error;
+      }
+  
+      // Optimistically update the cache
+      queryClient.setQueryData<Task[]>([TASKS_CACHE_KEY], (old) => {
+        if (!old) return [data];
+  
+        if (isNewTask) {
+          return [data, ...old];
+        } else {
+          return old.map((task) => (task.id === data.id ? data : task));
+        }
       });
+  
+      toast({
+        title: "Success",
+        description: `Task ${isNewTask ? 'created' : 'updated'} successfully`,
+      });
+  
+      return data;
+    } catch (error) {
+      console.error('Error saving task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save task. Please try again.",
+        variant: "destructive",
+      });
+      return null;
     }
-  });
+  };
 
-  // Mutation for deleting a task
-  const deleteTaskMutation = useMutation({
-    mutationFn: deleteTask,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
-      toast({
-        title: 'Success',
-        description: 'Task deleted successfully!',
+  const toggleCompletion = async (taskId: string, completed: boolean): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ completed })
+        .eq('id', taskId);
+  
+      if (error) {
+        throw error;
+      }
+  
+      // Optimistically update the cache
+      queryClient.setQueryData<Task[]>([TASKS_CACHE_KEY], (old) => {
+        if (!old) return [];
+        return old.map((task) =>
+          task.id === taskId ? { ...task, completed } : task
+        );
       });
-    },
-    onError: (error) => {
+  
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete task. Please try again.',
-        variant: 'destructive',
+        title: "Success",
+        description: `Task completion toggled successfully`,
+      });
+    } catch (error) {
+      console.error('Error toggling task completion:', error);
+      toast({
+        title: "Error",
+        description: "Failed to toggle task completion. Please try again.",
+        variant: "destructive",
       });
     }
-  });
+  };
+
+  const deleteTask = async (taskId: string): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+  
+      if (error) {
+        throw error;
+      }
+  
+      // Optimistically update the cache
+      queryClient.setQueryData<Task[]>([TASKS_CACHE_KEY], (old) => {
+        if (!old) return [];
+        return old.filter((task) => task.id !== taskId);
+      });
+  
+      toast({
+        title: "Success",
+        description: "Task deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete task. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return {
     tasks,
     isLoading,
-    error: error ? (error as Error) : null,
-    saveTask: (taskData: Partial<Task>) => saveTaskMutation.mutateAsync(taskData),
-    toggleCompletion: (taskId: string, completed: boolean) => 
-      toggleCompletionMutation.mutateAsync({ taskId, completed }),
-    deleteTask: (taskId: string) => deleteTaskMutation.mutateAsync(taskId),
-    refetchTasks
+    error,
+    saveTask,
+    toggleCompletion,
+    deleteTask,
+    refreshTasks: () => queryClient.invalidateQueries({ queryKey: [TASKS_CACHE_KEY] })
   };
 };
