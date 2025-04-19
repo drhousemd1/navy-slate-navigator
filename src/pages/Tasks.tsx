@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -6,7 +7,7 @@ import TasksHeader from '../components/task/TasksHeader';
 import { RewardsProvider } from '../contexts/RewardsContext';
 import TaskCardVisual from '@/components/TaskCardVisual';
 import TaskCard from '@/components/TaskCard';
-import { useOptimizedTasksQuery } from '@/hooks/useOptimizedTasksQuery';
+import { useOptimizedTasksQuery, TaskVisualData } from '@/hooks/useOptimizedTasksQuery';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Task } from '@/lib/taskUtils';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +27,18 @@ interface TasksContentProps {
   isEditorOpen: boolean;
   setIsEditorOpen: (isOpen: boolean) => void;
 }
+
+// Default empty task for proper type checking
+const DEFAULT_TASK_VALUES: Partial<Task> = {
+  points: 0,
+  completed: false,
+  priority: 'medium',
+  frequency: 'daily',
+  icon_color: '#9b87f5',
+  title_color: '#FFFFFF',
+  subtext_color: '#8E9196',
+  calendar_color: '#7E69AB',
+};
 
 const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
@@ -159,19 +172,24 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         </div>
       ) : (
         <div className="space-y-4">
-          {tasks.map(task => (
-            <div key={task.id} className="slow-fade-in">
-              {renderLogic ? (
-                <TaskCard
-                  {...task}
-                  onEdit={() => handleEditTask(task)}
-                  onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
-                />
-              ) : (
-                <TaskCardVisual {...task} />
-              )}
-            </div>
-          ))}
+          {tasks.map(task => {
+            // Merge with default values to ensure all required properties are present
+            const fullTask = { ...DEFAULT_TASK_VALUES, ...task } as Task;
+            
+            return (
+              <div key={task.id} className="slow-fade-in">
+                {renderLogic ? (
+                  <TaskCard
+                    {...fullTask}
+                    onEdit={() => handleEditTask(fullTask)}
+                    onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
+                  />
+                ) : (
+                  <TaskCardVisual {...fullTask} />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

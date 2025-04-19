@@ -9,7 +9,17 @@ const TASKS_KEY = ['tasks'];
 const CACHED_TASKS_KEY = 'cached_tasks';
 
 // Types
-type TaskVisualData = Pick<Task, 'id' | 'title' | 'description' | 'background_image_url' | 'background_opacity' | 'focal_point_x' | 'focal_point_y'>;
+export type TaskVisualData = {
+  id: string;
+  title: string;
+  description: string;
+  background_image_url?: string;
+  background_opacity?: number;
+  focal_point_x?: number;
+  focal_point_y?: number;
+  points: number;
+  priority?: 'low' | 'medium' | 'high';
+};
 
 // Get cached tasks from localStorage
 const getCachedTasks = (): TaskVisualData[] => {
@@ -54,21 +64,25 @@ const fetchTasks = async (): Promise<Task[]> => {
     throw new Error(error.message);
   }
 
+  // Ensure all data conforms to expected types
   const tasks = (data || []).map(task => ({
     ...task,
-    frequency: task.frequency as "daily" | "weekly",
+    frequency: (task.frequency === 'daily' || task.frequency === 'weekly') ? task.frequency : 'daily',
+    priority: (task.priority === 'low' || task.priority === 'medium' || task.priority === 'high') ? task.priority : 'medium',
     usage_data: task.usage_data || Array(7).fill(0)
-  }));
+  })) as Task[];
 
   // Cache the visual data
-  const visualData = tasks.map(({ id, title, description, background_image_url, background_opacity, focal_point_x, focal_point_y }) => ({
+  const visualData = tasks.map(({ id, title, description, background_image_url, background_opacity, focal_point_x, focal_point_y, points, priority }) => ({
     id,
     title,
     description,
     background_image_url,
     background_opacity,
     focal_point_x,
-    focal_point_y
+    focal_point_y,
+    points,
+    priority
   }));
   localStorage.setItem(CACHED_TASKS_KEY, JSON.stringify(visualData));
 
@@ -90,7 +104,7 @@ export function useOptimizedTasksQuery() {
     refetchOnWindowFocus: false,
     initialData: () => {
       const cached = getCachedTasks();
-      return cached.length ? cached : undefined;
+      return cached.length ? cached as Task[] : undefined;
     }
   });
 

@@ -81,14 +81,18 @@ export const fetchTasks = async (): Promise<Task[]> => {
     }
     
     const processedTasks = (data || []).map(task => {
-      if (!task.usage_data) {
-        task.usage_data = Array(7).fill(0);
-      }
+      // Ensure values conform to expected types
+      const safeTask = {
+        ...task,
+        frequency: (task.frequency === 'daily' || task.frequency === 'weekly') ? task.frequency : 'daily' as const,
+        priority: (task.priority === 'low' || task.priority === 'medium' || task.priority === 'high') ? task.priority : 'medium' as const,
+        usage_data: task.usage_data || Array(7).fill(0)
+      };
       
-      if (task.completed && task.frequency === 'daily' && !wasCompletedToday(task)) {
-        return { ...task, completed: false };
+      if (safeTask.completed && safeTask.frequency === 'daily' && !wasCompletedToday(safeTask as Task)) {
+        return { ...safeTask, completed: false } as Task;
       }
-      return task;
+      return safeTask as Task;
     });
     
     // Cache the results in localStorage
