@@ -334,7 +334,7 @@ const AdminTesting = () => {
             src="/lovable-uploads/4df3c2bc-d557-4ac5-9b0c-0e76f31b924a.png"
             alt={isReorderMode ? "Save Order" : "Reorder Cards"}
             onClick={toggleReorderMode}
-            className={`h-12 w-12 cursor-pointer transition-opacity hover:opacity-80 ${
+            className={`h-12 w-12 cursor-pointer ${
               isReorderMode ? 'opacity-50' : 'opacity-100'
             }`}
             role="button"
