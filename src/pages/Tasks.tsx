@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 const TASK_CACHE_KEY = 'cachedTasks';
 
 const useCachedTasks = () => {
-  return useQuery(['tasks'], fetchLightweightTasks, {
+  return useQuery<Task[]>(['tasks'], fetchLightweightTasks, {
     staleTime: 1000 * 60 * 60,
     refetchOnWindowFocus: false,
     initialData: () => {
@@ -26,10 +26,10 @@ const useCachedTasks = () => {
 };
 
 const TasksContent = ({ isEditorOpen, setIsEditorOpen }) => {
-  const [currentTask, setCurrentTask] = useState(null);
+  const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const { data: tasks, isLoading } = useCachedTasks();
 
-  const handleEditTask = (task) => {
+  const handleEditTask = (task: Task) => {
     setCurrentTask(task);
     setIsEditorOpen(true);
   };

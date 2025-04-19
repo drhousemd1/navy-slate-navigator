@@ -7,7 +7,7 @@ const DeleteTaskDialog = ({ taskId, onConfirm, onCancel }) => {
 
   const handleDelete = () => {
     console.log('Deleted task', taskId);
-    queryClient.invalidateQueries(['tasks']);
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
     onConfirm();
   };
 

@@ -1,9 +1,17 @@
 
 import React from 'react';
 
-const TaskIcon = ({ status }) => {
+interface Props {
+  icon_name: string;
+  icon_color: string;
+  className?: string;
+}
+
+const TaskIcon = ({ icon_name, icon_color, className = '' }: Props) => {
   return (
-    <span className={`inline-block w-3 h-3 rounded-full ${status === 'done' ? 'bg-green-500' : 'bg-yellow-400'}`} />
+    <div className={`w-6 h-6 rounded-full ${icon_color} flex items-center justify-center ${className}`}>
+      <span className="text-xs font-bold text-white">{icon_name}</span>
+    </div>
   );
 };
 
