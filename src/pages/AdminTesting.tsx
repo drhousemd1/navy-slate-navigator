@@ -329,15 +329,17 @@ const AdminTesting = () => {
         </div>
         
         <div className="flex justify-end gap-2 mb-6">
-          <img 
-            src="/lovable-uploads/b04a1a6d-f35f-4f94-b625-d4028df44812.png"
-            alt="Toggle Reorder Mode"
+          <Button 
             onClick={toggleReorderMode}
-            className={`h-10 w-10 cursor-pointer transition-all duration-200 hover:scale-110 ${
-              isReorderMode ? 'opacity-100' : 'opacity-70'
-            }`}
-            title={isReorderMode ? "Save Order" : "Reorder Cards"}
-          />
+            className={`flex items-center gap-2 ${isReorderMode ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+          >
+            <img 
+              src="/lovable-uploads/b04a1a6d-f35f-4f94-b625-d4028df44812.png"
+              alt="Reorder Cards"
+              className="h-5 w-5"
+            />
+            {isReorderMode ? "Save Order" : "Reorder Cards"}
+          </Button>
           <Button 
             onClick={handleAddCard}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
