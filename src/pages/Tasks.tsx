@@ -34,6 +34,9 @@ const DEFAULT_TASK_VALUES: Partial<Task> = {
   title_color: '#FFFFFF',
   subtext_color: '#8E9196',
   calendar_color: '#7E69AB',
+  background_opacity: 100,
+  focal_point_x: 50,
+  focal_point_y: 50,
 };
 
 const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
@@ -91,10 +94,10 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       ) : (
         <div className="space-y-4">
           {tasks.map(task => {
-            const fullTask = { ...DEFAULT_TASK_VALUES, ...task } as Task;
+            const fullTask = { ...DEFAULT_TASK_VALUES, ...task };
             
             return (
-              <div key={task.id} className="slow-fade-in">
+              <div key={fullTask.id} className="slow-fade-in">
                 {renderLogic ? (
                   <TaskCard
                     {...fullTask}
@@ -106,7 +109,19 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
                   />
                 ) : (
                   <TaskCardVisual 
-                    {...fullTask}
+                    title={fullTask.title}
+                    description={fullTask.description || ''}
+                    background_image_url={fullTask.background_image_url}
+                    background_opacity={fullTask.background_opacity}
+                    focal_point_x={fullTask.focal_point_x}
+                    focal_point_y={fullTask.focal_point_y}
+                    priority={fullTask.priority}
+                    points={fullTask.points}
+                    icon_url={fullTask.icon_url}
+                    icon_name={fullTask.icon_name}
+                    title_color={fullTask.title_color}
+                    subtext_color={fullTask.subtext_color}
+                    icon_color={fullTask.icon_color}
                   />
                 )}
               </div>

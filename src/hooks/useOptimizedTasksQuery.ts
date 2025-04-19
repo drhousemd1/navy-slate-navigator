@@ -29,7 +29,7 @@ export type TaskVisualData = {
   icon_color?: string;
 };
 
-const getCachedTasks = (): TaskVisualData[] => {
+const getCachedTasks = (): Task[] => {
   try {
     const cached = localStorage.getItem(CACHED_TASKS_KEY);
     return cached ? JSON.parse(cached) : [];
@@ -52,41 +52,17 @@ const fetchTasks = async (): Promise<Task[]> => {
   // Process and validate the data
   const tasks = (data || []).map(task => ({
     ...task,
-    frequency: task.frequency === 'weekly' ? 'weekly' : 'daily',
-    priority: (task.priority === 'low' || task.priority === 'medium' || task.priority === 'high') 
-      ? task.priority 
-      : 'medium' as const,
+    frequency: task.frequency || 'daily',
+    priority: task.priority || 'medium',
+    points: Number(task.points) || 0,
+    background_opacity: Number(task.background_opacity) || 100,
+    focal_point_x: Number(task.focal_point_x) || 50,
+    focal_point_y: Number(task.focal_point_y) || 50,
     usage_data: task.usage_data || Array(7).fill(0)
   })) as Task[];
 
-  // Cache the complete visual data
-  const visualData = tasks.map(({ 
-    id, title, description, background_image_url, background_opacity,
-    focal_point_x, focal_point_y, points, priority, completed,
-    frequency, frequency_count, icon_url, icon_name,
-    title_color, subtext_color, calendar_color, icon_color
-  }) => ({
-    id,
-    title,
-    description,
-    background_image_url,
-    background_opacity,
-    focal_point_x,
-    focal_point_y,
-    points,
-    priority,
-    completed,
-    frequency,
-    frequency_count,
-    icon_url,
-    icon_name,
-    title_color,
-    subtext_color,
-    calendar_color,
-    icon_color
-  }));
-  
-  localStorage.setItem(CACHED_TASKS_KEY, JSON.stringify(visualData));
+  // Cache the tasks
+  localStorage.setItem(CACHED_TASKS_KEY, JSON.stringify(tasks));
   return tasks;
 };
 
@@ -101,10 +77,7 @@ export function useOptimizedTasksQuery() {
     queryFn: fetchTasks,
     staleTime: 1000 * 60 * 60, // 1 hour
     refetchOnWindowFocus: false,
-    initialData: () => {
-      const cached = getCachedTasks();
-      return cached.length ? cached as Task[] : undefined;
-    }
+    initialData: getCachedTasks
   });
 
   return {
