@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
 import TaskCard from '../components/TaskCard';
@@ -10,6 +11,17 @@ import { Task } from '../lib/taskUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// Component for rendering skeleton loading state
+const TaskSkeletons = () => {
+  return (
+    <div className="space-y-4 animate-pulse">
+      {[1, 2, 3].map((n) => (
+        <Skeleton key={n} className="h-48 bg-navy/50 rounded-lg border-2 border-[#00f0ff]/30" />
+      ))}
+    </div>
+  );
+};
+
 interface TasksContentProps {
   isEditorOpen: boolean;
   setIsEditorOpen: (isOpen: boolean) => void;
@@ -17,6 +29,7 @@ interface TasksContentProps {
 
 const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
+  const [isRenderReady, setIsRenderReady] = useState(false);
   const queryClient = useQueryClient();
   
   const { 
@@ -28,19 +41,26 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     deleteTask 
   } = useTasksQuery();
 
-  const handleNewTask = () => {
+  // Ensure a smooth transition from skeleton to actual content
+  useEffect(() => {
+    // Set render ready after a small delay or when tasks are loaded
+    const timer = setTimeout(() => setIsRenderReady(true), 200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleNewTask = useCallback(() => {
     console.log("Creating new task");
     setCurrentTask(null);
     setIsEditorOpen(true);
-  };
+  }, [setIsEditorOpen]);
 
-  const handleEditTask = (task: Task) => {
+  const handleEditTask = useCallback((task: Task) => {
     console.log("Editing task:", task);
     setCurrentTask(task);
     setIsEditorOpen(true);
-  };
+  }, [setIsEditorOpen]);
 
-  const handleSaveTask = async (taskData: Task) => {
+  const handleSaveTask = useCallback(async (taskData: Task) => {
     try {
       console.log("Saving task:", taskData);
       const savedTask = await saveTask(taskData);
@@ -51,9 +71,9 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     } catch (err) {
       console.error('Error saving task:', err);
     }
-  };
+  }, [saveTask, setIsEditorOpen]);
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTask = useCallback(async (taskId: string) => {
     try {
       console.log("Deleting task:", taskId);
       await deleteTask(taskId);
@@ -62,9 +82,9 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     } catch (err) {
       console.error('Error deleting task:', err);
     }
-  };
+  }, [deleteTask, setIsEditorOpen]);
 
-  const handleToggleCompletion = async (taskId: string, completed: boolean) => {
+  const handleToggleCompletion = useCallback(async (taskId: string, completed: boolean) => {
     try {
       console.log(`Toggling task ${taskId} completion to ${completed}`);
       await toggleCompletion(taskId, completed);
@@ -97,18 +117,27 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     } catch (err) {
       console.error('Error toggling task completion:', err);
     }
-  };
+  }, [toggleCompletion, tasks, queryClient]);
+
+  // Prefetch images to improve perceived performance
+  useEffect(() => {
+    if (tasks.length > 0 && !isLoading) {
+      tasks.forEach(task => {
+        if (task.background_image_url) {
+          const img = new Image();
+          img.src = task.background_image_url;
+        }
+      });
+    }
+  }, [tasks, isLoading]);
 
   return (
     <div className="p-4 pt-6">
       <TasksHeader />
       
-      {isLoading ? (
-        <div className="flex flex-col space-y-4">
-          {[1, 2, 3].map((n) => (
-            <Skeleton key={n} className="h-48 bg-navy/0 animate-pulse rounded-lg border-2 border-[#00f0ff]/0" />
-          ))}
-        </div>
+      {/* Show skeletons while loading or during initial render */}
+      {(!isRenderReady || isLoading) ? (
+        <TaskSkeletons />
       ) : error ? (
         <div className="text-center text-red-500 py-10">
           <p className="mb-2">Failed to load tasks</p>
@@ -167,10 +196,10 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
 const Tasks: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   
-  const handleNewTask = () => {
+  const handleNewTask = useCallback(() => {
     console.log("Parent component triggering new task");
     setIsEditorOpen(true);
-  };
+  }, []);
   
   return (
     <AppLayout onAddNewItem={handleNewTask}>

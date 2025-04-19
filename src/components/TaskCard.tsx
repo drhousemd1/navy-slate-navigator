@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Edit } from 'lucide-react';
@@ -63,9 +63,22 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
   const maxCompletions = frequency_count || 1;
   const isFullyCompleted = currentCompletions >= maxCompletions;
+  
+  // State to control when to load interactive elements
+  const [loadInteractivity, setLoadInteractivity] = useState(false);
+  
+  // Visual content loads immediately, but interactivity is delayed
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoadInteractivity(true);
+    }, 100); // Short delay to prioritize visual rendering
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
+      {/* Background image loads first */}
       {backgroundImage && (
         <div 
           className="absolute inset-0 w-full h-full z-0"
@@ -79,10 +92,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
       )}
 
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
+        {/* Visual header loads immediately */}
         <div className="flex justify-between items-start mb-3">
           <PriorityBadge priority={priority} />
           
-          {onToggleCompletion && (
+          {/* Interactive elements load after visual content */}
+          {loadInteractivity && onToggleCompletion && (
             <div className="flex items-center gap-2">
               <PointsBadge points={points} />
               <CompletionButton 
@@ -95,6 +110,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           )}
         </div>
         
+        {/* Main content - always visible */}
         <div className="flex items-start mb-auto">
           <div className="mr-4 flex-shrink-0">
             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00f0ff' }}>
@@ -125,6 +141,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
         </div>
         
+        {/* Footer with interactive elements */}
         <div className="flex items-center justify-between mt-4">
           {frequency && (
             <FrequencyTracker 
@@ -135,16 +152,19 @@ const TaskCard: React.FC<TaskCardProps> = ({
             />
           )}
           
-          <div className="flex space-x-2 ml-auto">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onEdit}
-              className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Interactive button loads after initial render */}
+          {loadInteractivity && (
+            <div className="flex space-x-2 ml-auto">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onEdit}
+                className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
       
