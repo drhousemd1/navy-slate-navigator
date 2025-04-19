@@ -120,13 +120,15 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   return (
     <>
       <Card 
-        className={`relative overflow-hidden border-2 min-h-[280px] transition-all duration-300 ${
+        className={`relative overflow-hidden border-2 bg-navy drag-item ${
           isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
-        } bg-navy drag-item`}
+        }`}
+        style={{ height: '250px' }}
         data-testid="admin-card"
       >
         {isReorderMode && (
-          <div className="absolute top-2 left-2 z-50 bg-amber-500/90 text-white p-1.5 rounded-md flex items-center shadow-md">
+          <div className="absolute top-2 left-2 z-50 bg-amber-500/90 text-white p-1.5 rounded-md flex items-center shadow-md" 
+               style={{ height: '28px' }}>
             <MoveVertical className="h-4 w-4 mr-1" /> 
             <span className="text-xs font-medium">Drag to reorder</span>
           </div>
@@ -149,7 +151,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
             subtextColor={cardData.subtext_color}
             highlightEffect={cardData.highlight_effect}
           />
-          <div className="mt-auto pt-4">
+          <div className="mt-auto">
             <CardFooter
               calendarColor={cardData.calendar_color || '#7E69AB'}
               usageData={usageData}
