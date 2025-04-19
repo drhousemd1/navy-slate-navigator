@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { DragDropContext, Droppable, Draggable, DropResult, DragStart } from '@hello-pangea/dnd';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import reorderIcon from '@/assets/reorder-icon.svg';
 
 interface SupabaseCardData {
   id: string;
