@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -34,7 +33,6 @@ export const useTasksQuery = () => {
     error
   } = useQuery({
     ...queryConfig,
-    queryKey: [TASKS_CACHE_KEY],
     queryFn: fetchTasks,
     initialData: () => {
       try {
@@ -80,16 +78,16 @@ export const useTasksQuery = () => {
       }
   
       const isNewTask = !taskData.id;
+      
+      // Prepare the data for Supabase ensuring it matches the expected format
+      const taskToSave = {
+        ...taskData,
+        updated_at: new Date().toISOString(),
+      };
   
       const { data, error } = await supabase
         .from('tasks')
-        .upsert(
-          {
-            ...taskData,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' }
-        )
+        .upsert(taskToSave, { onConflict: 'id' })
         .select()
         .single();
   
