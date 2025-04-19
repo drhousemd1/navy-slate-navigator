@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -46,7 +45,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   
   const { tasks = [], isLoading, error, refetchTasks } = useOptimizedTasksQuery();
 
-  // Staged rendering for better performance
   useEffect(() => {
     const visualTimer = setTimeout(() => setIsRenderReady(true), 100);
     const logicTimer = setTimeout(() => setRenderLogic(true), 300);
@@ -103,7 +101,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
                     {...fullTask}
                     onEdit={() => handleEditTask(fullTask)}
                     onToggleCompletion={(completed) => {
-                      console.log('Toggle completion:', task.id, completed);
+                      console.log('Toggle completion:', fullTask.id, completed);
                       refetchTasks();
                     }}
                   />
