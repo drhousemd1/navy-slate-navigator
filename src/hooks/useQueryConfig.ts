@@ -10,9 +10,9 @@ export const DEFAULT_GC_TIME = 10 * 60 * 1000;
 export function useQueryConfig<TData>(
   key: QueryKey,
   options?: Partial<UseQueryOptions<TData>>
-): Partial<UseQueryOptions<TData>> {
+): UseQueryOptions<TData> {
   return {
-    queryKey: key, // Add back queryKey as it's required
+    queryKey: key,
     staleTime: DEFAULT_STALE_TIME,
     gcTime: DEFAULT_GC_TIME,
     refetchOnWindowFocus: true,
