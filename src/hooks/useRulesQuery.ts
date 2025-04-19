@@ -1,8 +1,8 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getMondayBasedDay } from '@/lib/utils';
-import React from 'react';
 
 // Types for our rules
 export interface Rule {
@@ -37,18 +37,30 @@ export interface RuleViolation {
   week_number: string;
 }
 
-// Simple string key for cache - reverting to original format that worked
-const RULES_CACHE_KEY = 'rules';
+// Keys for React Query cache
+const RULES_KEY = 'rules';
+const RULE_VIOLATIONS_KEY = 'rule_violations';
 
 // Fetch all rules
 export const fetchRules = async (): Promise<Rule[]> => {
-  const { data, error } = await supabase
-    .from('rules')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return (data || []) as Rule[];
+  try {
+    const { data, error } = await supabase
+      .from('rules')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return (data as Rule[] || []).map(rule => {
+      if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
+        return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
+      }
+      return rule;
+    });
+  } catch (error) {
+    console.error('Error fetching rules:', error);
+    throw error;
+  }
 };
 
 // Create a new rule
@@ -65,7 +77,7 @@ export const createRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
       priority: ruleWithoutId.priority || 'medium',
       background_opacity: ruleWithoutId.background_opacity || 100,
       icon_color: ruleWithoutId.icon_color || '#FFFFFF',
-      title_color: ruleWithoutId.title_color || '#FFFFFF', 
+      title_color: ruleWithoutId.title_color || '#FFFFFF',
       subtext_color: ruleWithoutId.subtext_color || '#FFFFFF',
       calendar_color: ruleWithoutId.calendar_color || '#9c7abb',
       highlight_effect: ruleWithoutId.highlight_effect || false,
@@ -139,18 +151,23 @@ export const updateRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
 
 // Delete a rule
 export const deleteRule = async (ruleId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('rules')
-    .delete()
-    .eq('id', ruleId);
-  
-  if (error) throw error;
+  try {
+    const { error } = await supabase
+      .from('rules')
+      .delete()
+      .eq('id', ruleId);
+    
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error deleting rule:', error);
+    throw error;
+  }
 };
 
 // Record a rule violation
 export const recordRuleViolation = async (ruleId: string): Promise<{ updatedRule: Rule, violation: RuleViolation }> => {
   try {
-    // Get the current rule
+    // First, get the current rule to update its usage data
     const { data: ruleData, error: ruleError } = await supabase
       .from('rules')
       .select('*')
@@ -158,14 +175,15 @@ export const recordRuleViolation = async (ruleId: string): Promise<{ updatedRule
       .single();
       
     if (ruleError) throw ruleError;
+    
     const rule = ruleData as Rule;
     
-    // Update usage data
+    // Update the usage data for the current day of the week
     const currentDayOfWeek = getMondayBasedDay();
     const newUsageData = [...(rule.usage_data || [0, 0, 0, 0, 0, 0, 0])];
     newUsageData[currentDayOfWeek] = 1;
     
-    // Update rule with new usage data
+    // Update the rule with new usage data
     const { data: updatedRuleData, error: updateError } = await supabase
       .from('rules')
       .update({
@@ -178,12 +196,14 @@ export const recordRuleViolation = async (ruleId: string): Promise<{ updatedRule
       
     if (updateError) throw updateError;
     
-    // Record violation
+    // Record the violation in rule_violations table
     const today = new Date();
+    const jsDayOfWeek = today.getDay();
+    
     const violationData = {
       rule_id: ruleId,
       violation_date: today.toISOString(),
-      day_of_week: today.getDay(),
+      day_of_week: jsDayOfWeek,
       week_number: `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`
     };
     
@@ -193,41 +213,57 @@ export const recordRuleViolation = async (ruleId: string): Promise<{ updatedRule
       .select()
       .single();
       
-    if (violationError) throw violationError;
+    if (violationError) {
+      console.error('Error recording rule violation:', violationError);
+      // We'll return the updated rule even if violation recording fails
+      return { 
+        updatedRule: updatedRuleData as Rule, 
+        violation: { ...violationData, id: 'error' } 
+      };
+    }
     
     return { 
-      updatedRule: updatedRuleData as Rule,
-      violation: violationRecord as RuleViolation
+      updatedRule: updatedRuleData as Rule, 
+      violation: violationRecord as RuleViolation 
     };
   } catch (error) {
-    console.error('Error recording violation:', error);
+    console.error('Error recording rule violation:', error);
     throw error;
   }
 };
 
+// Main hook for rule operations
 export const useRulesQuery = () => {
   const queryClient = useQueryClient();
-
-  // Simplified query without queryConfig wrapper
+  
+  // Query for fetching all rules
   const {
     data: rules = [],
     isLoading,
     error
   } = useQuery({
-    queryKey: RULES_CACHE_KEY,
+    queryKey: [RULES_KEY],
     queryFn: fetchRules,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000,   // 10 minutes
+    refetchOnWindowFocus: false,
   });
 
-  // Optimized create mutation
+  // Mutation for creating a rule
   const createRuleMutation = useMutation({
     mutationFn: createRule,
     onSuccess: (newRule) => {
-      queryClient.setQueryData(RULES_CACHE_KEY, (oldData: Rule[] = []) => [newRule, ...oldData]);
-      toast({ title: "Success", description: "Rule created successfully" });
+      // Update the cache with new rule
+      queryClient.setQueryData(
+        [RULES_KEY],
+        (oldData: Rule[] = []) => [newRule, ...oldData]
+      );
+      
+      toast({
+        title: "Success",
+        description: "Rule created successfully",
+      });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: "Failed to create rule. Please try again.",
@@ -236,60 +272,144 @@ export const useRulesQuery = () => {
     }
   });
 
-  // Optimized update mutation
+  // Mutation for updating a rule
   const updateRuleMutation = useMutation({
     mutationFn: updateRule,
-    onSuccess: (updatedRule) => {
-      queryClient.setQueryData(RULES_CACHE_KEY, (oldData: Rule[] = []) => 
-        oldData.map(rule => rule.id === updatedRule.id ? updatedRule : rule)
+    onMutate: async (updatedRule) => {
+      // Cancel outgoing refetches to avoid overwriting our optimistic update
+      await queryClient.cancelQueries({ queryKey: [RULES_KEY] });
+      
+      // Snapshot the previous value
+      const previousRules = queryClient.getQueryData<Rule[]>([RULES_KEY]) || [];
+      
+      // Optimistically update the cache with the new value
+      queryClient.setQueryData(
+        [RULES_KEY],
+        (oldData: Rule[] = []) => oldData.map(rule => 
+          rule.id === updatedRule.id ? { ...rule, ...updatedRule } : rule
+        )
       );
-      toast({ title: "Success", description: "Rule updated successfully" });
+      
+      // Return the previous value for rollback
+      return { previousRules };
     },
-    onError: () => {
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Rule updated successfully",
+      });
+    },
+    onError: (error, _, context) => {
+      // Rollback to previous value
+      if (context?.previousRules) {
+        queryClient.setQueryData([RULES_KEY], context.previousRules);
+      }
+      
       toast({
         title: "Error",
         description: "Failed to update rule. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to make sure our local data is in sync with the server
+      queryClient.invalidateQueries({ queryKey: [RULES_KEY] });
     }
   });
 
-  // Optimized delete mutation
+  // Mutation for deleting a rule
   const deleteRuleMutation = useMutation({
     mutationFn: deleteRule,
-    onSuccess: (_, deletedId) => {
-      queryClient.setQueryData(RULES_CACHE_KEY, (oldData: Rule[] = []) => 
-        oldData.filter(rule => rule.id !== deletedId)
+    onMutate: async (id) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: [RULES_KEY] });
+      
+      // Snapshot the previous values
+      const previousRules = queryClient.getQueryData<Rule[]>([RULES_KEY]) || [];
+      
+      // Optimistically update caches
+      queryClient.setQueryData(
+        [RULES_KEY],
+        (oldData: Rule[] = []) => oldData.filter(rule => rule.id !== id)
       );
-      toast({ title: "Success", description: "Rule deleted successfully" });
+      
+      return { previousRules };
     },
-    onError: () => {
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Rule deleted successfully",
+      });
+    },
+    onError: (error, _, context) => {
+      // Rollback to previous values
+      if (context?.previousRules) {
+        queryClient.setQueryData([RULES_KEY], context.previousRules);
+      }
+      
       toast({
         title: "Error",
         description: "Failed to delete rule. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: [RULES_KEY] });
     }
   });
-
-  // Optimized violation mutation
+  
+  // Mutation for recording a rule violation
   const recordViolationMutation = useMutation({
     mutationFn: recordRuleViolation,
-    onSuccess: ({ updatedRule }) => {
-      queryClient.setQueryData(RULES_CACHE_KEY, (oldData: Rule[] = []) => 
-        oldData.map(rule => rule.id === updatedRule.id ? updatedRule : rule)
+    onMutate: async (ruleId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: [RULES_KEY] });
+      
+      // Snapshot the previous value
+      const previousRules = queryClient.getQueryData<Rule[]>([RULES_KEY]) || [];
+      
+      // Optimistically update the rule in the cache
+      queryClient.setQueryData(
+        [RULES_KEY],
+        (oldData: Rule[] = []) => oldData.map(rule => {
+          if (rule.id !== ruleId) return rule;
+          
+          // Update the usage data for the current day
+          const currentDayOfWeek = getMondayBasedDay();
+          const newUsageData = [...(rule.usage_data || [0, 0, 0, 0, 0, 0, 0])];
+          newUsageData[currentDayOfWeek] = 1;
+          
+          return {
+            ...rule,
+            usage_data: newUsageData
+          };
+        })
       );
+      
+      return { previousRules };
+    },
+    onSuccess: () => {
       toast({
         title: "Rule Broken",
         description: "This violation has been recorded.",
       });
     },
-    onError: () => {
+    onError: (error, _, context) => {
+      // Rollback to previous value
+      if (context?.previousRules) {
+        queryClient.setQueryData([RULES_KEY], context.previousRules);
+      }
+      
       toast({
         title: "Error",
         description: "Failed to record rule violation. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: [RULES_KEY] });
     }
   });
 
@@ -301,6 +421,7 @@ export const useRulesQuery = () => {
     updateRule: (data: Partial<Rule>) => updateRuleMutation.mutateAsync(data),
     deleteRule: (id: string) => deleteRuleMutation.mutateAsync(id),
     recordViolation: (ruleId: string) => recordViolationMutation.mutateAsync(ruleId),
-    refreshRules: () => queryClient.invalidateQueries({ queryKey: RULES_CACHE_KEY })
+    // Refresh function to force refetch
+    refreshRules: () => queryClient.invalidateQueries({ queryKey: [RULES_KEY] })
   };
 };

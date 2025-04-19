@@ -1,36 +1,11 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Badge } from '../ui/badge';
 import { Box, Coins } from 'lucide-react';
 import { useRewardsQuery } from '@/hooks/useRewardsQuery';
-import { supabase } from '@/integrations/supabase/client';
 
 const RewardsHeader: React.FC = () => {
-  const { rewards, refetchRewards } = useRewardsQuery();
-  const [points, setPoints] = useState(0);
-  
-  // Calculate total rewards supply
-  const totalRewardsSupply = rewards.reduce((total, reward) => total + reward.supply, 0);
-  
-  // Fetch points from profiles table
-  useEffect(() => {
-    const fetchPoints = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('points')
-          .eq('id', user.id)
-          .single();
-          
-        if (!error && data) {
-          setPoints(data.points);
-        }
-      }
-    };
-    
-    fetchPoints();
-  }, []);
+  const { points, totalRewardsSupply, refetchPoints } = useRewardsQuery();
 
   return (
     <div className="flex items-center mb-6">
