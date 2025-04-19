@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Task } from '@/lib/taskUtils';
-
 import NumberField from './NumberField';
 import ColorPickerField from './ColorPickerField';
 import PrioritySelector from './PrioritySelector';
@@ -45,7 +44,7 @@ interface TaskEditorFormProps {
   onCancel: () => void;
 }
 
-const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
+const TaskEditorForm: React.FC<TaskEditorFormProps> = ({ 
   taskData,
   onSave,
   onDelete,
@@ -56,7 +55,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
+  
   const form = useForm<TaskFormValues>({
     defaultValues: {
       title: taskData?.title || '',
@@ -78,7 +77,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     },
   });
 
-  useEffect(() => {
+  React.useEffect(() => {
     setImagePreview(taskData?.background_image_url || null);
     setIconPreview(taskData?.icon_url || null);
     setSelectedIconName(taskData?.icon_name || null);
@@ -127,22 +126,34 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       setSelectedIconName(null);
       form.setValue('icon_url', iconUrl);
       form.setValue('icon_name', undefined);
+      
+      toast({
+        title: "Custom icon selected",
+        description: "Custom icon has been applied to the task",
+      });
     } else {
       setSelectedIconName(iconName);
       setIconPreview(null);
       form.setValue('icon_name', iconName);
       form.setValue('icon_url', undefined);
+      
+      toast({
+        title: "Icon selected",
+        description: `${iconName} icon selected`,
+      });
     }
   };
 
   const handleSubmit = async (values: TaskFormValues) => {
     setLoading(true);
+    
     try {
       const taskToSave: Partial<Task> = {
         ...values,
         id: taskData?.id,
         icon_name: selectedIconName || undefined,
       };
+      
       await onSave(taskToSave);
     } catch (error) {
       console.error('Error saving task:', error);
@@ -156,6 +167,28 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     }
   };
 
+  const incrementPoints = () => {
+    const currentPoints = form.getValues('points');
+    form.setValue('points', currentPoints + 1);
+  };
+
+  const decrementPoints = () => {
+    const currentPoints = form.getValues('points');
+    form.setValue('points', Math.max(0, currentPoints - 1));
+  };
+
+  const incrementFrequencyCount = () => {
+    const currentCount = form.getValues('frequency_count');
+    form.setValue('frequency_count', currentCount + 1);
+  };
+
+  const decrementFrequencyCount = () => {
+    const currentCount = form.getValues('frequency_count');
+    if (currentCount > 1) {
+      form.setValue('frequency_count', currentCount - 1);
+    }
+  };
+
   const handleDelete = () => {
     if (taskData?.id && onDelete) {
       onDelete(taskData.id);
@@ -166,73 +199,185 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <div>
-          <label>Title</label>
-          <input value={form.watch('title')} onChange={(e) => form.setValue('title', e.target.value)} className="w-full border px-2 py-1" />
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-white">Title</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Task title" 
+                  className="bg-dark-navy border-light-navy text-white" 
+                  {...field} 
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-white">Description</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Task description" 
+                  className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
+                  {...field} 
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <PrioritySelector control={form.control} />
+          
+          <NumberField
+            control={form.control}
+            name="points"
+            label="Points"
+            onIncrement={incrementPoints}
+            onDecrement={decrementPoints}
+            minValue={0}
+          />
         </div>
-        <div className="mt-2">
-          <label>Description</label>
-          <Textarea value={form.watch('description')} onChange={(e) => form.setValue('description', e.target.value)} className="w-full border px-2 py-1" />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FrequencySelector control={form.control} />
+          
+          <NumberField
+            control={form.control}
+            name="frequency_count"
+            label="Times per period"
+            onIncrement={incrementFrequencyCount}
+            onDecrement={decrementFrequencyCount}
+            minValue={1}
+          />
         </div>
-        <div className="mt-2">
-          <label>Points</label>
-          <NumberField value={form.watch('points')} onChange={(value) => form.setValue('points', value)} className="w-full border px-2 py-1" />
+        
+        <div className="space-y-4">
+          <FormLabel className="text-white text-lg">Background Image</FormLabel>
+          <BackgroundImageSelector
+            control={form.control}
+            imagePreview={imagePreview}
+            initialPosition={{ 
+              x: taskData?.focal_point_x || 50, 
+              y: taskData?.focal_point_y || 50 
+            }}
+            onRemoveImage={() => {
+              setImagePreview(null);
+              form.setValue('background_image_url', undefined);
+            }}
+            onImageUpload={handleImageUpload}
+            setValue={form.setValue}
+          />
         </div>
-        <div className="mt-2">
-          <label>Frequency</label>
-          <FrequencySelector value={form.watch('frequency')} onChange={(value) => form.setValue('frequency', value)} className="w-full border px-2 py-1" />
+        
+        <div className="space-y-4">
+          <FormLabel className="text-white text-lg">Task Icon</FormLabel>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
+              <IconSelector
+                selectedIconName={selectedIconName}
+                iconPreview={iconPreview}
+                iconColor={form.watch('icon_color')}
+                onSelectIcon={handleIconSelect}
+                onUploadIcon={handleIconUpload}
+                onRemoveIcon={() => {
+                  setIconPreview(null);
+                  setSelectedIconName(null);
+                  form.setValue('icon_url', undefined);
+                  form.setValue('icon_name', undefined);
+                }}
+              />
+            </div>
+            
+            <PredefinedIconsGrid
+              selectedIconName={selectedIconName}
+              iconColor={form.watch('icon_color')}
+              onSelectIcon={handleIconSelect}
+            />
+          </div>
         </div>
-        <div className="mt-2">
-          <label>Frequency Count</label>
-          <NumberField value={form.watch('frequency_count')} onChange={(value) => form.setValue('frequency_count', value)} className="w-full border px-2 py-1" />
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <ColorPickerField 
+            control={form.control} 
+            name="title_color" 
+            label="Title Color" 
+          />
+          
+          <ColorPickerField 
+            control={form.control} 
+            name="subtext_color" 
+            label="Subtext Color" 
+          />
+          
+          <ColorPickerField 
+            control={form.control} 
+            name="calendar_color" 
+            label="Calendar Color" 
+          />
+          
+          <ColorPickerField 
+            control={form.control} 
+            name="icon_color" 
+            label="Icon Color" 
+          />
         </div>
-        <div className="mt-2">
-          <label>Background Image</label>
-          <input type="file" onChange={handleImageUpload} className="w-full border px-2 py-1" />
-          {imagePreview && <img src={imagePreview} alt="Background Image" className="w-full h-40 mt-2" />}
+        
+        <FormField
+          control={form.control}
+          name="highlight_effect"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between">
+              <div className="space-y-0.5">
+                <FormLabel className="text-white">Highlight Effect</FormLabel>
+                <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        
+        <div className="pt-4 w-full flex items-center justify-end gap-3">
+          {taskData?.id && onDelete && (
+            <DeleteTaskDialog
+              isOpen={isDeleteDialogOpen}
+              onOpenChange={setIsDeleteDialogOpen}
+              onDelete={handleDelete}
+            />
+          )}
+          <Button 
+            type="button" 
+            variant="destructive" 
+            onClick={onCancel}
+            className="bg-red-700 border-light-navy text-white hover:bg-red-600"
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : (
+              <>
+                <Save className="h-4 w-4" />
+                Save Changes
+              </>
+            )}
+          </Button>
         </div>
-        <div className="mt-2">
-          <label>Background Opacity</label>
-          <NumberField value={form.watch('background_opacity')} onChange={(value) => form.setValue('background_opacity', value)} className="w-full border px-2 py-1" />
-        </div>
-        <div className="mt-2">
-          <label>Icon</label>
-          <IconSelector value={form.watch('icon_name')} onChange={handleIconSelect} className="w-full border px-2 py-1" />
-          {iconPreview && <img src={iconPreview} alt="Icon" className="w-full h-40 mt-2" />}
-        </div>
-        <div className="mt-2">
-          <label>Title Color</label>
-          <ColorPickerField value={form.watch('title_color')} onChange={(value) => form.setValue('title_color', value)} className="w-full border px-2 py-1" />
-        </div>
-        <div className="mt-2">
-          <label>Subtext Color</label>
-          <ColorPickerField value={form.watch('subtext_color')} onChange={(value) => form.setValue('subtext_color', value)} className="w-full border px-2 py-1" />
-        </div>
-        <div className="mt-2">
-          <label>Calendar Color</label>
-          <ColorPickerField value={form.watch('calendar_color')} onChange={(value) => form.setValue('calendar_color', value)} className="w-full border px-2 py-1" />
-        </div>
-        <div className="mt-2">
-          <label>Icon Color</label>
-          <ColorPickerField value={form.watch('icon_color')} onChange={(value) => form.setValue('icon_color', value)} className="w-full border px-2 py-1" />
-        </div>
-        <div className="mt-2">
-          <label>Highlight Effect</label>
-          <Switch checked={form.watch('highlight_effect')} onChange={(value) => form.setValue('highlight_effect', value)} className="w-full border px-2 py-1" />
-        </div>
-        <div className="mt-2">
-          <label>Focal Point X</label>
-          <NumberField value={form.watch('focal_point_x')} onChange={(value) => form.setValue('focal_point_x', value)} className="w-full border px-2 py-1" />
-        </div>
-        <div className="mt-2">
-          <label>Focal Point Y</label>
-          <NumberField value={form.watch('focal_point_y')} onChange={(value) => form.setValue('focal_point_y', value)} className="w-full border px-2 py-1" />
-        </div>
-        <div className="mt-2">
-          <label>Priority</label>
-          <PrioritySelector value={form.watch('priority')} onChange={(value) => form.setValue('priority', value)} className="w-full border px-2 py-1" />
-        </div>
-        <button type="submit" className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">Save</button>
       </form>
     </Form>
   );

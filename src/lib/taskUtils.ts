@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getMondayBasedDay } from "./utils";
@@ -13,11 +12,11 @@ export interface Task {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  frequency?: "daily" | "weekly";
+  frequency?: 'daily' | 'weekly';
   frequency_count?: number;
   icon_url?: string;
   icon_name?: string;
-  priority?: "low" | "medium" | "high";
+  priority?: 'low' | 'medium' | 'high';
   completion_count?: number;
   max_completions?: number;
   title_color?: string;
@@ -32,7 +31,7 @@ export interface Task {
 
 export const getLocalDateString = (): string => {
   const today = new Date();
-  return today.toLocaleDateString("en-CA");
+  return today.toLocaleDateString('en-CA');
 };
 
 export const wasCompletedToday = (task: Task): boolean => {
@@ -47,10 +46,10 @@ export const canCompleteTask = (task: Task): boolean => {
   if (!task.frequency_count) {
     return !task.completed;
   }
-
+  
   const todayIndex = getCurrentDayOfWeek();
   const todayCompletions = task.usage_data?.[todayIndex] || 0;
-
+  
   return todayCompletions < (task.frequency_count || 1);
 };
 
@@ -61,38 +60,38 @@ const initializeUsageDataArray = (task: Task): number[] => {
 export const fetchTasks = async (): Promise<Task[]> => {
   try {
     const { data, error } = await supabase
-      .from("tasks")
-      .select("*")
-      .order("created_at", { ascending: true });
-
+      .from('tasks')
+      .select('*')
+      .order('created_at', { ascending: true });
+    
     if (error) {
-      console.error("Error fetching tasks:", error);
+      console.error('Error fetching tasks:', error);
       toast({
-        title: "Error fetching tasks",
+        title: 'Error fetching tasks',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
       return [];
     }
-
+    
     const processedTasks = (data as Task[]).map(task => {
       if (!task.usage_data) {
         task.usage_data = Array(7).fill(0);
       }
-
-      if (task.completed && task.frequency === "daily" && !wasCompletedToday(task)) {
+      
+      if (task.completed && task.frequency === 'daily' && !wasCompletedToday(task)) {
         return { ...task, completed: false };
       }
       return task;
     });
-
+    
     return processedTasks;
   } catch (err) {
-    console.error("Unexpected error fetching tasks:", err);
+    console.error('Unexpected error fetching tasks:', err);
     toast({
-      title: "Error fetching tasks",
-      description: "Could not fetch tasks",
-      variant: "destructive",
+      title: 'Error fetching tasks',
+      description: 'Could not fetch tasks',
+      variant: 'destructive',
     });
     return [];
   }
@@ -100,17 +99,17 @@ export const fetchTasks = async (): Promise<Task[]> => {
 
 export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
   try {
-    console.log("Saving task with highlight effect:", task.highlight_effect);
-    console.log("Saving task with icon name:", task.icon_name);
-    console.log("Saving task with icon color:", task.icon_color);
-    console.log("Saving task with usage_data:", task.usage_data);
-
+    console.log('Saving task with highlight effect:', task.highlight_effect);
+    console.log('Saving task with icon name:', task.icon_name);
+    console.log('Saving task with icon color:', task.icon_color);
+    console.log('Saving task with usage_data:', task.usage_data);
+    
     const usage_data = task.usage_data || Array(7).fill(0);
     const now = new Date().toISOString();
-
+    
     if (task.id) {
       const { data, error } = await supabase
-        .from("tasks")
+        .from('tasks')
         .update({
           title: task.title,
           description: task.description,
@@ -131,18 +130,18 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           priority: task.priority,
           icon_color: task.icon_color,
           last_completed_date: task.last_completed_date,
-          usage_data,
+          usage_data: usage_data,
           updated_at: now,
         })
-        .eq("id", task.id)
+        .eq('id', task.id)
         .select()
         .single();
-
+      
       if (error) throw error;
       return data as Task;
     } else {
       const { data, error } = await supabase
-        .from("tasks")
+        .from('tasks')
         .insert({
           title: task.title,
           description: task.description,
@@ -163,21 +162,21 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           priority: task.priority,
           icon_color: task.icon_color,
           last_completed_date: null,
-          usage_data,
+          usage_data: usage_data,
           created_at: now,
         })
         .select()
         .single();
-
+      
       if (error) throw error;
       return data as Task;
     }
   } catch (err: any) {
-    console.error("Error saving task:", err);
+    console.error('Error saving task:', err);
     toast({
-      title: "Error saving task",
-      description: err.message || "Could not save task",
-      variant: "destructive",
+      title: 'Error saving task',
+      description: err.message || 'Could not save task',
+      variant: 'destructive',
     });
     return null;
   }
@@ -186,141 +185,141 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
 export const updateTaskCompletion = async (id: string, completed: boolean): Promise<boolean> => {
   try {
     const { data: taskData, error: taskError } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("id", id)
+      .from('tasks')
+      .select('*')
+      .eq('id', id)
       .single();
-
+    
     if (taskError) throw taskError;
-
+    
     const task = taskData as Task;
-
+    
     if (completed && !canCompleteTask(task)) {
       toast({
-        title: "Maximum completions reached",
-        description: "You have reached the maximum completions for today.",
-        variant: "default",
+        title: 'Maximum completions reached',
+        description: 'You have reached the maximum completions for today.',
+        variant: 'default',
       });
       return false;
     }
-
+    
     const usage_data = task.usage_data || Array(7).fill(0);
-
+    
     if (completed) {
       const dayOfWeek = getCurrentDayOfWeek();
       usage_data[dayOfWeek] = (usage_data[dayOfWeek] || 0) + 1;
-
+      
       const { data: authData } = await supabase.auth.getUser();
       const userId = authData.user?.id;
-
+      
       if (userId) {
-        const { error: historyError } = await supabase.rpc("record_task_completion", {
+        const { error: historyError } = await supabase.rpc('record_task_completion', {
           task_id_param: id,
-          user_id_param: userId,
+          user_id_param: userId
         }) as unknown as { error: Error | null };
-
+        
         if (historyError) {
-          console.error("Error recording task completion history:", historyError);
+          console.error('Error recording task completion history:', historyError);
         } else {
-          console.log("Task completion recorded in history");
+          console.log('Task completion recorded in history');
         }
       }
     }
-
+    
     const dayOfWeek = getCurrentDayOfWeek();
     const isFullyCompleted = usage_data[dayOfWeek] >= (task.frequency_count || 1);
-
+    
     const { error } = await supabase
-      .from("tasks")
-      .update({
+      .from('tasks')
+      .update({ 
         completed: isFullyCompleted,
         last_completed_date: completed ? getLocalDateString() : task.last_completed_date,
-        usage_data,
+        usage_data
       })
-      .eq("id", id);
-
+      .eq('id', id);
+    
     if (error) throw error;
-
+    
     if (completed) {
       try {
         const taskPoints = task.points || 0;
         const { data: authData } = await supabase.auth.getUser();
         const userId = authData.user?.id;
-
+        
         if (!userId) {
-          console.log("No authenticated user, skipping points update");
+          console.log('No authenticated user, skipping points update');
           return true;
         }
-
+        
         const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("points")
-          .eq("id", userId)
+          .from('profiles')
+          .select('points')
+          .eq('id', userId)
           .single();
-
+        
         if (profileError) {
-          if (profileError.code === "PGRST116") {
-            console.log("No profile found, creating one with initial points:", taskPoints);
-
+          if (profileError.code === 'PGRST116') {
+            console.log('No profile found, creating one with initial points:', taskPoints);
+            
             const { error: createError } = await supabase
-              .from("profiles")
+              .from('profiles')
               .insert([{ id: userId, points: taskPoints }]);
-
+              
             if (createError) {
-              console.error("Error creating profile:", createError);
+              console.error('Error creating profile:', createError);
               return true;
             }
-
+            
             toast({
-              title: "Points Earned",
+              title: 'Points Earned',
               description: `You earned ${taskPoints} points!`,
-              variant: "default",
+              variant: 'default',
             });
-
+            
             return true;
           }
-
-          console.error("Error fetching profile:", profileError);
+          
+          console.error('Error fetching profile:', profileError);
           return true;
         }
-
+        
         const currentPoints = profileData?.points || 0;
         const newPoints = currentPoints + taskPoints;
-        console.log("Updating profile points from", currentPoints, "to", newPoints);
-
+        console.log('Updating profile points from', currentPoints, 'to', newPoints);
+        
         const { error: pointsError } = await supabase
-          .from("profiles")
+          .from('profiles')
           .update({ points: newPoints })
-          .eq("id", userId);
-
+          .eq('id', userId);
+          
         if (pointsError) {
-          console.error("Error updating points:", pointsError);
+          console.error('Error updating points:', pointsError);
           return true;
         }
-
-        console.log("Points updated successfully:", newPoints);
+        
+        console.log('Points updated successfully:', newPoints);
         toast({
-          title: "Points Earned",
+          title: 'Points Earned',
           description: `You earned ${taskPoints} points!`,
-          variant: "default",
+          variant: 'default',
         });
       } catch (err) {
-        console.error("Error handling points:", err);
+        console.error('Error handling points:', err);
         toast({
-          title: "Task Completed",
-          description: "Task was completed, but there was an issue updating points.",
-          variant: "default",
+          title: 'Task Completed',
+          description: 'Task was completed, but there was an issue updating points.',
+          variant: 'default',
         });
       }
     }
-
+    
     return true;
   } catch (err: any) {
-    console.error("Error updating task completion:", err);
+    console.error('Error updating task completion:', err);
     toast({
-      title: "Error updating task",
-      description: err.message || "Could not update task completion status",
-      variant: "destructive",
+      title: 'Error updating task',
+      description: err.message || 'Could not update task completion status',
+      variant: 'destructive',
     });
     return false;
   }
@@ -328,40 +327,45 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
 
 export const deleteTask = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
-
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', id);
+    
     if (error) throw error;
-
+    
     return true;
   } catch (err: any) {
-    console.error("Error deleting task:", err);
+    console.error('Error deleting task:', err);
     toast({
-      title: "Error deleting task",
-      description: err.message || "Could not delete task",
-      variant: "destructive",
+      title: 'Error deleting task',
+      description: err.message || 'Could not delete task',
+      variant: 'destructive',
     });
     return false;
   }
 };
 
-export const resetTaskCompletions = async (frequency: "daily" | "weekly"): Promise<boolean> => {
+export const resetTaskCompletions = async (frequency: 'daily' | 'weekly'): Promise<boolean> => {
   try {
     const today = getLocalDateString();
-
+    
     const { error } = await supabase
-      .from("tasks")
-      .update({ completed: false })
-      .eq("frequency", frequency)
-      .not("last_completed_date", "eq", today);
-
+      .from('tasks')
+      .update({ 
+        completed: false
+      })
+      .eq('frequency', frequency)
+      .not('last_completed_date', 'eq', today);
+    
     if (error) throw error;
     return true;
   } catch (err: any) {
-    console.error("Error resetting task completions:", err);
+    console.error('Error resetting task completions:', err);
     toast({
-      title: "Error resetting tasks",
-      description: err.message || "Could not reset task completion status",
-      variant: "destructive",
+      title: 'Error resetting tasks',
+      description: err.message || 'Could not reset task completion status',
+      variant: 'destructive',
     });
     return false;
   }
