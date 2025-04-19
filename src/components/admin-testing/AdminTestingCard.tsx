@@ -1,3 +1,5 @@
+// 📂 src/components/admin-testing/AdminTestingCard.tsx
+
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
@@ -10,40 +12,38 @@ import { useImageCarousel } from '@/components/admin-testing/hooks/useImageCarou
 import { renderCardIcon } from '@/components/admin-testing/utils/renderCardIcon';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
-import { AdminTestingCardData } from "./defaultAdminTestingCards";
+import { AdminTestingCardData } from './defaultAdminTestingCards';
 import { MoveVertical } from 'lucide-react';
 
 export interface AdminTestingCardProps {
+  card: AdminTestingCardData;
   id?: string;
   title?: string;
   description?: string | null;
-  icon?: React.ReactNode;
   priority?: 'low' | 'medium' | 'high';
   points?: number;
   globalCarouselIndex?: number;
   onUpdate?: (card: AdminTestingCardData) => void;
-  card?: AdminTestingCardData;
   isReorderMode?: boolean;
 }
 
 const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
+  card,
   id,
   title,
   description,
-  icon,
   priority = 'medium',
   points = 5,
   globalCarouselIndex,
   onUpdate,
-  card,
-  isReorderMode = false
+  isReorderMode = false,
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
+
+  // Freeze height when reorder mode toggles
   const cardRef = useRef<HTMLDivElement>(null);
   const [fixedHeight, setFixedHeight] = useState<number | undefined>();
-
-  // Freeze card height the moment Re-order mode toggles on
   useLayoutEffect(() => {
     if (isReorderMode && cardRef.current) {
       setFixedHeight(cardRef.current.getBoundingClientRect().height);
@@ -52,35 +52,37 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     }
   }, [isReorderMode]);
 
+  // Use card prop values (not uninitialized cardData) here
   const {
     cardData,
     images,
     usageData,
     isTransitioning,
-    handleSaveCard
+    handleSaveCard,
   } = useAdminCardData({
     id: card?.id || id || '',
     title: card?.title || title || '',
     description: card?.description ?? description,
     priority: card?.priority || priority,
     points: card?.points || points,
-    icon_url: cardData.icon_url,
-    icon_name: cardData.icon_name || '',
-    icon_color: cardData.icon_color || '#FFFFFF',
-    background_images: cardData.background_images,
-    background_image_url: cardData.background_image_url
+    icon_url: card?.icon_url || '',
+    icon_name: card?.icon_name || '',
+    icon_color: card?.icon_color || '#FFFFFF',
+    background_images: card?.background_images || [],
+    background_image_url: card?.background_image_url || null,
   });
 
-  const {
-    visibleImage,
-    transitionImage
-  } = useImageCarousel(images, globalCarouselIndex || 0, carouselTimer);
+  const { visibleImage, transitionImage } = useImageCarousel(
+    images,
+    globalCarouselIndex || 0,
+    carouselTimer
+  );
 
   const iconComponent = renderCardIcon({
     iconUrl: cardData.icon_url,
     iconName: cardData.icon_name,
     iconColor: cardData.icon_color,
-    fallbackIcon: icon
+    fallbackIcon: null,
   });
 
   const handleDeleteCard = async (cardId: string) => {
@@ -93,15 +95,15 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         toast({
           title: "Error",
           description: `Failed to delete card: ${error.message}`,
-          variant: "destructive"
+          variant: "destructive",
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error deleting card:", err);
       toast({
         title: "Error",
         description: "An unexpected error occurred.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -116,15 +118,13 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
       <Card
         ref={cardRef}
         data-testid="admin-card"
-        style={fixedHeight ? { height: fixedHeight } : {}}
+        style={fixedHeight ? { height: fixedHeight } : undefined}
         className={`relative overflow-hidden border-2 ${
           isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
         } bg-navy`}
       >
         {isReorderMode && (
-          <div
-            className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center pointer-events-none"
-          >
+          <div className="absolute top-2 left-2 z-50 bg-amber-500 text-white p-1 rounded-md flex items-center pointer-events-none">
             <MoveVertical className="h-4 w-4 mr-1" />
             <span className="text-xs">Drag to reorder</span>
           </div>
@@ -149,8 +149,10 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
           icon={iconComponent}
         />
 
-        <CardFooter usageData={usageData} calendarColor={cardData.calendar_color} />
-
+        <CardFooter
+          usageData={usageData}
+          calendarColor={cardData.calendar_color}
+        />
       </Card>
 
       <AdminTestingEditModal
@@ -159,11 +161,9 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         cardData={cardData}
         onSave={(updated) => {
           handleSaveCard(updated);
-          if (onUpdate) {
-            onUpdate(updated);
-          }
+          if (onUpdate) onUpdate(updated);
         }}
-        onDelete={handleDeleteCard}
+        onDelete={() => handleDeleteCard(cardData.id)}
         localStorageKey="adminTestingCards"
         carouselTimer={carouselTimer}
         onCarouselTimerChange={handleCarouselTimerChange}
