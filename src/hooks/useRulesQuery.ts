@@ -39,7 +39,7 @@ export interface RuleViolation {
 }
 
 // Keys for React Query cache
-const RULES_CACHE_KEY = 'rules';
+const RULES_CACHE_KEY = ['rules'];
 
 // Fetch all rules
 export const fetchRules = async (): Promise<Rule[]> => {
