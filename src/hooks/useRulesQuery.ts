@@ -225,7 +225,7 @@ export const recordRuleViolation = async (ruleId: string): Promise<{ updatedRule
 
 export const useRulesQuery = () => {
   const queryClient = useQueryClient();
-  const queryConfig = useQueryConfig<Rule[]>([RULES_CACHE_KEY]);
+  const queryConfig = useQueryConfig<Rule[]>(RULES_CACHE_KEY);
 
   const {
     data: rules = [],
@@ -233,12 +233,12 @@ export const useRulesQuery = () => {
     error
   } = useQuery({
     ...queryConfig,
-    queryKey: [RULES_CACHE_KEY],
+    queryKey: RULES_CACHE_KEY,
     queryFn: fetchRules,
     initialData: () => {
       // Try to load from localStorage first
       try {
-        const cached = localStorage.getItem(RULES_CACHE_KEY);
+        const cached = localStorage.getItem(RULES_CACHE_KEY.toString());
         if (cached) {
           const { data, timestamp } = JSON.parse(cached);
           // Only use cache if it's less than 1 hour old
@@ -257,7 +257,7 @@ export const useRulesQuery = () => {
     if (rules.length > 0) {
       try {
         localStorage.setItem(
-          RULES_CACHE_KEY,
+          RULES_CACHE_KEY.toString(),
           JSON.stringify({
             data: rules,
             timestamp: Date.now(),
@@ -275,7 +275,7 @@ export const useRulesQuery = () => {
     onSuccess: (newRule) => {
       // Update the cache with new rule
       queryClient.setQueryData(
-        [RULES_CACHE_KEY],
+        RULES_CACHE_KEY,
         (oldData: Rule[] = []) => [newRule, ...oldData]
       );
       
@@ -298,14 +298,14 @@ export const useRulesQuery = () => {
     mutationFn: updateRule,
     onMutate: async (updatedRule) => {
       // Cancel outgoing refetches to avoid overwriting our optimistic update
-      await queryClient.cancelQueries({ queryKey: [RULES_CACHE_KEY] });
+      await queryClient.cancelQueries({ queryKey: RULES_CACHE_KEY });
       
       // Snapshot the previous value
-      const previousRules = queryClient.getQueryData<Rule[]>([RULES_CACHE_KEY]) || [];
+      const previousRules = queryClient.getQueryData<Rule[]>(RULES_CACHE_KEY) || [];
       
       // Optimistically update the cache with the new value
       queryClient.setQueryData(
-        [RULES_CACHE_KEY],
+        RULES_CACHE_KEY,
         (oldData: Rule[] = []) => oldData.map(rule => 
           rule.id === updatedRule.id ? { ...rule, ...updatedRule } : rule
         )
@@ -323,7 +323,7 @@ export const useRulesQuery = () => {
     onError: (error, _, context) => {
       // Rollback to previous value
       if (context?.previousRules) {
-        queryClient.setQueryData([RULES_CACHE_KEY], context.previousRules);
+        queryClient.setQueryData(RULES_CACHE_KEY, context.previousRules);
       }
       
       toast({
@@ -334,7 +334,7 @@ export const useRulesQuery = () => {
     },
     onSettled: () => {
       // Always refetch after error or success to make sure our local data is in sync with the server
-      queryClient.invalidateQueries({ queryKey: [RULES_CACHE_KEY] });
+      queryClient.invalidateQueries({ queryKey: RULES_CACHE_KEY });
     }
   });
 
@@ -343,14 +343,14 @@ export const useRulesQuery = () => {
     mutationFn: deleteRule,
     onMutate: async (id) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: [RULES_CACHE_KEY] });
+      await queryClient.cancelQueries({ queryKey: RULES_CACHE_KEY });
       
       // Snapshot the previous values
-      const previousRules = queryClient.getQueryData<Rule[]>([RULES_CACHE_KEY]) || [];
+      const previousRules = queryClient.getQueryData<Rule[]>(RULES_CACHE_KEY) || [];
       
       // Optimistically update caches
       queryClient.setQueryData(
-        [RULES_CACHE_KEY],
+        RULES_CACHE_KEY,
         (oldData: Rule[] = []) => oldData.filter(rule => rule.id !== id)
       );
       
@@ -365,7 +365,7 @@ export const useRulesQuery = () => {
     onError: (error, _, context) => {
       // Rollback to previous values
       if (context?.previousRules) {
-        queryClient.setQueryData([RULES_CACHE_KEY], context.previousRules);
+        queryClient.setQueryData(RULES_CACHE_KEY, context.previousRules);
       }
       
       toast({
@@ -376,7 +376,7 @@ export const useRulesQuery = () => {
     },
     onSettled: () => {
       // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: [RULES_CACHE_KEY] });
+      queryClient.invalidateQueries({ queryKey: RULES_CACHE_KEY });
     }
   });
   
@@ -385,14 +385,14 @@ export const useRulesQuery = () => {
     mutationFn: recordRuleViolation,
     onMutate: async (ruleId) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: [RULES_CACHE_KEY] });
+      await queryClient.cancelQueries({ queryKey: RULES_CACHE_KEY });
       
       // Snapshot the previous value
-      const previousRules = queryClient.getQueryData<Rule[]>([RULES_CACHE_KEY]) || [];
+      const previousRules = queryClient.getQueryData<Rule[]>(RULES_CACHE_KEY) || [];
       
       // Optimistically update the rule in the cache
       queryClient.setQueryData(
-        [RULES_CACHE_KEY],
+        RULES_CACHE_KEY,
         (oldData: Rule[] = []) => oldData.map(rule => {
           if (rule.id !== ruleId) return rule;
           
@@ -419,7 +419,7 @@ export const useRulesQuery = () => {
     onError: (error, _, context) => {
       // Rollback to previous value
       if (context?.previousRules) {
-        queryClient.setQueryData([RULES_CACHE_KEY], context.previousRules);
+        queryClient.setQueryData(RULES_CACHE_KEY, context.previousRules);
       }
       
       toast({
@@ -430,7 +430,7 @@ export const useRulesQuery = () => {
     },
     onSettled: () => {
       // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: [RULES_CACHE_KEY] });
+      queryClient.invalidateQueries({ queryKey: RULES_CACHE_KEY });
     }
   });
 
@@ -443,6 +443,6 @@ export const useRulesQuery = () => {
     deleteRule: (id: string) => deleteRuleMutation.mutateAsync(id),
     recordViolation: (ruleId: string) => recordViolationMutation.mutateAsync(ruleId),
     // Add refresh function to force refetch
-    refreshRules: () => queryClient.invalidateQueries({ queryKey: [RULES_CACHE_KEY] })
+    refreshRules: () => queryClient.invalidateQueries({ queryKey: RULES_CACHE_KEY })
   };
 };
