@@ -113,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Use the existing supabase client directly
     const client = supabase;
 
-    const { data: subscription } = client.auth.onAuthStateChange((event, newSession) => {
+    const { data } = client.auth.onAuthStateChange((event, newSession) => {
       // Synchronous updates only here to avoid deadlocks
       const userFromSession = newSession?.user ?? null;
 
@@ -140,6 +140,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
+    const subscription = data.subscription;
+
     // Get the current session on mount, setting state
     client.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -155,7 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
-      subscription?.unsubscribe();
+      subscription.unsubscribe();
     };
   }, [navigate]);
 
