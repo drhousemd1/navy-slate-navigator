@@ -11,7 +11,6 @@ import { renderCardIcon } from '@/components/admin-testing/utils/renderCardIcon'
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { AdminTestingCardData } from "./defaultAdminTestingCards";
-import { MoveVertical } from 'lucide-react';
 
 export interface AdminTestingCardProps {
   title: string;
@@ -126,13 +125,13 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         data-testid="admin-card"
       >
         {isReorderMode && (
-          <div className="absolute top-2 left-2 z-50 bg-amber-500/90 text-white px-3 py-2 rounded-md flex items-center gap-2 shadow-md">
+          <div className="absolute top-2 left-2 z-50 bg-amber-500/90 text-white p-1.5 rounded-md flex items-center gap-1.5 shadow-md">
             <img 
-              src="/lovable-uploads/b04a1a6d-f35f-4f94-b625-d4028df44812.png"
-              alt="Drag to reorder"
-              className="h-5 w-5"
+              src="/lovable-uploads/d5dce2e0-fb15-4e5f-9f26-2fb3ce55f0f9.png" 
+              alt="Reorder" 
+              className="w-4 h-4"
             />
-            <span className="text-xs font-semibold tracking-wide">Drag to reorder</span>
+            <span className="text-xs font-medium">Drag to reorder</span>
           </div>
         )}
         <CardBackground 
