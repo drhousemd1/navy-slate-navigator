@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AppLayout from "../components/AppLayout";
 import TaskCard from "../components/TaskCard";
@@ -12,7 +12,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 const TASK_CACHE_KEY = "cachedTasks";
 
 const useCachedTasks = () => {
-  return useQuery<Task[]>(["tasks"], fetchTasks, {
+  return useQuery<Task[]>({
+    queryKey: ["tasks"],
+    queryFn: fetchTasks,
     staleTime: 1000 * 60 * 60,
     refetchOnWindowFocus: false,
     initialData: () => {
@@ -33,7 +35,7 @@ const TasksContent = ({
   setIsEditorOpen: (open: boolean) => void;
 }) => {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  const { data: tasks, isLoading } = useCachedTasks();
+  const { data: tasks = [], isLoading } = useCachedTasks();
 
   const handleEditTask = (task: Task) => {
     setCurrentTask(task);
