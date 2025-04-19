@@ -32,7 +32,13 @@ export const useTasksQuery = () => {
     isLoading,
     error
   } = useQuery({
-    ...queryConfig,
+    queryKey: [TASKS_CACHE_KEY], // Explicitly set queryKey here
+    staleTime: queryConfig.staleTime,
+    gcTime: queryConfig.gcTime,
+    refetchOnWindowFocus: queryConfig.refetchOnWindowFocus,
+    refetchOnReconnect: queryConfig.refetchOnReconnect,
+    retry: queryConfig.retry,
+    retryDelay: queryConfig.retryDelay,
     queryFn: fetchTasks,
     initialData: () => {
       try {
