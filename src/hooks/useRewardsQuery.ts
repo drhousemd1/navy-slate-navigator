@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useQueryConfig } from './useQueryConfig';
 import { Reward } from '@/lib/rewardUtils';
-import React from 'react';
+import * as React from 'react';
 
 const REWARDS_CACHE_KEY = 'rewards';
 
@@ -67,7 +67,23 @@ export const useRewardsQuery = () => {
     mutationFn: async (rewardData: Partial<Reward> & { title: string }): Promise<Reward> => {
       const { data, error } = await supabase
         .from('rewards')
-        .insert(rewardData)
+        .insert({
+          title: rewardData.title,
+          description: rewardData.description || '',
+          cost: rewardData.cost || 0,
+          supply: rewardData.supply || 0,
+          background_image_url: rewardData.background_image_url,
+          background_opacity: rewardData.background_opacity,
+          icon_url: rewardData.icon_url,
+          icon_name: rewardData.icon_name,
+          title_color: rewardData.title_color,
+          subtext_color: rewardData.subtext_color,
+          calendar_color: rewardData.calendar_color,
+          highlight_effect: rewardData.highlight_effect,
+          focal_point_x: rewardData.focal_point_x,
+          focal_point_y: rewardData.focal_point_y,
+          icon_color: rewardData.icon_color,
+        })
         .select()
         .single();
         
@@ -241,6 +257,9 @@ export const useRewardsQuery = () => {
         title: "Success",
         description: `You purchased ${updatedReward.title}`,
       });
+      
+      // Invalidate the profile points cache since they were updated
+      queryClient.invalidateQueries({ queryKey: ['profile-points'] });
     },
     onError: (error) => {
       console.error('Error buying reward:', error);
