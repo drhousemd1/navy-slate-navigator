@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -12,7 +11,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Task } from '@/lib/taskUtils';
 import { supabase } from '@/integrations/supabase/client';
 
-// Component for rendering skeleton loading state
 const TaskSkeletons = () => {
   return (
     <div className="space-y-4 animate-pulse">
@@ -28,7 +26,6 @@ interface TasksContentProps {
   setIsEditorOpen: (isOpen: boolean) => void;
 }
 
-// Default empty task for proper type checking
 const DEFAULT_TASK_VALUES: Partial<Task> = {
   points: 0,
   completed: false,
@@ -52,7 +49,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     refetchTasks 
   } = useOptimizedTasksQuery();
 
-  // Visual-first rendering
   useEffect(() => {
     const visualTimer = setTimeout(() => setIsRenderReady(true), 100);
     const logicTimer = setTimeout(() => setRenderLogic(true), 300);
@@ -80,14 +76,8 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const handleSaveTask = useCallback(async (taskData: Task) => {
     try {
       console.log("Saving task:", taskData);
-      // const savedTask = await saveTask(taskData);
-      // Temporarily remove saveTask usage
       setIsEditorOpen(false);
       refetchTasks();
-      
-      // if (savedTask) {
-      //   setIsEditorOpen(false);
-      // }
     } catch (err) {
       console.error('Error saving task:', err);
     }
@@ -96,8 +86,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const handleDeleteTask = useCallback(async (taskId: string) => {
     try {
       console.log("Deleting task:", taskId);
-      // await deleteTask(taskId);
-      // Temporarily remove deleteTask usage
       setCurrentTask(null);
       setIsEditorOpen(false);
       refetchTasks();
@@ -109,9 +97,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const handleToggleCompletion = useCallback(async (taskId: string, completed: boolean) => {
     try {
       console.log(`Toggling task ${taskId} completion to ${completed}`);
-      // await toggleCompletion(taskId, completed);
-      // Temporarily remove toggleCompletion usage
-      
       if (completed) {
         const task = tasks.find(t => t.id === taskId);
         const points = task?.points || 0;
@@ -120,7 +105,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         const { data: authData } = await supabase.auth.getUser();
         const userId = authData.user?.id || 'anonymous';
         
-        // Log the completion to history
         const { error: insertError } = await supabase
           .from('task_completion_history')
           .insert({
@@ -133,7 +117,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
           console.error('Error inserting into task_completion_history:', insertError.message);
         } else {
           console.log('Logged task completion to history');
-          // Make sure we invalidate weekly metrics data when a task is completed
           queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
         }
       }
@@ -143,7 +126,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     }
   }, [tasks, queryClient, refetchTasks]);
 
-  // Prefetch images to improve perceived performance
   useEffect(() => {
     if (tasks?.length > 0 && !isLoading) {
       tasks.forEach(task => {
@@ -173,7 +155,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       ) : (
         <div className="space-y-4">
           {tasks.map(task => {
-            // Merge with default values to ensure all required properties are present
             const fullTask = { ...DEFAULT_TASK_VALUES, ...task } as Task;
             
             return (
@@ -185,7 +166,10 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
                     onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
                   />
                 ) : (
-                  <TaskCardVisual {...fullTask} />
+                  <TaskCardVisual 
+                    {...fullTask}
+                    backgroundImage={fullTask.background_image_url}
+                  />
                 )}
               </div>
             );

@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -18,7 +17,16 @@ export type TaskVisualData = {
   focal_point_x?: number;
   focal_point_y?: number;
   points: number;
-  priority?: 'low' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high';
+  completed?: boolean;
+  frequency?: 'daily' | 'weekly';
+  frequency_count?: number;
+  icon_url?: string;
+  icon_name?: string;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  icon_color?: string;
 };
 
 // Get cached tasks from localStorage
@@ -31,7 +39,6 @@ const getCachedTasks = (): TaskVisualData[] => {
   }
 };
 
-// Optimized fetch with column selection
 const fetchTasks = async (): Promise<Task[]> => {
   const { data, error } = await supabase
     .from('tasks')
@@ -49,12 +56,11 @@ const fetchTasks = async (): Promise<Task[]> => {
       frequency_count,
       icon_url,
       icon_name,
-      priority,
+      icon_color,
       title_color,
       subtext_color,
       calendar_color,
-      highlight_effect,
-      icon_color,
+      priority,
       usage_data
     `)
     .order('created_at', { ascending: true });
@@ -64,16 +70,23 @@ const fetchTasks = async (): Promise<Task[]> => {
     throw new Error(error.message);
   }
 
-  // Ensure all data conforms to expected types
+  // Process and validate the data
   const tasks = (data || []).map(task => ({
     ...task,
-    frequency: (task.frequency === 'daily' || task.frequency === 'weekly') ? task.frequency : 'daily',
-    priority: (task.priority === 'low' || task.priority === 'medium' || task.priority === 'high') ? task.priority : 'medium',
+    frequency: task.frequency === 'weekly' ? 'weekly' : 'daily',
+    priority: (task.priority === 'low' || task.priority === 'medium' || task.priority === 'high') 
+      ? task.priority 
+      : 'medium' as const,
     usage_data: task.usage_data || Array(7).fill(0)
   })) as Task[];
 
-  // Cache the visual data
-  const visualData = tasks.map(({ id, title, description, background_image_url, background_opacity, focal_point_x, focal_point_y, points, priority }) => ({
+  // Cache the complete visual data
+  const visualData = tasks.map(({ 
+    id, title, description, background_image_url, background_opacity,
+    focal_point_x, focal_point_y, points, priority, completed,
+    frequency, frequency_count, icon_url, icon_name,
+    title_color, subtext_color, calendar_color, icon_color
+  }) => ({
     id,
     title,
     description,
@@ -82,10 +95,19 @@ const fetchTasks = async (): Promise<Task[]> => {
     focal_point_x,
     focal_point_y,
     points,
-    priority
+    priority,
+    completed,
+    frequency,
+    frequency_count,
+    icon_url,
+    icon_name,
+    title_color,
+    subtext_color,
+    calendar_color,
+    icon_color
   }));
+  
   localStorage.setItem(CACHED_TASKS_KEY, JSON.stringify(visualData));
-
   return tasks;
 };
 

@@ -4,15 +4,18 @@ import { Card } from './ui/card';
 import PriorityBadge from './task/PriorityBadge';
 import TaskIcon from './task/TaskIcon';
 import HighlightedText from './task/HighlightedText';
+import PointsBadge from './task/PointsBadge';
 
 interface TaskCardVisualProps {
   title: string;
   description: string;
-  backgroundImage?: string;
-  backgroundOpacity?: number;
-  focalPointX?: number;
-  focalPointY?: number;
+  background_image_url?: string;
+  backgroundImage?: string; // For backward compatibility
+  background_opacity?: number;
+  focal_point_x?: number;
+  focal_point_y?: number;
   priority?: 'low' | 'medium' | 'high';
+  points: number;
   icon_url?: string;
   icon_name?: string;
   title_color?: string;
@@ -23,27 +26,31 @@ interface TaskCardVisualProps {
 const TaskCardVisual: React.FC<TaskCardVisualProps> = ({
   title,
   description,
-  backgroundImage,
-  backgroundOpacity = 100,
-  focalPointX = 50,
-  focalPointY = 50,
+  background_image_url,
+  backgroundImage, // For backward compatibility
+  background_opacity = 100,
+  focal_point_x = 50,
+  focal_point_y = 50,
   priority = 'medium',
+  points,
   icon_url,
   icon_name,
   title_color = '#FFFFFF',
   subtext_color = '#8E9196',
   icon_color = '#9b87f5'
 }) => {
+  const actualBackgroundImage = background_image_url || backgroundImage;
+  
   return (
-    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
-      {backgroundImage && (
+    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!actualBackgroundImage ? 'bg-navy' : ''}`}>
+      {actualBackgroundImage && (
         <div 
           className="absolute inset-0 w-full h-full z-0"
           style={{
-            backgroundImage: `url(${backgroundImage})`,
+            backgroundImage: `url(${actualBackgroundImage})`,
             backgroundSize: 'cover',
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100,
+            backgroundPosition: `${focal_point_x}% ${focal_point_y}%`,
+            opacity: background_opacity / 100,
           }}
         />
       )}
@@ -51,6 +58,7 @@ const TaskCardVisual: React.FC<TaskCardVisualProps> = ({
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">
           <PriorityBadge priority={priority} />
+          <PointsBadge points={points} />
         </div>
         
         <div className="flex items-start mb-auto">
