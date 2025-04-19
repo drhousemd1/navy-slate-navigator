@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -401,7 +402,7 @@ const AdminTesting = () => {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="space-y-6"
+                    className="flex flex-col gap-y-6"
                   >
                     {cards.map((card, index) => (
                       <Draggable
