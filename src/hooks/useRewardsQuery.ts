@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -63,7 +64,7 @@ export const useRewardsQuery = () => {
 
   // Create a new reward
   const createRewardMutation = useMutation({
-    mutationFn: async (rewardData: Partial<Reward>): Promise<Reward> => {
+    mutationFn: async (rewardData: Partial<Reward> & { title: string }): Promise<Reward> => {
       const { data, error } = await supabase
         .from('rewards')
         .insert(rewardData)
@@ -192,30 +193,34 @@ export const useRewardsQuery = () => {
   // Buy a reward
   const buyRewardMutation = useMutation({
     mutationFn: async ({ id, cost }: { id: string, cost: number }): Promise<Reward> => {
-      // First, get the current user's points
+      // First, get the current user's points from profiles table
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+      
       const { data: userData, error: userError } = await supabase
-        .from('user_points')
+        .from('profiles')
         .select('points')
+        .eq('id', user.id)
         .single();
         
       if (userError) throw userError;
       
-      if (userData.points < cost) {
+      if (!userData || userData.points < cost) {
         throw new Error('Not enough points');
       }
       
       // Update the user's points
       const { error: pointsError } = await supabase
-        .from('user_points')
+        .from('profiles')
         .update({ points: userData.points - cost })
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+        .eq('id', user.id);
         
       if (pointsError) throw pointsError;
       
       // Update the reward supply
       const { data: rewardData, error: rewardError } = await supabase
         .from('rewards')
-        .update({ supply: supabase.rpc('increment', { inc: 1 }) })
+        .update({ supply: rewards.find(r => r.id === id)?.supply + 1 || 1 })
         .eq('id', id)
         .select()
         .single();
@@ -231,9 +236,6 @@ export const useRewardsQuery = () => {
           reward.id === updatedReward.id ? updatedReward : reward
         )
       );
-      
-      // Also invalidate user points
-      queryClient.invalidateQueries({ queryKey: ['user_points'] });
       
       toast({
         title: "Success",
@@ -263,22 +265,17 @@ export const useRewardsQuery = () => {
   const useRewardMutation = useMutation({
     mutationFn: async (id: string): Promise<Reward> => {
       // Get the current reward
-      const { data: rewardData, error: rewardGetError } = await supabase
-        .from('rewards')
-        .select('*')
-        .eq('id', id)
-        .single();
-        
-      if (rewardGetError) throw rewardGetError;
+      const reward = rewards.find(r => r.id === id);
+      if (!reward) throw new Error('Reward not found');
       
-      if (rewardData.supply <= 0) {
+      if (reward.supply <= 0) {
         throw new Error('No supply available');
       }
       
       // Update the reward supply
       const { data: updatedReward, error: rewardUpdateError } = await supabase
         .from('rewards')
-        .update({ supply: rewardData.supply - 1 })
+        .update({ supply: reward.supply - 1 })
         .eq('id', id)
         .select()
         .single();
@@ -338,7 +335,7 @@ export const useRewardsQuery = () => {
     rewards,
     isLoading,
     error,
-    createReward: (data: Partial<Reward>) => createRewardMutation.mutateAsync(data),
+    createReward: (data: Partial<Reward> & { title: string }) => createRewardMutation.mutateAsync(data),
     updateReward: (id: string, data: Partial<Reward>) => updateRewardMutation.mutateAsync({ id, ...data }),
     deleteReward: (id: string) => deleteRewardMutation.mutateAsync(id),
     buyReward: (id: string, cost: number) => buyRewardMutation.mutateAsync({ id, cost }),

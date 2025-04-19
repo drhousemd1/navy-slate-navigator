@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useQueryConfig } from './useQueryConfig';
 import { getMondayBasedDay } from '@/lib/utils';
+import React from 'react';
 
 // Types for our rules
 export interface Rule {
@@ -48,7 +49,9 @@ export const fetchRules = async (): Promise<Rule[]> => {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data || [];
+  
+  // Add type assertion to ensure correct typing
+  return (data || []) as Rule[];
 };
 
 // Create a new rule

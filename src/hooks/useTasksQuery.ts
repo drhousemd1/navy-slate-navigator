@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useQueryConfig } from './useQueryConfig';
 import { Task } from '@/lib/taskUtils';
+import React from 'react';
 
 const TASKS_CACHE_KEY = 'tasks';
 
@@ -13,7 +14,9 @@ export const fetchTasks = async (): Promise<Task[]> => {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data || [];
+  
+  // Add type assertion to ensure correct typing
+  return (data || []) as Task[];
 };
 
 export const useTasksQuery = () => {
