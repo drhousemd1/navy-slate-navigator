@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,14 +7,12 @@ import { AuthViewProps } from './types';
 import { useAuthForm } from './useAuthForm';
 import { useDebugMode } from './useDebugMode';
 import { Checkbox } from '@/components/ui/checkbox';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
   const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => {
     try {
       return localStorage.getItem('rememberMe') === 'true';
@@ -21,19 +20,20 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       return false;
     }
   });
-  
-  // Direct login function
+
+  const [loadingInternally, setLoadingInternally] = useState(false);
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (currentView === "login") {
-      setIsLoggingIn(true);
+      setLoadingInternally(true);
       updateFormState({ loginError: null });
-      
+
       try {
         await handleLoginSubmit(e, rememberMe);
       } finally {
-        setIsLoggingIn(false);
+        setLoadingInternally(false);
       }
     } else {
       const result = await handleSignupSubmit(e);
@@ -123,7 +123,6 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
             </div>
           )}
           
-          {/* Debug information when debug mode is enabled */}
           {debugMode && (
             <div className="text-xs text-gray-400 p-2 border border-gray-700 rounded bg-gray-900/50 overflow-auto">
               <p>Debug mode enabled</p>
@@ -146,21 +145,21 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
             </div>
           )}
           
-          <Button 
+          <Button
             type="submit"
-            className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center" 
-            disabled={isLoggingIn || formState.loading}
+            className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center"
+            disabled={loadingInternally || formState.loading}
           >
             <LogIn className="w-4 h-4 mr-2" />
-            {isLoggingIn || formState.loading ? 'Signing In...' : 'Sign In'}
+            {loadingInternally || formState.loading ? 'Signing In...' : 'Sign In'}
           </Button>
-          
+
           {currentView === "login" && (
             <p className="text-center text-sm text-gray-400 pt-2">
-              Don't have an account?{" "}
-              <Button 
-                type="button" 
-                variant="link" 
+              Don't have an account?{' '}
+              <Button
+                type="button"
+                variant="link"
                 className="text-blue-400 hover:text-blue-300 p-0"
                 onClick={() => onViewChange("signup")}
               >
