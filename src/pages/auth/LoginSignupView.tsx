@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -5,7 +6,6 @@ import { LogIn, AlertCircle, RefreshCw } from 'lucide-react';
 import { AuthViewProps } from './types';
 import { useAuthForm } from './useAuthForm';
 import { useDebugMode } from './useDebugMode';
-import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -14,27 +14,64 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [rememberMe, setRememberMe] = useState(() => {
-    try {
-      return localStorage.getItem('rememberMe') === 'true';
-    } catch {
-      return false;
-    }
-  });
   
   // Direct login function
+  const directLogin = async () => {
+    try {
+      setIsLoggingIn(true);
+      updateFormState({ loginError: null });
+      
+      console.log("Attempting login with:", {
+        email: formState.email,
+        passwordLength: formState.password?.length || 0
+      });
+      
+      // Direct call to Supabase auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formState.email,
+        password: formState.password,
+      });
+      
+      if (error) {
+        console.error("Login error:", error);
+        
+        // Display a user-friendly error message
+        let errorMessage = "Authentication failed. Please check your credentials.";
+        if (error.message.includes("Invalid login credentials")) {
+          errorMessage = "Invalid email or password. Please try again.";
+        }
+        
+        updateFormState({ loginError: errorMessage });
+        return;
+      }
+      
+      if (data && data.user) {
+        console.log("Login successful:", data.user.email);
+        toast({
+          title: "Login successful",
+          description: "You have been successfully logged in.",
+        });
+        // Navigation will happen automatically via AuthContext
+      } else {
+        updateFormState({ 
+          loginError: "Login succeeded but no user data returned."
+        });
+      }
+    } catch (error) {
+      console.error("Exception during login:", error);
+      updateFormState({ 
+        loginError: error.message || "An unexpected error occurred. Please try again."
+      });
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+  
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (currentView === "login") {
-      setIsLoggingIn(true);
-      updateFormState({ loginError: null });
-      
-      try {
-        await handleLoginSubmit(e, rememberMe);
-      } finally {
-        setIsLoggingIn(false);
-      }
+      directLogin();
     } else {
       const result = await handleSignupSubmit(e);
       if (result === "login") {
@@ -90,21 +127,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 {showPassword ? "Hide" : "Show"}
               </Button>
             </div>
-            <div className="flex justify-between items-center mt-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="rememberMe"
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked === true)}
-                  className="border-gray-400"
-                />
-                <label
-                  htmlFor="rememberMe"
-                  className="text-sm text-gray-300 cursor-pointer"
-                >
-                  Remember Me
-                </label>
-              </div>
+            <div className="text-right">
               <Button 
                 type="button" 
                 variant="link" 
@@ -172,4 +195,4 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       </div>
     </div>
   );
-};
+}
