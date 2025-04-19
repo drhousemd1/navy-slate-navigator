@@ -4,12 +4,11 @@ import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
 import ActivityDataReset from '@/components/admin-testing/ActivityDataReset';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
-import { Plus, MoveVertical } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { AdminTestingCardData } from '@/components/admin-testing/defaultAdminTestingCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { DragDropContext, Droppable, Draggable, DropResult, DragStart } from '@hello-pangea/dnd';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface SupabaseCardData {
   id: string;
@@ -330,17 +329,15 @@ const AdminTesting = () => {
         </div>
         
         <div className="flex justify-end gap-2 mb-6">
-          <Button 
+          <img 
+            src="/lovable-uploads/b04a1a6d-f35f-4f94-b625-d4028df44812.png"
+            alt="Toggle Reorder Mode"
             onClick={toggleReorderMode}
-            className={`flex items-center gap-2 ${isReorderMode ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
-          >
-            <img 
-              src="/lovable-uploads/b04a1a6d-f35f-4f94-b625-d4028df44812.png"
-              alt="Reorder Cards"
-              className="h-5 w-5"
-            />
-            {isReorderMode ? "Save Order" : "Reorder Cards"}
-          </Button>
+            className={`h-10 w-10 cursor-pointer transition-all duration-200 hover:scale-110 ${
+              isReorderMode ? 'opacity-100' : 'opacity-70'
+            }`}
+            title={isReorderMode ? "Save Order" : "Reorder Cards"}
+          />
           <Button 
             onClick={handleAddCard}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
