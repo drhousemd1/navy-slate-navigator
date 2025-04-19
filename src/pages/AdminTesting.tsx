@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -10,7 +11,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { DragDropContext, Droppable, Draggable, DropResult, DragStart } from '@hello-pangea/dnd';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import reorderIcon from '@/assets/reorder-icon.svg';
 
 interface SupabaseCardData {
   id: string;
@@ -333,13 +333,9 @@ const AdminTesting = () => {
         <div className="flex justify-end gap-2 mb-6">
           <Button 
             onClick={toggleReorderMode}
-            className={`flex items-center gap-2 ${isReorderMode ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+            className={isReorderMode ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}
           >
-            <img 
-              src={reorderIcon} 
-              alt="Reorder Cards" 
-              className="h-6 w-6" 
-            />
+            <MoveVertical className="mr-2 h-4 w-4" />
             {isReorderMode ? "Save Order" : "Reorder Cards"}
           </Button>
           <Button 
