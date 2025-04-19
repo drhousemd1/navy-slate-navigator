@@ -1,65 +1,94 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { getMondayBasedDay } from "./utils";
 
 export interface Task {
   id: string;
   title: string;
-  image_url: string;
-  status: string;
+  description: string;
+  points: number;
+  completed: boolean;
+  background_image_url?: string;
+  background_opacity?: number;
+  focal_point_x?: number;
+  focal_point_y?: number;
+  frequency?: "daily" | "weekly";
+  frequency_count?: number;
+  icon_url?: string;
+  icon_name?: string;
+  priority?: "low" | "medium" | "high";
+  completion_count?: number;
+  max_completions?: number;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  highlight_effect?: boolean;
+  icon_color?: string;
+  last_completed_date?: string;
+  usage_data?: number[];
+  created_at?: string;
 }
 
-export const fetchLightweightTasks = async (): Promise<Task[]> => {
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('id, title, image_url, status')
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return data || [];
-};
-
-export const fetchFullTaskDetails = async (taskId: string): Promise<Task> => {
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('id', taskId)
-    .single();
-
-  if (error) throw error;
-  return data;
-};
-
-// Original exports restored
-export const saveTask = async (task: Task): Promise<Task> => {
-  const { data, error } = await supabase
-    .from('tasks')
-    .upsert(task)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-};
-
-export const deleteTask = async (taskId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', taskId);
-
-  if (error) throw error;
-};
-
-export const updateTaskCompletion = async (taskId: string, completed: boolean): Promise<void> => {
-  const { error } = await supabase
-    .from('tasks')
-    .update({ status: completed ? 'done' : 'pending' })
-    .eq('id', taskId);
-
-  if (error) throw error;
+export const getLocalDateString = (): string => {
+  const today = new Date();
+  return today.toLocaleDateString("en-CA");
 };
 
 export const wasCompletedToday = (task: Task): boolean => {
-  // Stubbed logic for testing
-  return task.status === 'done';
+  return task.last_completed_date === getLocalDateString();
+};
+
+export const getCurrentDayOfWeek = (): number => {
+  return getMondayBasedDay();
+};
+
+export const canCompleteTask = (task: Task): boolean => {
+  if (!task.frequency_count) {
+    return !task.completed;
+  }
+
+  const todayIndex = getCurrentDayOfWeek();
+  const todayCompletions = task.usage_data?.[todayIndex] || 0;
+
+  return todayCompletions < (task.frequency_count || 1);
+};
+
+const initializeUsageDataArray = (task: Task): number[] => {
+  return task.usage_data || Array(7).fill(0);
+};
+
+export const fetchTasks = async (): Promise<Task[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching tasks:", error);
+      toast({
+        title: "Error fetching tasks",
+        description: error.message,
+        variant: "destructive",
+      });
+      return [];
+    }
+
+    const processedTasks = (data || []).map((task: Task) => {
+      const usage_data = initializeUsageDataArray(task);
+      const isToday = wasCompletedToday(task);
+      return {
+        ...task,
+        usage_data,
+        completed:
+          task.frequency === "daily" && !isToday ? false : task.completed,
+      };
+    });
+
+    return processedTasks;
+  } catch (err) {
+    console.error("Unhandled fetch error:", err);
+    return [];
+  }
 };
