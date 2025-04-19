@@ -12,6 +12,7 @@ export function useQueryConfig<TData>(
   options?: Partial<UseQueryOptions<TData>>
 ): Partial<UseQueryOptions<TData>> {
   return {
+    queryKey: key, // Add back queryKey as it's required
     staleTime: DEFAULT_STALE_TIME,
     gcTime: DEFAULT_GC_TIME,
     refetchOnWindowFocus: true,
