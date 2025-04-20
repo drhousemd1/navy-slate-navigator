@@ -35,18 +35,21 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
     for (let i = 0; i < 7; i++) {
       const used = i < trackerData.length ? Boolean(trackerData[i]) : false;
 
+      // This style is adapted to fully fill the circle when used, with consistent radius and a subtle border:
       circles.push(
         <div
           key={i}
-          className="w-4 h-4 rounded-full"
+          className="w-4 h-4 rounded-full flex items-center justify-center"
           style={{
             backgroundColor: used ? calendarColor : 'transparent',
-            border: `2px solid ${calendarColor || 'rgba(142, 145, 150, 0.5)'}`,
+            border: used ? `2px solid ${calendarColor}` : `2px solid ${calendarColor || 'rgba(142, 145, 150, 0.5)'}`,
             boxSizing: 'border-box',
-            boxShadow: i === currentDayOfWeek ? `0 0 4px 2px ${calendarColor}` : 'none',
-            transition: 'background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease'
+            boxShadow: i === currentDayOfWeek ? `0 0 6px 2px ${calendarColor}` : 'none',
+            transition: 'background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
           }}
-        />
+        >
+          {/* Empty child for consistent sizing */}
+        </div>
       );
     }
 
@@ -67,3 +70,4 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
 };
 
 export default WeeklyUsageTracker;
+
