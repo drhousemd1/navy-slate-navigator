@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -14,34 +13,26 @@ const ActivityDataReset = () => {
     if (!confirm('Are you sure you want to reset ALL activity data? This cannot be undone.')) {
       return;
     }
-
+    
     try {
       setIsResetting(true);
       console.log("Resetting all activity data...");
 
-      // Use typed literals instead of string for table names to avoid TS overload error
-      type TableName = 
-        | "task_completion_history"
-        | "rule_violations"
-        | "reward_usage"
-        | "punishment_history";
-
-      const tables: { name: TableName; column: string }[] = [
-        { name: "task_completion_history", column: "id" },
-        { name: "rule_violations", column: "id" },
-        { name: "reward_usage", column: "id" },
-        { name: "punishment_history", column: "id" },
+      // Define fixed tables with proper typing
+      const tables = [
+        { name: 'task_completion_history', column: 'id' },
+        { name: 'rule_violations', column: 'id' },
+        { name: 'reward_usage', column: 'id' },
+        { name: 'punishment_history', column: 'id' }
       ];
 
-      const supabase = getSupabaseClient();
-
       for (const { name, column } of tables) {
-        // delete rows where id is not the dummy zero uuid
+        // Type assertion to ensure name is treated as a valid table name
         const { error, count } = await supabase
-          .from(name)
+          .from(name as any)
           .delete()
           .neq(column, '00000000-0000-0000-0000-000000000000')
-          .select({ count: 'exact' });
+          .select('count');
 
         if (error) {
           throw new Error(`Failed to delete from ${name}: ${error.message}`);
@@ -50,7 +41,6 @@ const ActivityDataReset = () => {
         console.log(`Deleted ${count} rows from ${name}`);
       }
 
-      // Reset tasks
       const { data: tasks, error: fetchTasksError } = await supabase
         .from('tasks')
         .select('id');
@@ -59,7 +49,7 @@ const ActivityDataReset = () => {
         throw new Error("Failed to fetch tasks");
       }
 
-      for (const task of tasks || []) {
+      for (const task of tasks) {
         const { error: updateTaskError } = await supabase
           .from('tasks')
           .update({
@@ -75,7 +65,6 @@ const ActivityDataReset = () => {
         }
       }
 
-      // Reset rules
       const { data: rules, error: fetchRulesError } = await supabase
         .from('rules')
         .select('id');
@@ -84,7 +73,7 @@ const ActivityDataReset = () => {
         throw new Error("Failed to fetch rules");
       }
 
-      for (const rule of rules || []) {
+      for (const rule of rules) {
         const { error: updateRuleError } = await supabase
           .from('rules')
           .update({
@@ -151,4 +140,3 @@ const ActivityDataReset = () => {
 };
 
 export default ActivityDataReset;
-

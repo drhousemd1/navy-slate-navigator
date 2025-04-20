@@ -9,11 +9,27 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
-  const { formState, rememberMe, setRememberMe, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
+  const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
 
+  const [rememberMe, setRememberMe] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('rememberMe') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
   const [loadingInternally, setLoadingInternally] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rememberMe', rememberMe.toString());
+    } catch {
+      // ignore
+    }
+  }, [rememberMe]);
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateFormState({ email: e.target.value });
@@ -21,10 +37,6 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateFormState({ password: e.target.value });
-  };
-
-  const handleCheckboxChange = (checked: boolean | undefined) => {
-    setRememberMe(checked === true);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -104,7 +116,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 <Checkbox
                   id="rememberMe"
                   checked={rememberMe}
-                  onCheckedChange={handleCheckboxChange}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
                   className="border-gray-400"
                 />
                 <label
@@ -126,11 +138,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
           </div>
 
           {formState.loginError && (
-            <div
-              className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded flex items-start gap-2"
-              role="alert"
-              aria-live="assertive"
-            >
+            <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded flex items-start gap-2" role="alert" aria-live="assertive">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span>{formState.loginError}</span>
             </div>

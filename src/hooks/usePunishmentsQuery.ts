@@ -1,5 +1,6 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -10,7 +11,7 @@ const PUNISHMENT_HISTORY_KEY = 'punishment_history';
 // Get punishment count for loading expectations
 export const getPunishmentsCount = async (): Promise<number> => {
   try {
-    const { count, error } = await getSupabaseClient()
+    const { count, error } = await supabase
       .from('punishments')
       .select('*', { count: 'exact', head: true })
       .abortSignal(AbortSignal.timeout(3000));
@@ -26,7 +27,7 @@ export const getPunishmentsCount = async (): Promise<number> => {
 // Fetch all punishments
 export const fetchPunishments = async (): Promise<PunishmentData[]> => {
   try {
-    const { data, error } = await getSupabaseClient()
+    const { data, error } = await supabase
       .from('punishments')
       .select('*')
       .order('created_at', { ascending: true });
@@ -42,7 +43,7 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
 // Fetch punishment history
 export const fetchPunishmentHistory = async (): Promise<PunishmentHistoryItem[]> => {
   try {
-    const { data, error } = await getSupabaseClient()
+    const { data, error } = await supabase
       .from('punishment_history')
       .select('*')
       .order('applied_date', { ascending: false })
@@ -59,7 +60,7 @@ export const fetchPunishmentHistory = async (): Promise<PunishmentHistoryItem[]>
 // Create a new punishment
 export const createPunishment = async (punishmentData: PunishmentData): Promise<PunishmentData> => {
   try {
-    const { data, error } = await getSupabaseClient()
+    const { data, error } = await supabase
       .from('punishments')
       .insert(punishmentData)
       .select()
@@ -76,7 +77,7 @@ export const createPunishment = async (punishmentData: PunishmentData): Promise<
 // Update an existing punishment
 export const updatePunishment = async ({ id, ...data }: PunishmentData): Promise<void> => {
   try {
-    const { error } = await getSupabaseClient()
+    const { error } = await supabase
       .from('punishments')
       .update(data)
       .eq('id', id);
@@ -91,7 +92,7 @@ export const updatePunishment = async ({ id, ...data }: PunishmentData): Promise
 // Delete a punishment
 export const deletePunishment = async (id: string): Promise<void> => {
   try {
-    const { error } = await getSupabaseClient()
+    const { error } = await supabase
       .from('punishments')
       .delete()
       .eq('id', id);
@@ -115,7 +116,7 @@ export const applyPunishment = async (punishmentId: string, points: number): Pro
       points_deducted: points
     };
     
-    const { data, error } = await getSupabaseClient()
+    const { data, error } = await supabase
       .from('punishment_history')
       .insert(historyEntry)
       .select()

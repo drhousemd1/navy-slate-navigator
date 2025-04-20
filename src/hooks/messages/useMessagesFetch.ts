@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Message } from '../messages/types';
 
@@ -16,7 +17,7 @@ export const useMessagesFetch = (partnerId?: string) => {
     
     try {
       // Get the current user's linked partner from the profiles table
-      const { data, error } = await getSupabaseClient()
+      const { data, error } = await supabase
         .from('profiles')
         .select('linked_partner_id')
         .eq('id', user.id)
@@ -54,7 +55,7 @@ export const useMessagesFetch = (partnerId?: string) => {
 
       console.log('[QUERY] Fetching messages between', user.id, 'and', partnerIdValue);
       // Modified query to work with messages to self for testing
-      const { data, error } = await getSupabaseClient()
+      const { data, error } = await supabase
         .from('messages')
         .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerIdValue}),and(sender_id.eq.${partnerIdValue},receiver_id.eq.${user.id})`)
@@ -84,7 +85,7 @@ export const useMessagesFetch = (partnerId?: string) => {
 
     setLoadingOlder(true);
     try {
-      const { data, error } = await getSupabaseClient()
+      const { data, error } = await supabase
         .from('messages')
         .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerIdValue}),and(sender_id.eq.${partnerIdValue},receiver_id.eq.${user.id})`)

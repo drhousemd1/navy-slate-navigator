@@ -1,7 +1,5 @@
 
-// Fix import - replace supabase with getSupabaseClient
-
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useMessageSend = () => {
@@ -17,7 +15,6 @@ export const useMessageSend = () => {
     }
 
     try {
-      const supabase = getSupabaseClient();
       const { data, error } = await supabase
         .from('messages')
         .insert({

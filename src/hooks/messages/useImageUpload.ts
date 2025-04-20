@@ -1,8 +1,6 @@
 
-// Fix import - replace supabase with getSupabaseClient
-
 import { useState } from 'react';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useImageUpload = () => {
@@ -15,7 +13,6 @@ export const useImageUpload = () => {
 
     setIsUploading(true);
     try {
-      const supabase = getSupabaseClient();
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       

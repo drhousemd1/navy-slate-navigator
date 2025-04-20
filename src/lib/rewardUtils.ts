@@ -1,4 +1,4 @@
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export interface Reward {
@@ -11,6 +11,7 @@ export interface Reward {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
+  // Remove icon_url from interface
   icon_name?: string;
   title_color?: string;
   subtext_color?: string;
@@ -25,7 +26,9 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   try {
     console.log("[fetchRewards] Fetching rewards without sorting");
     
-    const { data, error } = await getSupabaseClient()
+    // CRITICAL: Using explicit id-based sorting for consistent order
+    // This ensures rewards are always in the same order across operations
+    const { data, error } = await supabase
       .from('rewards')
       .select('*')
       .order('id', { ascending: true });
@@ -50,6 +53,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
       }))
     );
     
+    // Return data exactly as received from database with consistent sorting
     return data as Reward[];
   } catch (err) {
     console.error('[fetchRewards] Unexpected error fetching rewards:', err);
@@ -65,12 +69,18 @@ export const fetchRewards = async (): Promise<Reward[]> => {
 export const saveReward = async (reward: Partial<Reward> & { title: string }, existingId?: string): Promise<Reward | null> => {
   try {
     if (existingId) {
+      // CRITICAL FIX: When updating an existing reward:
+      // 1. Never update the created_at timestamp
+      // 2. Don't include updated_at field at all (let Supabase handle it)
+      // 3. Remove any timestamps from the data we're sending
+      
+      // Create a clean copy of the reward data without any timestamp fields
       const { created_at, updated_at, ...cleanRewardData } = reward;
       
       console.log('[saveReward] Updating reward with clean data (no timestamps):', 
         { id: existingId, ...cleanRewardData });
       
-      const { data, error } = await getSupabaseClient()
+      const { data, error } = await supabase
         .from('rewards')
         .update(cleanRewardData)
         .eq('id', existingId)
@@ -81,8 +91,9 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       console.log('[saveReward] Reward updated successfully, returned data:', data[0]);
       return data[0] as Reward;
     } else {
+      // Create new reward
       console.log('[saveReward] Creating new reward:', reward);
-      const { data, error } = await getSupabaseClient()
+      const { data, error } = await supabase
         .from('rewards')
         .insert(reward)
         .select();
@@ -104,7 +115,7 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
 
 export const deleteReward = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await getSupabaseClient()
+    const { error } = await supabase
       .from('rewards')
       .delete()
       .eq('id', id);
@@ -124,7 +135,8 @@ export const deleteReward = async (id: string): Promise<boolean> => {
 
 export const updateRewardSupply = async (id: string, newSupply: number): Promise<boolean> => {
   try {
-    const { error } = await getSupabaseClient()
+    // CRITICAL: Only update the supply field, nothing else
+    const { error } = await supabase
       .from('rewards')
       .update({ supply: newSupply })
       .eq('id', id);

@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Pencil, Lock, Copy, Check, Trash2, Unlink2, Camera } from 'lucide-react';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useNavigate } from 'react-router-dom';
@@ -68,7 +68,7 @@ const Profile = () => {
     if (!user) return;
     
     try {
-      const { data, error } = await getSupabaseClient()
+      const { data, error } = await supabase
         .from('profiles')
         .select('partner_link_code, linked_partner_id, avatar_url')
         .eq('id', user.id)
@@ -87,7 +87,7 @@ const Profile = () => {
       if (data?.linked_partner_id) {
         setIsRoleLocked(true);
         
-        const { data: partnerData, error: partnerError } = await getSupabaseClient()
+        const { data: partnerData, error: partnerError } = await supabase
           .from('profiles')
           .select('id')
           .eq('id', data.linked_partner_id)
@@ -96,7 +96,7 @@ const Profile = () => {
         if (partnerError) throw partnerError;
         
         if (partnerData) {
-          const { data: userData, error: userError } = await getSupabaseClient().auth.admin.getUserById(
+          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
             partnerData.id
           );
           
@@ -143,7 +143,7 @@ const Profile = () => {
     try {
       const fileName = `${user.id}-${Date.now()}`;
       
-      const { error: uploadError, data } = await getSupabaseClient().storage
+      const { error: uploadError, data } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
           cacheControl: '3600',
@@ -152,13 +152,13 @@ const Profile = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = getSupabaseClient().storage
+      const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
 
       const avatarUrl = urlData.publicUrl;
       
-      const { error: updateError } = await getSupabaseClient()
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: avatarUrl })
         .eq('id', user.id);
@@ -196,7 +196,7 @@ const Profile = () => {
 
     setIsLoading(true);
     try {
-      const { data: profileData, error: fetchError } = await getSupabaseClient()
+      const { data: profileData, error: fetchError } = await supabase
         .from('profiles')
         .select('avatar_url')
         .eq('id', user.id)
@@ -209,7 +209,7 @@ const Profile = () => {
         const fileName = urlParts[urlParts.length - 1];
         
         if (fileName) {
-          const { error: deleteFileError } = await getSupabaseClient().storage
+          const { error: deleteFileError } = await supabase.storage
             .from('avatars')
             .remove([fileName]);
             
@@ -219,7 +219,7 @@ const Profile = () => {
         }
       }
       
-      const { error: updateError } = await getSupabaseClient()
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: null })
         .eq('id', user.id);
@@ -272,7 +272,7 @@ const Profile = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await getSupabaseClient().auth.updateUser({
+      const { error } = await supabase.auth.updateUser({
         data: { nickname }
       });
 
@@ -310,7 +310,7 @@ const Profile = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await getSupabaseClient().auth.updateUser({ email });
+      const { error } = await supabase.auth.updateUser({ email });
 
       if (error) throw error;
 
@@ -369,7 +369,7 @@ const Profile = () => {
 
     setIsLoading(true);
     try {
-      const { error: signInError } = await getSupabaseClient().auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: user?.email || '',
         password: currentPassword
       });
@@ -378,7 +378,7 @@ const Profile = () => {
         throw new Error("Current password is incorrect");
       }
       
-      const { error } = await getSupabaseClient().auth.updateUser({ 
+      const { error } = await supabase.auth.updateUser({ 
         password: newPassword 
       });
 
@@ -409,7 +409,7 @@ const Profile = () => {
     
     setIsLoading(true);
     try {
-      const { error } = await getSupabaseClient().auth.updateUser({
+      const { error } = await supabase.auth.updateUser({
         data: { role: value }
       });
 
@@ -444,7 +444,7 @@ const Profile = () => {
     const userRole = partnerRole === 'dominant' ? 'submissive' : 'dominant';
     
     if (role !== userRole) {
-      const { error: roleError } = await getSupabaseClient().auth.updateUser({
+      const { error: roleError } = await supabase.auth.updateUser({
         data: { role: userRole }
       });
       
@@ -465,7 +465,7 @@ const Profile = () => {
       const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
       const code = `${randomPart}-${partnerRole.substring(0, 3).toUpperCase()}-${user?.id.substring(0, 8)}`;
       
-      const { error } = await getSupabaseClient()
+      const { error } = await supabase
         .from('profiles')
         .update({ partner_link_code: code })
         .eq('id', user?.id);
@@ -522,7 +522,7 @@ const Profile = () => {
         throw new Error(`This code is meant for a ${requiredRole} user, but you are also a ${role}. Partners must have different roles.`);
       }
       
-      const { data: partnerData, error: partnerError } = await getSupabaseClient()
+      const { data: partnerData, error: partnerError } = await supabase
         .from('profiles')
         .select('id')
         .eq('partner_link_code', enteredPartnerCode.trim())
@@ -536,7 +536,7 @@ const Profile = () => {
         throw new Error("You cannot link to your own account.");
       }
       
-      const { data: partnerCheck, error: checkError } = await getSupabaseClient()
+      const { data: partnerCheck, error: checkError } = await supabase
         .from('profiles')
         .select('linked_partner_id')
         .eq('id', partnerData.id)
@@ -546,7 +546,7 @@ const Profile = () => {
         throw new Error("This user is already linked with another partner.");
       }
       
-      const { error: roleError } = await getSupabaseClient().auth.updateUser({
+      const { error: roleError } = await supabase.auth.updateUser({
         data: { role: requiredRole }
       });
       
@@ -556,7 +556,7 @@ const Profile = () => {
       
       setRole(requiredRole);
       
-      const { error: updateError } = await getSupabaseClient()
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ 
           linked_partner_id: partnerData.id,
@@ -566,7 +566,7 @@ const Profile = () => {
         
       if (updateError) throw updateError;
       
-      const { error: partnerUpdateError } = await getSupabaseClient()
+      const { error: partnerUpdateError } = await supabase
         .from('profiles')
         .update({ 
           linked_partner_id: user?.id,
@@ -599,14 +599,14 @@ const Profile = () => {
   const handleDeleteAccount = async () => {
     setIsLoading(true);
     try {
-      const { error: profileError } = await getSupabaseClient()
+      const { error: profileError } = await supabase
         .from('profiles')
         .delete()
         .eq('id', user?.id);
 
       if (profileError) throw profileError;
 
-      const { error: authError } = await getSupabaseClient().auth.admin.deleteUser(
+      const { error: authError } = await supabase.auth.admin.deleteUser(
         user?.id as string
       );
 
@@ -634,7 +634,7 @@ const Profile = () => {
   const unlinkPartner = async () => {
     setIsLoading(true);
     try {
-      const { data } = await getSupabaseClient()
+      const { data } = await supabase
         .from('profiles')
         .select('linked_partner_id')
         .eq('id', user?.id)
@@ -642,7 +642,7 @@ const Profile = () => {
         
       const partnerId = data?.linked_partner_id;
       
-      const { error: updateError } = await getSupabaseClient()
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ linked_partner_id: null })
         .eq('id', user?.id);
@@ -650,7 +650,7 @@ const Profile = () => {
       if (updateError) throw updateError;
       
       if (partnerId) {
-        const { error: partnerUpdateError } = await getSupabaseClient()
+        const { error: partnerUpdateError } = await supabase
           .from('profiles')
           .update({ linked_partner_id: null })
           .eq('id', partnerId);

@@ -1,7 +1,3 @@
-
-// Fix ProtectedRoute and AdminRoute to wait for loading before redirect or rendering
-// Reduce flickering by delaying redirect until auth is confirmed
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

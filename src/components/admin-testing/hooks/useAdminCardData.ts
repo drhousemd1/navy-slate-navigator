@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { AdminTestingCardData } from '../defaultAdminTestingCards';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { Json } from '@/integrations/supabase/types';
 
@@ -24,6 +25,7 @@ interface UseAdminCardDataResult {
   handleSaveCard: (updatedCard: AdminTestingCardData) => void;
 }
 
+// Helper type to handle Supabase data conversion
 interface SupabaseCardData {
   id: string;
   title: string;
@@ -91,48 +93,53 @@ export const useAdminCardData = ({
       try {
         setIsLoading(true);
         console.log("Fetching card data with ID:", id);
-
-        const supabase = getSupabaseClient();
-
+        
         const { data, error } = await supabase
           .from('admin_testing_cards')
           .select('*')
           .eq('id', id)
           .single();
-
+        
         if (error) {
-          if (error.code !== 'PGRST116') {
+          if (error.code !== 'PGRST116') { // Not found is not a critical error
             console.error('Error fetching card data:', error);
           } else {
             console.log("Card not found in database, using default values");
           }
+          // If not found in Supabase, use the default state
           return;
         }
         
         if (data) {
           console.log("Card data retrieved from Supabase:", data);
           
+          // Cast data to our helper type to handle type conversions
           const supabaseData = data as SupabaseCardData;
           
-          let usageDataArray: number[] = [1, 2, 0, 3, 1, 0, 2];
+          // Extract usage data and ensure it's an array of numbers
+          let usageDataArray: number[] = [1, 2, 0, 3, 1, 0, 2]; // Default
           
           if (supabaseData.usage_data) {
             if (Array.isArray(supabaseData.usage_data)) {
+              // Convert all items to numbers
               usageDataArray = supabaseData.usage_data.map(item => 
                 typeof item === 'number' ? item : 0
               );
             } else if (typeof supabaseData.usage_data === 'object') {
+              // Handle case where it might be an object with numeric values
               usageDataArray = Object.values(supabaseData.usage_data as Record<string, unknown>)
                 .map(value => typeof value === 'number' ? value : 0);
             }
           }
           
+          // Extract background images
           let backgroundImagesArray: string[] = [];
           if (Array.isArray(supabaseData.background_images)) {
             backgroundImagesArray = supabaseData.background_images
               .filter(img => typeof img === 'string') as string[];
           }
           
+          // Transform data from Supabase to match our expected format
           const transformedData: AdminTestingCardData = {
             id: supabaseData.id,
             title: supabaseData.title,
@@ -159,6 +166,7 @@ export const useAdminCardData = ({
           
           setCardData(transformedData);
           
+          // Set images from background_images or single background_image_url
           let imageArray: string[] = backgroundImagesArray;
           
           if (imageArray.length === 0 && supabaseData.background_image_url) {
@@ -179,6 +187,7 @@ export const useAdminCardData = ({
   }, [id]);
 
   useEffect(() => {
+    // Initialize images array from props if not loaded from Supabase
     if (!isLoading && images.length === 0) {
       const initialImages: string[] = [];
       
@@ -199,6 +208,7 @@ export const useAdminCardData = ({
     try {
       console.log("Saving card to Supabase:", updatedCard);
       
+      // Make sure we have the complete updated data
       const newCardData = {
         ...cardData,
         ...updatedCard
@@ -206,6 +216,7 @@ export const useAdminCardData = ({
       
       setCardData(newCardData);
       
+      // Update images array based on updated card data
       let newImages: string[] = [];
       
       if (Array.isArray(updatedCard.background_images)) {
@@ -216,10 +227,12 @@ export const useAdminCardData = ({
       
       setImages(newImages);
       
+      // Save to Supabase using upsert
       const { error } = await supabase
         .from('admin_testing_cards')
         .upsert({
           ...newCardData,
+          // Explicitly add points and order to ensure they're included in the upsert
           points: typeof newCardData.points === 'number' ? newCardData.points : 0,
           order: typeof newCardData.order === 'number' ? newCardData.order : 0
         }, { 
@@ -252,6 +265,7 @@ export const useAdminCardData = ({
     }
   };
 
+  // Ensure usageData is always an array of numbers
   const usageData = Array.isArray(cardData.usage_data) 
     ? cardData.usage_data 
     : [0, 0, 0, 0, 0, 0, 0];

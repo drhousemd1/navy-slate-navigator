@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
@@ -10,7 +9,7 @@ import { useAdminCardData } from '@/components/admin-testing/hooks/useAdminCardD
 import { useImageCarousel } from '@/components/admin-testing/hooks/useImageCarousel';
 import { renderCardIcon } from '@/components/admin-testing/utils/renderCardIcon';
 import { toast } from "@/hooks/use-toast";
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { AdminTestingCardData } from "./defaultAdminTestingCards";
 
 export interface AdminTestingCardProps {
@@ -81,8 +80,6 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   const handleDeleteCard = async (cardId: string) => {
     try {
-      const supabase = getSupabaseClient();
-
       const { error } = await supabase
         .from('admin_testing_cards')
         .delete()

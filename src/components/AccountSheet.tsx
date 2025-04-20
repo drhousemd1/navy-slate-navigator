@@ -12,7 +12,7 @@ import { UserCircle2, User, LogOut, BookOpen, Terminal } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 const AccountSheet = () => {
   const navigate = useNavigate();
@@ -66,7 +66,6 @@ const AccountSheet = () => {
       }
 
       try {
-        const supabase = getSupabaseClient();
         const { data, error } = await supabase
           .from('profiles')
           .select('avatar_url')
@@ -213,4 +212,3 @@ const AccountSheet = () => {
 };
 
 export default AccountSheet;
-

@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { EncyclopediaEntry } from '@/types/encyclopedia';
 
 export const useEncyclopedia = () => {
@@ -8,7 +9,7 @@ export const useEncyclopedia = () => {
   const { data: entries = [], isLoading, error } = useQuery({
     queryKey: ['encyclopedia-entries'],
     queryFn: async () => {
-      const { data, error } = await getSupabaseClient()
+      const { data, error } = await supabase
         .from('encyclopedia_entries')
         .select('*')
         .order('title');

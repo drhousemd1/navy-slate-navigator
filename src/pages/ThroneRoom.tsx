@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '../contexts/auth/AuthContext';
@@ -10,10 +11,12 @@ import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns'; // Import format from date-fns
+
+// Import extracted components
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
 import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin } = useAuth();
@@ -21,19 +24,26 @@ const ThroneRoom: React.FC = () => {
   const { rewards } = useRewards();
   const queryClient = useQueryClient();
   
+  // Force clear any cached data on component mount
   useEffect(() => {
+    // Clear all query cache to force fresh data
     queryClient.clear();
+    
+    // Force invalidate all metrics queries
     queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
     queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
     queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+    
     console.log('ThroneRoom mounted: Cleared all cached data to force fresh fetch');
   }, [queryClient]);
   
+  // Fetch summary data with React Query for better cache management and refreshing
   const fetchSummaryData = async (): Promise<WeeklyMetricsSummary> => {
     try {
+      // Get current week's start and end dates (Monday-based)
       const today = new Date();
       const diff = today.getDay();
-      const mondayDiff = diff === 0 ? -6 : 1 - diff;
+      const mondayDiff = diff === 0 ? -6 : 1 - diff; // Convert Sunday (0) to be -6 days from Monday
       const weekStart = new Date(today);
       weekStart.setDate(today.getDate() + mondayDiff);
       weekStart.setHours(0, 0, 0, 0);
@@ -43,7 +53,8 @@ const ThroneRoom: React.FC = () => {
       
       console.log('Fetching weekly data from', weekStart.toISOString(), 'to', weekEnd.toISOString());
       
-      const { data: taskCompletions, error: taskError } = await getSupabaseClient()
+      // Fetch task completions
+      const { data: taskCompletions, error: taskError } = await supabase
         .from('task_completion_history')
         .select('task_id, completed_at')
         .gte('completed_at', weekStart.toISOString())
@@ -51,13 +62,15 @@ const ThroneRoom: React.FC = () => {
         
       if (taskError) throw new Error(`Error fetching tasks: ${taskError.message}`);
       
+      // Count unique task completions (one per task per day)
       const uniqueTasksPerDay = new Set();
       taskCompletions?.forEach(completion => {
         const dateKey = format(new Date(completion.completed_at), 'yyyy-MM-dd') + '-' + completion.task_id;
         uniqueTasksPerDay.add(dateKey);
       });
       
-      const { data: ruleViolations, error: ruleError } = await getSupabaseClient()
+      // Fetch rule violations
+      const { data: ruleViolations, error: ruleError } = await supabase
         .from('rule_violations')
         .select('*')
         .gte('violation_date', weekStart.toISOString())
@@ -65,7 +78,8 @@ const ThroneRoom: React.FC = () => {
         
       if (ruleError) throw new Error(`Error fetching rule violations: ${ruleError.message}`);
       
-      const { data: rewardUsages, error: rewardError } = await getSupabaseClient()
+      // Fetch reward usages
+      const { data: rewardUsages, error: rewardError } = await supabase
         .from('reward_usage')
         .select('*')
         .gte('created_at', weekStart.toISOString())
@@ -73,7 +87,8 @@ const ThroneRoom: React.FC = () => {
         
       if (rewardError) throw new Error(`Error fetching rewards: ${rewardError.message}`);
       
-      const { data: punishments, error: punishmentError } = await getSupabaseClient()
+      // Fetch punishments
+      const { data: punishments, error: punishmentError } = await supabase
         .from('punishment_history')
         .select('*')
         .gte('applied_date', weekStart.toISOString())
@@ -81,6 +96,7 @@ const ThroneRoom: React.FC = () => {
         
       if (punishmentError) throw new Error(`Error fetching punishments: ${punishmentError.message}`);
       
+      // Calculate summary counts
       return {
         tasksCompleted: uniqueTasksPerDay.size || 0,
         rulesBroken: ruleViolations?.length || 0,
@@ -98,28 +114,37 @@ const ThroneRoom: React.FC = () => {
     }
   };
   
+  // Critical fix: Use React Query with settings that force refresh after reset
   const { data: metricsSummary = { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 }, 
           refetch } = useQuery({
     queryKey: ['weekly-metrics-summary'],
     queryFn: fetchSummaryData,
     refetchOnWindowFocus: true,
-    refetchInterval: 5000,
-    staleTime: 0,
-    gcTime: 0,
+    refetchInterval: 5000, // More aggressive refresh (every 5 seconds)
+    staleTime: 0, // Consider data always stale to force refresh
+    gcTime: 0, // Don't cache at all
   });
 
+  // Force refresh data when location changes or when component mounts
   useEffect(() => {
+    // Invalidate all metrics queries to ensure fresh data
     queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
     queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
     queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+    
+    // Force immediate refetch
     refetch();
     
+    // Add a check for URL params that indicate a fresh page load from reset
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('fresh')) {
       console.log('Fresh page load detected after reset, force clearing all caches');
+      // Clear local/session storage again for good measure
       localStorage.clear();
       sessionStorage.clear();
+      // Clear all query cache
       queryClient.clear();
+      // Remove the 'fresh' param from URL to avoid re-triggering on navigation
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
@@ -134,8 +159,10 @@ const ThroneRoom: React.FC = () => {
           </p>
           
           <div className="space-y-6">
+            {/* Weekly activity graph */}
             <WeeklyMetricsChart />
             
+            {/* Weekly metrics summary tiles */}
             <div className="space-y-2">
               <WeeklyMetricsSummaryTiles 
                 tasksCompleted={metricsSummary.tasksCompleted}

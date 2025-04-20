@@ -1,5 +1,6 @@
+
 import { useEffect, useCallback, useRef } from 'react';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessageArchive } from './useMessageArchive';
 
@@ -29,12 +30,12 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
     // First clean up any existing subscription
     if (subscriptionRef.current) {
       console.log('❌ Cleaning up previous subscription before creating new one');
-      getSupabaseClient().removeChannel(subscriptionRef.current);
+      supabase.removeChannel(subscriptionRef.current);
       subscriptionRef.current = null;
     }
     
     // Subscribe to message inserts with immediate refetch for both incoming and outgoing messages
-    const channelSubscription = getSupabaseClient()
+    const channelSubscription = supabase
       .channel(channelName)
       .on('postgres_changes', {
         event: 'INSERT',
@@ -70,7 +71,7 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
     return () => {
       if (subscriptionRef.current) {
         console.log('❌ Cleaning up realtime subscription');
-        getSupabaseClient().removeChannel(subscriptionRef.current);
+        supabase.removeChannel(subscriptionRef.current);
         subscriptionRef.current = null;
         hasSubscribed.current = false;
       }

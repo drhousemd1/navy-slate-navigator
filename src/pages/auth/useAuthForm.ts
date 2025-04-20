@@ -1,6 +1,4 @@
 
-// Fix form state initialization to load from localStorage and avoid resetting rememberMe on rerenders
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -8,15 +6,6 @@ import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
 
 export function useAuthForm() {
-  // Load rememberMe flag from localStorage once on mount
-  const [rememberMe, setRememberMe] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('rememberMe') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
   const [formState, setFormState] = useState<AuthFormState>({
     email: '',
     password: '',
@@ -34,20 +23,11 @@ export function useAuthForm() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  // Reflect rememberMe changes to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('rememberMe', rememberMe.toString());
-    } catch {
-      // ignore
-    }
-  }, [rememberMe]);
-
   const updateFormState = (updates: Partial<AuthFormState>) => {
     setFormState((prevState) => ({ ...prevState, ...updates }));
   };
 
-  const handleLoginSubmit = async (e: React.FormEvent, rememberMeParam: boolean) => {
+  const handleLoginSubmit = async (e: React.FormEvent, rememberMe: boolean) => {
     e.preventDefault();
     if (formState.loading) return;
     updateFormState({ loading: true, loginError: null });
@@ -61,7 +41,7 @@ export function useAuthForm() {
     }
 
     try {
-      const { error } = await signIn(formState.email.trim(), formState.password.trim(), rememberMeParam);
+      const { error } = await signIn(formState.email.trim(), formState.password.trim(), rememberMe);
 
       if (error) {
         updateFormState({
@@ -126,17 +106,16 @@ export function useAuthForm() {
         loginError: 'An unexpected error occurred. Please try again.',
         loading: false,
       });
+    } finally {
+      updateFormState({ loading: false });
     }
     return null;
   };
 
   return {
     formState,
-    rememberMe,
-    setRememberMe,
     updateFormState,
     handleLoginSubmit,
     handleSignupSubmit,
   };
 }
-

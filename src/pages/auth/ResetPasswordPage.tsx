@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { Lock } from 'lucide-react';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 const ResetPasswordPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -15,23 +16,28 @@ const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Extract access token from URL on component mount
   useEffect(() => {
-    const hash = location.hash.substring(1);
+    // Get access_token from URL hash or query params (Supabase might use either)
+    const hash = location.hash.substring(1); // Remove the # symbol
     const params = new URLSearchParams(hash || location.search);
     
+    // Check for access_token in hash fragment or query params
     const token = params.get('access_token');
     
     if (token) {
       console.log('Access token found in URL');
       setAccessToken(token);
       
+      // Set up the session with the access token
       const setSession = async () => {
         if (!params.get('refresh_token')) {
+          // If there's no refresh token, exit early — Supabase won't set session without it
           setError('Reset link is invalid or expired. Please request a new one.');
           return;
         }
 
-        const { error } = await getSupabaseClient().auth.setSession({
+        const { error } = await supabase.auth.setSession({
           access_token: token,
           refresh_token: params.get('refresh_token') || '',
         });
@@ -53,6 +59,7 @@ const ResetPasswordPage: React.FC = () => {
     e.preventDefault();
     setError(null);
 
+    // Validate passwords
     if (!newPassword || !confirmPassword) {
       setError('Please enter and confirm your new password.');
       return;
@@ -76,7 +83,8 @@ const ResetPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const { error: updateError } = await getSupabaseClient().auth.updateUser({
+      // Update the password using Supabase directly
+      const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
       
@@ -84,6 +92,7 @@ const ResetPasswordPage: React.FC = () => {
         console.error('Error updating password:', updateError);
         setError(updateError.message || 'Failed to update password. Please try again.');
       } else {
+        // Password reset successful
         toast({
           title: 'Password updated',
           description: 'Your password has been successfully reset. You can now log in with your new password.',

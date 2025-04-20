@@ -13,7 +13,7 @@ import {
 import AccountSheet from './AccountSheet';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -57,7 +57,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       }
 
       try {
-        const supabase = getSupabaseClient();
         const { data, error } = await supabase
           .from('profiles')
           .select('avatar_url')

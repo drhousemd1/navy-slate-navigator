@@ -1,19 +1,10 @@
-// Fixes to AuthContext:
-// - Use getSupabaseClient to get the client singleton
-// - Fix destructuring on onAuthStateChange return value
-// - Await checkUserRole fully and sequence loading state properly
-// - Handle loading state centrally, avoid multiple setLoading(false)
-// - Navigate after signIn and signUp correctly
-// - Improve typing for event checking
-// - Remove redundant loading state calls
 
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
-import { toast } from '@/hooks/use-toast';
+import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { useAuthOperations } from './useAuthOperations';
 import { useUserProfile } from './useUserProfile';
-import { getSupabaseClient, resetSupabaseClientWithPersist, clearAuthState } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   user: User | null;
@@ -38,14 +29,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
-
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-
-  const supabase = getSupabaseClient();
 
   const { signIn: authSignIn, signUp: authSignUp, resetPassword: authResetPassword, updatePassword: authUpdatePassword } = useAuthOperations();
   const { updateNickname: profileUpdateNickname, getNickname, updateProfileImage: profileUpdateProfileImage, getProfileImage, getUserRole } = useUserProfile(user, setUser);
@@ -67,8 +55,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     setLoading(true);
 
-    // Setup the onAuthStateChange listener with proper destructuring and type handling
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+    // Setup the onAuthStateChange listener synchronously, no async directly in callback
+    const { data } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, newSession: Session | null) => {
       const userFromSession = newSession?.user ?? null;
 
       console.log('Auth state changed:', event);
@@ -84,79 +72,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
+      // Defer async calls
       if (userFromSession) {
-        checkUserRole();
+        setLoading(true);
+        setTimeout(async () => {
+          await checkUserRole();
+          setLoading(false);
+        }, 0);
+      } else {
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
-    // Get session synchronously and then set the state with proper async flow
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-
+    // Get session synchronously and then set the state
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setIsAuthenticated(!!session);
-
         if (session?.user) {
           await checkUserRole();
         }
-      } catch (e) {
-        console.error('Error getting session:', e);
-      } finally {
         setLoading(false);
-      }
-    })();
+      })
+      .catch(e => {
+        console.error('Error getting session:', e);
+        setLoading(false);
+      });
 
     return () => {
-      if (subscription && typeof subscription.unsubscribe === 'function') {
-        subscription.unsubscribe();
-      }
+      data?.subscription?.unsubscribe();
     };
-  }, [navigate, checkUserRole, supabase.auth]);
+
+  }, [navigate, checkUserRole]);
 
   const signIn = async (email: string, password: string, rememberMe: boolean) => {
     try {
-      // Persist rememberMe flag in localStorage to sync with client config
-      try {
-        localStorage.setItem('rememberMe', rememberMe.toString());
-      } catch { /* ignore */ }
-
-      // Reset supabase client with desired persistSession config to match rememberMe
-      resetSupabaseClientWithPersist(rememberMe);
-
-      const result = await authSignIn(email, password, rememberMe);
-      if (!result.error && result.user && result.session) {
-        setUser(result.user);
-        setSession(result.session);
-        setIsAuthenticated(true);
-        await checkUserRole();
-        navigate('/'); // Navigate after successful login
-      }
-      return result;
-    } catch (error) {
-      console.error('SignIn failed:', error);
-      throw error;
+      localStorage.setItem('rememberMe', rememberMe.toString());
+    } catch {
+      // ignore
     }
+
+    const result = await authSignIn(email, password, rememberMe);
+    if (!result.error && result.user && result.session) {
+      setUser(result.user);
+      setSession(result.session);
+      setIsAuthenticated(true);
+      await checkUserRole();
+      navigate('/'); // Navigate after successful login
+    }
+    return result;
   };
 
   const signUp = async (email: string, password: string) => {
-    try {
-      const result = await authSignUp(email, password);
-      if (!result.error && result.data?.user && result.data?.session) {
-        setUser(result.data.user);
-        setSession(result.data.session);
-        setIsAuthenticated(true);
-        await checkUserRole();
-        navigate('/'); // Navigate after successful signup
-      }
-      return result;
-    } catch (error) {
-      console.error('SignUp failed:', error);
-      throw error;
+    const result = await authSignUp(email, password);
+    if (!result.error && result.data?.user && result.data?.session) {
+      setUser(result.data.user);
+      setSession(result.data.session);
+      setIsAuthenticated(true);
+      await checkUserRole();
+      navigate('/'); // Navigate after successful signup
     }
+    return result;
   };
 
   const signOut = async () => {

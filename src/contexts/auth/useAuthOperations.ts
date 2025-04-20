@@ -1,5 +1,5 @@
 
-import { getSupabaseClient, resetSupabaseClientWithPersist } from '@/integrations/supabase/client';
+import { supabase, initializeSupabaseClient } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export function useAuthOperations() {
@@ -20,14 +20,12 @@ export function useAuthOperations() {
       // Set remember me preference before signing in
       localStorage.setItem('rememberMe', rememberMe.toString());
       
-      // Reset Supabase client with the new persistence setting
-      resetSupabaseClientWithPersist(rememberMe);
-      
-      const supabase = getSupabaseClient();
+      // Reinitialize the Supabase client with the new persistence setting
+      const client = initializeSupabaseClient(rememberMe);
       
       // Use the trimmed values for authentication
       console.log('Making authentication request with:', { email: trimmedEmail });
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await client.auth.signInWithPassword({
         email: trimmedEmail,
         password: trimmedPassword,
       });
@@ -70,8 +68,6 @@ export function useAuthOperations() {
         return { error: { message: 'Password must be at least 6 characters long' }, data: null };
       }
       
-      const supabase = getSupabaseClient();
-      
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
         password: trimmedPassword,
@@ -113,8 +109,6 @@ export function useAuthOperations() {
       const siteUrl = window.location.origin;
       console.log('Using site URL for password reset:', siteUrl);
       
-      const supabase = getSupabaseClient();
-      
       const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
         redirectTo: `${siteUrl}/reset-password`,
       });
@@ -149,8 +143,6 @@ export function useAuthOperations() {
       if (trimmedPassword.length < 6) {
         return { error: { message: 'Password must be at least 6 characters long' } };
       }
-      
-      const supabase = getSupabaseClient();
       
       const { error } = await supabase.auth.updateUser({
         password: trimmedPassword

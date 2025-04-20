@@ -1,5 +1,6 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { 
   Task, 
@@ -16,7 +17,6 @@ const TASK_COMPLETIONS_KEY = 'task-completions';
 // Fetch all tasks
 export const fetchTasks = async (): Promise<Task[]> => {
   try {
-    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
@@ -75,10 +75,7 @@ export const useTasksQuery = () => {
 
   // Mutation for saving a task (create or update)
   const saveTaskMutation = useMutation({
-    mutationFn: async (taskData: Partial<Task>) => {
-      const supabase = getSupabaseClient();
-      return saveTask(taskData);
-    },
+    mutationFn: saveTask,
     onSuccess: (savedTask) => {
       queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
       toast({
@@ -97,9 +94,8 @@ export const useTasksQuery = () => {
 
   // Mutation for toggling task completion
   const toggleCompletionMutation = useMutation({
-    mutationFn: ({ taskId, completed }: { taskId: string, completed: boolean }) => {
-      return updateTaskCompletion(taskId, completed);
-    },
+    mutationFn: ({ taskId, completed }: { taskId: string, completed: boolean }) => 
+      updateTaskCompletion(taskId, completed),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
       queryClient.invalidateQueries({ queryKey: [TASK_COMPLETIONS_KEY] });
@@ -119,9 +115,7 @@ export const useTasksQuery = () => {
 
   // Mutation for deleting a task
   const deleteTaskMutation = useMutation({
-    mutationFn: (taskId: string) => {
-      return deleteTask(taskId);
-    },
+    mutationFn: deleteTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
       toast({
