@@ -88,7 +88,10 @@ const RewardCard: React.FC<RewardCardProps> = ({
       }
 
       const today = new Date();
-      const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
+      // Format week number as Year-ISOWeek (e.g., '2025-16')
+      const oneJan = new Date(today.getFullYear(), 0, 1);
+      const numberOfDays = Math.floor((today.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000));
+      const weekNumber = `${today.getFullYear()}-${Math.ceil((numberOfDays + oneJan.getDay() + 1) / 7)}`;
 
       const { error } = await supabase
         .from('reward_usage')
@@ -99,7 +102,9 @@ const RewardCard: React.FC<RewardCardProps> = ({
           used: true,
           created_at: new Date().toISOString(),
         });
+
       if (error) {
+        console.error("Error inserting reward usage:", error);
         throw error;
       }
 
@@ -151,7 +156,6 @@ const RewardCard: React.FC<RewardCardProps> = ({
         />
       )}
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
-        {/* Pass the corrected handleUseReward to RewardHeader */}
         <RewardHeader
           title={title}
           supply={supply}
@@ -181,4 +185,3 @@ const RewardCard: React.FC<RewardCardProps> = ({
 };
 
 export default RewardCard;
-
