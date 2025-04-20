@@ -28,10 +28,13 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
-  
+
+  // Local state to optimistically track completions per task by id
+  const [localUsageData, setLocalUsageData] = useState<{[taskId: string]: number[]}>({});
+
   // Use the global carousel index from the context (just like in Punishments.tsx)
   const { carouselTimer, globalCarouselIndex } = useTaskCarousel();
-  
+
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
@@ -44,14 +47,14 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     const checkForReset = () => {
       const now = new Date();
       console.log('Checking for task reset. Current local time:', now.toLocaleTimeString());
-      
+
       if (tasks.length > 0) {
         const tasksToReset = tasks.filter(task => 
           task.completed && 
           task.frequency === 'daily' && 
           !wasCompletedToday(task)
         );
-        
+
         if (tasksToReset.length > 0) {
           console.log('Found tasks that need to be reset:', tasksToReset.length);
           queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -60,27 +63,27 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     };
 
     checkForReset();
-    
+
     const scheduleMidnightCheck = () => {
       const now = new Date();
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(0, 0, 0, 0);
-      
+
       const timeUntilMidnight = tomorrow.getTime() - now.getTime();
       console.log('Time until midnight check:', timeUntilMidnight, 'ms');
-      
+
       return setTimeout(() => {
         console.log('Midnight reached, checking tasks');
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        
+
         const newTimeout = scheduleMidnightCheck();
         return () => clearTimeout(newTimeout);
       }, timeUntilMidnight);
     };
-    
+
     const timeoutId = scheduleMidnightCheck();
-    
+
     return () => clearTimeout(timeoutId);
   }, [queryClient, tasks]);
 
@@ -93,6 +96,17 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       });
     }
   }, [error]);
+
+  // Sync local usage data with latest fetched tasks usage_data when tasks change
+  useEffect(() => {
+    if (tasks.length > 0) {
+      const newLocalUsageData: {[taskId: string]: number[]} = {};
+      tasks.forEach(task => {
+        newLocalUsageData[task.id] = task.usage_data ? [...task.usage_data] : Array(7).fill(0);
+      });
+      setLocalUsageData(newLocalUsageData);
+    }
+  }, [tasks]);
 
   const handleNewTask = () => {
     console.log("Creating new task");
@@ -110,7 +124,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     try {
       console.log("Saving task:", taskData);
       const savedTask = await saveTask(taskData);
-      
+
       if (savedTask) {
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
         toast({
@@ -133,7 +147,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     try {
       console.log("Deleting task:", taskId);
       const success = await deleteTask(taskId);
-      
+
       if (success) {
         setCurrentTask(null);
         setIsEditorOpen(false);
@@ -154,25 +168,44 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   };
 
   const handleToggleCompletion = async (taskId: string, completed: boolean) => {
+    // Optimistically update localUsageData state immediately on client side for instant UI update
+    setLocalUsageData(prev => {
+      const currentUsage = prev[taskId] ? [...prev[taskId]] : Array(7).fill(0);
+      const dayOfWeek = new Date().getDay();
+      const currentCount = currentUsage[dayOfWeek] || 0;
+
+      // If completing, increment count for today, else decrement but ensure >=0
+      if (completed) {
+        if(currentCount >= 1) {
+          // Prevent going above max completions in local state
+          return prev;
+        }
+        currentUsage[dayOfWeek] = currentCount + 1;
+      } else {
+        currentUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
+      }
+      return { ...prev, [taskId]: currentUsage };
+    });
+
     try {
       console.log(`Toggling task ${taskId} completion to ${completed}`);
       const success = await updateTaskCompletion(taskId, completed);
-      
+
       if (success) {
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
         queryClient.invalidateQueries({ queryKey: ['task-completions'] });
         queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
         queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
         queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
-        
+
         if (completed) {
           const task = tasks.find(t => t.id === taskId);
           const points = task?.points || 0;
           console.log(`Task completed, earned ${points} points`);
-          
+
           const { data: authData } = await supabase.auth.getUser();
           const userId = authData.user?.id || 'anonymous';
-          
+
           const { error: insertError } = await supabase
             .from('task_completion_history')
             .insert({
@@ -187,7 +220,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
             console.log('Logged task completion to history');
             queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
           }
-          
+
           await refreshPointsFromDatabase();
         }
       }
@@ -204,7 +237,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   return (
     <div className="p-4 pt-6">
       <TasksHeader />
-      
+
       {isLoading ? (
         <div className="text-white">Loading tasks...</div>
       ) : tasks.length === 0 ? (
@@ -213,34 +246,42 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         </div>
       ) : (
         <div className="space-y-4">
-          {tasks.map(task => (
-            <TaskCard
-              key={task.id}
-              title={task.title}
-              description={task.description}
-              points={task.points}
-              completed={task.completed}
-              backgroundImage={task.background_image_url}
-              backgroundOpacity={task.background_opacity}
-              focalPointX={task.focal_point_x}
-              focalPointY={task.focal_point_y}
-              frequency={task.frequency}
-              frequency_count={task.frequency_count}
-              usage_data={task.usage_data}
-              icon_url={task.icon_url}
-              icon_name={task.icon_name}
-              priority={task.priority}
-              highlight_effect={task.highlight_effect}
-              title_color={task.title_color}
-              subtext_color={task.subtext_color}
-              calendar_color={task.calendar_color}
-              icon_color={task.icon_color}
-              onEdit={() => handleEditTask(task)}
-              onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
-              backgroundImages={task.background_images}
-              sharedImageIndex={globalCarouselIndex}
-            />
-          ))}
+          {tasks.map(task => {
+            // Use localUsageData if available, otherwise fallback to task usage_data
+            const usageDataForTask = localUsageData[task.id] || task.usage_data || Array(7).fill(0);
+            const currentDayOfWeek = new Date().getDay();
+            const currentCompletions = usageDataForTask[currentDayOfWeek] || 0;
+            const maxCompletions = task.frequency_count || 1;
+
+            return (
+              <TaskCard
+                key={task.id}
+                title={task.title}
+                description={task.description}
+                points={task.points}
+                completed={task.completed}
+                backgroundImage={task.background_image_url}
+                backgroundOpacity={task.background_opacity}
+                focalPointX={task.focal_point_x}
+                focalPointY={task.focal_point_y}
+                frequency={task.frequency}
+                frequency_count={task.frequency_count}
+                usage_data={usageDataForTask} // Pass locally updated usage_data
+                icon_url={task.icon_url}
+                icon_name={task.icon_name}
+                priority={task.priority}
+                highlight_effect={task.highlight_effect}
+                title_color={task.title_color}
+                subtext_color={task.subtext_color}
+                calendar_color={task.calendar_color}
+                icon_color={task.icon_color}
+                onEdit={() => handleEditTask(task)}
+                onToggleCompletion={(completed) => handleToggleCompletion(task.id, completed)}
+                backgroundImages={task.background_images}
+                sharedImageIndex={globalCarouselIndex}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -260,12 +301,12 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
 
 const Tasks: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  
+
   const handleNewTask = () => {
     console.log("Parent component triggering new task");
     setIsEditorOpen(true);
   };
-  
+
   return (
     <AppLayout onAddNewItem={handleNewTask}>
       <TaskCarouselProvider>
