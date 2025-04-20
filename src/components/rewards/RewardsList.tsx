@@ -8,7 +8,7 @@ interface RewardsListProps {
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
-  const { rewards, handleBuyReward, handleUseReward } = useRewards();
+  const { rewards, handleBuyReward, handleUseReward, rewardUsageMap } = useRewards();
   
   if (!rewards || rewards.length === 0) {
     return (
@@ -52,6 +52,8 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           title_color={reward.title_color}
           subtext_color={reward.subtext_color}
           calendar_color={reward.calendar_color}
+          // Pass down usage data per reward from centralized usage map
+          usageData={rewardUsageMap[reward.id] || Array(7).fill(false)}
         />
       ))}
     </div>
@@ -59,3 +61,4 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
 };
 
 export default RewardsList;
+

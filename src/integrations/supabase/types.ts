@@ -24,6 +24,7 @@ export type Database = {
           icon_name: string | null
           icon_url: string | null
           id: string
+          order: number | null
           points: number | null
           priority: string | null
           subtext_color: string | null
@@ -47,6 +48,7 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id: string
+          order?: number | null
           points?: number | null
           priority?: string | null
           subtext_color?: string | null
@@ -70,6 +72,7 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id?: string
+          order?: number | null
           points?: number | null
           priority?: string | null
           subtext_color?: string | null
@@ -454,7 +457,9 @@ export type Database = {
       }
       rules: {
         Row: {
+          background_image_path: string | null
           background_image_url: string | null
+          background_images: Json | null
           background_opacity: number
           calendar_color: string
           created_at: string
@@ -477,7 +482,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          background_image_path?: string | null
           background_image_url?: string | null
+          background_images?: Json | null
           background_opacity?: number
           calendar_color?: string
           created_at?: string
@@ -500,7 +507,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          background_image_path?: string | null
           background_image_url?: string | null
+          background_images?: Json | null
           background_opacity?: number
           calendar_color?: string
           created_at?: string
