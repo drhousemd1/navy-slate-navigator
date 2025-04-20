@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -164,33 +165,55 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   };
 
   const handleToggleCompletion = async (taskId: string, completed: boolean) => {
+    // Defensive variable to ensure consistent local usage update
     let updatedUsageForQuery: number[] | null = null;
 
-    setLocalUsageData((prev) => {
-      const currentUsage = prev[taskId] ? [...prev[taskId]] : Array(7).fill(0);
-      const dayOfWeek = new Date().getDay();
-      const currentCount = currentUsage[dayOfWeek] || 0;
-
-      if (completed) {
-        if (currentCount >= 1) {
-          return prev; // Prevent going above max completions in local state
-        }
-        currentUsage[dayOfWeek] = currentCount + 1;
-      } else {
-        currentUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
-      }
-
-      updatedUsageForQuery = currentUsage;
-      return { ...prev, [taskId]: currentUsage };
-    });
-
     try {
+      setLocalUsageData((prev) => {
+        const currentUsage = prev[taskId] ? [...prev[taskId]] : Array(7).fill(0);
+        const dayOfWeek = new Date().getDay();
+        const currentCount = currentUsage[dayOfWeek] || 0;
+
+        if (completed) {
+          if (currentCount >= 1) {
+            // Prevent going above max completions in local state
+            console.log(`Task ${taskId} already at max completions locally`);
+            return prev;
+          }
+          currentUsage[dayOfWeek] = currentCount + 1;
+        } else {
+          currentUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
+        }
+
+        updatedUsageForQuery = currentUsage;
+        return { ...prev, [taskId]: currentUsage };
+      });
+
       console.log(`Toggling task ${taskId} completion to ${completed}`);
 
       const updatedTask = await updateTaskCompletion(taskId, completed);
 
       if (!updatedTask) {
-        throw new Error('Failed to update task completion');
+        console.error('Updated task is null, reverting local state for task:', taskId);
+        // Revert localUsageData changed above since update failed
+        setLocalUsageData((prev) => {
+          const revertedUsage = prev[taskId] ? [...prev[taskId]] : Array(7).fill(0);
+          const dayOfWeek = new Date().getDay();
+          const currentCount = revertedUsage[dayOfWeek] || 0;
+          // Revert the increment or decrement
+          if (completed) {
+            revertedUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
+          } else {
+            revertedUsage[dayOfWeek] = currentCount + 1;
+          }
+          return { ...prev, [taskId]: revertedUsage };
+        });
+        toast({
+          title: 'Error',
+          description: 'Failed to update task completion due to backend rejection.',
+          variant: 'destructive',
+        });
+        return;
       }
 
       queryClient.setQueryData<Task[]>(['tasks'], (oldTasks) => {
@@ -312,3 +335,4 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
+
