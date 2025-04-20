@@ -1,10 +1,20 @@
 
+// Fixes to AuthContext:
+// - Use getSupabaseClient to get the client singleton
+// - Fix destructuring on onAuthStateChange return value
+// - Await checkUserRole fully and sequence loading state properly
+// - Handle loading state centrally, avoid multiple setLoading(false)
+// - Navigate after signIn and signUp correctly
+// - Improve typing for event checking
+// - Remove redundant loading state calls
+
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
-import { supabase, clearAuthState } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { useAuthOperations } from './useAuthOperations';
 import { useUserProfile } from './useUserProfile';
+import { getSupabaseClient, resetSupabaseClientWithPersist, clearAuthState } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   user: User | null;
@@ -29,11 +39,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
+
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+
+  const supabase = getSupabaseClient();
 
   const { signIn: authSignIn, signUp: authSignUp, resetPassword: authResetPassword, updatePassword: authUpdatePassword } = useAuthOperations();
   const { updateNickname: profileUpdateNickname, getNickname, updateProfileImage: profileUpdateProfileImage, getProfileImage, getUserRole } = useUserProfile(user, setUser);
@@ -55,8 +68,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     setLoading(true);
 
-    // Setup the onAuthStateChange listener synchronously, no async directly in callback
-    const { data } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, newSession: Session | null) => {
+    // Setup the onAuthStateChange listener with proper destructuring and type handling
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, newSession: Session | null) => {
       const userFromSession = newSession?.user ?? null;
 
       console.log('Auth state changed:', event);
@@ -65,75 +78,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userFromSession);
       setIsAuthenticated(!!userFromSession);
 
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
         setIsAdmin(false);
         setLoading(false);
         navigate('/auth');
         return;
       }
 
-      // Defer async calls
       if (userFromSession) {
-        setLoading(true);
-        setTimeout(async () => {
-          await checkUserRole();
-          setLoading(false);
-        }, 0);
-      } else {
-        setLoading(false);
+        await checkUserRole();
       }
+
+      setLoading(false);
     });
 
-    // Get session synchronously and then set the state
-    supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
+    // Get session synchronously and then set the state with proper async flow
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
         setSession(session);
         setUser(session?.user ?? null);
         setIsAuthenticated(!!session);
+
         if (session?.user) {
           await checkUserRole();
         }
-        setLoading(false);
-      })
-      .catch(e => {
+      } catch (e) {
         console.error('Error getting session:', e);
+      } finally {
         setLoading(false);
-      });
+      }
+    })();
 
     return () => {
-      data?.subscription?.unsubscribe();
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
     };
-
-  }, [navigate, checkUserRole]);
+  }, [navigate, checkUserRole, supabase.auth]);
 
   const signIn = async (email: string, password: string, rememberMe: boolean) => {
     try {
-      localStorage.setItem('rememberMe', rememberMe.toString());
-    } catch {
-      // ignore
-    }
+      // Persist rememberMe flag in localStorage to sync with client config
+      try {
+        localStorage.setItem('rememberMe', rememberMe.toString());
+      } catch { /* ignore */ }
 
-    const result = await authSignIn(email, password, rememberMe);
-    if (!result.error && result.user && result.session) {
-      setUser(result.user);
-      setSession(result.session);
-      setIsAuthenticated(true);
-      await checkUserRole();
-      navigate('/'); // Navigate after successful login
+      // Reset supabase client with desired persistSession config to match rememberMe
+      resetSupabaseClientWithPersist(rememberMe);
+
+      const result = await authSignIn(email, password, rememberMe);
+      if (!result.error && result.user && result.session) {
+        setUser(result.user);
+        setSession(result.session);
+        setIsAuthenticated(true);
+        await checkUserRole();
+        navigate('/'); // Navigate after successful login
+      }
+      return result;
+    } catch (error) {
+      console.error('SignIn failed:', error);
+      throw error;
     }
-    return result;
   };
 
   const signUp = async (email: string, password: string) => {
-    const result = await authSignUp(email, password);
-    if (!result.error && result.data?.user && result.data?.session) {
-      setUser(result.data.user);
-      setSession(result.data.session);
-      setIsAuthenticated(true);
-      await checkUserRole();
-      navigate('/'); // Navigate after successful signup
+    try {
+      const result = await authSignUp(email, password);
+      if (!result.error && result.data?.user && result.data?.session) {
+        setUser(result.data.user);
+        setSession(result.data.session);
+        setIsAuthenticated(true);
+        await checkUserRole();
+        navigate('/'); // Navigate after successful signup
+      }
+      return result;
+    } catch (error) {
+      console.error('SignUp failed:', error);
+      throw error;
     }
-    return result;
   };
 
   const signOut = async () => {
