@@ -1,194 +1,264 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AppLayout from '../components/AppLayout';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Check, Plus, Loader2 } from 'lucide-react';
-import FrequencyTracker from '../components/task/FrequencyTracker';
-import PriorityBadge from '../components/task/PriorityBadge';
+import { Plus, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import RuleEditor from '../components/RuleEditor';
 import { toast } from '@/hooks/use-toast';
-import HighlightedText from '../components/task/HighlightedText';
+import { supabase } from "@/integrations/supabase/client";
 import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
-import { useRulesQuery } from '@/hooks/useRulesQuery';
-import { Rule } from '@/hooks/rules/types'; // Changed import
+import { v4 as uuidv4 } from 'uuid';
+import RuleCard from '@/components/rule/RuleCard';
+import { RuleCardData } from '@/components/rule/hooks/useRuleCardData';
+
+interface Rule {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: 'low' | 'medium' | 'high';
+  points?: number;
+  background_image_url?: string | null;
+  background_images?: string[];
+  background_opacity: number;
+  icon_url?: string | null;
+  icon_name?: string | null;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  icon_color: string;
+  highlight_effect: boolean;
+  focal_point_x: number;
+  focal_point_y: number;
+  frequency: 'daily' | 'weekly';
+  frequency_count: number;
+  usage_data: number[];
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+}
 
 const Rules: React.FC = () => {
   const navigate = useNavigate();
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [currentRule, setCurrentRule] = useState<Rule | null>(null);
-  const { rules, isLoading, createRule, updateRule, deleteRule, recordViolation } = useRulesQuery();
-
-  const handleAddRule = () => {
-    setCurrentRule(null);
-    setIsEditorOpen(true);
-  };
-
-  const handleEditRule = (rule: Rule) => {
-    setCurrentRule(rule);
-    setIsEditorOpen(true);
-  };
-
-  const handleRuleBroken = async (rule: Rule) => {
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
+  const [carouselTimer, setCarouselTimer] = useState(5);
+  
+  const rulesRef = useRef<Rule[]>([]);
+  const intervalRef = useRef<number | null>(null);
+  const fetchIndexRef = useRef(0); // Add this line
+  const hasMoreRef = useRef(true); // Add this line
+  
+  const fetchRules = useCallback(async () => {
     try {
-      await recordViolation(rule.id);
-      navigate('/punishments');
-    } catch (err) {
-      console.error('Error recording rule violation:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to record rule violation. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
+      const from = fetchIndexRef.current;
+      const to = from + 9;
 
-  const handleSaveRule = async (ruleData: Partial<Rule>) => {
-    try {
-      if (ruleData.id) {
-        await updateRule(ruleData);
-      } else {
-        await createRule(ruleData);
+      console.log("Fetching rules from Supabase...", from, to);
+      const {
+        data,
+        error
+      } = await supabase.from('rules').select('*').order('created_at', {
+        ascending: false
+      }).range(from, to);
+      
+      if (error) {
+        throw error;
       }
-      setIsEditorOpen(false);
-      setCurrentRule(null);
+      
+      const newRules = (data as Rule[] || []).map(rule => {
+        if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
+          return {
+            ...rule,
+            usage_data: [0, 0, 0, 0, 0, 0, 0]
+          };
+        }
+        return rule;
+      });
+      
+      if (newRules.length === 0) {
+        hasMoreRef.current = false;
+        return;
+      }
+
+      setRules(prev => {
+        const existingIds = new Set(prev.map(r => r.id));
+        const deduped = newRules.filter(r => !existingIds.has(r.id));
+        return [...prev, ...deduped];
+      });
+      rulesRef.current = [...rulesRef.current, ...newRules];
+      fetchIndexRef.current += 10;
     } catch (err) {
-      console.error('Error saving rule:', err);
+      console.error('Error fetching rules:', err);
       toast({
         title: 'Error',
-        description: 'Failed to save rule. Please try again.',
-        variant: 'destructive',
+        description: 'Failed to fetch rules. Please try again.',
+        variant: 'destructive'
       });
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
+  
+  // Initialize carousel timer from localStorage and start initial interval
+  useEffect(() => {
+    const loadAll = async () => {
+      await fetchRules(); // initial batch
+      const lazyLoad = async () => {
+        while (hasMoreRef.current) {
+          await new Promise((res) => setTimeout(res, 250));
+          await fetchRules();
+        }
+      };
+      lazyLoad();
+    };
 
-  const handleDeleteRule = async (ruleId: string) => {
+    loadAll();
+    
+    const savedTimer = parseInt(localStorage.getItem('rules_carouselTimer') || '5', 10);
+    setCarouselTimer(savedTimer);
+    
+    // Initial interval setup
+    const intervalId = setInterval(() => {
+      setGlobalCarouselIndex(prev => prev + 1);
+    }, savedTimer * 1000);
+    
+    intervalRef.current = intervalId as unknown as number;
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [fetchRules]);
+  
+  // Update interval whenever carouselTimer changes
+  useEffect(() => {
+    // Clear existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    // Create new interval with updated timer value
+    const newIntervalId = setInterval(() => {
+      setGlobalCarouselIndex(prev => prev + 1);
+    }, carouselTimer * 1000);
+    
+    intervalRef.current = newIntervalId as unknown as number;
+    
+    // Save timer to localStorage to persist across refreshes
+    localStorage.setItem('rules_carouselTimer', carouselTimer.toString());
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [carouselTimer]);
+
+  const handleAddRule = async () => {
     try {
-      await deleteRule(ruleId);
-      setIsEditorOpen(false);
-      setCurrentRule(null);
+      const newRule = {
+        id: uuidv4(),
+        title: 'New Rule',
+        description: 'This is a new rule. Click edit to customize it.',
+        priority: 'medium' as const,
+        background_opacity: 80,
+        focal_point_x: 50,
+        focal_point_y: 50,
+        title_color: '#FFFFFF',
+        subtext_color: '#8E9196',
+        calendar_color: '#7E69AB',
+        icon_color: '#FFFFFF',
+        highlight_effect: false,
+        frequency: 'daily' as const,
+        frequency_count: 3,
+        usage_data: [0, 0, 0, 0, 0, 0, 0],
+        background_images: []
+      };
+      const {
+        data,
+        error
+      } = await supabase.from('rules').insert(newRule).select().single();
+      if (error) throw error;
+      const createdRule = data as Rule;
+      setRules([createdRule, ...rules]);
+      toast({
+        title: 'Success',
+        description: 'Rule created successfully!'
+      });
     } catch (err) {
-      console.error('Error deleting rule:', err);
+      console.error('Error adding rule:', err);
       toast({
         title: 'Error',
-        description: 'Failed to delete rule. Please try again.',
-        variant: 'destructive',
+        description: 'Failed to create rule. Please try again.',
+        variant: 'destructive'
       });
     }
   };
 
-  return (
-    <AppLayout onAddNewItem={handleAddRule}>
+  const handleUpdateRule = (updatedRule: RuleCardData) => {
+    const updatedRuleInFormat: Rule = {
+      ...updatedRule,
+      description: updatedRule.description || '',
+      points: 0,
+      background_images: updatedRule.background_images || []
+    };
+    setRules(rules.map(rule => rule.id === updatedRule.id ? updatedRuleInFormat : rule));
+  };
+
+  const handleRuleBroken = (rule: RuleCardData) => {
+    const updatedRule = rules.find(r => r.id === rule.id);
+    if (updatedRule) {
+      const newUsageData = [...rule.usage_data];
+      setRules(rules.map(r => r.id === rule.id ? {
+        ...r,
+        usage_data: newUsageData
+      } : r));
+    }
+  };
+
+  // Add handler for carousel timer changes
+  const handleCarouselTimerChange = (newTimer: number) => {
+    console.log(`Updating global carousel timer to ${newTimer} seconds`);
+    setCarouselTimer(newTimer);
+  };
+
+  return <AppLayout onAddNewItem={handleAddRule}>
       <RewardsProvider>
         <div className="container mx-auto px-4 py-6">
           <RulesHeader />
           
-          {isLoading ? (
-            <div className="flex justify-center items-center py-10">
+          <div className="flex justify-end mb-6">
+            
+          </div>
+          
+          {isLoading ? <div className="flex justify-center items-center py-10">
               <Loader2 className="w-10 h-10 text-white animate-spin" />
-            </div>
-          ) : rules.length === 0 ? (
-            <div className="text-center py-10">
+            </div> : rules.length === 0 ? <div className="text-center py-10">
               <p className="text-white mb-4">No rules found. Create your first rule!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {rules.map((rule) => (
-                <div key={rule.id} className="slow-fade-in">
-                  <Card 
-                    className={`bg-dark-navy border-2 border-[#00f0ff] ${rule.highlight_effect ? '' : ''} overflow-hidden`}
-                  >
-                    <div className="relative p-4">
-                      {rule.background_image_url && (
-                        <div 
-                          className="absolute inset-0 z-0" 
-                          style={{
-                            backgroundImage: `url(${rule.background_image_url})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
-                            opacity: (rule.background_opacity || 100) / 100
-                          }}
-                        />
-                      )}
-                      
-                      <div className="flex justify-between items-center mb-3 relative z-10">
-                        <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
-                          onClick={() => handleRuleBroken(rule)}
-                        >
-                          Rule Broken
-                        </Button>
-                      </div>
-                      
-                      <div className="mb-4 relative z-10">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-                            <Check className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="flex-1 flex flex-col">
-                            <div className="text-xl font-semibold">
-                              <HighlightedText
-                                text={rule.title}
-                                highlight={rule.highlight_effect}
-                                color={rule.title_color}
-                              />
-                            </div>
-                            
-                            {rule.description && (
-                              <div className="text-sm mt-1">
-                                <HighlightedText
-                                  text={rule.description}
-                                  highlight={rule.highlight_effect}
-                                  color={rule.subtext_color}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between mt-2 relative z-10">
-                        <FrequencyTracker 
-                          frequency={rule.frequency}
-                          frequency_count={rule.frequency_count}
-                          calendar_color={rule.calendar_color}
-                          usage_data={rule.usage_data}
-                        />
-                        
-                        <Button 
-                          size="sm" 
-                          className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
-                          onClick={() => handleEditRule(rule)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              ))}
-            </div>
-          )}
+            </div> : <div className="space-y-4">
+              {rules.map(rule => <RuleCard 
+                key={rule.id} 
+                id={rule.id} 
+                title={rule.title} 
+                description={rule.description || ''} 
+                priority={rule.priority} 
+                globalCarouselIndex={globalCarouselIndex} 
+                onUpdate={handleUpdateRule} 
+                onRuleBroken={handleRuleBroken} 
+                rule={rule as RuleCardData}
+                carouselTimer={carouselTimer}
+                onCarouselTimerChange={handleCarouselTimerChange} 
+              />)}
+            </div>}
         </div>
-        
-        <RuleEditor
-          isOpen={isEditorOpen}
-          onClose={() => {
-            setIsEditorOpen(false);
-            setCurrentRule(null);
-          }}
-          ruleData={currentRule || undefined}
-          onSave={handleSaveRule}
-          onDelete={handleDeleteRule}
-        />
       </RewardsProvider>
-    </AppLayout>
-  );
+    </AppLayout>;
 };
 
 export default Rules;

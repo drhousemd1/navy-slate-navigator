@@ -1,11 +1,16 @@
 
-import React from 'react';
-import { Badge } from '../ui/badge';
+import React, { useEffect } from 'react';
+import { Badge } from '../../components/ui/badge';
+import { useRewards } from '../../contexts/RewardsContext';
 import { Box, Coins } from 'lucide-react';
-import { useRewardsQuery } from '@/hooks/useRewardsQuery';
 
 const RewardsHeader: React.FC = () => {
-  const { points, totalRewardsSupply, refetchPoints } = useRewardsQuery();
+  const { totalPoints, totalRewardsSupply, refreshPointsFromDatabase } = useRewards();
+
+  // Refresh points when component mounts
+  useEffect(() => {
+    refreshPointsFromDatabase();
+  }, [refreshPointsFromDatabase]);
 
   return (
     <div className="flex items-center mb-6">
@@ -17,7 +22,7 @@ const RewardsHeader: React.FC = () => {
         </Badge>
         <Badge className="bg-cyan-500 text-white font-bold px-3 py-1 flex items-center gap-1">
           <Coins className="w-3 h-3" />
-          <span>{points}</span>
+          <span>{totalPoints}</span>
         </Badge>
       </div>
     </div>

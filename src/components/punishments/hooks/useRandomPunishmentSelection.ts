@@ -1,52 +1,80 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { PunishmentData } from '@/contexts/punishments/types';
 
-export const useRandomPunishmentSelection = (isOpen: boolean) => {
+export const useRandomPunishmentSelection = (punishments: PunishmentData[], isOpen: boolean) => {
   const [selectedPunishment, setSelectedPunishment] = useState<PunishmentData | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
-
-  // Reset selection when dialog opens
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const animationRef = useRef<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
     if (isOpen) {
       setSelectedPunishment(null);
       setIsSelecting(false);
     }
   }, [isOpen]);
-
-  const selectRandomPunishment = async (punishments: PunishmentData[]) => {
+  
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        clearTimeout(animationRef.current);
+      }
+    };
+  }, []);
+  
+  const startRandomSelection = () => {
     if (punishments.length === 0) return;
     
     setIsSelecting(true);
+    setSelectedPunishment(null);
     
-    // Set timeout to simulate selection process
-    setTimeout(() => {
-      const availablePunishments = punishments.filter(p => p.id && !String(p.id).startsWith('temp-'));
+    let counter = 0;
+    const totalIterations = 15;
+    const cycleSpeed = 80;
+    
+    const animateCycle = () => {
+      const randomIndex = Math.floor(Math.random() * punishments.length);
+      setCurrentIndex(randomIndex);
+      counter++;
       
-      if (availablePunishments.length > 0) {
-        const randomIndex = Math.floor(Math.random() * availablePunishments.length);
-        setSelectedPunishment(availablePunishments[randomIndex]);
+      const nextSpeed = cycleSpeed + (counter * 10);
+      
+      if (counter < totalIterations) {
+        animationRef.current = setTimeout(animateCycle, nextSpeed);
+      } else {
+        setSelectedPunishment(punishments[randomIndex]);
+        setIsSelecting(false);
       }
-      
-      setIsSelecting(false);
-    }, 1000);
+    };
+    
+    animationRef.current = setTimeout(animateCycle, cycleSpeed);
   };
-
-  // Function to get the current punishment or return null
+  
+  const handleReroll = () => {
+    if (animationRef.current) {
+      clearTimeout(animationRef.current);
+    }
+    startRandomSelection();
+  };
+  
+  useEffect(() => {
+    if (isOpen && punishments.length > 0 && !isSelecting && !selectedPunishment) {
+      startRandomSelection();
+    }
+  }, [isOpen, punishments.length, isSelecting, selectedPunishment]);
+  
   const getCurrentPunishment = () => {
-    return selectedPunishment;
+    return selectedPunishment || 
+      (punishments.length > 0 ? punishments[currentIndex] : null);
   };
-
-  // Function to handle rerolling (selecting a new random punishment)
-  const handleReroll = (punishments: PunishmentData[]) => {
-    selectRandomPunishment(punishments);
-  };
-
+  
   return {
     selectedPunishment,
     isSelecting,
-    selectRandomPunishment,
+    currentIndex,
     getCurrentPunishment,
-    handleReroll
+    handleReroll,
+    startRandomSelection
   };
 };

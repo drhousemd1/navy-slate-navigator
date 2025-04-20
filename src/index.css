@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -100,6 +101,7 @@
   }
 }
 
+/* Custom navigation animations */
 @layer components {
   .nav-item {
     @apply transition-all duration-300 ease-in-out;
@@ -149,77 +151,4 @@
   .hide-scrollbar::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
   }
-  
-  /* Slow fade-in animation */
-  .slow-fade-in {
-    opacity: 0;
-    animation: slow-fade-in 2s ease-in forwards;
-  }
-  
-  @keyframes slow-fade-in {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-  }
-
-  /* Improved drag and drop styles */
-  .drag-item {
-    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
-    transform-origin: 50% 50%;
-    position: relative;
-    will-change: transform;
-  }
-  
-  .drag-item.dragging {
-    opacity: 0.9;
-    pointer-events: auto;
-    transform: scale(1.02);
-    z-index: 50;
-  }
-  
-  .drag-placeholder {
-    opacity: 0.2;
-    background: theme('colors.amber.500');
-    border: 2px dashed theme('colors.amber.600');
-    margin: 1.5rem 0;
-    border-radius: 0.5rem;
-    min-height: inherit;
-    height: var(--card-height);
-  }
-
-  /* Remove old drag styles */
-  .dragging,
-  .dragging-active,
-  .no-select {
-    /* Override any existing drag styles */
-    transition: none;
-    touch-action: none;
-  }
-}
-
-/* Prevent sideways overscroll */
-html, body {
-  @apply overflow-x-hidden;
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y pinch-zoom;
-}
-
-/* Scrollable container during drag */
-.scrollable {
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Fixed body class - improved version */
-body.body-fixed {
-  width: 100%;
-  position: fixed;
-  overflow: hidden !important;
-}
-
-/* Make sure the placeholder space stays exact */
-[data-rbd-placeholder-context-id] {
-  transition: none !important;
-  margin: 0 !important;
-  min-height: var(--card-height) !important;
 }

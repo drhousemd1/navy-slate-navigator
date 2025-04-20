@@ -1,29 +1,37 @@
 
+import { usePunishments } from '@/contexts/PunishmentsContext';
+import { useRewards } from '@/contexts/RewardsContext';
 import { PunishmentData } from '@/contexts/punishments/types';
-import { usePunishmentToast } from './usePunishmentToast';
-import { toast } from "@/hooks/use-toast";
-import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
+import { toast } from '@/hooks/use-toast';
 
 export const useApplyRandomPunishment = (onClose: () => void) => {
-  const { applyPunishment } = usePunishmentsQuery();
-  const { showAppliedToast } = usePunishmentToast();
+  const { applyPunishment } = usePunishments();
+  const { totalPoints, setTotalPoints } = useRewards();
   
-  const handlePunish = async (punishment: PunishmentData | null) => {
-    if (!punishment || !punishment.id) {
+  const handlePunish = async (selectedPunishment: PunishmentData | null) => {
+    if (!selectedPunishment || !selectedPunishment.id) return;
+    
+    try {
+      // First update the total points in the UI immediately
+      const newTotal = totalPoints - selectedPunishment.points;
+      setTotalPoints(newTotal);
+      
+      // Then call the applyPunishment function
+      await applyPunishment(selectedPunishment.id, selectedPunishment.points);
+      
+      // Show success toast
       toast({
-        title: "Error",
-        description: "Cannot apply punishment. Please select a valid punishment.",
+        title: "Punishment Applied",
+        description: `${selectedPunishment.points} points deducted.`,
         variant: "destructive",
       });
-      return;
-    }
-
-    try {
-      await applyPunishment(punishment.id, punishment.points);
-      showAppliedToast(punishment.title, punishment.points);
+      
       onClose();
     } catch (error) {
       console.error("Error applying punishment:", error);
+      // Revert the point deduction if there was an error
+      setTotalPoints(totalPoints);
+      
       toast({
         title: "Error",
         description: "Failed to apply punishment. Please try again.",
