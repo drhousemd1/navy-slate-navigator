@@ -22,8 +22,11 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
     if (Array.isArray(usageData) && usageData.length === 7) {
       // Convert usageData values to explicit boolean true/false
       const cleanData = usageData.map(val => Boolean(val));
+      console.log("[WeeklyUsageTracker] usageData prop:", usageData);
+      console.log("[WeeklyUsageTracker] cleanData:", cleanData);
       setTrackerData(cleanData);
     } else {
+      console.log("[WeeklyUsageTracker] Invalid usageData, resetting trackerData");
       setTrackerData(Array(7).fill(false));
     }
   }, [usageData]);
@@ -32,6 +35,8 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
   const renderCircles = () => {
     return Array(7).fill(null).map((_, i) => {
       const used = i < trackerData.length ? trackerData[i] : false;
+      // Log for debugging
+      console.log(`[WeeklyUsageTracker] Day ${i} used:`, used);
 
       return (
         <div
@@ -39,8 +44,8 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
           className={`w-4 h-4 rounded-full border`}
           style={{
             backgroundColor: used ? calendarColor : 'transparent',
-            borderColor: used ? calendarColor : calendarColor || 'rgba(142, 145, 150, 0.5)',
-            boxShadow: i === currentDayOfWeek ? `0 0 0 1px ${calendarColor}` : 'none',
+            borderColor: used ? calendarColor : 'rgba(142, 145, 150, 0.5)',
+            boxShadow: i === currentDayOfWeek ? `0 0 0 2px ${calendarColor}` : 'none',
           }}
         />
       );
