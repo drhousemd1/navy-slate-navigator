@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import RewardHeader from './rewards/RewardHeader';
@@ -67,6 +68,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
     }
   };
 
+  // Updated handleUseReward to properly update usage, update local state, and invalidate query
   const handleUseReward = async () => {
     if (!id) {
       toast({
@@ -97,12 +99,12 @@ const RewardCard: React.FC<RewardCardProps> = ({
           used: true,
           created_at: new Date().toISOString(),
         });
-
       if (error) {
         throw error;
       }
 
       setLocalUsageData(updatedUsage);
+      // Invalidate the rewards query to refetch fresh data and update usageData prop
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
 
       toast({
@@ -149,6 +151,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
         />
       )}
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
+        {/* Pass the corrected handleUseReward to RewardHeader */}
         <RewardHeader
           title={title}
           supply={supply}
@@ -178,3 +181,4 @@ const RewardCard: React.FC<RewardCardProps> = ({
 };
 
 export default RewardCard;
+
