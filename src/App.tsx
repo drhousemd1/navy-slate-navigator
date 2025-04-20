@@ -22,7 +22,7 @@ import Messages from "./pages/Messages";
 import AdminTesting from "./pages/AdminTesting";
 
 // Protected route component using Outlet pattern
-const ProtectedRoute = () => {
+const ProtectedRoute: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   
   if (loading) {
@@ -35,11 +35,11 @@ const ProtectedRoute = () => {
     return <Navigate to="/auth" replace />;
   }
   
-  return <Outlet />;
+  return <>{children}</>;
 };
 
 // Admin-only route component using Outlet pattern
-const AdminRoute = () => {
+const AdminRoute: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   
   console.log('AdminRoute check - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin, 'loading:', loading);
@@ -56,9 +56,8 @@ const AdminRoute = () => {
   }
   
   // IMPORTANT: For testing purposes, temporarily allow all authenticated users to access admin pages
-  // This allows us to test the admin testing page without requiring admin privileges
   console.log('AdminRoute - Allowing access to admin page for testing purposes');
-  return <Outlet />;
+  return <>{children}</>;
   
   /* Uncomment this when you want to restore proper admin checking
   if (!isAdmin) {
@@ -67,12 +66,12 @@ const AdminRoute = () => {
   }
   
   console.log('AdminRoute - User is admin, showing protected content');
-  return <Outlet />;
+  return <>{children}</>;
   */
 };
 
 // Global loading guard route for all protected routes (if you want an explicit global guard)
-const GlobalAuthGuard = () => {
+const GlobalAuthGuard: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const { loading } = useAuth();
   
   if (loading) {
@@ -81,7 +80,7 @@ const GlobalAuthGuard = () => {
     </div>;
   }
   
-  return <Outlet />;
+  return <>{children}</>;
 };
 
 // Create a client with aggressive caching to maintain state between page navigations
@@ -111,21 +110,17 @@ const AppRoutes = () => {
       <Route path="/reset-password-view" element={<ResetPasswordView />} />
 
       {/* Wrap all authenticated routes in global guard */}
-      <Route element={<ProtectedRoute />}>
-        <Route element={<GlobalAuthGuard />}>
-          <Route path="/" element={<Index />} />
-          <Route path="/rules" element={<Rules />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/rewards" element={<Rewards />} />
-          <Route path="/punishments" element={<Punishments />} />
-          <Route path="/throne-room" element={<ThroneRoom />} />
-          <Route path="/encyclopedia" element={<Encyclopedia />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/admin-testing" element={<AdminRoute />}>
-            <Route index element={<AdminTesting />} />
-          </Route>
-        </Route>
+      <Route element={<ProtectedRoute><GlobalAuthGuard><Outlet /></GlobalAuthGuard></ProtectedRoute>}>
+        <Route path="/" element={<Index />} />
+        <Route path="/rules" element={<Rules />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/rewards" element={<Rewards />} />
+        <Route path="/punishments" element={<Punishments />} />
+        <Route path="/throne-room" element={<ThroneRoom />} />
+        <Route path="/encyclopedia" element={<Encyclopedia />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/messages" element={<Messages />} />
+        <Route path="/admin-testing" element={<AdminRoute><AdminTesting /></AdminRoute>} />
       </Route>
 
       <Route path="*" element={<NotFound />} />
@@ -152,4 +147,3 @@ const App = () => {
 };
 
 export default App;
-

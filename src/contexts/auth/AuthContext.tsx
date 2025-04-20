@@ -57,8 +57,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     setLoading(true);
 
-    // onAuthStateChange event type can be extended string, we use string to avoid type error
-    const { data: subscription } = supabase.auth.onAuthStateChange((event: string, newSession: Session | null) => {
+    // onAuthStateChange returns { subscription } now. We must unsubscribe on subscription.
+    const { subscription } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, newSession: Session | null) => {
       const userFromSession = newSession?.user ?? null;
 
       console.log('Auth state changed:', event);
@@ -80,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }, 0);
       }
 
+      // Ensure loading false is set after state updates
       if (event !== 'SIGNED_OUT') {
         setLoading(false);
       }
@@ -99,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
-      if (subscription?.unsubscribe) {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
         subscription.unsubscribe();
       }
     };
@@ -189,4 +190,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
