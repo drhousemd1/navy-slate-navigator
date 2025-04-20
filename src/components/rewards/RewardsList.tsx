@@ -31,8 +31,8 @@ const RewardsList: React.FC<RewardsListProps> = ({
           supply={reward.supply}
           iconName={reward.icon_name}
           iconColor={reward.icon_color}
-          onBuy={() => onBuy(reward.id, reward.cost)} // <-- fix below
-          onUse={() => onUse(reward.id)}              // <-- fix below
+          onBuy={() => { return onBuy(reward.id, reward.cost); }}
+          onUse={() => { return onUse(reward.id); }}
           onEdit={() => onEdit(index)}
           backgroundImage={reward.background_image_url}
           backgroundOpacity={reward.background_opacity}
@@ -48,10 +48,4 @@ const RewardsList: React.FC<RewardsListProps> = ({
   );
 };
 
-// Fix for onBuy and onUse handlers:
-// Change from () => { onBuy(...); } which returns void
-// to () => onBuy(...) which implicitly returns Promise<void>
-// or explicitly return the call.
-
 export default RewardsList;
-
