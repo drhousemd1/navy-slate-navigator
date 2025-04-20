@@ -15,28 +15,28 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
   // Get the current day of the week (0 = Monday, 6 = Sunday)
   const currentDayOfWeek = getMondayBasedDay();
 
-  // We'll transform usageData to a number array similar to punishments for usage counts
-  const [weekData, setWeekData] = useState<number[]>([]);
+  // We'll transform usageData to a boolean array for usage state
+  const [trackerData, setTrackerData] = useState<boolean[]>(Array(7).fill(false));
 
   useEffect(() => {
     if (Array.isArray(usageData) && usageData.length === 7) {
-      // Convert booleans or numbers to 0/1 for usage array
-      const numericData = usageData.map(val => (val ? 1 : 0));
-      setWeekData(numericData);
+      // Convert usageData values to explicit boolean true/false
+      const cleanData = usageData.map(val => Boolean(val));
+      setTrackerData(cleanData);
     } else {
-      setWeekData(Array(7).fill(0));
+      setTrackerData(Array(7).fill(false));
     }
   }, [usageData]);
 
-  // Render 7 circles for the week
+  // Render 7 circles for the week with correct fill and border logic
   const renderCircles = () => {
     return Array(7).fill(null).map((_, i) => {
-      const used = i < weekData.length ? weekData[i] > 0 : false;
+      const used = i < trackerData.length ? trackerData[i] : false;
 
       return (
         <div
           key={i}
-          className={`w-4 h-4 rounded-full border ${used ? 'border-transparent' : 'bg-transparent'}`}
+          className={`w-4 h-4 rounded-full border ${used ? 'bg-transparent border-transparent' : 'bg-transparent'}`}
           style={{
             backgroundColor: used ? calendarColor : 'transparent',
             borderColor: used ? 'transparent' : calendarColor || 'rgba(142, 145, 150, 0.5)',
@@ -61,3 +61,4 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
 };
 
 export default WeeklyUsageTracker;
+
