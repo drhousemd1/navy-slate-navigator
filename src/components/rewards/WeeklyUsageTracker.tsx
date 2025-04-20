@@ -35,16 +35,16 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
     for (let i = 0; i < 7; i++) {
       const used = i < trackerData.length ? Boolean(trackerData[i]) : false;
 
-      // Improved styling: fill circle fully when used, border transparent
       circles.push(
         <div
           key={i}
           className="w-4 h-4 rounded-full"
           style={{
             backgroundColor: used ? calendarColor : 'transparent',
-            border: used ? 'none' : `2px solid ${calendarColor || 'rgba(142, 145, 150, 0.5)'}`,
-            boxShadow: i === currentDayOfWeek ? `0 0 0 2px ${calendarColor}` : 'none',
-            transition: 'background-color 0.3s ease, border 0.3s ease'
+            border: `2px solid ${calendarColor || 'rgba(142, 145, 150, 0.5)'}`,
+            boxSizing: 'border-box',
+            boxShadow: i === currentDayOfWeek ? `0 0 4px 2px ${calendarColor}` : 'none',
+            transition: 'background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease'
           }}
         />
       );
@@ -67,4 +67,3 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
 };
 
 export default WeeklyUsageTracker;
-
