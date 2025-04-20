@@ -1,10 +1,12 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import RewardHeader from './rewards/RewardHeader';
 import RewardContent from './rewards/RewardContent';
 import RewardFooter from './rewards/RewardFooter';
 import { useToast } from '../hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { getMondayBasedDay } from '@/lib/utils';
 
 interface RewardCardProps {
   title: string;
@@ -26,6 +28,7 @@ interface RewardCardProps {
   calendar_color?: string;
   usageData?: boolean[];
   frequencyCount?: number;
+  id?: string;
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({
@@ -46,9 +49,17 @@ const RewardCard: React.FC<RewardCardProps> = ({
   title_color = '#FFFFFF',
   subtext_color = '#8E9196',
   calendar_color = '#7E69AB',
-  usageData = Array(7).fill(false)
+  usageData = Array(7).fill(false),
+  id,
 }) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [localUsageData, setLocalUsageData] = useState<boolean[]>(() => usageData.map(Boolean));
+
+  useEffect(() => {
+    setLocalUsageData(usageData.map(Boolean));
+  }, [usageData]);
 
   const handleBuy = (cost: number) => {
     if (onBuy) {
@@ -56,33 +67,79 @@ const RewardCard: React.FC<RewardCardProps> = ({
     }
   };
 
-  const handleUse = () => {
-    if (onUse) {
-      onUse();
+  const handleUseReward = async () => {
+    if (!id) {
+      toast({
+        title: "Error",
+        description: "Reward ID missing. Cannot use reward.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const todayIndex = getMondayBasedDay();
+      const updatedUsage = [...localUsageData];
+      updatedUsage[todayIndex] = true;
+
+      if (onUse) {
+        onUse();
+      }
+
+      const today = new Date();
+      const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
+
+      const { error } = await supabase
+        .from('reward_usage')
+        .insert({
+          reward_id: id,
+          day_of_week: todayIndex,
+          week_number: weekNumber,
+          used: true,
+          created_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      setLocalUsageData(updatedUsage);
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
+
+      toast({
+        title: "Success",
+        description: `You used "${title}"`,
+      });
+    } catch (error) {
+      console.error("Error using reward:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to use reward.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleEdit = () => {
+  const handleEditReward = () => {
     if (onEdit) {
       onEdit();
     }
   };
 
-  const cardBorderStyle = supply > 0 
+  const cardBorderStyle = supply > 0
     ? {
-        borderColor: '#FEF7CD', // Changed from #FFD700 to #FEF7CD for a whiter yellow
-        boxShadow: '0 0 8px 2px rgba(254, 247, 205, 0.6)' // Updated shadow to match new color
-      } 
+        borderColor: '#FEF7CD',
+        boxShadow: '0 0 8px 2px rgba(254, 247, 205, 0.6)',
+      }
     : {};
 
   return (
-    <Card 
+    <Card
       className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy z-0"
       style={cardBorderStyle}
     >
       {backgroundImage && (
-        <div 
-          className="absolute inset-0 z-0" 
+        <div
+          className="absolute inset-0 z-0"
           style={{
             backgroundImage: `url(${backgroundImage})`,
             backgroundSize: 'cover',
@@ -97,9 +154,9 @@ const RewardCard: React.FC<RewardCardProps> = ({
           supply={supply}
           cost={cost}
           onBuy={handleBuy}
-          onUse={handleUse}
+          onUse={handleUseReward}
         />
-        
+
         <RewardContent
           title={title}
           description={description}
@@ -109,11 +166,11 @@ const RewardCard: React.FC<RewardCardProps> = ({
           title_color={title_color}
           subtext_color={subtext_color}
         />
-        
+
         <RewardFooter
-          usageData={usageData}
+          usageData={localUsageData}
           calendarColor={calendar_color}
-          onEdit={handleEdit}
+          onEdit={handleEditReward}
         />
       </div>
     </Card>
