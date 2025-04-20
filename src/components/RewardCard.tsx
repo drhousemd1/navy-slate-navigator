@@ -5,9 +5,7 @@ import RewardHeader from './rewards/RewardHeader';
 import RewardContent from './rewards/RewardContent';
 import RewardFooter from './rewards/RewardFooter';
 import { useToast } from '../hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { getMondayBasedDay } from '@/lib/utils';
 
 interface RewardCardProps {
   title: string;
@@ -56,11 +54,8 @@ const RewardCard: React.FC<RewardCardProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [localUsageData, setLocalUsageData] = useState<boolean[]>(() => usageData.map(Boolean));
-
-  useEffect(() => {
-    setLocalUsageData(usageData.map(Boolean));
-  }, [usageData]);
+  // We do not manage local usageData or update usage here anymore.
+  // Delegate usage handling to onUse and the hook mutation for consistency.
 
   const handleBuy = (cost: number) => {
     if (onBuy) {
@@ -68,8 +63,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
     }
   };
 
-  // Updated handleUseReward to properly update usage, update local state, and invalidate query
-  const handleUseReward = async () => {
+  const handleUseReward = () => {
     if (!id) {
       toast({
         title: "Error",
@@ -78,53 +72,11 @@ const RewardCard: React.FC<RewardCardProps> = ({
       });
       return;
     }
-    try {
-      const todayIndex = getMondayBasedDay();
-      const updatedUsage = [...localUsageData];
-      updatedUsage[todayIndex] = true;
 
-      if (onUse) {
-        onUse();
-      }
-
-      const today = new Date();
-
-      // Format week number as Year-ISOWeek (e.g., '2025-16')
-      const oneJan = new Date(today.getFullYear(), 0, 1);
-      const numberOfDays = Math.floor((today.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000));
-      const weekNumber = `${today.getFullYear()}-${Math.ceil((numberOfDays + oneJan.getDay() + 1) / 7)}`;
-
-      const { error } = await supabase
-        .from('reward_usage')
-        .insert({
-          reward_id: id,
-          day_of_week: todayIndex,
-          week_number: weekNumber,
-          used: true,
-          created_at: new Date().toISOString(),
-        });
-
-      if (error) {
-        console.error("Error inserting reward usage:", error);
-        throw error;
-      }
-
-      setLocalUsageData(updatedUsage);
-      // Invalidate the rewards query to refetch fresh data and update usageData prop
-      await queryClient.invalidateQueries({ queryKey: ['rewards'] });
-
-      toast({
-        title: "Success",
-        description: `You used "${title}"`,
-      });
-    } catch (error) {
-      console.error("Error using reward:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to use reward.",
-        variant: "destructive",
-      });
+    if (onUse) {
+      onUse();
     }
+    // No local usage updates here. Hook will update cache & usage state.
   };
 
   const handleEditReward = () => {
@@ -133,12 +85,13 @@ const RewardCard: React.FC<RewardCardProps> = ({
     }
   };
 
-  const cardBorderStyle = supply > 0
-    ? {
-        borderColor: '#FEF7CD',
-        boxShadow: '0 0 8px 2px rgba(254, 247, 205, 0.6)',
-      }
-    : {};
+  const cardBorderStyle =
+    supply > 0
+      ? {
+          borderColor: '#FEF7CD',
+          boxShadow: '0 0 8px 2px rgba(254, 247, 205, 0.6)',
+        }
+      : {};
 
   return (
     <Card
@@ -176,7 +129,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
         />
 
         <RewardFooter
-          usageData={localUsageData}
+          usageData={usageData}
           calendarColor={calendar_color}
           onEdit={handleEditReward}
         />
