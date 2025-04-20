@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Session, User } from '@supabase/supabase-js';
+import type { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { useAuthOperations } from './useAuthOperations';
 import { useUserProfile } from './useUserProfile';
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
 
     // onAuthStateChange returns { data: { subscription } }
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, newSession: Session | null) => {
+    const { data } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, newSession: Session | null) => {
       const userFromSession = newSession?.user ?? null;
 
       console.log('Auth state changed:', event);
@@ -72,37 +72,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
+      // Defer checkUserRole to avoid async in callback
       if (userFromSession) {
-        setTimeout(() => {
-          checkUserRole();
+        setTimeout(async () => {
+          await checkUserRole();
+          setLoading(false);
         }, 0);
+      } else {
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsAuthenticated(!!session);
-      if (session?.user) {
-        checkUserRole();
-      }
-      setLoading(false);
-    }).catch(e => {
-      console.error('Error getting session:', e);
-      setLoading(false);
-    });
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsAuthenticated(!!session);
+        if (session?.user) {
+          await checkUserRole();
+        }
+        setLoading(false);
+      })
+      .catch(e => {
+        console.error('Error getting session:', e);
+        setLoading(false);
+      });
 
     return () => {
-      if (subscription && typeof subscription.unsubscribe === 'function') {
-        subscription.unsubscribe();
-      }
+      data?.subscription?.unsubscribe();
     };
+
   }, [navigate, checkUserRole]);
 
   const signIn = async (email: string, password: string, rememberMe: boolean) => {
     try {
+      // Store rememberMe in localStorage
       localStorage.setItem('rememberMe', rememberMe.toString());
     } catch {
       // ignore storage errors
@@ -114,6 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(result.session);
       setIsAuthenticated(true);
       await checkUserRole();
+      navigate('/'); // Navigate to homepage on successful login
     }
     return result;
   };
@@ -125,6 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(result.data.session);
       setIsAuthenticated(true);
       await checkUserRole();
+      navigate('/'); // Navigate to homepage on successful signup
     }
     return result;
   };
@@ -185,3 +191,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
