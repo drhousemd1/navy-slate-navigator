@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { useAuthOperations } from './useAuthOperations';
 import { useUserProfile } from './useUserProfile';
@@ -35,8 +35,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // We use the static supabase client imported directly to avoid recreations
-
   // Hooks for auth and profile operations - use the static client implicitly now
   const { signIn: authSignIn, signUp: authSignUp, resetPassword: authResetPassword, updatePassword: authUpdatePassword } = useAuthOperations();
   const { updateNickname: profileUpdateNickname, getNickname, updateProfileImage: profileUpdateProfileImage, getProfileImage, getUserRole } = useUserProfile(user, setUser);
@@ -56,15 +54,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  // This useEffect sets up the auth state change listener and hydrates session once
   useEffect(() => {
     setLoading(true);
-    const { data } = supabase.auth.onAuthStateChange((event, newSession) => {
+
+    // onAuthStateChange event type can be extended string, we use string to avoid type error
+    const { data: subscription } = supabase.auth.onAuthStateChange((event: string, newSession: Session | null) => {
       const userFromSession = newSession?.user ?? null;
 
       console.log('Auth state changed:', event);
 
-      // Synchronous state update only here - no async calls
       setSession(newSession);
       setUser(userFromSession);
       setIsAuthenticated(!!userFromSession);
@@ -77,19 +75,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (userFromSession) {
-        // Defer async checkUserRole to avoid blocking UI
         setTimeout(() => {
           checkUserRole();
         }, 0);
       }
 
-      // Set loading false after all state is updated once
       if (event !== 'SIGNED_OUT') {
         setLoading(false);
       }
     });
 
-    // Immediately hydrate on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -104,14 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
-      // Defensive unsubscribe if available
-      if (typeof data?.subscription?.unsubscribe === 'function') {
-        data.subscription.unsubscribe();
+      if (subscription?.unsubscribe) {
+        subscription.unsubscribe();
       }
     };
   }, [navigate, checkUserRole]);
 
-  // signIn updates rememberMe locally then signs in with the static client
   const signIn = async (email: string, password: string, rememberMe: boolean) => {
     try {
       localStorage.setItem('rememberMe', rememberMe.toString());
@@ -160,7 +153,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Wrappers to expose profile / auth related methods
   const resetPassword = (email: string) => authResetPassword(email);
   const updatePassword = (newPassword: string) => authUpdatePassword(newPassword);
   const updateNickname = (nickname: string) => profileUpdateNickname(nickname);
@@ -197,3 +189,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

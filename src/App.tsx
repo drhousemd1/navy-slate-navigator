@@ -1,7 +1,8 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/auth"; 
@@ -20,8 +21,8 @@ import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
 import AdminTesting from "./pages/AdminTesting";
 
-// Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+// Protected route component using Outlet pattern
+const ProtectedRoute = () => {
   const { isAuthenticated, loading } = useAuth();
   
   if (loading) {
@@ -31,17 +32,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!isAuthenticated) {
-    return <Navigate to="/auth" />;
+    return <Navigate to="/auth" replace />;
   }
   
-  return <>{children}</>;
+  return <Outlet />;
 };
 
-// Admin-only route component
-const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+// Admin-only route component using Outlet pattern
+const AdminRoute = () => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   
-  // Add debugging for admin route
   console.log('AdminRoute check - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin, 'loading:', loading);
   
   if (loading) {
@@ -52,27 +52,27 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (!isAuthenticated) {
     console.log('AdminRoute - User not authenticated, redirecting to /auth');
-    return <Navigate to="/auth" />;
+    return <Navigate to="/auth" replace />;
   }
   
   // IMPORTANT: For testing purposes, temporarily allow all authenticated users to access admin pages
   // This allows us to test the admin testing page without requiring admin privileges
   console.log('AdminRoute - Allowing access to admin page for testing purposes');
-  return <>{children}</>;
+  return <Outlet />;
   
   /* Uncomment this when you want to restore proper admin checking
   if (!isAdmin) {
     console.log('AdminRoute - User not admin, redirecting to /');
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
   
   console.log('AdminRoute - User is admin, showing protected content');
-  return <>{children}</>;
+  return <Outlet />;
   */
 };
 
-// Global loading guard route for all protected routes
-const GlobalAuthGuard = ({ children }: { children: React.ReactNode }) => {
+// Global loading guard route for all protected routes (if you want an explicit global guard)
+const GlobalAuthGuard = () => {
   const { loading } = useAuth();
   
   if (loading) {
@@ -81,7 +81,7 @@ const GlobalAuthGuard = ({ children }: { children: React.ReactNode }) => {
     </div>;
   }
   
-  return <>{children}</>;
+  return <Outlet />;
 };
 
 // Create a client with aggressive caching to maintain state between page navigations
@@ -100,7 +100,6 @@ const queryClient = new QueryClient({
 
 // Configure routes with proper nesting to ensure context is available
 const AppRoutes = () => {
-  // Add debugging for routing using standard React hooks
   React.useEffect(() => {
     console.log('AppRoutes component initialized. Routes ready to be matched.');
   }, []);
@@ -123,7 +122,9 @@ const AppRoutes = () => {
           <Route path="/encyclopedia" element={<Encyclopedia />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/messages" element={<Messages />} />
-          <Route path="/admin-testing" element={<AdminRoute><AdminTesting /></AdminRoute>} />
+          <Route path="/admin-testing" element={<AdminRoute />}>
+            <Route index element={<AdminTesting />} />
+          </Route>
         </Route>
       </Route>
 
@@ -134,7 +135,6 @@ const AppRoutes = () => {
 
 // Main App component
 const App = () => {
-  // Use proper React hooks inside the component function
   React.useEffect(() => {
     console.log('App component initialized. React Router ready.');
   }, []);
@@ -152,3 +152,4 @@ const App = () => {
 };
 
 export default App;
+
