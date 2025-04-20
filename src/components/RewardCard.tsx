@@ -88,6 +88,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
       }
 
       const today = new Date();
+
       // Format week number as Year-ISOWeek (e.g., '2025-16')
       const oneJan = new Date(today.getFullYear(), 0, 1);
       const numberOfDays = Math.floor((today.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000));
@@ -110,7 +111,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
 
       setLocalUsageData(updatedUsage);
       // Invalidate the rewards query to refetch fresh data and update usageData prop
-      queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      await queryClient.invalidateQueries({ queryKey: ['rewards'] });
 
       toast({
         title: "Success",
