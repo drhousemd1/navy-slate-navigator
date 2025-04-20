@@ -58,7 +58,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(result.user);
       setSession(result.session);
       setIsAuthenticated(true);
-      // Navigation moved to effect
+      // Navigate home after login success if desired
+      navigate('/');
     }
     return result;
   };
@@ -69,7 +70,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(result.data.user);
       setSession(result.data.session);
       setIsAuthenticated(true);
-      // Navigation moved to effect
+      // Navigate home after signup if auto login is desired
+      navigate('/');
     }
     return result;
   };
@@ -85,7 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setIsAuthenticated(false);
       setIsAdmin(false);
-      // Navigate to auth page moved to effect
+      // Navigate to auth page after logout
+      navigate('/auth');
     } catch (error) {
       throw error;
     }
@@ -112,21 +115,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     setLoading(true);
-    // Setup auth state listener FIRST - synchronous updates only
+    // Setup auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-      setIsAuthenticated(!!newSession);
-      setLoading(false);
-      // Do NOT call navigate here
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setSession(null);
+        setIsAuthenticated(false);
+        setLoading(false);
+        navigate('/auth');
+      } else if (newSession) {
+        setUser(newSession.user);
+        setSession(newSession);
+        setIsAuthenticated(true);
+        setLoading(false);
+      } else {
+        setLoading(false);
+      }
     });
 
-    // THEN get existing session
+    // Then get existing session
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsAuthenticated(!!session);
+        if (session) {
+          setUser(session.user);
+          setSession(session);
+          setIsAuthenticated(true);
+        }
         setLoading(false);
       })
       .catch(() => {
@@ -136,18 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
-
-  // Separate effect for navigation after login/logout
-  useEffect(() => {
-    if (!loading) {
-      if (isAuthenticated) {
-        navigate('/');
-      } else {
-        navigate('/auth');
-      }
-    }
-  }, [isAuthenticated, loading, navigate]);
+  }, [navigate]);
 
   useEffect(() => {
     if (isAuthenticated) {
