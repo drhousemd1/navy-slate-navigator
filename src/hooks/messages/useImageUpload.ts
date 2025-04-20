@@ -1,3 +1,6 @@
+
+// Fix import - replace supabase with getSupabaseClient
+
 import { useState } from 'react';
 import { getSupabaseClient } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,10 +15,11 @@ export const useImageUpload = () => {
 
     setIsUploading(true);
     try {
+      const supabase = getSupabaseClient();
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       
-      const { data, error } = await getSupabaseClient().storage
+      const { data, error } = await supabase.storage
         .from('message_images')
         .upload(`${user.id}/${fileName}`, file);
       
@@ -24,7 +28,7 @@ export const useImageUpload = () => {
         throw error;
       }
       
-      const { data: { publicUrl } } = getSupabaseClient().storage
+      const { data: { publicUrl } } = supabase.storage
         .from('message_images')
         .getPublicUrl(`${user.id}/${fileName}`);
       

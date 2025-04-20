@@ -1,40 +1,38 @@
+
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useTasks } from '@/hooks/useTasksQuery';
-import TaskCard from '@/components/task/TaskCard';
+import { useTasksQuery } from '@/hooks/useTasksQuery'; // useTasks does not exist, replaced by useTasksQuery
+import TaskCard from '@/components/TaskCard'; // Fixed invalid path: was '@/components/task/TaskCard'
 import TaskEditorModal from '@/components/task/TaskEditorModal';
 import AppLayout from '@/components/AppLayout';
-import { TaskData } from '@/contexts/TasksContext';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { toast } from '@/hooks/use-toast';
 import { getSupabaseClient } from '@/integrations/supabase/client';
 
 const Tasks: React.FC = () => {
-  const { tasks, createTask, updateTask, deleteTask, isLoading, error } = useTasks();
+  const { tasks, saveTask, deleteTask, isLoading, error, refetchTasks } = useTasksQuery(); // changed to match useTasksQuery export
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<TaskData | null>(null);
+  const [selectedTask, setSelectedTask] = useState(null);
 
   const handleOpenEditor = () => {
     setSelectedTask(null);
     setIsEditorOpen(true);
   };
 
-  const handleEditTask = (task: TaskData) => {
+  const handleEditTask = (task: any) => {
     setSelectedTask(task);
     setIsEditorOpen(true);
   };
 
-  const handleSaveTask = async (taskData: TaskData) => {
+  const handleSaveTask = async (taskData: any) => {
     try {
       if (selectedTask) {
-        await updateTask(selectedTask.id as string, taskData);
+        await saveTask({ ...taskData, id: selectedTask.id });
         toast({
           title: 'Task Updated',
           description: `Task "${taskData.title}" updated successfully.`,
         });
       } else {
-        await createTask(taskData);
+        await saveTask(taskData);
         toast({
           title: 'Task Created',
           description: `Task "${taskData.title}" created successfully.`,
@@ -142,7 +140,7 @@ const Tasks: React.FC = () => {
                         {...provided.dragHandleProps}
                       >
                         <TaskCard
-                          task={task}
+                          {...task}
                           onEdit={() => handleEditTask(task)}
                           onDelete={() => handleDeleteTask(task.id as string)}
                         />
@@ -167,3 +165,4 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
+

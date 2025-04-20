@@ -16,7 +16,8 @@ const TASK_COMPLETIONS_KEY = 'task-completions';
 // Fetch all tasks
 export const fetchTasks = async (): Promise<Task[]> => {
   try {
-    const { data, error } = await getSupabaseClient()
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
       .from('tasks')
       .select('*')
       .order('created_at', { ascending: true });
@@ -74,7 +75,10 @@ export const useTasksQuery = () => {
 
   // Mutation for saving a task (create or update)
   const saveTaskMutation = useMutation({
-    mutationFn: saveTask,
+    mutationFn: async (taskData: Partial<Task>) => {
+      const supabase = getSupabaseClient();
+      return saveTask(taskData);
+    },
     onSuccess: (savedTask) => {
       queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
       toast({
@@ -93,8 +97,9 @@ export const useTasksQuery = () => {
 
   // Mutation for toggling task completion
   const toggleCompletionMutation = useMutation({
-    mutationFn: ({ taskId, completed }: { taskId: string, completed: boolean }) => 
-      updateTaskCompletion(taskId, completed),
+    mutationFn: ({ taskId, completed }: { taskId: string, completed: boolean }) => {
+      return updateTaskCompletion(taskId, completed);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
       queryClient.invalidateQueries({ queryKey: [TASK_COMPLETIONS_KEY] });
@@ -114,7 +119,9 @@ export const useTasksQuery = () => {
 
   // Mutation for deleting a task
   const deleteTaskMutation = useMutation({
-    mutationFn: deleteTask,
+    mutationFn: (taskId: string) => {
+      return deleteTask(taskId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
       toast({

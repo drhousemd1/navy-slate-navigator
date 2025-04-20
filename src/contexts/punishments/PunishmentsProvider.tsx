@@ -1,33 +1,74 @@
-
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { PunishmentsContextType } from './types';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { usePunishmentOperations } from './usePunishmentOperations';
+
+interface Punishment {
+  id: string;
+  title: string;
+  points: number;
+  // ... other properties as needed
+}
+
+interface PunishmentsContextType {
+  punishments: Punishment[];
+  punishmentHistory: any[];
+  loading: boolean;
+  error: Error | null;
+  applyPunishment: (id: string, points: number) => Promise<void>;
+  fetchPunishments: () => Promise<void>;
+}
 
 const PunishmentsContext = createContext<PunishmentsContextType | undefined>(undefined);
 
 export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const operations = usePunishmentOperations();
-  const [initialLoadAttempted, setInitialLoadAttempted] = useState(false);
-  
-  useEffect(() => {
-    // Only attempt to fetch on first mount, don't refetch on rerenders
-    if (!initialLoadAttempted) {
-      operations.fetchPunishments();
-      setInitialLoadAttempted(true);
+  const { applyPunishment } = usePunishmentOperations();
+  const [punishments, setPunishments] = useState<Punishment[]>([]);
+  const [punishmentHistory, setPunishmentHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  // Fetch punishments from Supabase
+  const fetchPunishments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const supabase = (await import('@/integrations/supabase/client')).getSupabaseClient();
+      const { data, error: fetchError } = await supabase.from('punishments').select('*');
+      if (fetchError) {
+        setError(fetchError);
+      } else {
+        setPunishments(data || []);
+      }
+    } catch (err: any) {
+      setError(err);
+    } finally {
+      setLoading(false);
     }
-  }, [initialLoadAttempted]);
+  };
+
+  useEffect(() => {
+    fetchPunishments();
+  }, []);
 
   return (
-    <PunishmentsContext.Provider value={operations}>
+    <PunishmentsContext.Provider
+      value={{
+        punishments,
+        punishmentHistory,
+        loading,
+        error,
+        applyPunishment,
+        fetchPunishments,
+      }}
+    >
       {children}
     </PunishmentsContext.Provider>
   );
 };
 
-export const usePunishments = (): PunishmentsContextType => {
+export const usePunishmentsContext = () => {
   const context = useContext(PunishmentsContext);
-  if (context === undefined) {
-    throw new Error('usePunishments must be used within a PunishmentsProvider');
+  if (!context) {
+    throw new Error('usePunishmentsContext must be used within a PunishmentsProvider');
   }
   return context;
 };
