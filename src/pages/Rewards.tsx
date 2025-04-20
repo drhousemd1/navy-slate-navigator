@@ -70,12 +70,14 @@ const Rewards: React.FC = () => {
   // Handle buying a reward
   const handleBuyReward = async (id: string, cost: number) => {
     await buyReward(id, cost);
+    // Optional: Refresh rewards supply and points after buying
+    await refetchRewards();
   };
 
   // Handle using a reward
   const handleUseReward = async (id: string) => {
     await useReward(id);
-    // Refresh rewards after usage to get updated usageData for UI
+    // Refresh rewards after usage to update usageData on UI and reflect circle fill
     await refetchRewards();
   };
 
@@ -93,18 +95,12 @@ const Rewards: React.FC = () => {
             <p className="text-white mb-4">No rewards found. Create your first reward!</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-4 w-full max-w-full">
-            {rewards.map((reward, index) => (
-              <div key={reward.id} className="slow-fade-in w-full">
-                <RewardsList 
-                  rewards={[reward]} 
-                  onEdit={() => handleEdit(index)}
-                  onBuy={handleBuyReward}
-                  onUse={() => handleUseReward(reward.id)}
-                />
-              </div>
-            ))}
-          </div>
+          <RewardsList 
+            rewards={rewards} 
+            onEdit={handleEdit}
+            onBuy={handleBuyReward}
+            onUse={handleUseReward}
+          />
         )}
         
         <RewardEditor
@@ -112,7 +108,7 @@ const Rewards: React.FC = () => {
           onClose={closeEditor}
           rewardData={currentReward}
           onSave={handleSave}
-          onDelete={currentRewardIndex !== null ? handleDelete : undefined}
+          onDelete={currentRewardIndex !== null ? () => handleDelete(currentRewardIndex) : undefined}
         />
       </div>
     </AppLayout>
@@ -120,4 +116,3 @@ const Rewards: React.FC = () => {
 };
 
 export default Rewards;
-
