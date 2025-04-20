@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
@@ -8,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const useRewardOperations = () => {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const { totalPoints, setTotalPoints, updatePointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
-  
+
   const { 
     data: fetchedRewards = [], 
     isLoading,
@@ -291,7 +292,10 @@ export const useRewardOperations = () => {
         const updatedRewards = [...rewards];
         updatedRewards[rewardIndex] = { ...reward, supply: updatedSupply };
         setRewards(updatedRewards);
-        
+
+        // REFRESH REWARDS TO UPDATE usageData for accurate tracker
+        await refetchRewards();
+
         toast({
           title: "Reward Used",
           description: `You used ${reward.title}`,
@@ -306,7 +310,7 @@ export const useRewardOperations = () => {
         variant: "destructive",
       });
     }
-  }, [rewards]);
+  }, [rewards, refetchRewards]);
 
   return {
     rewards,
