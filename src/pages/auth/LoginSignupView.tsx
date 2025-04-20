@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LogIn, AlertCircle, RefreshCw } from 'lucide-react';
@@ -13,7 +12,8 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
   const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(() => {
+
+  const [rememberMe, setRememberMe] = useState<boolean>(() => {
     try {
       return localStorage.getItem('rememberMe') === 'true';
     } catch {
@@ -22,6 +22,22 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
   });
 
   const [loadingInternally, setLoadingInternally] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rememberMe', rememberMe.toString());
+    } catch {
+      // ignore
+    }
+  }, [rememberMe]);
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFormState({ email: e.target.value });
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFormState({ password: e.target.value });
+  };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,46 +62,51 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
       <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
-        <h1 
+        <h1
           className="text-2xl font-bold text-center text-white cursor-default"
           onClick={handleTitleClick}
         >
           Welcome to the Rewards System
         </h1>
-        
-        <form onSubmit={handleFormSubmit} className="space-y-4">
+
+        <form onSubmit={handleFormSubmit} className="space-y-4" autoComplete="off">
           <div className="space-y-2">
-            <label className="text-white text-sm">Email</label>
+            <label className="text-white text-sm" htmlFor="email">Email</label>
             <Input
+              id="email"
               type="email"
               value={formState.email}
-              onChange={(e) => updateFormState({ email: e.target.value })}
+              onChange={handleEmailChange}
               required
               className="bg-navy border-light-navy text-white"
               placeholder="your@email.com"
               autoComplete="email"
+              spellCheck={false}
             />
           </div>
-          
+
           <div className="space-y-2">
-            <label className="text-white text-sm">Password</label>
+            <label className="text-white text-sm" htmlFor="password">Password</label>
             <div className="relative">
               <Input
+                id="password"
                 type={showPassword ? "text" : "password"}
                 value={formState.password}
-                onChange={(e) => updateFormState({ password: e.target.value })}
+                onChange={handlePasswordChange}
                 required
                 className="bg-navy border-light-navy text-white pr-10"
                 placeholder="********"
                 minLength={6}
                 autoComplete={currentView === "login" ? "current-password" : "new-password"}
+                spellCheck={false}
               />
-              <Button 
-                type="button" 
-                variant="ghost" 
+              <Button
+                type="button"
+                variant="ghost"
                 size="sm"
                 className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 text-gray-400 hover:text-white"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? "Hide" : "Show"}
               </Button>
@@ -100,14 +121,14 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 />
                 <label
                   htmlFor="rememberMe"
-                  className="text-sm text-gray-300 cursor-pointer"
+                  className="text-sm text-gray-300 cursor-pointer select-none"
                 >
                   Remember Me
                 </label>
               </div>
-              <Button 
-                type="button" 
-                variant="link" 
+              <Button
+                type="button"
+                variant="link"
                 className="text-sm text-blue-400 hover:text-blue-300 p-0"
                 onClick={() => onViewChange("forgot-password")}
               >
@@ -115,14 +136,14 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
               </Button>
             </div>
           </div>
-          
+
           {formState.loginError && (
-            <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded flex items-start gap-2">
+            <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded flex items-start gap-2" role="alert" aria-live="assertive">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span>{formState.loginError}</span>
             </div>
           )}
-          
+
           {debugMode && (
             <div className="text-xs text-gray-400 p-2 border border-gray-700 rounded bg-gray-900/50 overflow-auto">
               <p>Debug mode enabled</p>
@@ -144,11 +165,12 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
               </Button>
             </div>
           )}
-          
+
           <Button
             type="submit"
             className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center"
             disabled={loadingInternally || formState.loading}
+            aria-live="polite"
           >
             <LogIn className="w-4 h-4 mr-2" />
             {loadingInternally || formState.loading ? 'Signing In...' : 'Sign In'}
