@@ -35,6 +35,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Load 'rememberMe' flag from localStorage once during initialization
+  const [initialized, setInitialized] = React.useState(false);
+  const [client, setClient] = React.useState(supabase);
+
+  // Update client based on rememberMe before mounting listeners
+  useEffect(() => {
+    let rememberMeFlag = false;
+    try {
+      rememberMeFlag = localStorage.getItem('rememberMe') === 'true';
+    } catch {
+      rememberMeFlag = false;
+    }
+    // Initialize supabase client with persistSession set accordingly
+    const initializedClient = initializeSupabaseClient(rememberMeFlag);
+    setClient(initializedClient);
+    setInitialized(true);
+  }, []);
+
+  // Hooks for auth and profile operations use the client instance, so override the hooks after client is ready
   const { signIn: authSignIn, signUp: authSignUp, resetPassword: authResetPassword, updatePassword: authUpdatePassword } = useAuthOperations();
   const { updateNickname: profileUpdateNickname, getNickname, updateProfileImage: profileUpdateProfileImage, getProfileImage, getUserRole } = useUserProfile(user, setUser);
 
@@ -42,7 +61,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkUserRole = async () => {
     try {
       if (user) {
-        // Directly read role from user metadata
         const role = user.user_metadata?.role;
         setIsAdmin(role === 'admin');
       } else {
@@ -55,6 +73,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string, rememberMe: boolean) => {
+    // Update the rememberMe flag in localStorage and re-initialize supabase client accordingly
+    try {
+      localStorage.setItem('rememberMe', rememberMe.toString());
+    } catch {}
+
+    // Reinitialize supabase client with the updated persistence
+    const newClient = initializeSupabaseClient(rememberMe);
+    setClient(newClient);
+
     const result = await authSignIn(email, password, rememberMe);
     if (!result.error && result.user && result.session) {
       setUser(result.user);
@@ -80,11 +107,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await clearAuthState();
 
-      // Use supabase client signOut
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Sign-out error:', error);
-        throw error;
+      if (client.auth) {
+        // Use client signOut method
+        const { error } = await client.auth.signOut();
+        if (error) {
+          console.error('Sign-out error:', error);
+          throw error;
+        }
+      } else {
+        console.error('Supabase client auth not initialized.');
       }
 
       setUser(null);
@@ -94,7 +125,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
 
       navigate('/auth');
-      // No need to reload the window here, React Router handles navigation cleanly
     } catch (error: any) {
       console.error('Sign-out failed:', error);
       throw error;
@@ -107,40 +137,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateNickname = (nickname: string) => profileUpdateNickname(nickname);
   const updateProfileImage = (imageUrl: string) => profileUpdateProfileImage(imageUrl);
 
-  // Setup auth state listener and session initialization
   useEffect(() => {
-    setLoading(true);
-    // Use the existing supabase client directly
-    const client = supabase;
+    if (!initialized) {
+      return; // don't initialize the listener until client is ready
+    }
 
+    setLoading(true);
+
+    // Set up the auth state change listener
     const { data } = client.auth.onAuthStateChange((event, newSession) => {
       // Synchronous updates only here to avoid deadlocks
       const userFromSession = newSession?.user ?? null;
 
-      // Debug log
       console.log('Auth state changed:', event);
 
       setSession(newSession);
       setUser(userFromSession);
       setIsAuthenticated(!!userFromSession);
 
+      // Reset isAdmin and loading on SIGNED_OUT immediately
       if (event === 'SIGNED_OUT') {
         setIsAdmin(false);
         setLoading(false);
         navigate('/auth');
       }
 
+      // Defer calls that require async side effects outside callback
       if (userFromSession) {
         setTimeout(() => {
           checkUserRole();
         }, 0);
       }
 
-      // Mark loading false after updates
-      setLoading(false);
+      // We unify loading state change here to prevent multiple setLoading calls and reduce re-renders
+      if (event !== 'SIGNED_OUT') {
+        setLoading(false);
+      }
     });
-
-    const subscription = data.subscription;
 
     // Get the current session on mount, setting state
     client.auth.getSession().then(({ data: { session } }) => {
@@ -157,9 +190,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
-      subscription.unsubscribe();
+      // Defensive: unsubscribe can be undefined in some supabase versions, check type
+      if (typeof data?.subscription?.unsubscribe === 'function') {
+        data.subscription.unsubscribe();
+      }
     };
-  }, [navigate]);
+  }, [client, initialized, navigate]);
 
   return (
     <AuthContext.Provider value={{
