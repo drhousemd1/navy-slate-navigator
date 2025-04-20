@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
+import { Session, User } from '@supabase/supabase-js';
 import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { useAuthOperations } from './useAuthOperations';
 import { useUserProfile } from './useUserProfile';
@@ -35,14 +35,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Hooks for auth and profile operations - use the static client implicitly now
   const { signIn: authSignIn, signUp: authSignUp, resetPassword: authResetPassword, updatePassword: authUpdatePassword } = useAuthOperations();
   const { updateNickname: profileUpdateNickname, getNickname, updateProfileImage: profileUpdateProfileImage, getProfileImage, getUserRole } = useUserProfile(user, setUser);
 
   const checkUserRole = useCallback(async () => {
     try {
       if (user) {
-        // Use user_metadata role safely
         const role = user.user_metadata?.role;
         setIsAdmin(role === 'admin');
       } else {
@@ -57,8 +55,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     setLoading(true);
 
-    // onAuthStateChange returns { subscription } now. We must unsubscribe on subscription.
-    const { subscription } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, newSession: Session | null) => {
+    // onAuthStateChange returns { data: { subscription } }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, newSession: Session | null) => {
       const userFromSession = newSession?.user ?? null;
 
       console.log('Auth state changed:', event);
@@ -80,10 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }, 0);
       }
 
-      // Ensure loading false is set after state updates
-      if (event !== 'SIGNED_OUT') {
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
