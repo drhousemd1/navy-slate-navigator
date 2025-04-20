@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 import { UserRole } from './types';
 
 export function useRoleManagement(user: User | null) {
@@ -20,6 +20,8 @@ export function useRoleManagement(user: User | null) {
     try {
       console.log('useRoleManagement: Checking user role for', user.email);
       
+      const supabase = getSupabaseClient();
+
       // First check if user has an admin role
       const { data: adminCheck, error: adminError } = await supabase
         .rpc('has_role', {

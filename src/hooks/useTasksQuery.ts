@@ -1,6 +1,5 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { 
   Task, 
@@ -17,7 +16,7 @@ const TASK_COMPLETIONS_KEY = 'task-completions';
 // Fetch all tasks
 export const fetchTasks = async (): Promise<Task[]> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('tasks')
       .select('*')
       .order('created_at', { ascending: true });

@@ -1,5 +1,4 @@
-
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useMessageSend = () => {
@@ -15,7 +14,7 @@ export const useMessageSend = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('messages')
         .insert({
           sender_id: user.id,

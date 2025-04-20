@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabaseClient } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { getMondayBasedDay } from "./utils";
 
@@ -59,7 +59,7 @@ const initializeUsageDataArray = (task: Task): number[] => {
 
 export const fetchTasks = async (): Promise<Task[]> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('tasks')
       .select('*')
       .order('created_at', { ascending: true });
@@ -108,7 +108,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     const now = new Date().toISOString();
     
     if (task.id) {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('tasks')
         .update({
           title: task.title,
@@ -140,7 +140,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
       if (error) throw error;
       return data as Task;
     } else {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('tasks')
         .insert({
           title: task.title,
@@ -184,7 +184,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
 
 export const updateTaskCompletion = async (id: string, completed: boolean): Promise<boolean> => {
   try {
-    const { data: taskData, error: taskError } = await supabase
+    const { data: taskData, error: taskError } = await getSupabaseClient()
       .from('tasks')
       .select('*')
       .eq('id', id)
@@ -209,11 +209,11 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
       const dayOfWeek = getCurrentDayOfWeek();
       usage_data[dayOfWeek] = (usage_data[dayOfWeek] || 0) + 1;
       
-      const { data: authData } = await supabase.auth.getUser();
+      const { data: authData } = await getSupabaseClient().auth.getUser();
       const userId = authData.user?.id;
       
       if (userId) {
-        const { error: historyError } = await supabase.rpc('record_task_completion', {
+        const { error: historyError } = await getSupabaseClient().rpc('record_task_completion', {
           task_id_param: id,
           user_id_param: userId
         }) as unknown as { error: Error | null };
@@ -229,7 +229,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     const dayOfWeek = getCurrentDayOfWeek();
     const isFullyCompleted = usage_data[dayOfWeek] >= (task.frequency_count || 1);
     
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('tasks')
       .update({ 
         completed: isFullyCompleted,
@@ -243,7 +243,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     if (completed) {
       try {
         const taskPoints = task.points || 0;
-        const { data: authData } = await supabase.auth.getUser();
+        const { data: authData } = await getSupabaseClient().auth.getUser();
         const userId = authData.user?.id;
         
         if (!userId) {
@@ -251,7 +251,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           return true;
         }
         
-        const { data: profileData, error: profileError } = await supabase
+        const { data: profileData, error: profileError } = await getSupabaseClient()
           .from('profiles')
           .select('points')
           .eq('id', userId)
@@ -261,7 +261,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           if (profileError.code === 'PGRST116') {
             console.log('No profile found, creating one with initial points:', taskPoints);
             
-            const { error: createError } = await supabase
+            const { error: createError } = await getSupabaseClient()
               .from('profiles')
               .insert([{ id: userId, points: taskPoints }]);
               
@@ -287,7 +287,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         const newPoints = currentPoints + taskPoints;
         console.log('Updating profile points from', currentPoints, 'to', newPoints);
         
-        const { error: pointsError } = await supabase
+        const { error: pointsError } = await getSupabaseClient()
           .from('profiles')
           .update({ points: newPoints })
           .eq('id', userId);
@@ -327,7 +327,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
 
 export const deleteTask = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('tasks')
       .delete()
       .eq('id', id);
@@ -350,7 +350,7 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly'): Promi
   try {
     const today = getLocalDateString();
     
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('tasks')
       .update({ 
         completed: false

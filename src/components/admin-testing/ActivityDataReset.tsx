@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -26,10 +27,12 @@ const ActivityDataReset = () => {
         { name: 'punishment_history', column: 'id' }
       ];
 
+      const supabase = getSupabaseClient();
+
       for (const { name, column } of tables) {
         // Type assertion to ensure name is treated as a valid table name
         const { error, count } = await supabase
-          .from(name as any)
+          .from(name)
           .delete()
           .neq(column, '00000000-0000-0000-0000-000000000000')
           .select('count');
@@ -140,3 +143,4 @@ const ActivityDataReset = () => {
 };
 
 export default ActivityDataReset;
+

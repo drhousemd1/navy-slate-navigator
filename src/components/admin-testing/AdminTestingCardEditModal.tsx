@@ -14,7 +14,7 @@ import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
 import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 
 interface AdminTestingCardEditModalProps {
   isOpen: boolean;

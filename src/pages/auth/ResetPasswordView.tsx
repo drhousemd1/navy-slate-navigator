@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 
 export const ResetPasswordView: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -18,13 +17,12 @@ export const ResetPasswordView: React.FC = () => {
   const { updatePassword } = useAuth();
   const navigate = useNavigate();
 
-  // Check for active session on component mount
   useEffect(() => {
     console.log('ResetPasswordView mounted, checking for active session...');
     
     const checkSession = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
+        const { data } = await getSupabaseClient().auth.getSession();
         console.log('Session check result:', data?.session ? 'Active session found' : 'No active session');
         
         if (data?.session) {
@@ -49,7 +47,6 @@ export const ResetPasswordView: React.FC = () => {
     setError(null);
     
     try {
-      // Validate passwords
       if (!newPassword) {
         throw new Error('Please enter a new password.');
       }
@@ -64,7 +61,6 @@ export const ResetPasswordView: React.FC = () => {
       
       console.log('Attempting to update password...');
       
-      // Update the user's password using our context function
       const { error } = await updatePassword(newPassword);
       
       if (error) {
@@ -74,17 +70,14 @@ export const ResetPasswordView: React.FC = () => {
       
       console.log('Password updated successfully');
       
-      // Show success message and redirect
       setSuccess(true);
       toast({
         title: 'Password reset successful',
         description: 'Your password has been reset. You will be redirected to login.',
       });
       
-      // Sign out the user to clear the temporary session
-      await supabase.auth.signOut();
+      await getSupabaseClient().auth.signOut();
       
-      // Redirect to login after a short delay
       setTimeout(() => {
         navigate('/auth');
       }, 3000);

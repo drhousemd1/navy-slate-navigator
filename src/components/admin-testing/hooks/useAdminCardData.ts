@@ -1,7 +1,8 @@
 
+// Only updated import and supabase usage in async methods
 import { useState, useEffect } from 'react';
 import { AdminTestingCardData } from '../defaultAdminTestingCards';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { Json } from '@/integrations/supabase/types';
 
@@ -93,13 +94,15 @@ export const useAdminCardData = ({
       try {
         setIsLoading(true);
         console.log("Fetching card data with ID:", id);
-        
+
+        const supabase = getSupabaseClient();
+
         const { data, error } = await supabase
           .from('admin_testing_cards')
           .select('*')
           .eq('id', id)
           .single();
-        
+
         if (error) {
           if (error.code !== 'PGRST116') { // Not found is not a critical error
             console.error('Error fetching card data:', error);

@@ -1,6 +1,5 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getMondayBasedDay } from '@/lib/utils';
 
@@ -44,7 +43,7 @@ const RULE_VIOLATIONS_KEY = 'rule_violations';
 // Fetch all rules
 export const fetchRules = async (): Promise<Rule[]> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('rules')
       .select('*')
       .order('created_at', { ascending: false });
@@ -92,10 +91,10 @@ export const createRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
       ...(ruleWithoutId.icon_name && { icon_name: ruleWithoutId.icon_name }),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: (await supabase.auth.getUser()).data.user?.id,
+      user_id: (await getSupabaseClient().auth.getUser()).data.user?.id,
     };
     
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('rules')
       .insert(newRule)
       .select()
@@ -116,7 +115,7 @@ export const updateRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
       throw new Error('Rule ID is required for updates');
     }
     
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('rules')
       .update({
         title: ruleData.title,
@@ -152,7 +151,7 @@ export const updateRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
 // Delete a rule
 export const deleteRule = async (ruleId: string): Promise<void> => {
   try {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('rules')
       .delete()
       .eq('id', ruleId);
@@ -168,7 +167,7 @@ export const deleteRule = async (ruleId: string): Promise<void> => {
 export const recordRuleViolation = async (ruleId: string): Promise<{ updatedRule: Rule, violation: RuleViolation }> => {
   try {
     // First, get the current rule to update its usage data
-    const { data: ruleData, error: ruleError } = await supabase
+    const { data: ruleData, error: ruleError } = await getSupabaseClient()
       .from('rules')
       .select('*')
       .eq('id', ruleId)
@@ -184,7 +183,7 @@ export const recordRuleViolation = async (ruleId: string): Promise<{ updatedRule
     newUsageData[currentDayOfWeek] = 1;
     
     // Update the rule with new usage data
-    const { data: updatedRuleData, error: updateError } = await supabase
+    const { data: updatedRuleData, error: updateError } = await getSupabaseClient()
       .from('rules')
       .update({
         usage_data: newUsageData,
@@ -207,7 +206,7 @@ export const recordRuleViolation = async (ruleId: string): Promise<{ updatedRule
       week_number: `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`
     };
     
-    const { data: violationRecord, error: violationError } = await supabase
+    const { data: violationRecord, error: violationError } = await getSupabaseClient()
       .from('rule_violations')
       .insert(violationData)
       .select()

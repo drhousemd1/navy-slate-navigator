@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
 import { toast } from '@/hooks/use-toast';
 import { usePointsManagement } from './usePointsManagement';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 
 export const useRewardOperations = () => {
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -88,7 +88,7 @@ export const useRewardOperations = () => {
         
         console.log("[RewardsContext] Updating only these fields:", Object.keys(fieldsToUpdate));
         
-        const { data, error } = await supabase
+        const { data, error } = await getSupabaseClient()
           .from('rewards')
           .update(fieldsToUpdate)
           .eq('id', existingReward.id)
@@ -272,7 +272,7 @@ export const useRewardOperations = () => {
         const dayOfWeek = today.getDay(); // 0-6, where 0 is Sunday
         const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
         
-        const { error: usageError } = await supabase
+        const { error: usageError } = await getSupabaseClient()
           .from('reward_usage')
           .insert({
             reward_id: reward.id,

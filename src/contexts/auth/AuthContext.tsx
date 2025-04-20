@@ -1,4 +1,3 @@
-
 // Fixes to AuthContext:
 // - Use getSupabaseClient to get the client singleton
 // - Fix destructuring on onAuthStateChange return value
@@ -69,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
 
     // Setup the onAuthStateChange listener with proper destructuring and type handling
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, newSession: Session | null) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       const userFromSession = newSession?.user ?? null;
 
       console.log('Auth state changed:', event);
@@ -78,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userFromSession);
       setIsAuthenticated(!!userFromSession);
 
-      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      if (event === 'SIGNED_OUT') {
         setIsAdmin(false);
         setLoading(false);
         navigate('/auth');
@@ -86,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (userFromSession) {
-        await checkUserRole();
+        checkUserRole();
       }
 
       setLoading(false);

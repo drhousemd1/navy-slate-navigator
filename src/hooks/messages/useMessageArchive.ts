@@ -1,5 +1,4 @@
-
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 
 export const useMessageArchive = () => {
   // Archive messages older than a certain date (e.g., 30 days)

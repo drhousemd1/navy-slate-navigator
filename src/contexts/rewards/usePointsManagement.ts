@@ -1,6 +1,5 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -18,7 +17,7 @@ export const usePointsManagement = () => {
     try {
       console.log('Fetching points for authenticated user:', user.id);
       
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('profiles')
         .select('points')
         .eq('id', user.id)
@@ -29,7 +28,7 @@ export const usePointsManagement = () => {
           // Profile doesn't exist yet, create one
           console.log('No profile found for user, creating one with 0 points');
           
-          const { data: newProfileData, error: createError } = await supabase
+          const { data: newProfileData, error: createError } = await getSupabaseClient()
             .from('profiles')
             .insert({ id: user.id, points: 0 })
             .select()
@@ -80,7 +79,7 @@ export const usePointsManagement = () => {
       console.log('Updating points for user:', user.id, 'to', newPoints);
       
       // First check if the profile exists with a more reliable method
-      const { data: existingProfile, error: fetchError } = await supabase
+      const { data: existingProfile, error: fetchError } = await getSupabaseClient()
         .from('profiles')
         .select('id')
         .eq('id', user.id);
@@ -93,7 +92,7 @@ export const usePointsManagement = () => {
       // If profile exists, update it, otherwise create it
       if (existingProfile && existingProfile.length > 0) {
         // Update existing profile
-        const { error: updateError } = await supabase
+        const { error: updateError } = await getSupabaseClient()
           .from('profiles')
           .update({ points: newPoints })
           .eq('id', user.id);
@@ -104,7 +103,7 @@ export const usePointsManagement = () => {
         }
       } else {
         // Create new profile
-        const { error: insertError } = await supabase
+        const { error: insertError } = await getSupabaseClient()
           .from('profiles')
           .insert({ id: user.id, points: newPoints });
         

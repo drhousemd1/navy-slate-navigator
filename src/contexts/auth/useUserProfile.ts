@@ -1,6 +1,6 @@
 
 import { User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export function useUserProfile(user: User | null, setUser: (user: User | null) => void) {
@@ -68,6 +68,8 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
   const updateUserRole = async (role: string) => {
     if (user) {
       try {
+        const supabase = getSupabaseClient();
+
         const { error } = await supabase.auth.updateUser({
           data: { 
             role 

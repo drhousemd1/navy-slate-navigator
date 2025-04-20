@@ -1,6 +1,5 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 import { Reward } from '@/lib/rewardUtils';
 import { toast } from '@/hooks/use-toast';
 
@@ -10,7 +9,7 @@ const REWARDS_KEY = 'rewards';
 // Get rewards count for loading expectations
 export const getRewardsCount = async (): Promise<number> => {
   try {
-    const { count, error } = await supabase
+    const { count, error } = await getSupabaseClient()
       .from('rewards')
       .select('*', { count: 'exact', head: true })
       .abortSignal(AbortSignal.timeout(3000));
@@ -26,7 +25,7 @@ export const getRewardsCount = async (): Promise<number> => {
 // Fetch all rewards
 export const fetchRewards = async (): Promise<Reward[]> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('rewards')
       .select('*')
       .order('id', { ascending: true });
@@ -42,7 +41,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
 // Create a new reward
 export const createReward = async (rewardData: Partial<Reward> & { title: string }): Promise<Reward> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('rewards')
       .insert(rewardData)
       .select()
@@ -59,7 +58,7 @@ export const createReward = async (rewardData: Partial<Reward> & { title: string
 // Update an existing reward
 export const updateReward = async ({ id, ...data }: Partial<Reward> & { id: string }): Promise<void> => {
   try {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('rewards')
       .update(data)
       .eq('id', id);
@@ -74,7 +73,7 @@ export const updateReward = async ({ id, ...data }: Partial<Reward> & { id: stri
 // Delete a reward
 export const deleteReward = async (id: string): Promise<void> => {
   try {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('rewards')
       .delete()
       .eq('id', id);
@@ -89,7 +88,7 @@ export const deleteReward = async (id: string): Promise<void> => {
 // Update reward supply
 export const updateRewardSupply = async (id: string, supply: number): Promise<void> => {
   try {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('rewards')
       .update({ supply })
       .eq('id', id);
@@ -104,7 +103,7 @@ export const updateRewardSupply = async (id: string, supply: number): Promise<vo
 // Fetch profile points
 export const fetchProfilePoints = async (userId: string): Promise<number> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('profiles')
       .select('points')
       .eq('id', userId)
@@ -121,7 +120,7 @@ export const fetchProfilePoints = async (userId: string): Promise<number> => {
 // Update profile points
 export const updateProfilePoints = async (userId: string, points: number): Promise<void> => {
   try {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('profiles')
       .update({ points })
       .eq('id', userId);
@@ -135,7 +134,7 @@ export const updateProfilePoints = async (userId: string, points: number): Promi
 
 export const useRewardsQuery = () => {
   const queryClient = useQueryClient();
-  const userId = supabase.auth.getUser().then(res => res.data.user?.id || '');
+  const userId = getSupabaseClient().auth.getUser().then(res => res.data.user?.id || '');
   
   // Query for fetching all rewards
   const {
@@ -366,7 +365,7 @@ export const useRewardsQuery = () => {
       await updateRewardSupply(rewardId, reward.supply - 1);
       
       // Record reward usage
-      const { error } = await supabase.from('reward_usage').insert({
+      const { error } = await getSupabaseClient().from('reward_usage').insert({
         reward_id: rewardId,
         day_of_week: new Date().getDay(),
         week_number: `${new Date().getFullYear()}-${Math.floor(new Date().getDate() / 7)}`,
