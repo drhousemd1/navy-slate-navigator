@@ -79,7 +79,7 @@ const Rewards: React.FC = () => {
 
   return (
     <AppLayout onAddNewItem={handleAddNewReward}>
-      <div className="p-4 pt-6">
+      <div className="p-4 pt-6 w-full max-w-full">
         <RewardsHeader />
         
         {isLoading ? (
@@ -91,9 +91,9 @@ const Rewards: React.FC = () => {
             <p className="text-white mb-4">No rewards found. Create your first reward!</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-4 max-w-3xl mx-auto">
+          <div className="flex flex-col gap-4 w-full max-w-full">
             {rewards.map((reward, index) => (
-              <div key={reward.id} className="slow-fade-in">
+              <div key={reward.id} className="slow-fade-in w-full">
                 <RewardsList 
                   rewards={[reward]} 
                   onEdit={() => handleEdit(index)}
