@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardEditor from '../components/RewardEditor';
@@ -71,10 +72,9 @@ const Rewards: React.FC = () => {
     await buyReward(id, cost);
   };
 
-  // Handle using a reward - force refresh rewards after usage to update usageData
+  // Handle using a reward
   const handleUseReward = async (id: string) => {
     await useReward(id);
-    refetchRewards();
   };
 
   return (

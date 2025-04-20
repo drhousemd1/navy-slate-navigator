@@ -7,11 +7,20 @@ import { toast } from '@/hooks/use-toast';
 const SUPABASE_URL = "https://ronqvzihpffgowyscgfm.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvbnF2emlocGZmZ293eXNjZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4NzM0NzIsImV4cCI6MjA1ODQ0OTQ3Mn0.28ftEjZYpnYOywnRdRbRRg5UKD31VPpuZ00mJH8IQtM";
 
-// Always persist session to ensure session survives page reloads
+// Get persisted auth preference from localStorage
+const getPersistedAuth = () => {
+  try {
+    return localStorage.getItem('rememberMe') === 'true';
+  } catch {
+    return false;
+  }
+};
+
+// Create a properly configured client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     autoRefreshToken: true,
-    persistSession: true, // Always true for consistent session persistence
+    persistSession: getPersistedAuth(),
     detectSessionInUrl: true,
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   }
@@ -43,3 +52,4 @@ export const clearAuthState = async () => {
     console.log("Auth state successfully cleared");
   }
 };
+

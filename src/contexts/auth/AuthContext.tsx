@@ -51,7 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getUserRole,
   } = useUserProfile(user, setUser);
 
-  // SIGN IN: pass rememberMe but do NOT use it for client config, just store preference.
   const signIn = async (email: string, password: string, rememberMe: boolean) => {
     const result = await authSignIn(email, password, rememberMe);
 
@@ -59,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(result.user);
       setSession(result.session);
       setIsAuthenticated(true);
-      // Navigate after successful sign-in
+      // Navigate home after login success if desired
       navigate('/');
     }
     return result;
@@ -71,13 +70,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(result.data.user);
       setSession(result.data.session);
       setIsAuthenticated(true);
-      // Navigate after signup if auto-login
+      // Navigate home after signup if auto login is desired
       navigate('/');
     }
     return result;
   };
 
-  // SIGN OUT: clears state and calls signOut
   const signOut = async () => {
     try {
       await clearAuthState();
@@ -89,13 +87,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setIsAuthenticated(false);
       setIsAdmin(false);
+      // Navigate to auth page after logout
       navigate('/auth');
     } catch (error) {
       throw error;
     }
   };
 
-  // Checks user's admin role
   const checkUserRole = async () => {
     if (user) {
       const { data: updatedUser, error: userError } = await supabase.auth.getUser();
@@ -117,11 +115,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     setLoading(true);
-
-    // Setup auth state listener FIRST
+    // Setup auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      console.log('[AuthStateChange]', event, newSession);
-
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setSession(null);
@@ -129,7 +124,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
         navigate('/auth');
       } else if (newSession) {
-        // Update all states synchronously for login or session changes
         setUser(newSession.user);
         setSession(newSession);
         setIsAuthenticated(true);
@@ -139,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // THEN check existing session once on mount
+    // Then get existing session
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         if (session) {
@@ -158,7 +152,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [navigate]);
 
-  // When authenticated or user changes, check admin role
   useEffect(() => {
     if (isAuthenticated) {
       checkUserRole();

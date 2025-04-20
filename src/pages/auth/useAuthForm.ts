@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/AuthContext'; 
@@ -35,7 +34,6 @@ export function useAuthForm() {
     setFormState(prevState => ({ ...prevState, ...updates }));
   };
   
-  // Pass rememberMe flag from Login view to signIn call
   const handleLoginSubmit = async (e: React.FormEvent, rememberMe: boolean) => {
     e.preventDefault();
     updateFormState({ loading: true, loginError: null });
@@ -51,7 +49,6 @@ export function useAuthForm() {
       
       console.log("Login attempt with email:", formState.email);
       
-      // SignIn with rememberMe flag
       const { error } = await signIn(formState.email, formState.password, rememberMe);
       
       if (error) {
