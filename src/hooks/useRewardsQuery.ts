@@ -3,8 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/lib/rewardUtils';
 import { toast } from '@/hooks/use-toast';
 
+// Keys for React Query cache
 const REWARDS_KEY = 'rewards';
 
+// Get rewards count for loading expectations
 export const getRewardsCount = async (): Promise<number> => {
   try {
     const { count, error } = await supabase
@@ -20,6 +22,7 @@ export const getRewardsCount = async (): Promise<number> => {
   }
 };
 
+// Fetch all rewards
 export const fetchRewards = async (): Promise<Reward[]> => {
   try {
     const { data, error } = await supabase
@@ -35,6 +38,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   }
 };
 
+// Create a new reward
 export const createReward = async (rewardData: Partial<Reward> & { title: string }): Promise<Reward> => {
   try {
     const { data, error } = await supabase
@@ -51,6 +55,7 @@ export const createReward = async (rewardData: Partial<Reward> & { title: string
   }
 };
 
+// Update an existing reward
 export const updateReward = async ({ id, ...data }: Partial<Reward> & { id: string }): Promise<void> => {
   try {
     const { error } = await supabase
@@ -65,6 +70,7 @@ export const updateReward = async ({ id, ...data }: Partial<Reward> & { id: stri
   }
 };
 
+// Delete a reward
 export const deleteReward = async (id: string): Promise<void> => {
   try {
     const { error } = await supabase
@@ -79,6 +85,7 @@ export const deleteReward = async (id: string): Promise<void> => {
   }
 };
 
+// Update reward supply
 export const updateRewardSupply = async (id: string, supply: number): Promise<void> => {
   try {
     const { error } = await supabase
@@ -93,6 +100,7 @@ export const updateRewardSupply = async (id: string, supply: number): Promise<vo
   }
 };
 
+// Fetch profile points
 export const fetchProfilePoints = async (userId: string): Promise<number> => {
   try {
     const { data, error } = await supabase
@@ -109,6 +117,7 @@ export const fetchProfilePoints = async (userId: string): Promise<number> => {
   }
 };
 
+// Update profile points
 export const updateProfilePoints = async (userId: string, points: number): Promise<void> => {
   try {
     const { error } = await supabase
@@ -127,6 +136,7 @@ export const useRewardsQuery = () => {
   const queryClient = useQueryClient();
   const userId = supabase.auth.getUser().then(res => res.data.user?.id || '');
   
+  // Query for fetching all rewards
   const {
     data: rewards = [],
     isLoading,
@@ -140,6 +150,7 @@ export const useRewardsQuery = () => {
     refetchOnReconnect: false,
   });
 
+  // Query for fetching count of rewards (for loading skeletons)
   const {
     data: expectedCardCount = rewards.length || 1,
   } = useQuery({
@@ -148,6 +159,7 @@ export const useRewardsQuery = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Query for fetching user points
   const {
     data: points = 0,
     refetch: refetchPoints
@@ -161,9 +173,11 @@ export const useRewardsQuery = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Mutation for creating a reward
   const createRewardMutation = useMutation({
     mutationFn: createReward,
     onSuccess: (newReward) => {
+      // Update the cache with new reward
       queryClient.setQueryData(
         [REWARDS_KEY],
         (oldData: Reward[] = []) => [...oldData, newReward]
@@ -183,13 +197,17 @@ export const useRewardsQuery = () => {
     }
   });
 
+  // Mutation for updating a reward
   const updateRewardMutation = useMutation({
     mutationFn: updateReward,
     onMutate: async (updatedReward) => {
+      // Cancel outgoing refetches to avoid overwriting our optimistic update
       await queryClient.cancelQueries({ queryKey: [REWARDS_KEY] });
       
+      // Snapshot the previous value
       const previousRewards = queryClient.getQueryData<Reward[]>([REWARDS_KEY]) || [];
       
+      // Optimistically update the cache with the new value
       queryClient.setQueryData(
         [REWARDS_KEY],
         (oldData: Reward[] = []) => oldData.map(reward => 
@@ -197,6 +215,7 @@ export const useRewardsQuery = () => {
         )
       );
       
+      // Return the previous value for rollback
       return { previousRewards };
     },
     onSuccess: () => {
@@ -206,6 +225,7 @@ export const useRewardsQuery = () => {
       });
     },
     onError: (error, _, context) => {
+      // Rollback to previous value
       if (context?.previousRewards) {
         queryClient.setQueryData([REWARDS_KEY], context.previousRewards);
       }
@@ -217,17 +237,22 @@ export const useRewardsQuery = () => {
       });
     },
     onSettled: () => {
+      // Always refetch after error or success to make sure our local data is in sync with the server
       queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] });
     }
   });
 
+  // Mutation for deleting a reward
   const deleteRewardMutation = useMutation({
     mutationFn: deleteReward,
     onMutate: async (id) => {
+      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: [REWARDS_KEY] });
       
+      // Snapshot the previous values
       const previousRewards = queryClient.getQueryData<Reward[]>([REWARDS_KEY]) || [];
       
+      // Optimistically update caches
       queryClient.setQueryData(
         [REWARDS_KEY],
         (oldData: Reward[] = []) => oldData.filter(reward => reward.id !== id)
@@ -242,6 +267,7 @@ export const useRewardsQuery = () => {
       });
     },
     onError: (error, _, context) => {
+      // Rollback to previous values
       if (context?.previousRewards) {
         queryClient.setQueryData([REWARDS_KEY], context.previousRewards);
       }
@@ -253,10 +279,12 @@ export const useRewardsQuery = () => {
       });
     },
     onSettled: () => {
+      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] });
     }
   });
 
+  // Mutation for buying a reward
   const buyRewardMutation = useMutation({
     mutationFn: async ({ 
       rewardId, 
@@ -268,23 +296,28 @@ export const useRewardsQuery = () => {
       const id = await userId;
       if (!id) throw new Error("User not authenticated");
       
+      // First update points
       const newPoints = points - cost;
       if (newPoints < 0) throw new Error("Not enough points");
       
       await updateProfilePoints(id, newPoints);
       
+      // Then update reward supply
       const reward = rewards.find(r => r.id === rewardId);
       if (!reward) throw new Error("Reward not found");
       
       await updateRewardSupply(rewardId, reward.supply + 1);
     },
     onMutate: async ({ rewardId, cost }) => {
+      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: [REWARDS_KEY] });
       await queryClient.cancelQueries({ queryKey: ['profile', 'points'] });
       
+      // Snapshot the previous values
       const previousRewards = queryClient.getQueryData<Reward[]>([REWARDS_KEY]) || [];
       const previousPoints = queryClient.getQueryData<number>(['profile', 'points']) || 0;
       
+      // Optimistically update caches
       queryClient.setQueryData(['profile', 'points'], previousPoints - cost);
       
       queryClient.setQueryData(
@@ -303,6 +336,7 @@ export const useRewardsQuery = () => {
       });
     },
     onError: (error, _, context) => {
+      // Rollback to previous values
       if (context?.previousRewards) {
         queryClient.setQueryData([REWARDS_KEY], context.previousRewards);
       }
@@ -317,11 +351,13 @@ export const useRewardsQuery = () => {
       });
     },
     onSettled: () => {
+      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] });
       queryClient.invalidateQueries({ queryKey: ['profile', 'points'] });
     }
   });
 
+  // Mutation for using a reward
   const useRewardMutation = useMutation({
     mutationFn: async (rewardId: string) => {
       const reward = rewards.find(r => r.id === rewardId);
@@ -330,6 +366,7 @@ export const useRewardsQuery = () => {
       
       await updateRewardSupply(rewardId, reward.supply - 1);
       
+      // Record reward usage
       const { error } = await supabase.from('reward_usage').insert({
         reward_id: rewardId,
         day_of_week: new Date().getDay(),
@@ -340,10 +377,13 @@ export const useRewardsQuery = () => {
       if (error) throw error;
     },
     onMutate: async (rewardId) => {
+      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: [REWARDS_KEY] });
       
+      // Snapshot the previous values
       const previousRewards = queryClient.getQueryData<Reward[]>([REWARDS_KEY]) || [];
       
+      // Optimistically update caches
       queryClient.setQueryData(
         [REWARDS_KEY],
         (oldData: Reward[] = []) => oldData.map(reward => 
@@ -353,14 +393,14 @@ export const useRewardsQuery = () => {
       
       return { previousRewards };
     },
-    onSuccess: async () => {
+    onSuccess: () => {
       toast({
         title: "Success",
         description: "Reward used successfully",
       });
-      await queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] });
     },
     onError: (error, _, context) => {
+      // Rollback to previous values
       if (context?.previousRewards) {
         queryClient.setQueryData([REWARDS_KEY], context.previousRewards);
       }
@@ -372,10 +412,12 @@ export const useRewardsQuery = () => {
       });
     },
     onSettled: () => {
+      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] });
     }
   });
 
+  // Calculate total rewards supply
   const totalRewardsSupply = rewards.reduce((total, reward) => total + reward.supply, 0);
 
   return {
