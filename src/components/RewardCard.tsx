@@ -6,6 +6,8 @@ import RewardContent from './rewards/RewardContent';
 import RewardFooter from './rewards/RewardFooter';
 import { useToast } from '../hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { getMondayBasedDay } from '@/lib/utils';
 
 interface RewardCardProps {
   title: string;
@@ -54,16 +56,15 @@ const RewardCard: React.FC<RewardCardProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // We do not manage local usageData or update usage here anymore.
-  // Delegate usage handling to onUse and the hook mutation for consistency.
+  // Local usageData state to update usage immediately
+  const [localUsageData, setLocalUsageData] = useState<boolean[]>([...usageData]);
 
-  const handleBuy = (cost: number) => {
-    if (onBuy) {
-      onBuy(cost);
-    }
-  };
+  useEffect(() => {
+    setLocalUsageData([...usageData]);
+  }, [usageData]);
 
-  const handleUseReward = () => {
+  // Handler that updates usage tracker on "Use" button click
+  const handleUseReward = async () => {
     if (!id) {
       toast({
         title: "Error",
@@ -73,10 +74,89 @@ const RewardCard: React.FC<RewardCardProps> = ({
       return;
     }
 
-    if (onUse) {
-      onUse();
+    if (supply <= 0) {
+      toast({
+        title: "No Supply",
+        description: "You don't have any supply of this reward left to use.",
+        variant: "destructive",
+      });
+      return;
     }
-    // No local usage updates here. Hook will update cache & usage state.
+
+    // Compute today index based on Monday (0) through Sunday (6)
+    const todayIndex = getMondayBasedDay();
+
+    // Create updated usage data array to mark today as used
+    const updatedUsage = [...localUsageData];
+    updatedUsage[todayIndex] = true;
+    setLocalUsageData(updatedUsage);
+
+    // Call external onUse handler to update supply etc in DB and refetch
+    if (onUse) {
+      try {
+        await onUse();
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err.message || "Failed to use reward",
+          variant: "destructive",
+        });
+
+        // Revert local usageData for UI if error
+        setLocalUsageData([...usageData]);
+        return;
+      }
+    }
+
+    // Insert new usage record in the DB
+    try {
+      const today = new Date();
+
+      // Compute ISO week number string YYYY-Www following ISO standard
+      // We use Monday as start of week already in getMondayBasedDay utility
+      const weekStart = new Date(today);
+      const day = weekStart.getDay();
+      const diff = (day === 0 ? -6 : 1) - day; // shift Sunday (0) to Monday (1)
+      weekStart.setDate(weekStart.getDate() + diff);
+
+      const firstThursday = new Date(weekStart.getFullYear(), 0, 4);
+      const firstThursdayDay = firstThursday.getDay();
+      const firstWeekStart = new Date(firstThursday);
+      const firstWeekDiff = (firstThursdayDay === 0 ? -6 : 1) - firstThursdayDay;
+      firstWeekStart.setDate(firstWeekStart.getDate() + firstWeekDiff);
+
+      // Calculate ISO week number
+      const weekNumber = Math.round(((weekStart.getTime() - firstWeekStart.getTime()) / 86400000 + 3) / 7) + 1;
+      const isoWeekNumber = `${weekStart.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
+
+      const { error } = await supabase.from('reward_usage').insert({
+        reward_id: id,
+        day_of_week: todayIndex,
+        week_number: isoWeekNumber,
+        used: true,
+        created_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to record reward usage",
+        variant: "destructive",
+      });
+      // revert local state on error
+      setLocalUsageData([...usageData]);
+      return;
+    }
+
+    // Invalidate queries to get fresh data and update usageData refresh
+    await queryClient.invalidateQueries({ queryKey: ['rewards'] });
+  };
+
+  const handleBuy = (cost: number) => {
+    if (onBuy) {
+      onBuy(cost);
+    }
   };
 
   const handleEditReward = () => {
@@ -129,7 +209,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
         />
 
         <RewardFooter
-          usageData={usageData}
+          usageData={localUsageData}
           calendarColor={calendar_color}
           onEdit={handleEditReward}
         />
