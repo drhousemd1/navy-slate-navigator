@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/lib/rewardUtils';
@@ -335,19 +336,25 @@ export const useRewardsQuery = () => {
       const today = new Date();
       const dayOfWeekMondayBased = getMondayBasedDay(today);
 
-      const oneJan = new Date(today.getFullYear(), 0, 1);
-      const dayOfWeek = today.getDay() || 7;
-      const nearestThursday = new Date(today);
-      nearestThursday.setDate(today.getDate() + 4 - dayOfWeek);
-      const yearStart = new Date(nearestThursday.getFullYear(), 0, 1);
-      const weekNumber = Math.ceil(((nearestThursday.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-
-      const isoWeekNumber = `${nearestThursday.getFullYear()}-${weekNumber}`;
+      // Calculate ISO Week Number according to ISO-8601 standard:
+      // Week starts on Monday; week 1 is the first week with a Thursday in it
+      const isoWeekNumString = (() => {
+        // Copy the date so as not to modify original
+        const dateCopy = new Date(today.getTime());
+        // Set to nearest Thursday: current date + 4 - current day number with Sunday=0
+        const day = dateCopy.getDay() || 7; // Sunday=7 for ISO
+        dateCopy.setDate(dateCopy.getDate() + 4 - day);
+        // Get first day of the year
+        const yearStart = new Date(dateCopy.getFullYear(), 0, 1);
+        // Calculate full weeks to nearest Thursday
+        const weekNo = Math.ceil(((dateCopy.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+        return `${dateCopy.getFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+      })();
 
       const { error } = await supabase.from('reward_usage').insert({
         reward_id: rewardId,
         day_of_week: dayOfWeekMondayBased,
-        week_number: isoWeekNumber,
+        week_number: isoWeekNumString,
         used: true,
         created_at: new Date().toISOString(),
       });
@@ -355,11 +362,11 @@ export const useRewardsQuery = () => {
       if (error) throw error;
     },
     onMutate: async (rewardId) => {
-      await queryClient.cancelQueries({ queryKey: ['rewards'] });
-      const previousRewards = queryClient.getQueryData<Reward[]>(['rewards']) || [];
+      await queryClient.cancelQueries({ queryKey: [REWARDS_KEY] });
+      const previousRewards = queryClient.getQueryData<Reward[]>([REWARDS_KEY]) || [];
 
       queryClient.setQueryData(
-        ['rewards'],
+        [REWARDS_KEY],
         (oldData: Reward[] = []) =>
           oldData.map(reward =>
             reward.id === rewardId
@@ -378,7 +385,7 @@ export const useRewardsQuery = () => {
     },
     onError: (error, _, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData(['rewards'], context.previousRewards);
+        queryClient.setQueryData([REWARDS_KEY], context.previousRewards);
       }
       toast({
         title: "Error",
@@ -387,7 +394,7 @@ export const useRewardsQuery = () => {
       });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      queryClient.invalidateQueries({ queryKey: [REWARDS_KEY] });
     }
   });
 
