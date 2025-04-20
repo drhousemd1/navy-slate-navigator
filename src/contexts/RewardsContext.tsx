@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect } from 'react';
 import { Reward } from '@/lib/rewardUtils';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,6 +7,7 @@ import { useRewardOperations } from './rewards/useRewardOperations';
 
 const RewardsContext = createContext<RewardsContextType>({
   rewards: [],
+  rewardUsageMap: {}, // default empty object
   totalPoints: 0,
   totalRewardsSupply: 0,
   setTotalPoints: () => {},
@@ -23,6 +25,7 @@ export const useRewards = () => useContext(RewardsContext);
 export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const {
     rewards,
+    rewardUsageMap, // Destructure rewardUsageMap here from hook
     setRewards,
     isLoading,
     fetchedRewards,
@@ -62,6 +65,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const value = {
     rewards,
+    rewardUsageMap, // Provide rewardUsageMap in context value
     totalPoints,
     totalRewardsSupply,
     setTotalPoints,

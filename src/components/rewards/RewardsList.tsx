@@ -19,6 +19,9 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
     );
   }
 
+  // Defensive fallback if rewardUsageMap is undefined/null
+  const usageMapSafe = rewardUsageMap || {};
+
   // Enhanced debugging logs showing index and ID to track position stability
   console.log("[RewardsList] Rendering rewards list with stable order:", 
     rewards.map((r, i) => ({ 
@@ -52,8 +55,8 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           title_color={reward.title_color}
           subtext_color={reward.subtext_color}
           calendar_color={reward.calendar_color}
-          // Pass down usage data per reward from centralized usage map
-          usageData={rewardUsageMap[reward.id] || Array(7).fill(false)}
+          // Pass down usage data per reward from centralized usage map or default empty array
+          usageData={usageMapSafe[reward.id] || Array(7).fill(false)}
         />
       ))}
     </div>
@@ -61,4 +64,3 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
 };
 
 export default RewardsList;
-
