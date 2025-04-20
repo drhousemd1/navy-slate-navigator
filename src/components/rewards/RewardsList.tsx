@@ -6,8 +6,8 @@ import { Reward } from '@/lib/rewardUtils';
 interface RewardsListProps {
   rewards: Reward[];
   onEdit: (index: number) => void;
-  onBuy: (id: string, cost: number) => Promise<void>;
-  onUse: (id: string) => Promise<void>;
+  onBuy: (id: string, cost: number) => void;
+  onUse: (id: string) => void;
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ 
@@ -31,8 +31,8 @@ const RewardsList: React.FC<RewardsListProps> = ({
           supply={reward.supply}
           iconName={reward.icon_name}
           iconColor={reward.icon_color}
-          onBuy={() => { return onBuy(reward.id, reward.cost); }}
-          onUse={() => { return onUse(reward.id); }}
+          onBuy={() => onBuy(reward.id, reward.cost)}
+          onUse={() => onUse(reward.id)}
           onEdit={() => onEdit(index)}
           backgroundImage={reward.background_image_url}
           backgroundOpacity={reward.background_opacity}
