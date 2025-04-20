@@ -27,7 +27,6 @@ interface PunishmentCardProps {
   focal_point_y?: number;
   background_images?: (string | null)[];
   carousel_timer?: number;
-  globalCarouselIndex?: number;
 }
 
 const PunishmentCard: React.FC<PunishmentCardProps> = ({
@@ -46,8 +45,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   focal_point_x = 50,
   focal_point_y = 50,
   background_images = [],
-  carousel_timer = 5,
-  globalCarouselIndex = 0
+  carousel_timer = 5
 }) => {
   const {
     isEditorOpen,
@@ -70,7 +68,6 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
           backgroundOpacity={background_opacity}
           focalPointX={focal_point_x}
           focalPointY={focal_point_y}
-          globalCarouselIndex={globalCarouselIndex}
         />
         
         <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">

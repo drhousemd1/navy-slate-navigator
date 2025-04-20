@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Control, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
-import { usePunishments } from '@/contexts/PunishmentsContext';
 
 interface PunishmentImageSelectionSectionProps {
   imageSlots: (string | null)[];
@@ -32,7 +31,6 @@ const PunishmentImageSelectionSection: React.FC<PunishmentImageSelectionSectionP
   watch,
   control
 }) => {
-  const { globalCarouselTimer, setGlobalCarouselTimer } = usePunishments();
   const currentImage = selectedBoxIndex !== null ? imageSlots[selectedBoxIndex] : null;
   
   // Get position from form values for the selected image
@@ -41,17 +39,11 @@ const PunishmentImageSelectionSection: React.FC<PunishmentImageSelectionSectionP
     y: watch('focal_point_y') || 50
   };
 
-  // Update both local and global carousel timer
-  const handleTimerChange = (newTimer: number) => {
-    onCarouselTimerChange(newTimer);
-    setGlobalCarouselTimer(newTimer);
-  };
-
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Images</FormLabel>
-      <div className="flex items-end justify-between mb-4">
-        <div className="flex gap-2">
+      <div className="flex flex-row items-end space-x-6 mb-4">
+        <div className="flex space-x-2">
           {imageSlots.map((imageUrl, index) => (
             <div
               key={index}
@@ -89,18 +81,18 @@ const PunishmentImageSelectionSection: React.FC<PunishmentImageSelectionSectionP
             <Button
               type="button"
               size="sm"
-              onClick={() => handleTimerChange(Math.max(1, globalCarouselTimer - 1))}
+              onClick={() => onCarouselTimerChange(Math.max(1, carouselTimer - 1))}
               className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
             >
               –
             </Button>
 
-            <div className="w-10 text-center text-white">{globalCarouselTimer}</div>
+            <div className="w-10 text-center text-white">{carouselTimer}</div>
 
             <Button
               type="button"
               size="sm"
-              onClick={() => handleTimerChange(globalCarouselTimer + 1)}
+              onClick={() => onCarouselTimerChange(carouselTimer + 1)}
               className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
             >
               +
