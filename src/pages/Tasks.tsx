@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -165,7 +164,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   };
 
   const handleToggleCompletion = async (taskId: string, completed: boolean) => {
-    // Defensive variable to ensure consistent local usage update
     let updatedUsageForQuery: number[] | null = null;
 
     try {
@@ -176,7 +174,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
 
         if (completed) {
           if (currentCount >= 1) {
-            // Prevent going above max completions in local state
             console.log(`Task ${taskId} already at max completions locally`);
             return prev;
           }
@@ -195,12 +192,10 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
 
       if (!updatedTask) {
         console.error('Updated task is null, reverting local state for task:', taskId);
-        // Revert localUsageData changed above since update failed
         setLocalUsageData((prev) => {
           const revertedUsage = prev[taskId] ? [...prev[taskId]] : Array(7).fill(0);
           const dayOfWeek = new Date().getDay();
           const currentCount = revertedUsage[dayOfWeek] || 0;
-          // Revert the increment or decrement
           if (completed) {
             revertedUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
           } else {
@@ -335,4 +330,3 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
-
