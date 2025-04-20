@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LogIn, AlertCircle, RefreshCw } from 'lucide-react';
@@ -6,50 +6,34 @@ import { AuthViewProps } from './types';
 import { useAuthForm } from './useAuthForm';
 import { useDebugMode } from './useDebugMode';
 import { Checkbox } from '@/components/ui/checkbox';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
   const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
   const { debugMode, handleTitleClick } = useDebugMode();
   const [showPassword, setShowPassword] = useState(false);
-
-  const [rememberMe, setRememberMe] = useState<boolean>(() => {
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
     try {
       return localStorage.getItem('rememberMe') === 'true';
     } catch {
       return false;
     }
   });
-
-  const [loadingInternally, setLoadingInternally] = useState(false);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('rememberMe', rememberMe.toString());
-    } catch {
-      // ignore
-    }
-  }, [rememberMe]);
-
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateFormState({ email: e.target.value });
-  };
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateFormState({ password: e.target.value });
-  };
-
+  
+  // Direct login function
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (currentView === "login") {
-      setLoadingInternally(true);
+      setIsLoggingIn(true);
       updateFormState({ loginError: null });
-
+      
       try {
         await handleLoginSubmit(e, rememberMe);
       } finally {
-        setLoadingInternally(false);
+        setIsLoggingIn(false);
       }
     } else {
       const result = await handleSignupSubmit(e);
@@ -62,51 +46,46 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
       <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
-        <h1
+        <h1 
           className="text-2xl font-bold text-center text-white cursor-default"
           onClick={handleTitleClick}
         >
           Welcome to the Rewards System
         </h1>
-
-        <form onSubmit={handleFormSubmit} className="space-y-4" autoComplete="off">
+        
+        <form onSubmit={handleFormSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-white text-sm" htmlFor="email">Email</label>
+            <label className="text-white text-sm">Email</label>
             <Input
-              id="email"
               type="email"
               value={formState.email}
-              onChange={handleEmailChange}
+              onChange={(e) => updateFormState({ email: e.target.value })}
               required
               className="bg-navy border-light-navy text-white"
               placeholder="your@email.com"
               autoComplete="email"
-              spellCheck={false}
             />
           </div>
-
+          
           <div className="space-y-2">
-            <label className="text-white text-sm" htmlFor="password">Password</label>
+            <label className="text-white text-sm">Password</label>
             <div className="relative">
               <Input
-                id="password"
                 type={showPassword ? "text" : "password"}
                 value={formState.password}
-                onChange={handlePasswordChange}
+                onChange={(e) => updateFormState({ password: e.target.value })}
                 required
                 className="bg-navy border-light-navy text-white pr-10"
                 placeholder="********"
                 minLength={6}
                 autoComplete={currentView === "login" ? "current-password" : "new-password"}
-                spellCheck={false}
               />
-              <Button
-                type="button"
-                variant="ghost"
+              <Button 
+                type="button" 
+                variant="ghost" 
                 size="sm"
                 className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 text-gray-400 hover:text-white"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? "Hide" : "Show"}
               </Button>
@@ -121,14 +100,14 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 />
                 <label
                   htmlFor="rememberMe"
-                  className="text-sm text-gray-300 cursor-pointer select-none"
+                  className="text-sm text-gray-300 cursor-pointer"
                 >
                   Remember Me
                 </label>
               </div>
-              <Button
-                type="button"
-                variant="link"
+              <Button 
+                type="button" 
+                variant="link" 
                 className="text-sm text-blue-400 hover:text-blue-300 p-0"
                 onClick={() => onViewChange("forgot-password")}
               >
@@ -136,14 +115,15 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
               </Button>
             </div>
           </div>
-
+          
           {formState.loginError && (
-            <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded flex items-start gap-2" role="alert" aria-live="assertive">
+            <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded flex items-start gap-2">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span>{formState.loginError}</span>
             </div>
           )}
-
+          
+          {/* Debug information when debug mode is enabled */}
           {debugMode && (
             <div className="text-xs text-gray-400 p-2 border border-gray-700 rounded bg-gray-900/50 overflow-auto">
               <p>Debug mode enabled</p>
@@ -165,23 +145,22 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
               </Button>
             </div>
           )}
-
-          <Button
+          
+          <Button 
             type="submit"
-            className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center"
-            disabled={loadingInternally || formState.loading}
-            aria-live="polite"
+            className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center" 
+            disabled={isLoggingIn || formState.loading}
           >
             <LogIn className="w-4 h-4 mr-2" />
-            {loadingInternally || formState.loading ? 'Signing In...' : 'Sign In'}
+            {isLoggingIn || formState.loading ? 'Signing In...' : 'Sign In'}
           </Button>
-
+          
           {currentView === "login" && (
             <p className="text-center text-sm text-gray-400 pt-2">
-              Don't have an account?{' '}
-              <Button
-                type="button"
-                variant="link"
+              Don't have an account?{" "}
+              <Button 
+                type="button" 
+                variant="link" 
                 className="text-blue-400 hover:text-blue-300 p-0"
                 onClick={() => onViewChange("signup")}
               >

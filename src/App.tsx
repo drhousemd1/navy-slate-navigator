@@ -1,7 +1,8 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/auth"; 
@@ -20,8 +21,8 @@ import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
 import AdminTesting from "./pages/AdminTesting";
 
-// Protected route component using Outlet pattern
-const ProtectedRoute: React.FC<{children: React.ReactNode}> = ({ children }) => {
+// Protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
   
   if (loading) {
@@ -31,16 +32,17 @@ const ProtectedRoute: React.FC<{children: React.ReactNode}> = ({ children }) => 
   }
   
   if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/auth" />;
   }
   
   return <>{children}</>;
 };
 
-// Admin-only route component using Outlet pattern
-const AdminRoute: React.FC<{children: React.ReactNode}> = ({ children }) => {
+// Admin-only route component
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   
+  // Add debugging for admin route
   console.log('AdminRoute check - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin, 'loading:', loading);
   
   if (loading) {
@@ -51,35 +53,23 @@ const AdminRoute: React.FC<{children: React.ReactNode}> = ({ children }) => {
   
   if (!isAuthenticated) {
     console.log('AdminRoute - User not authenticated, redirecting to /auth');
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/auth" />;
   }
   
   // IMPORTANT: For testing purposes, temporarily allow all authenticated users to access admin pages
+  // This allows us to test the admin testing page without requiring admin privileges
   console.log('AdminRoute - Allowing access to admin page for testing purposes');
   return <>{children}</>;
   
   /* Uncomment this when you want to restore proper admin checking
   if (!isAdmin) {
     console.log('AdminRoute - User not admin, redirecting to /');
-    return <Navigate to="/" replace />;
+    return <Navigate to="/" />;
   }
   
   console.log('AdminRoute - User is admin, showing protected content');
   return <>{children}</>;
   */
-};
-
-// Global loading guard route for all protected routes (if you want an explicit global guard)
-const GlobalAuthGuard: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const { loading } = useAuth();
-  
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen bg-navy">
-      <p className="text-white">Loading...</p>
-    </div>;
-  }
-  
-  return <>{children}</>;
 };
 
 // Create a client with aggressive caching to maintain state between page navigations
@@ -98,6 +88,7 @@ const queryClient = new QueryClient({
 
 // Configure routes with proper nesting to ensure context is available
 const AppRoutes = () => {
+  // Add debugging for routing using standard React hooks
   React.useEffect(() => {
     console.log('AppRoutes component initialized. Routes ready to be matched.');
   }, []);
@@ -107,21 +98,16 @@ const AppRoutes = () => {
       <Route path="/auth" element={<Auth />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/reset-password-view" element={<ResetPasswordView />} />
-
-      {/* Wrap all authenticated routes in global guard */}
-      <Route element={<ProtectedRoute><GlobalAuthGuard><Outlet /></GlobalAuthGuard></ProtectedRoute>}>
-        <Route path="/" element={<Index />} />
-        <Route path="/rules" element={<Rules />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/rewards" element={<Rewards />} />
-        <Route path="/punishments" element={<Punishments />} />
-        <Route path="/throne-room" element={<ThroneRoom />} />
-        <Route path="/encyclopedia" element={<Encyclopedia />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/messages" element={<Messages />} />
-        <Route path="/admin-testing" element={<AdminRoute><AdminTesting /></AdminRoute>} />
-      </Route>
-
+      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+      <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
+      <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+      <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
+      <Route path="/punishments" element={<ProtectedRoute><Punishments /></ProtectedRoute>} />
+      <Route path="/throne-room" element={<ProtectedRoute><ThroneRoom /></ProtectedRoute>} />
+      <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+      <Route path="/admin-testing" element={<AdminRoute><AdminTesting /></AdminRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -129,6 +115,7 @@ const AppRoutes = () => {
 
 // Main App component
 const App = () => {
+  // Use proper React hooks inside the component function
   React.useEffect(() => {
     console.log('App component initialized. React Router ready.');
   }, []);

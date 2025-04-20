@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useAuth } from '@/contexts/auth/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 export function useForgotPassword() {
@@ -13,16 +13,19 @@ export function useForgotPassword() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
+    
     if (!email) {
       setError("Please enter your email address.");
       setLoading(false);
       return;
     }
-
+    
     try {
+      console.log("Attempting to send password reset email to:", email);
+      
       const { error: resetError } = await resetPassword(email);
       if (resetError) {
+        console.error("Password reset error:", resetError);
         setError(resetError.message || "Failed to send password reset email. Please try again.");
       } else {
         toast({
@@ -31,7 +34,8 @@ export function useForgotPassword() {
         });
         return true;
       }
-    } catch {
+    } catch (error) {
+      console.error("Password reset error:", error);
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);

@@ -11,28 +11,25 @@ const Auth: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
+  // Check if there's a view state passed via navigation
   React.useEffect(() => {
     if (location.state && location.state.view) {
       setAuthView(location.state.view as AuthView);
     }
   }, [location]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-navy">
-        <p className="text-white">Loading...</p>
-      </div>
-    );
+  // Only redirect if we're sure about authentication status
+  if (isAuthenticated && !loading) {
+    console.log('Auth page: User is authenticated, redirecting to home');
+    return <Navigate to="/" />;
   }
 
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
+  // Only render auth UI if we're sure user is not authenticated or we're still loading
   if (authView === "forgot-password") {
     return <ForgotPasswordView onBackClick={() => setAuthView("login")} />;
   }
 
+  // Default view: Login/Signup
   return <LoginSignupView currentView={authView} onViewChange={setAuthView} />;
 };
 
