@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -72,6 +71,19 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   */
 };
 
+// Global loading guard route for all protected routes
+const GlobalAuthGuard = ({ children }: { children: React.ReactNode }) => {
+  const { loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen bg-navy">
+      <p className="text-white">Loading...</p>
+    </div>;
+  }
+  
+  return <>{children}</>;
+};
+
 // Create a client with aggressive caching to maintain state between page navigations
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -98,16 +110,23 @@ const AppRoutes = () => {
       <Route path="/auth" element={<Auth />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/reset-password-view" element={<ResetPasswordView />} />
-      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-      <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
-      <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-      <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
-      <Route path="/punishments" element={<ProtectedRoute><Punishments /></ProtectedRoute>} />
-      <Route path="/throne-room" element={<ProtectedRoute><ThroneRoom /></ProtectedRoute>} />
-      <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-      <Route path="/admin-testing" element={<AdminRoute><AdminTesting /></AdminRoute>} />
+
+      {/* Wrap all authenticated routes in global guard */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<GlobalAuthGuard />}>
+          <Route path="/" element={<Index />} />
+          <Route path="/rules" element={<Rules />} />
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/rewards" element={<Rewards />} />
+          <Route path="/punishments" element={<Punishments />} />
+          <Route path="/throne-room" element={<ThroneRoom />} />
+          <Route path="/encyclopedia" element={<Encyclopedia />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/admin-testing" element={<AdminRoute><AdminTesting /></AdminRoute>} />
+        </Route>
+      </Route>
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
