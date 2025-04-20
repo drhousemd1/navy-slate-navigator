@@ -166,7 +166,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const handleToggleCompletion = async (taskId: string, completed: boolean) => {
     let updatedUsageForQuery: number[] | null = null;
 
-    setLocalUsageData(prev => {
+    setLocalUsageData((prev) => {
       const currentUsage = prev[taskId] ? [...prev[taskId]] : Array(7).fill(0);
       const dayOfWeek = new Date().getDay();
       const currentCount = currentUsage[dayOfWeek] || 0;
@@ -181,62 +181,37 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       }
 
       updatedUsageForQuery = currentUsage;
-
       return { ...prev, [taskId]: currentUsage };
     });
 
-    if (updatedUsageForQuery) {
-      queryClient.setQueryData<Task[]>(['tasks'], oldTasks => {
-        if (!oldTasks) return oldTasks;
-
-        return oldTasks.map(task => {
-          if (task.id === taskId) {
-            return {
-              ...task,
-              usage_data: updatedUsageForQuery
-            };
-          }
-          return task;
-        });
-      });
-    }
-
     try {
       console.log(`Toggling task ${taskId} completion to ${completed}`);
-      const success = await updateTaskCompletion(taskId, completed);
 
-      if (success) {
-        queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        queryClient.invalidateQueries({ queryKey: ['task-completions'] });
-        queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
-        queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-        queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+      const updatedTask = await updateTaskCompletion(taskId, completed);
 
-        if (completed) {
-          const task = tasks.find(t => t.id === taskId);
-          const points = task?.points || 0;
-          console.log(`Task completed, earned ${points} points`);
+      if (!updatedTask) {
+        throw new Error('Failed to update task completion');
+      }
 
-          const { data: authData } = await supabase.auth.getUser();
-          const userId = authData.user?.id || 'anonymous';
+      queryClient.setQueryData<Task[]>(['tasks'], (oldTasks) => {
+        if (!oldTasks) return [];
+        return oldTasks.map((task) => (task.id === taskId ? updatedTask : task));
+      });
 
-          const { error: insertError } = await supabase
-            .from('task_completion_history')
-            .insert({
-              task_id: taskId,
-              completed_at: new Date().toISOString(),
-              user_id: userId
-            });
+      if (updatedTask.usage_data) {
+        setLocalUsageData((prev) => ({
+          ...prev,
+          [taskId]: updatedTask.usage_data,
+        }));
+      }
 
-          if (insertError) {
-            console.error('Error inserting into task_completion_history:', insertError.message);
-          } else {
-            console.log('Logged task completion to history');
-            queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
-          }
+      queryClient.invalidateQueries({ queryKey: ['task-completions'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
 
-          await refreshPointsFromDatabase();
-        }
+      if (completed) {
+        await refreshPointsFromDatabase();
       }
     } catch (err) {
       console.error('Error toggling task completion:', err);
@@ -245,6 +220,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         description: 'Failed to update task. Please try again.',
         variant: 'destructive',
       });
+
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     }
   };
