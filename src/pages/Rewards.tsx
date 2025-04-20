@@ -75,6 +75,8 @@ const Rewards: React.FC = () => {
   // Handle using a reward
   const handleUseReward = async (id: string) => {
     await useReward(id);
+    // Refresh rewards after usage to get updated usageData for UI
+    await refetchRewards();
   };
 
   return (
@@ -98,7 +100,7 @@ const Rewards: React.FC = () => {
                   rewards={[reward]} 
                   onEdit={() => handleEdit(index)}
                   onBuy={handleBuyReward}
-                  onUse={handleUseReward}
+                  onUse={() => handleUseReward(reward.id)}
                 />
               </div>
             ))}
@@ -118,3 +120,4 @@ const Rewards: React.FC = () => {
 };
 
 export default Rewards;
+
