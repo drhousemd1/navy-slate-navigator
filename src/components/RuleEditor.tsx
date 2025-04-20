@@ -2,7 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import RuleEditorForm from './rule-editor/RuleEditorForm';
-import { Rule } from '@/hooks/rules/types'; // Changed import
+import { Rule } from '@/hooks/useRulesQuery';
 
 interface RuleEditorProps {
   isOpen: boolean;
@@ -55,4 +55,3 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
 };
 
 export default RuleEditor;
-

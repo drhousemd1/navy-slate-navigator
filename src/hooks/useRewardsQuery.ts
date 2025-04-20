@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/lib/rewardUtils';
@@ -144,10 +145,8 @@ export const useRewardsQuery = () => {
   } = useQuery({
     queryKey: [REWARDS_KEY],
     queryFn: fetchRewards,
-    staleTime: 1000 * 60 * 10,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
   });
 
   // Query for fetching count of rewards (for loading skeletons)
@@ -156,7 +155,7 @@ export const useRewardsQuery = () => {
   } = useQuery({
     queryKey: [REWARDS_KEY, 'count'],
     queryFn: getRewardsCount,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Query for fetching user points
@@ -170,7 +169,7 @@ export const useRewardsQuery = () => {
       if (!id) return 0;
       return fetchProfilePoints(id);
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Mutation for creating a reward
