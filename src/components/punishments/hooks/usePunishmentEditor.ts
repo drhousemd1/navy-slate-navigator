@@ -1,19 +1,19 @@
 
-import { useState } from 'react';
-import { PunishmentData } from '@/contexts/punishments/types';
-import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
+import { useState, useCallback } from 'react';
+import { usePunishments, PunishmentData } from '@/contexts/PunishmentsContext';
 
 interface UsePunishmentEditorProps {
   id?: string;
 }
 
 export const usePunishmentEditor = ({ id }: UsePunishmentEditorProps) => {
-  const { updatePunishment, deletePunishment } = usePunishmentsQuery();
+  const { updatePunishment, deletePunishment } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   
-  const handleEdit = () => {
+  const handleEdit = useCallback(() => {
+    console.log("Edit button clicked for punishment ID:", id);
     setIsEditorOpen(true);
-  };
+  }, [id]);
 
   const handleSavePunishment = async (updatedPunishment: PunishmentData) => {
     if (!id) return Promise.resolve();

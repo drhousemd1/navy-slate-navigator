@@ -1,9 +1,10 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export function useAuthOperations() {
   // Sign in with email and password
-  const signIn = async (email: string, password: string, rememberMe: boolean) => {
+  const signIn = async (email: string, password: string) => {
     try {
       console.log('Starting sign in process for email:', email);
       
@@ -15,9 +16,6 @@ export function useAuthOperations() {
         console.error('Sign in validation error: Missing email or password');
         return { error: { message: 'Email and password are required' }, user: null };
       }
-      
-      // Set remember me preference before signing in
-      localStorage.setItem('rememberMe', rememberMe.toString());
       
       // Use the trimmed values for authentication
       console.log('Making authentication request with:', { email: trimmedEmail });
@@ -40,6 +38,15 @@ export function useAuthOperations() {
       
       console.log('Sign in successful:', data.user?.email);
       console.log('Session data:', data.session ? 'Session exists' : 'No session');
+      
+      // Make sure we validate the session before confirming success
+      if (!data.session) {
+        console.error('Sign in produced no session');
+        return { 
+          error: { message: 'Authentication successful but no session was created. Please try again.' },
+          user: data.user 
+        };
+      }
       
       return { error: null, user: data.user, session: data.session };
     } catch (error: any) {

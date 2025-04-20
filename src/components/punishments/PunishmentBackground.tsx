@@ -10,9 +10,9 @@ interface PunishmentBackgroundProps {
 
 const PunishmentBackground: React.FC<PunishmentBackgroundProps> = ({
   background_image_url,
-  background_opacity,
-  focal_point_x,
-  focal_point_y
+  background_opacity = 50,
+  focal_point_x = 50,
+  focal_point_y = 50
 }) => {
   if (!background_image_url) return null;
   

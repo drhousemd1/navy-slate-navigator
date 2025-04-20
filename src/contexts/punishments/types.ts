@@ -14,6 +14,8 @@ export type PunishmentData = {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
+  background_images?: (string | null)[] | null;
+  carousel_timer?: number;
 };
 
 export type PunishmentHistoryItem = {
@@ -29,7 +31,8 @@ export interface PunishmentsContextType {
   punishmentHistory: PunishmentHistoryItem[];
   loading: boolean;
   error: Error | null;
-  expectedCardCount: number;
+  globalCarouselTimer: number;
+  setGlobalCarouselTimer: (timer: number) => void;
   fetchPunishments: () => Promise<void>;
   createPunishment: (punishmentData: PunishmentData) => Promise<string>;
   updatePunishment: (id: string, punishmentData: PunishmentData) => Promise<void>;
@@ -38,3 +41,4 @@ export interface PunishmentsContextType {
   getPunishmentHistory: (punishmentId: string) => PunishmentHistoryItem[];
   totalPointsDeducted: number;
 }
+

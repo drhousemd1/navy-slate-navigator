@@ -1,12 +1,13 @@
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import BackgroundImageSelector from "@/components/task-editor/BackgroundImageSelector";
+import React from 'react';
 import { FormLabel } from "@/components/ui/form";
-import { Control } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Control, UseFormSetValue, UseFormWatch } from 'react-hook-form';
+import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
+import { usePunishments } from '@/contexts/PunishmentsContext';
 
-interface ImageSelectionSectionProps {
-  imagePreview: string | null;
+interface PunishmentImageSelectionSectionProps {
   imageSlots: (string | null)[];
   selectedBoxIndex: number | null;
   carouselTimer: number;
@@ -14,12 +15,12 @@ interface ImageSelectionSectionProps {
   onSelectImageSlot: (index: number) => void;
   onRemoveImage: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  setValue: (key: string, value: any) => void;
-  position: { x: number; y: number };
+  setValue: UseFormSetValue<any>;
+  watch: UseFormWatch<any>;
   control: Control<any>;
 }
 
-const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
+const PunishmentImageSelectionSection: React.FC<PunishmentImageSelectionSectionProps> = ({
   imageSlots,
   selectedBoxIndex,
   carouselTimer,
@@ -28,21 +29,27 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   onRemoveImage,
   onImageUpload,
   setValue,
-  position,
+  watch,
   control
 }) => {
+  const { globalCarouselTimer, setGlobalCarouselTimer } = usePunishments();
   const currentImage = selectedBoxIndex !== null ? imageSlots[selectedBoxIndex] : null;
   
-  console.log("ImageSelectionSection rendering with:", {
-    selectedBoxIndex,
-    hasCurrentImage: Boolean(currentImage),
-    imageSlotCount: imageSlots.length,
-    nonEmptySlots: imageSlots.filter(Boolean).length
-  });
+  // Get position from form values for the selected image
+  const position = {
+    x: watch('focal_point_x') || 50,
+    y: watch('focal_point_y') || 50
+  };
+
+  // Update both local and global carousel timer
+  const handleTimerChange = (newTimer: number) => {
+    onCarouselTimerChange(newTimer);
+    setGlobalCarouselTimer(newTimer);
+  };
 
   return (
     <div className="space-y-4">
-      <FormLabel className="text-white text-lg">Background Image</FormLabel>
+      <FormLabel className="text-white text-lg">Background Images</FormLabel>
       <div className="flex items-end justify-between mb-4">
         <div className="flex gap-2">
           {imageSlots.map((imageUrl, index) => (
@@ -75,25 +82,25 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
             Carousel Timer
           </span>
           <span className="text-xs text-slate-400">
-            (Settings will be applied to all cards)
+            (Time between image transitions)
           </span>
 
           <div className="flex items-center space-x-2">
             <Button
               type="button"
               size="sm"
-              onClick={() => onCarouselTimerChange(Math.max(1, carouselTimer - 1))}
+              onClick={() => handleTimerChange(Math.max(1, globalCarouselTimer - 1))}
               className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
             >
               –
             </Button>
 
-            <div className="w-10 text-center text-white">{carouselTimer}</div>
+            <div className="w-10 text-center text-white">{globalCarouselTimer}</div>
 
             <Button
               type="button"
               size="sm"
-              onClick={() => onCarouselTimerChange(carouselTimer + 1)}
+              onClick={() => handleTimerChange(globalCarouselTimer + 1)}
               className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
             >
               +
@@ -116,4 +123,4 @@ const ImageSelectionSection: React.FC<ImageSelectionSectionProps> = ({
   );
 };
 
-export default ImageSelectionSection;
+export default PunishmentImageSelectionSection;
