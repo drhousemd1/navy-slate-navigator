@@ -36,10 +36,10 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
       return (
         <div
           key={i}
-          className={`w-4 h-4 rounded-full border ${used ? 'bg-transparent border-transparent' : 'bg-transparent'}`}
+          className={`w-4 h-4 rounded-full border`}
           style={{
             backgroundColor: used ? calendarColor : 'transparent',
-            borderColor: used ? 'transparent' : calendarColor || 'rgba(142, 145, 150, 0.5)',
+            borderColor: used ? calendarColor : calendarColor || 'rgba(142, 145, 150, 0.5)',
             boxShadow: i === currentDayOfWeek ? `0 0 0 1px ${calendarColor}` : 'none',
           }}
         />
