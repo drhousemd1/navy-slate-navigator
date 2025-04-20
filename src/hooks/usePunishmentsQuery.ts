@@ -140,11 +140,10 @@ export const usePunishmentsQuery = () => {
   } = useQuery({
     queryKey: [PUNISHMENTS_KEY],
     queryFn: fetchPunishments,
-    staleTime: 1000 * 60 * 10,      // 10 minutes stale time
-    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention
-    refetchOnWindowFocus: false,    // Disable refetch on window focus
-    refetchOnMount: false,          // Disable refetch on mount
-    refetchOnReconnect: false,      // Disable refetch on reconnect
+    staleTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // Query for fetching punishment history
@@ -153,11 +152,10 @@ export const usePunishmentsQuery = () => {
   } = useQuery({
     queryKey: [PUNISHMENT_HISTORY_KEY],
     queryFn: fetchPunishmentHistory,
-    staleTime: 1000 * 60 * 10,      // 10 minutes stale time
-    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention
-    refetchOnWindowFocus: false,    // Disable refetch on window focus
-    refetchOnMount: false,          // Disable refetch on mount
-    refetchOnReconnect: false,      // Disable refetch on reconnect
+    staleTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // Query for fetching count of punishments (for loading skeletons)
@@ -166,11 +164,10 @@ export const usePunishmentsQuery = () => {
   } = useQuery({
     queryKey: [PUNISHMENTS_KEY, 'count'],
     queryFn: getPunishmentsCount,
-    staleTime: 1000 * 60 * 10,      // 10 minutes stale time
-    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention
-    refetchOnWindowFocus: false,    // Disable refetch on window focus
-    refetchOnMount: false,          // Disable refetch on mount
-    refetchOnReconnect: false,      // Disable refetch on reconnect
+    staleTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // Calculate total points deducted

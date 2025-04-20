@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchRules,
@@ -21,11 +20,10 @@ export const useRulesQuery = () => {
   } = useQuery({
     queryKey: [RULES_KEY],
     queryFn: fetchRules,
-    staleTime: 1000 * 60 * 10,      // 10 minutes stale time
-    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention (React Query v4+)
-    refetchOnWindowFocus: false,    // Disable refetch on window focus
-    refetchOnMount: false,          // Disable automatic refetch on mount if data not stale
-    refetchOnReconnect: false,      // Disable refetch on reconnect
+    staleTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   const createRuleMutation = useMutation({

@@ -68,10 +68,9 @@ export const useTasksQuery = () => {
     queryKey: [TASKS_KEY],
     queryFn: fetchTasks,
     staleTime: 1000 * 60 * 10,      // 10 minutes stale time
-    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention
-    refetchOnWindowFocus: false,    // Disable refetch on window focus
-    refetchOnMount: false,          // Disable automatic refetch on mount
-    refetchOnReconnect: false,      // Disable refetch on reconnect
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // Mutation for saving a task (create or update)

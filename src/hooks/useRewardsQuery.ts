@@ -144,11 +144,10 @@ export const useRewardsQuery = () => {
   } = useQuery({
     queryKey: [REWARDS_KEY],
     queryFn: fetchRewards,
-    staleTime: 1000 * 60 * 10,      // 10 minutes stale time
-    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention
-    refetchOnWindowFocus: false,    // Disable refetch on window focus
-    refetchOnMount: false,          // Disable refetch on mount
-    refetchOnReconnect: false,      // Disable refetch on reconnect
+    staleTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // Query for fetching count of rewards (for loading skeletons)
@@ -157,7 +156,7 @@ export const useRewardsQuery = () => {
   } = useQuery({
     queryKey: [REWARDS_KEY, 'count'],
     queryFn: getRewardsCount,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   // Query for fetching user points
@@ -171,7 +170,7 @@ export const useRewardsQuery = () => {
       if (!id) return 0;
       return fetchProfilePoints(id);
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   // Mutation for creating a reward
