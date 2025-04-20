@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -11,7 +12,8 @@ import { toast } from '@/hooks/use-toast';
 import HighlightedText from '../components/task/HighlightedText';
 import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
-import { useRulesQuery, Rule } from '@/hooks/useRulesQuery';
+import { useRulesQuery } from '@/hooks/useRulesQuery';
+import { Rule } from '@/hooks/rules/types'; // Changed import
 
 const Rules: React.FC = () => {
   const navigate = useNavigate();
