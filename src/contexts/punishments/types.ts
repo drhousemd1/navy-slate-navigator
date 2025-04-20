@@ -14,8 +14,6 @@ export type PunishmentData = {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  background_images?: (string | null)[] | null;
-  carousel_timer?: number;
 };
 
 export type PunishmentHistoryItem = {

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import PunishmentCardHeader from './punishments/PunishmentCardHeader';
 import PunishmentCardContent from './punishments/PunishmentCardContent';
 import PunishmentCardFooter from './punishments/PunishmentCardFooter';
-import PunishmentBackgroundCarousel from './punishments/PunishmentBackgroundCarousel';
+import PunishmentBackground from './punishments/PunishmentBackground';
 import { usePunishmentCard } from './punishments/hooks/usePunishmentCard';
 
 interface PunishmentCardProps {
@@ -25,8 +25,6 @@ interface PunishmentCardProps {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  background_images?: (string | null)[];
-  carousel_timer?: number;
 }
 
 const PunishmentCard: React.FC<PunishmentCardProps> = ({
@@ -43,9 +41,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   background_image_url,
   background_opacity = 50,
   focal_point_x = 50,
-  focal_point_y = 50,
-  background_images = [],
-  carousel_timer = 5
+  focal_point_y = 50
 }) => {
   const {
     isEditorOpen,
@@ -58,16 +54,16 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
     handleDeletePunishment
   } = usePunishmentCard({ id, points });
 
+  console.log('PunishmentCard rendering with icon_color:', icon_color);
+
   return (
     <>
       <Card className="relative overflow-hidden border-2 border-red-500 bg-navy">
-        <PunishmentBackgroundCarousel 
-          backgroundImages={background_images}
-          backgroundImageUrl={background_image_url}
-          carouselTimer={carousel_timer}
-          backgroundOpacity={background_opacity}
-          focalPointX={focal_point_x}
-          focalPointY={focal_point_y}
+        <PunishmentBackground 
+          background_image_url={background_image_url}
+          background_opacity={background_opacity}
+          focal_point_x={focal_point_x}
+          focal_point_y={focal_point_y}
         />
         
         <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
@@ -112,9 +108,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
           background_image_url,
           background_opacity,
           focal_point_x,
-          focal_point_y,
-          background_images,
-          carousel_timer
+          focal_point_y
         }}
         onSave={handleSavePunishment}
         onDelete={handleDeletePunishment}

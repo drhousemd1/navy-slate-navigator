@@ -151,8 +151,6 @@ const PunishmentsContent: React.FC = () => {
               background_opacity={punishment.background_opacity}
               focal_point_x={punishment.focal_point_x}
               focal_point_y={punishment.focal_point_y}
-              background_images={punishment.background_images}
-              carousel_timer={punishment.carousel_timer}
             />
           ))}
         </div>
