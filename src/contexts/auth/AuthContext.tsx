@@ -55,8 +55,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     setLoading(true);
 
-    // onAuthStateChange returns { data: { subscription } }
-    const { data } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, newSession: Session | null) => {
+    // Setup the onAuthStateChange listener synchronously, no async directly in callback
+    const { data } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, newSession: Session | null) => {
       const userFromSession = newSession?.user ?? null;
 
       console.log('Auth state changed:', event);
@@ -72,8 +72,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Defer checkUserRole to avoid async in callback
+      // Defer async calls
       if (userFromSession) {
+        setLoading(true);
         setTimeout(async () => {
           await checkUserRole();
           setLoading(false);
@@ -83,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
+    // Get session synchronously and then set the state
     supabase.auth.getSession()
       .then(async ({ data: { session } }) => {
         setSession(session);
@@ -106,10 +108,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string, rememberMe: boolean) => {
     try {
-      // Store rememberMe in localStorage
       localStorage.setItem('rememberMe', rememberMe.toString());
     } catch {
-      // ignore storage errors
+      // ignore
     }
 
     const result = await authSignIn(email, password, rememberMe);
@@ -118,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(result.session);
       setIsAuthenticated(true);
       await checkUserRole();
-      navigate('/'); // Navigate to homepage on successful login
+      navigate('/'); // Navigate after successful login
     }
     return result;
   };
@@ -130,7 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(result.data.session);
       setIsAuthenticated(true);
       await checkUserRole();
-      navigate('/'); // Navigate to homepage on successful signup
+      navigate('/'); // Navigate after successful signup
     }
     return result;
   };
@@ -191,4 +192,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
