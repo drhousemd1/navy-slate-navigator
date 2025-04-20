@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
@@ -141,8 +140,10 @@ export const usePunishmentsQuery = () => {
   } = useQuery({
     queryKey: [PUNISHMENTS_KEY],
     queryFn: fetchPunishments,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // Query for fetching punishment history
@@ -151,8 +152,10 @@ export const usePunishmentsQuery = () => {
   } = useQuery({
     queryKey: [PUNISHMENT_HISTORY_KEY],
     queryFn: fetchPunishmentHistory,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // Query for fetching count of punishments (for loading skeletons)
@@ -161,7 +164,10 @@ export const usePunishmentsQuery = () => {
   } = useQuery({
     queryKey: [PUNISHMENTS_KEY, 'count'],
     queryFn: getPunishmentsCount,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // Calculate total points deducted
