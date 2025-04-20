@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/lib/rewardUtils';
@@ -145,8 +144,11 @@ export const useRewardsQuery = () => {
   } = useQuery({
     queryKey: [REWARDS_KEY],
     queryFn: fetchRewards,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 10,      // 10 minutes stale time
+    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention
+    refetchOnWindowFocus: false,    // Disable refetch on window focus
+    refetchOnMount: false,          // Disable refetch on mount
+    refetchOnReconnect: false,      // Disable refetch on reconnect
   });
 
   // Query for fetching count of rewards (for loading skeletons)

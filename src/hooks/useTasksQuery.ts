@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -68,9 +67,11 @@ export const useTasksQuery = () => {
   } = useQuery({
     queryKey: [TASKS_KEY],
     queryFn: fetchTasks,
-    staleTime: 10000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true
+    staleTime: 1000 * 60 * 10,      // 10 minutes stale time
+    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention
+    refetchOnWindowFocus: false,    // Disable refetch on window focus
+    refetchOnMount: false,          // Disable automatic refetch on mount
+    refetchOnReconnect: false,      // Disable refetch on reconnect
   });
 
   // Mutation for saving a task (create or update)

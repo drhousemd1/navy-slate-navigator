@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
@@ -141,8 +140,11 @@ export const usePunishmentsQuery = () => {
   } = useQuery({
     queryKey: [PUNISHMENTS_KEY],
     queryFn: fetchPunishments,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 10,      // 10 minutes stale time
+    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention
+    refetchOnWindowFocus: false,    // Disable refetch on window focus
+    refetchOnMount: false,          // Disable refetch on mount
+    refetchOnReconnect: false,      // Disable refetch on reconnect
   });
 
   // Query for fetching punishment history
@@ -151,8 +153,11 @@ export const usePunishmentsQuery = () => {
   } = useQuery({
     queryKey: [PUNISHMENT_HISTORY_KEY],
     queryFn: fetchPunishmentHistory,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 10,      // 10 minutes stale time
+    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention
+    refetchOnWindowFocus: false,    // Disable refetch on window focus
+    refetchOnMount: false,          // Disable refetch on mount
+    refetchOnReconnect: false,      // Disable refetch on reconnect
   });
 
   // Query for fetching count of punishments (for loading skeletons)
@@ -161,7 +166,11 @@ export const usePunishmentsQuery = () => {
   } = useQuery({
     queryKey: [PUNISHMENTS_KEY, 'count'],
     queryFn: getPunishmentsCount,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1000 * 60 * 10,      // 10 minutes stale time
+    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention
+    refetchOnWindowFocus: false,    // Disable refetch on window focus
+    refetchOnMount: false,          // Disable refetch on mount
+    refetchOnReconnect: false,      // Disable refetch on reconnect
   });
 
   // Calculate total points deducted

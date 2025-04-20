@@ -14,7 +14,6 @@ import { getMondayBasedDay } from '@/lib/utils';
 export const useRulesQuery = () => {
   const queryClient = useQueryClient();
 
-  // Fetch all rules
   const {
     data: rules = [],
     isLoading,
@@ -22,11 +21,13 @@ export const useRulesQuery = () => {
   } = useQuery({
     queryKey: [RULES_KEY],
     queryFn: fetchRules,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 10,      // 10 minutes stale time
+    cacheTime: 1000 * 60 * 30,      // 30 minutes cache retention (React Query v4+)
+    refetchOnWindowFocus: false,    // Disable refetch on window focus
+    refetchOnMount: false,          // Disable automatic refetch on mount if data not stale
+    refetchOnReconnect: false,      // Disable refetch on reconnect
   });
 
-  // Create rule mutation
   const createRuleMutation = useMutation({
     mutationFn: createRule,
     onSuccess: (newRule) => {
@@ -48,7 +49,6 @@ export const useRulesQuery = () => {
     }
   });
 
-  // Update rule mutation
   const updateRuleMutation = useMutation({
     mutationFn: updateRule,
     onMutate: async (updatedRule) => {
@@ -82,7 +82,6 @@ export const useRulesQuery = () => {
     }
   });
 
-  // Delete rule mutation
   const deleteRuleMutation = useMutation({
     mutationFn: deleteRule,
     onMutate: async (id) => {
@@ -115,7 +114,6 @@ export const useRulesQuery = () => {
     }
   });
 
-  // Record violation mutation
   const recordViolationMutation = useMutation({
     mutationFn: recordRuleViolation,
     onMutate: async (ruleId) => {
