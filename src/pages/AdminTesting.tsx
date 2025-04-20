@@ -1,14 +1,15 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
 import ActivityDataReset from '@/components/admin-testing/ActivityDataReset';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, MoveVertical } from 'lucide-react';
 import { AdminTestingCardData } from '@/components/admin-testing/defaultAdminTestingCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
+import { DragDropContext, Droppable, Draggable, DropResult, DragStart } from '@hello-pangea/dnd';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface SupabaseCardData {
   id: string;
@@ -32,6 +33,7 @@ interface SupabaseCardData {
   created_at: string | null;
   updated_at: string | null;
   user_id: string | null;
+  order: number | null;
 }
 
 const AdminTesting = () => {
@@ -40,6 +42,12 @@ const AdminTesting = () => {
   const [carouselTimer, setCarouselTimer] = useState(5);
   const [isLoading, setIsLoading] = useState(true);
   const [cardsFetched, setCardsFetched] = useState(false);
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const draggedItemId = useRef<string | null>(null);
+  const scrollPositionRef = useRef(0);
+  const cardsContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -47,7 +55,6 @@ const AdminTesting = () => {
         setIsLoading(true);
         console.log("Fetching cards from Supabase...");
         
-        // Check if the supabase client is properly initialized
         if (!supabase) {
           console.error("Supabase client is not initialized!");
           toast({
@@ -60,7 +67,8 @@ const AdminTesting = () => {
 
         const { data, error } = await supabase
           .from('admin_testing_cards')
-          .select('*');
+          .select('*')
+          .order('order', { ascending: true });
         
         if (error) {
           console.error('Error fetching cards from Supabase:', error);
@@ -86,17 +94,19 @@ const AdminTesting = () => {
             title_color: card.title_color || '#FFFFFF',
             subtext_color: card.subtext_color || '#8E9196',
             calendar_color: card.calendar_color || '#7E69AB',
+            icon_url: card.icon_url || null,
+            icon_name: card.icon_name || null,
             icon_color: card.icon_color || '#FFFFFF',
             highlight_effect: card.highlight_effect || false,
             usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0],
-            background_images: Array.isArray(card.background_images) ? card.background_images : []
+            background_images: Array.isArray(card.background_images) ? card.background_images : [],
+            order: card.order || 0
           })) as AdminTestingCardData[];
           
           console.log("Formatted cards:", formattedCards);
           setCards(formattedCards);
         } else {
           console.log("No cards found in the database, creating a default card");
-          // If no cards are found, create a default one
           await handleAddCard();
         }
       } catch (error) {
@@ -139,7 +149,8 @@ const AdminTesting = () => {
       icon_color: '#FFFFFF',
       highlight_effect: false,
       usage_data: [0, 0, 0, 0, 0, 0, 0],
-      background_images: []
+      background_images: [],
+      order: cards.length
     };
     
     try {
@@ -171,7 +182,8 @@ const AdminTesting = () => {
         ...data,
         priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
         points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
-        background_images: Array.isArray(supabaseData.background_images) ? supabaseData.background_images : []
+        background_images: Array.isArray(supabaseData.background_images) ? supabaseData.background_images : [],
+        order: supabaseData.order || cards.length
       } as AdminTestingCardData;
       
       setCards(prevCards => [...prevCards, formattedCard]);
@@ -199,20 +211,139 @@ const AdminTesting = () => {
     ));
   };
 
+  const toggleReorderMode = () => {
+    console.log("Toggling reorder mode:", !isReorderMode);
+    
+    if (isReorderMode) {
+      saveCardOrder();
+    }
+    
+    setIsReorderMode(!isReorderMode);
+  };
+
+  const preventTouchMove = (e: TouchEvent) => {
+    if (isDragging && e.target instanceof HTMLElement) {
+      if (!e.target.closest('.scrollable')) {
+        e.preventDefault();
+      }
+    }
+  };
+
+  const onDragStart = (result: DragStart) => {
+    setIsDragging(true);
+    draggedItemId.current = result.draggableId;
+    
+    // Store the scroll position
+    if (cardsContainerRef.current) {
+      scrollPositionRef.current = cardsContainerRef.current.scrollTop;
+    }
+    
+    // Get and store the card height for placeholder
+    const draggedCard = document.querySelector(`[data-rbd-draggable-id="${result.draggableId}"]`);
+    if (draggedCard) {
+      document.documentElement.style.setProperty('--card-height', `${draggedCard.clientHeight}px`);
+    }
+    
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    document.addEventListener('touchmove', preventTouchMove, { passive: false });
+  };
+
+  const onDragEnd = (result: DropResult) => {
+    setIsDragging(false);
+    draggedItemId.current = null;
+    
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+    document.removeEventListener('touchmove', preventTouchMove);
+    
+    // Reset the card height variable
+    document.documentElement.style.removeProperty('--card-height');
+    
+    if (!result.destination || result.destination.index === result.source.index) {
+      return;
+    }
+
+    const reordered = Array.from(cards);
+    const [removed] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, removed);
+
+    setCards(reordered.map((card, index) => ({
+      ...card,
+      order: index
+    })));
+  };
+
+  const saveCardOrder = async () => {
+    try {
+      setIsSavingOrder(true);
+      console.log("Saving card order to database");
+
+      const updates = cards.map(card => ({
+        id: card.id,
+        order: card.order
+      }));
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('admin_testing_cards')
+          .update({ order: update.order })
+          .eq('id', update.id);
+
+        if (error) {
+          console.error('Error updating card order:', error);
+          toast({
+            title: "Error",
+            description: `Failed to save card order: ${error.message}`,
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: "Card order saved successfully",
+      });
+    } catch (error) {
+      console.error('Error in saveCardOrder:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while saving card order",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
+  console.log("Render admin testing page, reorder mode:", isReorderMode);
+
   return (
     <AppLayout>
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold text-white mb-6">Admin Testing Panel</h1>
         
-        <div className="bg-red-500 text-white p-6 mb-6 rounded-lg">
+        <div className="bg-yellow-500 text-black p-6 mb-6 rounded-lg">
           <h2 className="text-3xl font-bold">ADMIN TESTING PAGE</h2>
           <p>This page is for testing admin functionality only.</p>
         </div>
         
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-end gap-2 mb-6">
+          <img 
+            src="/lovable-uploads/4df3c2bc-d557-4ac5-9b0c-0e76f31b924a.png"
+            alt={isReorderMode ? "Save Order" : "Reorder Cards"}
+            onClick={toggleReorderMode}
+            className={`h-12 w-12 cursor-pointer ${
+              isReorderMode ? 'opacity-50' : 'opacity-100'
+            }`}
+            role="button"
+            aria-label={isReorderMode ? "Save Order" : "Reorder Cards"}
+          />
           <Button 
             onClick={handleAddCard}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            disabled={isReorderMode}
           >
             <Plus className="mr-2 h-4 w-4" />
             Add New Card
@@ -225,29 +356,61 @@ const AdminTesting = () => {
           <div className="text-center text-white p-8">
             <p>No cards found. Click the "Add New Card" button to create one.</p>
           </div>
-        ) : cards.length === 0 && !cardsFetched ? (
-          <div className="text-center text-white p-8">
-            <p>Unable to load cards. Please try refreshing the page.</p>
-          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cards.map(card => (
-              <AdminTestingCard
-                key={card.id}
-                card={card}
-                id={card.id}
-                title={card.title}
-                description={card.description}
-                priority={card.priority}
-                points={card.points}
-                globalCarouselIndex={globalCarouselIndex}
-                onUpdate={handleUpdateCard}
-              />
-            ))}
-          </div>
+          <DragDropContext
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+          >
+            <Droppable droppableId="admin-cards" isDropDisabled={!isReorderMode}>
+              {(provided, snapshot) => (
+                <div
+                  ref={(el) => {
+                    provided.innerRef(el);
+                    cardsContainerRef.current = el;
+                  }}
+                  {...provided.droppableProps}
+                  className="flex flex-col gap-y-6"
+                >
+                  {cards.map((card, index) => (
+                    <Draggable
+                      key={card.id}
+                      draggableId={card.id}
+                      index={index}
+                      isDragDisabled={!isReorderMode}
+                    >
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          className={`drag-item ${snapshot.isDragging ? 'dragging' : ''}`}
+                          style={{
+                            ...provided.draggableProps.style,
+                          }}
+                        >
+                          <AdminTestingCard
+                            key={card.id}
+                            card={card}
+                            id={card.id}
+                            title={card.title}
+                            description={card.description}
+                            priority={card.priority}
+                            points={card.points}
+                            globalCarouselIndex={globalCarouselIndex}
+                            onUpdate={handleUpdateCard}
+                            isReorderMode={isReorderMode}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         )}
         
-        {/* Activity Data Reset Section */}
         <div className="mt-12">
           <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Data Management</h2>
           <ActivityDataReset />

@@ -1,4 +1,3 @@
 
-// Re-export everything from the refactored files
-export { PunishmentsProvider, usePunishments } from './punishments/PunishmentsProvider';
-export type { PunishmentData, PunishmentHistoryItem, PunishmentsContextType } from './punishments/types';
+// Re-export everything from the types file only
+export type { PunishmentData, PunishmentHistoryItem } from './punishments/types';

@@ -2,30 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import RuleEditorForm from './rule-editor/RuleEditorForm';
-
-interface Rule {
-  id?: string;
-  title: string;
-  description: string | null;
-  priority: 'low' | 'medium' | 'high';
-  background_image_url?: string | null;
-  background_opacity: number;
-  icon_url?: string | null;
-  icon_name?: string | null;
-  title_color: string;
-  subtext_color: string;
-  calendar_color: string;
-  icon_color: string;
-  highlight_effect: boolean;
-  focal_point_x: number;
-  focal_point_y: number;
-  frequency: 'daily' | 'weekly';
-  frequency_count: number;
-  usage_data?: number[];
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string;
-}
+import { Rule } from '@/hooks/rules/types'; // Changed import
 
 interface RuleEditorProps {
   isOpen: boolean;
@@ -78,3 +55,4 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
 };
 
 export default RuleEditor;
+

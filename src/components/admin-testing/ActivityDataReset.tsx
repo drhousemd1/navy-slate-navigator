@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
@@ -14,30 +13,32 @@ const ActivityDataReset = () => {
     if (!confirm('Are you sure you want to reset ALL activity data? This cannot be undone.')) {
       return;
     }
-
+    
     try {
       setIsResetting(true);
       console.log("Resetting all activity data...");
 
+      // Define fixed tables with proper typing
       const tables = [
-        'task_completion_history',
-        'rule_violations',
-        'reward_usage',
-        'punishment_history'
+        { name: 'task_completion_history', column: 'id' },
+        { name: 'rule_violations', column: 'id' },
+        { name: 'reward_usage', column: 'id' },
+        { name: 'punishment_history', column: 'id' }
       ];
 
-      for (const table of tables) {
+      for (const { name, column } of tables) {
+        // Type assertion to ensure name is treated as a valid table name
         const { error, count } = await supabase
-          .from(table)
+          .from(name as any)
           .delete()
-          .gt('created_at', '1900-01-01') // safer universal condition
-          .select('*', { count: 'exact' });
+          .neq(column, '00000000-0000-0000-0000-000000000000')
+          .select('count');
 
         if (error) {
-          throw new Error(`Failed to delete from ${table}: ${error.message}`);
+          throw new Error(`Failed to delete from ${name}: ${error.message}`);
         }
 
-        console.log(`Deleted ${count} rows from ${table}`);
+        console.log(`Deleted ${count} rows from ${name}`);
       }
 
       const { data: tasks, error: fetchTasksError } = await supabase
