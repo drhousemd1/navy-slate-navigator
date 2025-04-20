@@ -164,46 +164,42 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   };
 
   const handleToggleCompletion = async (taskId: string, completed: boolean) => {
+    let updatedUsageForQuery: number[] | null = null;
+
     setLocalUsageData(prev => {
       const currentUsage = prev[taskId] ? [...prev[taskId]] : Array(7).fill(0);
       const dayOfWeek = new Date().getDay();
       const currentCount = currentUsage[dayOfWeek] || 0;
 
       if (completed) {
-        if(currentCount >= 1) {
-          return { ...prev };
+        if (currentCount >= 1) {
+          return prev; // Prevent going above max completions in local state
         }
         currentUsage[dayOfWeek] = currentCount + 1;
       } else {
         currentUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
       }
+
+      updatedUsageForQuery = currentUsage;
+
       return { ...prev, [taskId]: currentUsage };
     });
 
-    queryClient.setQueryData<Task[]>(['tasks'], oldTasks => {
-      if (!oldTasks) return oldTasks;
+    if (updatedUsageForQuery) {
+      queryClient.setQueryData<Task[]>(['tasks'], oldTasks => {
+        if (!oldTasks) return oldTasks;
 
-      return oldTasks.map(task => {
-        if (task.id === taskId) {
-          const updatedUsageData = localUsageData[taskId] ? [...localUsageData[taskId]] : Array(7).fill(0);
-          const dayOfWeek = new Date().getDay();
-
-          if (completed) {
-            if ((updatedUsageData[dayOfWeek] || 0) < 1) {
-              updatedUsageData[dayOfWeek] = (updatedUsageData[dayOfWeek] || 0) + 1;
-            }
-          } else {
-            updatedUsageData[dayOfWeek] = Math.max((updatedUsageData[dayOfWeek] || 0) - 1, 0);
+        return oldTasks.map(task => {
+          if (task.id === taskId) {
+            return {
+              ...task,
+              usage_data: updatedUsageForQuery
+            };
           }
-
-          return {
-            ...task,
-            usage_data: updatedUsageData
-          };
-        }
-        return task;
+          return task;
+        });
       });
-    });
+    }
 
     try {
       console.log(`Toggling task ${taskId} completion to ${completed}`);
