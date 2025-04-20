@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -29,10 +28,8 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
 
-  // Local state to optimistically track completions per task by id
   const [localUsageData, setLocalUsageData] = useState<{[taskId: string]: number[]}>({});
 
-  // Use the global carousel index from the context (just like in Punishments.tsx)
   const { carouselTimer, globalCarouselIndex } = useTaskCarousel();
 
   const { data: tasks = [], isLoading, error } = useQuery({
@@ -97,7 +94,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     }
   }, [error]);
 
-  // Sync local usage data with latest fetched tasks usage_data when tasks change
   useEffect(() => {
     if (tasks.length > 0) {
       const newLocalUsageData: {[taskId: string]: number[]} = {};
@@ -168,23 +164,45 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   };
 
   const handleToggleCompletion = async (taskId: string, completed: boolean) => {
-    // Optimistically update localUsageData state immediately on client side for instant UI update
     setLocalUsageData(prev => {
       const currentUsage = prev[taskId] ? [...prev[taskId]] : Array(7).fill(0);
       const dayOfWeek = new Date().getDay();
       const currentCount = currentUsage[dayOfWeek] || 0;
 
-      // If completing, increment count for today, else decrement but ensure >=0
       if (completed) {
         if(currentCount >= 1) {
-          // Prevent going above max completions in local state
-          return prev;
+          return { ...prev };
         }
         currentUsage[dayOfWeek] = currentCount + 1;
       } else {
         currentUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
       }
       return { ...prev, [taskId]: currentUsage };
+    });
+
+    queryClient.setQueryData<Task[]>(['tasks'], oldTasks => {
+      if (!oldTasks) return oldTasks;
+
+      return oldTasks.map(task => {
+        if (task.id === taskId) {
+          const updatedUsageData = localUsageData[taskId] ? [...localUsageData[taskId]] : Array(7).fill(0);
+          const dayOfWeek = new Date().getDay();
+
+          if (completed) {
+            if ((updatedUsageData[dayOfWeek] || 0) < 1) {
+              updatedUsageData[dayOfWeek] = (updatedUsageData[dayOfWeek] || 0) + 1;
+            }
+          } else {
+            updatedUsageData[dayOfWeek] = Math.max((updatedUsageData[dayOfWeek] || 0) - 1, 0);
+          }
+
+          return {
+            ...task,
+            usage_data: updatedUsageData
+          };
+        }
+        return task;
+      });
     });
 
     try {
@@ -231,6 +249,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         description: 'Failed to update task. Please try again.',
         variant: 'destructive',
       });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     }
   };
 
@@ -247,7 +266,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       ) : (
         <div className="space-y-4">
           {tasks.map(task => {
-            // Use localUsageData if available, otherwise fallback to task usage_data
             const usageDataForTask = localUsageData[task.id] || task.usage_data || Array(7).fill(0);
             const currentDayOfWeek = new Date().getDay();
             const currentCompletions = usageDataForTask[currentDayOfWeek] || 0;
@@ -266,7 +284,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
                 focalPointY={task.focal_point_y}
                 frequency={task.frequency}
                 frequency_count={task.frequency_count}
-                usage_data={usageDataForTask} // Pass locally updated usage_data
+                usage_data={usageDataForTask}
                 icon_url={task.icon_url}
                 icon_name={task.icon_name}
                 priority={task.priority}
