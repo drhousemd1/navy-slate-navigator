@@ -6,8 +6,8 @@ import { Reward } from '@/lib/rewardUtils';
 interface RewardsListProps {
   rewards: Reward[];
   onEdit: (index: number) => void;
-  onBuy: (id: string, cost: number) => void;
-  onUse: (id: string) => void;
+  onBuy: (id: string, cost: number) => Promise<void>;
+  onUse: (id: string) => Promise<void>;
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ 
@@ -49,3 +49,4 @@ const RewardsList: React.FC<RewardsListProps> = ({
 };
 
 export default RewardsList;
+
