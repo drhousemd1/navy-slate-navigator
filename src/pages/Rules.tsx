@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -36,6 +37,7 @@ interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  isUpdating?: boolean;
 }
 
 const Rules: React.FC = () => {
@@ -106,10 +108,12 @@ const Rules: React.FC = () => {
     },
     onMutate: async (rule) => {
       await queryClient.cancelQueries({ queryKey: ['rules'] });
-      const previousRules = queryClient.getQueryData<Rule[]>({ queryKey: ['rules'] });
-      queryClient.setQueryData<Rule[]>({ queryKey: ['rules'] }, (old = []) =>
-        old.map(r => r.id === rule.id ? { ...r, isUpdating: true } : r)
-      );
+      const previousRules = queryClient.getQueryData<Rule[]>(['rules']);
+      
+      queryClient.setQueryData<Rule[]>(['rules'], (old = []) => {
+        return old.map(r => r.id === rule.id ? { ...r, isUpdating: true } : r);
+      });
+      
       return { previousRules };
     },
     onError: (err, rule, context: any) => {
@@ -118,7 +122,9 @@ const Rules: React.FC = () => {
         description: 'Failed to record rule violation. Please try again.',
         variant: 'destructive',
       });
-      queryClient.setQueryData<Rule[]>({ queryKey: ['rules'] }, context.previousRules);
+      if (context?.previousRules) {
+        queryClient.setQueryData<Rule[]>(['rules'], context.previousRules);
+      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['rules'] });
@@ -195,9 +201,9 @@ const Rules: React.FC = () => {
     },
     onMutate: async (ruleData: Partial<Rule>) => {
       await queryClient.cancelQueries({ queryKey: ['rules'] });
-      const previousRules = queryClient.getQueryData<Rule[]>({ queryKey: ['rules'] });
+      const previousRules = queryClient.getQueryData<Rule[]>(['rules']);
 
-      queryClient.setQueryData<Rule[]>({ queryKey: ['rules'] }, (old = []) => {
+      queryClient.setQueryData<Rule[]>(['rules'], (old = []) => {
         if (!old) return [ruleData as Rule];
         if (ruleData.id) {
           return old.map(rule => (rule.id === ruleData.id ? { ...rule, ...ruleData } : rule));
@@ -205,6 +211,7 @@ const Rules: React.FC = () => {
           return [ruleData as Rule, ...old];
         }
       });
+      
       return { previousRules };
     },
     onError: (err, ruleData, context: any) => {
@@ -213,7 +220,9 @@ const Rules: React.FC = () => {
         description: 'Failed to save rule. Please try again.',
         variant: 'destructive',
       });
-      queryClient.setQueryData<Rule[]>({ queryKey: ['rules'] }, context.previousRules);
+      if (context?.previousRules) {
+        queryClient.setQueryData<Rule[]>(['rules'], context.previousRules);
+      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['rules'] });
@@ -236,9 +245,11 @@ const Rules: React.FC = () => {
     },
     onMutate: async (ruleId: string) => {
       await queryClient.cancelQueries({ queryKey: ['rules'] });
-      const previousRules = queryClient.getQueryData<Rule[]>({ queryKey: ['rules'] });
+      const previousRules = queryClient.getQueryData<Rule[]>(['rules']);
 
-      queryClient.setQueryData<Rule[]>({ queryKey: ['rules'] }, (old = []) => old ? old.filter(rule => rule.id !== ruleId) : []);
+      queryClient.setQueryData<Rule[]>(['rules'], (old = []) => {
+        return old ? old.filter(rule => rule.id !== ruleId) : [];
+      });
 
       return { previousRules };
     },
@@ -248,7 +259,9 @@ const Rules: React.FC = () => {
         description: 'Failed to delete rule. Please try again.',
         variant: 'destructive',
       });
-      queryClient.setQueryData<Rule[]>({ queryKey: ['rules'] }, context.previousRules);
+      if (context?.previousRules) {
+        queryClient.setQueryData<Rule[]>(['rules'], context.previousRules);
+      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['rules'] });
