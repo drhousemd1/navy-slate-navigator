@@ -2,13 +2,11 @@
 import React, { useEffect } from 'react';
 import { Badge } from '../ui/badge';
 import { Box, Coins } from 'lucide-react';
-import { supabase } from "@/integrations/supabase/client";
 import { useRewards } from '@/contexts/RewardsContext';
 
 const RulesHeader: React.FC = () => {
   const { totalPoints, totalRewardsSupply, refreshPointsFromDatabase } = useRewards();
 
-  // Refresh points when component mounts - exactly like in TasksHeader
   useEffect(() => {
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
@@ -31,3 +29,4 @@ const RulesHeader: React.FC = () => {
 };
 
 export default RulesHeader;
+
