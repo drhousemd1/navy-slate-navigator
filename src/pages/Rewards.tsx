@@ -1,36 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { QueryClient, QueryClientProvider, useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { persistQueryClient } from '@tanstack/react-query-persist-client'
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
+import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardEditor from '../components/RewardEditor';
-import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
+import { useRewards } from '../contexts/RewardsContext';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import RewardsList from '../components/rewards/RewardsList';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-
-// Create a new QueryClient instance
-const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            staleTime: 1000 * 60 * 20,       // Consider data fresh for 20 minutes
-            cacheTime: 1000 * 60 * 30,       // Keep data in memory for 30 minutes after inactive
-            refetchOnWindowFocus: false      // Avoid refetch when switching back to tab
-        },
-    },
-});
-
-//Implement LocalStorage persistence
-const localStoragePersister = createSyncStoragePersister({
-    storage: window.localStorage,
-})
-
-persistQueryClient({
-    queryClient,
-    persister: localStoragePersister,
-    maxAge: 1000 * 60 * 20 // Persisted data valid for 20 minutes
-});
 
 interface RewardsContentProps {
     isEditorOpen: boolean;
@@ -38,123 +12,11 @@ interface RewardsContentProps {
 }
 
 const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
+    const { rewards, handleSaveReward, handleDeleteReward, isLoading } = useRewards();
+
+    // Editor state
     const [currentReward, setCurrentReward] = useState<any>(null);
     const [currentRewardIndex, setCurrentRewardIndex] = useState<number | null>(null);
-    const queryClient = useQueryClient();
-
-    // Fetch rewards using React Query
-    const { data: rewards = [], isLoading, error, refetch } = useQuery({
-        queryKey: ['rewards'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('rewards')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                throw new Error(error.message);
-            }
-            return data;
-        },
-    });
-
-    // Mutations for saving, deleting, and claiming rewards
-    const saveRewardMutation = useMutation(
-        async (rewardData: any) => {
-            const { data, error } = await supabase
-                .from('rewards')
-                .upsert(rewardData)
-                .select()
-                .single();
-            if (error) {
-                throw new Error(error.message);
-            }
-            return data;
-        },
-        {
-            onMutate: async (newReward) => {
-                // Cancel any outgoing rewards queries, so they don't overwrite the optimistic update
-                await queryClient.cancelQueries({ queryKey: ['rewards'] });
-
-                // Snapshot the previous value
-                const previousRewards = queryClient.getQueryData<any[]>(['rewards']) || [];
-
-                // Optimistically update the cache
-                queryClient.setQueryData<any[]>(['rewards'], (old) => {
-                    if (newReward.id) {
-                        // If the reward exists, update it
-                        return old?.map((reward) => (reward.id === newReward.id ? newReward : reward)) ?? [];
-                    } else {
-                        // If the reward is new, add it to the beginning of the list
-                        return [newReward, ...(old ?? [])];
-                    }
-                });
-
-                // Return a context object with the snapshotted value
-                return { previousRewards };
-            },
-            onError: (err, newReward, context: any) => {
-                console.error('Error saving reward:', err);
-                toast({
-                    title: 'Error',
-                    description: 'Failed to save reward. Please try again.',
-                    variant: 'destructive',
-                });
-                // Rollback to the previous value
-                queryClient.setQueryData<any[]>(['rewards'], context.previousRewards);
-            },
-            onSettled: () => {
-                // After success or failure, refetch rewards to ensure accuracy
-                queryClient.invalidateQueries({ queryKey: ['rewards'] });
-            },
-        }
-    );
-
-    const deleteRewardMutation = useMutation(
-        async (rewardId: string) => {
-            const { data, error } = await supabase
-                .from('rewards')
-                .delete()
-                .eq('id', rewardId)
-                .select()
-                .single();
-            if (error) {
-                throw new Error(error.message);
-            }
-            return data;
-        },
-        {
-            onMutate: async (rewardId) => {
-                // Cancel any outgoing rewards queries, so they don't overwrite the optimistic update
-                await queryClient.cancelQueries({ queryKey: ['rewards'] });
-
-                // Snapshot the previous value
-                const previousRewards = queryClient.getQueryData<any[]>(['rewards']) || [];
-
-                // Optimistically update the cache
-                queryClient.setQueryData<any[]>(['rewards'], (old) =>
-                    old?.filter((reward) => reward.id !== rewardId) ?? []
-                );
-
-                // Return a context object with the snapshotted value
-                return { previousRewards };
-            },
-            onError: (err, rewardId, context: any) => {
-                console.error('Error deleting reward:', err);
-                toast({
-                    title: 'Error',
-                    description: 'Failed to delete reward. Please try again.',
-                    variant: 'destructive',
-                });
-                // Rollback to the previous value
-                queryClient.setQueryData<any[]>(['rewards'], context.previousRewards);
-            },
-            onSettled: () => {
-                // After success or failure, refetch rewards to ensure accuracy
-                queryClient.invalidateQueries({ queryKey: ['rewards'] });
-            },
-        }
-    );
 
     // Handle editing a reward
     const handleEdit = (index: number) => {
@@ -181,8 +43,15 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     const handleSave = async (rewardData: any) => {
         console.log("Saving reward with data:", rewardData, "at index:", currentRewardIndex);
         try {
-            // Optimistically update the cache
-            await saveRewardMutation.mutateAsync(rewardData);
+            // Log the order of rewards before saving
+            console.log("Rewards order BEFORE saving:",
+                rewards.map((r, i) => `${i}: ${r.title} (${r.id})`));
+
+            await handleSaveReward(rewardData, currentRewardIndex);
+
+            // Log the order of rewards after saving to verify it hasn't changed
+            console.log("Rewards order AFTER saving:",
+                rewards.map((r, i) => `${i}: ${r.title} (${r.id})`));
 
             toast({
                 title: "Success",
@@ -205,11 +74,10 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     };
 
     // Handle deleting a reward
-    const handleDelete = async (rewardId: string) => {
-        console.log("Deleting reward with id:", rewardId);
+    const handleDelete = async (index: number) => {
+        console.log("Deleting reward at index:", index);
         try {
-            // Optimistically update the cache
-            await deleteRewardMutation.mutateAsync(rewardId);
+            await handleDeleteReward(index);
 
             toast({
                 title: "Success",
@@ -237,7 +105,7 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
         setCurrentRewardIndex(null);
     };
 
-    if (isLoading) {
+    if (isLoading && !rewards.length) {
         return (
             <div className="p-4 pt-6">
                 <RewardsHeader />
@@ -251,13 +119,14 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     return (
         <div className="p-4 pt-6">
             <RewardsHeader />
-            <RewardsList onEdit={handleEdit} onDelete={handleDelete} />
+            <RewardsList onEdit={handleEdit} />
 
             <RewardEditor
                 isOpen={isEditorOpen}
                 onClose={closeEditor}
                 rewardData={currentReward}
                 onSave={handleSave}
+                onDelete={currentRewardIndex !== null ? handleDelete : undefined}
             />
         </div>
     );
@@ -268,12 +137,10 @@ const Rewards: React.FC = () => {
 
     return (
         <AppLayout onAddNewItem={() => setIsEditorOpen(true)}>
-            <QueryClientProvider client={queryClient}>
-                <RewardsContent
-                    isEditorOpen={isEditorOpen}
-                    setIsEditorOpen={setIsEditorOpen}
-                />
-            </QueryClientProvider>
+            <RewardsContent
+                isEditorOpen={isEditorOpen}
+                setIsEditorOpen={setIsEditorOpen}
+            />
         </AppLayout>
     );
 };
