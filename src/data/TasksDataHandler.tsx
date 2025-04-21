@@ -6,6 +6,7 @@ import {
   Task,
   fetchTasks,
   saveTask,
+  updateTaskCompletion,
   deleteTask,
   getCurrentDayOfWeek,
   wasCompletedToday
@@ -78,7 +79,6 @@ export const useToggleTaskCompletion = () => {
       
       // Calculate the updated usage_data
       const dayOfWeek = getCurrentDayOfWeek();
-      const now = new Date().toISOString();
       const currentUsage = currentTask.usage_data ? [...currentTask.usage_data] : Array(7).fill(0);
       const maxCompletions = currentTask.frequency_count || 1;
       
@@ -98,8 +98,7 @@ export const useToggleTaskCompletion = () => {
             ? { 
                 ...task, 
                 usage_data: optimisticUsage,
-                completed: optimisticUsage[dayOfWeek] > 0,
-                last_completed_date: completed ? new Date().toLocaleDateString('en-CA') : task.last_completed_date
+                completed: optimisticUsage[dayOfWeek] > 0
               } 
             : task
         )
@@ -145,31 +144,18 @@ export const useSaveTask = () => {
       
       const previousTasks = queryClient.getQueryData<Task[]>(['tasks']);
       
-      // Update usage_data for the current day
-      const dayOfWeek = getCurrentDayOfWeek();
-      const now = new Date().toISOString();
-      
-      // Ensure usage_data exists and is properly formatted
-      let currentUsageData = taskData.usage_data || Array(7).fill(0);
-      
       // Optimistically update the tasks list
       queryClient.setQueryData<Task[]>(['tasks'], (old = []) => {
         if (taskData.id) {
           // Update existing task
-          return old.map(task => task.id === taskData.id ? { 
-            ...task, 
-            ...taskData, 
-            usage_data: currentUsageData,
-            updated_at: now
-          } : task);
+          return old.map(task => task.id === taskData.id ? { ...task, ...taskData } : task);
         } else {
           // Add new task with temporary ID
           const newTask = { 
             ...taskData, 
             id: `temp-${Date.now()}`,
-            usage_data: currentUsageData,
-            created_at: now,
-            updated_at: now
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           };
           return [newTask, ...old];
         }
@@ -185,7 +171,6 @@ export const useSaveTask = () => {
         variant: 'destructive',
       });
       
-      // Restore previous data from context if available
       if (context?.previousTasks) {
         queryClient.setQueryData<Task[]>(['tasks'], context.previousTasks);
       }
@@ -197,7 +182,6 @@ export const useSaveTask = () => {
       });
     },
     onSettled: () => {
-      // Invalidate all relevant queries to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task-completions'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
@@ -235,7 +219,6 @@ export const useDeleteTask = () => {
         variant: 'destructive',
       });
       
-      // Restore previous data from context if available
       if (context?.previousTasks) {
         queryClient.setQueryData<Task[]>(['tasks'], context.previousTasks);
       }
@@ -247,7 +230,6 @@ export const useDeleteTask = () => {
       });
     },
     onSettled: () => {
-      // Invalidate all relevant queries to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task-completions'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
