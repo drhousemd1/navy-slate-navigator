@@ -1,14 +1,33 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
-import PunishmentCard from '../components/PunishmentCard';
 import { Clock, Skull, Bomb, Zap } from 'lucide-react';
 import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts/PunishmentsContext';
 import PunishmentEditor from '../components/PunishmentEditor';
+import PunishmentsList from '../components/punishments/PunishmentsList';
 
-const PunishmentsContent: React.FC = () => {
+export const getIconComponent = (iconName: string) => {
+  switch(iconName) {
+    case 'Skull':
+      return <Skull className="h-5 w-5 text-white" />;
+    case 'Clock':
+      return <Clock className="h-5 w-5 text-white" />;
+    case 'Bomb':
+      return <Bomb className="h-5 w-5 text-white" />;
+    case 'Zap':
+      return <Zap className="h-5 w-5 text-white" />;
+    default:
+      return <Skull className="h-5 w-5 text-white" />;
+  }
+};
+
+interface PunishmentsContentProps {
+  isEditorOpen: boolean;
+  setIsEditorOpen: (isOpen: boolean) => void;
+}
+
+const PunishmentsContent: React.FC<PunishmentsContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const { 
     punishments, 
     loading, 
@@ -18,10 +37,8 @@ const PunishmentsContent: React.FC = () => {
     globalCarouselTimer 
   } = usePunishments();
   
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
-  const [cleanupDone, setCleanupDone] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+
   
   // Add global carousel index state
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
@@ -34,58 +51,6 @@ const PunishmentsContent: React.FC = () => {
     
     return () => clearInterval(interval);
   }, [globalCarouselTimer]);
-
-  // Effect to delete dummy punishment cards
-  useEffect(() => {
-    const removeDummyPunishments = async () => {
-      if (!loading && !cleanupDone && punishments.length > 0) {
-        const dummyTitles = ["Late to Meeting", "Missed Deadline", "Breaking Rules"];
-        
-        for (const punishment of punishments) {
-          if (dummyTitles.includes(punishment.title) && punishment.id) {
-            console.log(`Removing dummy punishment: ${punishment.title}`);
-            await deletePunishment(punishment.id);
-          }
-        }
-        
-        setCleanupDone(true);
-      }
-    };
-    
-    removeDummyPunishments();
-  }, [loading, punishments, deletePunishment, cleanupDone]);
-
-  useEffect(() => {
-    const handleAddNewPunishment = () => {
-      handleAddNewPunishmentClick();
-    };
-
-    const currentContainer = containerRef.current;
-    if (currentContainer) {
-      currentContainer.addEventListener('add-new-punishment', handleAddNewPunishment);
-    }
-
-    return () => {
-      if (currentContainer) {
-        currentContainer.removeEventListener('add-new-punishment', handleAddNewPunishment);
-      }
-    };
-  }, []);
-
-  const getIconComponent = (iconName: string) => {
-    switch(iconName) {
-      case 'Skull':
-        return <Skull className="h-5 w-5 text-white" />;
-      case 'Clock':
-        return <Clock className="h-5 w-5 text-white" />;
-      case 'Bomb':
-        return <Bomb className="h-5 w-5 text-white" />;
-      case 'Zap':
-        return <Zap className="h-5 w-5 text-white" />;
-      default:
-        return <Skull className="h-5 w-5 text-white" />;
-    }
-  };
 
   const handleAddNewPunishmentClick = () => {
     setCurrentPunishment(undefined);
@@ -109,7 +74,7 @@ const PunishmentsContent: React.FC = () => {
   };
 
   return (
-    <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
+    <div className="p-4 pt-6 PunishmentsContent">
       <PunishmentsHeader />
       
       {loading ? (
@@ -125,31 +90,11 @@ const PunishmentsContent: React.FC = () => {
           <p>Create your first punishment to deduct points for undesirable behaviors.</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {punishments.map(punishment => (
-            <PunishmentCard
-              key={punishment.id}
-              id={punishment.id}
-              title={punishment.title}
-              description={punishment.description || ''}
-              points={punishment.points}
-              icon={getIconComponent(punishment.icon_name || 'Skull')}
-              icon_name={punishment.icon_name}
-              icon_color={punishment.icon_color}
-              title_color={punishment.title_color}
-              subtext_color={punishment.subtext_color}
-              calendar_color={punishment.calendar_color}
-              highlight_effect={punishment.highlight_effect}
-              background_image_url={punishment.background_image_url}
-              background_opacity={punishment.background_opacity}
-              focal_point_x={punishment.focal_point_x}
-              focal_point_y={punishment.focal_point_y}
-              background_images={punishment.background_images}
-              carousel_timer={globalCarouselTimer} // Use the global timer from context
-              globalCarouselIndex={globalCarouselIndex}
-            />
-          ))}
-        </div>
+        <PunishmentsList 
+          punishments={punishments}
+          globalCarouselTimer={globalCarouselTimer}
+          globalCarouselIndex={globalCarouselIndex}
+        />
       )}
       
       <PunishmentEditor 
@@ -163,17 +108,16 @@ const PunishmentsContent: React.FC = () => {
 };
 
 const Punishments: React.FC = () => {
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+
   return (
-    <AppLayout onAddNewItem={() => {
-      const content = document.querySelector('.PunishmentsContent');
-      if (content) {
-        const event = new CustomEvent('add-new-punishment');
-        content.dispatchEvent(event);
-      }
-    }}>
+    <AppLayout onAddNewItem={() => setIsEditorOpen(true)}>
       <RewardsProvider>
         <PunishmentsProvider>
-          <PunishmentsContent />
+          <PunishmentsContent 
+            isEditorOpen={isEditorOpen}
+            setIsEditorOpen={(isOpen: boolean) => setIsEditorOpen(isOpen)}
+          />
         </PunishmentsProvider>
       </RewardsProvider>
     </AppLayout>
