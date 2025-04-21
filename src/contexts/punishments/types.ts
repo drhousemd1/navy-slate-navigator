@@ -1,3 +1,4 @@
+
 export type PunishmentData = {
   id?: string;
   title: string;
@@ -40,3 +41,4 @@ export interface PunishmentsContextType {
   getPunishmentHistory: (punishmentId: string) => PunishmentHistoryItem[];
   totalPointsDeducted: number;
 }
+
