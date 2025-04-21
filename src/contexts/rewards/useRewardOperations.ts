@@ -1,5 +1,4 @@
-
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
 import { toast } from '@/hooks/use-toast';
@@ -9,10 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const useRewardOperations = () => {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const { totalPoints, setTotalPoints, updatePointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
-
-  // New state to hold usage data per reward by id
-  const [rewardUsageMap, setRewardUsageMap] = useState<{ [id: string]: boolean[] }>({});
-
+  
   const { 
     data: fetchedRewards = [], 
     isLoading,
@@ -21,56 +17,6 @@ export const useRewardOperations = () => {
     queryKey: ['rewards'],
     queryFn: fetchRewards,
   });
-
-  // Function to fetch usage data for a reward from the DB
-  const fetchUsageDataByRewardId = useCallback(async (rewardId: string): Promise<boolean[]> => {
-    try {
-      // Fetch usage for current week for the reward
-      const today = new Date();
-      const currentYear = today.getFullYear();
-      const weekNumber = `${currentYear}-${Math.floor(today.getDate() / 7)}`;
-
-      const { data, error } = await supabase
-        .from('reward_usage')
-        .select('day_of_week, used')
-        .eq('reward_id', rewardId)
-        .eq('week_number', weekNumber);
-
-      if (error) {
-        console.error(`[useRewardOperations] Error fetching usage data for reward ${rewardId}:`, error);
-        return Array(7).fill(false);
-      }
-
-      const usageArray = Array(7).fill(false);
-      if (data && data.length > 0) {
-        data.forEach((entry: {day_of_week: number, used: boolean}) => {
-          if (entry.day_of_week !== null && entry.day_of_week >= 0 && entry.day_of_week < 7) {
-            usageArray[entry.day_of_week] = Boolean(entry.used);
-          }
-        });
-      }
-
-      return usageArray;
-    } catch (error) {
-      console.error(`[useRewardOperations] Exception fetching usage data for reward ${rewardId}:`, error);
-      return Array(7).fill(false);
-    }
-  }, []);
-
-  // Refresh usage data for all rewards
-  const refreshAllUsageData = useCallback(async () => {
-    if (rewards.length === 0) return;
-    const usageMap: { [id: string]: boolean[] } = {};
-    for (const reward of rewards) {
-      usageMap[reward.id] = await fetchUsageDataByRewardId(reward.id);
-    }
-    setRewardUsageMap(usageMap);
-  }, [rewards, fetchUsageDataByRewardId]);
-
-  // Fetch usage data whenever rewards change or on mount
-  useEffect(() => {
-    refreshAllUsageData();
-  }, [refreshAllUsageData]);
 
   const refetchRewards = useCallback(async () => {
     console.log("[RewardsContext] Manually refetching rewards");
@@ -85,16 +31,10 @@ export const useRewardOperations = () => {
         }))
       );
       setRewards(data);
-      // Refresh usage data for updated rewards
-      const usageMap: { [id: string]: boolean[] } = {};
-      for (const reward of data) {
-        usageMap[reward.id] = await fetchUsageDataByRewardId(reward.id);
-      }
-      setRewardUsageMap(usageMap);
     }
     
     await refreshPointsFromDatabase();
-  }, [refetch, refreshPointsFromDatabase, fetchUsageDataByRewardId]);
+  }, [refetch, refreshPointsFromDatabase]);
 
   const getTotalRewardsSupply = useCallback(() => {
     return rewards.reduce((total, reward) => total + reward.supply, 0);
@@ -134,6 +74,7 @@ export const useRewardOperations = () => {
           description: dataToSave.description,
           cost: dataToSave.cost,
           icon_name: dataToSave.icon_name,
+          icon_url: dataToSave.icon_url,
           icon_color: dataToSave.icon_color,
           background_image_url: dataToSave.background_image_url,
           background_opacity: dataToSave.background_opacity,
@@ -179,9 +120,6 @@ export const useRewardOperations = () => {
           );
           
           setRewards(updatedRewards);
-
-          // Refresh usage data after update for this reward
-          usageDataRefreshForSingleReward(result.id);
         }
       } else {
         result = await saveReward(dataToSave as Reward & { title: string });
@@ -201,8 +139,6 @@ export const useRewardOperations = () => {
             
             return newList;
           });
-          // Refresh usage for new reward
-          usageDataRefreshForSingleReward(result.id);
         }
       }
       
@@ -212,15 +148,6 @@ export const useRewardOperations = () => {
       throw error;
     }
   }, [rewards]);
-
-  // Helper to refresh usage for a single reward immediately
-  const usageDataRefreshForSingleReward = useCallback(async (rewardId: string) => {
-    const usageDataForReward = await fetchUsageDataByRewardId(rewardId);
-    setRewardUsageMap(prev => ({
-      ...prev,
-      [rewardId]: usageDataForReward
-    }));
-  }, [fetchUsageDataByRewardId]);
 
   const handleDeleteReward = useCallback(async (index: number): Promise<boolean> => {
     console.log("Handling delete reward at index:", index);
@@ -237,14 +164,6 @@ export const useRewardOperations = () => {
       if (success) {
         console.log("Reward deleted successfully");
         setRewards(prevRewards => prevRewards.filter((_, i) => i !== index));
-        
-        // Remove usage data for deleted reward
-        setRewardUsageMap(prev => {
-          const copy = { ...prev };
-          delete copy[rewardToDelete.id];
-          return copy;
-        });
-        
         return true;
       }
       
@@ -350,17 +269,14 @@ export const useRewardOperations = () => {
         console.log("Reward used successfully");
         
         const today = new Date();
-        const dayOfWeek = today.getDay(); // 0 is Sunday in JS
-        // Convert Sunday=0 to Monday-based 0 index (Monday=0..Sunday=6)
-        const mondayBasedDayOfWeek = (dayOfWeek + 6) % 7;
-
+        const dayOfWeek = today.getDay(); // 0-6, where 0 is Sunday
         const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
         
         const { error: usageError } = await supabase
           .from('reward_usage')
           .insert({
             reward_id: reward.id,
-            day_of_week: mondayBasedDayOfWeek,
+            day_of_week: dayOfWeek,
             week_number: weekNumber,
             used: true,
             created_at: new Date().toISOString()
@@ -375,13 +291,6 @@ export const useRewardOperations = () => {
         const updatedRewards = [...rewards];
         updatedRewards[rewardIndex] = { ...reward, supply: updatedSupply };
         setRewards(updatedRewards);
-
-        // Refresh usage data locally for this reward to update calendar
-        const updatedUsageData = await fetchUsageDataByRewardId(reward.id);
-        setRewardUsageMap(prev => ({
-          ...prev,
-          [reward.id]: updatedUsageData
-        }));
         
         toast({
           title: "Reward Used",
@@ -397,12 +306,11 @@ export const useRewardOperations = () => {
         variant: "destructive",
       });
     }
-  }, [rewards, fetchUsageDataByRewardId]);
+  }, [rewards]);
 
   return {
     rewards,
     setRewards,
-    rewardUsageMap, // Expose usage map for usage data per reward
     isLoading,
     fetchedRewards,
     totalPoints,

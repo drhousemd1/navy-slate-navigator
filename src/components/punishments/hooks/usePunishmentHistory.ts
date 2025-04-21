@@ -1,48 +1,53 @@
 
-import { useState } from 'react';
-import { usePunishments, PunishmentHistoryItem } from '@/contexts/PunishmentsContext';
-import { convertToMondayBasedIndex } from '@/lib/utils';
+import { useMemo } from 'react';
+import { PunishmentHistoryItem } from '@/contexts/punishments/types';
+import { generateMondayBasedWeekDates, convertToMondayBasedIndex } from '@/lib/utils';
+import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
 
 interface UsePunishmentHistoryProps {
   id?: string;
 }
 
 export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
-  const { getPunishmentHistory } = usePunishments();
+  const { getPunishmentHistory } = usePunishmentsQuery();
   
-  const getHistory = (): PunishmentHistoryItem[] => {
-    return id ? getPunishmentHistory(id) : [];
-  };
-  
-  const getWeekData = (): number[] => {
-    const history = getHistory();
-    const currentDate = new Date();
-    const currentDay = currentDate.getDay();
+  // Get punishment history for this specific punishment
+  const punishmentHistory = useMemo(() => {
+    if (!id) return [];
+    return getPunishmentHistory(id);
+  }, [id, getPunishmentHistory]);
+
+  // Calculate the weekly usage data
+  const getWeekData = () => {
+    const currentWeekDates = generateMondayBasedWeekDates();
     
-    const weekData = [0, 0, 0, 0, 0, 0, 0];
+    // Initialize with all days at 0
+    const usageByDay = Array(7).fill(0);
     
-    history.forEach(item => {
-      const itemDate = new Date(item.applied_date);
-      const daysSinceToday = Math.floor((currentDate.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (daysSinceToday < 7) {
-        // Convert the day_of_week to Monday-based index
-        const mondayBasedDayIndex = convertToMondayBasedIndex(item.day_of_week);
-        weekData[mondayBasedDayIndex] = 1;
-      }
-    });
+    if (punishmentHistory.length > 0) {
+      // Count applications by day
+      punishmentHistory.forEach(item => {
+        const itemDate = new Date(item.applied_date);
+        const dateString = itemDate.toISOString().split('T')[0];
+        
+        // If the date is in the current week, increment the count
+        const dayIndex = currentWeekDates.indexOf(dateString);
+        if (dayIndex !== -1) {
+          usageByDay[dayIndex]++;
+        }
+      });
+    }
     
-    return weekData;
+    return usageByDay;
   };
-  
-  const getFrequencyCount = (): number => {
-    const weekData = getWeekData();
-    return weekData.reduce((acc, val) => acc + val, 0);
+
+  // Get the total frequency count for this punishment
+  const getFrequencyCount = () => {
+    return punishmentHistory.length;
   };
-  
+
   return {
-    getHistory,
     getWeekData,
-    getFrequencyCount
+    getFrequencyCount,
   };
 };
