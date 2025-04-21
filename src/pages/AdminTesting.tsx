@@ -8,7 +8,6 @@ import { Plus } from 'lucide-react';
 import { AdminTestingCardData } from '@/components/admin-testing/defaultAdminTestingCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
-
 interface SupabaseCardData {
   id: string;
   title: string;
@@ -32,20 +31,17 @@ interface SupabaseCardData {
   updated_at: string | null;
   user_id: string | null;
 }
-
 const AdminTesting = () => {
   const [cards, setCards] = useState<AdminTestingCardData[]>([]);
   const [globalCarouselIndex, setGlobalCarouselIndex] = useState(0);
   const [carouselTimer, setCarouselTimer] = useState(5);
   const [isLoading, setIsLoading] = useState(true);
   const [cardsFetched, setCardsFetched] = useState(false);
-
   useEffect(() => {
     const fetchCards = async () => {
       try {
         setIsLoading(true);
         console.log("Fetching cards from Supabase...");
-        
         if (!supabase) {
           console.error("Supabase client is not initialized!");
           toast({
@@ -55,11 +51,10 @@ const AdminTesting = () => {
           });
           return;
         }
-
-        const { data, error } = await supabase
-          .from('admin_testing_cards')
-          .select('*');
-        
+        const {
+          data,
+          error
+        } = await supabase.from('admin_testing_cards').select('*');
         if (error) {
           console.error('Error fetching cards from Supabase:', error);
           toast({
@@ -69,14 +64,12 @@ const AdminTesting = () => {
           });
           return;
         }
-        
         console.log("Received data from Supabase:", data);
         setCardsFetched(true);
-        
         if (data && data.length > 0) {
           const formattedCards = data.map((card: SupabaseCardData) => ({
             ...card,
-            priority: (card.priority as 'low' | 'medium' | 'high') || 'medium',
+            priority: card.priority as 'low' | 'medium' | 'high' || 'medium',
             points: typeof card.points === 'number' ? card.points : 5,
             background_opacity: card.background_opacity || 80,
             focal_point_x: card.focal_point_x || 50,
@@ -89,7 +82,6 @@ const AdminTesting = () => {
             usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0],
             background_images: Array.isArray(card.background_images) ? card.background_images : []
           })) as AdminTestingCardData[];
-          
           console.log("Formatted cards:", formattedCards);
           setCards(formattedCards);
         } else {
@@ -107,19 +99,14 @@ const AdminTesting = () => {
         setIsLoading(false);
       }
     };
-
     fetchCards();
-    
     const savedTimer = parseInt(localStorage.getItem('adminTestingCards_carouselTimer') || '5', 10);
     setCarouselTimer(savedTimer);
-    
     const intervalId = setInterval(() => {
       setGlobalCarouselIndex(prev => prev + 1);
     }, savedTimer * 1000);
-    
     return () => clearInterval(intervalId);
   }, []);
-
   const handleAddCard = async () => {
     const newCard: AdminTestingCardData = {
       id: uuidv4(),
@@ -138,19 +125,15 @@ const AdminTesting = () => {
       usage_data: [0, 0, 0, 0, 0, 0, 0],
       background_images: []
     };
-    
     try {
       console.log("Adding new card to Supabase:", newCard);
-      
-      const { data, error } = await supabase
-        .from('admin_testing_cards')
-        .insert({
-          ...newCard,
-          points: newCard.points || 0
-        })
-        .select()
-        .single();
-      
+      const {
+        data,
+        error
+      } = await supabase.from('admin_testing_cards').insert({
+        ...newCard,
+        points: newCard.points || 0
+      }).select().single();
       if (error) {
         console.error('Error adding card to Supabase:', error);
         toast({
@@ -160,24 +143,19 @@ const AdminTesting = () => {
         });
         return;
       }
-      
       console.log("Card added successfully:", data);
-      
       const supabaseData = data as SupabaseCardData;
       const formattedCard = {
         ...data,
-        priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
+        priority: supabaseData.priority as 'low' | 'medium' | 'high' || 'medium',
         points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
         background_images: Array.isArray(supabaseData.background_images) ? supabaseData.background_images : []
       } as AdminTestingCardData;
-      
       setCards(prevCards => [...prevCards, formattedCard]);
-      
       toast({
         title: "Success",
-        description: "New card created successfully",
+        description: "New card created successfully"
       });
-      
       return formattedCard;
     } catch (error) {
       console.error('Error in handleAddCard:', error);
@@ -189,68 +167,38 @@ const AdminTesting = () => {
       return null;
     }
   };
-
   const handleUpdateCard = (updatedCard: AdminTestingCardData) => {
-    setCards(prevCards => prevCards.map(card => 
-      card.id === updatedCard.id ? updatedCard : card
-    ));
+    setCards(prevCards => prevCards.map(card => card.id === updatedCard.id ? updatedCard : card));
   };
-
-  return (
-    <AppLayout>
+  return <AppLayout>
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold text-white mb-6">Admin Testing Panel</h1>
         
-        <div className="bg-[#FEF7CD] text-[#222] p-6 mb-6 rounded-lg">
+        <div className="text-[#222] p-6 mb-6 rounded-lg bg-zinc-200">
           <h2 className="text-3xl font-bold">ADMIN TESTING PAGE</h2>
           <p>This page is for testing admin functionality only.</p>
         </div>
         
         <div className="flex justify-end mb-6">
-          <Button 
-            onClick={handleAddCard}
-            className="bg-green-500 hover:bg-green-600 text-white"
-          >
+          <Button onClick={handleAddCard} className="bg-green-500 hover:bg-green-600 text-white">
             <Plus className="mr-2 h-4 w-4" />
             Add New Card
           </Button>
         </div>
         
-        {isLoading ? (
-          <div className="text-center text-white p-8">Loading cards...</div>
-        ) : cards.length === 0 && cardsFetched ? (
-          <div className="text-center text-white p-8">
+        {isLoading ? <div className="text-center text-white p-8">Loading cards...</div> : cards.length === 0 && cardsFetched ? <div className="text-center text-white p-8">
             <p>No cards found. Click the "Add New Card" button to create one.</p>
-          </div>
-        ) : cards.length === 0 && !cardsFetched ? (
-          <div className="text-center text-white p-8">
+          </div> : cards.length === 0 && !cardsFetched ? <div className="text-center text-white p-8">
             <p>Unable to load cards. Please try refreshing the page.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cards.map(card => (
-              <AdminTestingCard
-                key={card.id}
-                card={card}
-                id={card.id}
-                title={card.title}
-                description={card.description}
-                priority={card.priority}
-                points={card.points}
-                globalCarouselIndex={globalCarouselIndex}
-                onUpdate={handleUpdateCard}
-              />
-            ))}
-          </div>
-        )}
+          </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {cards.map(card => <AdminTestingCard key={card.id} card={card} id={card.id} title={card.title} description={card.description} priority={card.priority} points={card.points} globalCarouselIndex={globalCarouselIndex} onUpdate={handleUpdateCard} />)}
+          </div>}
         
         <div className="mt-12">
           <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Data Management</h2>
           <ActivityDataReset />
         </div>
       </div>
-    </AppLayout>
-  );
+    </AppLayout>;
 };
-
 export default AdminTesting;
