@@ -5,12 +5,11 @@ import RewardEditor from '../RewardEditor';
 import RewardHeader from './RewardHeader';
 import RewardContent from './RewardContent';
 import RewardFooter from './RewardFooter';
-import RewardBackground from './RewardBackground';
+// Removed import of missing RewardBackground component
 import { usePointsManagement } from '@/contexts/rewards/usePointsManagement';
 import { useToast } from '@/hooks/use-toast';
 import { useRewardOperations } from '@/contexts/rewards/useRewardOperations';
 import { getMondayBasedDay } from '@/lib/utils';
-// Removed unused import dayjs due to missing package
 
 interface RewardCardProps {
   title: string;
@@ -67,10 +66,8 @@ const useRewardCard = ({ id, points }: { id?: string; points: number }) => {
         return;
       }
 
-      // Use context's handleUseReward to handle supply and usage recording
       await contextHandleUseReward(id);
 
-      // Update local week data (simulate marking today as used)
       const todayIndex = getMondayBasedDay();
       setWeekData(prev => {
         const newData = [...prev];
@@ -118,7 +115,6 @@ const useRewardCard = ({ id, points }: { id?: string; points: number }) => {
   const handleDeleteRewardWrapper = async () => {
     if (!id) return;
     try {
-      // Find reward index to delete
       const index = rewards.findIndex(r => r.id === id);
       if (index === -1) {
         toast({
