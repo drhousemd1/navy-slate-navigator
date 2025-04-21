@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getMondayBasedDay } from "./utils";
@@ -201,21 +200,15 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
 
 export const updateTaskCompletion = async (id: string, completed: boolean): Promise<Task | null> => {
   try {
-    console.log(`updateTaskCompletion called for taskId: ${id}, completed: ${completed}`);
-
     const { data: taskData, error: taskError } = await supabase
       .from('tasks')
       .select('*')
       .eq('id', id)
       .single();
 
-    if (taskError) {
-      console.error('Error fetching task:', taskError);
-      throw taskError;
-    }
+    if (taskError) throw taskError;
 
     const task = taskData as Task;
-    console.log('Fetched task:', task);
 
     if (completed && !canCompleteTask(task)) {
       toast({
@@ -223,7 +216,6 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         description: 'You have reached the maximum completions for today.',
         variant: 'default',
       });
-      console.log('Completion rejected: max completions reached for task:', id);
       return null;
     }
 
@@ -232,7 +224,6 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     if (completed) {
       const dayOfWeek = getCurrentDayOfWeek();
       usage_data[dayOfWeek] = (usage_data[dayOfWeek] || 0) + 1;
-      console.log(`Updated usage_data for day ${dayOfWeek}:`, usage_data);
 
       const { data: authData } = await supabase.auth.getUser();
       const userId = authData.user?.id;
@@ -254,8 +245,6 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     const dayOfWeek = getCurrentDayOfWeek();
     const isFullyCompleted = usage_data[dayOfWeek] >= (task.frequency_count || 1);
 
-    console.log('Updating task completion status, fully completed:', isFullyCompleted);
-
     const { data: updatedTasks, error } = await supabase
       .from('tasks')
       .update({
@@ -265,17 +254,9 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
       })
       .eq('id', id)
       .select()
-      .maybeSingle();
+      .single();
 
-    if (error) {
-      console.error('Error updating task completion in DB:', error);
-      throw error;
-    }
-
-    if (!updatedTasks) {
-      console.error('No task was updated during completion update.');
-      return null;
-    }
+    if (error) throw error;
 
     if (completed) {
       try {

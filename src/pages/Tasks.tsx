@@ -182,7 +182,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         return oldTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task));
       });
 
-      // Update local usage data state to match backend
+      // Update local usage data state
       if (updatedTask.usage_data) {
         setLocalUsageData((prev) => ({
           ...prev,
@@ -211,8 +211,27 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     }
   });
 
-  // Removed optimistic UI update before mutation, now wait for mutation success to update UI
   const handleToggleCompletion = (taskId: string, completed: boolean) => {
+    const currentUsage = localUsageData[taskId] ? [...localUsageData[taskId]] : Array(7).fill(0);
+    const dayOfWeek = new Date().getDay();
+    const currentCount = currentUsage[dayOfWeek] || 0;
+
+    // Prevent exceeding max completions on local UI side before mutation
+    if (completed && currentCount >= 1) {
+      console.log(`Task ${taskId} already at max completions locally`);
+      return;
+    }
+    // Optimistically update local usage data immediately for responsiveness
+    if (completed) {
+      currentUsage[dayOfWeek] = currentCount + 1;
+    } else {
+      currentUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
+    }
+    setLocalUsageData((prev) => ({
+      ...prev,
+      [taskId]: currentUsage,
+    }));
+
     toggleCompletionMutation.mutate({ taskId, completed });
   };
 
@@ -303,3 +322,4 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
+
