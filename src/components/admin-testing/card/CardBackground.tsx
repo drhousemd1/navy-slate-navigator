@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface CardBackgroundProps {
@@ -24,6 +23,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
     <>
       {visibleImage && (
         <img
+          key={visibleImage}
           src={visibleImage}
           alt=""
           className="absolute inset-0 w-full h-full object-cover opacity-100 z-0"
@@ -37,6 +37,7 @@ const CardBackground: React.FC<CardBackgroundProps> = ({
       )}
       {transitionImage && (
         <img
+          key={transitionImage}
           src={transitionImage}
           alt=""
           className={`absolute inset-0 w-full h-full object-cover z-10 pointer-events-none ${
