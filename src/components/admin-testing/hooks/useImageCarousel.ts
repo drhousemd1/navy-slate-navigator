@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
 
-declare function require(path: string): string;
+import { useState, useEffect } from 'react';
 
 interface UseImageCarouselProps {
   images: string[];
@@ -17,7 +16,7 @@ export const useImageCarousel = ({
   images, 
   globalCarouselIndex 
 }: UseImageCarouselProps): UseImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? require(images[0]) : null);
+  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
@@ -32,7 +31,7 @@ export const useImageCarousel = ({
       
       if (imagesChanged) {
         setPreviousImages(images);
-        setVisibleImage(require(images[0]));
+        setVisibleImage(images[0]);
         setTransitionImage(null);
         setIsTransitioning(false);
       }
@@ -43,7 +42,7 @@ export const useImageCarousel = ({
       setTransitionImage(null);
       setIsTransitioning(false);
     }
-  }, [images]);
+  }, [images, previousImages]);
 
   // Handle image transitions when global carousel index changes
   useEffect(() => {
@@ -58,7 +57,7 @@ export const useImageCarousel = ({
     preload.src = next;
     
     preload.onload = () => {
-      setTransitionImage(require(next));
+      setTransitionImage(next);
       setIsTransitioning(false);
       
       requestAnimationFrame(() => {
@@ -66,7 +65,7 @@ export const useImageCarousel = ({
           setIsTransitioning(true);
           
           const timeout = setTimeout(() => {
-            setVisibleImage(require(next));
+            setVisibleImage(next);
             setTransitionImage(null);
             setIsTransitioning(false);
           }, 2000);
@@ -79,7 +78,7 @@ export const useImageCarousel = ({
     preload.onerror = () => {
       console.error("Failed to load image:", next);
       // Try to continue with the next image anyway
-      setVisibleImage(require(next));
+      setVisibleImage(next);
     };
   }, [globalCarouselIndex, images, visibleImage]);
 
