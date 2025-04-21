@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { PunishmentData } from '@/contexts/punishments/types';
+import { PunishmentData } from '@/contexts/PunishmentsContext';
 import PointsBadge from '@/components/task/PointsBadge';
 import PunishmentBackground from './PunishmentBackground';
 import PunishmentCardContent from './PunishmentCardContent';
