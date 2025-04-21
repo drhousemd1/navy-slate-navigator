@@ -1,7 +1,7 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { PunishmentsContextType } from './types';
 import { usePunishmentOperations } from './usePunishmentOperations';
-import { useQueryClient } from '@tanstack/react-query';
 
 const PunishmentsContext = createContext<PunishmentsContextType | undefined>(undefined);
 
@@ -10,7 +10,6 @@ const DEFAULT_CAROUSEL_TIMER = 5;
 
 export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [globalCarouselTimer, setGlobalCarouselTimer] = useState(DEFAULT_CAROUSEL_TIMER);
-  const queryClient = useQueryClient();
   const operations = usePunishmentOperations();
   
   useEffect(() => {
