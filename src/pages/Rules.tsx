@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -55,7 +54,6 @@ const Rules: React.FC = () => {
 
       if (error) throw error;
 
-      // Ensure proper types for priority, frequency, and usage_data
       return (data as any[]).map(rule => {
         const priorityVal = ['low', 'medium', 'high'].includes(rule.priority) ? rule.priority : 'medium';
         const frequencyVal = ['daily', 'weekly'].includes(rule.frequency) ? rule.frequency : 'daily';
@@ -71,7 +69,6 @@ const Rules: React.FC = () => {
     }
   });
 
-  // Mutation for marking rule broken
   const handleRuleBrokenMutation = useMutation({
     mutationFn: async (rule: Rule) => {
       const currentDay = getMondayBasedDay();
@@ -79,7 +76,6 @@ const Rules: React.FC = () => {
       const newUsageData = [...(rule.usage_data || [0,0,0,0,0,0,0])];
       newUsageData[currentDay] = 1;
 
-      // Update rule usage_data
       const { error } = await supabase
         .from('rules')
         .update({ usage_data: newUsageData, updated_at: new Date().toISOString() })
@@ -87,7 +83,6 @@ const Rules: React.FC = () => {
 
       if (error) throw error;
 
-      // Insert violation analytics record
       const today = new Date();
       const jsDay = today.getDay();
       const { error: violationError } = await supabase
@@ -110,9 +105,9 @@ const Rules: React.FC = () => {
       return { ...rule, usage_data: newUsageData };
     },
     onMutate: async (rule) => {
-      await queryClient.cancelQueries(['rules']);
-      const previousRules = queryClient.getQueryData(['rules']);
-      queryClient.setQueryData(['rules'], (old: Rule[] | undefined) =>
+      await queryClient.cancelQueries({ queryKey: ['rules'] });
+      const previousRules = queryClient.getQueryData({ queryKey: ['rules'] });
+      queryClient.setQueryData({ queryKey: ['rules'] }, (old: Rule[] | undefined) =>
         old ? old.map(r => r.id === rule.id ? { ...r, isUpdating: true } : r) : []
       );
       return { previousRules };
@@ -123,10 +118,10 @@ const Rules: React.FC = () => {
         description: 'Failed to record rule violation. Please try again.',
         variant: 'destructive',
       });
-      queryClient.setQueryData(['rules'], context.previousRules);
+      queryClient.setQueryData({ queryKey: ['rules'] }, context.previousRules);
     },
     onSettled: () => {
-      queryClient.invalidateQueries(['rules']);
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
       navigate('/punishments');
     }
   });
@@ -135,7 +130,6 @@ const Rules: React.FC = () => {
     handleRuleBrokenMutation.mutate(rule);
   };
 
-  // Mutation for saving a rule (add or update)
   const handleSaveRuleMutation = useMutation({
     mutationFn: async (ruleData: Partial<Rule>) => {
       if (ruleData.id) {
@@ -167,7 +161,6 @@ const Rules: React.FC = () => {
         if (error) throw error;
         return data;
       } else {
-        // Insert new rule
         const newRule = {
           title: ruleData.title!,
           priority: ruleData.priority ?? 'medium',
@@ -201,10 +194,10 @@ const Rules: React.FC = () => {
       }
     },
     onMutate: async (ruleData: Partial<Rule>) => {
-      await queryClient.cancelQueries(['rules']);
-      const previousRules = queryClient.getQueryData(['rules']);
+      await queryClient.cancelQueries({ queryKey: ['rules'] });
+      const previousRules = queryClient.getQueryData({ queryKey: ['rules'] });
 
-      queryClient.setQueryData(['rules'], (old: Rule[] | undefined) => {
+      queryClient.setQueryData({ queryKey: ['rules'] }, (old: Rule[] | undefined) => {
         if (!old) return [ruleData as Rule];
         if (ruleData.id) {
           return old.map(rule => (rule.id === ruleData.id ? { ...rule, ...ruleData } : rule));
@@ -220,10 +213,10 @@ const Rules: React.FC = () => {
         description: 'Failed to save rule. Please try again.',
         variant: 'destructive',
       });
-      queryClient.setQueryData(['rules'], context.previousRules);
+      queryClient.setQueryData({ queryKey: ['rules'] }, context.previousRules);
     },
     onSettled: () => {
-      queryClient.invalidateQueries(['rules']);
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
       setIsEditorOpen(false);
     }
   });
@@ -232,7 +225,6 @@ const Rules: React.FC = () => {
     handleSaveRuleMutation.mutate(ruleData);
   };
 
-  // Mutation for deleting a rule
   const handleDeleteRuleMutation = useMutation({
     mutationFn: async (ruleId: string) => {
       const { error } = await supabase
@@ -243,10 +235,10 @@ const Rules: React.FC = () => {
       if (error) throw error;
     },
     onMutate: async (ruleId: string) => {
-      await queryClient.cancelQueries(['rules']);
-      const previousRules = queryClient.getQueryData(['rules']);
+      await queryClient.cancelQueries({ queryKey: ['rules'] });
+      const previousRules = queryClient.getQueryData({ queryKey: ['rules'] });
 
-      queryClient.setQueryData(['rules'], (old: Rule[] | undefined) => old ? old.filter(rule => rule.id !== ruleId) : []);
+      queryClient.setQueryData({ queryKey: ['rules'] }, (old: Rule[] | undefined) => old ? old.filter(rule => rule.id !== ruleId) : []);
 
       return { previousRules };
     },
@@ -256,10 +248,10 @@ const Rules: React.FC = () => {
         description: 'Failed to delete rule. Please try again.',
         variant: 'destructive',
       });
-      queryClient.setQueryData(['rules'], context.previousRules);
+      queryClient.setQueryData({ queryKey: ['rules'] }, context.previousRules);
     },
     onSettled: () => {
-      queryClient.invalidateQueries(['rules']);
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
       setCurrentRule(null);
       setIsEditorOpen(false);
     }
@@ -387,4 +379,3 @@ const Rules: React.FC = () => {
 };
 
 export default Rules;
-
