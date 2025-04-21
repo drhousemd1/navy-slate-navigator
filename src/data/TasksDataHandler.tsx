@@ -165,7 +165,8 @@ export const useSaveTask = () => {
             ...taskData, 
             id: `temp-${Date.now()}`,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            usage_data: Array(7).fill(0) // Initialize usage_data
           };
           return [newTask, ...old];
         }
