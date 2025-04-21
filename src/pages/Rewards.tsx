@@ -11,15 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 // Create a new QueryClient instance
-const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            staleTime: 1000 * 60 * 20,       // Consider data fresh for 20 minutes
-            cacheTime: 1000 * 60 * 30,       // Keep data in memory for 30 minutes after inactive
-            refetchOnWindowFocus: false      // Avoid refetch when switching back to tab
-        },
-    },
-});
+const queryClient = new QueryClient();
 
 //Implement LocalStorage persistence
 const localStoragePersister = createSyncStoragePersister({
@@ -56,6 +48,9 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
             }
             return data;
         },
+        staleTime: 1000 * 60 * 20,
+        cacheTime: 1000 * 60 * 30,
+        refetchOnWindowFocus: false,
     });
 
     // Mutations for saving, deleting, and claiming rewards
