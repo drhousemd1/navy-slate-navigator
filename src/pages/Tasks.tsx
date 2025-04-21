@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
 import TaskCard from '../components/TaskCard';
 import TaskEditor from '../components/TaskEditor';
@@ -32,7 +33,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
 
   const { carouselTimer, globalCarouselIndex } = useTaskCarousel();
 
-  const { data: tasks = [], isLoading, error } = useQuery({
+  const { data: tasks = [], isLoading, error, refetch } = useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
     staleTime: 10000,
@@ -163,46 +164,10 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
     }
   };
 
-  const handleToggleCompletion = async (taskId: string, completed: boolean) => {
-    let updatedUsageForQuery: number[] | null = null;
-
-    try {
-      setLocalUsageData((prev) => {
-        const currentUsage = prev[taskId] ? [...prev[taskId]] : Array(7).fill(0);
-        const dayOfWeek = new Date().getDay();
-        const currentCount = currentUsage[dayOfWeek] || 0;
-
-        if (completed) {
-          if (currentCount >= 1) {
-            console.log(`Task ${taskId} already at max completions locally`);
-            return prev;
-          }
-          currentUsage[dayOfWeek] = currentCount + 1;
-        } else {
-          currentUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
-        }
-
-        updatedUsageForQuery = currentUsage;
-        return { ...prev, [taskId]: currentUsage };
-      });
-
-      console.log(`Toggling task ${taskId} completion to ${completed}`);
-
-      const updatedTask = await updateTaskCompletion(taskId, completed);
-
+  const toggleCompletionMutation = useMutation({
+    mutationFn: ({ taskId, completed }: { taskId: string; completed: boolean }) => updateTaskCompletion(taskId, completed),
+    onSuccess: async (updatedTask) => {
       if (!updatedTask) {
-        console.error('Updated task is null, reverting local state for task:', taskId);
-        setLocalUsageData((prev) => {
-          const revertedUsage = prev[taskId] ? [...prev[taskId]] : Array(7).fill(0);
-          const dayOfWeek = new Date().getDay();
-          const currentCount = revertedUsage[dayOfWeek] || 0;
-          if (completed) {
-            revertedUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
-          } else {
-            revertedUsage[dayOfWeek] = currentCount + 1;
-          }
-          return { ...prev, [taskId]: revertedUsage };
-        });
         toast({
           title: 'Error',
           description: 'Failed to update task completion due to backend rejection.',
@@ -211,36 +176,63 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         return;
       }
 
+      // Update the query cache for tasks replacing the updated task
       queryClient.setQueryData<Task[]>(['tasks'], (oldTasks) => {
         if (!oldTasks) return [];
-        return oldTasks.map((task) => (task.id === taskId ? updatedTask : task));
+        return oldTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task));
       });
 
+      // Update local usage data state
       if (updatedTask.usage_data) {
         setLocalUsageData((prev) => ({
           ...prev,
-          [taskId]: updatedTask.usage_data,
+          [updatedTask.id]: updatedTask.usage_data,
         }));
       }
 
+      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['task-completions'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
       queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
 
-      if (completed) {
+      if (updatedTask.completed) {
         await refreshPointsFromDatabase();
       }
-    } catch (err) {
+    },
+    onError: (err) => {
       console.error('Error toggling task completion:', err);
       toast({
         title: 'Error',
         description: 'Failed to update task. Please try again.',
         variant: 'destructive',
       });
-
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     }
+  });
+
+  const handleToggleCompletion = (taskId: string, completed: boolean) => {
+    const currentUsage = localUsageData[taskId] ? [...localUsageData[taskId]] : Array(7).fill(0);
+    const dayOfWeek = new Date().getDay();
+    const currentCount = currentUsage[dayOfWeek] || 0;
+
+    // Prevent exceeding max completions on local UI side before mutation
+    if (completed && currentCount >= 1) {
+      console.log(`Task ${taskId} already at max completions locally`);
+      return;
+    }
+    // Optimistically update local usage data immediately for responsiveness
+    if (completed) {
+      currentUsage[dayOfWeek] = currentCount + 1;
+    } else {
+      currentUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
+    }
+    setLocalUsageData((prev) => ({
+      ...prev,
+      [taskId]: currentUsage,
+    }));
+
+    toggleCompletionMutation.mutate({ taskId, completed });
   };
 
   return (
@@ -330,3 +322,4 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
+
