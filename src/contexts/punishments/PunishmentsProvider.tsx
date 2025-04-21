@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { PunishmentsContextType } from './types';
 
+
 const PunishmentsContext = createContext<PunishmentsContextType | undefined>(undefined);
 
 // Default carousel timer in seconds
