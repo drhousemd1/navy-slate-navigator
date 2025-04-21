@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
 import { Clock, Skull, Bomb, Zap } from 'lucide-react';
+import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments, PunishmentData } from '../contexts/PunishmentsContext';
 import PunishmentEditor from '../components/PunishmentEditor';
@@ -169,9 +171,11 @@ const Punishments: React.FC = () => {
         content.dispatchEvent(event);
       }
     }}>
+      <RewardsProvider>
         <PunishmentsProvider>
           <PunishmentsContent />
         </PunishmentsProvider>
+      </RewardsProvider>
     </AppLayout>
   );
 };
