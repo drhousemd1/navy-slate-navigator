@@ -23,7 +23,6 @@ export interface AdminTestingCardProps {
   globalCarouselIndex: number;
   onUpdate?: (updated: AdminTestingCardData) => void;
   card?: AdminTestingCardData;
-  isReorderMode?: boolean; // add reorder mode prop
 }
 
 const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
@@ -35,8 +34,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   points = 5,
   globalCarouselIndex,
   onUpdate,
-  card,
-  isReorderMode = false,
+  card
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
@@ -158,7 +156,6 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         localStorageKey="adminTestingCards"
         carouselTimer={carouselTimer}
         onCarouselTimerChange={handleCarouselTimerChange}
-        isReorderMode={isReorderMode} // pass this to modal if needed
       />
     </>
   );
