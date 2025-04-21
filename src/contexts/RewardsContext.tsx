@@ -122,14 +122,14 @@ const RewardsContext = createContext<RewardsContextType>({
     rewardUsageMap: {}, // default empty object
     totalPoints: 0,
     totalRewardsSupply: 0,
-    setTotalPoints: () => {},
+    setTotalPoints: () => { },
     isLoading: true,
-    refetchRewards: async () => {},
+    refetchRewards: async () => { },
     handleSaveReward: async () => null,
     handleDeleteReward: async () => false,
-    handleBuyReward: async () => {},
-    handleUseReward: async () => {},
-    refreshPointsFromDatabase: async () => {},
+    handleBuyReward: async () => { },
+    handleUseReward: async () => { },
+    refreshPointsFromDatabase: async () => { },
 });
 
 export const useRewards = () => useContext(RewardsContext);
@@ -208,10 +208,10 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteRewardMutation.mutate(rewardId);
     };
 
-    //Implement getTotalRewardsSupply, refreshPointsFromDatabase, handleBuyReward, handleUseReward
-    const getTotalRewardsSupply = () => {
+    const getTotalRewardsSupply = useCallback(() => {
+        if (!rewards) return 0;
         return rewards.reduce((acc, reward) => acc + reward.points, 0);
-    };
+    }, [rewards]);
 
     const refreshPointsFromDatabase = useCallback(async () => {
         try {
@@ -273,7 +273,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         rewards,
         rewardUsageMap, // Provide rewardUsageMap in context value
         totalPoints,
-        totalRewardsSupply,
+        totalRewardsSupply: getTotalRewardsSupply(),
         setTotalPoints,
         isLoading,
         refetchRewards: refetch,
