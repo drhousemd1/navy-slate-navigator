@@ -20,7 +20,7 @@ export const useTasksQuery = () => {
     queryKey: ['tasks'],
     queryFn: fetchTasks,
     staleTime: 1000 * 60 * 20, // 20 minutes
-    cacheTime: 1000 * 60 * 30, // 30 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes (replace cacheTime with gcTime)
     refetchOnWindowFocus: false
   });
 };
@@ -178,7 +178,7 @@ export const useSaveTask = () => {
     onSuccess: (savedTask) => {
       toast({
         title: 'Success',
-        description: `Task ${savedTask.id ? 'updated' : 'created'} successfully!`,
+        description: `Task ${savedTask?.id ? 'updated' : 'created'} successfully!`,
       });
     },
     onSettled: () => {
