@@ -1,5 +1,6 @@
-
 import { useState, useEffect } from 'react';
+
+declare function require(path: string): string;
 
 interface UseImageCarouselProps {
   images: string[];
@@ -16,7 +17,7 @@ export const useImageCarousel = ({
   images, 
   globalCarouselIndex 
 }: UseImageCarouselProps): UseImageCarouselResult => {
-  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? images[0] : null);
+  const [visibleImage, setVisibleImage] = useState<string | null>(images.length > 0 ? require(images[0]) : null);
   const [transitionImage, setTransitionImage] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
@@ -31,7 +32,7 @@ export const useImageCarousel = ({
       
       if (imagesChanged) {
         setPreviousImages(images);
-        setVisibleImage(images[0]);
+        setVisibleImage(require(images[0]));
         setTransitionImage(null);
         setIsTransitioning(false);
       }
@@ -57,7 +58,7 @@ export const useImageCarousel = ({
     preload.src = next;
     
     preload.onload = () => {
-      setTransitionImage(next);
+      setTransitionImage(require(next));
       setIsTransitioning(false);
       
       requestAnimationFrame(() => {
@@ -65,7 +66,7 @@ export const useImageCarousel = ({
           setIsTransitioning(true);
           
           const timeout = setTimeout(() => {
-            setVisibleImage(next);
+            setVisibleImage(require(next));
             setTransitionImage(null);
             setIsTransitioning(false);
           }, 2000);
@@ -78,7 +79,7 @@ export const useImageCarousel = ({
     preload.onerror = () => {
       console.error("Failed to load image:", next);
       // Try to continue with the next image anyway
-      setVisibleImage(next);
+      setVisibleImage(require(next));
     };
   }, [globalCarouselIndex, images, visibleImage]);
 
