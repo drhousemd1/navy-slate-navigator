@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Reward } from '@/lib/rewardUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { RewardsContextType } from './rewardTypes';

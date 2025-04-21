@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { PunishmentData, PunishmentsContextType } from './types';
+import { PunishmentsContextType } from './types';
 import { usePunishmentOperations } from './usePunishmentOperations';
 
 const PunishmentsContext = createContext<PunishmentsContextType | undefined>(undefined);
@@ -29,28 +29,7 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const contextValue: PunishmentsContextType = {
         ...operations,
         globalCarouselTimer,
-        setGlobalCarouselTimer,
-        fetchPunishments: operations.refetchPunishments,
-        createPunishment: async (punishmentData: PunishmentData) => {
-            await operations.createPunishment(punishmentData);
-            return ""; // Return a default value, since the original function returns a string
-        },
-        updatePunishment: async (id: string, punishmentData: PunishmentData) => {
-            await operations.updatePunishment(id, punishmentData);
-        },
-        deletePunishment: async (id: string) => {
-            await operations.deletePunishment(id);
-        },
-        applyPunishment: async (punishmentId: string, points: number) => {
-            console.log("applyPunishment is not implemented yet");
-        },
-        getPunishmentHistory: (punishmentId: string) => {
-            console.log("getPunishmentHistory is not implemented yet");
-            return [];
-        },
-        punishmentHistory: [],
-        error: null,
-        totalPointsDeducted: 0
+        setGlobalCarouselTimer
     };
 
     return (
@@ -60,9 +39,9 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     );
 };
 
-export const usePunishments = () => {
+export const usePunishments = (): PunishmentsContextType => {
     const context = useContext(PunishmentsContext);
-    if (!context) {
+    if (context === undefined) {
         throw new Error('usePunishments must be used within a PunishmentsProvider');
     }
     return context;

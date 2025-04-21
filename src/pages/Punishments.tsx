@@ -171,5 +171,3 @@ const Punishments: React.FC = () => {
         </AppLayout>
     );
 };
-
-export default Punishments;
