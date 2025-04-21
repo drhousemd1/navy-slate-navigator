@@ -1,5 +1,6 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { persistQueryClient } from '@tanstack/react-query-persist-client'
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -12,10 +13,22 @@ import {
   wasCompletedToday
 } from '@/lib/taskUtils';
 
+const localStoragePersister = createSyncStoragePersister({
+  storage: window.localStorage,
+});
+
 /**
  * Provides the tasks query that fetches all tasks from Supabase
  */
 export const useTasksQuery = () => {
+  const queryClient = useQueryClient();
+
+  persistQueryClient({
+    queryClient,
+    persister: localStoragePersister,
+    maxAge: 1000 * 60 * 20 // Persisted data valid for 20 minutes
+  });
+
   return useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
@@ -123,10 +136,6 @@ export const useToggleTaskCompletion = () => {
     onSettled: () => {
       // Always invalidate the tasks query after a completion toggle
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task-completions'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
     }
   });
 };
@@ -140,6 +149,7 @@ export const useSaveTask = () => {
   return useMutation({
     mutationFn: saveTask,
     onMutate: async (taskData: Task) => {
+      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
       
       const previousTasks = queryClient.getQueryData<Task[]>(['tasks']);
@@ -183,10 +193,6 @@ export const useSaveTask = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task-completions'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
     }
   });
 };
@@ -200,6 +206,7 @@ export const useDeleteTask = () => {
   return useMutation({
     mutationFn: deleteTask,
     onMutate: async (taskId: string) => {
+      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
       
       const previousTasks = queryClient.getQueryData<Task[]>(['tasks']);
@@ -231,10 +238,6 @@ export const useDeleteTask = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task-completions'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
     }
   });
 };
