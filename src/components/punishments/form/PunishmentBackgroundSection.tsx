@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Control, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import { FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
@@ -29,14 +30,21 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
   const { globalCarouselTimer, setGlobalCarouselTimer } = usePunishments();
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
   
+  // Ensure we always have exactly 5 slots by padding any existing arrays
   const ensureExactlyFiveSlots = (slots: (string | null)[]) => {
+    // Copy the array to avoid mutation
     const result = [...slots];
+    
+    // If less than 5 slots, pad with nulls
     while (result.length < 5) {
       result.push(null);
     }
+    
+    // If more than 5 slots (unlikely), truncate
     return result.slice(0, 5);
   };
   
+  // Initialize image slots with the provided background images (padded to 5) or create empty ones
   const [imageSlots, setImageSlots] = useState<(string | null)[]>(
     initialBackgroundImages.length > 0 
       ? ensureExactlyFiveSlots(initialBackgroundImages)
@@ -45,16 +53,19 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
         : [null, null, null, null, null]
   );
 
+  // Update slots if initialBackgroundImages changes, ensuring we have 5 slots
   useEffect(() => {
     if (initialBackgroundImages.length > 0) {
       setImageSlots(ensureExactlyFiveSlots(initialBackgroundImages));
     }
   }, [initialBackgroundImages]);
 
+  // Update form value when image slots change
   useEffect(() => {
     setValue('background_images', imageSlots);
   }, [imageSlots, setValue]);
   
+  // Set background_image_url from the selected image
   useEffect(() => {
     if (selectedBoxIndex !== null && imageSlots[selectedBoxIndex]) {
       setValue('background_image_url', imageSlots[selectedBoxIndex]);
@@ -77,6 +88,7 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
     }
   };
 
+  // Handle image upload for the selected slot
   const handleSlotImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     onImageUpload(e);
     
@@ -91,6 +103,7 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
     }
   };
 
+  // Handle removing the image from the selected slot
   const handleSlotImageRemove = () => {
     if (selectedBoxIndex !== null) {
       const newSlots = [...imageSlots];

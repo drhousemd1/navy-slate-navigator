@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, X } from 'lucide-react';
-import { PunishmentData } from '@/contexts/PunishmentsContext';
+import { PunishmentData } from '@/contexts/punishments/types';
 
 interface RandomPunishmentActionsProps {
   isSelecting: boolean;

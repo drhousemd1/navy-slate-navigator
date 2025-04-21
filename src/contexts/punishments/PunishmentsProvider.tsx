@@ -1,109 +1,157 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { PunishmentsContextType } from './types';
 
-// Fixed import path for types and added missing methods and global timer state
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import type { PunishmentData, PunishmentHistoryItem } from './types';
 
-// Define the shape of the context, with all expected properties added
-interface PunishmentsContextType {
-  punishments: PunishmentData[];
-  isLoading: boolean;
-  fetchPunishments: () => Promise<void>;
-  addPunishment: (punishment: PunishmentData) => Promise<void>;
-  updatePunishment: (id: string, data: PunishmentData) => Promise<void>;
-  deletePunishment: (id: string) => Promise<void>;
+const PunishmentsContext = createContext<PunishmentsContextType | undefined>(undefined);
 
-  // Additional methods used in hooks:
-  applyPunishment: (id: string, points: number) => Promise<void>;
-  getPunishmentHistory: (punishmentId: string) => PunishmentHistoryItem[];
+// Default carousel timer in seconds
+const DEFAULT_CAROUSEL_TIMER = 5;
 
-  // Adding global carousel timer state
-  globalCarouselTimer: number;
-  setGlobalCarouselTimer: React.Dispatch<React.SetStateAction<number>>;
-}
+export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [punishments, setPunishments] = useState<any[]>([]);
+  const [punishmentHistory, setPunishmentHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [globalCarouselTimer, setGlobalCarouselTimer] = useState(DEFAULT_CAROUSEL_TIMER);
+  
+  // Placeholder state to deduct points - this does nothing yet!
+  const [totalPointsDeducted, setTotalPointsDeducted] = useState(0);
 
-// Create default context value stub
-const defaultContext: PunishmentsContextType = {
-  punishments: [],
-  isLoading: false,
-  fetchPunishments: async () => {},
-  addPunishment: async () => {},
-  updatePunishment: async () => {},
-  deletePunishment: async () => {},
-  applyPunishment: async () => {},
-  getPunishmentHistory: () => [],
-  globalCarouselTimer: 5,
-  setGlobalCarouselTimer: () => {},
-};
-
-// Create context
-const PunishmentsContext = createContext<PunishmentsContextType>(defaultContext);
-
-// Provider component
-export const PunishmentsProvider = ({ children }: { children: ReactNode }) => {
-  const [punishments, setPunishments] = useState<PunishmentData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [punishmentHistory, setPunishmentHistory] = useState<PunishmentHistoryItem[]>([]);
-  const [globalCarouselTimer, setGlobalCarouselTimer] = useState(5);
-
-  // For now, stub async calls; these should connect to your backend or supabase in real usage.
-  const fetchPunishments = useCallback(async () => {
-    setIsLoading(true);
-    // TODO: fetch punishments and history from backend or supabase here and call setPunishments, setPunishmentHistory
-    setIsLoading(false);
+  useEffect(() => {
+    const fetchPunishments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('punishments')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+        
+        setPunishments(data || []);
+      } catch (err) {
+        console.error('Error fetching punishments:', err);
+        setError(err as Error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPunishments();
   }, []);
 
-  const addPunishment = useCallback(async (punishment: PunishmentData) => {
-    setPunishments((prev) => [...prev, punishment]);
-  }, []);
+  const createPunishment = async (punishmentData: any): Promise<string> => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('punishments')
+        .insert([punishmentData])
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      setPunishments(prevPunishments => [data, ...prevPunishments]);
+      return data.id;
+    } catch (err) {
+      console.error('Error creating punishment:', err);
+      setError(err as Error);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const updatePunishment = useCallback(async (id: string, data: PunishmentData) => {
-    setPunishments((prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)));
-  }, []);
+  const updatePunishment = async (id: string, punishmentData: any): Promise<void> => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('punishments')
+        .update(punishmentData)
+        .eq('id', id);
+      
+      if (error) {
+        throw error;
+      }
 
-  const deletePunishment = useCallback(async (id: string) => {
-    setPunishments((prev) => prev.filter((p) => p.id !== id));
-  }, []);
+      setPunishments(prevPunishments =>
+        prevPunishments.map(punishment => (punishment.id === id ? { ...punishment, ...punishmentData } : punishment))
+      );
+    } catch (err) {
+      console.error('Error updating punishment:', err);
+      setError(err as Error);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Dummy placeholder for applyPunishment for now
-  const applyPunishment = useCallback(async (id: string, points: number) => {
-    // Add history item - should be replaced with correct backend logic
-    setPunishmentHistory((prev) => [
-      {
-        id: `temp-${Date.now()}`,
-        punishment_id: id,
-        day_of_week: new Date().getDay(),
-        points_deducted: points,
-        applied_date: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-  }, []);
+  const deletePunishment = async (id: string): Promise<void> => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('punishments')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      setPunishments(prevPunishments => prevPunishments.filter(punishment => punishment.id !== id));
+    } catch (err) {
+      console.error('Error deleting punishment:', err);
+      setError(err as Error);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const applyPunishment = async (punishmentId: string, points: number): Promise<void> => {
+    // Placeholder for applyPunishment logic
+    // This function would ideally update user points or log the punishment
+    console.log(`Applying punishment ${punishmentId} with ${points} points`);
+  };
 
-  const getPunishmentHistory = useCallback(
-    (punishmentId: string): PunishmentHistoryItem[] => {
-      return punishmentHistory.filter((item) => item.punishment_id === punishmentId);
-    },
-    [punishmentHistory],
-  );
+  const getPunishmentHistory = (punishmentId: string): any[] => {
+    // Placeholder for getPunishmentHistory logic
+    console.log(`Getting history for punishment ${punishmentId}`);
+    return [];
+  };
 
-  const value: PunishmentsContextType = {
+  const contextValue: PunishmentsContextType = {
     punishments,
-    isLoading,
-    fetchPunishments,
-    addPunishment,
+    punishmentHistory,
+    loading,
+    error,
+    globalCarouselTimer,
+    setGlobalCarouselTimer,
+    fetchPunishments: () => {},
+    createPunishment,
     updatePunishment,
     deletePunishment,
     applyPunishment,
     getPunishmentHistory,
-    globalCarouselTimer,
-    setGlobalCarouselTimer,
+    totalPointsDeducted,
   };
 
-  return <PunishmentsContext.Provider value={value}>{children}</PunishmentsContext.Provider>;
+  return (
+    <PunishmentsContext.Provider value={contextValue}>
+      {children}
+    </PunishmentsContext.Provider>
+  );
 };
 
-// Hook for consuming PunishmentsContext
-export const usePunishments = () => {
-  return useContext(PunishmentsContext);
+export const usePunishments = (): PunishmentsContextType => {
+  const context = useContext(PunishmentsContext);
+  if (context === undefined) {
+    throw new Error('usePunishments must be used within a PunishmentsProvider');
+  }
+  return context;
 };
 
+import { supabase } from '@/integrations/supabase/client';

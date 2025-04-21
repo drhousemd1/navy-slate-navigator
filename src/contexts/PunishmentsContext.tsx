@@ -1,4 +1,4 @@
 
-// Re-export all fixes after corrections to types and provider imports
-export type { PunishmentData, PunishmentHistoryItem } from './punishments/types';
+// Re-export everything from the refactored files
 export { PunishmentsProvider, usePunishments } from './punishments/PunishmentsProvider';
+export type { PunishmentData, PunishmentHistoryItem, PunishmentsContextType } from './punishments/types';

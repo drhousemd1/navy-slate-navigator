@@ -1,6 +1,6 @@
-// Fix import path from punishment context
-import { usePunishments } from '@/contexts/PunishmentsContext';
-import { PunishmentHistoryItem } from '@/contexts/PunishmentsContext';
+
+import { useState } from 'react';
+import { usePunishments, PunishmentHistoryItem } from '@/contexts/PunishmentsContext';
 import { convertToMondayBasedIndex } from '@/lib/utils';
 
 interface UsePunishmentHistoryProps {
@@ -9,7 +9,7 @@ interface UsePunishmentHistoryProps {
 
 export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
   const { getPunishmentHistory } = usePunishments();
-
+  
   const getHistory = (): PunishmentHistoryItem[] => {
     return id ? getPunishmentHistory(id) : [];
   };
@@ -22,7 +22,7 @@ export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
     const weekData = [0, 0, 0, 0, 0, 0, 0];
     
     history.forEach(item => {
-      const itemDate = new Date(item.applied_date!);
+      const itemDate = new Date(item.applied_date);
       const daysSinceToday = Math.floor((currentDate.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24));
       
       if (daysSinceToday < 7) {
