@@ -29,8 +29,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
 
-  const [localUsageData, setLocalUsageData] = useState<{[taskId: string]: number[]}>({});
-
   const { carouselTimer, globalCarouselIndex } = useTaskCarousel();
 
   // Fetch tasks using React Query
@@ -101,45 +99,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       });
     }
   }, [error]); // Rerun effect if error changes
-
-  // Effect to initialize local usage data when tasks are loaded or changed
-  useEffect(() => {
-    // Load local usage data from local storage
-    const storedUsageData = localStorage.getItem('localUsageData');
-    let initialUsageData: {[taskId: string]: number[]} = {};
-    if (storedUsageData) {
-      try {
-        initialUsageData = JSON.parse(storedUsageData);
-      } catch (e) {
-        console.error("Failed to parse localUsageData from localStorage", e);
-        // Handle the error, e.g., by clearing the invalid data
-        localStorage.removeItem('localUsageData');
-      }
-    }
-
-    if (tasks.length > 0) {
-      const newLocalUsageData: {[taskId: string]: number[]} = {};
-      tasks.forEach(task => {
-        const taskId = task.id;
-        const backendUsageData = task.usage_data || Array(7).fill(0);
-        const localStorageUsageData = initialUsageData[taskId] || Array(7).fill(0);
-        const currentDayOfWeek = getCurrentDayOfWeek();
-
-        // Merge backend and local storage data, prioritizing local storage for the current day
-        const mergedUsageData = backendUsageData.map((value, index) => {
-          return index === currentDayOfWeek ? localStorageUsageData[index] !== undefined ? localStorageUsageData[index] : value : value;
-        });
-
-        newLocalUsageData[taskId] = mergedUsageData;
-      });
-      setLocalUsageData(newLocalUsageData);
-    }
-  }, [tasks]); // Rerun effect if tasks array changes
-
-  // Effect to save local usage data to local storage
-  useEffect(() => {
-    localStorage.setItem('localUsageData', JSON.stringify(localUsageData));
-  }, [localUsageData]); // Rerun effect if localUsageData changes
 
   // Handler to open editor for a new task
   const handleNewTask = () => {
@@ -224,7 +183,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         return;
       }
 
-      // --- **FIX APPLIED HERE** ---
       // Update the React Query cache with the confirmed data from the backend
       queryClient.setQueryData<Task[]>(['tasks'], (oldTasks) => {
         if (!oldTasks) return [];
@@ -232,15 +190,6 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
           task.id === updatedTask.id ? updatedTask : task
         );
       });
-
-      // Update local usage data state based on the confirmed backend data
-      // This ensures local state matches the cache/backend after success
-      if (updatedTask.usage_data) {
-        setLocalUsageData((prev) => ({
-          ...prev,
-          [updatedTask.id]: updatedTask.usage_data,
-        }));
-      }
 
       // Invalidate related queries that depend on task completion data
       queryClient.invalidateQueries({ queryKey: ['task-completions'] });
@@ -267,48 +216,71 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   });
 
   // Handler called when the completion button is clicked
-  const handleToggleCompletion = (taskId: string, completed: boolean) => {
-    // Find the specific task from the current list in state/cache
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) {
+  const handleToggleCompletion = async (taskId: string, completed: boolean) => {
+    try {
+      // Find the specific task from the current list in state/cache
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) {
         console.error("Task not found for toggle:", taskId);
         return; // Should not happen normally
+      }
+
+      const dayOfWeek = getCurrentDayOfWeek(); // Use imported utility function
+
+      // Get current usage data from the task or initialize it if it doesn't exist
+      const currentUsage = task.usage_data ? [...task.usage_data] : Array(7).fill(0);
+
+      // --- **FIX APPLIED HERE** ---
+      const maxCompletions = task.frequency_count || 1; // Get max completions from the task object
+
+      // Prevent triggering mutation if max completions already reached (local check)
+      if (currentUsage[dayOfWeek] >= maxCompletions && completed) {
+          toast({
+              title: 'Maximum completions reached',
+              description: 'You have already completed this task the maximum number of times today.',
+              variant: 'default',
+          });
+          return;
+      }
+
+      // Optimistically update local usage data *before* calling the mutation
+      // This makes the UI feel more responsive
+      const optimisticUsage = [...currentUsage];
+        optimisticUsage[dayOfWeek] = completed ? Math.min(optimisticUsage[dayOfWeek] + 1, maxCompletions) : Math.max(optimisticUsage[dayOfWeek] - 1, 0);
+
+      //Update supabase with optimisticUsage
+      const { data: updatedTask, error: updateError } = await supabase
+          .from('tasks')
+          .update({ usage_data: optimisticUsage })
+          .eq('id', taskId)
+          .select()
+          .single();
+
+          if (updateError) {
+              console.error('Error updating task completion:', updateError);
+              toast({
+                  title: 'Error',
+                  description: 'Failed to update task. Please try again.',
+                  variant: 'destructive',
+              });
+          } else {
+            // Invalidate tasks query to refetch the updated list
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+
+            toast({
+              title: 'Success',
+              description: 'Task updated successfully!',
+            });
+          }
+
+    } catch (error) {
+        console.error("Error toggling task completion:", error);
+        toast({
+            title: 'Error',
+            description: 'Failed to update task. Please try again.',
+            variant: 'destructive',
+        });
     }
-
-    const currentUsage = localUsageData[taskId] ? [...localUsageData[taskId]] : Array(7).fill(0);
-    const dayOfWeek = getCurrentDayOfWeek(); // Use imported utility function
-    const currentCount = currentUsage[dayOfWeek] || 0;
-    // --- **FIX APPLIED HERE** ---
-    const maxCompletions = task.frequency_count || 1; // Get max completions from the task object
-
-    // Prevent triggering mutation if max completions already reached (local check)
-    if (completed && currentCount >= maxCompletions) {
-      console.log(`Task ${taskId} already at max completions locally (${currentCount}/${maxCompletions})`);
-      // Show a toast here as well, as the backend rejection toast won't fire
-      toast({
-        title: 'Maximum completions reached',
-        description: 'You have already completed this task the maximum number of times today.',
-        variant: 'default',
-      });
-      return;
-    }
-
-    // Optimistically update local usage data *before* calling the mutation
-    // This makes the UI feel more responsive
-    const optimisticUsage = [...currentUsage];
-    if (completed) {
-      optimisticUsage[dayOfWeek] = currentCount + 1;
-    } else {
-      // Logic for 'un-completing' if needed (currently not supported by button)
-      // optimisticUsage[dayOfWeek] = Math.max(currentCount - 1, 0);
-    }
-    setLocalUsageData((prev) => ({
-      ...prev,
-      [taskId]: optimisticUsage,
-    }));
-
-    // Call the mutation to update the backend
-    toggleCompletionMutation.mutate({ taskId, completed });
   };
 
   // Render the main content of the Tasks page
@@ -327,7 +299,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         <div className="space-y-4">
           {tasks.map(task => {
             // Get usage data for the specific task, defaulting if necessary
-            const usageDataForTask = localUsageData[task.id] || task.usage_data || Array(7).fill(0);
+            const usageDataForTask = task.usage_data || Array(7).fill(0);
             const currentDayOfWeek = getCurrentDayOfWeek();
             const currentCompletions = usageDataForTask[currentDayOfWeek] || 0;
 
