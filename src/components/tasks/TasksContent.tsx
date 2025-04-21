@@ -23,7 +23,7 @@ interface TasksContentProps {
 const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const { refreshPointsFromDatabase } = useRewards();
-  const { carouselTimer, globalCarouselIndex } = useTaskCarousel();
+  const { carouselTimer, setCarouselTimer, globalCarouselIndex } = useTaskCarousel();
   const { checkForReset } = useTaskResetChecker();
 
   // Query hooks
@@ -87,8 +87,9 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       console.log("Saving task:", taskData);
       await saveTaskMutation.mutateAsync(taskData);
       
-      if (taskData.carousel_timer) {
-        carouselTimer && typeof carouselTimer === 'function' && carouselTimer(taskData.carousel_timer);
+      // Fix this line - properly update carousel timer if present
+      if (taskData.carousel_timer && typeof taskData.carousel_timer === 'number') {
+        setCarouselTimer(taskData.carousel_timer);
       }
       
       setIsEditorOpen(false);
