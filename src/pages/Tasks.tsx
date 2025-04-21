@@ -250,7 +250,7 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         <div className="p-4 pt-6">
             <TasksHeader />
 
-            {isLoading ? (
+            {isLoading && tasks.length === 0 ? (
                 <div className="text-white">Loading tasks...</div>
             ) : tasks.length === 0 ? (
                 <div className="text-center py-10">
