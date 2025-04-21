@@ -198,11 +198,27 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
             // Snapshot the previous value
             const previousTasks = queryClient.getQueryData<Task[]>(['tasks']);
 
+             // Get the current day of the week
+            const dayOfWeek = getCurrentDayOfWeek();
+
             // Optimistically update to the new value
             queryClient.setQueryData<Task[]>(['tasks'], (old) =>
-                old?.map((task) =>
-                    task.id === taskId ? { ...task, completed: completed } : task
-                ) ?? []
+                old?.map((task) => {
+                    if (task.id === taskId) {
+                        // Get the current usage data for the task
+                        const currentUsage = task.usage_data ? [...task.usage_data] : Array(7).fill(0);
+
+                         // Get max completions from the task object
+                        const maxCompletions = task.frequency_count || 1;
+
+                        // Update the usage data for the current day of the week
+                        const optimisticUsage = [...currentUsage];
+                        optimisticUsage[dayOfWeek] = completed ? Math.min(optimisticUsage[dayOfWeek] + 1, maxCompletions) : Math.max(optimisticUsage[dayOfWeek] - 1, 0);
+
+                        return { ...task, completed: completed, usage_data: optimisticUsage };
+                    }
+                    return task;
+                }) ?? []
             );
 
             // Return a context object with the snapshotted value
