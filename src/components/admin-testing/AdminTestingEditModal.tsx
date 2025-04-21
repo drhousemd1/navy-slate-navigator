@@ -22,6 +22,7 @@ interface AdminTestingEditModalProps {
   localStorageKey: string;
   carouselTimer: number;
   onCarouselTimerChange: (timer: number) => void;
+  isReorderMode: boolean;
 }
 
 // Define a specific type for the form values to prevent infinite type instantiation
@@ -54,7 +55,8 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
   onDelete,
   localStorageKey,
   carouselTimer,
-  onCarouselTimerChange
+  onCarouselTimerChange,
+  isReorderMode
 }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(cardData?.background_image_url || null);
@@ -71,7 +73,6 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
     localStorage.setItem(`${localStorageKey}_carouselTimer`, String(carouselTimer));
   }, [carouselTimer, localStorageKey]);
   
-  // Use the explicit form values type to prevent infinite type instantiation
   const form = useForm<AdminTestingFormValues>({
     defaultValues: {
       id: cardData?.id || '',
@@ -138,7 +139,6 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
         console.log("Loading background_images into slots:", cardData.background_images);
         cardData.background_images.forEach((img, index) => {
           if (index < newImageSlots.length && img) {
-            // Fix for substring error - ensure img is a string before using substring
             const imgStr = typeof img === 'string' ? img : '';
             const imgDisplay = imgStr ? (imgStr.substring(0, 50) + '...') : '[Non-string]';
             
@@ -147,7 +147,6 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
           }
         });
       } else if (cardData.background_image_url) {
-        // Fix for substring error - ensure background_image_url is a string
         const bgImgUrl = cardData.background_image_url;
         const bgImgPreview = typeof bgImgUrl === 'string' ? 
           (bgImgUrl.substring(0, 50) + '...') : 
@@ -169,12 +168,10 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // If no box selected, auto-select the first empty slot
     let targetIndex = selectedBoxIndex;
     if (targetIndex === null) {
       const firstEmpty = imageSlots.findIndex((slot) => !slot);
       if (firstEmpty === -1) {
-        // All slots are full, select the first one
         targetIndex = 0;
       } else {
         targetIndex = firstEmpty;
@@ -234,7 +231,6 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
       updatedSlots[selectedBoxIndex] = null;
       setImageSlots(updatedSlots);
       
-      // Clear preview but keep the selected box highlighted
       setImagePreview(null);
       form.setValue('background_image_url', '');
       
@@ -312,11 +308,9 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
       setIsSaving(true);
       console.log("Saving admin testing card data:", data);
       
-      // Validate image slots before saving
       const validImageSlots = imageSlots
         .filter(slot => typeof slot === 'string' && slot.trim() !== '')
         .map(slot => {
-          // Additional validation to ensure it's a valid data URL or image URL
           if (!slot) return null;
           try {
             if (slot.startsWith('data:image') || slot.startsWith('http')) {
@@ -334,7 +328,6 @@ const AdminTestingEditModal: React.FC<AdminTestingEditModalProps> = ({
       
       console.log(`Found ${validImageSlots.length} valid image slots after validation`);
       
-      // Ensure background_image_url is set to the current imagePreview
       const updatedData: AdminTestingCardData = {
         ...data,
         background_image_url: imagePreview || '',
