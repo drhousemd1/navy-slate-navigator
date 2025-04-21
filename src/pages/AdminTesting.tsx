@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -197,6 +198,9 @@ const AdminTesting = () => {
         <div className="mt-12">
           <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Data Management</h2>
           <ActivityDataReset />
+        </div>
+        <div className="text-white text-center mt-8">
+          reposave1restore
         </div>
       </div>
     </AppLayout>;
