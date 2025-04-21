@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { persistQueryClient } from '@tanstack/react-query-persist-client'
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
@@ -21,6 +21,29 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+// Create a new QueryClient instance
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            staleTime: 1000 * 60 * 20,       // Consider data fresh for 20 minutes
+            cacheTime: 1000 * 60 * 30,       // Keep data in memory for 30 minutes after inactive
+            refetchOnWindowFocus: false      // Avoid refetch when switching back to tab
+        },
+    },
+});
+
+//Implement LocalStorage persistence
+const localStoragePersister = createSyncStoragePersister({
+    storage: window.localStorage,
+})
+
+persistQueryClient({
+    queryClient,
+    persister: localStoragePersister,
+    maxAge: 1000 * 60 * 20 // Persisted data valid for 20 minutes
+});
+
+
 interface TasksContentProps {
     isEditorOpen: boolean;
     setIsEditorOpen: (isOpen: boolean) => void;
@@ -39,6 +62,54 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
         queryFn: fetchTasks,
     });
 
+    // Effect for daily task reset checks
+    useEffect(() => {
+        const checkForReset = () => {
+            const now = new Date();
+            console.log('Checking for task reset. Current local time:', now.toLocaleTimeString());
+
+            if (tasks.length > 0) {
+                const tasksToReset = tasks.filter(task =>
+                    task.completed &&
+                    task.frequency === 'daily' &&
+                    !wasCompletedToday(task)
+                );
+
+                if (tasksToReset.length > 0) {
+                    console.log('Found tasks that need to be reset:', tasksToReset.length);
+                    // Invalidate tasks query to trigger refetch and reset completed status
+                    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+                }
+            }
+        };
+
+        checkForReset(); // Initial check on mount
+
+        // Schedule a check precisely at midnight
+        const scheduleMidnightCheck = () => {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+
+            const timeUntilMidnight = tomorrow.getTime() - now.getTime();
+            console.log('Time until midnight check:', timeUntilMidnight, 'ms');
+
+            return setTimeout(() => {
+                console.log('Midnight reached, checking tasks for reset');
+                queryClient.invalidateQueries({ queryKey: ['tasks'] }); // Refetch tasks at midnight
+
+                // Reschedule for the next midnight
+                const newTimeout = scheduleMidnightCheck();
+                return () => clearTimeout(newTimeout); // Cleanup function for timeout
+            }, timeUntilMidnight);
+        };
+
+        const timeoutId = scheduleMidnightCheck();
+
+        // Cleanup timeout on component unmount
+        return () => clearTimeout(timeoutId);
+    }, [queryClient, tasks]); // Rerun effect if queryClient or tasks change
 
     // Effect to handle errors during task fetching
     useEffect(() => {
@@ -254,6 +325,7 @@ const Tasks: React.FC = () => {
 
     return (
         <AppLayout onAddNewItem={handleNewTask}>
+            <QueryClientProvider client={queryClient}>
                 <TaskCarouselProvider> {/* Provides carousel context */}
                     <RewardsProvider> {/* Provides rewards context */}
                         <TasksContent
@@ -262,6 +334,7 @@ const Tasks: React.FC = () => {
                         />
                     </RewardsProvider>
                 </TaskCarouselProvider>
+            </QueryClientProvider>
         </AppLayout>
     );
 };

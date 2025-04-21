@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -8,8 +9,6 @@ import Auth from "./pages/auth";
 import { AuthProvider, useAuth } from "./contexts/auth";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
-import { persistQueryClient } from '@tanstack/react-query-persist-client'
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
 
 // Create empty placeholder pages for our navigation
 import Rules from "./pages/Rules";
@@ -87,16 +86,6 @@ const queryClient = new QueryClient({
   },
 });
 
-const localStoragePersister = createSyncStoragePersister({
-  storage: window.localStorage,
-});
-
-persistQueryClient({
-    queryClient,
-    persister: localStoragePersister,
-    maxAge: 1000 * 60 * 20 // Persisted data valid for 20 minutes
-});
-
 // Configure routes with proper nesting to ensure context is available
 const AppRoutes = () => {
   // Add debugging for routing using standard React hooks
@@ -127,24 +116,6 @@ const AppRoutes = () => {
 // Main App component
 const App = () => {
   // Use proper React hooks inside the component function
-  const [isRestored, setIsRestored] = useState(false);
-
-  React.useEffect(() => {
-    const restoreCache = async () => {
-      await queryClient.restore({ 
-          storage: localStoragePersister.storage
-      });
-      setIsRestored(true);
-    };
-
-    restoreCache();
-  }, []);
-
-  // Ensure that the app doesn't render until the cache has been restored
-  if (!isRestored) {
-    return <div>Loading...</div>; // Or any other loading indicator
-  }
-
   React.useEffect(() => {
     console.log('App component initialized. React Router ready.');
   }, []);
