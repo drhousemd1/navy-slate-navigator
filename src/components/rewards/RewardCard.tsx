@@ -1,4 +1,4 @@
-tsx
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '../ui/card';
 import RewardEditor from './RewardEditor';
@@ -93,20 +93,8 @@ const useRewardCard = ({ id, points }: UseRewardCardProps): UseRewardCardReturn 
         title: 'Error',
         description: 'Could not use reward.',
       });
-
-      toast({
-        title: 'Reward Used',
-        description: 'You have used this reward!',
-      });
-    } catch (error) {
-      console.error('Error using reward:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Could not use reward.',
-      });
     }
-  }, [id, points, spendPoints, toast, updateReward, updateWeekData, weekData]);
+  }, [id, points, spendPoints, toast, updateReward, updateWeekData]);
 
   const handleClearWeekData = useCallback(async () => {
     try {
@@ -202,7 +190,8 @@ const RewardCard: React.FC<RewardCardProps> = ({
     handleUseReward,
     handleEdit,
     handleSaveReward,
-    handleDeleteReward
+    handleDeleteReward,
+    handleClearWeekData
   } = useRewardCard({ id, points });
 
   return (
@@ -232,8 +221,8 @@ const RewardCard: React.FC<RewardCardProps> = ({
           />
           
           <RewardFooter 
-            usage_data={weekData}
-            calendar_color={calendar_color}
+            usageData={weekData}
+            calendarColor={calendar_color}
             onClear={handleClearWeekData}
             onEdit={handleEdit}
           />
