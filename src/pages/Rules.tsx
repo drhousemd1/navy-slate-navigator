@@ -12,9 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import HighlightedText from '../components/task/HighlightedText';
 import RulesHeader from '../components/rule/RulesHeader';
 import { getMondayBasedDay } from '@/lib/utils';
-import { useQueryClient, useQuery, useMutation, QueryClient } from '@tanstack/react-query';
-import { persistQueryClient } from '@tanstack/react-query-persist-client'
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
+import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 
 interface Rule {
   id: string;
@@ -39,27 +37,6 @@ interface Rule {
   updated_at?: string;
   user_id?: string;
 }
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 20,       // Consider data fresh for 20 minutes
-      cacheTime: 1000 * 60 * 30,       // Keep data in memory for 30 minutes after inactive
-      refetchOnWindowFocus: false      // Avoid refetch when switching back to tab
-    }
-  }
-});
-
-const localStoragePersister = createSyncStoragePersister({
-  storage: window.localStorage,
-});
-
-persistQueryClient({
-  queryClient,
-  persister: localStoragePersister,
-  maxAge: 1000 * 60 * 20 // Persisted data valid for 20 minutes
-});
-
 
 const Rules: React.FC = () => {
   const navigate = useNavigate();
@@ -339,7 +316,7 @@ const Rules: React.FC = () => {
             {rules?.map((rule) => (
               <Card
                 key={rule.id}
-                className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'
+                className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'}
                   } overflow-hidden`}
               >
                 <div className="relative p-4">
