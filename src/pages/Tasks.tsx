@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -105,15 +104,42 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
 
   // Effect to initialize local usage data when tasks are loaded or changed
   useEffect(() => {
+    // Load local usage data from local storage
+    const storedUsageData = localStorage.getItem('localUsageData');
+    let initialUsageData: {[taskId: string]: number[]} = {};
+    if (storedUsageData) {
+      try {
+        initialUsageData = JSON.parse(storedUsageData);
+      } catch (e) {
+        console.error("Failed to parse localUsageData from localStorage", e);
+        // Handle the error, e.g., by clearing the invalid data
+        localStorage.removeItem('localUsageData');
+      }
+    }
+
     if (tasks.length > 0) {
       const newLocalUsageData: {[taskId: string]: number[]} = {};
       tasks.forEach(task => {
-        // Initialize with task's usage_data or a default array if null/undefined
-        newLocalUsageData[task.id] = task.usage_data ? [...task.usage_data] : Array(7).fill(0);
+        const taskId = task.id;
+        const backendUsageData = task.usage_data || Array(7).fill(0);
+        const localStorageUsageData = initialUsageData[taskId] || Array(7).fill(0);
+        const currentDayOfWeek = getCurrentDayOfWeek();
+
+        // Merge backend and local storage data, prioritizing local storage for the current day
+        const mergedUsageData = backendUsageData.map((value, index) => {
+          return index === currentDayOfWeek ? localStorageUsageData[index] !== undefined ? localStorageUsageData[index] : value : value;
+        });
+
+        newLocalUsageData[taskId] = mergedUsageData;
       });
       setLocalUsageData(newLocalUsageData);
     }
   }, [tasks]); // Rerun effect if tasks array changes
+
+  // Effect to save local usage data to local storage
+  useEffect(() => {
+    localStorage.setItem('localUsageData', JSON.stringify(localUsageData));
+  }, [localUsageData]); // Rerun effect if localUsageData changes
 
   // Handler to open editor for a new task
   const handleNewTask = () => {
