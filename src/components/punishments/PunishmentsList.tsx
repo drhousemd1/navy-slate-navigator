@@ -1,6 +1,8 @@
+
 import React from 'react';
-import PunishmentCard from '../components/PunishmentCard';
-import { getIconComponent } from './Punishments'; // Import the function
+import PunishmentCard from '../PunishmentCard';
+// Import getIconComponent from pages/Punishments for consistent icons
+import { getIconComponent } from '../../pages/Punishments';
 
 interface PunishmentsListProps {
   punishments: any[]; // Replace 'any' with the actual type of punishment
@@ -39,3 +41,4 @@ const PunishmentsList: React.FC<PunishmentsListProps> = ({ punishments, globalCa
 };
 
 export default PunishmentsList;
+

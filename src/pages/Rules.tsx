@@ -12,9 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import HighlightedText from '../components/task/HighlightedText';
 import RulesHeader from '../components/rule/RulesHeader';
 import { getMondayBasedDay } from '@/lib/utils';
-import { useQueryClient, useQuery, useMutation, QueryClient } from '@tanstack/react-query';
-import { persistQueryClient } from '@tanstack/react-query-persist-client'
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
+import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 
 interface Rule {
   id: string;
@@ -40,27 +38,6 @@ interface Rule {
   user_id?: string;
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 20,       // Consider data fresh for 20 minutes
-      cacheTime: 1000 * 60 * 30,       // Keep data in memory for 30 minutes after inactive
-      refetchOnWindowFocus: false      // Avoid refetch when switching back to tab
-    }
-  }
-});
-
-const localStoragePersister = createSyncStoragePersister({
-  storage: window.localStorage,
-});
-
-persistQueryClient({
-  queryClient,
-  persister: localStoragePersister,
-  maxAge: 1000 * 60 * 20 // Persisted data valid for 20 minutes
-});
-
-
 const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -79,11 +56,28 @@ const Rules: React.FC = () => {
         throw error;
       }
 
-      const rulesWithUsageData = (data as Rule[] || []).map(rule => {
-        if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
-          return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
+      const rulesWithUsageData = (data as any[] || []).map((rule) => {
+        let priorityVal: 'low' | 'medium' | 'high' = 'medium';
+        if (rule.priority === 'low' || rule.priority === 'medium' || rule.priority === 'high') {
+          priorityVal = rule.priority;
         }
-        return rule;
+
+        let frequencyVal: 'daily' | 'weekly' = 'daily';
+        if (rule.frequency === 'daily' || rule.frequency === 'weekly') {
+          frequencyVal = rule.frequency;
+        }
+
+        let usageDataVal: number[] = [0,0,0,0,0,0,0];
+        if (rule.usage_data && Array.isArray(rule.usage_data) && rule.usage_data.length === 7) {
+          usageDataVal = rule.usage_data.map(Number);
+        }
+
+        return {
+          ...rule,
+          priority: priorityVal,
+          frequency: frequencyVal,
+          usage_data: usageDataVal,
+        };
       });
 
       return rulesWithUsageData;
