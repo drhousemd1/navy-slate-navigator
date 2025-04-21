@@ -300,7 +300,7 @@ const AdminTesting = () => {
                         Add New Card
                     </Button>
                     <button onClick={toggleReorderMode} className="reorder-button">
-                        <img src="/reorder-icon.png" alt="Reorder" className="w-8 h-8" />
+                        <img src="/public/placeholder.svg" alt="Reorder" className="w-8 h-8" />
                     </button>
                 </div>
 

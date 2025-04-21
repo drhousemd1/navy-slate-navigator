@@ -42,7 +42,7 @@ export const useImageCarousel = ({
       setTransitionImage(null);
       setIsTransitioning(false);
     }
-  }, [images, previousImages]);
+  }, [images]);
 
   // Handle image transitions when global carousel index changes
   useEffect(() => {
