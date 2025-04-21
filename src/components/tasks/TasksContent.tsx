@@ -23,7 +23,7 @@ interface TasksContentProps {
 const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const { refreshPointsFromDatabase } = useRewards();
-  const { carouselTimer, setCarouselTimer, globalCarouselIndex } = useTaskCarousel();
+  const { setCarouselTimer, globalCarouselIndex } = useTaskCarousel();
   const { checkForReset } = useTaskResetChecker();
 
   // Query hooks
