@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
@@ -247,6 +248,11 @@ const AdminTesting = () => {
         <div className="mt-12">
           <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Data Management</h2>
           <ActivityDataReset />
+        </div>
+        
+        {/* Add the desired text at the bottom */}
+        <div className="text-center text-white mt-16 mb-8 font-semibold text-lg">
+          ResPoint1
         </div>
       </div>
     </AppLayout>
