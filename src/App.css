@@ -40,3 +40,41 @@
 .read-the-docs {
   color: #888;
 }
+
+/* CSS STYLING */
+.drag-item {
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transform-origin: 50% 50%;
+  position: relative;
+  will-change: transform;
+}
+
+.drag-item.dragging {
+  opacity: 0.9;
+  pointer-events: auto;
+  transform: scale(1.02);
+  z-index: 50;
+}
+
+.drag-placeholder {
+  opacity: 0.2;
+  background: theme('colors.amber.500');
+  border: 2px dashed theme('colors.amber.600');
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+  min-height: inherit;
+  height: var(--card-height);
+}
+
+[data-rbd-placeholder-context-id] {
+  transition: none !important;
+  margin: 0 !important;
+  min-height: var(--card-height) !important;
+}
+
+.reorder-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
