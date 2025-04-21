@@ -1,24 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
 import TaskCard from '../components/TaskCard';
 import TaskEditor from '../components/TaskEditor';
 import TasksHeader from '../components/task/TasksHeader';
 import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import { TaskCarouselProvider, useTaskCarousel } from '../contexts/TaskCarouselContext';
-import {
-  fetchTasks,
-  Task,
-  saveTask,
-  updateTaskCompletion,
-  deleteTask,
-  getLocalDateString,
-  wasCompletedToday,
-  getCurrentDayOfWeek
-} from '../lib/taskUtils';
+import { Task, getCurrentDayOfWeek } from '../lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { 
+  useTasksQuery, 
+  useToggleTaskCompletion, 
+  useSaveTask, 
+  useDeleteTask,
+  useTaskResetChecker
+} from '@/data/TasksDataHandler';
 
 interface TasksContentProps {
   isEditorOpen: boolean;
@@ -27,38 +23,20 @@ interface TasksContentProps {
 
 const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOpen }) => {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
-
   const { carouselTimer, globalCarouselIndex } = useTaskCarousel();
+  const { checkForReset } = useTaskResetChecker();
 
-  const { data: tasks = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['tasks'],
-    queryFn: fetchTasks,
-    staleTime: 10000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true
-  });
+  // Query hooks
+  const { data: tasks = [], isLoading, error } = useTasksQuery();
+  
+  // Mutation hooks
+  const saveTaskMutation = useSaveTask();
+  const deleteTaskMutation = useDeleteTask();
+  const toggleCompletionMutation = useToggleTaskCompletion();
 
   useEffect(() => {
-    const checkForReset = () => {
-      const now = new Date();
-      console.log('Checking for task reset. Current local time:', now.toLocaleTimeString());
-
-      if (tasks.length > 0) {
-        const tasksToReset = tasks.filter(task =>
-          task.completed &&
-          task.frequency === 'daily' &&
-          !wasCompletedToday(task)
-        );
-
-        if (tasksToReset.length > 0) {
-          console.log('Found tasks that need to be reset:', tasksToReset.length);
-          queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        }
-      }
-    };
-
+    // Check for tasks that need to be reset (e.g., daily tasks at midnight)
     checkForReset();
 
     const scheduleMidnightCheck = () => {
@@ -72,18 +50,16 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
 
       const timeout = setTimeout(() => {
         console.log('Midnight reached, checking tasks for reset');
-        queryClient.invalidateQueries({ queryKey: ['tasks'] });
-
-        scheduleMidnightCheck();
+        checkForReset();
+        scheduleMidnightCheck(); // Schedule the next check
       }, timeUntilMidnight);
 
       return timeout;
     };
 
     const timeoutId = scheduleMidnightCheck();
-
     return () => clearTimeout(timeoutId);
-  }, [queryClient, tasks]);
+  }, [checkForReset]);
 
   useEffect(() => {
     if (error) {
@@ -110,147 +86,43 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const handleSaveTask = async (taskData: Task) => {
     try {
       console.log("Saving task:", taskData);
-      const savedTask = await saveTask(taskData);
-
-      if (savedTask) {
-        queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        toast({
-          title: 'Success',
-          description: `Task ${currentTask ? 'updated' : 'created'} successfully!`,
-        });
-        setIsEditorOpen(false);
+      await saveTaskMutation.mutateAsync(taskData);
+      
+      if (taskData.carousel_timer) {
+        carouselTimer && carouselTimer(taskData.carousel_timer);
       }
+      
+      setIsEditorOpen(false);
+      setCurrentTask(null);
     } catch (err) {
-      console.error('Error saving task:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to save task. Please try again.',
-        variant: 'destructive',
-      });
+      console.error('Error in handleSaveTask:', err);
+      // Error is already handled in the mutation
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
     try {
       console.log("Deleting task:", taskId);
-      const success = await deleteTask(taskId);
-
-      if (success) {
-        setCurrentTask(null);
-        setIsEditorOpen(false);
-        queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        toast({
-          title: 'Success',
-          description: 'Task deleted successfully!',
-        });
-      }
+      await deleteTaskMutation.mutateAsync(taskId);
+      
+      setCurrentTask(null);
+      setIsEditorOpen(false);
     } catch (err) {
-      console.error('Error deleting task:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete task. Please try again.',
-        variant: 'destructive',
-      });
+      console.error('Error in handleDeleteTask:', err);
+      // Error is already handled in the mutation
     }
   };
 
-  const toggleCompletionMutation = useMutation({
-    mutationFn: ({ taskId, completed }: { taskId: string; completed: boolean }) =>
-      updateTaskCompletion(taskId, completed),
-
-    onSuccess: async (updatedTask) => {
-      if (!updatedTask) {
-        toast({
-          title: 'Update Failed',
-          description: 'Failed to update task completion. Max completions may be reached.',
-          variant: 'destructive',
-        });
-        queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        return;
-      }
-
-      queryClient.setQueryData<Task[]>(['tasks'], (oldTasks) => {
-        if (!oldTasks) return [];
-        return oldTasks.map((task) =>
-          task.id === updatedTask.id ? updatedTask : task
-        );
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['task-completions'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
-
-      if (updatedTask.completed) {
-        await refreshPointsFromDatabase();
-      }
-    },
-    onError: (err) => {
-      console.error('Error toggling task completion:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to update task. Please try again.',
-        variant: 'destructive',
-      });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    }
-  });
-
   const handleToggleCompletion = async (taskId: string, completed: boolean) => {
     try {
-      const task = tasks.find(t => t.id === taskId);
-      if (!task) {
-        console.error("Task not found for toggle:", taskId);
-        return;
+      const result = await toggleCompletionMutation.mutateAsync({ taskId, completed });
+      
+      if (result && completed) {
+        await refreshPointsFromDatabase();
       }
-
-      const dayOfWeek = getCurrentDayOfWeek();
-
-      const currentUsage = task.usage_data ? [...task.usage_data] : Array(7).fill(0);
-
-      const maxCompletions = task.frequency_count || 1;
-
-      if (currentUsage[dayOfWeek] >= maxCompletions && completed) {
-        toast({
-          title: 'Maximum completions reached',
-          description: 'You have already completed this task the maximum number of times today.',
-          variant: 'default',
-        });
-        return;
-      }
-
-      const optimisticUsage = [...currentUsage];
-      optimisticUsage[dayOfWeek] = completed ? Math.min(optimisticUsage[dayOfWeek] + 1, maxCompletions) : Math.max(optimisticUsage[dayOfWeek] - 1, 0);
-
-      const { data: updatedTask, error: updateError } = await supabase
-        .from('tasks')
-        .update({ usage_data: optimisticUsage })
-        .eq('id', taskId)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error('Error updating task completion:', updateError);
-        toast({
-          title: 'Error',
-          description: 'Failed to update task. Please try again.',
-          variant: 'destructive',
-        });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        toast({
-          title: 'Success',
-          description: 'Task updated successfully!',
-        });
-      }
-
-    } catch (error) {
-      console.error("Error toggling task completion:", error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update task. Please try again.',
-        variant: 'destructive',
-      });
+    } catch (err) {
+      console.error("Error in handleToggleCompletion:", err);
+      // Error is already handled in the mutation
     }
   };
 
@@ -340,4 +212,3 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
-
