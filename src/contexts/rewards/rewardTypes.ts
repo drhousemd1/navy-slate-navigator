@@ -3,6 +3,7 @@ import { Reward } from '@/lib/rewardUtils';
 
 export interface RewardsContextType {
   rewards: Reward[];
+  rewardUsageMap: { [id: string]: boolean[] };  // Added rewardUsageMap here
   totalPoints: number;
   totalRewardsSupply: number;
   setTotalPoints: (points: number) => void;

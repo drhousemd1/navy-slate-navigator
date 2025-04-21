@@ -5,20 +5,35 @@ import { usePunishmentOperations } from './usePunishmentOperations';
 
 const PunishmentsContext = createContext<PunishmentsContextType | undefined>(undefined);
 
+// Default carousel timer in seconds
+const DEFAULT_CAROUSEL_TIMER = 5;
+
 export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [globalCarouselTimer, setGlobalCarouselTimer] = useState(DEFAULT_CAROUSEL_TIMER);
   const operations = usePunishmentOperations();
-  const [initialLoadAttempted, setInitialLoadAttempted] = useState(false);
   
   useEffect(() => {
-    // Only attempt to fetch on first mount, don't refetch on rerenders
-    if (!initialLoadAttempted) {
-      operations.fetchPunishments();
-      setInitialLoadAttempted(true);
+    operations.fetchPunishments();
+  }, []);
+
+  // Find the first punishment with a custom timer or use default
+  useEffect(() => {
+    if (operations.punishments.length > 0) {
+      const firstWithTimer = operations.punishments.find(p => p.carousel_timer !== undefined);
+      if (firstWithTimer && firstWithTimer.carousel_timer) {
+        setGlobalCarouselTimer(firstWithTimer.carousel_timer);
+      }
     }
-  }, [initialLoadAttempted]);
+  }, [operations.punishments]);
+
+  const contextValue: PunishmentsContextType = {
+    ...operations,
+    globalCarouselTimer,
+    setGlobalCarouselTimer
+  };
 
   return (
-    <PunishmentsContext.Provider value={operations}>
+    <PunishmentsContext.Provider value={contextValue}>
       {children}
     </PunishmentsContext.Provider>
   );
