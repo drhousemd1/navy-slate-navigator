@@ -10,7 +10,7 @@ import { usePointsManagement } from '@/contexts/rewards/usePointsManagement';
 import { useToast } from '@/hooks/use-toast';
 import { useRewardOperations } from '@/contexts/rewards/useRewardOperations';
 import { getMondayBasedDay } from '@/lib/utils';
-import dayjs from 'dayjs';
+// Removed unused import dayjs due to missing package
 
 interface RewardCardProps {
   title: string;
@@ -38,7 +38,6 @@ const useRewardCard = ({ id, points }: { id?: string; points: number }) => {
     handleSaveReward,
     handleDeleteReward,
     handleUseReward: contextHandleUseReward,
-    // No direct updateReward or deleteReward exposed here, so we'll rely on context handles
   } = useRewardOperations();
 
   const [weekData, setWeekData] = useState<boolean[]>(Array(7).fill(false));
@@ -260,4 +259,3 @@ const RewardCard: React.FC<RewardCardProps> = ({
 };
 
 export default RewardCard;
-

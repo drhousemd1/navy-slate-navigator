@@ -41,4 +41,3 @@ const PunishmentsList: React.FC<PunishmentsListProps> = ({ punishments, globalCa
 };
 
 export default PunishmentsList;
-

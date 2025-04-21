@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Check, Plus, Loader2 } from 'lucide-react';
+import { Edit, Check, Loader2 } from 'lucide-react';
 import FrequencyTracker from '../components/task/FrequencyTracker';
 import PriorityBadge from '../components/task/PriorityBadge';
 import { useNavigate } from 'react-router-dom';
@@ -426,3 +427,4 @@ const Rules: React.FC = () => {
 };
 
 export default Rules;
+
