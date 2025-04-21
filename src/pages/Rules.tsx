@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,10 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import HighlightedText from '../components/task/HighlightedText';
 import RulesHeader from '../components/rule/RulesHeader';
-import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery, useMutation, QueryClient } from '@tanstack/react-query';
+import { persistQueryClient } from '@tanstack/react-query-persist-client'
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
 
 interface Rule {
   id: string;
@@ -39,54 +40,55 @@ interface Rule {
   user_id?: string;
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 20,       // Consider data fresh for 20 minutes
+      cacheTime: 1000 * 60 * 30,       // Keep data in memory for 30 minutes after inactive
+      refetchOnWindowFocus: false      // Avoid refetch when switching back to tab
+    }
+  }
+});
+
+const localStoragePersister = createSyncStoragePersister({
+  storage: window.localStorage,
+});
+
+persistQueryClient({
+  queryClient,
+  persister: localStoragePersister,
+  maxAge: 1000 * 60 * 20 // Persisted data valid for 20 minutes
+});
+
+
 const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
-  const [rules, setRules] = useState<Rule[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchRules = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('rules')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          throw error;
-        }
-        
-        const rulesWithUsageData = (data as Rule[] || []).map(rule => {
-          if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
-            return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
-          }
-          return rule;
-        });
-        
-        setRules(rulesWithUsageData);
-      } catch (err) {
-        console.error('Error fetching rules:', err);
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch rules. Please try again.',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
+  const { data: rules, isLoading, refetch } = useQuery({
+    queryKey: ['rules'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rules')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
       }
-    };
-    
-    fetchRules();
-    
-    const intervalId = setInterval(() => {
-      fetchRules();
-    }, 30000); // Refresh every 30 seconds
-    
-    return () => clearInterval(intervalId);
-  }, []);
+
+      const rulesWithUsageData = (data as Rule[] || []).map(rule => {
+        if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
+          return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
+        }
+        return rule;
+      });
+
+      return rulesWithUsageData;
+    },
+  });
 
   const handleAddRule = () => {
     setCurrentRule(null);
@@ -98,13 +100,13 @@ const Rules: React.FC = () => {
     setIsEditorOpen(true);
   };
 
-  const handleRuleBroken = async (rule: Rule) => {
-    try {
+  const handleRuleBrokenMutation = useMutation({
+    mutationFn: async (rule: Rule) => {
       const currentDayOfWeek = getMondayBasedDay();
-      
+
       const newUsageData = [...(rule.usage_data || [0, 0, 0, 0, 0, 0, 0])];
       newUsageData[currentDayOfWeek] = 1;
-      
+
       const { data, error } = await supabase
         .from('rules')
         .update({
@@ -113,12 +115,12 @@ const Rules: React.FC = () => {
         })
         .eq('id', rule.id)
         .select();
-        
+
       if (error) throw error;
-      
+
       const today = new Date();
       const jsDayOfWeek = today.getDay();
-      
+
       const { error: violationError } = await supabase
         .from('rule_violations')
         .insert({
@@ -127,7 +129,7 @@ const Rules: React.FC = () => {
           day_of_week: jsDayOfWeek,
           week_number: `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`
         });
-        
+
       if (violationError) {
         console.error('Error recording rule violation:', violationError);
         toast({
@@ -138,35 +140,41 @@ const Rules: React.FC = () => {
       } else {
         console.log('Rule violation recorded successfully');
       }
-      
-      setRules(rules.map(r => 
-        r.id === rule.id ? { ...r, usage_data: newUsageData } : r
-      ));
-      
-      toast({
-        title: 'Rule Broken',
-        description: 'This violation has been recorded.',
-      });
-      
-      navigate('/punishments');
-      
-    } catch (err) {
+      return {
+        ...rule,
+        usage_data: newUsageData
+      }
+    },
+    onMutate: async (rule: Rule) => {
+      await queryClient.cancelQueries({ queryKey: ['rules'] })
+      const previousRules = queryClient.getQueryData(['rules'])
+      queryClient.setQueryData(['rules'], (old: Rule[] | undefined) =>
+        old ? old.map((r) => (r.id === rule.id ? { ...r, isUpdating: true } : r)) : []
+      );
+      return { previousRules, rule };
+    },
+    onError: (err: any, rule: Rule, context: any) => {
       console.error('Error updating rule:', err);
       toast({
         title: 'Error',
         description: 'Failed to record rule violation. Please try again.',
         variant: 'destructive',
       });
-    }
-  };
+      queryClient.setQueryData(['rules'], context.previousRules)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['rules'] })
+      navigate('/punishments');
+    },
+  });
 
-  const handleSaveRule = async (ruleData: Partial<Rule>) => {
-    try {
-      let result;
-      
+  const handleRuleBroken = async (rule: Rule) => {
+    handleRuleBrokenMutation.mutate(rule)
+  }
+
+  const handleSaveRuleMutation = useMutation({
+    mutationFn: async (ruleData: Partial<Rule>) => {
       if (ruleData.id) {
-        const existingRule = rules.find(rule => rule.id === ruleData.id);
-        
         const { data, error } = await supabase
           .from('rules')
           .update({
@@ -191,27 +199,16 @@ const Rules: React.FC = () => {
           .eq('id', ruleData.id)
           .select()
           .single();
-          
+
         if (error) throw error;
-        result = data;
-        
-        if (existingRule && existingRule.usage_data) {
-          result.usage_data = existingRule.usage_data;
-        }
-        
-        setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result as Rule } : rule));
-        
-        toast({
-          title: 'Success',
-          description: 'Rule updated successfully!',
-        });
+        return data
       } else {
         const { id, ...ruleWithoutId } = ruleData;
-        
+
         if (!ruleWithoutId.title) {
           throw new Error('Rule title is required');
         }
-        
+
         const newRule = {
           title: ruleWithoutId.title,
           priority: ruleWithoutId.priority || 'medium',
@@ -234,170 +231,202 @@ const Rules: React.FC = () => {
           updated_at: new Date().toISOString(),
           user_id: (await supabase.auth.getUser()).data.user?.id,
         };
-        
+
         const { data, error } = await supabase
           .from('rules')
           .insert(newRule)
           .select()
           .single();
-          
+
         if (error) throw error;
-        result = data;
-        
-        setRules([result as Rule, ...rules]);
-        
-        toast({
-          title: 'Success',
-          description: 'Rule created successfully!',
-        });
+        return data
       }
-      
-      setIsEditorOpen(false);
-    } catch (err) {
+    },
+    onMutate: async (ruleData: Partial<Rule>) => {
+      await queryClient.cancelQueries({ queryKey: ['rules'] });
+      const previousRules = queryClient.getQueryData(['rules']);
+
+      queryClient.setQueryData(
+        ['rules'],
+        (old: Rule[] | undefined) => {
+          if (!old) return [ruleData as Rule];
+          if (ruleData.id) {
+            return old.map((rule) =>
+              rule.id === ruleData.id ? { ...rule, ...ruleData } : rule
+            );
+          } else {
+            return [ruleData as Rule, ...old];
+          }
+        }
+      );
+      return { previousRules, ruleData };
+    },
+    onError: (err: any, ruleData: Partial<Rule>, context: any) => {
       console.error('Error saving rule:', err);
       toast({
         title: 'Error',
         description: 'Failed to save rule. Please try again.',
         variant: 'destructive',
       });
-    }
+      queryClient.setQueryData(['rules'], context.previousRules);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
+      setIsEditorOpen(false);
+    },
+  });
+
+  const handleSaveRule = async (ruleData: Partial<Rule>) => {
+    handleSaveRuleMutation.mutate(ruleData);
   };
 
-  const handleDeleteRule = async (ruleId: string) => {
-    try {
+  const handleDeleteRuleMutation = useMutation({
+    mutationFn: async (ruleId: string) => {
       const { error } = await supabase
         .from('rules')
         .delete()
         .eq('id', ruleId);
-      
+
       if (error) throw error;
-      
-      setRules(rules.filter(rule => rule.id !== ruleId));
-      
-      toast({
-        title: 'Success',
-        description: 'Rule deleted successfully!',
-      });
-      
-      setCurrentRule(null);
-      setIsEditorOpen(false);
-    } catch (err) {
+    },
+    onMutate: async (ruleId: string) => {
+      await queryClient.cancelQueries({ queryKey: ['rules'] });
+      const previousRules = queryClient.getQueryData(['rules']);
+
+      queryClient.setQueryData(
+        ['rules'],
+        (old: Rule[] | undefined) =>
+          old ? old.filter((rule) => rule.id !== ruleId) : []
+      );
+
+      return { previousRules, ruleId };
+    },
+    onError: (err: any, ruleId: string, context: any) => {
       console.error('Error deleting rule:', err);
       toast({
         title: 'Error',
         description: 'Failed to delete rule. Please try again.',
         variant: 'destructive',
       });
-    }
+      queryClient.setQueryData(['rules'], context.previousRules);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
+      setCurrentRule(null);
+      setIsEditorOpen(false);
+    },
+  });
+
+  const handleDeleteRule = async (ruleId: string) => {
+    handleDeleteRuleMutation.mutate(ruleId);
   };
 
   return (
     <AppLayout onAddNewItem={handleAddRule}>
-      <RewardsProvider>
-        <div className="container mx-auto px-4 py-6">
-          <RulesHeader />
-          
-          {isLoading ? (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="w-10 h-10 text-white animate-spin" />
-            </div>
-          ) : rules.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-white mb-4">No rules found. Create your first rule!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {rules.map((rule) => (
-                <Card 
-                  key={rule.id}
-                  className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
-                >
-                  <div className="relative p-4">
-                    {rule.background_image_url && (
-                      <div 
-                        className="absolute inset-0 z-0" 
-                        style={{
-                          backgroundImage: `url(${rule.background_image_url})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
-                          opacity: (rule.background_opacity || 100) / 100
-                        }}
-                      />
-                    )}
-                    
-                    <div className="flex justify-between items-center mb-3 relative z-10">
-                      <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
-                        onClick={() => handleRuleBroken(rule)}
-                      >
-                        Rule Broken
-                      </Button>
-                    </div>
-                    
-                    <div className="mb-4 relative z-10">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-                          <Check className="w-6 h-6 text-white" />
+      <div className="container mx-auto px-4 py-6">
+        <RulesHeader />
+
+        {isLoading ? (
+          <div className="flex justify-center items-center py-10">
+            <Loader2 className="w-10 h-10 text-white animate-spin" />
+          </div>
+        ) : rules?.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-white mb-4">No rules found. Create your first rule!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {rules?.map((rule) => (
+              <Card
+                key={rule.id}
+                className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'
+                  } overflow-hidden`}
+              >
+                <div className="relative p-4">
+                  {rule.background_image_url && (
+                    <div
+                      className="absolute inset-0 z-0"
+                      style={{
+                        backgroundImage: `url(${rule.background_image_url})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
+                        opacity: (rule.background_opacity || 100) / 100,
+                      }}
+                    />
+                  )}
+
+                  <div className="flex justify-between items-center mb-3 relative z-10">
+                    <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
+                      onClick={() => handleRuleBroken(rule)}
+                    >
+                      Rule Broken
+                    </Button>
+                  </div>
+
+                  <div className="mb-4 relative z-10">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
+                        <Check className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1 flex flex-col">
+                        <div className="text-xl font-semibold">
+                          <HighlightedText
+                            text={rule.title}
+                            highlight={rule.highlight_effect}
+                            color={rule.title_color}
+                          />
                         </div>
-                        <div className="flex-1 flex flex-col">
-                          <div className="text-xl font-semibold">
+
+                        {rule.description && (
+                          <div className="text-sm mt-1">
                             <HighlightedText
-                              text={rule.title}
+                              text={rule.description}
                               highlight={rule.highlight_effect}
-                              color={rule.title_color}
+                              color={rule.subtext_color}
                             />
                           </div>
-                          
-                          {rule.description && (
-                            <div className="text-sm mt-1">
-                              <HighlightedText
-                                text={rule.description}
-                                highlight={rule.highlight_effect}
-                                color={rule.subtext_color}
-                              />
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
-                    
-                    <div className="flex items-center justify-between mt-2 relative z-10">
-                      <FrequencyTracker 
-                        frequency={rule.frequency}
-                        frequency_count={rule.frequency_count}
-                        calendar_color={rule.calendar_color}
-                        usage_data={rule.usage_data}
-                      />
-                      
-                      <Button 
-                        size="sm" 
-                        className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
-                        onClick={() => handleEditRule(rule)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </div>
                   </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <RuleEditor
-          isOpen={isEditorOpen}
-          onClose={() => {
-            setIsEditorOpen(false);
-            setCurrentRule(null);
-          }}
-          ruleData={currentRule || undefined}
-          onSave={handleSaveRule}
-          onDelete={handleDeleteRule}
-        />
-      </RewardsProvider>
+
+                  <div className="flex items-center justify-between mt-2 relative z-10">
+                    <FrequencyTracker
+                      frequency={rule.frequency}
+                      frequency_count={rule.frequency_count}
+                      calendar_color={rule.calendar_color}
+                      usage_data={rule.usage_data}
+                    />
+
+                    <Button
+                      size="sm"
+                      className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
+                      onClick={() => handleEditRule(rule)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <RuleEditor
+        isOpen={isEditorOpen}
+        onClose={() => {
+          setIsEditorOpen(false);
+          setCurrentRule(null);
+        }}
+        ruleData={currentRule || undefined}
+        onSave={handleSaveRule}
+        onDelete={handleDeleteRule}
+      />
     </AppLayout>
   );
 };
