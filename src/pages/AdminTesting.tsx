@@ -208,8 +208,6 @@ const AdminTesting = () => {
     ));
   };
 
-  // Drag and Drop Helper Functions
-
   // Touch move prevention during drag
   const preventTouchMove = (e: TouchEvent) => {
     if (isDragging && e.target instanceof HTMLElement) {
@@ -224,12 +222,11 @@ const AdminTesting = () => {
     setIsDragging(true);
     draggedItemId.current = result.draggableId;
 
-    // Store scroll position
     if (cardsContainerRef.current) {
       scrollPositionRef.current = cardsContainerRef.current.scrollTop;
     }
 
-    // Set card height for placeholder
+    // Set height for placeholder
     const draggedCard = document.querySelector(`[data-rbd-draggable-id="${result.draggableId}"]`);
     if (draggedCard) {
       document.documentElement.style.setProperty('--card-height', `${draggedCard.clientHeight}px`);
@@ -363,7 +360,6 @@ const AdminTesting = () => {
                             key={card.id}
                             card={card}
                             globalCarouselIndex={globalCarouselIndex}
-                            // Pass reorder mode to card if needed for UI changes inside card
                             isReorderMode={isReorderMode}
                           />
                         </div>
