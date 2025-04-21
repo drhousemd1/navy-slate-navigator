@@ -87,9 +87,9 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
       console.log("Saving task:", taskData);
       await saveTaskMutation.mutateAsync(taskData);
       
-      // Fix this line - properly update carousel timer if present
-      if (taskData.carousel_timer && typeof taskData.carousel_timer === 'number') {
-        setCarouselTimer(taskData.carousel_timer);
+      // Make sure carousel_timer is a number before updating the state
+      if (taskData.carousel_timer !== undefined && taskData.carousel_timer !== null) {
+        setCarouselTimer(Number(taskData.carousel_timer));
       }
       
       setIsEditorOpen(false);
