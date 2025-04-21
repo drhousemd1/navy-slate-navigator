@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import AdminTestingEditModal from '@/components/admin-testing/AdminTestingEditModal';
@@ -22,7 +23,6 @@ export interface AdminTestingCardProps {
   globalCarouselIndex: number;
   onUpdate?: (updated: AdminTestingCardData) => void;
   card?: AdminTestingCardData;
-  isReorderMode?: boolean;
 }
 
 const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
@@ -34,8 +34,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   points = 5,
   globalCarouselIndex,
   onUpdate,
-  card,
-  isReorderMode,
+  card
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
@@ -140,7 +139,6 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
             calendarColor={cardData.calendar_color || '#7E69AB'}
             usageData={usageData}
             onEditClick={handleOpenEditModal}
-            isReorderMode={isReorderMode}
           />
         </div>
       </Card>
