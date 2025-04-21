@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AdminTestingCard from '@/components/admin-testing/AdminTestingCard';
 import ActivityDataReset from '@/components/admin-testing/ActivityDataReset';
@@ -8,6 +9,13 @@ import { Plus } from 'lucide-react';
 import { AdminTestingCardData } from '@/components/admin-testing/defaultAdminTestingCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+  DragStart
+} from '@hello-pangea/dnd';
 
 interface SupabaseCardData {
   id: string;
@@ -31,6 +39,7 @@ interface SupabaseCardData {
   created_at: string | null;
   updated_at: string | null;
   user_id: string | null;
+  order: number; // added order
 }
 
 const AdminTesting = () => {
@@ -39,6 +48,13 @@ const AdminTesting = () => {
   const [carouselTimer, setCarouselTimer] = useState(5);
   const [isLoading, setIsLoading] = useState(true);
   const [cardsFetched, setCardsFetched] = useState(false);
+
+  // Reorder mode state
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const draggedItemId = useRef<string | null>(null);
+  const cardsContainerRef = useRef<HTMLDivElement | null>(null);
+  const scrollPositionRef = useRef(0);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -58,7 +74,8 @@ const AdminTesting = () => {
 
         const { data, error } = await supabase
           .from('admin_testing_cards')
-          .select('*');
+          .select('*')
+          .order('order', { ascending: true }); // order by 'order' column
         
         if (error) {
           console.error('Error fetching cards from Supabase:', error);
@@ -87,7 +104,8 @@ const AdminTesting = () => {
             icon_color: card.icon_color || '#FFFFFF',
             highlight_effect: card.highlight_effect || false,
             usage_data: card.usage_data || [0, 0, 0, 0, 0, 0, 0],
-            background_images: Array.isArray(card.background_images) ? card.background_images : []
+            background_images: Array.isArray(card.background_images) ? card.background_images : [],
+            order: typeof card.order === 'number' ? card.order : 0,
           })) as AdminTestingCardData[];
           
           console.log("Formatted cards:", formattedCards);
@@ -136,7 +154,8 @@ const AdminTesting = () => {
       icon_color: '#FFFFFF',
       highlight_effect: false,
       usage_data: [0, 0, 0, 0, 0, 0, 0],
-      background_images: []
+      background_images: [],
+      order: cards.length, // add with current length as default order
     };
     
     try {
@@ -168,7 +187,8 @@ const AdminTesting = () => {
         ...data,
         priority: (supabaseData.priority as 'low' | 'medium' | 'high') || 'medium',
         points: typeof supabaseData.points === 'number' ? supabaseData.points : 5,
-        background_images: Array.isArray(supabaseData.background_images) ? supabaseData.background_images : []
+        background_images: Array.isArray(supabaseData.background_images) ? supabaseData.background_images : [],
+        order: supabaseData.order || 0,
       } as AdminTestingCardData;
       
       setCards(prevCards => [...prevCards, formattedCard]);
@@ -196,6 +216,90 @@ const AdminTesting = () => {
     ));
   };
 
+  // Drag and Drop related handlers for reorder feature
+
+  // Touch move prevention during drag
+  const preventTouchMove = (e: TouchEvent) => {
+    if (isDragging && e.target instanceof HTMLElement) {
+      if (!e.target.closest('.scrollable')) {
+        e.preventDefault();
+      }
+    }
+  };
+
+  // Drag start handler
+  const onDragStart = (result: DragStart) => {
+    setIsDragging(true);
+    draggedItemId.current = result.draggableId;
+    
+    // Store scroll position
+    if (cardsContainerRef.current) {
+      scrollPositionRef.current = cardsContainerRef.current.scrollTop;
+    }
+    
+    // Set card height for placeholder
+    const draggedCard = document.querySelector(`[data-rbd-draggable-id="${result.draggableId}"]`);
+    if (draggedCard) {
+      document.documentElement.style.setProperty('--card-height', `${draggedCard.clientHeight}px`);
+    }
+    
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    document.addEventListener('touchmove', preventTouchMove, { passive: false });
+  };
+
+  // Save card order to database
+  const saveCardOrder = async (orderedCards: AdminTestingCardData[]) => {
+    try {
+      const updates = orderedCards.map((card, index) => ({
+        ...card,
+        order: index,
+      }));
+      
+      const { error } = await supabase
+        .from('admin_testing_cards')
+        .upsert(updates);
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving card order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save card order.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Drag end handler
+  const onDragEnd = async (result: DropResult) => {
+    setIsDragging(false);
+    draggedItemId.current = null;
+    
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+    document.removeEventListener('touchmove', preventTouchMove);
+    
+    document.documentElement.style.removeProperty('--card-height');
+    
+    if (!result.destination || result.destination.index === result.source.index) {
+      return;
+    }
+    
+    const newCards = Array.from(cards);
+    const [removed] = newCards.splice(result.source.index, 1);
+    newCards.splice(result.destination.index, 0, removed);
+
+    // Assign new order indices according to new position
+    const reorderedCards = newCards.map((card, idx) => ({
+      ...card,
+      order: idx
+    }));
+
+    setCards(reorderedCards);
+    await saveCardOrder(reorderedCards);
+  };
+
   return (
     <AppLayout>
       <div className="container mx-auto p-4">
@@ -205,17 +309,26 @@ const AdminTesting = () => {
           <h2 className="text-3xl font-bold">ADMIN TESTING PAGE</h2>
           <p>This page is for testing admin functionality only.</p>
         </div>
-        
-        <div className="flex justify-end mb-6">
-          <Button 
-            onClick={handleAddCard}
-            className="bg-green-500 hover:bg-green-600 text-white"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add New Card
-          </Button>
+
+        <div className="flex justify-between mb-6 items-center">
+          <div className="flex space-x-4">
+            <Button 
+              onClick={handleAddCard}
+              className="bg-green-500 hover:bg-green-600 text-white"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Card
+            </Button>
+            <Button 
+              variant={isReorderMode ? "destructive" : "default"}
+              onClick={() => setIsReorderMode(!isReorderMode)}
+              className={isReorderMode ? "bg-red-700 hover:bg-red-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}
+            >
+              {isReorderMode ? "Done Reordering" : "Reorder Cards"}
+            </Button>
+          </div>
         </div>
-        
+
         {isLoading ? (
           <div className="text-center text-white p-8">Loading cards...</div>
         ) : cards.length === 0 && cardsFetched ? (
@@ -227,23 +340,59 @@ const AdminTesting = () => {
             <p>Unable to load cards. Please try refreshing the page.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cards.map(card => (
-              <AdminTestingCard
-                key={card.id}
-                card={card}
-                id={card.id}
-                title={card.title}
-                description={card.description}
-                priority={card.priority}
-                points={card.points}
-                globalCarouselIndex={globalCarouselIndex}
-                onUpdate={handleUpdateCard}
-              />
-            ))}
-          </div>
+          <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
+            <Droppable droppableId="admin-cards" isDropDisabled={!isReorderMode}>
+              {(provided) => (
+                <div
+                  ref={(el) => {
+                    provided.innerRef(el);
+                    cardsContainerRef.current = el;
+                  }}
+                  {...provided.droppableProps}
+                  className="flex flex-col gap-y-6"
+                >
+                  {cards
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map((card, index) => (
+                    <Draggable
+                      key={card.id}
+                      draggableId={card.id}
+                      index={index}
+                      isDragDisabled={!isReorderMode}
+                    >
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          className={`drag-item ${snapshot.isDragging ? 'dragging' : ''}`}
+                          style={{
+                            ...provided.draggableProps.style,
+                          }}
+                        >
+                          <AdminTestingCard
+                            key={card.id}
+                            card={card}
+                            id={card.id}
+                            title={card.title}
+                            description={card.description}
+                            priority={card.priority}
+                            points={card.points}
+                            globalCarouselIndex={globalCarouselIndex}
+                            onUpdate={handleUpdateCard}
+                            isReorderMode={isReorderMode} // pass reorder mode so card can adjust styles
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         )}
-        
+
         <div className="mt-12">
           <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Data Management</h2>
           <ActivityDataReset />
@@ -254,3 +403,4 @@ const AdminTesting = () => {
 };
 
 export default AdminTesting;
+
