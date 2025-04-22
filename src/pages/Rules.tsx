@@ -58,7 +58,8 @@ const Rules: React.FC = () => {
         .from('rules')
         .update({ usage_data: newUsageData, updated_at: new Date().toISOString() })
         .eq('id', rule.id)
-        .select();
+        .select()
+        .single();
 
       if (error) throw error;
 
@@ -102,28 +103,36 @@ const Rules: React.FC = () => {
     try {
       let result;
       if (ruleData.id) {
-        // update existing rule
+        // Prepare an update payload ensuring that title and other required fields exist (or fallback)
+        // Using non-optional access to ruleData.title because it's required for updates
+        if (!ruleData.title) {
+          throw new Error('Rule title is required for update.');
+        }
+
+        // Explicitly build the update object with defaults or current values
+        const updatePayload = {
+          title: ruleData.title,
+          description: ruleData.description ?? null,
+          priority: ruleData.priority ?? 'medium',
+          background_image_url: ruleData.background_image_url ?? null,
+          background_opacity: ruleData.background_opacity ?? 100,
+          icon_url: ruleData.icon_url ?? null,
+          icon_name: ruleData.icon_name ?? null,
+          title_color: ruleData.title_color ?? '#FFFFFF',
+          subtext_color: ruleData.subtext_color ?? '#FFFFFF',
+          calendar_color: ruleData.calendar_color ?? '#9c7abb',
+          icon_color: ruleData.icon_color ?? '#FFFFFF',
+          highlight_effect: ruleData.highlight_effect ?? false,
+          focal_point_x: ruleData.focal_point_x ?? 50,
+          focal_point_y: ruleData.focal_point_y ?? 50,
+          frequency: ruleData.frequency ?? 'daily',
+          frequency_count: ruleData.frequency_count ?? 3,
+          updated_at: new Date().toISOString()
+        };
+
         const { data, error } = await supabase
           .from('rules')
-          .update({
-            title: ruleData.title,
-            description: ruleData.description,
-            priority: ruleData.priority,
-            background_image_url: ruleData.background_image_url,
-            background_opacity: ruleData.background_opacity,
-            icon_url: ruleData.icon_url,
-            icon_name: ruleData.icon_name,
-            title_color: ruleData.title_color,
-            subtext_color: ruleData.subtext_color,
-            calendar_color: ruleData.calendar_color,
-            icon_color: ruleData.icon_color,
-            highlight_effect: ruleData.highlight_effect,
-            focal_point_x: ruleData.focal_point_x,
-            focal_point_y: ruleData.focal_point_y,
-            frequency: ruleData.frequency,
-            frequency_count: ruleData.frequency_count,
-            updated_at: new Date().toISOString()
-          })
+          .update(updatePayload)
           .eq('id', ruleData.id)
           .select()
           .single();
