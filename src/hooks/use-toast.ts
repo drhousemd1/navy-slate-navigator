@@ -9,6 +9,7 @@ type ToastProps = {
   duration?: number
 }
 
+// Create a single toast function that exports correctly
 export function toast({ title, description, variant, duration }: ToastProps) {
   return sonnerToast[variant === "destructive" ? "error" : "success"](
     title,
@@ -19,4 +20,5 @@ export function toast({ title, description, variant, duration }: ToastProps) {
   )
 }
 
-export { toast }
+// Export a hook interface for compatibility with shadcn/ui pattern
+export { useToast } from "./useToast"
