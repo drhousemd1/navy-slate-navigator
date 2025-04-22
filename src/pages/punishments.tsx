@@ -1,51 +1,155 @@
+import React, { useState, useRef } from 'react';
+import AppLayout from '../components/AppLayout';
+import PunishmentCard from '../components/PunishmentCard';
+import { Clock, Skull, Bomb, Zap, Plus } from 'lucide-react';
+import { RewardsProvider } from '../contexts/RewardsContext';
+import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
+import { PunishmentData } from '@/contexts/punishments/types';
+import PunishmentEditor from '../components/PunishmentEditor';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { usePunishmentsQuery } from '@/hooks/usePunishmentsQuery';
 
-import React from 'react';
-import { MainLayout } from '@/components/layout/MainLayout';
-import { usePunishmentsData } from '@/data/PunishmentsDataHandler';
-import { Loader2 } from 'lucide-react';
+const PunishmentsContent: React.FC = () => {
+  const { 
+    punishments, 
+    loading, 
+    expectedCardCount, 
+    createPunishment, 
+    updatePunishment, 
+    error 
+  } = usePunishmentsQuery();
+  
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-const PunishmentsPage = () => {
-  const { punishments, isLoading } = usePunishmentsData();
+  const getIconComponent = (iconName: string) => {
+    switch(iconName) {
+      case 'Skull':
+        return <Skull className="h-5 w-5 text-white" />;
+      case 'Clock':
+        return <Clock className="h-5 w-5 text-white" />;
+      case 'Bomb':
+        return <Bomb className="h-5 w-5 text-white" />;
+      case 'Zap':
+        return <Zap className="h-5 w-5 text-white" />;
+      default:
+        return <Skull className="h-5 w-5 text-white" />;
+    }
+  };
 
-  if (isLoading) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-[80vh]">
-          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-        </div>
-      </MainLayout>
-    );
-  }
+  const handleAddNewPunishmentClick = () => {
+    setCurrentPunishment(undefined);
+    setIsEditorOpen(true);
+  };
+
+  const handleSavePunishment = async (data: PunishmentData): Promise<void> => {
+    try {
+      if (data.id) {
+        await updatePunishment(data.id, data);
+      } else {
+        await createPunishment(data);
+      }
+      setIsEditorOpen(false);
+    } catch (error) {
+      console.error("Error saving punishment:", error);
+      throw error;
+    }
+  };
+
+  const renderSkeletons = () => {
+    const loadedCount = punishments.length;
+    const remainingToLoad = Math.max(1, expectedCardCount - loadedCount);
+    
+    return Array.from({ length: remainingToLoad }).map((_, index) => (
+      <Skeleton key={`skeleton-${index}`} className="h-32 animate-pulse rounded-lg invisible" />
+    ));
+  };
 
   return (
-    <MainLayout>
-      <h1 className="text-2xl font-bold mb-6">Punishments</h1>
+    <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
+      <PunishmentsHeader />
       
-      {punishments.length === 0 ? (
-        <div className="text-center p-8 bg-slate-800 rounded-lg">
-          <p className="text-gray-400">You don't have any punishments yet.</p>
-          <p className="text-gray-400">Create your first punishment to get started.</p>
+      {error && !punishments.length ? (
+        <div className="text-center py-12 text-gray-400">
+          <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
+          <h3 className="text-xl font-semibold mb-2">Error Loading Punishments</h3>
+          <p>There was a problem loading your punishments. Please try refreshing the page.</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-navy hover:bg-light-navy"
+          >
+            Refresh Page
+          </Button>
+        </div>
+      ) : punishments.length === 0 && !loading ? (
+        <div className="text-center py-12 text-gray-400">
+          <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
+          <h3 className="text-xl font-semibold mb-2">No Punishments Yet</h3>
+          <p>Create your first punishment to deduct points for undesirable behaviors.</p>
+          <Button
+            onClick={handleAddNewPunishmentClick}
+            className="mt-4 bg-navy hover:bg-light-navy flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Punishment
+          </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {punishments.map((punishment) => (
-            <div 
-              key={punishment.id} 
-              className="bg-slate-800 rounded-lg p-4 border border-slate-700"
-            >
-              <h3 className="font-semibold mb-2">{punishment.title}</h3>
-              <p className="text-sm text-gray-400 mb-3">{punishment.description}</p>
-              <div className="flex justify-between items-center">
-                <span className="text-xs bg-red-900 text-red-300 px-2 py-1 rounded">
-                  Points Deduction: {punishment.points}
-                </span>
+        <div className="space-y-4">
+          {punishments
+            .filter(punishment => punishment.id && !String(punishment.id).startsWith('temp-'))
+            .map((punishment, index) => (
+              <div key={punishment.id} className="slow-fade-in">
+                <PunishmentCard
+                  id={punishment.id}
+                  title={punishment.title}
+                  description={punishment.description || ''}
+                  points={punishment.points}
+                  icon={getIconComponent(punishment.icon_name || 'Skull')}
+                  icon_name={punishment.icon_name}
+                  icon_color={punishment.icon_color}
+                  title_color={punishment.title_color}
+                  subtext_color={punishment.subtext_color}
+                  calendar_color={punishment.calendar_color}
+                  highlight_effect={punishment.highlight_effect}
+                  background_image_url={punishment.background_image_url}
+                  background_opacity={punishment.background_opacity}
+                  focal_point_x={punishment.focal_point_x}
+                  focal_point_y={punishment.focal_point_y}
+                />
               </div>
-            </div>
-          ))}
+            ))}
+          
+          {loading && renderSkeletons()}
         </div>
       )}
-    </MainLayout>
+      
+      <PunishmentEditor 
+        isOpen={isEditorOpen}
+        onClose={() => setIsEditorOpen(false)}
+        punishmentData={currentPunishment}
+        onSave={handleSavePunishment}
+      />
+    </div>
   );
 };
 
-export default PunishmentsPage;
+const Punishments: React.FC = () => {
+  return (
+    <AppLayout onAddNewItem={() => {
+      const content = document.querySelector('.PunishmentsContent');
+      if (content) {
+        const event = new CustomEvent('add-new-punishment');
+        content.dispatchEvent(event);
+      }
+    }}>
+      <RewardsProvider>
+        <PunishmentsContent />
+      </RewardsProvider>
+    </AppLayout>
+  );
+};
+
+export default Punishments;

@@ -1,6 +1,6 @@
 
 import React from "react"
-import { toast as sonnerToast, Toast, useToaster } from "sonner"
+import { toast as sonnerToast, useToaster } from "sonner"
 
 export interface ToastActionElement {
   altText: string;
@@ -8,7 +8,7 @@ export interface ToastActionElement {
   children: React.ReactNode;
 }
 
-export type ToastProps = React.ComponentPropsWithoutRef<typeof Toast> & {
+export type ToastProps = React.ComponentPropsWithoutRef<typeof sonnerToast> & {
   id?: string;
   title?: React.ReactNode;
   description?: React.ReactNode;

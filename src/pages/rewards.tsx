@@ -1,60 +1,119 @@
-
-import React from 'react';
-import { MainLayout } from '@/components/layout/MainLayout';
-import { useRewardsData } from '@/data/RewardsDataHandler';
+import React, { useState } from 'react';
+import AppLayout from '../components/AppLayout';
+import RewardEditor from '../components/RewardEditor';
+import RewardsHeader from '../components/rewards/RewardsHeader';
+import RewardsList from '../components/rewards/RewardsList';
 import { Loader2 } from 'lucide-react';
+import { useRewardsQuery } from '@/hooks/useRewardsQuery';
 
-const RewardsPage = () => {
-  const { rewards, userPoints, isLoading } = useRewardsData();
+const Rewards: React.FC = () => {
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [currentReward, setCurrentReward] = useState<any>(null);
+  const [currentRewardIndex, setCurrentRewardIndex] = useState<number | null>(null);
+  
+  const { 
+    rewards, 
+    isLoading, 
+    createReward, 
+    updateReward, 
+    deleteReward, 
+    buyReward, 
+    useReward,
+    refetchRewards 
+  } = useRewardsQuery();
 
-  if (isLoading) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-[80vh]">
-          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-        </div>
-      </MainLayout>
-    );
-  }
+  // Handle adding a new reward
+  const handleAddNewReward = () => {
+    setCurrentReward(null);
+    setCurrentRewardIndex(null);
+    setIsEditorOpen(true);
+  };
+
+  // Handle editing a reward
+  const handleEdit = (index: number) => {
+    setCurrentReward({
+      ...rewards[index],
+      index
+    });
+    setCurrentRewardIndex(index);
+    setIsEditorOpen(true);
+  };
+
+  // Handle saving edited reward
+  const handleSave = async (rewardData: any) => {
+    if (rewardData.id) {
+      await updateReward(rewardData.id, rewardData);
+    } else {
+      await createReward(rewardData);
+    }
+    
+    closeEditor();
+    refetchRewards();
+  };
+
+  // Handle deleting a reward
+  const handleDelete = async (index: number) => {
+    const rewardToDelete = rewards[index];
+    if (rewardToDelete && rewardToDelete.id) {
+      await deleteReward(rewardToDelete.id);
+      closeEditor();
+    }
+  };
+
+  const closeEditor = () => {
+    setIsEditorOpen(false);
+    setCurrentReward(null);
+    setCurrentRewardIndex(null);
+  };
+
+  // Handle buying a reward
+  const handleBuyReward = async (id: string, cost: number) => {
+    await buyReward(id, cost);
+  };
+
+  // Handle using a reward
+  const handleUseReward = async (id: string) => {
+    await useReward(id);
+  };
 
   return (
-    <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Rewards</h1>
-        <div className="bg-slate-800 px-4 py-2 rounded-lg">
-          <span className="text-gray-400 mr-2">Current Points:</span>
-          <span className="font-bold">{userPoints}</span>
-        </div>
-      </div>
-      
-      {rewards.length === 0 ? (
-        <div className="text-center p-8 bg-slate-800 rounded-lg">
-          <p className="text-gray-400">You don't have any rewards yet.</p>
-          <p className="text-gray-400">Create your first reward to get started.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {rewards.map((reward) => (
-            <div 
-              key={reward.id} 
-              className="bg-slate-800 rounded-lg p-4 border border-slate-700"
-            >
-              <h3 className="font-semibold mb-2">{reward.title}</h3>
-              <p className="text-sm text-gray-400 mb-3">{reward.description}</p>
-              <div className="flex justify-between items-center">
-                <span className="text-xs bg-green-900 text-green-300 px-2 py-1 rounded">
-                  Cost: {reward.cost} points
-                </span>
-                <span className="text-xs text-gray-400">
-                  Supply: {reward.supply}
-                </span>
+    <AppLayout onAddNewItem={handleAddNewReward}>
+      <div className="p-4 pt-6">
+        <RewardsHeader />
+        
+        {isLoading ? (
+          <div className="flex justify-center items-center py-10">
+            <Loader2 className="w-10 h-10 text-white animate-spin" />
+          </div>
+        ) : rewards.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-white mb-4">No rewards found. Create your first reward!</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 max-w-3xl mx-auto">
+            {rewards.map((reward, index) => (
+              <div key={reward.id} className="slow-fade-in">
+                <RewardsList 
+                  rewards={[reward]} 
+                  onEdit={() => handleEdit(index)}
+                  onBuy={handleBuyReward}
+                  onUse={handleUseReward}
+                />
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </MainLayout>
+            ))}
+          </div>
+        )}
+        
+        <RewardEditor
+          isOpen={isEditorOpen}
+          onClose={closeEditor}
+          rewardData={currentReward}
+          onSave={handleSave}
+          onDelete={currentRewardIndex !== null ? handleDelete : undefined}
+        />
+      </div>
+    </AppLayout>
   );
 };
 
-export default RewardsPage;
+export default Rewards;

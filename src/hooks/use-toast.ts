@@ -20,5 +20,5 @@ export function toast({ title, description, variant, duration }: ToastProps) {
   )
 }
 
-// Export a hook interface for compatibility with shadcn/ui pattern
+// Re-export useToast from our custom implementation
 export { useToast } from "./useToast"
