@@ -43,6 +43,7 @@
     "@tanstack/query-sync-storage-persister": "^5.74.4",
     "@tanstack/react-query": "^5.56.2",
     "@tanstack/react-query-devtools": "^5.69.0",
+    "@tanstack/react-query-persist-client": "^5.74.4",
     "@types/uuid": "^10.0.0",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",

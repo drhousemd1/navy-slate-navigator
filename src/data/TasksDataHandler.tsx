@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
@@ -22,9 +21,36 @@ const fetchTasks = async (): Promise<Task[]> => {
     throw error;
   }
 
+  // Convert database records to Task interface
+  const tasks: Task[] = data.map(task => ({
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    points: task.points,
+    priority: task.priority as 'low' | 'medium' | 'high',
+    completed: task.completed,
+    background_image_url: task.background_image_url,
+    background_opacity: task.background_opacity,
+    focal_point_x: task.focal_point_x,
+    focal_point_y: task.focal_point_y,
+    frequency: task.frequency as 'daily' | 'weekly',
+    frequency_count: task.frequency_count,
+    usage_data: Array.isArray(task.usage_data) ? task.usage_data : [0, 0, 0, 0, 0, 0, 0],
+    icon_name: task.icon_name,
+    icon_url: task.icon_url,
+    icon_color: task.icon_color,
+    highlight_effect: task.highlight_effect,
+    title_color: task.title_color,
+    subtext_color: task.subtext_color,
+    calendar_color: task.calendar_color,
+    last_completed_date: task.last_completed_date,
+    created_at: task.created_at,
+    updated_at: task.updated_at
+  }));
+
   // Check for tasks that need to be reset
   const today = getLocalDateString();
-  const tasksToReset = data.filter(task => 
+  const tasksToReset = tasks.filter(task => 
     task.completed && 
     task.frequency === 'daily' && 
     task.last_completed_date !== today
@@ -59,10 +85,35 @@ const fetchTasks = async (): Promise<Task[]> => {
       throw refreshError;
     }
 
-    return refreshedData;
+    // Convert refreshed data to Task interface
+    return refreshedData.map(task => ({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      points: task.points,
+      priority: task.priority as 'low' | 'medium' | 'high',
+      completed: task.completed,
+      background_image_url: task.background_image_url,
+      background_opacity: task.background_opacity,
+      focal_point_x: task.focal_point_x,
+      focal_point_y: task.focal_point_y,
+      frequency: task.frequency as 'daily' | 'weekly',
+      frequency_count: task.frequency_count,
+      usage_data: Array.isArray(task.usage_data) ? task.usage_data : [0, 0, 0, 0, 0, 0, 0],
+      icon_name: task.icon_name,
+      icon_url: task.icon_url,
+      icon_color: task.icon_color,
+      highlight_effect: task.highlight_effect,
+      title_color: task.title_color,
+      subtext_color: task.subtext_color,
+      calendar_color: task.calendar_color,
+      last_completed_date: task.last_completed_date,
+      created_at: task.created_at,
+      updated_at: task.updated_at
+    }));
   }
 
-  return data;
+  return tasks;
 };
 
 // Save a task to the database

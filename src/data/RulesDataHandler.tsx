@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -31,6 +30,33 @@ export interface Rule {
 
 // Keys for our queries
 const RULES_QUERY_KEY = ['rules'];
+
+// Convert database records to Rule interface
+const convertDbRuleToRuleInterface = (rule: any): Rule => {
+  return {
+    id: rule.id,
+    title: rule.title,
+    description: rule.description,
+    priority: rule.priority as 'low' | 'medium' | 'high',
+    background_image_url: rule.background_image_url,
+    background_opacity: rule.background_opacity,
+    icon_url: rule.icon_url,
+    icon_name: rule.icon_name,
+    title_color: rule.title_color,
+    subtext_color: rule.subtext_color,
+    calendar_color: rule.calendar_color,
+    icon_color: rule.icon_color,
+    highlight_effect: rule.highlight_effect,
+    focal_point_x: rule.focal_point_x,
+    focal_point_y: rule.focal_point_y,
+    frequency: rule.frequency as 'daily' | 'weekly',
+    frequency_count: rule.frequency_count,
+    usage_data: Array.isArray(rule.usage_data) ? rule.usage_data : [0, 0, 0, 0, 0, 0, 0],
+    created_at: rule.created_at,
+    updated_at: rule.updated_at,
+    user_id: rule.user_id
+  };
+};
 
 // Fetch rules from the database
 const fetchRules = async (): Promise<Rule[]> => {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,7 +36,7 @@ const fetchPunishments = async (): Promise<PunishmentData[]> => {
     background_opacity: punishment.background_opacity,
     focal_point_x: punishment.focal_point_x,
     focal_point_y: punishment.focal_point_y,
-    usage_data: Array(7).fill(0), // Default usage data
+    usage_data: [0, 0, 0, 0, 0, 0, 0],
     created_at: punishment.created_at,
     updated_at: punishment.updated_at
   }));
@@ -81,9 +80,7 @@ const createPunishmentInDb = async (punishment: Partial<PunishmentData>): Promis
     calendar_color: punishmentData.calendar_color || '#ea384c',
     highlight_effect: punishmentData.highlight_effect || false,
     focal_point_x: punishmentData.focal_point_x || 50,
-    focal_point_y: punishmentData.focal_point_y || 50,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    focal_point_y: punishmentData.focal_point_y || 50
   };
 
   const { data, error } = await supabase
@@ -99,7 +96,7 @@ const createPunishmentInDb = async (punishment: Partial<PunishmentData>): Promis
 
   return {
     ...data,
-    usage_data: Array(7).fill(0)
+    usage_data: [0, 0, 0, 0, 0, 0, 0]
   };
 };
 
@@ -127,7 +124,7 @@ const updatePunishmentInDb = async (id: string, punishment: Partial<PunishmentDa
 
   return {
     ...data,
-    usage_data: punishment.usage_data || Array(7).fill(0)
+    usage_data: punishment.usage_data || [0, 0, 0, 0, 0, 0, 0]
   };
 };
 
@@ -148,8 +145,6 @@ const deletePunishmentFromDb = async (id: string): Promise<void> => {
 const applyPunishmentInDb = async (punishment: PunishmentData): Promise<void> => {
   const today = new Date();
   const dayOfWeek = today.getDay();
-  const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
-  const currentDay = getMondayBasedDay();
   
   // First, record the punishment in history
   const { error: historyError } = await supabase
@@ -167,16 +162,26 @@ const applyPunishmentInDb = async (punishment: PunishmentData): Promise<void> =>
   }
 
   // Update the user's points
-  // Note: This would require a function in Supabase, implemented as an example
   const { data: userData } = await supabase.auth.getUser();
   if (userData.user) {
+    // Instead of using RPC which may not exist, we'll update directly
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('points')
+      .eq('id', userData.user.id)
+      .single();
+      
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+      throw profileError;
+    }
+    
+    const newPoints = Math.max(0, (profileData.points || 0) - punishment.points);
+    
     const { error: pointsError } = await supabase
       .from('profiles')
       .update({ 
-        points: supabase.rpc('calculate_points_after_deduction', { 
-          user_id: userData.user.id,
-          points_to_deduct: punishment.points 
-        })
+        points: newPoints
       })
       .eq('id', userData.user.id);
 

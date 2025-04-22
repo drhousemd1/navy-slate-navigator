@@ -5,28 +5,27 @@ import { getMondayBasedDay } from "./utils";
 export interface Task {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   points: number;
+  priority: 'low' | 'medium' | 'high';
   completed: boolean;
   background_image_url?: string;
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  frequency?: 'daily' | 'weekly';
-  frequency_count?: number;
+  frequency: 'daily' | 'weekly';
+  frequency_count: number;
+  usage_data?: number[];
   icon_url?: string;
   icon_name?: string;
-  priority?: 'low' | 'medium' | 'high';
-  completion_count?: number;
-  max_completions?: number;
+  highlight_effect?: boolean;
   title_color?: string;
   subtext_color?: string;
   calendar_color?: string;
-  highlight_effect?: boolean;
   icon_color?: string;
   last_completed_date?: string;
-  usage_data?: number[];
   created_at?: string;
+  updated_at?: string;
 }
 
 export const getLocalDateString = (): string => {
