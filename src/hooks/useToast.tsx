@@ -1,13 +1,15 @@
 
 import React from "react";
-import { toast as sonnerToast } from "sonner";
+import { toast as sonnerToast, type Toast as SonnerToast } from "sonner";
 
+// Custom action element type for our toasts
 export interface ToastActionElement {
   altText: string;
   onClick: () => void;
   children: React.ReactNode;
 }
 
+// Our custom toast props type
 export type ToastProps = {
   id?: string;
   title?: React.ReactNode;
@@ -18,19 +20,30 @@ export type ToastProps = {
 }
 
 export function useToast() {
-  // Since sonner doesn't export useToaster, we need to use the toast API directly
+  // Create a toast function that adapts our props to sonner's expected format
   const toast = ({ 
     title, 
     description, 
     variant = "default", 
     duration = 5000,
+    action,
     ...props 
   }: ToastProps) => {
-    return sonnerToast[variant === "destructive" ? "error" : "success"](
+    // Map our variant to sonner's types
+    const type = variant === "destructive" ? "error" : "success";
+    
+    // Convert our custom action to sonner's expected format if it exists
+    const sonnerAction = action ? {
+      label: action.altText,
+      onClick: action.onClick
+    } : undefined;
+    
+    return sonnerToast[type](
       title,
       {
         description,
         duration,
+        action: sonnerAction,
         ...props,
       }
     );

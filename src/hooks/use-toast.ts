@@ -1,13 +1,8 @@
 
 // This is from shadcn/ui
 import { toast as sonnerToast } from "sonner";
-
-type ToastProps = {
-  title?: string;
-  description?: string;
-  variant?: "default" | "destructive";
-  duration?: number;
-}
+import { useToast } from "./useToast";
+import type { ToastProps } from "./useToast";
 
 // Create a single toast function that exports correctly
 export function toast({ title, description, variant, duration }: ToastProps) {
@@ -20,5 +15,6 @@ export function toast({ title, description, variant, duration }: ToastProps) {
   );
 }
 
-// Re-export useToast from our custom implementation
-export { useToast } from "./useToast";
+// Export both the hook and the standalone toast function
+export { useToast };
+export type { ToastProps };

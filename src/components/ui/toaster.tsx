@@ -1,5 +1,5 @@
 
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "@/hooks/use-toast";
 import {
   Toast,
   ToastClose,
@@ -7,30 +7,11 @@ import {
   ToastProvider,
   ToastTitle,
   ToastViewport,
-} from "@/components/ui/toast"
+} from "@/components/ui/toast";
+import { Toaster as SonnerToaster } from "sonner";
 
+// Instead of using shadcn/ui's original Toaster that expects toasts array, 
+// we'll use sonner's Toaster component directly since our useToast doesn't provide toasts array
 export function Toaster() {
-  const { toasts } = useToast()
-
-  return (
-    <ToastProvider duration={2000}>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} duration={2000} {...props}>
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center space-x-2">
-                {title && <ToastTitle>{title}</ToastTitle>}
-                {description && (
-                  <ToastDescription>{description}</ToastDescription>
-                )}
-              </div>
-              {action}
-            </div>
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
-  )
+  return <SonnerToaster />;
 }
