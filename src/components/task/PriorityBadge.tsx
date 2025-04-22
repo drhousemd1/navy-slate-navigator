@@ -1,38 +1,38 @@
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { ArrowDown, ArrowRight, ArrowUp } from 'lucide-react';
 
 interface PriorityBadgeProps {
   priority: 'low' | 'medium' | 'high';
 }
 
 const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority }) => {
-  const config = {
-    low: {
-      color: 'bg-blue-600',
-      icon: <ArrowDown className="h-3 w-3 mr-1" />,
-      label: 'Low Priority',
-    },
-    medium: {
-      color: 'bg-amber-600',
-      icon: <ArrowRight className="h-3 w-3 mr-1" />,
-      label: 'Medium Priority',
-    },
-    high: {
-      color: 'bg-red-600',
-      icon: <ArrowUp className="h-3 w-3 mr-1" />,
-      label: 'High Priority',
-    },
+  const getPriorityColor = () => {
+    switch (priority) {
+      case 'high':
+        return '#00FFF7'; // Neon cyan (matching nav-active color)
+      case 'medium':
+        return '#ff9934'; // Neon orange
+      case 'low':
+        return '#4dff88'; // Neon green
+      default:
+        return '#ff9934'; // Default to medium color
+    }
   };
 
-  const { color, icon, label } = config[priority];
+  const color = getPriorityColor();
 
   return (
-    <Badge className={`${color} text-white flex items-center`}>
-      {icon}
-      {label}
-    </Badge>
+    <div className="font-bold capitalize px-3 py-1 text-sm">
+      <span
+        className="neon-text"
+        style={{ 
+          color: color,
+          textShadow: `0 0 5px ${color}, 0 0 10px ${color}` 
+        }}
+      >
+        {priority}
+      </span>
+    </div>
   );
 };
 

@@ -7,28 +7,13 @@ interface HighlightedTextProps {
   color: string;
 }
 
-const HighlightedText: React.FC<HighlightedTextProps> = ({ 
-  text, 
-  highlight = false, 
-  color = '#FFFFFF' 
-}) => {
-  if (!text) return null;
-  
-  if (!highlight) {
-    return <span style={{ color }}>{text}</span>;
-  }
-
+const HighlightedText: React.FC<HighlightedTextProps> = ({ text, highlight, color }) => {
   return (
-    <span 
-      style={{ 
-        color, 
-        textShadow: '0 0 5px currentColor, 0 0 10px currentColor',
-        fontWeight: 'bold'
-      }}
-    >
+    <span className={highlight ? 'bg-yellow-300 rounded px-1.5' : undefined} style={highlight ? { color } : { color }}>
       {text}
     </span>
   );
 };
 
 export default HighlightedText;
+

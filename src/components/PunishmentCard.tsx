@@ -1,52 +1,128 @@
+
 import React from 'react';
 import { Card } from './ui/card';
-import { Button } from './ui/button';
-import { Edit } from 'lucide-react';
-import PunishmentEditor from './PunishmentCardEditModal';
-import { usePunishments, useUpdatePunishment } from '@/data/PunishmentDataHandler';
+import PunishmentEditor from './PunishmentEditor';
+import { cn } from '@/lib/utils';
+import PunishmentCardHeader from './punishments/PunishmentCardHeader';
+import PunishmentCardContent from './punishments/PunishmentCardContent';
+import PunishmentCardFooter from './punishments/PunishmentCardFooter';
+import PunishmentBackgroundCarousel from './punishments/PunishmentBackgroundCarousel';
+import { usePunishmentCard } from './punishments/hooks/usePunishmentCard';
 
 interface PunishmentCardProps {
-  id: string;
+  title: string;
+  description: string;
+  points: number;
+  icon?: React.ReactNode;
+  id?: string;
+  icon_name?: string;
+  icon_color?: string;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  highlight_effect?: boolean;
+  background_image_url?: string;
+  background_opacity?: number;
+  focal_point_x?: number;
+  focal_point_y?: number;
+  background_images?: (string | null)[];
+  carousel_timer?: number;
+  globalCarouselIndex?: number;
 }
 
-const PunishmentCard: React.FC<PunishmentCardProps> = ({ id }) => {
-  const { data: punishments, isLoading, isError } = usePunishments();
-  const { mutate: updatePunishment } = useUpdatePunishment();
-  const punishment = punishments?.find((punishment) => punishment.id === id);
-  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
-
-  if (isLoading) {
-    return <p>Loading...</p>;
-  }
-
-  if (isError || !punishment) {
-    return <p>Error or Punishment not found</p>;
-  }
-
-  const handleSave = async (punishmentData: any) => {
-    await updatePunishment({ id: punishment.id, ...punishmentData });
-    setIsEditDialogOpen(false);
-  };
+const PunishmentCard: React.FC<PunishmentCardProps> = ({
+  title,
+  description,
+  points,
+  id,
+  icon_name,
+  icon_color = '#ea384c',
+  title_color = '#FFFFFF',
+  subtext_color = '#8E9196',
+  calendar_color = '#ea384c',
+  highlight_effect = false,
+  background_image_url,
+  background_opacity = 50,
+  focal_point_x = 50,
+  focal_point_y = 50,
+  background_images = [],
+  carousel_timer = 5,
+  globalCarouselIndex = 0
+}) => {
+  const {
+    isEditorOpen,
+    setIsEditorOpen,
+    weekData,
+    frequencyCount,
+    handlePunish,
+    handleEdit,
+    handleSavePunishment,
+    handleDeletePunishment
+  } = usePunishmentCard({ id, points });
 
   return (
-    <Card className="relative overflow-hidden border-2 border-[#00f0ff]">
-      <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
-        <h2>{punishment.title}</h2>
-        <p>{punishment.description}</p>
-        <Button onClick={() => setIsEditDialogOpen(true)}>Edit</Button>
-      </div>
-      <PunishmentEditor
-        isOpen={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
-        punishmentData={punishment}
-        onSave={handleSave}
-        onDelete={(punishmentId: string) => {
-          // Implement delete logic here
-          console.log('Punishment deleted:', punishmentId);
-          setIsEditDialogOpen(false);
+    <>
+      <Card className="relative overflow-hidden border-2 border-red-500 bg-navy">
+        <PunishmentBackgroundCarousel 
+          backgroundImages={background_images}
+          backgroundImageUrl={background_image_url}
+          carouselTimer={carousel_timer}
+          backgroundOpacity={background_opacity}
+          focalPointX={focal_point_x}
+          focalPointY={focal_point_y}
+          globalCarouselIndex={globalCarouselIndex}
+        />
+        
+        <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
+          <PunishmentCardHeader 
+            points={points}
+            onPunish={handlePunish}
+          />
+          
+          <PunishmentCardContent 
+            icon_name={icon_name}
+            icon_color={icon_color}
+            title={title}
+            description={description}
+            title_color={title_color}
+            subtext_color={subtext_color}
+            highlight_effect={highlight_effect}
+          />
+          
+          <PunishmentCardFooter 
+            frequency_count={frequencyCount}
+            calendar_color={calendar_color}
+            usage_data={weekData}
+            onEdit={handleEdit}
+          />
+        </div>
+      </Card>
+      
+      <PunishmentEditor 
+        isOpen={isEditorOpen}
+        onClose={() => setIsEditorOpen(false)}
+        punishmentData={{
+          id,
+          title,
+          description,
+          points,
+          icon_name,
+          icon_color,
+          title_color,
+          subtext_color,
+          calendar_color,
+          highlight_effect,
+          background_image_url,
+          background_opacity,
+          focal_point_x,
+          focal_point_y,
+          background_images,
+          carousel_timer
         }}
+        onSave={handleSavePunishment}
+        onDelete={handleDeletePunishment}
       />
-    </Card>
+    </>
   );
 };
 

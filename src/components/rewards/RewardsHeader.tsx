@@ -1,27 +1,29 @@
 
-import React from 'react';
-import { useRewards } from '@/contexts/RewardsContext';
-import { Award } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Badge } from '../../components/ui/badge';
+import { useRewards } from '../../contexts/RewardsContext';
+import { Box, Coins } from 'lucide-react';
 
-const RewardsHeader = () => {
-  const { totalPoints } = useRewards();
+const RewardsHeader: React.FC = () => {
+  const { totalPoints, totalRewardsSupply, refreshPointsFromDatabase } = useRewards();
+
+  // Refresh points when component mounts
+  useEffect(() => {
+    refreshPointsFromDatabase();
+  }, [refreshPointsFromDatabase]);
 
   return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center">
-            <Award className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Rewards</h1>
-            <p className="text-gray-400">Manage your rewards and incentives</p>
-          </div>
-        </div>
-        <div className="bg-gradient-to-r from-amber-500 to-amber-300 px-4 py-2 rounded-lg">
-          <span className="text-xs text-amber-900 uppercase font-bold">Available Points</span>
-          <div className="text-2xl font-bold text-white">{totalPoints}</div>
-        </div>
+    <div className="flex items-center mb-6">
+      <h1 className="text-base font-semibold text-white mr-auto">My Rewards</h1>
+      <div className="flex items-center gap-2">
+        <Badge className="bg-blue-500 text-white font-bold px-3 py-1 flex items-center gap-1">
+          <Box className="w-3 h-3" />
+          <span>{totalRewardsSupply}</span>
+        </Badge>
+        <Badge className="bg-cyan-500 text-white font-bold px-3 py-1 flex items-center gap-1">
+          <Coins className="w-3 h-3" />
+          <span>{totalPoints}</span>
+        </Badge>
       </div>
     </div>
   );

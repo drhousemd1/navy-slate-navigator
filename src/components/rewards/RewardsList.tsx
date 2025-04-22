@@ -1,79 +1,63 @@
 
 import React from 'react';
-import { useRewards } from '@/contexts/RewardsContext';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Award, Edit, ShoppingCart } from 'lucide-react';
+import { useRewards } from '../../contexts/RewardsContext';
+import RewardCard from '../RewardCard';
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
-  const { rewards, handleBuyReward, totalPoints } = useRewards();
-
+  const { rewards, handleBuyReward, handleUseReward, rewardUsageMap } = useRewards();
+  
   if (!rewards || rewards.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-400">
-        <Award className="mx-auto h-12 w-12 mb-4 opacity-50" />
-        <h3 className="text-xl font-semibold mb-2">No Rewards Yet</h3>
-        <p>Create your first reward to motivate yourself.</p>
+      <div className="text-center p-10">
+        <p className="text-light-navy mb-4">You don't have any rewards yet.</p>
+        <p className="text-light-navy">Click the + button to create your first reward!</p>
       </div>
     );
   }
 
+  // Defensive fallback if rewardUsageMap is undefined/null
+  const usageMapSafe = rewardUsageMap || {};
+
+  // Enhanced debugging logs showing index and ID to track position stability
+  console.log("[RewardsList] Rendering rewards list with stable order:", 
+    rewards.map((r, i) => ({ 
+      index: i, 
+      id: r.id, 
+      title: r.title, 
+      created_at: r.created_at,
+      updated_at: r.updated_at
+    }))
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {rewards.map((reward, index) => (
-        <Card key={reward.id} className="bg-dark-navy border-2 border-[#00f0ff] overflow-hidden">
-          <div className="relative p-4">
-            {reward.background_image_url && (
-              <div
-                className="absolute inset-0 z-0"
-                style={{
-                  backgroundImage: `url(${reward.background_image_url})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: `${reward.focal_point_x || 50}% ${reward.focal_point_y || 50}%`,
-                  opacity: (reward.background_opacity || 100) / 100,
-                }}
-              />
-            )}
-            
-            <div className="flex justify-between items-center mb-3 relative z-10">
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center mr-3">
-                  <Award className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">{reward.title}</h3>
-                  {reward.description && (
-                    <p className="text-sm text-gray-400">{reward.description}</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="bg-amber-500 text-white font-bold px-3 py-1 rounded">
-                  {reward.cost} pts
-                </div>
-                <Button 
-                  size="sm" 
-                  className="bg-gray-700 hover:bg-gray-600 rounded-full w-8 h-8 p-0"
-                  onClick={() => onEdit(index)}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="bg-amber-500 hover:bg-amber-600 rounded-full w-8 h-8 p-0"
-                  onClick={() => handleBuyReward(index)}
-                  disabled={totalPoints < reward.cost}
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Card>
+        <RewardCard
+          key={reward.id}
+          title={reward.title}
+          description={reward.description || ''}
+          cost={reward.cost}
+          supply={reward.supply}
+          iconName={reward.icon_name}
+          iconColor={reward.icon_color}
+          onBuy={() => handleBuyReward(reward.id, reward.cost)}
+          onUse={() => handleUseReward(reward.id)}
+          onEdit={() => onEdit(index)}
+          backgroundImage={reward.background_image_url}
+          backgroundOpacity={reward.background_opacity}
+          focalPointX={reward.focal_point_x}
+          focalPointY={reward.focal_point_y}
+          highlight_effect={reward.highlight_effect}
+          title_color={reward.title_color}
+          subtext_color={reward.subtext_color}
+          calendar_color={reward.calendar_color}
+          // Pass down usage data per reward from centralized usage map or default empty array
+          usageData={usageMapSafe[reward.id] || Array(7).fill(false)}
+        />
       ))}
     </div>
   );
