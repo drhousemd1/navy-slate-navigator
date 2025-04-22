@@ -4,12 +4,10 @@ import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { getMondayBasedDay } from '@/lib/utils';
 
-// Keys for our queries
 const TASKS_QUERY_KEY = ['tasks'];
 const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
 const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
 
-// Fetch tasks from the database
 const fetchTasks = async (): Promise<Task[]> => {
   const { data, error } = await supabase
     .from('tasks')
@@ -21,7 +19,6 @@ const fetchTasks = async (): Promise<Task[]> => {
     throw error;
   }
 
-  // Convert database records to Task interface
   const tasks: Task[] = data.map(task => ({
     id: task.id,
     title: task.title,
@@ -35,7 +32,9 @@ const fetchTasks = async (): Promise<Task[]> => {
     focal_point_y: task.focal_point_y,
     frequency: task.frequency as 'daily' | 'weekly',
     frequency_count: task.frequency_count,
-    usage_data: Array.isArray(task.usage_data) ? task.usage_data : [0, 0, 0, 0, 0, 0, 0],
+    usage_data: Array.isArray(task.usage_data) 
+      ? task.usage_data.map(val => typeof val === 'number' ? val : Number(val)) 
+      : [0, 0, 0, 0, 0, 0, 0],
     icon_name: task.icon_name,
     icon_url: task.icon_url,
     icon_color: task.icon_color,
@@ -48,7 +47,6 @@ const fetchTasks = async (): Promise<Task[]> => {
     updated_at: task.updated_at
   }));
 
-  // Check for tasks that need to be reset
   const today = getLocalDateString();
   const tasksToReset = tasks.filter(task => 
     task.completed && 
@@ -56,7 +54,6 @@ const fetchTasks = async (): Promise<Task[]> => {
     task.last_completed_date !== today
   );
 
-  // Reset tasks if needed
   if (tasksToReset.length > 0) {
     const updates = tasksToReset.map(task => ({
       id: task.id,
@@ -74,7 +71,6 @@ const fetchTasks = async (): Promise<Task[]> => {
       }
     }
 
-    // Re-fetch tasks after reset
     const { data: refreshedData, error: refreshError } = await supabase
       .from('tasks')
       .select('*')
@@ -85,7 +81,6 @@ const fetchTasks = async (): Promise<Task[]> => {
       throw refreshError;
     }
 
-    // Convert refreshed data to Task interface
     return refreshedData.map(task => ({
       id: task.id,
       title: task.title,
@@ -99,7 +94,9 @@ const fetchTasks = async (): Promise<Task[]> => {
       focal_point_y: task.focal_point_y,
       frequency: task.frequency as 'daily' | 'weekly',
       frequency_count: task.frequency_count,
-      usage_data: Array.isArray(task.usage_data) ? task.usage_data : [0, 0, 0, 0, 0, 0, 0],
+      usage_data: Array.isArray(task.usage_data) 
+        ? task.usage_data.map(val => typeof val === 'number' ? val : Number(val)) 
+        : [0, 0, 0, 0, 0, 0, 0],
       icon_name: task.icon_name,
       icon_url: task.icon_url,
       icon_color: task.icon_color,
@@ -116,10 +113,8 @@ const fetchTasks = async (): Promise<Task[]> => {
   return tasks;
 };
 
-// Save a task to the database
 const saveTaskToDb = async (taskData: Task): Promise<Task> => {
   if (taskData.id) {
-    // Update existing task
     const { data, error } = await supabase
       .from('tasks')
       .update({
@@ -154,7 +149,6 @@ const saveTaskToDb = async (taskData: Task): Promise<Task> => {
 
     return data;
   } else {
-    // Create new task
     const newTask = {
       title: taskData.title,
       description: taskData.description,
@@ -194,7 +188,6 @@ const saveTaskToDb = async (taskData: Task): Promise<Task> => {
   }
 };
 
-// Delete a task from the database
 const deleteTaskFromDb = async (taskId: string): Promise<boolean> => {
   const { error } = await supabase
     .from('tasks')
@@ -209,7 +202,6 @@ const deleteTaskFromDb = async (taskId: string): Promise<boolean> => {
   return true;
 };
 
-// Update a task's completion status
 const updateTaskCompletionInDb = async (taskId: string, completed: boolean): Promise<boolean> => {
   const today = getLocalDateString();
   
@@ -230,7 +222,6 @@ const updateTaskCompletionInDb = async (taskId: string, completed: boolean): Pro
   return true;
 };
 
-// Log task completion to history
 const logTaskCompletionToHistory = async (taskId: string): Promise<void> => {
   const { data: authData } = await supabase.auth.getUser();
   const userId = authData.user?.id || 'anonymous';
@@ -249,9 +240,7 @@ const logTaskCompletionToHistory = async (taskId: string): Promise<void> => {
   }
 };
 
-// Update task usage data
 const updateTaskUsageData = async (taskId: string): Promise<void> => {
-  // First get the task to access current usage data
   const { data: taskData, error: taskError } = await supabase
     .from('tasks')
     .select('usage_data')
@@ -264,8 +253,12 @@ const updateTaskUsageData = async (taskId: string): Promise<void> => {
   }
 
   const currentDay = getMondayBasedDay();
-  const updatedUsageData = [...(taskData.usage_data || Array(7).fill(0))];
-  updatedUsageData[currentDay] = (updatedUsageData[currentDay] || 0) + 1;
+  const currentUsageData = Array.isArray(taskData.usage_data) 
+    ? taskData.usage_data 
+    : Array(7).fill(0);
+    
+  const updatedUsageData = [...currentUsageData];
+  updatedUsageData[currentDay] = Number(updatedUsageData[currentDay] || 0) + 1;
 
   const { error: updateError } = await supabase
     .from('tasks')
@@ -281,11 +274,9 @@ const updateTaskUsageData = async (taskId: string): Promise<void> => {
   }
 };
 
-// The main hook to expose all task-related operations
 export const useTasksData = () => {
   const queryClient = useQueryClient();
 
-  // Query for fetching all tasks
   const {
     data: tasks = [],
     isLoading,
@@ -294,24 +285,19 @@ export const useTasksData = () => {
   } = useQuery({
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
-    staleTime: 1000 * 60 * 20, // 20 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
+    staleTime: 1000 * 60 * 20,
+    gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false
   });
 
-  // Mutation for saving a task (create or update)
   const saveTaskMutation = useMutation({
     mutationFn: saveTaskToDb,
     onMutate: async (newTask) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
       
-      // Snapshot the previous value
       const previousTasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY) || [];
       
-      // Optimistically update the cache with the new task
       if (newTask.id) {
-        // Updating existing task
         queryClient.setQueryData<Task[]>(
           TASKS_QUERY_KEY, 
           previousTasks.map(t => 
@@ -321,7 +307,6 @@ export const useTasksData = () => {
           )
         );
       } else {
-        // Creating new task
         const tempId = `temp-${Date.now()}`;
         const optimisticTask: Task = {
           id: tempId,
@@ -364,28 +349,22 @@ export const useTasksData = () => {
         variant: 'destructive',
       });
       
-      // Rollback to the previous state
       if (context) {
         queryClient.setQueryData(TASKS_QUERY_KEY, context.previousTasks);
       }
     },
     onSettled: () => {
-      // Always refetch after error or success to synchronize with server state
       queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
     }
   });
 
-  // Mutation for deleting a task
   const deleteTaskMutation = useMutation({
     mutationFn: deleteTaskFromDb,
     onMutate: async (taskId) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
       
-      // Snapshot the previous value
       const previousTasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY) || [];
       
-      // Optimistically update the cache by removing the deleted task
       queryClient.setQueryData<Task[]>(
         TASKS_QUERY_KEY, 
         previousTasks.filter(t => t.id !== taskId)
@@ -401,24 +380,19 @@ export const useTasksData = () => {
         variant: 'destructive',
       });
       
-      // Rollback to the previous state
       if (context) {
         queryClient.setQueryData(TASKS_QUERY_KEY, context.previousTasks);
       }
     },
     onSettled: () => {
-      // Always refetch after error or success to synchronize with server state
       queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
     }
   });
 
-  // Mutation for toggling task completion
   const toggleTaskCompletionMutation = useMutation({
     mutationFn: async ({ taskId, completed }: { taskId: string; completed: boolean }) => {
-      // First update the task's completion status
       await updateTaskCompletionInDb(taskId, completed);
       
-      // If marking as completed, also log to history and update usage data
       if (completed) {
         await logTaskCompletionToHistory(taskId);
         await updateTaskUsageData(taskId);
@@ -427,27 +401,22 @@ export const useTasksData = () => {
       return true;
     },
     onMutate: async ({ taskId, completed }) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
       await queryClient.cancelQueries({ queryKey: TASK_COMPLETIONS_QUERY_KEY });
       await queryClient.cancelQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
       
-      // Snapshot the previous value
       const previousTasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY) || [];
       
-      // Find the task to update
       const taskToUpdate = previousTasks.find(t => t.id === taskId);
       
       if (taskToUpdate) {
-        // Update usage data for completed tasks
         let updatedUsageData = [...(taskToUpdate.usage_data || Array(7).fill(0))];
         
         if (completed) {
           const currentDay = getMondayBasedDay();
-          updatedUsageData[currentDay] = (updatedUsageData[currentDay] || 0) + 1;
+          updatedUsageData[currentDay] = Number(updatedUsageData[currentDay] || 0) + 1;
         }
         
-        // Optimistically update the cache with the updated task
         queryClient.setQueryData<Task[]>(
           TASKS_QUERY_KEY, 
           previousTasks.map(t => 
@@ -474,13 +443,11 @@ export const useTasksData = () => {
         variant: 'destructive',
       });
       
-      // Rollback to the previous state
       if (context) {
         queryClient.setQueryData(TASKS_QUERY_KEY, context.previousTasks);
       }
     },
     onSettled: () => {
-      // Always refetch after error or success to synchronize with server state
       queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: TASK_COMPLETIONS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
@@ -491,20 +458,13 @@ export const useTasksData = () => {
   });
 
   return {
-    // Data
     tasks,
-    
-    // Loading state
     isLoading,
     error,
-    
-    // Tasks CRUD operations
     saveTask: (taskData: Task) => saveTaskMutation.mutateAsync(taskData),
     deleteTask: (taskId: string) => deleteTaskMutation.mutateAsync(taskId),
     toggleTaskCompletion: (taskId: string, completed: boolean) => 
       toggleTaskCompletionMutation.mutateAsync({ taskId, completed }),
-    
-    // Refetch function
     refetchTasks
   };
 };

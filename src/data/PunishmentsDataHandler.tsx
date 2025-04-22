@@ -1,47 +1,13 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
-import { usePunishmentToast } from '@/components/punishments/hooks/usePunishmentToast';
-import { getMondayBasedDay } from '@/lib/utils';
 
 // Keys for our queries
 const PUNISHMENTS_QUERY_KEY = ['punishments'];
 const PUNISHMENT_HISTORY_QUERY_KEY = ['punishment-history'];
-
-// Process punishment data from database to match our interface
-const processPunishmentData = (punishment: any): PunishmentData => {
-  return {
-    id: punishment.id,
-    title: punishment.title,
-    description: punishment.description || '',
-    points: punishment.points || 0,
-    icon_name: punishment.icon_name || '',
-    icon_color: punishment.icon_color || '#ea384c',
-    title_color: punishment.title_color || '#FFFFFF',
-    subtext_color: punishment.subtext_color || '#8E9196',
-    calendar_color: punishment.calendar_color || '#ea384c',
-    highlight_effect: punishment.highlight_effect || false,
-    background_image_url: punishment.background_image_url || null,
-    background_opacity: punishment.background_opacity || 50,
-    focal_point_x: punishment.focal_point_x || 50,
-    focal_point_y: punishment.focal_point_y || 50,
-    usage_data: [0, 0, 0, 0, 0, 0, 0], // Default empty usage data
-    created_at: punishment.created_at,
-    updated_at: punishment.updated_at
-  };
-};
-
-// Process punishment history from database to match our interface
-const processPunishmentHistory = (item: any): PunishmentHistoryItem => {
-  return {
-    id: item.id,
-    punishment_id: item.punishment_id,
-    applied_date: item.applied_date,
-    day_of_week: item.day_of_week,
-    points_deducted: item.points_deducted
-  };
-};
 
 // Fetch punishments from the database
 const fetchPunishments = async (): Promise<PunishmentData[]> => {
@@ -49,13 +15,30 @@ const fetchPunishments = async (): Promise<PunishmentData[]> => {
     .from('punishments')
     .select('*')
     .order('created_at', { ascending: false });
-
+  
   if (error) {
     console.error('Error fetching punishments:', error);
     throw error;
   }
-
-  return (data || []).map(processPunishmentData);
+  
+  return data.map(item => ({
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    points: item.points,
+    icon_name: item.icon_name,
+    icon_color: item.icon_color,
+    title_color: item.title_color,
+    subtext_color: item.subtext_color,
+    calendar_color: item.calendar_color,
+    highlight_effect: item.highlight_effect,
+    background_image_url: item.background_image_url,
+    background_opacity: item.background_opacity,
+    focal_point_x: item.focal_point_x,
+    focal_point_y: item.focal_point_y,
+    created_at: item.created_at,
+    updated_at: item.updated_at
+  }));
 };
 
 // Fetch punishment history from the database
@@ -64,158 +47,131 @@ const fetchPunishmentHistory = async (): Promise<PunishmentHistoryItem[]> => {
     .from('punishment_history')
     .select('*')
     .order('applied_date', { ascending: false });
-
+  
   if (error) {
     console.error('Error fetching punishment history:', error);
     throw error;
   }
-
-  return (data || []).map(processPunishmentHistory);
+  
+  return data;
 };
 
 // Create a new punishment
 const createPunishmentInDb = async (punishment: Partial<PunishmentData>): Promise<PunishmentData> => {
-  const { id, ...punishmentData } = punishment;
-  
-  const newPunishment = {
-    title: punishmentData.title || 'New Punishment',
-    description: punishmentData.description || '',
-    points: punishmentData.points || 10,
-    background_image_url: punishmentData.background_image_url,
-    background_opacity: punishmentData.background_opacity || 50,
-    icon_name: punishmentData.icon_name || 'Skull',
-    icon_color: punishmentData.icon_color || '#ea384c',
-    title_color: punishmentData.title_color || '#FFFFFF',
-    subtext_color: punishmentData.subtext_color || '#8E9196',
-    calendar_color: punishmentData.calendar_color || '#ea384c',
-    highlight_effect: punishmentData.highlight_effect || false,
-    focal_point_x: punishmentData.focal_point_x || 50,
-    focal_point_y: punishmentData.focal_point_y || 50
-  };
-
   const { data, error } = await supabase
     .from('punishments')
-    .insert(newPunishment)
+    .insert({
+      title: punishment.title,
+      description: punishment.description,
+      points: punishment.points || 10,
+      icon_name: punishment.icon_name,
+      icon_color: punishment.icon_color || '#ea384c',
+      title_color: punishment.title_color || '#FFFFFF',
+      subtext_color: punishment.subtext_color || '#8E9196',
+      calendar_color: punishment.calendar_color || '#ea384c',
+      highlight_effect: punishment.highlight_effect || false,
+      background_image_url: punishment.background_image_url,
+      background_opacity: punishment.background_opacity || 50,
+      focal_point_x: punishment.focal_point_x || 50,
+      focal_point_y: punishment.focal_point_y || 50,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
     .select()
     .single();
-
+  
   if (error) {
     console.error('Error creating punishment:', error);
     throw error;
   }
-
-  return processPunishmentData(data);
+  
+  return data;
 };
 
 // Update an existing punishment
 const updatePunishmentInDb = async (id: string, punishment: Partial<PunishmentData>): Promise<PunishmentData> => {
-  // Remove properties not in the db schema
-  const { usage_data, ...dataToUpdate } = punishment;
-  
-  const updateData = {
-    ...dataToUpdate,
-    updated_at: new Date().toISOString()
-  };
-
   const { data, error } = await supabase
     .from('punishments')
-    .update(updateData)
+    .update({
+      title: punishment.title,
+      description: punishment.description,
+      points: punishment.points,
+      icon_name: punishment.icon_name,
+      icon_color: punishment.icon_color,
+      title_color: punishment.title_color,
+      subtext_color: punishment.subtext_color,
+      calendar_color: punishment.calendar_color,
+      highlight_effect: punishment.highlight_effect,
+      background_image_url: punishment.background_image_url,
+      background_opacity: punishment.background_opacity,
+      focal_point_x: punishment.focal_point_x,
+      focal_point_y: punishment.focal_point_y,
+      updated_at: new Date().toISOString()
+    })
     .eq('id', id)
     .select()
     .single();
-
+  
   if (error) {
     console.error('Error updating punishment:', error);
     throw error;
   }
-
-  return processPunishmentData(data);
+  
+  return data;
 };
 
-// Delete a punishment
+// Delete an existing punishment
 const deletePunishmentFromDb = async (id: string): Promise<void> => {
   const { error } = await supabase
     .from('punishments')
     .delete()
     .eq('id', id);
-
+  
   if (error) {
     console.error('Error deleting punishment:', error);
     throw error;
   }
 };
 
-// Apply a punishment and record it in history
-const applyPunishmentInDb = async (punishment: PunishmentData): Promise<void> => {
+// Apply a punishment (record in history)
+const applyPunishmentToDb = async (punishment: PunishmentData | { id: string; points: number }): Promise<void> => {
   const today = new Date();
-  const dayOfWeek = getMondayBasedDay();
+  const dayOfWeek = today.getDay();
   
-  // First, record the punishment in history
-  const { error: historyError } = await supabase
+  const historyEntry = {
+    punishment_id: punishment.id,
+    points_deducted: punishment.points,
+    day_of_week: dayOfWeek,
+    applied_date: today.toISOString()
+  };
+  
+  const { error } = await supabase
     .from('punishment_history')
-    .insert({
-      punishment_id: punishment.id,
-      points_deducted: punishment.points,
-      applied_date: today.toISOString(),
-      day_of_week: dayOfWeek
-    });
-
-  if (historyError) {
-    console.error('Error recording punishment history:', historyError);
-    throw historyError;
-  }
-
-  // Update the user's points
-  const { data: userData } = await supabase.auth.getUser();
-  if (userData.user) {
-    // Instead of using RPC which may not exist, we'll update directly
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('points')
-      .eq('id', userData.user.id)
-      .single();
-      
-    if (profileError) {
-      console.error('Error fetching profile:', profileError);
-      throw profileError;
-    }
-    
-    const newPoints = Math.max(0, (profileData.points || 0) - punishment.points);
-    
-    const { error: pointsError } = await supabase
-      .from('profiles')
-      .update({ 
-        points: newPoints
-      })
-      .eq('id', userData.user.id);
-
-    if (pointsError) {
-      console.error('Error deducting points:', pointsError);
-      throw pointsError;
-    }
+    .insert(historyEntry);
+  
+  if (error) {
+    console.error('Error applying punishment:', error);
+    throw error;
   }
 };
 
 // The main hook to expose all punishment-related operations
 export const usePunishmentsData = () => {
   const queryClient = useQueryClient();
-  const { showErrorToast } = usePunishmentToast();
   const [isSelectingRandom, setIsSelectingRandom] = useState(false);
   const [selectedPunishment, setSelectedPunishment] = useState<PunishmentData | null>(null);
-
+  
   // Query for fetching all punishments
-  const { 
-    data: punishments = [], 
+  const {
+    data: punishments = [],
     isLoading: loading,
+    error,
     refetch: refetchPunishments
   } = useQuery({
     queryKey: PUNISHMENTS_QUERY_KEY,
-    queryFn: fetchPunishments,
-    staleTime: 1000 * 60 * 20, // 20 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
-    refetchOnWindowFocus: false
+    queryFn: fetchPunishments
   });
-
+  
   // Query for fetching punishment history
   const {
     data: punishmentHistory = [],
@@ -223,236 +179,128 @@ export const usePunishmentsData = () => {
     refetch: refetchHistory
   } = useQuery({
     queryKey: PUNISHMENT_HISTORY_QUERY_KEY,
-    queryFn: fetchPunishmentHistory,
-    staleTime: 1000 * 60 * 20, // 20 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
-    refetchOnWindowFocus: false
+    queryFn: fetchPunishmentHistory
   });
-
-  // Mutation for creating a new punishment
+  
+  // Mutation for creating a punishment
   const createPunishmentMutation = useMutation({
     mutationFn: createPunishmentInDb,
-    onMutate: async (newPunishment) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      
-      // Snapshot the previous value
-      const previousPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY) || [];
-      
-      // Optimistically update the cache with the new punishment
-      // Generate a temporary ID
-      const tempId = `temp-${Date.now()}`;
-      const optimisticPunishment: PunishmentData = {
-        id: tempId,
-        title: newPunishment.title || 'New Punishment',
-        description: newPunishment.description || '',
-        points: newPunishment.points || 10,
-        background_image_url: newPunishment.background_image_url,
-        background_opacity: newPunishment.background_opacity || 50,
-        icon_name: newPunishment.icon_name || 'Skull',
-        icon_color: newPunishment.icon_color || '#ea384c',
-        title_color: newPunishment.title_color || '#FFFFFF',
-        subtext_color: newPunishment.subtext_color || '#8E9196',
-        calendar_color: newPunishment.calendar_color || '#ea384c',
-        highlight_effect: newPunishment.highlight_effect || false,
-        focal_point_x: newPunishment.focal_point_x || 50,
-        focal_point_y: newPunishment.focal_point_y || 50,
-        usage_data: Array(7).fill(0),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      queryClient.setQueryData<PunishmentData[]>(
-        PUNISHMENTS_QUERY_KEY, 
-        [optimisticPunishment, ...previousPunishments]
-      );
-      
-      return { previousPunishments };
-    },
-    onError: (err, newPunishment, context) => {
-      console.error('Error creating punishment:', err);
-      showErrorToast('Failed to create punishment. Please try again.');
-      
-      // Rollback to the previous state
-      if (context) {
-        queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context.previousPunishments);
-      }
-    },
-    onSettled: () => {
-      // Always refetch after error or success to synchronize with server state
+    onSuccess: (data) => {
+      toast({
+        title: "Success",
+        description: "Punishment created successfully",
+      });
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to create punishment. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Error creating punishment:', error);
     }
   });
-
-  // Mutation for updating an existing punishment
+  
+  // Mutation for updating a punishment
   const updatePunishmentMutation = useMutation({
     mutationFn: ({ id, punishment }: { id: string; punishment: Partial<PunishmentData> }) => 
       updatePunishmentInDb(id, punishment),
-    onMutate: async ({ id, punishment }) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      
-      // Snapshot the previous value
-      const previousPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY) || [];
-      
-      // Optimistically update the cache with the updated punishment
-      queryClient.setQueryData<PunishmentData[]>(
-        PUNISHMENTS_QUERY_KEY, 
-        previousPunishments.map(p => 
-          p.id === id 
-            ? { ...p, ...punishment, updated_at: new Date().toISOString() } 
-            : p
-        )
-      );
-      
-      return { previousPunishments };
-    },
-    onError: (err, variables, context) => {
-      console.error('Error updating punishment:', err);
-      showErrorToast('Failed to update punishment. Please try again.');
-      
-      // Rollback to the previous state
-      if (context) {
-        queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context.previousPunishments);
-      }
-    },
-    onSettled: () => {
-      // Always refetch after error or success to synchronize with server state
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Punishment updated successfully",
+      });
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update punishment. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Error updating punishment:', error);
     }
   });
-
+  
   // Mutation for deleting a punishment
   const deletePunishmentMutation = useMutation({
     mutationFn: deletePunishmentFromDb,
-    onMutate: async (id) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      
-      // Snapshot the previous value
-      const previousPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY) || [];
-      
-      // Optimistically update the cache by removing the deleted punishment
-      queryClient.setQueryData<PunishmentData[]>(
-        PUNISHMENTS_QUERY_KEY, 
-        previousPunishments.filter(p => p.id !== id)
-      );
-      
-      return { previousPunishments };
-    },
-    onError: (err, id, context) => {
-      console.error('Error deleting punishment:', err);
-      showErrorToast('Failed to delete punishment. Please try again.');
-      
-      // Rollback to the previous state
-      if (context) {
-        queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context.previousPunishments);
-      }
-    },
-    onSettled: () => {
-      // Always refetch after error or success to synchronize with server state
-      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-    }
-  });
-
-  // Mutation for applying a punishment
-  const applyPunishmentMutation = useMutation({
-    mutationFn: applyPunishmentInDb,
-    onMutate: async (punishment) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      await queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
-      await queryClient.cancelQueries({ queryKey: ['rewards', 'points'] });
-      
-      // Snapshot the previous values
-      const previousPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY) || [];
-      const previousHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY) || [];
-      
-      // Create a new history item
-      const today = new Date();
-      const newHistoryItem: PunishmentHistoryItem = {
-        id: `temp-${Date.now()}`,
-        punishment_id: punishment.id,
-        applied_date: today.toISOString(),
-        day_of_week: today.getDay(),
-        points_deducted: punishment.points
-      };
-      
-      // Optimistically update the history cache
-      queryClient.setQueryData(
-        PUNISHMENT_HISTORY_QUERY_KEY, 
-        [newHistoryItem, ...previousHistory]
-      );
-      
-      return { 
-        previousPunishments, 
-        previousHistory 
-      };
-    },
-    onError: (err, punishment, context) => {
-      console.error('Error applying punishment:', err);
-      showErrorToast('Failed to apply punishment. Please try again.');
-      
-      // Rollback to the previous state
-      if (context) {
-        queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context.previousPunishments);
-        queryClient.setQueryData(PUNISHMENT_HISTORY_QUERY_KEY, context.previousHistory);
-      }
-    },
-    onSettled: () => {
-      // Always refetch after error or success to synchronize with server state
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Punishment deleted successfully",
+      });
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: ['rewards', 'points'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete punishment. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Error deleting punishment:', error);
     }
   });
-
-  // Random punishment selection logic
+  
+  // Mutation for applying a punishment
+  const applyPunishmentMutation = useMutation({
+    mutationFn: applyPunishmentToDb,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to apply punishment. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Error applying punishment:', error);
+    }
+  });
+  
+  // Function to select a random punishment
   const selectRandomPunishment = () => {
+    if (punishments.length === 0) {
+      toast({
+        title: "No Punishments",
+        description: "Create some punishments first!",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsSelectingRandom(true);
     
-    // Simulate delay for the random selection animation
+    // Simulate a delay for the selection animation
     setTimeout(() => {
-      if (punishments.length > 0) {
-        const randomIndex = Math.floor(Math.random() * punishments.length);
-        setSelectedPunishment(punishments[randomIndex]);
-      }
+      const randomIndex = Math.floor(Math.random() * punishments.length);
+      setSelectedPunishment(punishments[randomIndex]);
       setIsSelectingRandom(false);
-    }, 1000);
+    }, 1500);
   };
-
+  
+  // Function to reset the random selection
   const resetRandomSelection = () => {
     setSelectedPunishment(null);
   };
-
+  
   return {
-    // Data
     punishments,
     punishmentHistory,
-    isSelectingRandom,
-    selectedPunishment,
-    
-    // Loading states
     loading,
     historyLoading,
-    
-    // Create, update, delete operations
-    createPunishment: (punishment: Partial<PunishmentData>) => 
-      createPunishmentMutation.mutateAsync(punishment),
+    error,
+    isSelectingRandom,
+    selectedPunishment,
+    createPunishment: createPunishmentMutation.mutateAsync,
     updatePunishment: (id: string, punishment: Partial<PunishmentData>) => 
       updatePunishmentMutation.mutateAsync({ id, punishment }),
-    deletePunishment: (id: string) => 
-      deletePunishmentMutation.mutateAsync(id),
-    
-    // Apply punishment
-    applyPunishment: (punishment: PunishmentData) => 
-      applyPunishmentMutation.mutateAsync(punishment),
-    
-    // Random punishment functionality
+    deletePunishment: deletePunishmentMutation.mutateAsync,
+    applyPunishment: applyPunishmentMutation.mutateAsync,
     selectRandomPunishment,
     resetRandomSelection,
-    
-    // Refetch functions
     refetchPunishments,
     refetchHistory
   };

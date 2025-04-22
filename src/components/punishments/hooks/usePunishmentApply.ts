@@ -18,10 +18,15 @@ export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
     if (!id) return;
     
     try {
+      // First update the total points in the UI immediately
       const newTotal = totalPoints - points;
       setTotalPoints(newTotal);
       
-      await applyPunishment(id, points);
+      // Then call the applyPunishment function - now with just the punishment ID
+      await applyPunishment({
+        id: id,
+        points: points
+      });
     } catch (error) {
       console.error('Error applying punishment:', error);
       setTotalPoints(totalPoints);
