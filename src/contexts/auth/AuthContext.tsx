@@ -1,6 +1,5 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { useAuthOperations } from './useAuthOperations';
@@ -31,7 +30,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Fix: Define the AuthProvider as a regular function component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -106,11 +104,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(false);
       setIsAdmin(false);
       
-      // Force navigation to auth page
-      navigate('/auth');
+      // Use window.location for navigation instead of useNavigate
+      window.location.href = '/auth';
       
-      // Force reload the page to clear any cached state
-      window.location.reload();
     } catch (error: any) {
       console.error('Sign-out failed:', error);
       throw error;
@@ -161,8 +157,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAuthenticated(false);
           setLoading(false);
           
-          // Force reload the page on sign out to clear any cached state
-          navigate('/auth');
+          // Use window.location for navigation instead of useNavigate
+          window.location.href = '/auth';
         } else if (newSession) {
           console.log("Auth state: User session detected");
           setUser(newSession.user);
@@ -220,7 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("AuthContext: Cleaning up auth subscription");
       subscription?.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
   // Provide the auth context value
   const value: AuthContextType = {
