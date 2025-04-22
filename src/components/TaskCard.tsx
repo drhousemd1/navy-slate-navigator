@@ -10,9 +10,6 @@ import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
 import HighlightedText from './task/HighlightedText';
 import { getCurrentDayOfWeek } from '@/lib/taskUtils';
-import TaskCardHeader from './tasks/TaskCardHeader';
-import TaskCardFooter from './tasks/TaskCardFooter';
-import TaskBackground from './tasks/TaskBackground';
 
 interface TaskCardProps {
   title: string;
@@ -20,7 +17,6 @@ interface TaskCardProps {
   points: number;
   completed?: boolean;
   backgroundImage?: string;
-  backgroundImages?: (string | null)[] | null;
   backgroundOpacity?: number;
   focalPointX?: number;
   focalPointY?: number;
@@ -38,8 +34,6 @@ interface TaskCardProps {
   subtext_color?: string;
   calendar_color?: string;
   icon_color?: string;
-  sharedImageIndex?: number;
-  carouselTimer?: number;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -48,7 +42,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
   points,
   completed = false,
   backgroundImage,
-  backgroundImages = [],
   backgroundOpacity = 100,
   focalPointX = 50,
   focalPointY = 50,
@@ -64,32 +57,26 @@ const TaskCard: React.FC<TaskCardProps> = ({
   title_color = '#FFFFFF',
   subtext_color = '#8E9196',
   calendar_color = '#7E69AB',
-  icon_color = '#9b87f5',
-  sharedImageIndex = 0,
-  carouselTimer = 5
+  icon_color = '#9b87f5'
 }) => {
   const currentDayOfWeek = getCurrentDayOfWeek();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
   const maxCompletions = frequency_count || 1;
   const isFullyCompleted = currentCompletions >= maxCompletions;
 
-  // Handle both legacy and new background image format (exactly like in PunishmentCard)
-  const allBackgroundImages = backgroundImages && backgroundImages.length > 0 
-    ? backgroundImages 
-    : backgroundImage 
-      ? [backgroundImage] 
-      : [];
-
   return (
-    <Card className="relative overflow-hidden border-2 border-[#00f0ff]">
-      {/* Background layer */}
-      <TaskBackground
-        backgroundImages={allBackgroundImages}
-        backgroundOpacity={backgroundOpacity}
-        focalPointX={focalPointX}
-        focalPointY={focalPointY}
-        globalCarouselIndex={sharedImageIndex}
-      />
+    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
+      {backgroundImage && (
+        <div 
+          className="absolute inset-0 w-full h-full z-0"
+          style={{
+            backgroundImage: `url(${backgroundImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: backgroundOpacity / 100,
+          }}
+        />
+      )}
 
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">

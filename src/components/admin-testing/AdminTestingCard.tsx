@@ -12,6 +12,7 @@ import { renderCardIcon } from '@/components/admin-testing/utils/renderCardIcon'
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { AdminTestingCardData } from "./defaultAdminTestingCards";
+import { MoveVertical } from 'lucide-react';
 
 export interface AdminTestingCardProps {
   title: string;
@@ -23,6 +24,7 @@ export interface AdminTestingCardProps {
   globalCarouselIndex: number;
   onUpdate?: (updated: AdminTestingCardData) => void;
   card?: AdminTestingCardData;
+  isReorderMode?: boolean;
 }
 
 const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
@@ -34,7 +36,8 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
   points = 5,
   globalCarouselIndex,
   onUpdate,
-  card
+  card,
+  isReorderMode = false
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
@@ -62,7 +65,12 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
     isTransitioning
   } = useImageCarousel({ images, globalCarouselIndex });
 
-  const handleOpenEditModal = () => setIsEditModalOpen(true);
+  const handleOpenEditModal = () => {
+    if (!isReorderMode) {
+      setIsEditModalOpen(true);
+    }
+  };
+  
   const handleCloseEditModal = () => setIsEditModalOpen(false);
 
   const iconComponent = renderCardIcon({
@@ -74,7 +82,6 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   const handleDeleteCard = async (cardId: string) => {
     try {
-      // Delete from Supabase
       const { error } = await supabase
         .from('admin_testing_cards')
         .delete()
@@ -90,13 +97,11 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
         return;
       }
       
-      // Notify about the deletion
       toast({
         title: "Card Deleted",
         description: "The admin testing card has been deleted",
       });
       
-      // Close the modal
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Error deleting card:", error);
@@ -110,14 +115,24 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   const handleCarouselTimerChange = (newValue: number) => {
     setCarouselTimer(newValue);
-    // Store carousel timer in localStorage for now as it's a global setting
     localStorage.setItem("adminTestingCards_carouselTimer", newValue.toString());
   };
 
   return (
     <>
-      <Card className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy">
-        <CardBackground
+      <Card 
+        className={`relative overflow-hidden border-2 ${
+          isReorderMode ? 'border-amber-500' : 'border-[#00f0ff]'
+        } bg-navy drag-item`}
+        data-testid="admin-card"
+      >
+        {isReorderMode && (
+          <div className="absolute top-2 left-2 z-50 bg-amber-500/90 text-white p-1.5 rounded-md flex items-center shadow-md">
+            <MoveVertical className="h-4 w-4 mr-1" /> 
+            <span className="text-xs font-medium">Drag to reorder</span>
+          </div>
+        )}
+        <CardBackground 
           visibleImage={visibleImage}
           transitionImage={transitionImage}
           isTransitioning={isTransitioning}
@@ -139,6 +154,7 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
             calendarColor={cardData.calendar_color || '#7E69AB'}
             usageData={usageData}
             onEditClick={handleOpenEditModal}
+            isReorderMode={isReorderMode}
           />
         </div>
       </Card>
