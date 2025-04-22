@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,25 +16,26 @@ import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { fetchRules } from '@/data/rules/fetchRules';
+import { Rule } from '@/data/interfaces/Rule';
 
 const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [currentRule, setCurrentRule] = useState(null);
+  const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const queryClient = useQueryClient();
 
-  // Use react-query to fetch rules with caching and background refreshing
+  // typed useQuery result to Rule[]
   const {
     data: rules = [],
     isLoading,
     isFetching,
     error,
-  } = useQuery({
+  } = useQuery<Rule[]>({
     queryKey: ['rules'],
     queryFn: fetchRules,
-    staleTime: 1000 * 60 * 20, // 20 minutes cache
+    staleTime: 1000 * 60 * 20,
     refetchOnWindowFocus: true,
-    refetchInterval: 30000,  // Refresh every 30s in background
+    refetchInterval: 30000,
   });
 
   const handleAddRule = () => {
@@ -42,12 +43,12 @@ const Rules: React.FC = () => {
     setIsEditorOpen(true);
   };
 
-  const handleEditRule = (rule) => {
+  const handleEditRule = (rule: Rule) => {
     setCurrentRule(rule);
     setIsEditorOpen(true);
   };
 
-  const handleRuleBroken = async (rule) => {
+  const handleRuleBroken = async (rule: Rule) => {
     try {
       const currentDayOfWeek = getMondayBasedDay();
       const newUsageData = [...(rule.usage_data || [0, 0, 0, 0, 0, 0, 0])];
@@ -81,7 +82,7 @@ const Rules: React.FC = () => {
         });
       }
 
-      queryClient.setQueryData(['rules'], (oldRules = []) =>
+      queryClient.setQueryData(['rules'], (oldRules: Rule[] = []) =>
         oldRules.map(r => r.id === rule.id ? { ...r, usage_data: newUsageData } : r)
       );
 
@@ -97,7 +98,7 @@ const Rules: React.FC = () => {
     }
   };
 
-  const handleSaveRule = async (ruleData) => {
+  const handleSaveRule = async (ruleData: Partial<Rule>) => {
     try {
       let result;
       if (ruleData.id) {
@@ -130,7 +131,7 @@ const Rules: React.FC = () => {
         if (error) throw error;
         result = data;
 
-        queryClient.setQueryData(['rules'], (oldRules = []) =>
+        queryClient.setQueryData(['rules'], (oldRules: Rule[] = []) =>
           oldRules.map(rule => (rule.id === ruleData.id ? { ...rule, ...result } : rule))
         );
 
@@ -140,7 +141,7 @@ const Rules: React.FC = () => {
         const { id, ...ruleWithoutId } = ruleData;
         if (!ruleWithoutId.title) throw new Error('Rule title is required');
 
-        const newRule = {
+        const newRule: Partial<Rule> = {
           title: ruleWithoutId.title,
           priority: ruleWithoutId.priority || 'medium',
           background_opacity: ruleWithoutId.background_opacity || 100,
@@ -171,7 +172,7 @@ const Rules: React.FC = () => {
 
         if (error) throw error;
         result = data;
-        queryClient.setQueryData(['rules'], (oldRules = []) => [result, ...oldRules]);
+        queryClient.setQueryData(['rules'], (oldRules: Rule[] = []) => [result, ...oldRules]);
 
         toast({ title: 'Success', description: 'Rule created successfully!' });
       }
@@ -186,7 +187,7 @@ const Rules: React.FC = () => {
     }
   };
 
-  const handleDeleteRule = async (ruleId) => {
+  const handleDeleteRule = async (ruleId: string) => {
     try {
       const { error } = await supabase
         .from('rules')
@@ -195,7 +196,7 @@ const Rules: React.FC = () => {
 
       if (error) throw error;
 
-      queryClient.setQueryData(['rules'], (oldRules = []) => oldRules.filter(r => r.id !== ruleId));
+      queryClient.setQueryData(['rules'], (oldRules: Rule[] = []) => oldRules.filter(r => r.id !== ruleId));
 
       toast({ title: 'Success', description: 'Rule deleted successfully!' });
 
@@ -321,3 +322,4 @@ const Rules: React.FC = () => {
 };
 
 export default Rules;
+
