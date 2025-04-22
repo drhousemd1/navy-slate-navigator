@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -273,10 +274,6 @@ export const useRulesData = () => {
           frequency: newRule.frequency || 'daily',
           frequency_count: newRule.frequency_count || 3,
           usage_data: [0, 0, 0, 0, 0, 0, 0],
-          ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
-          ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
-          ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
-          ...(ruleWithoutId.icon_name && { icon_name: ruleWithoutId.icon_name }),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };

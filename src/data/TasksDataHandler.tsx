@@ -24,7 +24,7 @@ const fetchTasks = async (): Promise<Task[]> => {
     title: task.title,
     description: task.description,
     points: task.points,
-    priority: task.priority as 'low' | 'medium' | 'high',
+    priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
     completed: task.completed,
     background_image_url: task.background_image_url,
     background_opacity: task.background_opacity,
@@ -86,7 +86,7 @@ const fetchTasks = async (): Promise<Task[]> => {
       title: task.title,
       description: task.description,
       points: task.points,
-      priority: task.priority as 'low' | 'medium' | 'high',
+      priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
       completed: task.completed,
       background_image_url: task.background_image_url,
       background_opacity: task.background_opacity,
@@ -147,7 +147,14 @@ const saveTaskToDb = async (taskData: Task): Promise<Task> => {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      priority: (data.priority as 'low' | 'medium' | 'high') || 'medium',
+      frequency: data.frequency as 'daily' | 'weekly',
+      usage_data: Array.isArray(data.usage_data) 
+        ? data.usage_data.map(val => typeof val === 'number' ? val : Number(val)) 
+        : [0, 0, 0, 0, 0, 0, 0]
+    } as Task;
   } else {
     const newTask = {
       title: taskData.title,
@@ -184,7 +191,14 @@ const saveTaskToDb = async (taskData: Task): Promise<Task> => {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      priority: (data.priority as 'low' | 'medium' | 'high') || 'medium',
+      frequency: data.frequency as 'daily' | 'weekly',
+      usage_data: Array.isArray(data.usage_data) 
+        ? data.usage_data.map(val => typeof val === 'number' ? val : Number(val)) 
+        : [0, 0, 0, 0, 0, 0, 0]
+    } as Task;
   }
 };
 

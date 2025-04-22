@@ -22,7 +22,7 @@ export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
       const newTotal = totalPoints - points;
       setTotalPoints(newTotal);
       
-      // Then call the applyPunishment function - now with just the punishment ID
+      // Then call the applyPunishment function with the punishment object
       await applyPunishment({
         id: id,
         points: points
