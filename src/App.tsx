@@ -62,16 +62,6 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   // This allows us to test the admin testing page without requiring admin privileges
   console.log('AdminRoute - Allowing access to admin page for testing purposes');
   return <>{children}</>;
-  
-  /* Uncomment this when you want to restore proper admin checking
-  if (!isAdmin) {
-    console.log('AdminRoute - User not admin, redirecting to /');
-    return <Navigate to="/" />;
-  }
-  
-  console.log('AdminRoute - User is admin, showing protected content');
-  return <>{children}</>;
-  */
 };
 
 // Create a client with aggressive caching to maintain state between page navigations

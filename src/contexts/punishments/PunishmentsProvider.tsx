@@ -8,8 +8,25 @@ const PunishmentsContext = createContext<PunishmentsContextType | undefined>(und
 export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const punishmentsData = usePunishmentsData();
   
+  // Add the missing properties required by PunishmentsContextType
+  const contextValue: PunishmentsContextType = {
+    ...punishmentsData,
+    error: null,
+    fetchPunishments: async () => {
+      await punishmentsData.refetchPunishments();
+    },
+    getPunishmentHistory: (punishmentId: string) => {
+      return punishmentsData.punishmentHistory.filter(item => 
+        item.punishment_id === punishmentId
+      );
+    },
+    totalPointsDeducted: punishmentsData.punishmentHistory.reduce(
+      (total, item) => total + item.points_deducted, 0
+    )
+  };
+  
   return (
-    <PunishmentsContext.Provider value={punishmentsData}>
+    <PunishmentsContext.Provider value={contextValue}>
       {children}
     </PunishmentsContext.Provider>
   );

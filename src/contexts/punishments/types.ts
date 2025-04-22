@@ -1,6 +1,6 @@
 
 export type PunishmentData = {
-  id?: string;
+  id: string;
   title: string;
   description?: string;
   points: number;
@@ -14,6 +14,9 @@ export type PunishmentData = {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
+  usage_data?: number[];
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type PunishmentHistoryItem = {
@@ -29,11 +32,17 @@ export interface PunishmentsContextType {
   punishmentHistory: PunishmentHistoryItem[];
   loading: boolean;
   error: Error | null;
+  isSelectingRandom?: boolean;
+  selectedPunishment?: PunishmentData | null;
   fetchPunishments: () => Promise<void>;
-  createPunishment: (punishmentData: PunishmentData) => Promise<string>;
-  updatePunishment: (id: string, punishmentData: PunishmentData) => Promise<void>;
+  createPunishment: (punishmentData: Partial<PunishmentData>) => Promise<string>;
+  updatePunishment: (id: string, punishmentData: Partial<PunishmentData>) => Promise<void>;
   deletePunishment: (id: string) => Promise<void>;
   applyPunishment: (punishmentId: string, points: number) => Promise<void>;
   getPunishmentHistory: (punishmentId: string) => PunishmentHistoryItem[];
   totalPointsDeducted: number;
+  selectRandomPunishment?: () => void;
+  resetRandomSelection?: () => void;
+  refetchPunishments?: () => Promise<any>;
+  refetchHistory?: () => Promise<any>;
 }

@@ -23,8 +23,23 @@ const fetchPunishments = async (): Promise<PunishmentData[]> => {
   }
 
   return data.map(punishment => ({
-    ...punishment,
-    usage_data: punishment.usage_data || Array(7).fill(0)
+    id: punishment.id,
+    title: punishment.title,
+    description: punishment.description,
+    points: punishment.points,
+    icon_name: punishment.icon_name,
+    icon_color: punishment.icon_color,
+    title_color: punishment.title_color,
+    subtext_color: punishment.subtext_color,
+    calendar_color: punishment.calendar_color,
+    highlight_effect: punishment.highlight_effect,
+    background_image_url: punishment.background_image_url,
+    background_opacity: punishment.background_opacity,
+    focal_point_x: punishment.focal_point_x,
+    focal_point_y: punishment.focal_point_y,
+    usage_data: Array(7).fill(0), // Default usage data
+    created_at: punishment.created_at,
+    updated_at: punishment.updated_at
   }));
 };
 
@@ -42,11 +57,10 @@ const fetchPunishmentHistory = async (): Promise<PunishmentHistoryItem[]> => {
 
   return data.map(item => ({
     id: item.id,
-    punishmentId: item.punishment_id,
-    punishmentTitle: item.punishments?.title || 'Unknown',
-    pointsDeducted: item.points_deducted,
-    appliedDate: item.applied_date,
-    dayOfWeek: item.day_of_week
+    punishment_id: item.punishment_id,
+    applied_date: item.applied_date,
+    day_of_week: item.day_of_week,
+    points_deducted: item.points_deducted
   }));
 };
 
@@ -55,8 +69,19 @@ const createPunishmentInDb = async (punishment: Partial<PunishmentData>): Promis
   const { id, ...punishmentData } = punishment;
   
   const newPunishment = {
-    ...punishmentData,
-    usage_data: Array(7).fill(0),
+    title: punishmentData.title || 'New Punishment',
+    description: punishmentData.description || '',
+    points: punishmentData.points || 10,
+    background_image_url: punishmentData.background_image_url,
+    background_opacity: punishmentData.background_opacity || 50,
+    icon_name: punishmentData.icon_name || 'Skull',
+    icon_color: punishmentData.icon_color || '#ea384c',
+    title_color: punishmentData.title_color || '#FFFFFF',
+    subtext_color: punishmentData.subtext_color || '#8E9196',
+    calendar_color: punishmentData.calendar_color || '#ea384c',
+    highlight_effect: punishmentData.highlight_effect || false,
+    focal_point_x: punishmentData.focal_point_x || 50,
+    focal_point_y: punishmentData.focal_point_y || 50,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -72,17 +97,25 @@ const createPunishmentInDb = async (punishment: Partial<PunishmentData>): Promis
     throw error;
   }
 
-  return data;
+  return {
+    ...data,
+    usage_data: Array(7).fill(0)
+  };
 };
 
 // Update an existing punishment
 const updatePunishmentInDb = async (id: string, punishment: Partial<PunishmentData>): Promise<PunishmentData> => {
+  const updateData = {
+    ...punishment,
+    updated_at: new Date().toISOString()
+  };
+
+  // Remove any fields that shouldn't be sent to the database
+  const { usage_data, ...dataToUpdate } = updateData;
+
   const { data, error } = await supabase
     .from('punishments')
-    .update({
-      ...punishment,
-      updated_at: new Date().toISOString()
-    })
+    .update(dataToUpdate)
     .eq('id', id)
     .select()
     .single();
@@ -92,7 +125,10 @@ const updatePunishmentInDb = async (id: string, punishment: Partial<PunishmentDa
     throw error;
   }
 
-  return data;
+  return {
+    ...data,
+    usage_data: punishment.usage_data || Array(7).fill(0)
+  };
 };
 
 // Delete a punishment
@@ -115,33 +151,14 @@ const applyPunishmentInDb = async (punishment: PunishmentData): Promise<void> =>
   const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
   const currentDay = getMondayBasedDay();
   
-  // Update the usage data for the punishment
-  const updatedUsageData = [...(punishment.usage_data || Array(7).fill(0))];
-  updatedUsageData[currentDay] = 1;
-
-  // First, update the punishment usage data
-  const { error: updateError } = await supabase
-    .from('punishments')
-    .update({
-      usage_data: updatedUsageData,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', punishment.id);
-
-  if (updateError) {
-    console.error('Error updating punishment usage data:', updateError);
-    throw updateError;
-  }
-
-  // Then, record the punishment in history
+  // First, record the punishment in history
   const { error: historyError } = await supabase
     .from('punishment_history')
     .insert({
       punishment_id: punishment.id,
       points_deducted: punishment.points,
       applied_date: today.toISOString(),
-      day_of_week: dayOfWeek,
-      week_number: weekNumber
+      day_of_week: dayOfWeek
     });
 
   if (historyError) {
@@ -150,13 +167,23 @@ const applyPunishmentInDb = async (punishment: PunishmentData): Promise<void> =>
   }
 
   // Update the user's points
-  const { error: pointsError } = await supabase.rpc('deduct_points', {
-    points_to_deduct: punishment.points
-  });
+  // Note: This would require a function in Supabase, implemented as an example
+  const { data: userData } = await supabase.auth.getUser();
+  if (userData.user) {
+    const { error: pointsError } = await supabase
+      .from('profiles')
+      .update({ 
+        points: supabase.rpc('calculate_points_after_deduction', { 
+          user_id: userData.user.id,
+          points_to_deduct: punishment.points 
+        })
+      })
+      .eq('id', userData.user.id);
 
-  if (pointsError) {
-    console.error('Error deducting points:', pointsError);
-    throw pointsError;
+    if (pointsError) {
+      console.error('Error deducting points:', pointsError);
+      throw pointsError;
+    }
   }
 };
 
@@ -171,7 +198,6 @@ export const usePunishmentsData = () => {
   const { 
     data: punishments = [], 
     isLoading: loading,
-    error,
     refetch: refetchPunishments
   } = useQuery({
     queryKey: PUNISHMENTS_QUERY_KEY,
@@ -333,29 +359,14 @@ export const usePunishmentsData = () => {
       const previousPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY) || [];
       const previousHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY) || [];
       
-      // Update the usage data for the punishment
-      const currentDay = getMondayBasedDay();
-      const updatedPunishments = previousPunishments.map(p => {
-        if (p.id === punishment.id) {
-          const updatedUsageData = [...(p.usage_data || Array(7).fill(0))];
-          updatedUsageData[currentDay] = 1;
-          return { ...p, usage_data: updatedUsageData };
-        }
-        return p;
-      });
-      
-      // Optimistically update the punishments cache
-      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, updatedPunishments);
-      
       // Create a new history item
       const today = new Date();
       const newHistoryItem: PunishmentHistoryItem = {
         id: `temp-${Date.now()}`,
-        punishmentId: punishment.id,
-        punishmentTitle: punishment.title,
-        pointsDeducted: punishment.points,
-        appliedDate: today.toISOString(),
-        dayOfWeek: today.getDay()
+        punishment_id: punishment.id,
+        applied_date: today.toISOString(),
+        day_of_week: today.getDay(),
+        points_deducted: punishment.points
       };
       
       // Optimistically update the history cache
@@ -404,15 +415,6 @@ export const usePunishmentsData = () => {
   const resetRandomSelection = () => {
     setSelectedPunishment(null);
   };
-
-  // Clear any errors when component unmounts
-  useEffect(() => {
-    return () => {
-      if (error) {
-        console.error('Error in punishment data handler:', error);
-      }
-    };
-  }, [error]);
 
   return {
     // Data
