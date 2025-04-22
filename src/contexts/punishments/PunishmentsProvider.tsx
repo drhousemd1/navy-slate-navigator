@@ -1,19 +1,15 @@
 
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 import { PunishmentsContextType } from './types';
-import { usePunishmentOperations } from './usePunishmentOperations';
+import { usePunishmentsData } from '@/data/PunishmentsDataHandler';
 
 const PunishmentsContext = createContext<PunishmentsContextType | undefined>(undefined);
 
 export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const operations = usePunishmentOperations();
+  const punishmentsData = usePunishmentsData();
   
-  useEffect(() => {
-    operations.fetchPunishments();
-  }, []);
-
   return (
-    <PunishmentsContext.Provider value={operations}>
+    <PunishmentsContext.Provider value={punishmentsData}>
       {children}
     </PunishmentsContext.Provider>
   );
