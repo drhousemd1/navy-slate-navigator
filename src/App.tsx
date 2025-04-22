@@ -6,14 +6,14 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 
-// Pages - using proper casing to match the actual file names
-import HomePage from "@/pages/index";
+// Pages - using proper casing for imports to match file system
+import HomePage from "@/pages/Index";
 import LoginPage from "@/pages/login";
-import TasksPage from "@/pages/tasks";
-import RulesPage from "@/pages/rules";
-import RewardsPage from "@/pages/rewards";
-import PunishmentsPage from "@/pages/punishments";
-import ProfilePage from "@/pages/profile";
+import TasksPage from "@/pages/Tasks";
+import RulesPage from "@/pages/Rules";
+import RewardsPage from "@/pages/Rewards";
+import PunishmentsPage from "@/pages/Punishments";
+import ProfilePage from "@/pages/Profile";
 import NotFoundPage from "@/pages/404";
 import ResetPasswordPage from "@/pages/reset-password";
 

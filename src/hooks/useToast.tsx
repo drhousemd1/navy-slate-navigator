@@ -1,6 +1,6 @@
 
-import React from "react"
-import { toast as sonnerToast, useToaster } from "sonner"
+import React from "react";
+import { toast as sonnerToast } from "sonner";
 
 export interface ToastActionElement {
   altText: string;
@@ -8,35 +8,36 @@ export interface ToastActionElement {
   children: React.ReactNode;
 }
 
-export type ToastProps = React.ComponentPropsWithoutRef<typeof sonnerToast> & {
+export type ToastProps = {
   id?: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
   variant?: "default" | "destructive";
+  duration?: number;
 }
 
 export function useToast() {
-  const { toasts } = useToaster()
-  
+  // Since sonner doesn't export useToaster, we need to use the toast API directly
   const toast = ({ 
     title, 
     description, 
     variant = "default", 
+    duration = 5000,
     ...props 
   }: ToastProps) => {
     return sonnerToast[variant === "destructive" ? "error" : "success"](
       title,
       {
         description,
+        duration,
         ...props,
       }
-    )
-  }
+    );
+  };
 
   return {
     toast,
-    toasts,
     dismiss: sonnerToast.dismiss,
-  }
+  };
 }
