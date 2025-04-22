@@ -5,11 +5,11 @@ import TaskCard from '../components/TaskCard';
 import TaskEditor from '../components/TaskEditor';
 import TasksHeader from '../components/task/TasksHeader';
 import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
-import { 
-  fetchTasks, 
-  Task, 
-  saveTask, 
-  updateTaskCompletion, 
+import {
+  fetchTasks,
+  Task,
+  saveTask,
+  updateTaskCompletion,
   deleteTask,
   getLocalDateString,
   wasCompletedToday
@@ -27,11 +27,16 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
 
-  const { data: tasks = [], isLoading, error } = useQuery({
+  const {
+    data: tasks = [],
+    isLoading,
+    isFetching,
+    error,
+  } = useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
-    staleTime: 10000,
-    refetchOnMount: true,
+    staleTime: 1000 * 60 * 20,
+    gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: true
   });
 
@@ -201,10 +206,8 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
   return (
     <div className="p-4 pt-6">
       <TasksHeader />
-      
-      {isLoading ? (
-        <div className="text-white">Loading tasks...</div>
-      ) : tasks.length === 0 ? (
+
+      {tasks.length === 0 && !isFetching ? (
         <div className="text-center py-10">
           <p className="text-light-navy mb-4">No tasks found. Create your first task to get started!</p>
         </div>
@@ -254,20 +257,16 @@ const TasksContent: React.FC<TasksContentProps> = ({ isEditorOpen, setIsEditorOp
 };
 
 const Tasks: React.FC = () => {
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  
+  const [isEditorOpen, setIsEditorOpen] = React.useState(false);
+
   const handleNewTask = () => {
-    console.log("Parent component triggering new task");
     setIsEditorOpen(true);
   };
-  
+
   return (
     <AppLayout onAddNewItem={handleNewTask}>
       <RewardsProvider>
-        <TasksContent 
-          isEditorOpen={isEditorOpen}
-          setIsEditorOpen={setIsEditorOpen}
-        />
+        <TasksContent isEditorOpen={isEditorOpen} setIsEditorOpen={setIsEditorOpen} />
       </RewardsProvider>
     </AppLayout>
   );

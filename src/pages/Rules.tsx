@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Check, Plus, Loader2 } from 'lucide-react';
+import { Edit, Check } from 'lucide-react';
 import FrequencyTracker from '../components/task/FrequencyTracker';
 import PriorityBadge from '../components/task/PriorityBadge';
 import { useNavigate } from 'react-router-dom';
@@ -13,112 +14,55 @@ import HighlightedText from '../components/task/HighlightedText';
 import RulesHeader from '../components/rule/RulesHeader';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { getMondayBasedDay } from '@/lib/utils';
-import { useQueryClient } from '@tanstack/react-query';
-
-interface Rule {
-  id: string;
-  title: string;
-  description: string | null;
-  priority: 'low' | 'medium' | 'high';
-  background_image_url?: string | null;
-  background_opacity: number;
-  icon_url?: string | null;
-  icon_name?: string | null;
-  title_color: string;
-  subtext_color: string;
-  calendar_color: string;
-  icon_color: string;
-  highlight_effect: boolean;
-  focal_point_x: number;
-  focal_point_y: number;
-  frequency: 'daily' | 'weekly';
-  frequency_count: number;
-  usage_data: number[];
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string;
-}
+import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { fetchRules } from '@/data/rules/fetchRules';
 
 const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [currentRule, setCurrentRule] = useState<Rule | null>(null);
-  const [rules, setRules] = useState<Rule[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [currentRule, setCurrentRule] = useState(null);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchRules = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('rules')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          throw error;
-        }
-        
-        const rulesWithUsageData = (data as Rule[] || []).map(rule => {
-          if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
-            return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
-          }
-          return rule;
-        });
-        
-        setRules(rulesWithUsageData);
-      } catch (err) {
-        console.error('Error fetching rules:', err);
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch rules. Please try again.',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchRules();
-    
-    const intervalId = setInterval(() => {
-      fetchRules();
-    }, 30000); // Refresh every 30 seconds
-    
-    return () => clearInterval(intervalId);
-  }, []);
+  // Use react-query to fetch rules with caching and background refreshing
+  const {
+    data: rules = [],
+    isLoading,
+    isFetching,
+    error,
+  } = useQuery({
+    queryKey: ['rules'],
+    queryFn: fetchRules,
+    staleTime: 1000 * 60 * 20, // 20 minutes cache
+    refetchOnWindowFocus: true,
+    refetchInterval: 30000,  // Refresh every 30s in background
+  });
 
   const handleAddRule = () => {
     setCurrentRule(null);
     setIsEditorOpen(true);
   };
 
-  const handleEditRule = (rule: Rule) => {
+  const handleEditRule = (rule) => {
     setCurrentRule(rule);
     setIsEditorOpen(true);
   };
 
-  const handleRuleBroken = async (rule: Rule) => {
+  const handleRuleBroken = async (rule) => {
     try {
       const currentDayOfWeek = getMondayBasedDay();
-      
       const newUsageData = [...(rule.usage_data || [0, 0, 0, 0, 0, 0, 0])];
       newUsageData[currentDayOfWeek] = 1;
-      
+
       const { data, error } = await supabase
         .from('rules')
-        .update({
-          usage_data: newUsageData,
-          updated_at: new Date().toISOString()
-        })
+        .update({ usage_data: newUsageData, updated_at: new Date().toISOString() })
         .eq('id', rule.id)
         .select();
-        
+
       if (error) throw error;
-      
+
       const today = new Date();
       const jsDayOfWeek = today.getDay();
-      
       const { error: violationError } = await supabase
         .from('rule_violations')
         .insert({
@@ -127,7 +71,7 @@ const Rules: React.FC = () => {
           day_of_week: jsDayOfWeek,
           week_number: `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`
         });
-        
+
       if (violationError) {
         console.error('Error recording rule violation:', violationError);
         toast({
@@ -135,21 +79,14 @@ const Rules: React.FC = () => {
           description: 'Rule marked as broken, but analytics may not be updated.',
           variant: 'destructive',
         });
-      } else {
-        console.log('Rule violation recorded successfully');
       }
-      
-      setRules(rules.map(r => 
-        r.id === rule.id ? { ...r, usage_data: newUsageData } : r
-      ));
-      
-      toast({
-        title: 'Rule Broken',
-        description: 'This violation has been recorded.',
-      });
-      
+
+      queryClient.setQueryData(['rules'], (oldRules = []) =>
+        oldRules.map(r => r.id === rule.id ? { ...r, usage_data: newUsageData } : r)
+      );
+
+      toast({ title: 'Rule Broken', description: 'This violation has been recorded.' });
       navigate('/punishments');
-      
     } catch (err) {
       console.error('Error updating rule:', err);
       toast({
@@ -160,13 +97,11 @@ const Rules: React.FC = () => {
     }
   };
 
-  const handleSaveRule = async (ruleData: Partial<Rule>) => {
+  const handleSaveRule = async (ruleData) => {
     try {
       let result;
-      
       if (ruleData.id) {
-        const existingRule = rules.find(rule => rule.id === ruleData.id);
-        
+        // update existing rule
         const { data, error } = await supabase
           .from('rules')
           .update({
@@ -191,27 +126,20 @@ const Rules: React.FC = () => {
           .eq('id', ruleData.id)
           .select()
           .single();
-          
+
         if (error) throw error;
         result = data;
-        
-        if (existingRule && existingRule.usage_data) {
-          result.usage_data = existingRule.usage_data;
-        }
-        
-        setRules(rules.map(rule => rule.id === ruleData.id ? { ...rule, ...result as Rule } : rule));
-        
-        toast({
-          title: 'Success',
-          description: 'Rule updated successfully!',
-        });
+
+        queryClient.setQueryData(['rules'], (oldRules = []) =>
+          oldRules.map(rule => (rule.id === ruleData.id ? { ...rule, ...result } : rule))
+        );
+
+        toast({ title: 'Success', description: 'Rule updated successfully!' });
       } else {
+        // create new rule
         const { id, ...ruleWithoutId } = ruleData;
-        
-        if (!ruleWithoutId.title) {
-          throw new Error('Rule title is required');
-        }
-        
+        if (!ruleWithoutId.title) throw new Error('Rule title is required');
+
         const newRule = {
           title: ruleWithoutId.title,
           priority: ruleWithoutId.priority || 'medium',
@@ -234,24 +162,19 @@ const Rules: React.FC = () => {
           updated_at: new Date().toISOString(),
           user_id: (await supabase.auth.getUser()).data.user?.id,
         };
-        
+
         const { data, error } = await supabase
           .from('rules')
           .insert(newRule)
           .select()
           .single();
-          
+
         if (error) throw error;
         result = data;
-        
-        setRules([result as Rule, ...rules]);
-        
-        toast({
-          title: 'Success',
-          description: 'Rule created successfully!',
-        });
+        queryClient.setQueryData(['rules'], (oldRules = []) => [result, ...oldRules]);
+
+        toast({ title: 'Success', description: 'Rule created successfully!' });
       }
-      
       setIsEditorOpen(false);
     } catch (err) {
       console.error('Error saving rule:', err);
@@ -263,22 +186,19 @@ const Rules: React.FC = () => {
     }
   };
 
-  const handleDeleteRule = async (ruleId: string) => {
+  const handleDeleteRule = async (ruleId) => {
     try {
       const { error } = await supabase
         .from('rules')
         .delete()
         .eq('id', ruleId);
-      
+
       if (error) throw error;
-      
-      setRules(rules.filter(rule => rule.id !== ruleId));
-      
-      toast({
-        title: 'Success',
-        description: 'Rule deleted successfully!',
-      });
-      
+
+      queryClient.setQueryData(['rules'], (oldRules = []) => oldRules.filter(r => r.id !== ruleId));
+
+      toast({ title: 'Success', description: 'Rule deleted successfully!' });
+
       setCurrentRule(null);
       setIsEditorOpen(false);
     } catch (err) {
@@ -296,12 +216,8 @@ const Rules: React.FC = () => {
       <RewardsProvider>
         <div className="container mx-auto px-4 py-6">
           <RulesHeader />
-          
-          {isLoading ? (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="w-10 h-10 text-white animate-spin" />
-            </div>
-          ) : rules.length === 0 ? (
+
+          {rules.length === 0 && !isFetching ? (
             <div className="text-center py-10">
               <p className="text-white mb-4">No rules found. Create your first rule!</p>
             </div>
@@ -310,7 +226,9 @@ const Rules: React.FC = () => {
               {rules.map((rule) => (
                 <Card 
                   key={rule.id}
-                  className={`bg-dark-navy border-2 ${rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'} overflow-hidden`}
+                  className={`bg-dark-navy border-2 ${
+                    rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'
+                  } overflow-hidden`}
                 >
                   <div className="relative p-4">
                     {rule.background_image_url && (
@@ -324,9 +242,9 @@ const Rules: React.FC = () => {
                         }}
                       />
                     )}
-                    
+
                     <div className="flex justify-between items-center mb-3 relative z-10">
-                      <PriorityBadge priority={rule.priority as 'low' | 'medium' | 'high'} />
+                      <PriorityBadge priority={rule.priority} />
                       <Button
                         variant="destructive"
                         size="sm"
@@ -336,7 +254,7 @@ const Rules: React.FC = () => {
                         Rule Broken
                       </Button>
                     </div>
-                    
+
                     <div className="mb-4 relative z-10">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
@@ -350,7 +268,7 @@ const Rules: React.FC = () => {
                               color={rule.title_color}
                             />
                           </div>
-                          
+
                           {rule.description && (
                             <div className="text-sm mt-1">
                               <HighlightedText
@@ -363,7 +281,7 @@ const Rules: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center justify-between mt-2 relative z-10">
                       <FrequencyTracker 
                         frequency={rule.frequency}
@@ -371,7 +289,7 @@ const Rules: React.FC = () => {
                         calendar_color={rule.calendar_color}
                         usage_data={rule.usage_data}
                       />
-                      
+
                       <Button 
                         size="sm" 
                         className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
@@ -386,7 +304,7 @@ const Rules: React.FC = () => {
             </div>
           )}
         </div>
-        
+
         <RuleEditor
           isOpen={isEditorOpen}
           onClose={() => {
