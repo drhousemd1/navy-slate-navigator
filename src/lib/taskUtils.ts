@@ -15,14 +15,14 @@ export interface Task {
   focal_point_y?: number;
   frequency: 'daily' | 'weekly';
   frequency_count: number;
-  usage_data?: number[];
+  usage_data: number[];
   icon_url?: string;
   icon_name?: string;
+  icon_color?: string;
   highlight_effect?: boolean;
   title_color?: string;
   subtext_color?: string;
   calendar_color?: string;
-  icon_color?: string;
   last_completed_date?: string;
   created_at?: string;
   updated_at?: string;
@@ -73,16 +73,25 @@ export const fetchTasks = async (): Promise<Task[]> => {
       return [];
     }
     
-    const processedTasks = (data as Task[]).map(task => {
-      if (!task.usage_data) {
-        task.usage_data = Array(7).fill(0);
+    const processedTasks = (data || []).map(processTaskFromDb);
+    
+    const tasksToReset = processedTasks.filter(task => 
+      task.completed && 
+      task.frequency === 'daily' && 
+      !wasCompletedToday(task)
+    );
+    
+    if (tasksToReset.length > 0) {
+      for (const task of tasksToReset) {
+        await supabase
+          .from('tasks')
+          .update({ completed: false })
+          .eq('id', task.id);
+          
+        // Update the local task object
+        task.completed = false;
       }
-      
-      if (task.completed && task.frequency === 'daily' && !wasCompletedToday(task)) {
-        return { ...task, completed: false };
-      }
-      return task;
-    });
+    }
     
     return processedTasks;
   } catch (err) {
@@ -94,6 +103,36 @@ export const fetchTasks = async (): Promise<Task[]> => {
     });
     return [];
   }
+};
+
+const processTaskFromDb = (task: any): Task => {
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    points: task.points,
+    priority: (task.priority as string || 'medium') as 'low' | 'medium' | 'high',
+    completed: task.completed,
+    background_image_url: task.background_image_url,
+    background_opacity: task.background_opacity,
+    focal_point_x: task.focal_point_x,
+    focal_point_y: task.focal_point_y,
+    frequency: (task.frequency as string || 'daily') as 'daily' | 'weekly',
+    frequency_count: task.frequency_count,
+    usage_data: Array.isArray(task.usage_data) ? 
+      task.usage_data.map((val: any) => Number(val)) : 
+      [0, 0, 0, 0, 0, 0, 0],
+    icon_url: task.icon_url,
+    icon_name: task.icon_name,
+    icon_color: task.icon_color,
+    highlight_effect: task.highlight_effect,
+    title_color: task.title_color,
+    subtext_color: task.subtext_color,
+    calendar_color: task.calendar_color,
+    last_completed_date: task.last_completed_date,
+    created_at: task.created_at,
+    updated_at: task.updated_at
+  };
 };
 
 export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {

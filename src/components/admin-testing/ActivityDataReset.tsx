@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -70,7 +71,7 @@ const ActivityDataReset: React.FC = () => {
         return;
       }
 
-      // Find the toast call and remove the duration property
+      // Removed the duration property from the toast call
       toast({
         title: 'Success',
         description: 'All activity data has been reset successfully',

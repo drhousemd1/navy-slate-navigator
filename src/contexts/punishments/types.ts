@@ -1,5 +1,7 @@
 
-export type PunishmentData = {
+import { RefetchOptions } from "@tanstack/react-query";
+
+export interface PunishmentData {
   id: string;
   title: string;
   description?: string;
@@ -17,32 +19,33 @@ export type PunishmentData = {
   usage_data?: number[];
   created_at?: string;
   updated_at?: string;
-};
+}
 
-export type PunishmentHistoryItem = {
+export interface PunishmentHistoryItem {
   id: string;
   punishment_id: string;
   applied_date: string;
   day_of_week: number;
   points_deducted: number;
-};
+}
 
 export interface PunishmentsContextType {
   punishments: PunishmentData[];
   punishmentHistory: PunishmentHistoryItem[];
   loading: boolean;
+  historyLoading?: boolean;
+  isSelectingRandom: boolean;
+  selectedPunishment: PunishmentData | null;
   error: Error | null;
-  isSelectingRandom?: boolean;
-  selectedPunishment?: PunishmentData | null;
-  fetchPunishments: () => Promise<void>;
-  createPunishment: (punishmentData: Partial<PunishmentData>) => Promise<string>;
-  updatePunishment: (id: string, punishmentData: Partial<PunishmentData>) => Promise<void>;
+  createPunishment: (punishment: Partial<PunishmentData>) => Promise<PunishmentData>;
+  updatePunishment: (id: string, punishment: Partial<PunishmentData>) => Promise<void>;
   deletePunishment: (id: string) => Promise<void>;
-  applyPunishment: (punishmentId: string, points: number) => Promise<void>;
+  applyPunishment: (punishment: PunishmentData) => Promise<void>;
+  selectRandomPunishment: () => void;
+  resetRandomSelection: () => void;
+  fetchPunishments: () => Promise<void>;
+  refetchPunishments: () => Promise<unknown>;
+  refetchHistory: (options?: RefetchOptions) => Promise<unknown>;
   getPunishmentHistory: (punishmentId: string) => PunishmentHistoryItem[];
   totalPointsDeducted: number;
-  selectRandomPunishment?: () => void;
-  resetRandomSelection?: () => void;
-  refetchPunishments?: () => Promise<any>;
-  refetchHistory?: () => Promise<any>;
 }

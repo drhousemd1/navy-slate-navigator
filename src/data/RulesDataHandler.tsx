@@ -7,7 +7,7 @@ import { getMondayBasedDay } from '@/lib/utils';
 export interface Rule {
   id: string;
   title: string;
-  description: string | null;
+  description?: string | null;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
   background_opacity: number;
@@ -37,7 +37,7 @@ const convertDbRuleToRuleInterface = (rule: any): Rule => {
     id: rule.id,
     title: rule.title,
     description: rule.description,
-    priority: rule.priority as 'low' | 'medium' | 'high',
+    priority: (rule.priority as string || 'medium') as 'low' | 'medium' | 'high',
     background_image_url: rule.background_image_url,
     background_opacity: rule.background_opacity,
     icon_url: rule.icon_url,
@@ -49,9 +49,11 @@ const convertDbRuleToRuleInterface = (rule: any): Rule => {
     highlight_effect: rule.highlight_effect,
     focal_point_x: rule.focal_point_x,
     focal_point_y: rule.focal_point_y,
-    frequency: rule.frequency as 'daily' | 'weekly',
+    frequency: (rule.frequency as string || 'daily') as 'daily' | 'weekly',
     frequency_count: rule.frequency_count,
-    usage_data: Array.isArray(rule.usage_data) ? rule.usage_data : [0, 0, 0, 0, 0, 0, 0],
+    usage_data: Array.isArray(rule.usage_data) ? 
+      rule.usage_data.map((val: any) => Number(val)) : 
+      [0, 0, 0, 0, 0, 0, 0],
     created_at: rule.created_at,
     updated_at: rule.updated_at,
     user_id: rule.user_id
@@ -70,14 +72,7 @@ const fetchRules = async (): Promise<Rule[]> => {
     throw error;
   }
   
-  const rulesWithUsageData = (data as Rule[] || []).map(rule => {
-    if (!rule.usage_data || !Array.isArray(rule.usage_data) || rule.usage_data.length !== 7) {
-      return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
-    }
-    return rule;
-  });
-  
-  return rulesWithUsageData;
+  return (data || []).map(convertDbRuleToRuleInterface);
 };
 
 // Save a rule to the database
@@ -114,7 +109,7 @@ const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
       throw error;
     }
     
-    return data;
+    return convertDbRuleToRuleInterface(data);
   } else {
     // Create new rule
     const { id, ...ruleWithoutId } = ruleData;
@@ -157,7 +152,7 @@ const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
       throw error;
     }
     
-    return data;
+    return convertDbRuleToRuleInterface(data);
   }
 };
 
@@ -278,6 +273,10 @@ export const useRulesData = () => {
           frequency: newRule.frequency || 'daily',
           frequency_count: newRule.frequency_count || 3,
           usage_data: [0, 0, 0, 0, 0, 0, 0],
+          ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
+          ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
+          ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
+          ...(ruleWithoutId.icon_name && { icon_name: ruleWithoutId.icon_name }),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };

@@ -2,8 +2,6 @@
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { persistQueryClient } from '@tanstack/react-query-persist-client';
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -76,18 +74,6 @@ const queryClient = new QueryClient({
       retry: 1,
     },
   },
-});
-
-// Set up localStorage persistence for TanStack Query
-const localStoragePersister = createSyncStoragePersister({
-  storage: window.localStorage,
-});
-
-// Persist the query client to localStorage
-persistQueryClient({
-  queryClient,
-  persister: localStoragePersister,
-  maxAge: 1000 * 60 * 20, // 20 minutes
 });
 
 // Configure routes with proper nesting to ensure context is available
