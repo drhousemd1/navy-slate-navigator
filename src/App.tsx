@@ -86,36 +86,8 @@ const queryClient = new QueryClient({
   },
 });
 
-// Configure routes with proper nesting to ensure context is available
-const AppRoutes = () => {
-  // Add debugging for routing using standard React hooks
-  React.useEffect(() => {
-    console.log('AppRoutes component initialized. Routes ready to be matched.');
-  }, []);
-
-  return (
-    <Routes>
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/reset-password-view" element={<ResetPasswordView />} />
-      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-      <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
-      <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-      <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
-      <Route path="/punishments" element={<ProtectedRoute><Punishments /></ProtectedRoute>} />
-      <Route path="/throne-room" element={<ProtectedRoute><ThroneRoom /></ProtectedRoute>} />
-      <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-      <Route path="/admin-testing" element={<AdminRoute><AdminTesting /></AdminRoute>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
-};
-
-// Main App component
+// Main App component with proper nesting of providers
 const App = () => {
-  // Use proper React hooks inside the component function
   React.useEffect(() => {
     console.log('App component initialized. React Router ready.');
   }, []);
@@ -125,7 +97,22 @@ const App = () => {
       <BrowserRouter>
         <AuthProvider>
           <Toaster />
-          <AppRoutes />
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/reset-password-view" element={<ResetPasswordView />} />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
+            <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
+            <Route path="/punishments" element={<ProtectedRoute><Punishments /></ProtectedRoute>} />
+            <Route path="/throne-room" element={<ProtectedRoute><ThroneRoom /></ProtectedRoute>} />
+            <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="/admin-testing" element={<AdminRoute><AdminTesting /></AdminRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
