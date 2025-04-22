@@ -29,7 +29,6 @@ export interface PunishmentsContextType {
   punishmentHistory: PunishmentHistoryItem[];
   loading: boolean;
   error: Error | null;
-  expectedCardCount: number;
   fetchPunishments: () => Promise<void>;
   createPunishment: (punishmentData: PunishmentData) => Promise<string>;
   updatePunishment: (id: string, punishmentData: PunishmentData) => Promise<void>;

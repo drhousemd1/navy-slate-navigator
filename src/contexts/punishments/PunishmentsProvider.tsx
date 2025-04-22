@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { PunishmentsContextType } from './types';
 import { usePunishmentOperations } from './usePunishmentOperations';
 
@@ -7,15 +7,10 @@ const PunishmentsContext = createContext<PunishmentsContextType | undefined>(und
 
 export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const operations = usePunishmentOperations();
-  const [initialLoadAttempted, setInitialLoadAttempted] = useState(false);
   
   useEffect(() => {
-    // Only attempt to fetch on first mount, don't refetch on rerenders
-    if (!initialLoadAttempted) {
-      operations.fetchPunishments();
-      setInitialLoadAttempted(true);
-    }
-  }, [initialLoadAttempted]);
+    operations.fetchPunishments();
+  }, []);
 
   return (
     <PunishmentsContext.Provider value={operations}>
