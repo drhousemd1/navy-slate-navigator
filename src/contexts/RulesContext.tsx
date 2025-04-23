@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule';
 import { useRulesData } from '@/data/hooks/useRulesData';
@@ -13,7 +13,7 @@ interface RulesContextType {
   saveRule: (ruleData: Partial<Rule>) => Promise<Rule>;
   deleteRule: (ruleId: string) => Promise<boolean>;
   markRuleBroken: (rule: Rule) => Promise<void>;
-  refetchRules: () => Promise<void>;
+  refetchRules: () => Promise<QueryObserverResult<Rule[], Error>>;
 }
 
 const RulesContext = createContext<RulesContextType | undefined>(undefined);
