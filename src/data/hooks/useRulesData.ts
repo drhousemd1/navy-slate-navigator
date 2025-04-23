@@ -25,7 +25,8 @@ export const useRulesData = () => {
     queryFn: fetchRules,
     staleTime: 1000 * 60 * 20, // 20 minutes
     gcTime: 1000 * 60 * 30, // 30 minutes
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: true,
+    refetchInterval: 30000,
   });
 
   // Mutation for saving a rule (create or update)
@@ -89,6 +90,12 @@ export const useRulesData = () => {
         queryClient.setQueryData(RULES_QUERY_KEY, context.previousRules);
       }
     },
+    onSuccess: (savedRule) => {
+      toast({
+        title: 'Success',
+        description: `Rule ${savedRule.id ? 'updated' : 'created'} successfully!`,
+      });
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
     }
@@ -119,6 +126,12 @@ export const useRulesData = () => {
       if (context) {
         queryClient.setQueryData(RULES_QUERY_KEY, context.previousRules);
       }
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Rule deleted successfully!',
+      });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
@@ -157,6 +170,12 @@ export const useRulesData = () => {
       if (context) {
         queryClient.setQueryData(RULES_QUERY_KEY, context.previousRules);
       }
+    },
+    onSuccess: () => {
+      toast({ 
+        title: 'Rule Broken', 
+        description: 'This violation has been recorded.' 
+      });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
