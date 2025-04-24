@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -32,51 +31,6 @@ const PunishmentsContent: React.FC = () => {
       }
     };
   }, []);
-
-  useEffect(() => {
-    const initSamplePunishments = async () => {
-      if (!loading && punishments.length === 0 && !initializing) {
-        setInitializing(true);
-
-        const samplePunishments = [
-          {
-            title: "Late to Meeting",
-            description: "Being late to scheduled meetings",
-            points: 10,
-            icon_name: "Clock",
-            icon_color: "#ea384c"
-          },
-          {
-            title: "Missed Deadline",
-            description: "Missing agreed upon deadlines",
-            points: 15,
-            icon_name: "Bomb",
-            icon_color: "#f97316"
-          },
-          {
-            title: "Breaking Rules",
-            description: "Violation of established rules",
-            points: 20,
-            icon_name: "Skull",
-            icon_color: "#7c3aed"
-          }
-        ];
-
-        try {
-          for (const punishment of samplePunishments) {
-            await createPunishment(punishment);
-          }
-          console.log("Sample punishments created successfully");
-        } catch (error) {
-          console.error("Error creating sample punishments:", error);
-        } finally {
-          setInitializing(false);
-        }
-      }
-    };
-
-    initSamplePunishments();
-  }, [loading, punishments.length, createPunishment, initializing]);
 
   return (
     <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
@@ -154,4 +108,3 @@ const Punishments: React.FC = () => {
 };
 
 export default Punishments;
-
