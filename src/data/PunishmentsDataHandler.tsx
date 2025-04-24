@@ -1,67 +1,45 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 
-// Keys for queries
 const PUNISHMENTS_QUERY_KEY = ['punishments'];
 const PUNISHMENT_HISTORY_QUERY_KEY = ['punishment-history'];
 
-// Separate function to fetch only punishments data
-const fetchPunishments = async () => {
-  const { data, error } = await supabase
-    .from('punishments')
-    .select('*')
-    .order('created_at', { ascending: false });
+// Fetch punishments with joined history data
+const fetchPunishmentsWithHistory = async () => {
+  const [punishmentsResult, historyResult] = await Promise.all([
+    supabase.from('punishments').select('*').order('created_at', { ascending: false }),
+    supabase.from('punishment_history').select('*').order('applied_date', { ascending: false })
+  ]);
 
-  if (error) throw error;
-  return data || [];
-};
+  if (punishmentsResult.error) throw punishmentsResult.error;
+  if (historyResult.error) throw historyResult.error;
 
-// Separate function to fetch only history data
-const fetchPunishmentHistory = async () => {
-  const { data, error } = await supabase
-    .from('punishment_history')
-    .select('*')
-    .order('applied_date', { ascending: false });
-
-  if (error) throw error;
-  return data || [];
+  return {
+    punishments: punishmentsResult.data || [],
+    history: historyResult.data || []
+  };
 };
 
 export const usePunishmentsData = () => {
   const queryClient = useQueryClient();
 
-  // Optimized punishments query with increased stale time
+  // Optimized query with caching and background updates
   const {
-    data: punishments = [],
-    isLoading: punishmentsLoading,
-    error: punishmentsError,
-    refetch: refetchPunishments
+    data = { punishments: [], history: [] },
+    isLoading: loading,
+    error
   } = useQuery({
     queryKey: PUNISHMENTS_QUERY_KEY,
-    queryFn: fetchPunishments,
-    staleTime: 1000 * 60 * 20, // 20 minutes - match rewards page
-    gcTime: 1000 * 60 * 30,    // 30 minutes
+    queryFn: fetchPunishmentsWithHistory,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30,   // 30 minutes
     refetchOnWindowFocus: false,
+    refetchInterval: false
   });
 
-  // Separate history query
-  const {
-    data: history = [],
-    isLoading: historyLoading,
-    error: historyError,
-    refetch: refetchHistory
-  } = useQuery({
-    queryKey: PUNISHMENT_HISTORY_QUERY_KEY,
-    queryFn: fetchPunishmentHistory,
-    staleTime: 1000 * 60 * 20, // 20 minutes - match rewards page
-    gcTime: 1000 * 60 * 30,    // 30 minutes
-    refetchOnWindowFocus: false,
-  });
-
-  // Create punishment with optimistic update
+  // Create punishment with optimistic update - FIX: Ensure title is required
   const createPunishmentMutation = useMutation({
     mutationFn: async (newPunishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => {
       const { data, error } = await supabase
@@ -75,22 +53,25 @@ export const usePunishmentsData = () => {
     },
     onMutate: async (newPunishment) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      const previousPunishments = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
+      const previousData = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
       
-      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, (old: any) => [
-        {
-          ...newPunishment,
-          id: 'temp-' + Date.now(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        ...(old || [])
-      ]);
+      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, (old: any) => ({
+        ...old,
+        punishments: [
+          {
+            ...newPunishment,
+            id: 'temp-' + Date.now(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          ...(old?.punishments || [])
+        ]
+      }));
       
-      return { previousPunishments };
+      return { previousData };
     },
     onError: (err, _, context) => {
-      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousPunishments);
+      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousData);
       toast({
         title: "Error",
         description: "Failed to create punishment",
@@ -123,18 +104,19 @@ export const usePunishmentsData = () => {
     },
     onMutate: async ({ id, punishment }) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      const previousPunishments = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
+      const previousData = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
       
-      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, (old: any) => 
-        old.map((p: PunishmentData) =>
+      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, (old: any) => ({
+        ...old,
+        punishments: old.punishments.map((p: PunishmentData) =>
           p.id === id ? { ...p, ...punishment, updated_at: new Date().toISOString() } : p
         )
-      );
+      }));
       
-      return { previousPunishments };
+      return { previousData };
     },
     onError: (err, _, context) => {
-      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousPunishments);
+      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousData);
       toast({
         title: "Error",
         description: "Failed to update punishment",
@@ -149,7 +131,7 @@ export const usePunishmentsData = () => {
     }
   });
 
-  // Apply punishment with optimistic update
+  // Apply punishment with optimistic update - FIX: Return void instead of the data
   const applyPunishmentMutation = useMutation({
     mutationFn: async (punishment: { id: string; points: number }) => {
       const historyEntry = {
@@ -167,8 +149,8 @@ export const usePunishmentsData = () => {
       if (error) throw error;
     },
     onMutate: async (punishment) => {
-      await queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
-      const previousHistory = queryClient.getQueryData(PUNISHMENT_HISTORY_QUERY_KEY);
+      await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+      const previousData = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
       
       const newHistoryEntry = {
         id: 'temp-' + Date.now(),
@@ -178,14 +160,15 @@ export const usePunishmentsData = () => {
         applied_date: new Date().toISOString()
       };
 
-      queryClient.setQueryData(PUNISHMENT_HISTORY_QUERY_KEY, (old: any) => 
-        [newHistoryEntry, ...(old || [])]
-      );
+      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, (old: any) => ({
+        ...old,
+        history: [newHistoryEntry, ...(old?.history || [])]
+      }));
       
-      return { previousHistory };
+      return { previousData };
     },
     onError: (err, _, context) => {
-      queryClient.setQueryData(PUNISHMENT_HISTORY_QUERY_KEY, context?.previousHistory);
+      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousData);
       toast({
         title: "Error",
         description: "Failed to apply punishment",
@@ -200,6 +183,7 @@ export const usePunishmentsData = () => {
     }
   });
 
+  // FIX: Change return type to void to match PunishmentsContextType
   const deletePunishmentMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -211,16 +195,18 @@ export const usePunishmentsData = () => {
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      const previousPunishments = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
+      const previousData = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
       
-      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, (old: any) => 
-        old.filter((p: PunishmentData) => p.id !== id)
-      );
+      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, (old: any) => ({
+        ...old,
+        punishments: old.punishments.filter((p: PunishmentData) => p.id !== id),
+        history: old.history.filter((h: PunishmentHistoryItem) => h.punishment_id !== id)
+      }));
       
-      return { previousPunishments };
+      return { previousData };
     },
     onError: (err, _, context) => {
-      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousPunishments);
+      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousData);
       toast({
         title: "Error",
         description: "Failed to delete punishment",
@@ -236,21 +222,14 @@ export const usePunishmentsData = () => {
   });
 
   const getPunishmentHistory = (punishmentId: string): PunishmentHistoryItem[] => {
-    return history.filter(item => item.punishment_id === punishmentId);
-  };
-
-  // Return a proper async refetch function
-  const refetchPunishmentsData = async () => {
-    queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-    queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
-    return await refetchPunishments();
+    return data.history.filter(item => item.punishment_id === punishmentId);
   };
 
   return {
-    punishments,
-    punishmentHistory: history,
-    loading: punishmentsLoading || historyLoading,
-    error: punishmentsError || historyError,
+    punishments: data.punishments,
+    punishmentHistory: data.history,
+    loading,
+    error: error as Error | null,
     isSelectingRandom: false,
     selectedPunishment: null,
     createPunishment: createPunishmentMutation.mutateAsync,
@@ -260,10 +239,10 @@ export const usePunishmentsData = () => {
     applyPunishment: applyPunishmentMutation.mutateAsync,
     selectRandomPunishment: () => {},
     resetRandomSelection: () => {},
-    fetchPunishments: refetchPunishmentsData,
-    refetchPunishments: refetchPunishmentsData,
-    refetchHistory: () => refetchHistory(),
+    fetchPunishments: () => queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
+    refetchPunishments: () => queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
+    refetchHistory: () => queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY }),
     getPunishmentHistory,
-    totalPointsDeducted: history.reduce((total, item) => total + (item.points_deducted || 0), 0)
+    totalPointsDeducted: data.history.reduce((total, item) => total + item.points_deducted, 0)
   };
 };

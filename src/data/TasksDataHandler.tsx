@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
@@ -6,16 +7,7 @@ import { getMondayBasedDay } from '@/lib/utils';
 
 const TASKS_QUERY_KEY = ['tasks'];
 const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
-
-const fetchTaskCompletions = async () => {
-  const { data, error } = await supabase
-    .from('task_completion_history')
-    .select('*')
-    .order('completed_at', { ascending: false });
-
-  if (error) throw error;
-  return data || [];
-};
+const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
 
 const fetchTasks = async (): Promise<Task[]> => {
   const { data, error } = await supabase
@@ -76,6 +68,7 @@ const fetchTasks = async (): Promise<Task[]> => {
         .eq('id', update.id);
     }
 
+    // Update tasks in memory rather than refetching
     return tasks.map(task => {
       if (tasksToReset.some(resetTask => resetTask.id === task.id)) {
         return { ...task, completed: false };
@@ -92,27 +85,13 @@ export const useTasksData = () => {
 
   const {
     data: tasks = [],
-    isLoading: tasksLoading,
-    error: tasksError,
-    refetch: refetchTasksQuery
+    isLoading,
+    error,
+    refetch
   } = useQuery({
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
-    staleTime: 1000 * 60 * 20,
-    gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: false,
-    refetchInterval: false
-  });
-
-  const {
-    data: taskCompletions = [],
-    isLoading: completionsLoading,
-    error: completionsError,
-    refetch: refetchCompletions
-  } = useQuery({
-    queryKey: TASK_COMPLETIONS_QUERY_KEY,
-    queryFn: fetchTaskCompletions,
-    staleTime: 1000 * 60 * 20,
+    staleTime: 1000 * 60 * 5, // 5 minutes, increase from the current setting
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
     refetchInterval: false
@@ -120,6 +99,7 @@ export const useTasksData = () => {
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
+      // Optimistic update
       let optimisticTask: Task;
       
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
@@ -127,6 +107,7 @@ export const useTasksData = () => {
       const previousTasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY) || [];
       
       if (taskData.id) {
+        // Update existing task
         optimisticTask = {
           ...previousTasks.find(t => t.id === taskData.id)!,
           ...taskData,
@@ -165,12 +146,14 @@ export const useTasksData = () => {
           .single();
 
         if (error) {
+          // Revert optimistic update on error
           queryClient.setQueryData(TASKS_QUERY_KEY, previousTasks);
           throw error;
         }
 
         return data as Task;
       } else {
+        // Create new task
         const tempId = `temp-${Date.now()}`;
         optimisticTask = {
           id: tempId,
@@ -226,10 +209,12 @@ export const useTasksData = () => {
           .single();
 
         if (error) {
+          // Revert optimistic update on error
           queryClient.setQueryData(TASKS_QUERY_KEY, previousTasks);
           throw error;
         }
 
+        // Update cache with the real task (replacing the optimistic one)
         queryClient.setQueryData<Task[]>(
           TASKS_QUERY_KEY, 
           previousTasks.concat([data as Task]).filter(t => t.id !== tempId)
@@ -250,6 +235,7 @@ export const useTasksData = () => {
 
   const deleteTask = async (taskId: string): Promise<boolean> => {
     try {
+      // Optimistic update
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
       
       const previousTasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY) || [];
@@ -265,6 +251,7 @@ export const useTasksData = () => {
         .eq('id', taskId);
 
       if (error) {
+        // Revert optimistic update
         queryClient.setQueryData(TASKS_QUERY_KEY, previousTasks);
         throw error;
       }
@@ -289,6 +276,7 @@ export const useTasksData = () => {
         throw new Error('Task not found');
       }
       
+      // Optimistic update
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
       
       const previousTasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY) || [];
@@ -302,6 +290,7 @@ export const useTasksData = () => {
       
       const isFullyCompleted = usageData[dayOfWeek] >= (task.frequency_count || 1);
       
+      // Apply optimistic update
       queryClient.setQueryData<Task[]>(
         TASKS_QUERY_KEY,
         previousTasks.map(t => {
@@ -317,6 +306,7 @@ export const useTasksData = () => {
         })
       );
       
+      // Perform actual update
       const { error } = await supabase
         .from('tasks')
         .update({ 
@@ -327,16 +317,19 @@ export const useTasksData = () => {
         .eq('id', taskId);
 
       if (error) {
+        // Revert optimistic update
         queryClient.setQueryData(TASKS_QUERY_KEY, previousTasks);
         throw error;
       }
 
+      // Update points if the task was completed
       if (completed) {
         const taskPoints = task.points || 0;
         const { data: authData } = await supabase.auth.getUser();
         const userId = authData.user?.id;
         
         if (userId) {
+          // Log the completion to history
           await supabase
             .from('task_completion_history')
             .insert({
@@ -345,6 +338,7 @@ export const useTasksData = () => {
               user_id: userId
             });
           
+          // Update points in profile if user is authenticated
           const { data: profileData } = await supabase
             .from('profiles')
             .select('points')
@@ -359,16 +353,19 @@ export const useTasksData = () => {
             .update({ points: newPoints })
             .eq('id', userId);
           
+          // Notify user about points earned
           toast({
             title: 'Points Earned',
             description: `You earned ${taskPoints} points!`,
             variant: 'default',
           });
           
+          // Invalidate related queries
           queryClient.invalidateQueries({ queryKey: ['user-points'] });
         }
       }
 
+      // Always invalidate metrics when task completion changes
       queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: TASK_COMPLETIONS_QUERY_KEY });
       
@@ -387,15 +384,13 @@ export const useTasksData = () => {
   const refetchTasks = async (
     options?: RefetchOptions
   ): Promise<QueryObserverResult<Task[], Error>> => {
-    queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-    queryClient.invalidateQueries({ queryKey: TASK_COMPLETIONS_QUERY_KEY });
-    return await refetchTasksQuery(options);
+    return refetch(options);
   };
 
   return {
     tasks,
-    isLoading: tasksLoading || completionsLoading,
-    error: tasksError || completionsError,
+    isLoading,
+    error,
     saveTask,
     deleteTask,
     toggleTaskCompletion,
