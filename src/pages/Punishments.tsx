@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -11,7 +12,6 @@ const PunishmentsContent: React.FC = () => {
   const { punishments, loading, createPunishment, updatePunishment } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState(undefined);
-  const [initializing, setInitializing] = useState(false);
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -61,8 +61,6 @@ const PunishmentsContent: React.FC = () => {
               background_opacity={punishment.background_opacity}
               focal_point_x={punishment.focal_point_x}
               focal_point_y={punishment.focal_point_y}
-              // onEdit prop REMOVED because PunishmentCardProps does not support it
-              // Instead, you could implement an edit handler onCardClick or similar if supported
             />
           ))}
         </div>
