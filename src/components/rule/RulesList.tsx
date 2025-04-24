@@ -2,7 +2,6 @@
 import React from 'react';
 import RuleCard from './RuleCard';
 import { Rule } from '@/data/interfaces/Rule';
-import { Skeleton } from '../ui/skeleton';
 
 interface RulesListProps {
   rules: Rule[];
@@ -17,19 +16,15 @@ const RulesList: React.FC<RulesListProps> = ({
   onEditRule,
   onRuleBroken 
 }) => {
-  const existingRules = rules.length > 0;
-
-  if (isLoading && !existingRules) {
+  if (isLoading && rules.length === 0) {
     return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-[200px] w-full bg-gray-800/50" />
-        ))}
+      <div className="text-center py-10">
+        <p className="text-white mb-4">Loading rules...</p>
       </div>
     );
   }
 
-  if (!isLoading && !existingRules) {
+  if (rules.length === 0) {
     return (
       <div className="text-center py-10">
         <p className="text-white mb-4">No rules found. Create your first rule!</p>

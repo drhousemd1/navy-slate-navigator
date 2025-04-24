@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -39,9 +40,9 @@ export const usePunishmentsData = () => {
     refetchInterval: false
   });
 
-  // Create punishment with optimistic update - FIX: Ensure title is required
+  // Create punishment with optimistic update
   const createPunishmentMutation = useMutation({
-    mutationFn: async (newPunishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => {
+    mutationFn: async (newPunishment: Partial<PunishmentData>) => {
       const { data, error } = await supabase
         .from('punishments')
         .insert(newPunishment)
@@ -131,7 +132,7 @@ export const usePunishmentsData = () => {
     }
   });
 
-  // Apply punishment with optimistic update - FIX: Return void instead of the data
+  // Apply punishment with optimistic update
   const applyPunishmentMutation = useMutation({
     mutationFn: async (punishment: { id: string; points: number }) => {
       const historyEntry = {
@@ -147,6 +148,7 @@ export const usePunishmentsData = () => {
         .single();
 
       if (error) throw error;
+      return data;
     },
     onMutate: async (punishment) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
@@ -183,7 +185,6 @@ export const usePunishmentsData = () => {
     }
   });
 
-  // FIX: Change return type to void to match PunishmentsContextType
   const deletePunishmentMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -192,6 +193,7 @@ export const usePunishmentsData = () => {
         .eq('id', id);
 
       if (error) throw error;
+      return id;
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });

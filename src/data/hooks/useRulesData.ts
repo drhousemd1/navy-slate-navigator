@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule';
@@ -6,52 +7,26 @@ import { saveRuleToDb } from '@/data/rules/saveRule';
 import { deleteRuleFromDb } from '@/data/rules/deleteRule';
 import { recordRuleViolationInDb } from '@/data/rules/recordViolation';
 import { getMondayBasedDay } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 
 // Keys for queries
-const RULES_QUERY_KEY = ['rules'] as const;
-const RULE_VIOLATIONS_QUERY_KEY = ['rule-violations'] as const;
-
-// Fetch violations separately to avoid refetching everything
-const fetchRuleViolations = async () => {
-  const { data: violations, error } = await supabase
-    .from('rule_violations')
-    .select('*')
-    .order('violation_date', { ascending: false });
-
-  if (error) throw error;
-  return violations || [];
-};
+const RULES_QUERY_KEY = ['rules'];
 
 export const useRulesData = () => {
   const queryClient = useQueryClient();
 
-  // Main rules query with aggressive caching
+  // Query for fetching all rules
   const {
     data: rules = [],
-    isLoading: rulesLoading,
-    error: rulesError,
-    refetch: refetchRulesQuery
+    isLoading,
+    error,
+    refetch: refetchRules
   } = useQuery({
     queryKey: RULES_QUERY_KEY,
     queryFn: fetchRules,
     staleTime: 1000 * 60 * 20, // 20 minutes
-    gcTime: 1000 * 60 * 30,    // 30 minutes
-    refetchOnWindowFocus: false,
-  });
-
-  // Separate query for violations with its own caching strategy
-  const {
-    data: violations = [],
-    isLoading: violationsLoading,
-    error: violationsError,
-    refetch: refetchViolationsQuery
-  } = useQuery({
-    queryKey: RULE_VIOLATIONS_QUERY_KEY,
-    queryFn: fetchRuleViolations,
-    staleTime: 1000 * 60 * 20, // 20 minutes
-    gcTime: 1000 * 60 * 30,    // 30 minutes
-    refetchOnWindowFocus: false,
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    refetchOnWindowFocus: true,
+    refetchInterval: 30000,
   });
 
   // Mutation for saving a rule (create or update)
@@ -207,17 +182,10 @@ export const useRulesData = () => {
     }
   });
 
-  // Return a proper Promise for refetchRules
-  const refetchRules = async () => {
-    queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
-    queryClient.invalidateQueries({ queryKey: RULE_VIOLATIONS_QUERY_KEY });
-    return await refetchRulesQuery();
-  };
-
   return {
     rules,
-    isLoading: rulesLoading || violationsLoading,
-    error: rulesError || violationsError,
+    isLoading,
+    error,
     saveRule: (ruleData: Partial<Rule>) => saveRuleMutation.mutateAsync(ruleData),
     deleteRule: (ruleId: string) => deleteRuleMutation.mutateAsync(ruleId),
     markRuleBroken: (rule: Rule) => markRuleBrokenMutation.mutateAsync(rule),

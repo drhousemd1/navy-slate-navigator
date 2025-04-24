@@ -1,9 +1,11 @@
-import React, { createContext, useContext, ReactNode, useMemo } from 'react';
+
+import React, { createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule';
 import { useRulesData } from '@/data/hooks/useRulesData';
 
+// Define the context type
 interface RulesContextType {
   rules: Rule[];
   isLoading: boolean;
@@ -27,7 +29,7 @@ export const RulesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     refetchRules 
   } = useRulesData();
 
-  const memoizedValue = React.useMemo<RulesContextType>(() => ({
+  const value: RulesContextType = {
     rules,
     isLoading,
     error,
@@ -35,10 +37,10 @@ export const RulesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     deleteRule,
     markRuleBroken,
     refetchRules
-  }), [rules, isLoading, error, saveRule, deleteRule, markRuleBroken, refetchRules]);
+  };
 
   return (
-    <RulesContext.Provider value={memoizedValue}>
+    <RulesContext.Provider value={value}>
       {children}
     </RulesContext.Provider>
   );
