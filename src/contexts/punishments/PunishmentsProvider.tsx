@@ -8,10 +8,18 @@ const PunishmentsContext = createContext<PunishmentsContextType | undefined>(und
 export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const punishmentsData = usePunishmentsData();
   
-  // Ensure the data we're passing to the provider matches exactly with PunishmentsContextType
-  const contextValue: PunishmentsContextType = {
-    ...punishmentsData
-  };
+  // Use React.useMemo to prevent unnecessary re-renders
+  const contextValue = React.useMemo<PunishmentsContextType>(() => {
+    return {
+      ...punishmentsData
+    };
+  }, [
+    punishmentsData.punishments,
+    punishmentsData.punishmentHistory,
+    punishmentsData.loading,
+    punishmentsData.error,
+    punishmentsData.totalPointsDeducted
+  ]);
   
   return (
     <PunishmentsContext.Provider value={contextValue}>
