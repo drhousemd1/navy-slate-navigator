@@ -32,6 +32,8 @@ const PunishmentsContent: React.FC = () => {
     };
   }, []);
 
+  console.log("Current punishments array:", punishments);
+
   return (
     <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
       <PunishmentsHeader />

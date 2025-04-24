@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -29,7 +30,8 @@ export const usePunishmentsData = () => {
   const {
     data = { punishments: [], history: [] },
     isLoading: loading,
-    error
+    error,
+    refetch
   } = useQuery({
     queryKey: PUNISHMENTS_QUERY_KEY,
     queryFn: fetchPunishmentsWithHistory,
@@ -240,7 +242,7 @@ export const usePunishmentsData = () => {
     selectRandomPunishment: () => {},
     resetRandomSelection: () => {},
     fetchPunishments: () => queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
-    refetchPunishments: () => queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
+    refetchPunishments: () => refetch(),
     refetchHistory: () => queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY }),
     getPunishmentHistory,
     totalPointsDeducted: data.history.reduce((total, item) => total + item.points_deducted, 0)
