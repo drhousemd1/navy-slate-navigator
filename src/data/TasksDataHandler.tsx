@@ -6,6 +6,7 @@ import { getMondayBasedDay } from '@/lib/utils';
 
 const TASKS_QUERY_KEY = ['tasks'];
 const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
+const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
 
 const fetchTaskCompletions = async () => {
   const { data, error } = await supabase
