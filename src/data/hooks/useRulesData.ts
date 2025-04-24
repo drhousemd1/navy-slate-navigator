@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule';
@@ -9,24 +8,47 @@ import { recordRuleViolationInDb } from '@/data/rules/recordViolation';
 import { getMondayBasedDay } from '@/lib/utils';
 
 // Keys for queries
-const RULES_QUERY_KEY = ['rules'];
+const RULES_QUERY_KEY = ['rules'] as const;
+const RULE_VIOLATIONS_QUERY_KEY = ['rule-violations'] as const;
+
+// Fetch violations separately to avoid refetching everything
+const fetchRuleViolations = async () => {
+  const { data: violations, error } = await supabase
+    .from('rule_violations')
+    .select('*')
+    .order('violation_date', { ascending: false });
+
+  if (error) throw error;
+  return violations || [];
+};
 
 export const useRulesData = () => {
   const queryClient = useQueryClient();
 
-  // Query for fetching all rules
+  // Main rules query with aggressive caching
   const {
     data: rules = [],
-    isLoading,
-    error,
-    refetch: refetchRules
+    isLoading: rulesLoading,
+    error: rulesError
   } = useQuery({
     queryKey: RULES_QUERY_KEY,
     queryFn: fetchRules,
     staleTime: 1000 * 60 * 20, // 20 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
-    refetchOnWindowFocus: true,
-    refetchInterval: 30000,
+    gcTime: 1000 * 60 * 30,    // 30 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Separate query for violations with its own caching strategy
+  const {
+    data: violations = [],
+    isLoading: violationsLoading,
+    error: violationsError
+  } = useQuery({
+    queryKey: RULE_VIOLATIONS_QUERY_KEY,
+    queryFn: fetchRuleViolations,
+    staleTime: 1000 * 60 * 20, // 20 minutes
+    gcTime: 1000 * 60 * 30,    // 30 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Mutation for saving a rule (create or update)
@@ -184,11 +206,14 @@ export const useRulesData = () => {
 
   return {
     rules,
-    isLoading,
-    error,
+    isLoading: rulesLoading || violationsLoading,
+    error: rulesError || violationsError,
     saveRule: (ruleData: Partial<Rule>) => saveRuleMutation.mutateAsync(ruleData),
     deleteRule: (ruleId: string) => deleteRuleMutation.mutateAsync(ruleId),
     markRuleBroken: (rule: Rule) => markRuleBrokenMutation.mutateAsync(rule),
-    refetchRules
+    refetchRules: () => {
+      queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: RULE_VIOLATIONS_QUERY_KEY });
+    }
   };
 };
