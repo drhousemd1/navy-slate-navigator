@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
-import { useState } from 'react';
 
 // Keys for queries
 const PUNISHMENTS_QUERY_KEY = ['punishments'];
@@ -33,8 +32,6 @@ const fetchPunishmentHistory = async () => {
 
 export const usePunishmentsData = () => {
   const queryClient = useQueryClient();
-  const [isSelectingRandom, setIsSelectingRandom] = useState(false);
-  const [selectedPunishment, setSelectedPunishment] = useState<PunishmentData | null>(null);
 
   // Optimized punishments query with increased stale time
   const {
@@ -168,7 +165,6 @@ export const usePunishmentsData = () => {
         .single();
 
       if (error) throw error;
-      return data;
     },
     onMutate: async (punishment) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
@@ -242,47 +238,30 @@ export const usePunishmentsData = () => {
   const getPunishmentHistory = (punishmentId: string): PunishmentHistoryItem[] => {
     return history.filter(item => item.punishment_id === punishmentId);
   };
-  
-  const selectRandomPunishment = () => {
-    if (punishments.length > 0) {
-      setIsSelectingRandom(true);
-      // Select random punishment after brief animation delay
-      setTimeout(() => {
-        const randomIndex = Math.floor(Math.random() * punishments.length);
-        setSelectedPunishment(punishments[randomIndex]);
-      }, 1000);
-    }
-  };
-  
-  const resetRandomSelection = () => {
-    setIsSelectingRandom(false);
-    setSelectedPunishment(null);
-  };
 
   // Return a proper async refetch function
-  const fetchAllPunishmentsData = async () => {
+  const refetchPunishmentsData = async () => {
     queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
     queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
-    await refetchPunishments();
-    await refetchHistory();
+    return await refetchPunishments();
   };
 
   return {
-    punishments: Array.isArray(punishments) ? punishments : [],  // Ensure it's always an array
-    punishmentHistory: Array.isArray(history) ? history : [],    // Ensure it's always an array
+    punishments,
+    punishmentHistory: history,
     loading: punishmentsLoading || historyLoading,
     error: punishmentsError || historyError,
-    isSelectingRandom,
-    selectedPunishment,
+    isSelectingRandom: false,
+    selectedPunishment: null,
     createPunishment: createPunishmentMutation.mutateAsync,
     updatePunishment: (id: string, punishment: Partial<PunishmentData>) => 
       updatePunishmentMutation.mutateAsync({ id, punishment }),
     deletePunishment: deletePunishmentMutation.mutateAsync,
     applyPunishment: applyPunishmentMutation.mutateAsync,
-    selectRandomPunishment,
-    resetRandomSelection,
-    fetchPunishments: fetchAllPunishmentsData,
-    refetchPunishments: fetchAllPunishmentsData,
+    selectRandomPunishment: () => {},
+    resetRandomSelection: () => {},
+    fetchPunishments: refetchPunishmentsData,
+    refetchPunishments: refetchPunishmentsData,
     refetchHistory: () => refetchHistory(),
     getPunishmentHistory,
     totalPointsDeducted: history.reduce((total, item) => total + (item.points_deducted || 0), 0)

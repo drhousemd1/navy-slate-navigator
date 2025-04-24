@@ -35,7 +35,7 @@ const PunishmentsContent: React.FC = () => {
 
   useEffect(() => {
     const initSamplePunishments = async () => {
-      if (!loading && Array.isArray(punishments) && punishments.length === 0 && !initializing) {
+      if (!loading && punishments.length === 0 && !initializing) {
         setInitializing(true);
 
         const samplePunishments = [
@@ -76,13 +76,13 @@ const PunishmentsContent: React.FC = () => {
     };
 
     initSamplePunishments();
-  }, [loading, punishments, createPunishment, initializing]);
+  }, [loading, punishments.length, createPunishment, initializing]);
 
   return (
     <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
       <PunishmentsHeader />
 
-      {Array.isArray(punishments) && punishments.length === 0 && !loading ? (
+      {punishments.length === 0 && !loading ? (
         <div className="text-center py-12 text-gray-400">
           <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
           <h3 className="text-xl font-semibold mb-2">No Punishments Yet</h3>
@@ -90,7 +90,7 @@ const PunishmentsContent: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {Array.isArray(punishments) && punishments.map(punishment => (
+          {punishments.map(punishment => (
             <PunishmentCard
               key={punishment.id}
               id={punishment.id}
@@ -107,6 +107,8 @@ const PunishmentsContent: React.FC = () => {
               background_opacity={punishment.background_opacity}
               focal_point_x={punishment.focal_point_x}
               focal_point_y={punishment.focal_point_y}
+              // onEdit prop REMOVED because PunishmentCardProps does not support it
+              // Instead, you could implement an edit handler onCardClick or similar if supported
             />
           ))}
         </div>
@@ -152,3 +154,4 @@ const Punishments: React.FC = () => {
 };
 
 export default Punishments;
+

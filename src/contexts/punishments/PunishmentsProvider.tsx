@@ -8,14 +8,18 @@ const PunishmentsContext = createContext<PunishmentsContextType | undefined>(und
 export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const punishmentsData = usePunishmentsData();
   
-  // Convert the return value from usePunishmentsData to match PunishmentsContextType
-  const contextValue: PunishmentsContextType = {
-    ...punishmentsData,
-    // Override the applyPunishment function to match the expected return type
-    applyPunishment: async (punishment) => {
-      await punishmentsData.applyPunishment(punishment);
-    }
-  };
+  // Use React.useMemo to prevent unnecessary re-renders
+  const contextValue = React.useMemo<PunishmentsContextType>(() => {
+    return {
+      ...punishmentsData
+    };
+  }, [
+    punishmentsData.punishments,
+    punishmentsData.punishmentHistory,
+    punishmentsData.loading,
+    punishmentsData.error,
+    punishmentsData.totalPointsDeducted
+  ]);
   
   return (
     <PunishmentsContext.Provider value={contextValue}>
