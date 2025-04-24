@@ -40,9 +40,9 @@ export const usePunishmentsData = () => {
     refetchInterval: false
   });
 
-  // Create punishment with optimistic update
+  // Create punishment with optimistic update - FIX: Ensure title is required
   const createPunishmentMutation = useMutation({
-    mutationFn: async (newPunishment: Partial<PunishmentData>) => {
+    mutationFn: async (newPunishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => {
       const { data, error } = await supabase
         .from('punishments')
         .insert(newPunishment)
@@ -185,6 +185,7 @@ export const usePunishmentsData = () => {
     }
   });
 
+  // FIX: Change return type to void to match PunishmentsContextType
   const deletePunishmentMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -193,7 +194,7 @@ export const usePunishmentsData = () => {
         .eq('id', id);
 
       if (error) throw error;
-      return id;
+      // Return void instead of id
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });

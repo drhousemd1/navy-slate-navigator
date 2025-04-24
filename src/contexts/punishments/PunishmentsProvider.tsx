@@ -8,8 +8,13 @@ const PunishmentsContext = createContext<PunishmentsContextType | undefined>(und
 export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const punishmentsData = usePunishmentsData();
   
+  // Ensure the data we're passing to the provider matches exactly with PunishmentsContextType
+  const contextValue: PunishmentsContextType = {
+    ...punishmentsData
+  };
+  
   return (
-    <PunishmentsContext.Provider value={punishmentsData}>
+    <PunishmentsContext.Provider value={contextValue}>
       {children}
     </PunishmentsContext.Provider>
   );

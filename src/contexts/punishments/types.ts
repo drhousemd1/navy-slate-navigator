@@ -37,7 +37,7 @@ export interface PunishmentsContextType {
   isSelectingRandom: boolean;
   selectedPunishment: PunishmentData | null;
   error: Error | null;
-  createPunishment: (punishment: Partial<PunishmentData>) => Promise<PunishmentData>;
+  createPunishment: (punishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => Promise<PunishmentData>;
   updatePunishment: (id: string, punishment: Partial<PunishmentData>) => Promise<PunishmentData>;
   deletePunishment: (id: string) => Promise<void>;
   applyPunishment: (punishment: PunishmentData | { id: string; points: number }) => Promise<void>;
