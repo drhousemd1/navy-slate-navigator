@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -132,7 +131,7 @@ export const usePunishmentsData = () => {
     }
   });
 
-  // Apply punishment with optimistic update
+  // Apply punishment with optimistic update - FIX: Return void instead of the data
   const applyPunishmentMutation = useMutation({
     mutationFn: async (punishment: { id: string; points: number }) => {
       const historyEntry = {
@@ -148,7 +147,6 @@ export const usePunishmentsData = () => {
         .single();
 
       if (error) throw error;
-      return data;
     },
     onMutate: async (punishment) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
@@ -194,7 +192,6 @@ export const usePunishmentsData = () => {
         .eq('id', id);
 
       if (error) throw error;
-      // Return void instead of id
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
