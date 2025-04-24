@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
-import { Skull, Clock, Bomb } from 'lucide-react';
+import { Skull } from 'lucide-react';
 import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments } from '../contexts/PunishmentsContext';
