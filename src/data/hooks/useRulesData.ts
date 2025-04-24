@@ -6,6 +6,7 @@ import { saveRuleToDb } from '@/data/rules/saveRule';
 import { deleteRuleFromDb } from '@/data/rules/deleteRule';
 import { recordRuleViolationInDb } from '@/data/rules/recordViolation';
 import { getMondayBasedDay } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 // Keys for queries
 const RULES_QUERY_KEY = ['rules'] as const;
@@ -29,7 +30,8 @@ export const useRulesData = () => {
   const {
     data: rules = [],
     isLoading: rulesLoading,
-    error: rulesError
+    error: rulesError,
+    refetch: refetchRulesQuery
   } = useQuery({
     queryKey: RULES_QUERY_KEY,
     queryFn: fetchRules,
@@ -42,7 +44,8 @@ export const useRulesData = () => {
   const {
     data: violations = [],
     isLoading: violationsLoading,
-    error: violationsError
+    error: violationsError,
+    refetch: refetchViolationsQuery
   } = useQuery({
     queryKey: RULE_VIOLATIONS_QUERY_KEY,
     queryFn: fetchRuleViolations,
@@ -204,6 +207,13 @@ export const useRulesData = () => {
     }
   });
 
+  // Return a proper Promise for refetchRules
+  const refetchRules = async () => {
+    queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
+    queryClient.invalidateQueries({ queryKey: RULE_VIOLATIONS_QUERY_KEY });
+    return await refetchRulesQuery();
+  };
+
   return {
     rules,
     isLoading: rulesLoading || violationsLoading,
@@ -211,9 +221,6 @@ export const useRulesData = () => {
     saveRule: (ruleData: Partial<Rule>) => saveRuleMutation.mutateAsync(ruleData),
     deleteRule: (ruleId: string) => deleteRuleMutation.mutateAsync(ruleId),
     markRuleBroken: (rule: Rule) => markRuleBrokenMutation.mutateAsync(rule),
-    refetchRules: () => {
-      queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: RULE_VIOLATIONS_QUERY_KEY });
-    }
+    refetchRules
   };
 };
