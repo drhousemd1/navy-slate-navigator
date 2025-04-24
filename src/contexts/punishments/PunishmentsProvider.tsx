@@ -10,15 +10,15 @@ export const PunishmentsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   
   // Use React.useMemo to prevent unnecessary re-renders
   const contextValue = React.useMemo<PunishmentsContextType>(() => {
-    return {
-      ...punishmentsData
-    };
+    return punishmentsData;
   }, [
     punishmentsData.punishments,
     punishmentsData.punishmentHistory,
     punishmentsData.loading,
     punishmentsData.error,
-    punishmentsData.totalPointsDeducted
+    punishmentsData.totalPointsDeducted,
+    punishmentsData.isSelectingRandom,
+    punishmentsData.selectedPunishment
   ]);
   
   return (
