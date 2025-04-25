@@ -8,53 +8,11 @@ import { RewardsProvider } from '@/contexts/RewardsContext';
 import { TasksProvider, useTasks } from '../contexts/TasksContext';
 import { Task } from '@/lib/taskUtils';
 
-interface TasksContentProps {
-  isEditorOpen: boolean;
-  currentTask: Task | null;
-  onCloseEditor: () => void;
-  onEditTask: (task: Task) => void;
-  onSaveTask: (taskData: Task) => Promise<void>;
-  onDeleteTask: (taskId: string) => Promise<void>;
-  onToggleCompletion: (taskId: string, completed: boolean) => Promise<boolean>;
-}
-
-const TasksContent: React.FC<TasksContentProps> = ({
-  isEditorOpen,
-  currentTask,
-  onCloseEditor,
-  onEditTask,
-  onSaveTask,
-  onDeleteTask,
-  onToggleCompletion
-}) => {
-  const { tasks, isLoading } = useTasks();
-
-  return (
-    <div className="p-4 pt-6">
-      <TasksHeader />
-
-      <TasksList
-        tasks={tasks}
-        isLoading={isLoading}
-        onEditTask={onEditTask}
-        onToggleCompletion={onToggleCompletion}
-      />
-
-      <TaskEditor
-        isOpen={isEditorOpen}
-        onClose={onCloseEditor}
-        taskData={currentTask || undefined}
-        onSave={onSaveTask}
-        onDelete={onDeleteTask}
-      />
-    </div>
-  );
-};
-
-const Tasks: React.FC = () => {
+// Separate component that uses useTasks hook inside TasksProvider
+const TasksWithContext: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  const { saveTask, deleteTask, toggleTaskCompletion } = useTasks();
+  const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion } = useTasks();
 
   const handleAddTask = () => {
     setCurrentTask(null);
@@ -87,21 +45,41 @@ const Tasks: React.FC = () => {
   };
 
   return (
+    <div className="p-4 pt-6">
+      <TasksHeader />
+
+      <TasksList
+        tasks={tasks}
+        isLoading={isLoading}
+        onEditTask={handleEditTask}
+        onToggleCompletion={toggleTaskCompletion}
+      />
+
+      <TaskEditor
+        isOpen={isEditorOpen}
+        onClose={() => {
+          setIsEditorOpen(false);
+          setCurrentTask(null);
+        }}
+        taskData={currentTask || undefined}
+        onSave={handleSaveTask}
+        onDelete={handleDeleteTask}
+      />
+    </div>
+  );
+};
+
+// Main Tasks component that sets up the providers
+const Tasks: React.FC = () => {
+  const handleAddTask = () => {
+    // This will be forwarded to the inner component via AppLayout
+  };
+
+  return (
     <AppLayout onAddNewItem={handleAddTask}>
       <RewardsProvider>
         <TasksProvider>
-          <TasksContent
-            isEditorOpen={isEditorOpen}
-            currentTask={currentTask}
-            onCloseEditor={() => {
-              setIsEditorOpen(false);
-              setCurrentTask(null);
-            }}
-            onEditTask={handleEditTask}
-            onSaveTask={handleSaveTask}
-            onDeleteTask={handleDeleteTask}
-            onToggleCompletion={toggleTaskCompletion}
-          />
+          <TasksWithContext />
         </TasksProvider>
       </RewardsProvider>
     </AppLayout>
