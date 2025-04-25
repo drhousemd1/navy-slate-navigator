@@ -290,6 +290,25 @@ export const usePunishmentsData = () => {
     0
   );
 
+  // Fix the refetch function type issues
+  const refetchPunishmentsTyped = (options?: RefetchOptions) => {
+    return refetchPunishments(options) as Promise<QueryObserverResult<PunishmentData[], Error>>;
+  };
+
+  const refetchHistoryTyped = (options?: RefetchOptions) => {
+    return refetchHistory(options) as Promise<QueryObserverResult<PunishmentHistoryItem[], Error>>;
+  };
+
+  // Helper function to properly type the fetchPunishments function
+  const fetchPunishmentsTyped = async (): Promise<void> => {
+    const promises: Promise<void>[] = [
+      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
+    ];
+    
+    await Promise.all(promises);
+  };
+
   return {
     punishments,
     punishmentHistory,
@@ -306,17 +325,9 @@ export const usePunishmentsData = () => {
       applyPunishmentMutation.mutateAsync(punishment),
     selectRandomPunishment: () => {},
     resetRandomSelection: () => {},
-    fetchPunishments: async () => {
-      // Fix for TypeScript error: explicitly define the array type for Promise.all
-      const promises: Promise<void>[] = [
-        queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
-        queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
-      ];
-      
-      await Promise.all(promises);
-    },
-    refetchPunishments: (options?: RefetchOptions) => refetchPunishments(options) as Promise<any>,
-    refetchHistory: (options?: RefetchOptions) => refetchHistory(options) as Promise<any>,
+    fetchPunishments: fetchPunishmentsTyped,
+    refetchPunishments: refetchPunishmentsTyped,
+    refetchHistory: refetchHistoryTyped,
     getPunishmentHistory,
     totalPointsDeducted
   };

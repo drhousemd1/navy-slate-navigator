@@ -1,5 +1,5 @@
 
-import { RefetchOptions } from "@tanstack/react-query";
+import { RefetchOptions, QueryObserverResult } from "@tanstack/react-query";
 
 export interface PunishmentData {
   id: string;
@@ -44,8 +44,8 @@ export interface PunishmentsContextType {
   selectRandomPunishment: () => void;
   resetRandomSelection: () => void;
   fetchPunishments: () => Promise<void>;
-  refetchPunishments: (options?: RefetchOptions) => Promise<any>;
-  refetchHistory: (options?: RefetchOptions) => Promise<any>;
+  refetchPunishments: (options?: RefetchOptions) => Promise<QueryObserverResult<PunishmentData[], Error>>;
+  refetchHistory: (options?: RefetchOptions) => Promise<QueryObserverResult<PunishmentHistoryItem[], Error>>;
   getPunishmentHistory: (punishmentId: string) => PunishmentHistoryItem[];
   totalPointsDeducted: number;
 }
