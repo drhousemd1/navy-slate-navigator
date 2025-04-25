@@ -1,9 +1,11 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { RewardEditorForm } from './reward-editor/RewardEditorForm';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface RewardEditorProps {
   isOpen: boolean;
@@ -21,24 +23,18 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   onDelete
 }) => {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   
   const handleSave = async (formData: any) => {
     console.log("RewardEditor handling save with form data:", formData);
     try {
-      // For existing rewards, pass the existing ID along with the form data
       const dataToSave = rewardData ? { ...formData, id: rewardData.id } : formData;
-      
       await onSave(dataToSave);
-      
-      // Force a rewards data refresh after saving
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      
       toast({
         title: "Success",
         description: "Reward saved successfully",
       });
-      
-      // Important: Close the dialog after successful save
       onClose();
     } catch (error) {
       console.error("Error in RewardEditor save handler:", error);
@@ -47,21 +43,38 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
         description: "Failed to save reward. Please try again.",
         variant: "destructive",
       });
-      // Don't close dialog if save failed
     }
   };
 
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="bottom" className="h-[100vh] bg-navy border-light-navy pt-10 px-0 overflow-y-auto">
+          <div className="px-4">
+            <SheetHeader className="text-center mb-6">
+              <SheetTitle className="text-2xl font-bold text-white">
+                {rewardData ? 'Edit Reward' : 'Create New Reward'}
+              </SheetTitle>
+              <SheetDescription className="text-light-navy">
+                {rewardData ? 'Modify the existing reward' : 'Create a new reward to redeem'}
+              </SheetDescription>
+            </SheetHeader>
+            
+            <RewardEditorForm
+              rewardData={rewardData}
+              onSave={handleSave}
+              onCancel={onClose}
+              onDelete={onDelete}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   return (
-    <Dialog 
-      open={isOpen} 
-      onOpenChange={(open) => {
-        if (!open) {
-          console.log("Dialog closing via onOpenChange");
-          onClose();
-        }
-      }}
-    >
-      <DialogContent className="bg-navy border-light-navy text-white max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-[90vw] max-h-[90vh] bg-navy border-light-navy text-white overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white">
             {rewardData ? 'Edit Reward' : 'Create New Reward'}
