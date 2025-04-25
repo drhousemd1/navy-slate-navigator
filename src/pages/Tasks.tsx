@@ -15,7 +15,7 @@ interface TasksContentProps {
   onEditTask: (task: Task) => void;
   onSaveTask: (taskData: Task) => Promise<void>;
   onDeleteTask: (taskId: string) => Promise<void>;
-  onToggleCompletion: (taskId: string, completed: boolean) => Promise<void>;
+  onToggleCompletion: (taskId: string, completed: boolean) => Promise<boolean>;
 }
 
 const TasksContent: React.FC<TasksContentProps> = ({
