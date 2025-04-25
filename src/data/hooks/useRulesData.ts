@@ -7,6 +7,7 @@ import { saveRuleToDb } from '@/data/rules/saveRule';
 import { deleteRuleFromDb } from '@/data/rules/deleteRule';
 import { recordRuleViolationInDb } from '@/data/rules/recordViolation';
 import { getMondayBasedDay } from '@/lib/utils';
+import { v4 as uuidv4 } from 'uuid';
 
 // Keys for queries
 const RULES_QUERY_KEY = ['rules'];
@@ -46,7 +47,8 @@ export const useRulesData = () => {
           )
         );
       } else {
-        const tempId = `temp-${Date.now()}`;
+        // Generate a proper UUID for optimistic updates instead of temp-timestamp
+        const tempId = uuidv4();
         const optimisticRule: Rule = {
           id: tempId,
           title: newRule.title || 'New Rule',
