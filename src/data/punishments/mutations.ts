@@ -1,4 +1,3 @@
-
 import { QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -17,18 +16,13 @@ export const createPunishmentMutation = (queryClient: QueryClient) => ({
     return data;
   },
   onMutate: async (newPunishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => {
-    // Define the type of promises array explicitly
-    const promises: Promise<void>[] = [
-      queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY })
-    ];
-    
-    await Promise.all(promises);
+    await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
     const previousData = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
     
     queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) => [
       {
         ...newPunishment,
-        id: 'temp-' + Date.now(),
+        id: `temp-${Date.now()}`,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       } as PunishmentData,
@@ -69,12 +63,7 @@ export const updatePunishmentMutation = (queryClient: QueryClient) => ({
     return data;
   },
   onMutate: async ({ id, punishment }: { id: string; punishment: Partial<PunishmentData> }) => {
-    // Define the type of promises array explicitly
-    const promises: Promise<void>[] = [
-      queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY })
-    ];
-    
-    await Promise.all(promises);
+    await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
     const previousData = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
     
     queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) =>
@@ -119,12 +108,7 @@ export const applyPunishmentMutation = (queryClient: QueryClient) => ({
     return data;
   },
   onMutate: async (punishment: { id: string; points: number }) => {
-    // Define the type of promises array explicitly
-    const promises: Promise<void>[] = [
-      queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
-    ];
-    
-    await Promise.all(promises);
+    await queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
     const previousData = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY);
     
     const newHistoryEntry = {
@@ -169,13 +153,8 @@ export const deletePunishmentMutation = (queryClient: QueryClient) => ({
     if (error) throw error;
   },
   onMutate: async (id: string) => {
-    // Define the type of promises array explicitly
-    const promises: Promise<void>[] = [
-      queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
-      queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
-    ];
-    
-    await Promise.all(promises);
+    await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+    await queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
     
     const previousPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
     const previousHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY);
