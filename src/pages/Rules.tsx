@@ -9,11 +9,64 @@ import { RewardsProvider } from '@/contexts/RewardsContext';
 import { RulesProvider, useRules } from '@/contexts/RulesContext';
 import { Rule } from '@/data/interfaces/Rule';
 
-const RulesContent: React.FC = () => {
+interface RulesContentProps {
+  isEditorOpen: boolean;
+  currentRule: Rule | null;
+  onCloseEditor: () => void;
+  onEditRule: (rule: Rule) => void;
+  onSaveRule: (ruleData: Partial<Rule>) => Promise<void>;
+  onDeleteRule: (ruleId: string) => Promise<void>;
+  onRuleBroken: (rule: Rule) => Promise<void>;
+}
+
+const RulesContent: React.FC<RulesContentProps> = ({
+  isEditorOpen,
+  currentRule,
+  onCloseEditor,
+  onEditRule,
+  onSaveRule,
+  onDeleteRule,
+  onRuleBroken
+}) => {
+  const navigate = useNavigate();
+  const { rules, isLoading } = useRules();
+
+  const handleRuleBroken = async (rule: Rule) => {
+    try {
+      await onRuleBroken(rule);
+      navigate('/punishments');
+    } catch (err) {
+      console.error('Error marking rule as broken:', err);
+    }
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-6">
+      <RulesHeader />
+
+      <RulesList
+        rules={rules}
+        isLoading={isLoading}
+        onEditRule={onEditRule}
+        onRuleBroken={handleRuleBroken}
+      />
+
+      <RuleEditor
+        isOpen={isEditorOpen}
+        onClose={onCloseEditor}
+        ruleData={currentRule || undefined}
+        onSave={onSaveRule}
+        onDelete={onDeleteRule}
+      />
+    </div>
+  );
+};
+
+const Rules: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
-  const { rules, isLoading, saveRule, deleteRule, markRuleBroken } = useRules();
+  const { saveRule, deleteRule, markRuleBroken } = useRules();
 
   const handleAddRule = () => {
     setCurrentRule(null);
@@ -23,15 +76,6 @@ const RulesContent: React.FC = () => {
   const handleEditRule = (rule: Rule) => {
     setCurrentRule(rule);
     setIsEditorOpen(true);
-  };
-
-  const handleRuleBroken = async (rule: Rule) => {
-    try {
-      await markRuleBroken(rule);
-      navigate('/punishments');
-    } catch (err) {
-      console.error('Error marking rule as broken:', err);
-    }
   };
 
   const handleSaveRule = async (ruleData: Partial<Rule>) => {
@@ -55,43 +99,21 @@ const RulesContent: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <RulesHeader />
-
-      <RulesList
-        rules={rules}
-        isLoading={isLoading}
-        onEditRule={handleEditRule}
-        onRuleBroken={handleRuleBroken}
-      />
-
-      <RuleEditor
-        isOpen={isEditorOpen}
-        onClose={() => {
-          setIsEditorOpen(false);
-          setCurrentRule(null);
-        }}
-        ruleData={currentRule || undefined}
-        onSave={handleSaveRule}
-        onDelete={handleDeleteRule}
-      />
-    </div>
-  );
-};
-
-const Rules: React.FC = () => {
-  const navigate = useNavigate();
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-
-  const handleAddRule = () => {
-    setIsEditorOpen(true);
-  };
-
-  return (
     <AppLayout onAddNewItem={handleAddRule}>
       <RewardsProvider>
         <RulesProvider>
-          <RulesContent />
+          <RulesContent
+            isEditorOpen={isEditorOpen}
+            currentRule={currentRule}
+            onCloseEditor={() => {
+              setIsEditorOpen(false);
+              setCurrentRule(null);
+            }}
+            onEditRule={handleEditRule}
+            onSaveRule={handleSaveRule}
+            onDeleteRule={handleDeleteRule}
+            onRuleBroken={markRuleBroken}
+          />
         </RulesProvider>
       </RewardsProvider>
     </AppLayout>
