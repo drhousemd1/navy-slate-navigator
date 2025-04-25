@@ -288,12 +288,14 @@ export const usePunishmentsData = () => {
       applyPunishmentMutation.mutateAsync(punishment),
     selectRandomPunishment: () => {},
     resetRandomSelection: () => {},
-    fetchPunishments: () => {
-      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
+    fetchPunishments: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
+      ]);
     },
-    refetchPunishments,
-    refetchHistory,
+    refetchPunishments: (options) => refetchPunishments(options),
+    refetchHistory: (options) => refetchHistory(options),
     getPunishmentHistory,
     totalPointsDeducted
   };

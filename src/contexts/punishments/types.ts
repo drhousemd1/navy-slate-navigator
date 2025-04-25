@@ -40,12 +40,12 @@ export interface PunishmentsContextType {
   createPunishment: (punishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => Promise<PunishmentData>;
   updatePunishment: (id: string, punishment: Partial<PunishmentData>) => Promise<PunishmentData>;
   deletePunishment: (id: string) => Promise<void>;
-  applyPunishment: (punishment: PunishmentData | { id: string; points: number }) => Promise<void>;
+  applyPunishment: (punishment: PunishmentData | { id: string; points: number }) => Promise<PunishmentHistoryItem>;
   selectRandomPunishment: () => void;
   resetRandomSelection: () => void;
   fetchPunishments: () => Promise<void>;
-  refetchPunishments: (options?: RefetchOptions) => Promise<unknown>;
-  refetchHistory: (options?: RefetchOptions) => Promise<unknown>;
+  refetchPunishments: (options?: RefetchOptions) => Promise<any>;
+  refetchHistory: (options?: RefetchOptions) => Promise<any>;
   getPunishmentHistory: (punishmentId: string) => PunishmentHistoryItem[];
   totalPointsDeducted: number;
 }
