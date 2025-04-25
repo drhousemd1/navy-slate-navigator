@@ -305,7 +305,8 @@ export const buyRewardMutation = (queryClient: QueryClient) => ({
     };
   },
   onError: (err, _, context) => {
-    if (showToasts) {
+    const showToast = true;
+    if (showToast) {
       toast({
         title: "Error",
         description: err instanceof Error ? err.message : 'Failed to buy reward',
@@ -319,7 +320,7 @@ export const buyRewardMutation = (queryClient: QueryClient) => ({
     }
   },
   onSuccess: () => {
-    if (showToasts) {
+    if (showToast) {
       toast({
         title: "Success",
         description: "Reward purchased successfully",
