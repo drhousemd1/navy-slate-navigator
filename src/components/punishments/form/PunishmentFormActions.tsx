@@ -1,12 +1,13 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 import DeletePunishmentDialog from '../DeletePunishmentDialog';
 
 interface PunishmentFormActionsProps {
   punishmentData?: PunishmentData;
-  loading: boolean;
+  isSaving?: boolean;
   isDeleteDialogOpen: boolean;
   setIsDeleteDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   onCancel: () => void;
@@ -15,7 +16,7 @@ interface PunishmentFormActionsProps {
 
 const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
   punishmentData,
-  loading,
+  isSaving = false,
   isDeleteDialogOpen,
   setIsDeleteDialogOpen,
   onCancel,
@@ -52,15 +53,9 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
       </Button>
       <Button 
         type="submit" 
-        className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
-        disabled={loading}
+        className="bg-nav-active text-white hover:bg-nav-active/90"
       >
-        {loading ? 'Saving...' : (
-          <>
-            <AlertCircle className="h-4 w-4" />
-            Save Changes
-          </>
-        )}
+        {isSaving ? 'Saving...' : 'Save Changes'}
       </Button>
     </div>
   );
