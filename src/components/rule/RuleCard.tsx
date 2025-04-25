@@ -18,7 +18,7 @@ const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken }) =
   return (
     <Card 
       className={`bg-dark-navy border-2 ${
-        rule.highlight_effect ? 'border-[#00f0ff] shadow-[0_0_8px_2px_rgba(0,240,255,0.6)]' : 'border-[#00f0ff]'
+        rule.highlight_effect ? 'border-[#00f0ff]' : 'border-[#00f0ff]'
       } overflow-hidden`}
     >
       <div className="relative p-4">
