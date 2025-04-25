@@ -55,8 +55,20 @@ const RulesWithContext: React.FC = () => {
     }
   };
 
+  // Expose the handleAddRule function to be called from outside
+  React.useEffect(() => {
+    const element = document.querySelector('.RulesContent');
+    if (element) {
+      const handleAddEvent = () => handleAddRule();
+      element.addEventListener('add-new-rule', handleAddEvent);
+      return () => {
+        element.removeEventListener('add-new-rule', handleAddEvent);
+      };
+    }
+  }, []);
+
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 RulesContent">
       <RulesHeader />
 
       <RulesList
@@ -82,12 +94,15 @@ const RulesWithContext: React.FC = () => {
 
 // Main Rules component that sets up the providers
 const Rules: React.FC = () => {
-  const handleAddRule = () => {
-    // This will be forwarded to the inner component via AppLayout
-  };
-
   return (
-    <AppLayout onAddNewItem={handleAddRule}>
+    <AppLayout onAddNewItem={() => {
+      // Dispatch a custom event to the inner component
+      const content = document.querySelector('.RulesContent');
+      if (content) {
+        const event = new CustomEvent('add-new-rule');
+        content.dispatchEvent(event);
+      }
+    }}>
       <RewardsProvider>
         <RulesProvider>
           <RulesWithContext />

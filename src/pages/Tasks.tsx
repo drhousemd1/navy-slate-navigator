@@ -44,8 +44,20 @@ const TasksWithContext: React.FC = () => {
     }
   };
 
+  // Expose the handleAddTask function to be called from outside
+  React.useEffect(() => {
+    const element = document.querySelector('.TasksContent');
+    if (element) {
+      const handleAddEvent = () => handleAddTask();
+      element.addEventListener('add-new-task', handleAddEvent);
+      return () => {
+        element.removeEventListener('add-new-task', handleAddEvent);
+      };
+    }
+  }, []);
+
   return (
-    <div className="p-4 pt-6">
+    <div className="p-4 pt-6 TasksContent">
       <TasksHeader />
 
       <TasksList
@@ -71,12 +83,15 @@ const TasksWithContext: React.FC = () => {
 
 // Main Tasks component that sets up the providers
 const Tasks: React.FC = () => {
-  const handleAddTask = () => {
-    // This will be forwarded to the inner component via AppLayout
-  };
-
   return (
-    <AppLayout onAddNewItem={handleAddTask}>
+    <AppLayout onAddNewItem={() => {
+      // Dispatch a custom event to the inner component
+      const content = document.querySelector('.TasksContent');
+      if (content) {
+        const event = new CustomEvent('add-new-task');
+        content.dispatchEvent(event);
+      }
+    }}>
       <RewardsProvider>
         <TasksProvider>
           <TasksWithContext />
