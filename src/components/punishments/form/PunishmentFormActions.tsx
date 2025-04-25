@@ -54,6 +54,7 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
       <Button 
         type="submit" 
         className="bg-nav-active text-white hover:bg-nav-active/90"
+        disabled={isSaving}
       >
         {isSaving ? 'Saving...' : 'Save Changes'}
       </Button>

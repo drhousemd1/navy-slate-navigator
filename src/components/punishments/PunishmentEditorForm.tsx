@@ -109,6 +109,7 @@ interface PunishmentFormContentProps {
   handleRemoveImage: () => void;
   onCancel: () => void;
   onDelete?: (index: string) => void;
+  isSaving?: boolean;
 }
 
 const PunishmentFormContent: React.FC<PunishmentFormContentProps> = ({
@@ -125,7 +126,8 @@ const PunishmentFormContent: React.FC<PunishmentFormContentProps> = ({
   handleImageUpload,
   handleRemoveImage,
   onCancel,
-  onDelete
+  onDelete,
+  isSaving
 }) => {
   return (
     <>
@@ -155,6 +157,7 @@ const PunishmentFormContent: React.FC<PunishmentFormContentProps> = ({
       
       <PunishmentFormActions 
         punishmentData={punishmentData}
+        isSaving={isSaving}
         isDeleteDialogOpen={isDeleteDialogOpen}
         setIsDeleteDialogOpen={setIsDeleteDialogOpen}
         onCancel={onCancel}
