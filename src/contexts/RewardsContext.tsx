@@ -25,6 +25,7 @@ const mockQueryResult: QueryObserverResult<Reward[], Error> = {
   isFetchedAfterMount: true,
   isFetching: false,
   isPlaceholderData: false,
+  isPreviousData: false,
   isRefetching: false,
   isStale: false,
   errorUpdateCount: 0,
