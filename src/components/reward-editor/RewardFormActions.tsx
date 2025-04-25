@@ -28,6 +28,7 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
           variant="destructive"
           onClick={() => setIsDeleteDialogOpen(true)}
           className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
+          disabled={isSaving}
         >
           <Trash2 className="h-4 w-4" />
           Delete

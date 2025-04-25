@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { Control, UseFormSetValue } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Control } from 'react-hook-form';
 import NumberField from '../task-editor/NumberField';
 
 interface RewardBasicDetailsProps {
