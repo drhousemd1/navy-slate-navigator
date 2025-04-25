@@ -21,13 +21,16 @@ const ColorPickerField: React.FC<ColorPickerFieldProps> = ({ control, name, labe
           <div className="flex items-center space-x-2">
             <div 
               className="w-6 h-6 rounded-full border border-white" 
-              style={{ backgroundColor: field.value }}
+              style={{ backgroundColor: field.value || '#ea384c' }}
             />
             <FormControl>
               <Input
                 type="color"
-                className="w-full h-10 bg-dark-navy border-light-navy"
-                {...field}
+                className="w-full h-10 bg-dark-navy border-light-navy cursor-pointer"
+                value={field.value || '#ea384c'}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                name={field.name}
               />
             </FormControl>
           </div>

@@ -26,7 +26,6 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
 }) => {
   const onSubmit = async (values: any) => {
     try {
-      // Prepare the data to save
       const icon_name = selectedIconName || null;
       const background_image_url = imagePreview || null;
       
@@ -34,6 +33,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
         ...values,
         icon_name: icon_name,
         background_image_url: background_image_url,
+        icon_color: values.icon_color || '#ea384c' // Ensure icon_color always has a value
       };
       
       if (punishmentData?.id) {
@@ -43,15 +43,17 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       // Save the data
       await onSave(dataToSave);
       
-      // Form is reset after successful save
-      form.reset();
-      // We explicitly call onCancel to close the form
-      onCancel();
-      
+      // Success notification
       toast({
         title: "Success",
         description: punishmentData?.id ? "Punishment updated successfully" : "Punishment created successfully",
       });
+      
+      // Close the form
+      onCancel();
+      
+      // Reset form after everything else is done
+      form.reset();
     } catch (error) {
       console.error("Error saving punishment:", error);
       toast({
@@ -63,9 +65,11 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-      {children}
-    </form>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {children}
+      </form>
+    </Form>
   );
 };
 
