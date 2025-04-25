@@ -9,64 +9,12 @@ import { RewardsProvider } from '@/contexts/RewardsContext';
 import { RulesProvider, useRules } from '@/contexts/RulesContext';
 import { Rule } from '@/data/interfaces/Rule';
 
-interface RulesContentProps {
-  isEditorOpen: boolean;
-  currentRule: Rule | null;
-  onCloseEditor: () => void;
-  onEditRule: (rule: Rule) => void;
-  onSaveRule: (ruleData: Partial<Rule>) => Promise<void>;
-  onDeleteRule: (ruleId: string) => Promise<void>;
-  onRuleBroken: (rule: Rule) => Promise<void>;
-}
-
-const RulesContent: React.FC<RulesContentProps> = ({
-  isEditorOpen,
-  currentRule,
-  onCloseEditor,
-  onEditRule,
-  onSaveRule,
-  onDeleteRule,
-  onRuleBroken
-}) => {
-  const navigate = useNavigate();
-  const { rules, isLoading } = useRules();
-
-  const handleRuleBroken = async (rule: Rule) => {
-    try {
-      await onRuleBroken(rule);
-      navigate('/punishments');
-    } catch (err) {
-      console.error('Error marking rule as broken:', err);
-    }
-  };
-
-  return (
-    <div className="container mx-auto px-4 py-6">
-      <RulesHeader />
-
-      <RulesList
-        rules={rules}
-        isLoading={isLoading}
-        onEditRule={onEditRule}
-        onRuleBroken={handleRuleBroken}
-      />
-
-      <RuleEditor
-        isOpen={isEditorOpen}
-        onClose={onCloseEditor}
-        ruleData={currentRule || undefined}
-        onSave={onSaveRule}
-        onDelete={onDeleteRule}
-      />
-    </div>
-  );
-};
-
-const Rules: React.FC = () => {
+// Separate component to use the useRules hook inside RulesProvider
+const RulesWithContext: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
-  const { saveRule, deleteRule, markRuleBroken } = useRules();
+  const { rules, isLoading, saveRule, deleteRule, markRuleBroken } = useRules();
 
   const handleAddRule = () => {
     setCurrentRule(null);
@@ -98,22 +46,51 @@ const Rules: React.FC = () => {
     }
   };
 
+  const handleRuleBroken = async (rule: Rule) => {
+    try {
+      await markRuleBroken(rule);
+      navigate('/punishments');
+    } catch (err) {
+      console.error('Error marking rule as broken:', err);
+    }
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-6">
+      <RulesHeader />
+
+      <RulesList
+        rules={rules}
+        isLoading={isLoading}
+        onEditRule={handleEditRule}
+        onRuleBroken={handleRuleBroken}
+      />
+
+      <RuleEditor
+        isOpen={isEditorOpen}
+        onClose={() => {
+          setIsEditorOpen(false);
+          setCurrentRule(null);
+        }}
+        ruleData={currentRule || undefined}
+        onSave={handleSaveRule}
+        onDelete={handleDeleteRule}
+      />
+    </div>
+  );
+};
+
+// Main Rules component that sets up the providers
+const Rules: React.FC = () => {
+  const handleAddRule = () => {
+    // This will be forwarded to the inner component via AppLayout
+  };
+
   return (
     <AppLayout onAddNewItem={handleAddRule}>
       <RewardsProvider>
         <RulesProvider>
-          <RulesContent
-            isEditorOpen={isEditorOpen}
-            currentRule={currentRule}
-            onCloseEditor={() => {
-              setIsEditorOpen(false);
-              setCurrentRule(null);
-            }}
-            onEditRule={handleEditRule}
-            onSaveRule={handleSaveRule}
-            onDeleteRule={handleDeleteRule}
-            onRuleBroken={markRuleBroken}
-          />
+          <RulesWithContext />
         </RulesProvider>
       </RewardsProvider>
     </AppLayout>
