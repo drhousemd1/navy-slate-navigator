@@ -7,24 +7,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Tables } from '@/integrations/supabase/types';
 import { PunishmentData } from '@/contexts/punishments/types';
 
-// Define the PunishmentData type based on the Supabase tables
-// export type PunishmentData = {
-//   id?: string;
-//   title: string;
-//   description?: string;
-//   points: number;
-//   icon_name?: string;
-//   icon_color?: string;
-//   title_color?: string;
-//   subtext_color?: string;
-//   calendar_color?: string;
-//   highlight_effect?: boolean;
-//   background_image_url?: string;
-//   background_opacity?: number;
-//   focal_point_x?: number;
-//   focal_point_y?: number;
-// };
-
 interface PunishmentEditorProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,18 +24,13 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
 }) => {
   const isMobile = useIsMobile();
 
-  const handleSave = async (data: PunishmentData) => {
-    try {
-      await onSave(data);
-      onClose();
-    } catch (error) {
-      console.error("Error saving punishment:", error);
-    }
+  const handleClose = () => {
+    onClose();
   };
 
   if (isMobile) {
     return (
-      <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <SheetContent className="bg-navy border-light-navy pt-10 px-0 overflow-y-auto" side="bottom" style={{ height: "100vh" }}>
           <div className="px-4">
             <SheetHeader className="text-center mb-6">
@@ -66,8 +43,8 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
             </SheetHeader>
             <PunishmentEditorForm
               punishmentData={punishmentData}
-              onSave={handleSave}
-              onCancel={onClose}
+              onSave={onSave}
+              onCancel={handleClose}
               onDelete={onDelete}
             />
           </div>
@@ -77,7 +54,7 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="bg-navy border-light-navy text-white max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white">
@@ -89,8 +66,8 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
         </DialogHeader>
         <PunishmentEditorForm
           punishmentData={punishmentData}
-          onSave={handleSave}
-          onCancel={onClose}
+          onSave={onSave}
+          onCancel={handleClose}
           onDelete={onDelete}
         />
       </DialogContent>

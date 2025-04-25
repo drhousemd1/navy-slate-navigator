@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
 import { Skull } from 'lucide-react';
@@ -11,31 +11,20 @@ import PunishmentEditor from '../components/PunishmentEditor';
 const PunishmentsContent: React.FC = () => {
   const { punishments, loading, createPunishment, updatePunishment } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [currentPunishment, setCurrentPunishment] = useState(undefined);
-  const containerRef = useRef(null);
+  const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
 
-  useEffect(() => {
-    const handleAddNewPunishment = () => {
-      setCurrentPunishment(undefined);
-      setIsEditorOpen(true);
-    };
+  const handleEditorClose = () => {
+    setIsEditorOpen(false);
+    setCurrentPunishment(undefined);
+  };
 
-    const currentContainer = containerRef.current;
-    if (currentContainer) {
-      currentContainer.addEventListener('add-new-punishment', handleAddNewPunishment);
-    }
-
-    return () => {
-      if (currentContainer) {
-        currentContainer.removeEventListener('add-new-punishment', handleAddNewPunishment);
-      }
-    };
-  }, []);
-
-  console.log("Current punishments array:", punishments);
+  const handleAddNewPunishment = () => {
+    setCurrentPunishment(undefined);
+    setIsEditorOpen(true);
+  };
 
   return (
-    <div className="p-4 pt-6 PunishmentsContent" ref={containerRef}>
+    <div className="p-4 pt-6 PunishmentsContent">
       <PunishmentsHeader />
 
       {punishments.length === 0 && !loading ? (
@@ -70,7 +59,7 @@ const PunishmentsContent: React.FC = () => {
 
       <PunishmentEditor 
         isOpen={isEditorOpen}
-        onClose={() => setIsEditorOpen(false)}
+        onClose={handleEditorClose}
         punishmentData={currentPunishment}
         onSave={async (data) => {
           try {
@@ -79,7 +68,7 @@ const PunishmentsContent: React.FC = () => {
             } else {
               await createPunishment(data);
             }
-            setIsEditorOpen(false);
+            handleEditorClose();
           } catch (error) {
             console.error("Error saving punishment:", error);
           }
@@ -90,14 +79,10 @@ const PunishmentsContent: React.FC = () => {
 };
 
 const Punishments: React.FC = () => {
+  const [isAddNewOpen, setIsAddNewOpen] = useState(false);
+
   return (
-    <AppLayout onAddNewItem={() => {
-      const content = document.querySelector('.PunishmentsContent');
-      if (content) {
-        const event = new CustomEvent('add-new-punishment');
-        content.dispatchEvent(event);
-      }
-    }}>
+    <AppLayout onAddNewItem={() => setIsAddNewOpen(true)}>
       <RewardsProvider>
         <PunishmentsProvider>
           <PunishmentsContent />
