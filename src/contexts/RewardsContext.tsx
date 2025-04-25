@@ -2,17 +2,19 @@
 import React, { createContext, useContext } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
+import { Reward } from '@/lib/rewardUtils';
+import { QueryObserverResult } from '@tanstack/react-query';
 
 // Create a complete mock observer result that satisfies the QueryObserverResult type
-const mockQueryResult = {
+const mockQueryResult: QueryObserverResult<Reward[], Error> = {
   data: [],
   error: null,
-  isError: false,
-  isSuccess: true,
-  isLoading: false,
-  isPending: false,
-  isLoadingError: false,
-  isRefetchError: false,
+  isError: false as const,
+  isSuccess: true as const,
+  isLoading: false as const,
+  isPending: false as const,
+  isLoadingError: false as const,
+  isRefetchError: false as const,
   failureCount: 0,
   failureReason: null,
   status: 'success' as const,
@@ -26,11 +28,10 @@ const mockQueryResult = {
   isPreviousData: false,
   isRefetching: false,
   isStale: false,
-  // Additional properties required by QueryObserverResult
   errorUpdateCount: 0,
   isInitialLoading: false,
   isPaused: false,
-  // The refetch function is also a Promise<QueryObserverResult>
+  // The refetch function needs to return the same type
   refetch: async () => mockQueryResult
 };
 
