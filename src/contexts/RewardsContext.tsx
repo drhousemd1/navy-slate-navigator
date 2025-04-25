@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useEffect } from 'react';
-import { Reward } from '@/lib/rewardUtils';
-import { supabase } from '@/integrations/supabase/client';
+
+import React, { createContext, useContext } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
-import { useRewardOperations } from './rewards/useRewardOperations';
+import { useRewardsData } from '@/data/rewards/useRewardsData';
 
 const RewardsContext = createContext<RewardsContextType>({
   rewards: [],
@@ -23,42 +22,40 @@ export const useRewards = () => useContext(RewardsContext);
 export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const {
     rewards,
-    setRewards,
-    isLoading,
-    fetchedRewards,
     totalPoints,
-    setTotalPoints,
+    totalRewardsSupply,
+    isLoading,
+    saveReward,
+    deleteReward,
+    buyReward,
+    useReward,
+    updatePoints,
     refetchRewards,
-    handleSaveReward,
-    handleDeleteReward,
-    handleBuyReward,
-    handleUseReward,
-    getTotalRewardsSupply,
-    refreshPointsFromDatabase
-  } = useRewardOperations();
-  
-  // Effect to update rewards from fetched data
-  useEffect(() => {
-    if (fetchedRewards.length > 0) {
-      console.log("[RewardsContext] Setting rewards from fetchedRewards with preserved order:", 
-        fetchedRewards.map((r, i) => ({ 
-          position: i,
-          id: r.id, 
-          title: r.title,
-          created_at: r.created_at
-        }))
-      );
-      setRewards(fetchedRewards);
-    }
-  }, [fetchedRewards, setRewards]);
+    refreshPointsFromDatabase,
+  } = useRewardsData();
 
-  // Add an effect to refresh points on mount
-  useEffect(() => {
-    refreshPointsFromDatabase();
-  }, [refreshPointsFromDatabase]);
+  const handleSaveReward = async (rewardData: any, index: number | null) => {
+    return await saveReward({ rewardData, currentIndex: index });
+  };
 
-  // Calculate total rewards supply
-  const totalRewardsSupply = getTotalRewardsSupply();
+  const handleDeleteReward = async (index: number) => {
+    const rewardToDelete = rewards[index];
+    if (!rewardToDelete?.id) return false;
+    await deleteReward(rewardToDelete.id);
+    return true;
+  };
+
+  const handleBuyReward = async (id: string, cost: number) => {
+    await buyReward({ rewardId: id, cost });
+  };
+
+  const handleUseReward = async (id: string) => {
+    await useReward(id);
+  };
+
+  const setTotalPoints = async (points: number) => {
+    await updatePoints(points);
+  };
 
   const value = {
     rewards,

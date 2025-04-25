@@ -1,5 +1,5 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
 import { 
   REWARDS_QUERY_KEY, 
@@ -39,8 +39,8 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: REWARDS_POINTS_QUERY_KEY,
     queryFn: fetchUserPoints,
-    staleTime: 1000 * 60 * 5,  // 5 minutes
-    gcTime: 1000 * 60 * 30,    // 30 minutes
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false
   });
 
@@ -50,8 +50,8 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: REWARDS_SUPPLY_QUERY_KEY,
     queryFn: fetchTotalRewardsSupply,
-    staleTime: 1000 * 60 * 5,  // 5 minutes
-    gcTime: 1000 * 60 * 30,    // 30 minutes
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false
   });
 
@@ -61,27 +61,37 @@ export const useRewardsData = () => {
   const useRewardMut = useMutation(useRewardMutation(queryClient));
   const updatePointsMut = useMutation(updateUserPointsMutation(queryClient));
 
+  const refetchRewardsTyped = (options?: RefetchOptions) => {
+    return refetchRewards(options) as Promise<QueryObserverResult<Reward[], Error>>;
+  };
+
+  const refreshPointsFromDatabase = async () => {
+    await Promise.all([
+      refetchPoints(),
+      refetchSupply()
+    ]);
+  };
+
   return {
+    // Data
     rewards,
     totalPoints,
     totalRewardsSupply,
+    
+    // Loading state
     isLoading: rewardsLoading,
     error: rewardsError,
-    saveReward: (rewardData: Partial<Reward>, currentIndex?: number | null) => 
-      saveRewardMut.mutateAsync({ rewardData, currentIndex }),
-    deleteReward: (rewardId: string) => 
-      deleteRewardMut.mutateAsync(rewardId),
-    buyReward: (rewardId: string, cost: number) => 
-      buyRewardMut.mutateAsync({ rewardId, cost }),
-    useReward: (rewardId: string) => 
-      useRewardMut.mutateAsync(rewardId),
-    updatePoints: (points: number) => 
-      updatePointsMut.mutateAsync(points),
-    refetchRewards: () => refetchRewards(),
-    refetchPoints: () => refetchPoints(),
-    refreshPointsFromDatabase: () => {
-      refetchPoints();
-      refetchSupply();
-    }
+    
+    // Mutations
+    saveReward: saveRewardMut.mutateAsync,
+    deleteReward: deleteRewardMut.mutateAsync,
+    buyReward: buyRewardMut.mutateAsync,
+    useReward: useRewardMut.mutateAsync,
+    updatePoints: updatePointsMut.mutateAsync,
+    
+    // Refetch functions
+    refetchRewards: refetchRewardsTyped,
+    refetchPoints,
+    refreshPointsFromDatabase
   };
 };
