@@ -18,6 +18,7 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   // Editor state
   const [currentReward, setCurrentReward] = useState<any>(null);
   const [currentRewardIndex, setCurrentRewardIndex] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Ensure we have the latest data when component mounts
   useEffect(() => {
@@ -50,6 +51,8 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   const handleSave = async (rewardData: any) => {
     console.log("Saving reward with data:", rewardData, "at index:", currentRewardIndex);
     try {
+      setIsSaving(true);
+      
       // Log the order of rewards before saving
       console.log("Rewards order BEFORE saving:", 
         rewards.map((r, i) => `${i}: ${r.title} (${r.id})`));
@@ -60,10 +63,7 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
       console.log("Rewards order AFTER saving:", 
         rewards.map((r, i) => `${i}: ${r.title} (${r.id})`));
       
-      toast({
-        title: "Success",
-        description: `Reward ${currentRewardIndex !== null ? 'updated' : 'created'} successfully`,
-      });
+      // Toast message is handled in the mutation, no need to show it here
       
       closeEditor();
     } catch (error) {
@@ -74,9 +74,8 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
         description: "Failed to save reward. Please try again.",
         variant: "destructive",
       });
-      
-      // Re-throw to allow RewardEditor to show error message
-      throw error;
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -86,10 +85,7 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     try {
       await handleDeleteReward(index);
       
-      toast({
-        title: "Success", 
-        description: "Reward deleted successfully",
-      });
+      // Toast message is handled in the mutation, no need to show it here
       
       closeEditor();
     } catch (error) {
@@ -100,8 +96,6 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
         description: "Failed to delete reward. Please try again.",
         variant: "destructive",
       });
-      
-      throw error;
     }
   };
 

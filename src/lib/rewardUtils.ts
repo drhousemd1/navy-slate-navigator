@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -24,13 +25,14 @@ export interface Reward {
 
 export const fetchRewards = async (): Promise<Reward[]> => {
   try {
-    console.log("[fetchRewards] Fetching rewards without sorting");
+    console.log("[fetchRewards] Fetching rewards");
     
     // CRITICAL: Using explicit id-based sorting for consistent order
-    // This ensures rewards are always in the same order across operations
+    // Using created_at DESC as primary sort to ensure newest rewards appear first
     const { data, error } = await supabase
       .from('rewards')
       .select('*')
+      .order('created_at', { ascending: false })
       .order('id', { ascending: true });
     
     if (error) {
@@ -43,7 +45,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
       return [];
     }
 
-    console.log('[fetchRewards] Raw data from Supabase BEFORE any processing:', 
+    console.log('[fetchRewards] Raw data from Supabase:', 
       data?.map((r, i) => ({
         position: i,
         id: r.id, 
@@ -53,7 +55,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
       }))
     );
     
-    // Return data exactly as received from database with consistent sorting
+    // Return data sorted with newest first
     return data as Reward[];
   } catch (err) {
     console.error('[fetchRewards] Unexpected error fetching rewards:', err);

@@ -1,228 +1,180 @@
+
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Form } from "@/components/ui/form";
-import { toast } from "@/hooks/use-toast";
 import RewardBasicDetails from './RewardBasicDetails';
 import RewardIconSection from './RewardIconSection';
 import RewardBackgroundSection from './RewardBackgroundSection';
 import RewardColorSettings from './RewardColorSettings';
 import RewardFormActions from './RewardFormActions';
-
-const rewardFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  cost: z.number().min(0, "Cost must be 0 or greater"),
-  background_image_url: z.string().nullable().optional(),
-  background_opacity: z.number().min(0).max(100).optional(),
-  focal_point_x: z.number().optional(),
-  focal_point_y: z.number().optional(),
-  title_color: z.string().optional(),
-  subtext_color: z.string().optional(),
-  calendar_color: z.string().optional(),
-  highlight_effect: z.boolean().optional(),
-  icon_color: z.string().optional(),
-});
-
-export type RewardFormValues = z.infer<typeof rewardFormSchema>;
+import DeleteRewardDialog from './DeleteRewardDialog';
 
 interface RewardEditorFormProps {
   rewardData?: any;
-  onSave: (data: RewardFormValues) => Promise<void>;
+  onSave: (formData: any) => Promise<void>;
   onCancel: () => void;
-  onDelete?: (index: number) => void;
+  onDelete?: (id: number) => void;
+  isSaving?: boolean;
 }
 
-const RewardEditorForm: React.FC<RewardEditorFormProps> = ({ 
+export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({ 
   rewardData, 
   onSave, 
-  onCancel, 
-  onDelete 
+  onCancel,
+  onDelete,
+  isSaving = false
 }) => {
-  const [loading, setLoading] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [iconPreview, setIconPreview] = useState<string | null>(null);
+  // Form state
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [cost, setCost] = useState(10);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
+  const [iconColor, setIconColor] = useState('#9b87f5');
+  const [titleColor, setTitleColor] = useState('#FFFFFF');
+  const [subtextColor, setSubtextColor] = useState('#8E9196');
+  const [calendarColor, setCalendarColor] = useState('#7E69AB');
+  const [highlightEffect, setHighlightEffect] = useState(false);
+  
+  // Background image state
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [backgroundOpacity, setBackgroundOpacity] = useState(100);
+  const [focalPointX, setFocalPointX] = useState(50);
+  const [focalPointY, setFocalPointY] = useState(50);
+  
+  // Dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  console.log("RewardEditorForm rendering with rewardData:", rewardData);
-  console.log("Initial background_opacity:", rewardData?.background_opacity);
-
-  const form = useForm<RewardFormValues>({
-    resolver: zodResolver(rewardFormSchema),
-    defaultValues: {
-      title: rewardData?.title || '',
-      description: rewardData?.description || '',
-      cost: rewardData?.cost || 0,
-      background_image_url: rewardData?.background_image_url || null,
-      background_opacity: rewardData?.background_opacity || 100,
-      focal_point_x: rewardData?.focal_point_x || 50,
-      focal_point_y: rewardData?.focal_point_y || 50,
-      title_color: rewardData?.title_color || '#FFFFFF',
-      subtext_color: rewardData?.subtext_color || '#CCCCCC',
-      calendar_color: rewardData?.calendar_color || '#3B82F6',
-      highlight_effect: rewardData?.highlight_effect || false,
-      icon_color: rewardData?.icon_color || '#FFFFFF',
-    }
-  });
-
-  console.log("Form background_opacity value:", form.getValues('background_opacity'));
-
+  // Load existing reward data if available
   useEffect(() => {
     if (rewardData) {
-      console.log("Setting form data from rewardData:", rewardData);
+      setTitle(rewardData.title || '');
+      setDescription(rewardData.description || '');
+      setCost(rewardData.cost || 10);
+      setSelectedIconName(rewardData.icon_name || null);
+      setIconColor(rewardData.icon_color || '#9b87f5');
+      setTitleColor(rewardData.title_color || '#FFFFFF');
+      setSubtextColor(rewardData.subtext_color || '#8E9196');
+      setCalendarColor(rewardData.calendar_color || '#7E69AB');
+      setHighlightEffect(rewardData.highlight_effect || false);
       
-      const opacityValue = rewardData.background_opacity || 100;
-        
-      console.log("Setting background_opacity to:", opacityValue);
-      
-      form.reset({
-        title: rewardData.title || '',
-        description: rewardData.description || '',
-        cost: rewardData.cost || 0,
-        background_image_url: rewardData.background_image_url || null,
-        background_opacity: opacityValue,
-        focal_point_x: rewardData.focal_point_x || 50,
-        focal_point_y: rewardData.focal_point_y || 50,
-        title_color: rewardData.title_color || '#FFFFFF',
-        subtext_color: rewardData.subtext_color || '#CCCCCC',
-        calendar_color: rewardData.calendar_color || '#3B82F6',
-        highlight_effect: rewardData.highlight_effect || false,
-        icon_color: rewardData.icon_color || '#FFFFFF',
-      });
-      
-      if (rewardData.background_image_url) {
-        setImagePreview(rewardData.background_image_url);
-      }
-      
-      if (rewardData.icon_name) {
-        setSelectedIconName(rewardData.icon_name);
-      }
+      // Background image settings
+      setImagePreview(rewardData.background_image_url || null);
+      setBackgroundOpacity(rewardData.background_opacity || 100);
+      setFocalPointX(rewardData.focal_point_x || 50);
+      setFocalPointY(rewardData.focal_point_y || 50);
+    } else {
+      // Reset to defaults if creating a new reward
+      setTitle('');
+      setDescription('');
+      setCost(10);
+      setSelectedIconName(null);
+      setIconColor('#9b87f5');
+      setTitleColor('#FFFFFF');
+      setSubtextColor('#8E9196');
+      setCalendarColor('#7E69AB');
+      setHighlightEffect(false);
+      setImagePreview(null);
+      setBackgroundOpacity(100);
+      setFocalPointX(50);
+      setFocalPointY(50);
     }
-  }, [rewardData, form]);
+  }, [rewardData]);
 
-  const handleSubmit = async (values: RewardFormValues) => {
-    console.log("Form submitted with values:", values);
-    setLoading(true);
-    
-    try {
-      const processedValues = {
-        ...values,
-        icon_name: selectedIconName || undefined,
-      };
-      
-      if (!imagePreview) {
-        processedValues.background_image_url = null;
-      }
-      
-      console.log("Calling onSave with processed data:", processedValues);
-      await onSave(processedValues);
-      
-      toast({
-        title: "Success",
-        description: "Reward saved successfully",
-      });
-    } catch (error) {
-      console.error('Error saving reward:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save reward. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const incrementCost = () => {
-    const currentCost = form.getValues('cost');
-    form.setValue('cost', currentCost + 1);
-  };
-
-  const decrementCost = () => {
-    const currentCost = form.getValues('cost');
-    form.setValue('cost', Math.max(0, currentCost - 1));
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        setImagePreview(result);
-        form.setValue('background_image_url', result);
-        form.setValue('background_opacity', 100);
-        console.log("Image uploaded, setting opacity to 100%");
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleImageUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = () => {
     setImagePreview(null);
-    form.setValue('background_image_url', null);
   };
 
-  const handleSelectIcon = (iconName: string) => {
-    setSelectedIconName(iconName);
-    setIconPreview(null);
+  const handleDeleteConfirm = () => {
+    if (onDelete && rewardData?.index !== undefined) {
+      onDelete(rewardData.index);
+    }
+    setIsDeleteDialogOpen(false);
   };
 
-  const handleUploadIcon = () => {
-    console.log("Upload custom icon");
-  };
-
-  const handleRemoveIcon = () => {
-    setSelectedIconName(null);
-    setIconPreview(null);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const formData = {
+      title,
+      description,
+      cost,
+      icon_name: selectedIconName,
+      icon_color: iconColor,
+      title_color: titleColor,
+      subtext_color: subtextColor,
+      calendar_color: calendarColor,
+      highlight_effect: highlightEffect,
+      background_image_url: imagePreview,
+      background_opacity: backgroundOpacity,
+      focal_point_x: focalPointX,
+      focal_point_y: focalPointY,
+    };
+    
+    await onSave(formData);
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <RewardBasicDetails 
-          control={form.control} 
-          incrementCost={incrementCost} 
-          decrementCost={decrementCost} 
-        />
-
-        <RewardIconSection 
-          control={form.control}
-          selectedIconName={selectedIconName}
-          iconPreview={iconPreview}
-          iconColor={form.watch('icon_color')}
-          onSelectIcon={handleSelectIcon}
-          onUploadIcon={handleUploadIcon}
-          onRemoveIcon={handleRemoveIcon}
-        />
-
-        <RewardBackgroundSection 
-          control={form.control}
-          imagePreview={imagePreview}
-          initialPosition={{
-            x: form.getValues('focal_point_x') || 50,
-            y: form.getValues('focal_point_y') || 50
-          }}
-          onRemoveImage={handleRemoveImage}
-          onImageUpload={handleImageUpload}
-          setValue={form.setValue}
-        />
-
-        <RewardColorSettings control={form.control} />
-
-        <RewardFormActions 
-          rewardData={rewardData}
-          loading={loading}
-          isDeleteDialogOpen={isDeleteDialogOpen}
-          setIsDeleteDialogOpen={setIsDeleteDialogOpen}
-          onCancel={onCancel}
-          onDelete={onDelete}
-        />
-      </form>
-    </Form>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <RewardBasicDetails 
+        title={title}
+        setTitle={setTitle}
+        description={description}
+        setDescription={setDescription}
+        cost={cost}
+        setCost={setCost}
+      />
+      
+      <RewardIconSection 
+        selectedIconName={selectedIconName}
+        setSelectedIconName={setSelectedIconName}
+        iconColor={iconColor}
+        setIconColor={setIconColor}
+      />
+      
+      <RewardBackgroundSection 
+        imagePreview={imagePreview}
+        backgroundOpacity={backgroundOpacity}
+        focalPointX={focalPointX}
+        focalPointY={focalPointY}
+        handleImageUpload={handleImageUpload}
+        handleRemoveImage={handleRemoveImage}
+        setBackgroundOpacity={setBackgroundOpacity}
+        setFocalPointX={setFocalPointX}
+        setFocalPointY={setFocalPointY}
+      />
+      
+      <RewardColorSettings 
+        titleColor={titleColor}
+        setTitleColor={setTitleColor}
+        subtextColor={subtextColor}
+        setSubtextColor={setSubtextColor}
+        calendarColor={calendarColor}
+        setCalendarColor={setCalendarColor}
+        highlightEffect={highlightEffect}
+        setHighlightEffect={setHighlightEffect}
+      />
+      
+      <RewardFormActions 
+        rewardData={rewardData}
+        isDeleteDialogOpen={isDeleteDialogOpen}
+        setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+        onCancel={onCancel}
+        onDelete={rewardData && onDelete ? () => setIsDeleteDialogOpen(true) : undefined}
+        isSaving={isSaving}
+      />
+      
+      <DeleteRewardDialog 
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        rewardName={rewardData?.title || 'this reward'}
+      />
+    </form>
   );
 };
-
-export { RewardEditorForm };

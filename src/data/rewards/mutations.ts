@@ -1,11 +1,10 @@
-
 import { QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { Reward } from '@/lib/rewardUtils';
 import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY } from './queries';
 
-export const saveRewardMutation = (queryClient: QueryClient) => ({
+export const saveRewardMutation = (queryClient: QueryClient, showToast: boolean = true) => ({
   mutationFn: async (params: { rewardData: Partial<Reward>; currentIndex?: number | null }): Promise<Reward> => {
     const { rewardData, currentIndex } = params;
     
@@ -87,7 +86,7 @@ export const saveRewardMutation = (queryClient: QueryClient) => ({
         )
       );
     } else {
-      // Creating new reward
+      // Creating new reward - add to beginning of list for immediate visibility
       const tempId = `temp-${Date.now()}`;
       const optimisticReward: Reward = {
         id: tempId,
@@ -109,6 +108,7 @@ export const saveRewardMutation = (queryClient: QueryClient) => ({
         updated_at: new Date().toISOString()
       };
       
+      // Place new rewards at the beginning of the list
       queryClient.setQueryData<Reward[]>(
         REWARDS_QUERY_KEY, 
         [optimisticReward, ...previousRewards]
@@ -118,21 +118,25 @@ export const saveRewardMutation = (queryClient: QueryClient) => ({
     return { previousRewards };
   },
   onError: (err, _, context) => {
-    toast({
-      title: "Error",
-      description: "Failed to save reward",
-      variant: "destructive",
-    });
+    if (showToast) {
+      toast({
+        title: "Error",
+        description: "Failed to save reward",
+        variant: "destructive",
+      });
+    }
     
     if (context) {
       queryClient.setQueryData(REWARDS_QUERY_KEY, context.previousRewards);
     }
   },
   onSuccess: () => {
-    toast({
-      title: "Success",
-      description: "Reward saved successfully",
-    });
+    if (showToast) {
+      toast({
+        title: "Success",
+        description: "Reward saved successfully",
+      });
+    }
   },
   onSettled: () => {
     // Always refetch after error or success
@@ -141,7 +145,7 @@ export const saveRewardMutation = (queryClient: QueryClient) => ({
   }
 });
 
-export const deleteRewardMutation = (queryClient: QueryClient) => ({
+export const deleteRewardMutation = (queryClient: QueryClient, showToast: boolean = true) => ({
   mutationFn: async (rewardId: string): Promise<boolean> => {
     const { error } = await supabase
       .from('rewards')
@@ -168,21 +172,25 @@ export const deleteRewardMutation = (queryClient: QueryClient) => ({
     return { previousRewards };
   },
   onError: (err, _, context) => {
-    toast({
-      title: "Error",
-      description: "Failed to delete reward",
-      variant: "destructive",
-    });
+    if (showToast) {
+      toast({
+        title: "Error",
+        description: "Failed to delete reward",
+        variant: "destructive",
+      });
+    }
     
     if (context) {
       queryClient.setQueryData(REWARDS_QUERY_KEY, context.previousRewards);
     }
   },
   onSuccess: () => {
-    toast({
-      title: "Success",
-      description: "Reward deleted successfully",
-    });
+    if (showToast) {
+      toast({
+        title: "Success",
+        description: "Reward deleted successfully",
+      });
+    }
   },
   onSettled: () => {
     queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
@@ -297,11 +305,13 @@ export const buyRewardMutation = (queryClient: QueryClient) => ({
     };
   },
   onError: (err, _, context) => {
-    toast({
-      title: "Error",
-      description: err instanceof Error ? err.message : 'Failed to buy reward',
-      variant: "destructive",
-    });
+    if (showToast) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to buy reward',
+        variant: "destructive",
+      });
+    }
     
     if (context) {
       queryClient.setQueryData(REWARDS_QUERY_KEY, context.previousRewards);
@@ -309,10 +319,12 @@ export const buyRewardMutation = (queryClient: QueryClient) => ({
     }
   },
   onSuccess: () => {
-    toast({
-      title: "Success",
-      description: "Reward purchased successfully",
-    });
+    if (showToast) {
+      toast({
+        title: "Success",
+        description: "Reward purchased successfully",
+      });
+    }
   },
   onSettled: () => {
     queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
@@ -386,21 +398,25 @@ export const useRewardMutation = (queryClient: QueryClient) => ({
     return { previousRewards };
   },
   onError: (err, _, context) => {
-    toast({
-      title: "Error",
-      description: err instanceof Error ? err.message : 'Failed to use reward',
-      variant: "destructive",
-    });
+    if (showToast) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to use reward',
+        variant: "destructive",
+      });
+    }
     
     if (context) {
       queryClient.setQueryData(REWARDS_QUERY_KEY, context.previousRewards);
     }
   },
   onSuccess: () => {
-    toast({
-      title: "Success",
-      description: "Reward used successfully",
-    });
+    if (showToast) {
+      toast({
+        title: "Success",
+        description: "Reward used successfully",
+      });
+    }
   },
   onSettled: () => {
     queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
@@ -440,11 +456,13 @@ export const updateUserPointsMutation = (queryClient: QueryClient) => ({
     return { previousPoints };
   },
   onError: (err, _, context) => {
-    toast({
-      title: "Error",
-      description: "Failed to update points",
-      variant: "destructive",
-    });
+    if (showToast) {
+      toast({
+        title: "Error",
+        description: "Failed to update points",
+        variant: "destructive",
+      });
+    }
     
     if (context) {
       queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, context.previousPoints);

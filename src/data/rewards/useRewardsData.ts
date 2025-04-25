@@ -55,8 +55,10 @@ export const useRewardsData = () => {
     refetchOnWindowFocus: false
   });
 
-  const saveRewardMut = useMutation(saveRewardMutation(queryClient));
-  const deleteRewardMut = useMutation(deleteRewardMutation(queryClient));
+  // Configure mutations with toast disabled in the handlers
+  // Toast messages will be handled at the UI level instead
+  const saveRewardMut = useMutation(saveRewardMutation(queryClient, false));
+  const deleteRewardMut = useMutation(deleteRewardMutation(queryClient, false));
   const buyRewardMut = useMutation(buyRewardMutation(queryClient));
   const useRewardMut = useMutation(useRewardMutation(queryClient));
   const updatePointsMut = useMutation(updateUserPointsMutation(queryClient));

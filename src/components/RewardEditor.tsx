@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { RewardEditorForm } from './reward-editor/RewardEditorForm';
@@ -24,13 +24,16 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+  const [isSaving, setIsSaving] = useState(false);
   
   const handleSave = async (formData: any) => {
     console.log("RewardEditor handling save with form data:", formData);
     try {
+      setIsSaving(true);
       const dataToSave = rewardData ? { ...formData, id: rewardData.id } : formData;
       await onSave(dataToSave);
-      queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      
+      // Display a single toast message on success
       toast({
         title: "Success",
         description: "Reward saved successfully",
@@ -43,6 +46,8 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
         description: "Failed to save reward. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -65,6 +70,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
               onSave={handleSave}
               onCancel={onClose}
               onDelete={onDelete}
+              isSaving={isSaving}
             />
           </div>
         </SheetContent>
@@ -89,6 +95,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
           onSave={handleSave}
           onCancel={onClose}
           onDelete={onDelete}
+          isSaving={isSaving}
         />
       </DialogContent>
     </Dialog>
