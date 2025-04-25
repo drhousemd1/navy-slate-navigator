@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { 
@@ -42,8 +41,7 @@ export const usePunishmentsData = () => {
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
-    refetchInterval: false,
-    enabled: !punishmentsLoading && punishments.length > 0
+    refetchInterval: false
   });
 
   const createPunishmentMut = useMutation(createPunishmentMutation(queryClient));
@@ -100,4 +98,3 @@ export const usePunishmentsData = () => {
     totalPointsDeducted
   };
 };
-
