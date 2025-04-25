@@ -31,6 +31,13 @@ export const createPunishmentMutation = (queryClient: QueryClient) => ({
     
     return { previousData };
   },
+  onSuccess: () => {
+    toast({
+      title: "Success",
+      description: "Punishment created successfully",
+    });
+    queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+  },
   onError: (err: Error, _: unknown, context: { previousData: PunishmentData[] } | undefined) => {
     queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousData);
     toast({
@@ -38,15 +45,6 @@ export const createPunishmentMutation = (queryClient: QueryClient) => ({
       description: "Failed to create punishment",
       variant: "destructive",
     });
-  },
-  onSuccess: () => {
-    toast({
-      title: "Success",
-      description: "Punishment created successfully",
-    });
-  },
-  onSettled: () => {
-    queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
   }
 });
 
@@ -74,18 +72,19 @@ export const updatePunishmentMutation = (queryClient: QueryClient) => ({
     
     return { previousData };
   },
+  onSuccess: () => {
+    toast({
+      title: "Success",
+      description: "Punishment updated successfully",
+    });
+    queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+  },
   onError: (err: Error, _: unknown, context: { previousData: PunishmentData[] } | undefined) => {
     queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousData);
     toast({
       title: "Error",
       description: "Failed to update punishment",
       variant: "destructive",
-    });
-  },
-  onSuccess: () => {
-    toast({
-      title: "Success",
-      description: "Punishment updated successfully",
     });
   }
 });
@@ -126,6 +125,13 @@ export const applyPunishmentMutation = (queryClient: QueryClient) => ({
     
     return { previousData };
   },
+  onSuccess: () => {
+    toast({
+      title: "Success",
+      description: "Punishment applied successfully",
+    });
+    queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
+  },
   onError: (err: Error, _: unknown, context: { previousData: PunishmentHistoryItem[] } | undefined) => {
     queryClient.setQueryData(PUNISHMENT_HISTORY_QUERY_KEY, context?.previousData);
     toast({
@@ -133,13 +139,6 @@ export const applyPunishmentMutation = (queryClient: QueryClient) => ({
       description: "Failed to apply punishment",
       variant: "destructive",
     });
-  },
-  onSuccess: () => {
-    toast({
-      title: "Success",
-      description: "Punishment applied successfully",
-    });
-    queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
   }
 });
 

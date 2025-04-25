@@ -1,8 +1,6 @@
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
-import { toast } from '@/hooks/use-toast';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 
 interface PunishmentFormSubmitHandlerProps {
@@ -25,42 +23,24 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   children
 }) => {
   const onSubmit = async (values: any) => {
+    const icon_name = selectedIconName || null;
+    const background_image_url = imagePreview || null;
+    
+    const dataToSave: PunishmentData = {
+      ...values,
+      icon_name: icon_name,
+      background_image_url: background_image_url,
+      icon_color: values.icon_color || '#ea384c'
+    };
+    
+    if (punishmentData?.id) {
+      dataToSave.id = punishmentData.id;
+    }
+    
     try {
-      const icon_name = selectedIconName || null;
-      const background_image_url = imagePreview || null;
-      
-      const dataToSave: PunishmentData = {
-        ...values,
-        icon_name: icon_name,
-        background_image_url: background_image_url,
-        icon_color: values.icon_color || '#ea384c' // Ensure icon_color always has a value
-      };
-      
-      if (punishmentData?.id) {
-        dataToSave.id = punishmentData.id;
-      }
-      
-      // Save the data
       await onSave(dataToSave);
-      
-      // Success notification
-      toast({
-        title: "Success",
-        description: punishmentData?.id ? "Punishment updated successfully" : "Punishment created successfully",
-      });
-      
-      // Close the form
-      onCancel();
-      
-      // Reset form after everything else is done
-      form.reset();
     } catch (error) {
       console.error("Error saving punishment:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save punishment. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
