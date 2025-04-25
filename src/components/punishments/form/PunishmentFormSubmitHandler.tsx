@@ -39,6 +39,8 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     
     try {
       await onSave(dataToSave);
+      form.reset();
+      onCancel();
     } catch (error) {
       console.error("Error saving punishment:", error);
     }

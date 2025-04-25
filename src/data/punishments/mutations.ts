@@ -1,10 +1,11 @@
+
 import { QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { PUNISHMENTS_QUERY_KEY, PUNISHMENT_HISTORY_QUERY_KEY } from './queries';
 
-export const createPunishmentMutation = (queryClient: QueryClient) => ({
+export const createPunishmentMutation = (queryClient: QueryClient, onSuccess?: () => void) => ({
   mutationFn: async (newPunishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => {
     const { data, error } = await supabase
       .from('punishments')
@@ -36,6 +37,13 @@ export const createPunishmentMutation = (queryClient: QueryClient) => ({
       title: "Success",
       description: "Punishment created successfully",
     });
+    
+    // Call the success callback if provided
+    if (onSuccess) {
+      onSuccess();
+    }
+
+    // Refetch data in background
     queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
   },
   onError: (err: Error, _: unknown, context: { previousData: PunishmentData[] } | undefined) => {
@@ -48,7 +56,7 @@ export const createPunishmentMutation = (queryClient: QueryClient) => ({
   }
 });
 
-export const updatePunishmentMutation = (queryClient: QueryClient) => ({
+export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: () => void) => ({
   mutationFn: async ({ id, punishment }: { id: string; punishment: Partial<PunishmentData> }) => {
     const { data, error } = await supabase
       .from('punishments')
@@ -77,6 +85,13 @@ export const updatePunishmentMutation = (queryClient: QueryClient) => ({
       title: "Success",
       description: "Punishment updated successfully",
     });
+    
+    // Call the success callback if provided
+    if (onSuccess) {
+      onSuccess();
+    }
+
+    // Refetch data in background
     queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
   },
   onError: (err: Error, _: unknown, context: { previousData: PunishmentData[] } | undefined) => {

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -79,7 +78,6 @@ const PunishmentsContent: React.FC = () => {
 };
 
 const Punishments: React.FC = () => {
-  // Direct approach to expose the add new punishment functionality
   const contentRef = React.useRef<{ handleAddNewPunishment?: () => void }>({});
 
   const handleAddNew = () => {
@@ -99,7 +97,6 @@ const Punishments: React.FC = () => {
   );
 };
 
-// Wrapper component to pass the ref
 const PunishmentsContentWrapper: React.FC<{ contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }> }> = ({ contentRef }) => {
   const { punishments, loading, createPunishment, updatePunishment } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -115,7 +112,6 @@ const PunishmentsContentWrapper: React.FC<{ contentRef: React.MutableRefObject<{
     setIsEditorOpen(true);
   };
 
-  // Expose the function to the parent component
   React.useEffect(() => {
     contentRef.current.handleAddNewPunishment = handleAddNewPunishment;
     return () => {
