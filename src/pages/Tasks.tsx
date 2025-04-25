@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -15,9 +14,26 @@ const TasksWithContext: React.FC = () => {
   const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion } = useTasks();
 
   const handleAddTask = () => {
+    console.log('handleAddTask called in TasksWithContext');
     setCurrentTask(null);
     setIsEditorOpen(true);
   };
+
+  // Expose the handleAddTask function to be called from outside
+  React.useEffect(() => {
+    console.log('Setting up event listener for add-new-task');
+    const element = document.querySelector('.TasksContent');
+    if (element) {
+      const handleAddEvent = () => {
+        console.log('Received add-new-task event');
+        handleAddTask();
+      };
+      element.addEventListener('add-new-task', handleAddEvent);
+      return () => {
+        element.removeEventListener('add-new-task', handleAddEvent);
+      };
+    }
+  }, []);
 
   const handleEditTask = (task: Task) => {
     setCurrentTask(task);
@@ -43,18 +59,6 @@ const TasksWithContext: React.FC = () => {
       console.error('Error deleting task:', err);
     }
   };
-
-  // Expose the handleAddTask function to be called from outside
-  React.useEffect(() => {
-    const element = document.querySelector('.TasksContent');
-    if (element) {
-      const handleAddEvent = () => handleAddTask();
-      element.addEventListener('add-new-task', handleAddEvent);
-      return () => {
-        element.removeEventListener('add-new-task', handleAddEvent);
-      };
-    }
-  }, []);
 
   return (
     <div className="p-4 pt-6 TasksContent">
@@ -85,9 +89,10 @@ const TasksWithContext: React.FC = () => {
 const Tasks: React.FC = () => {
   return (
     <AppLayout onAddNewItem={() => {
-      // Dispatch a custom event to the inner component
+      console.log('AppLayout onAddNewItem called for Tasks');
       const content = document.querySelector('.TasksContent');
       if (content) {
+        console.log('Dispatching add-new-task event');
         const event = new CustomEvent('add-new-task');
         content.dispatchEvent(event);
       }

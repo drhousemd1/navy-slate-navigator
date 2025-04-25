@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useNavigate } from 'react-router-dom';
@@ -17,9 +16,26 @@ const RulesWithContext: React.FC = () => {
   const { rules, isLoading, saveRule, deleteRule, markRuleBroken } = useRules();
 
   const handleAddRule = () => {
+    console.log('handleAddRule called in RulesWithContext');
     setCurrentRule(null);
     setIsEditorOpen(true);
   };
+
+  // Expose the handleAddRule function to be called from outside
+  React.useEffect(() => {
+    console.log('Setting up event listener for add-new-rule');
+    const element = document.querySelector('.RulesContent');
+    if (element) {
+      const handleAddEvent = () => {
+        console.log('Received add-new-rule event');
+        handleAddRule();
+      };
+      element.addEventListener('add-new-rule', handleAddEvent);
+      return () => {
+        element.removeEventListener('add-new-rule', handleAddEvent);
+      };
+    }
+  }, []);
 
   const handleEditRule = (rule: Rule) => {
     setCurrentRule(rule);
@@ -55,18 +71,6 @@ const RulesWithContext: React.FC = () => {
     }
   };
 
-  // Expose the handleAddRule function to be called from outside
-  React.useEffect(() => {
-    const element = document.querySelector('.RulesContent');
-    if (element) {
-      const handleAddEvent = () => handleAddRule();
-      element.addEventListener('add-new-rule', handleAddEvent);
-      return () => {
-        element.removeEventListener('add-new-rule', handleAddEvent);
-      };
-    }
-  }, []);
-
   return (
     <div className="container mx-auto px-4 py-6 RulesContent">
       <RulesHeader />
@@ -96,9 +100,10 @@ const RulesWithContext: React.FC = () => {
 const Rules: React.FC = () => {
   return (
     <AppLayout onAddNewItem={() => {
-      // Dispatch a custom event to the inner component
+      console.log('AppLayout onAddNewItem called for Rules');
       const content = document.querySelector('.RulesContent');
       if (content) {
+        console.log('Dispatching add-new-rule event');
         const event = new CustomEvent('add-new-rule');
         content.dispatchEvent(event);
       }
