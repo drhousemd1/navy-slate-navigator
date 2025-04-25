@@ -40,11 +40,11 @@ const PunishmentCardContent: React.FC<PunishmentCardContentProps> = ({
               <TaskIcon 
                 icon_name={icon_name} 
                 icon_color={icon_color} 
-                className="h-5 w-5"
+                className="w-6 h-6"
               />
             ) : (
               <Skull 
-                className="h-5 w-5" 
+                className="w-6 h-6" 
                 style={{ color: icon_color }} 
               />
             )}
