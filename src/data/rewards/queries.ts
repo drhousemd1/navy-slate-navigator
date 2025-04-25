@@ -10,7 +10,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   const { data, error } = await supabase
     .from('rewards')
     .select('*')
-    .order('id', { ascending: true });
+    .order('created_at', { ascending: false }); // Order by created_at desc to show newest first
   
   if (error) throw error;
   return data || [];

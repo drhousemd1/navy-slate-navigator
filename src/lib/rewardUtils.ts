@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -9,18 +8,17 @@ export interface Reward {
   cost: number;
   supply: number;
   background_image_url?: string | null;
-  background_opacity?: number;
-  focal_point_x?: number;
-  focal_point_y?: number;
-  // Remove icon_url from interface
+  background_opacity: number;
+  focal_point_x: number;
+  focal_point_y: number;
   icon_name?: string;
-  title_color?: string;
-  subtext_color?: string;
-  calendar_color?: string;
-  highlight_effect?: boolean;
-  icon_color?: string;
-  created_at?: string;
-  updated_at?: string;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  highlight_effect: boolean;
+  icon_color: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export const fetchRewards = async (): Promise<Reward[]> => {

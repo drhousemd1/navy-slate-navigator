@@ -225,10 +225,10 @@ export const saveRewardMutation = (queryClient: QueryClient, showToasts: boolean
         )
       );
     } else {
-      // Creating new reward - add to beginning of list for immediate visibility
-      const tempId = `temp-${Date.now()}`;
+      // Creating new reward - add to beginning of list (newest first)
+      const now = new Date().toISOString();
       const optimisticReward: Reward = {
-        id: tempId,
+        id: `temp-${now}`,
         title: rewardData.title || 'New Reward',
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
@@ -243,11 +243,10 @@ export const saveRewardMutation = (queryClient: QueryClient, showToasts: boolean
         highlight_effect: rewardData.highlight_effect || false,
         focal_point_x: rewardData.focal_point_x || 50,
         focal_point_y: rewardData.focal_point_y || 50,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: now,
+        updated_at: now
       };
       
-      // Place new rewards at the beginning of the list
       queryClient.setQueryData<Reward[]>(
         REWARDS_QUERY_KEY, 
         [optimisticReward, ...previousRewards]
