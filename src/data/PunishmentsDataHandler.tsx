@@ -1,5 +1,5 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
@@ -227,10 +227,13 @@ export const usePunishmentsData = () => {
       if (error) throw error;
     },
     onMutate: async (id) => {
-      await Promise.all([
+      // Fix for TypeScript error: explicitly define the array type for Promise.all
+      const promises: Promise<void>[] = [
         queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
         queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
-      ]);
+      ];
+      
+      await Promise.all(promises);
       
       const previousPunishments = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
       const previousHistory = queryClient.getQueryData(PUNISHMENT_HISTORY_QUERY_KEY);
@@ -289,13 +292,16 @@ export const usePunishmentsData = () => {
     selectRandomPunishment: () => {},
     resetRandomSelection: () => {},
     fetchPunishments: async () => {
-      await Promise.all([
+      // Fix for TypeScript error: explicitly define the array type for Promise.all
+      const promises: Promise<void>[] = [
         queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
-      ]);
+      ];
+      
+      await Promise.all(promises);
     },
-    refetchPunishments: (options) => refetchPunishments(options),
-    refetchHistory: (options) => refetchHistory(options),
+    refetchPunishments: (options?: RefetchOptions) => refetchPunishments(options) as Promise<any>,
+    refetchHistory: (options?: RefetchOptions) => refetchHistory(options) as Promise<any>,
     getPunishmentHistory,
     totalPointsDeducted
   };
