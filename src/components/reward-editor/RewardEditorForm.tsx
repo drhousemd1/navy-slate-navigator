@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { Form } from "@/components/ui/form"; // Import the Form component
 import RewardBasicDetails from './RewardBasicDetails';
 import RewardIconSection from './RewardIconSection';
 import RewardBackgroundSection from './RewardBackgroundSection';
@@ -27,7 +28,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   const [iconPreview, setIconPreview] = React.useState<string | null>(null);
 
   // Form handling with react-hook-form
-  const { control, handleSubmit, setValue, watch, reset } = useForm({
+  const form = useForm({
     defaultValues: {
       title: '',
       description: '',
@@ -44,6 +45,8 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       focal_point_y: 50,
     }
   });
+
+  const { control, handleSubmit, setValue, watch, reset } = form;
 
   // Watch form values
   const iconName = watch('icon_name');
@@ -120,55 +123,57 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <RewardBasicDetails 
-        control={control}
-        incrementCost={incrementCost}
-        decrementCost={decrementCost}
-      />
-      
-      <RewardIconSection 
-        control={control}
-        selectedIconName={iconName}
-        iconPreview={iconPreview}
-        iconColor={iconColor}
-        onSelectIcon={handleSelectIcon}
-        onUploadIcon={handleUploadIcon}
-        onRemoveIcon={handleRemoveIcon}
-      />
-      
-      <RewardBackgroundSection 
-        control={control}
-        imagePreview={imagePreview}
-        initialPosition={{ x: watch('focal_point_x'), y: watch('focal_point_y') }}
-        onRemoveImage={handleRemoveImage}
-        onImageUpload={(e) => {
-          if (e.target.files?.[0]) {
-            handleImageUpload(e.target.files[0]);
-          }
-        }}
-        setValue={setValue}
-      />
-      
-      <RewardColorSettings 
-        control={control}
-      />
-      
-      <RewardFormActions 
-        rewardData={rewardData}
-        isDeleteDialogOpen={isDeleteDialogOpen}
-        setIsDeleteDialogOpen={setIsDeleteDialogOpen}
-        onCancel={onCancel}
-        onDelete={rewardData && onDelete ? () => setIsDeleteDialogOpen(true) : undefined}
-        isSaving={isSaving}
-      />
-      
-      <DeleteRewardDialog 
-        isOpen={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={handleDeleteConfirm}
-        rewardName={rewardData?.title || 'this reward'}
-      />
-    </form>
+    <Form {...form}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <RewardBasicDetails 
+          control={control}
+          incrementCost={incrementCost}
+          decrementCost={decrementCost}
+        />
+        
+        <RewardIconSection 
+          control={control}
+          selectedIconName={iconName}
+          iconPreview={iconPreview}
+          iconColor={iconColor}
+          onSelectIcon={handleSelectIcon}
+          onUploadIcon={handleUploadIcon}
+          onRemoveIcon={handleRemoveIcon}
+        />
+        
+        <RewardBackgroundSection 
+          control={control}
+          imagePreview={imagePreview}
+          initialPosition={{ x: watch('focal_point_x'), y: watch('focal_point_y') }}
+          onRemoveImage={handleRemoveImage}
+          onImageUpload={(e) => {
+            if (e.target.files?.[0]) {
+              handleImageUpload(e.target.files[0]);
+            }
+          }}
+          setValue={setValue}
+        />
+        
+        <RewardColorSettings 
+          control={control}
+        />
+        
+        <RewardFormActions 
+          rewardData={rewardData}
+          isDeleteDialogOpen={isDeleteDialogOpen}
+          setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+          onCancel={onCancel}
+          onDelete={rewardData && onDelete ? () => setIsDeleteDialogOpen(true) : undefined}
+          isSaving={isSaving}
+        />
+        
+        <DeleteRewardDialog 
+          isOpen={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          onConfirm={handleDeleteConfirm}
+          rewardName={rewardData?.title || 'this reward'}
+        />
+      </form>
+    </Form>
   );
 };
