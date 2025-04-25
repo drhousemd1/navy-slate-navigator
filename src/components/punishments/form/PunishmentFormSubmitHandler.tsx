@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Form } from '@/components/ui/form';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 
@@ -22,6 +22,8 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   onCancel,
   children
 }) => {
+  const [loading, setLoading] = useState(false);
+  
   const onSubmit = async (values: any) => {
     const icon_name = selectedIconName || null;
     const background_image_url = imagePreview || null;
@@ -38,18 +40,29 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     }
     
     try {
+      setLoading(true);
       await onSave(dataToSave);
       form.reset();
       onCancel();
     } catch (error) {
       console.error("Error saving punishment:", error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Clone children and inject loading prop
+  const childrenWithLoading = React.Children.map(children, child => {
+    if (React.isValidElement(child)) {
+      return React.cloneElement(child, { loading });
+    }
+    return child;
+  });
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {children}
+        {childrenWithLoading}
       </form>
     </Form>
   );

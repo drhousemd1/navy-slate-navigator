@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Trash2 } from 'lucide-react';
+import { AlertCircle, Loader2, Trash2 } from 'lucide-react';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 import DeletePunishmentDialog from '../DeletePunishmentDialog';
 
@@ -29,6 +30,7 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
             type="button"
             variant="destructive"
             onClick={() => setIsDeleteDialogOpen(true)}
+            disabled={loading}
             className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
           >
             <Trash2 className="h-4 w-4" />
@@ -46,6 +48,7 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
         type="button" 
         variant="destructive" 
         onClick={onCancel}
+        disabled={loading}
         className="bg-red-700 text-white hover:bg-red-600"
       >
         Cancel
@@ -55,7 +58,12 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
         className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
         disabled={loading}
       >
-        {loading ? 'Saving...' : (
+        {loading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Saving...
+          </>
+        ) : (
           <>
             <AlertCircle className="h-4 w-4" />
             Save Changes
