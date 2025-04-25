@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import PunishmentEditorForm from './punishments/PunishmentEditorForm';
@@ -25,8 +25,15 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
   const isMobile = useIsMobile();
 
   const handleClose = () => {
-    onClose();
+    if (onClose) {
+      onClose();
+    }
   };
+
+  // Reset form state when opening/closing the editor
+  useEffect(() => {
+    console.log("PunishmentEditor isOpen changed:", isOpen);
+  }, [isOpen]);
 
   if (isMobile) {
     return (

@@ -26,6 +26,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
 }) => {
   const onSubmit = async (values: any) => {
     try {
+      // Prepare the data to save
       const icon_name = selectedIconName || null;
       const background_image_url = imagePreview || null;
       
@@ -39,9 +40,11 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
         dataToSave.id = punishmentData.id;
       }
       
+      // Save the data
       await onSave(dataToSave);
+      
+      // Reset form and close only after successful save
       form.reset();
-      onCancel();
     } catch (error) {
       console.error("Error saving punishment:", error);
       toast({

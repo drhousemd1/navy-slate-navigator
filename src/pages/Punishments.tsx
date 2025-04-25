@@ -79,13 +79,21 @@ const PunishmentsContent: React.FC = () => {
 };
 
 const Punishments: React.FC = () => {
-  const [isAddNewOpen, setIsAddNewOpen] = useState(false);
+  // Create a reference to the content component's add function
+  const [showAddNew, setShowAddNew] = useState(false);
+
+  // This function properly connects to the PunishmentsContent
+  const handleAddNew = () => {
+    setShowAddNew(true);
+    // Reset after a short delay to handle the effect
+    setTimeout(() => setShowAddNew(false), 100);
+  };
 
   return (
-    <AppLayout onAddNewItem={() => setIsAddNewOpen(true)}>
+    <AppLayout onAddNewItem={handleAddNew}>
       <RewardsProvider>
         <PunishmentsProvider>
-          <PunishmentsContent />
+          <PunishmentsContent key={showAddNew ? 'adding' : 'normal'} />
         </PunishmentsProvider>
       </RewardsProvider>
     </AppLayout>
