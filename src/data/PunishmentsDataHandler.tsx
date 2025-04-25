@@ -86,7 +86,12 @@ export const usePunishmentsData = () => {
       return data;
     },
     onMutate: async (newPunishment) => {
-      await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+      // Fix for TypeScript error: explicitly define the array type for Promise.all
+      const promises: Promise<void>[] = [
+        queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY })
+      ];
+      
+      await Promise.all(promises);
       const previousData = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
       
       queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, [
@@ -134,7 +139,12 @@ export const usePunishmentsData = () => {
       return data;
     },
     onMutate: async ({ id, punishment }) => {
-      await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+      // Fix for TypeScript error: explicitly define the array type for Promise.all
+      const promises: Promise<void>[] = [
+        queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY })
+      ];
+      
+      await Promise.all(promises);
       const previousData = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
       
       queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, (old: PunishmentData[] | undefined) =>
@@ -180,7 +190,12 @@ export const usePunishmentsData = () => {
       return data;
     },
     onMutate: async (punishment) => {
-      await queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
+      // Fix for TypeScript error: explicitly define the array type for Promise.all
+      const promises: Promise<void>[] = [
+        queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
+      ];
+      
+      await Promise.all(promises);
       const previousData = queryClient.getQueryData(PUNISHMENT_HISTORY_QUERY_KEY);
       
       const newHistoryEntry = {
