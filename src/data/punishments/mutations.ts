@@ -23,16 +23,16 @@ export const createPunishmentMutation = (queryClient: QueryClient) => ({
     ];
     
     await Promise.all(promises);
-    const previousData = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
+    const previousData = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
     
-    queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, [
+    queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) => [
       {
         ...newPunishment,
         id: 'temp-' + Date.now(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      },
-      ...(previousData || [])
+      } as PunishmentData,
+      ...old
     ]);
     
     return { previousData };
@@ -75,10 +75,10 @@ export const updatePunishmentMutation = (queryClient: QueryClient) => ({
     ];
     
     await Promise.all(promises);
-    const previousData = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
+    const previousData = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
     
-    queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, (old: PunishmentData[] | undefined) =>
-      (old || []).map(p =>
+    queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) =>
+      old.map(p =>
         p.id === id ? { ...p, ...punishment, updated_at: new Date().toISOString() } : p
       )
     );
@@ -125,7 +125,7 @@ export const applyPunishmentMutation = (queryClient: QueryClient) => ({
     ];
     
     await Promise.all(promises);
-    const previousData = queryClient.getQueryData(PUNISHMENT_HISTORY_QUERY_KEY);
+    const previousData = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY);
     
     const newHistoryEntry = {
       id: 'temp-' + Date.now(),
@@ -133,11 +133,11 @@ export const applyPunishmentMutation = (queryClient: QueryClient) => ({
       points_deducted: punishment.points,
       day_of_week: new Date().getDay(),
       applied_date: new Date().toISOString()
-    };
+    } as PunishmentHistoryItem;
 
-    queryClient.setQueryData(PUNISHMENT_HISTORY_QUERY_KEY, [
+    queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => [
       newHistoryEntry,
-      ...(previousData || [])
+      ...old
     ]);
     
     return { previousData };
@@ -177,15 +177,15 @@ export const deletePunishmentMutation = (queryClient: QueryClient) => ({
     
     await Promise.all(promises);
     
-    const previousPunishments = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
-    const previousHistory = queryClient.getQueryData(PUNISHMENT_HISTORY_QUERY_KEY);
+    const previousPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
+    const previousHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY);
     
-    queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, 
-      (old: PunishmentData[] | undefined) => (old || []).filter(p => p.id !== id)
+    queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, 
+      (old = []) => old.filter(p => p.id !== id)
     );
     
-    queryClient.setQueryData(PUNISHMENT_HISTORY_QUERY_KEY,
-      (old: PunishmentHistoryItem[] | undefined) => (old || []).filter(h => h.punishment_id !== id)
+    queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY,
+      (old = []) => old.filter(h => h.punishment_id !== id)
     );
     
     return { previousPunishments, previousHistory };
