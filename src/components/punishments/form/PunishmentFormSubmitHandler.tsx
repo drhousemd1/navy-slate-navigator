@@ -51,10 +51,12 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     }
   };
 
-  // Clone children to pass isSaving prop
+  // Use a more type-safe approach for cloning children
   const childrenWithProps = React.Children.map(children, child => {
+    // Only clone if it's a valid element
     if (React.isValidElement(child)) {
-      return React.cloneElement(child, { isSaving });
+      // Pass isSaving prop to the child
+      return React.cloneElement(child, { isSaving } as React.HTMLAttributes<HTMLElement>);
     }
     return child;
   });

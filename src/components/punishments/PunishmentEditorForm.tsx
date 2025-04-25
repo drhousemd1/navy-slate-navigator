@@ -155,7 +155,6 @@ const PunishmentFormContent: React.FC<PunishmentFormContentProps> = ({
       
       <PunishmentFormActions 
         punishmentData={punishmentData}
-        loading={false}
         isDeleteDialogOpen={isDeleteDialogOpen}
         setIsDeleteDialogOpen={setIsDeleteDialogOpen}
         onCancel={onCancel}
