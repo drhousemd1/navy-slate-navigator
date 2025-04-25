@@ -334,7 +334,7 @@ export const buyRewardMutation = (queryClient: QueryClient) => ({
 });
 
 export const useRewardMutation = (queryClient: QueryClient) => {
-  const showToasts = true;
+  const showToast = true;
   return {
   mutationFn: async (rewardId: string): Promise<boolean> => {
     // Get the reward first to check supply
@@ -400,7 +400,7 @@ export const useRewardMutation = (queryClient: QueryClient) => {
     return { previousRewards };
   },
   onError: (err, _, context) => {
-    if (showToasts) {
+    if (showToast) {
       toast({
         title: "Error",
         description: err instanceof Error ? err.message : 'Failed to use reward',
@@ -413,7 +413,7 @@ export const useRewardMutation = (queryClient: QueryClient) => {
     }
   },
   onSuccess: () => {
-    if (showToasts) {
+    if (showToast) {
       toast({
         title: "Success",
         description: "Reward used successfully",
@@ -427,7 +427,7 @@ export const useRewardMutation = (queryClient: QueryClient) => {
 }};
 
 export const updateUserPointsMutation = (queryClient: QueryClient) => {
-  const showToasts = true;
+  const showToast = true;
   return {
   mutationFn: async (points: number): Promise<boolean> => {
     const { data: userData } = await supabase.auth.getUser();
@@ -460,7 +460,7 @@ export const updateUserPointsMutation = (queryClient: QueryClient) => {
     return { previousPoints };
   },
   onError: (err, _, context) => {
-    if (showToasts) {
+    if (showToast) {
       toast({
         title: "Error",
         description: "Failed to update points",
