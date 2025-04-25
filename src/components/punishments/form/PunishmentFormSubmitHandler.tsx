@@ -43,8 +43,15 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       // Save the data
       await onSave(dataToSave);
       
-      // Reset form and close only after successful save
+      // Form is reset after successful save
       form.reset();
+      // We explicitly call onCancel to close the form
+      onCancel();
+      
+      toast({
+        title: "Success",
+        description: punishmentData?.id ? "Punishment updated successfully" : "Punishment created successfully",
+      });
     } catch (error) {
       console.error("Error saving punishment:", error);
       toast({

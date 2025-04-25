@@ -30,7 +30,7 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
     }
   };
 
-  // Reset form state when opening/closing the editor
+  // Log state changes for debugging
   useEffect(() => {
     console.log("PunishmentEditor isOpen changed:", isOpen);
   }, [isOpen]);
