@@ -17,6 +17,7 @@ export const createPunishmentMutation = (queryClient: QueryClient) => ({
     return data;
   },
   onMutate: async (newPunishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => {
+    // Define the type of promises array explicitly
     const promises: Promise<void>[] = [
       queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY })
     ];
@@ -68,6 +69,7 @@ export const updatePunishmentMutation = (queryClient: QueryClient) => ({
     return data;
   },
   onMutate: async ({ id, punishment }: { id: string; punishment: Partial<PunishmentData> }) => {
+    // Define the type of promises array explicitly
     const promises: Promise<void>[] = [
       queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY })
     ];
@@ -117,6 +119,7 @@ export const applyPunishmentMutation = (queryClient: QueryClient) => ({
     return data;
   },
   onMutate: async (punishment: { id: string; points: number }) => {
+    // Define the type of promises array explicitly
     const promises: Promise<void>[] = [
       queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
     ];
@@ -166,6 +169,7 @@ export const deletePunishmentMutation = (queryClient: QueryClient) => ({
     if (error) throw error;
   },
   onMutate: async (id: string) => {
+    // Define the type of promises array explicitly
     const promises: Promise<void>[] = [
       queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
       queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
