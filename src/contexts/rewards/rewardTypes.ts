@@ -1,5 +1,6 @@
 
 import { Reward } from '@/lib/rewardUtils';
+import { QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 
 export interface RewardsContextType {
   rewards: Reward[];
@@ -7,7 +8,7 @@ export interface RewardsContextType {
   totalRewardsSupply: number;
   setTotalPoints: (points: number) => void;
   isLoading: boolean;
-  refetchRewards: () => Promise<void>;
+  refetchRewards: (options?: RefetchOptions) => Promise<QueryObserverResult<Reward[], Error>>;
   handleSaveReward: (rewardData: any, index: number | null) => Promise<Reward | null>;
   handleDeleteReward: (index: number) => Promise<boolean>;
   handleBuyReward: (id: string, cost: number) => Promise<void>;

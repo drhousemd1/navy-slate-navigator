@@ -9,7 +9,7 @@ const RewardsContext = createContext<RewardsContextType>({
   totalRewardsSupply: 0,
   setTotalPoints: () => {},
   isLoading: true,
-  refetchRewards: async () => {},
+  refetchRewards: async () => ({ data: [], isError: false, error: null, isLoading: false, isSuccess: true }),
   handleSaveReward: async () => null,
   handleDeleteReward: async () => false,
   handleBuyReward: async () => {},
