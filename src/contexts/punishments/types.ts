@@ -33,7 +33,7 @@ export interface PunishmentsContextType {
   punishments: PunishmentData[];
   punishmentHistory: PunishmentHistoryItem[];
   loading: boolean;
-  historyLoading?: boolean;
+  historyLoading: boolean;
   isSelectingRandom: boolean;
   selectedPunishment: PunishmentData | null;
   error: Error | null;
@@ -44,7 +44,7 @@ export interface PunishmentsContextType {
   selectRandomPunishment: () => void;
   resetRandomSelection: () => void;
   fetchPunishments: () => Promise<void>;
-  refetchPunishments: () => Promise<unknown>;
+  refetchPunishments: (options?: RefetchOptions) => Promise<unknown>;
   refetchHistory: (options?: RefetchOptions) => Promise<unknown>;
   getPunishmentHistory: (punishmentId: string) => PunishmentHistoryItem[];
   totalPointsDeducted: number;

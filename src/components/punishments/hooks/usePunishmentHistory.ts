@@ -8,7 +8,7 @@ interface UsePunishmentHistoryProps {
 }
 
 export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
-  const { getPunishmentHistory } = usePunishments();
+  const { getPunishmentHistory, historyLoading } = usePunishments();
   
   const getHistory = (): PunishmentHistoryItem[] => {
     return id ? getPunishmentHistory(id) : [];
@@ -16,20 +16,15 @@ export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
   
   const getWeekData = (): number[] => {
     const history = getHistory();
-    const currentDate = new Date();
-    const currentDay = currentDate.getDay();
-    
+    // Initialize array with zeros for Monday to Sunday
     const weekData = [0, 0, 0, 0, 0, 0, 0];
     
+    // Since we're already filtering at the database level,
+    // we can just map the history items to their respective days
     history.forEach(item => {
-      const itemDate = new Date(item.applied_date);
-      const daysSinceToday = Math.floor((currentDate.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (daysSinceToday < 7) {
-        // Convert the day_of_week to Monday-based index
-        const mondayBasedDayIndex = convertToMondayBasedIndex(item.day_of_week);
-        weekData[mondayBasedDayIndex] = 1;
-      }
+      // Convert the day_of_week to Monday-based index
+      const mondayBasedDayIndex = convertToMondayBasedIndex(item.day_of_week);
+      weekData[mondayBasedDayIndex] = 1;
     });
     
     return weekData;
@@ -43,6 +38,7 @@ export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
   return {
     getHistory,
     getWeekData,
-    getFrequencyCount
+    getFrequencyCount,
+    isLoading: historyLoading
   };
 };

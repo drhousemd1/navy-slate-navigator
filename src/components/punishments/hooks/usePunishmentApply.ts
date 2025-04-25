@@ -13,11 +13,13 @@ export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
   const { totalPoints, setTotalPoints } = useRewards();
   const { applyPunishment } = usePunishments();
   const { showErrorToast } = usePunishmentToast();
+  const [applying, setApplying] = useState(false);
   
   const handlePunish = async () => {
-    if (!id) return;
+    if (!id || applying) return;
     
     try {
+      setApplying(true);
       // First update the total points in the UI immediately
       const newTotal = totalPoints - points;
       setTotalPoints(newTotal);
@@ -29,10 +31,12 @@ export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
       });
     } catch (error) {
       console.error('Error applying punishment:', error);
-      setTotalPoints(totalPoints);
+      setTotalPoints(totalPoints); // Revert the points on error
       showErrorToast("Failed to apply punishment. Please try again.");
+    } finally {
+      setApplying(false);
     }
   };
   
-  return { handlePunish };
+  return { handlePunish, applying };
 };
