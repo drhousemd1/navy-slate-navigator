@@ -4,6 +4,144 @@ import { toast } from "@/hooks/use-toast";
 import { Reward } from '@/lib/rewardUtils';
 import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY } from './queries';
 
+export const saveRewardMutation = (queryClient: QueryClient, showToasts: boolean = true) => ({
+  mutationFn: async (params: { rewardData: Partial<Reward>; currentIndex?: number | null }): Promise<Reward> => {
+    const { rewardData } = params;
+    console.log("Saving reward with data:", rewardData);
+    
+    if (rewardData.id) {
+      // Update existing reward
+      const { data, error } = await supabase
+        .from('rewards')
+        .update({
+          title: rewardData.title,
+          description: rewardData.description,
+          cost: rewardData.cost,
+          supply: rewardData.supply,
+          background_image_url: rewardData.background_image_url,
+          background_opacity: rewardData.background_opacity,
+          icon_name: rewardData.icon_name,
+          icon_color: rewardData.icon_color,
+          title_color: rewardData.title_color,
+          subtext_color: rewardData.subtext_color,
+          calendar_color: rewardData.calendar_color,
+          highlight_effect: rewardData.highlight_effect,
+          focal_point_x: rewardData.focal_point_x,
+          focal_point_y: rewardData.focal_point_y,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rewardData.id)
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+      return data;
+    } else {
+      // Create new reward
+      const newReward = {
+        title: rewardData.title || 'New Reward',
+        description: rewardData.description || '',
+        cost: rewardData.cost || 10,
+        supply: rewardData.supply || 0,
+        background_image_url: rewardData.background_image_url,
+        background_opacity: rewardData.background_opacity || 100,
+        icon_name: rewardData.icon_name,
+        icon_color: rewardData.icon_color || '#9b87f5',
+        title_color: rewardData.title_color || '#FFFFFF',
+        subtext_color: rewardData.subtext_color || '#8E9196',
+        calendar_color: rewardData.calendar_color || '#7E69AB',
+        highlight_effect: rewardData.highlight_effect || false,
+        focal_point_x: rewardData.focal_point_x || 50,
+        focal_point_y: rewardData.focal_point_y || 50
+      };
+      
+      const { data, error } = await supabase
+        .from('rewards')
+        .insert(newReward)
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+      return data;
+    }
+  },
+  onMutate: async ({ rewardData }) => {
+    // Cancel any outgoing refetches
+    await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
+    
+    // Snapshot the previous value
+    const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
+    
+    // Optimistically update to the new value
+    if (rewardData.id) {
+      // Updating existing reward
+      queryClient.setQueryData<Reward[]>(
+        REWARDS_QUERY_KEY, 
+        previousRewards.map(r => 
+          r.id === rewardData.id 
+            ? { ...r, ...rewardData, updated_at: new Date().toISOString() } 
+            : r
+        )
+      );
+    } else {
+      // Creating new reward
+      const now = new Date().toISOString();
+      const optimisticReward: Reward = {
+        id: `temp-${now}`,
+        title: rewardData.title || 'New Reward',
+        description: rewardData.description || '',
+        cost: rewardData.cost || 10,
+        supply: rewardData.supply || 0,
+        background_image_url: rewardData.background_image_url,
+        background_opacity: rewardData.background_opacity || 100,
+        icon_name: rewardData.icon_name,
+        icon_color: rewardData.icon_color || '#9b87f5',
+        title_color: rewardData.title_color || '#FFFFFF',
+        subtext_color: rewardData.subtext_color || '#8E9196',
+        calendar_color: rewardData.calendar_color || '#7E69AB',
+        highlight_effect: rewardData.highlight_effect || false,
+        focal_point_x: rewardData.focal_point_x || 50,
+        focal_point_y: rewardData.focal_point_y || 50,
+        created_at: now,
+        updated_at: now
+      };
+      
+      queryClient.setQueryData<Reward[]>(
+        REWARDS_QUERY_KEY, 
+        [optimisticReward, ...previousRewards]
+      );
+    }
+    
+    return { previousRewards };
+  },
+  onError: (err, _, context) => {
+    if (showToasts) {
+      toast({
+        title: "Error",
+        description: "Failed to save reward. Please try again.",
+        variant: "destructive",
+      });
+    }
+    
+    // Rollback to the previous state
+    if (context) {
+      queryClient.setQueryData(REWARDS_QUERY_KEY, context.previousRewards);
+    }
+  },
+  onSuccess: (data) => {
+    if (showToasts) {
+      toast({
+        title: "Success",
+        description: "Reward saved successfully",
+      });
+    }
+  },
+  onSettled: () => {
+    // Always refetch after error or success to ensure we have the latest data
+    queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+  }
+});
+
 export const buyRewardMutation = (queryClient: QueryClient) => {
   const showToast = true;  // Define showToast at the top of the function
 
@@ -142,146 +280,6 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
     }
   };
 };
-
-export const saveRewardMutation = (queryClient: QueryClient, showToasts: boolean = true) => ({
-  mutationFn: async (params: { rewardData: Partial<Reward>; currentIndex?: number | null }): Promise<Reward> => {
-    const { rewardData, currentIndex } = params;
-    
-    if (rewardData.id) {
-      // Update existing reward
-      const { data, error } = await supabase
-        .from('rewards')
-        .update({
-          title: rewardData.title,
-          description: rewardData.description,
-          cost: rewardData.cost,
-          background_image_url: rewardData.background_image_url,
-          background_opacity: rewardData.background_opacity,
-          icon_name: rewardData.icon_name,
-          icon_color: rewardData.icon_color,
-          title_color: rewardData.title_color,
-          subtext_color: rewardData.subtext_color,
-          calendar_color: rewardData.calendar_color,
-          highlight_effect: rewardData.highlight_effect,
-          focal_point_x: rewardData.focal_point_x,
-          focal_point_y: rewardData.focal_point_y,
-        })
-        .eq('id', rewardData.id)
-        .select()
-        .single();
-        
-      if (error) {
-        throw error;
-      }
-      
-      return data;
-    } else {
-      // Create new reward
-      const { data, error } = await supabase
-        .from('rewards')
-        .insert({
-          title: rewardData.title || 'New Reward',
-          description: rewardData.description || '',
-          cost: rewardData.cost || 10,
-          supply: rewardData.supply || 0,
-          background_image_url: rewardData.background_image_url,
-          background_opacity: rewardData.background_opacity || 100,
-          icon_name: rewardData.icon_name,
-          icon_color: rewardData.icon_color || '#9b87f5',
-          title_color: rewardData.title_color || '#FFFFFF',
-          subtext_color: rewardData.subtext_color || '#8E9196',
-          calendar_color: rewardData.calendar_color || '#7E69AB',
-          highlight_effect: rewardData.highlight_effect || false,
-          focal_point_x: rewardData.focal_point_x || 50,
-          focal_point_y: rewardData.focal_point_y || 50,
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        throw error;
-      }
-      
-      return data;
-    }
-  },
-  onMutate: async ({ rewardData, currentIndex }) => {
-    // Define the type of promises array explicitly
-    const promises: Promise<void>[] = [
-      queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY })
-    ];
-    
-    await Promise.all(promises);
-    const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
-    
-    if (rewardData.id) {
-      // Updating existing reward
-      queryClient.setQueryData<Reward[]>(
-        REWARDS_QUERY_KEY, 
-        previousRewards.map(r => 
-          r.id === rewardData.id 
-            ? { ...r, ...rewardData, updated_at: new Date().toISOString() } 
-            : r
-        )
-      );
-    } else {
-      // Creating new reward - add to beginning of list (newest first)
-      const now = new Date().toISOString();
-      const optimisticReward: Reward = {
-        id: `temp-${now}`,
-        title: rewardData.title || 'New Reward',
-        description: rewardData.description || '',
-        cost: rewardData.cost || 10,
-        supply: rewardData.supply || 0,
-        background_image_url: rewardData.background_image_url,
-        background_opacity: rewardData.background_opacity || 100,
-        icon_name: rewardData.icon_name,
-        icon_color: rewardData.icon_color || '#9b87f5',
-        title_color: rewardData.title_color || '#FFFFFF',
-        subtext_color: rewardData.subtext_color || '#8E9196',
-        calendar_color: rewardData.calendar_color || '#7E69AB',
-        highlight_effect: rewardData.highlight_effect || false,
-        focal_point_x: rewardData.focal_point_x || 50,
-        focal_point_y: rewardData.focal_point_y || 50,
-        created_at: now,
-        updated_at: now
-      };
-      
-      queryClient.setQueryData<Reward[]>(
-        REWARDS_QUERY_KEY, 
-        [optimisticReward, ...previousRewards]
-      );
-    }
-    
-    return { previousRewards };
-  },
-  onError: (err, _, context) => {
-    if (showToasts) {
-      toast({
-        title: "Error",
-        description: "Failed to save reward",
-        variant: "destructive",
-      });
-    }
-    
-    if (context) {
-      queryClient.setQueryData(REWARDS_QUERY_KEY, context.previousRewards);
-    }
-  },
-  onSuccess: () => {
-    if (showToasts) {
-      toast({
-        title: "Success",
-        description: "Reward saved successfully",
-      });
-    }
-  },
-  onSettled: () => {
-    // Always refetch after error or success
-    queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-    queryClient.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
-  }
-});
 
 export const deleteRewardMutation = (queryClient: QueryClient, showToasts: boolean = true) => ({
   mutationFn: async (rewardId: string): Promise<boolean> => {
