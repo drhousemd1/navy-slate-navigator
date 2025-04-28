@@ -16,14 +16,7 @@ import {
   useRewardMutation,
   updateUserPointsMutation
 } from './mutations';
-
-// Centralized configuration for React Query
-const QUERY_CONFIG = {
-  staleTime: 1000 * 60 * 5,  // 5 minutes
-  gcTime: 1000 * 60 * 30,    // 30 minutes
-  refetchOnWindowFocus: false,
-  refetchOnMount: true
-};
+import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
@@ -36,7 +29,7 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
-    ...QUERY_CONFIG
+    ...STANDARD_QUERY_CONFIG
   });
 
   const {
@@ -45,7 +38,7 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: REWARDS_POINTS_QUERY_KEY,
     queryFn: fetchUserPoints,
-    ...QUERY_CONFIG
+    ...STANDARD_QUERY_CONFIG
   });
 
   const {
@@ -54,48 +47,46 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: REWARDS_SUPPLY_QUERY_KEY,
     queryFn: fetchTotalRewardsSupply,
-    ...QUERY_CONFIG
+    ...STANDARD_QUERY_CONFIG
   });
 
   // Configure mutations with toast disabled in the handlers
-  // Toast messages will be handled at the UI level instead
   const saveRewardMut = useMutation({
     mutationFn: saveRewardMutation(queryClient, false),
-    // Prevent unnecessary rerenders by using more specific invalidation
-    onSettled: () => {
-      // Instead of full invalidation, update the cache more precisely
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY, exact: true });
-    }
+    // Removed query invalidation since we're using direct cache updates in the mutation
   });
 
   const deleteRewardMut = useMutation({
     mutationFn: deleteRewardMutation(queryClient, false),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY, exact: true });
-    }
+    // Removed query invalidation since we're using direct cache updates in the mutation
   });
 
   const buyRewardMut = useMutation({
     mutationFn: buyRewardMutation(queryClient)
+    // Direct cache updates in the mutation
   });
 
   const useRewardMut = useMutation({
     mutationFn: useRewardMutation(queryClient)
+    // Direct cache updates in the mutation
   });
 
   const updatePointsMut = useMutation({
     mutationFn: updateUserPointsMutation(queryClient)
+    // Direct cache updates in the mutation
   });
 
   const refetchRewardsTyped = (options?: RefetchOptions) => {
     return refetchRewards(options) as Promise<QueryObserverResult<Reward[], Error>>;
   };
 
+  // This function now just updates the local cache, not triggering any fetches
   const refreshPointsFromDatabase = async () => {
-    await Promise.all([
-      refetchPoints(),
-      refetchSupply()
-    ]);
+    const points = await fetchUserPoints();
+    queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, points);
+    
+    const supply = await fetchTotalRewardsSupply();
+    queryClient.setQueryData(REWARDS_SUPPLY_QUERY_KEY, supply);
   };
 
   return {
@@ -115,7 +106,7 @@ export const useRewardsData = () => {
     useReward: useRewardMut.mutateAsync,
     updatePoints: updatePointsMut.mutateAsync,
     
-    // Refetch functions
+    // Refetch functions - maintained for compatibility
     refetchRewards: refetchRewardsTyped,
     refetchPoints,
     refreshPointsFromDatabase

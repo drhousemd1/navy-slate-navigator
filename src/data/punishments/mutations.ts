@@ -20,6 +20,21 @@ export const createPunishmentMutation = (queryClient: QueryClient, onSuccess?: (
     const startTime = performance.now();
     
     try {
+      // Optimistic update - add a temporary entry to the cache
+      const tempId = `temp-${Date.now()}`;
+      const optimisticPunishment = {
+        id: tempId,
+        ...newPunishment,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } as PunishmentData;
+
+      // Update local cache immediately for better UI responsiveness
+      queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) => 
+        [optimisticPunishment, ...old]
+      );
+      
+      // Perform the actual API call
       const { data, error } = await supabase
         .from('punishments')
         .insert(newPunishment)
@@ -28,9 +43,9 @@ export const createPunishmentMutation = (queryClient: QueryClient, onSuccess?: (
 
       if (error) throw error;
       
-      // Update cache directly for immediate UI feedback
+      // Replace optimistic entry with actual data
       queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) => 
-        [data, ...old]
+        old.map(p => p.id === tempId ? data : p)
       );
       
       const endTime = performance.now();
@@ -47,6 +62,11 @@ export const createPunishmentMutation = (queryClient: QueryClient, onSuccess?: (
     } catch (error) {
       console.error("[createPunishmentMutation] Error:", error);
       
+      // Remove the optimistic entry in case of error
+      queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) =>
+        old.filter(p => !p.id.toString().startsWith('temp-'))
+      );
+      
       showToast("Error", "Failed to create punishment", "destructive");
       
       throw error;
@@ -59,6 +79,25 @@ export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: (
     const startTime = performance.now();
     
     try {
+      // Get the current data for optimistic update
+      const currentData = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY) || [];
+      const currentItem = currentData.find(p => p.id === id);
+      
+      if (!currentItem) throw new Error("Punishment not found in cache");
+      
+      // Create optimistic update
+      const optimisticUpdate = {
+        ...currentItem,
+        ...punishment,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Update cache immediately
+      queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) =>
+        old.map(p => p.id === id ? optimisticUpdate : p)
+      );
+      
+      // Make the actual API call
       const { data, error } = await supabase
         .from('punishments')
         .update(punishment)
@@ -68,11 +107,9 @@ export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: (
 
       if (error) throw error;
       
-      // Update cache directly for immediate UI feedback
+      // Update cache with actual data from server
       queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) =>
-        old.map(p =>
-          p.id === id ? data : p
-        )
+        old.map(p => p.id === id ? data : p)
       );
       
       const endTime = performance.now();
@@ -89,6 +126,9 @@ export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: (
     } catch (error) {
       console.error("[updatePunishmentMutation] Error:", error);
       
+      // Revert cache in case of error
+      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+      
       showToast("Error", "Failed to update punishment", "destructive");
       
       throw error;
@@ -101,12 +141,29 @@ export const applyPunishmentMutation = (queryClient: QueryClient) =>
     const startTime = performance.now();
     
     try {
+      // Create optimistic history entry
+      const today = new Date();
+      const tempId = `temp-${Date.now()}`;
+      const optimisticHistoryEntry: PunishmentHistoryItem = {
+        id: tempId,
+        punishment_id: punishment.id,
+        points_deducted: punishment.points,
+        day_of_week: today.getDay(),
+        applied_date: today.toISOString()
+      };
+      
+      // Update cache immediately
+      queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => 
+        [optimisticHistoryEntry, ...old]
+      );
+      
+      // Make the actual API call
       const historyEntry = {
         punishment_id: punishment.id,
         points_deducted: punishment.points,
-        day_of_week: new Date().getDay()
+        day_of_week: today.getDay()
       };
-
+      
       const { data, error } = await supabase
         .from('punishment_history')
         .insert(historyEntry)
@@ -115,9 +172,9 @@ export const applyPunishmentMutation = (queryClient: QueryClient) =>
 
       if (error) throw error;
       
-      // Update cache directly for immediate UI feedback
+      // Update cache with actual data
       queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => 
-        [data, ...old]
+        old.map(h => h.id === tempId ? data : h)
       );
       
       const endTime = performance.now();
@@ -128,6 +185,11 @@ export const applyPunishmentMutation = (queryClient: QueryClient) =>
       return data;
     } catch (error) {
       console.error("[applyPunishmentMutation] Error:", error);
+      
+      // Remove optimistic entry on error
+      queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => 
+        old.filter(h => !h.id.toString().startsWith('temp-'))
+      );
       
       showToast("Error", "Failed to apply punishment", "destructive");
       
@@ -141,6 +203,12 @@ export const deletePunishmentMutation = (queryClient: QueryClient) =>
     const startTime = performance.now();
     
     try {
+      // Update cache immediately (optimistic delete)
+      queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, 
+        (old = []) => old.filter(p => p.id !== id)
+      );
+      
+      // Make the actual API call
       const { error } = await supabase
         .from('punishments')
         .delete()
@@ -148,11 +216,7 @@ export const deletePunishmentMutation = (queryClient: QueryClient) =>
 
       if (error) throw error;
       
-      // Update cache directly for immediate UI feedback
-      queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, 
-        (old = []) => old.filter(p => p.id !== id)
-      );
-      
+      // Also filter history items for deleted punishment
       queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY,
         (old = []) => old.filter(h => h.punishment_id !== id)
       );
@@ -163,6 +227,10 @@ export const deletePunishmentMutation = (queryClient: QueryClient) =>
       showToast("Success", "Punishment deleted successfully");
     } catch (error) {
       console.error("[deletePunishmentMutation] Error:", error);
+      
+      // Revert the cache changes in case of error
+      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
       
       showToast("Error", "Failed to delete punishment", "destructive");
       

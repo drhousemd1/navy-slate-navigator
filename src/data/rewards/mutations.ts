@@ -1,4 +1,3 @@
-
 import { QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -25,7 +24,25 @@ export const saveRewardMutation = (queryClient: QueryClient, showToasts: boolean
       
       // Handle optimistic updates before the actual API call
       if (rewardData.id) {
-        // Update existing reward
+        // Get current data for optimistic update
+        const currentRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
+        const currentReward = currentRewards.find(r => r.id === rewardData.id);
+        
+        if (!currentReward) throw new Error("Reward not found in cache");
+        
+        // Create optimistic update
+        const optimisticReward = {
+          ...currentReward,
+          ...rewardData,
+          updated_at: new Date().toISOString()
+        };
+        
+        // Update cache immediately
+        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
+          old.map(r => r.id === rewardData.id ? optimisticReward : r)
+        );
+        
+        // Make the actual API call
         const { data, error } = await supabase
           .from('rewards')
           .update({
@@ -52,13 +69,17 @@ export const saveRewardMutation = (queryClient: QueryClient, showToasts: boolean
         if (error) throw error;
         result = data;
         
-        // Update the cache directly for better UX
+        // Update cache with actual server data
         queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
           old.map(r => r.id === result.id ? result : r)
         );
       } else {
-        // Create new reward
+        // Create new reward - generate temp ID for optimistic update
+        const tempId = `temp-${Date.now()}`;
+        
+        // Create new reward data
         const newReward = {
+          id: tempId as string,
           title: rewardData.title || 'New Reward',
           description: rewardData.description || '',
           cost: rewardData.cost || 10,
@@ -72,21 +93,44 @@ export const saveRewardMutation = (queryClient: QueryClient, showToasts: boolean
           calendar_color: rewardData.calendar_color || '#7E69AB',
           highlight_effect: rewardData.highlight_effect || false,
           focal_point_x: rewardData.focal_point_x || 50,
-          focal_point_y: rewardData.focal_point_y || 50
-        };
+          focal_point_y: rewardData.focal_point_y || 50,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        } as Reward;
         
+        // Add to cache immediately
+        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
+          [newReward, ...old]
+        );
+        
+        // Create actual reward in database
         const { data, error } = await supabase
           .from('rewards')
-          .insert(newReward)
+          .insert({
+            title: newReward.title,
+            description: newReward.description,
+            cost: newReward.cost,
+            supply: newReward.supply,
+            background_image_url: newReward.background_image_url,
+            background_opacity: newReward.background_opacity,
+            icon_name: newReward.icon_name,
+            icon_color: newReward.icon_color,
+            title_color: newReward.title_color,
+            subtext_color: newReward.subtext_color,
+            calendar_color: newReward.calendar_color,
+            highlight_effect: newReward.highlight_effect,
+            focal_point_x: newReward.focal_point_x,
+            focal_point_y: newReward.focal_point_y
+          })
           .select('*')
           .single();
           
         if (error) throw error;
         result = data;
         
-        // Update cache to include the new reward
+        // Replace optimistic reward with actual one
         queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
-          [result, ...old]
+          old.map(r => r.id === tempId ? result : r)
         );
       }
       
@@ -100,6 +144,11 @@ export const saveRewardMutation = (queryClient: QueryClient, showToasts: boolean
       return result;
     } catch (error) {
       console.error("[saveRewardMutation] Error:", error);
+      
+      // Remove the optimistic update in case of error
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
+        old.filter(r => !r.id.toString().startsWith('temp-'))
+      );
       
       if (showToasts) {
         showToast("Error", "Failed to save reward. Please try again.", "destructive");
@@ -115,6 +164,30 @@ export const buyRewardMutation = (queryClient: QueryClient) =>
     const startTime = performance.now();
     
     try {
+      // Get current points and reward data for optimistic updates
+      const currentPoints = queryClient.getQueryData<number>(REWARDS_POINTS_QUERY_KEY) || 0;
+      const rewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
+      const reward = rewards.find(r => r.id === rewardId);
+      
+      if (!reward) throw new Error('Reward not found in cache');
+      
+      // Check if we have enough points locally (to fail fast)
+      if (currentPoints < cost) {
+        throw new Error('Not enough points to buy this reward');
+      }
+      
+      // Apply optimistic updates
+      const newPoints = currentPoints - cost;
+      const updatedReward = { ...reward, supply: reward.supply + 1 };
+      
+      // Update points in cache
+      queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, newPoints);
+      
+      // Update reward in cache
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
+        old.map(r => r.id === rewardId ? updatedReward : r)
+      );
+      
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
       
@@ -136,7 +209,7 @@ export const buyRewardMutation = (queryClient: QueryClient) =>
       }
       
       // Then, check if reward is available
-      const { data: reward, error: rewardError } = await supabase
+      const { data: rewardData, error: rewardError } = await supabase
         .from('rewards')
         .select('supply, title')
         .eq('id', rewardId)
@@ -146,10 +219,10 @@ export const buyRewardMutation = (queryClient: QueryClient) =>
       
       // Start transaction-like operations
       // First, deduct points
-      const newPoints = userPoints.points - cost;
+      const serverNewPoints = userPoints.points - cost;
       const { error: updatePointsError } = await supabase
         .from('profiles')
-        .update({ points: newPoints })
+        .update({ points: serverNewPoints })
         .eq('id', userId);
       
       if (updatePointsError) throw updatePointsError;
@@ -158,7 +231,7 @@ export const buyRewardMutation = (queryClient: QueryClient) =>
       const { error: updateSupplyError } = await supabase
         .from('rewards')
         .update({ 
-          supply: reward.supply + 1,
+          supply: rewardData.supply + 1,
           updated_at: new Date().toISOString()
         })
         .eq('id', rewardId);
@@ -186,26 +259,18 @@ export const buyRewardMutation = (queryClient: QueryClient) =>
           week_number: weekNumber
         });
       
-      // Update cache directly for immediate UI feedback
-      queryClient.setQueryData<number>(REWARDS_POINTS_QUERY_KEY, newPoints);
-      
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
-        old.map(r => {
-          if (r.id === rewardId) {
-            return { ...r, supply: r.supply + 1 };
-          }
-          return r;
-        })
-      );
-      
       const endTime = performance.now();
       console.log(`[buyRewardMutation] Operation completed in ${endTime - startTime}ms`);
       
-      showToast("Success", `You purchased ${reward.title || 'a reward'}`);
+      showToast("Success", `You purchased ${rewardData.title || 'a reward'}`);
       
-      return { success: true, newPoints };
+      return { success: true, newPoints: serverNewPoints };
     } catch (error) {
       console.error("[buyRewardMutation] Error:", error);
+      
+      // Revert cache on error
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
       
       showToast(
         "Error", 

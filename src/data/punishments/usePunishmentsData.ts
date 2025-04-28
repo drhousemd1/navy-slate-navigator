@@ -42,27 +42,22 @@ export const usePunishmentsData = () => {
 
   const createPunishmentMut = useMutation({
     mutationFn: createPunishmentMutation(queryClient),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY, exact: true });
-    }
+    // Direct cache updates in the mutation
   });
 
   const updatePunishmentMut = useMutation({
     mutationFn: updatePunishmentMutation(queryClient),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY, exact: true });
-    }
+    // Direct cache updates in the mutation
   });
 
   const applyPunishmentMut = useMutation({
     mutationFn: applyPunishmentMutation(queryClient),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY, exact: true });
-    }
+    // Direct cache updates in the mutation
   });
 
   const deletePunishmentMut = useMutation({
     mutationFn: deletePunishmentMutation(queryClient)
+    // Direct cache updates in the mutation
   });
 
   const getPunishmentHistory = (punishmentId: string): PunishmentHistoryItem[] => {
@@ -82,11 +77,14 @@ export const usePunishmentsData = () => {
     return refetchHistory(options) as Promise<QueryObserverResult<PunishmentHistoryItem[], Error>>;
   };
 
+  // Update this to not invalidate queries
   const fetchPunishmentsTyped = async (): Promise<void> => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
-    ]);
+    // Instead of invalidating (which causes refetches), we just refresh the data if needed
+    const newPunishments = await fetchPunishments();
+    queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, newPunishments);
+    
+    const newHistory = await fetchCurrentWeekPunishmentHistory();
+    queryClient.setQueryData(PUNISHMENT_HISTORY_QUERY_KEY, newHistory);
   };
 
   // Create a wrapper function that adapts to the expected interface
