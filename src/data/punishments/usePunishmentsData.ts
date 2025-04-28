@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { 
@@ -88,6 +89,16 @@ export const usePunishmentsData = () => {
     ]);
   };
 
+  // Create a wrapper function that adapts to the expected interface
+  const updatePunishmentWrapper = (id: string, punishment: Partial<PunishmentData>): Promise<PunishmentData> => {
+    return updatePunishmentMut.mutateAsync({ id, punishment });
+  };
+
+  // Create a wrapper function for applyPunishment as well to match the context type
+  const applyPunishmentWrapper = (punishment: PunishmentData | { id: string; points: number }): Promise<PunishmentHistoryItem> => {
+    return applyPunishmentMut.mutateAsync(punishment as { id: string; points: number });
+  };
+
   return {
     punishments,
     punishmentHistory,
@@ -97,9 +108,9 @@ export const usePunishmentsData = () => {
     isSelectingRandom: false,
     selectedPunishment: null,
     createPunishment: createPunishmentMut.mutateAsync,
-    updatePunishment: updatePunishmentMut.mutateAsync,
+    updatePunishment: updatePunishmentWrapper,
     deletePunishment: deletePunishmentMut.mutateAsync,
-    applyPunishment: applyPunishmentMut.mutateAsync,
+    applyPunishment: applyPunishmentWrapper,
     selectRandomPunishment: () => {},
     resetRandomSelection: () => {},
     fetchPunishments: fetchPunishmentsTyped,
