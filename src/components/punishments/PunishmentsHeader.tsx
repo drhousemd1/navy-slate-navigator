@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { Badge } from '../ui/badge';
-import { useRewards } from '../../contexts/RewardsContext';
+import { useRewards } from '@/contexts/RewardsContext';
 import { Box, Coins, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
-import RandomPunishmentSelector from './RandomPunishmentSelector';
 import { usePunishments } from '@/contexts/PunishmentsContext';
+import RandomPunishmentSelections from './RandomPunishmentSelections';
 
 const PunishmentsHeader: React.FC = () => {
   const { totalPoints, totalRewardsSupply } = useRewards();
@@ -35,7 +35,7 @@ const PunishmentsHeader: React.FC = () => {
         </Badge>
       </div>
       
-      <RandomPunishmentSelector 
+      <RandomPunishmentSelections
         isOpen={isRandomSelectorOpen} 
         onClose={() => setIsRandomSelectorOpen(false)} 
       />

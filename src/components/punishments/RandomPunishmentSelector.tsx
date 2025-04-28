@@ -1,39 +1,30 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
-import { usePunishments } from '@/contexts/PunishmentsContext';
 import { Shuffle } from 'lucide-react';
-import { useRandomPunishmentSelection } from './hooks/useRandomPunishmentSelection';
-import { useApplyRandomPunishment } from './hooks/useApplyRandomPunishment';
 import RandomPunishmentCard from './RandomPunishmentCard';
 import RandomPunishmentActions from './RandomPunishmentActions';
+import { PunishmentData } from '@/contexts/punishments/types';
 
 interface RandomPunishmentSelectorProps {
   isOpen: boolean;
   onClose: () => void;
+  selectedPunishment: PunishmentData | null;
+  currentPunishment: PunishmentData | null;
+  isSelecting: boolean;
+  onPunish: () => void;
+  onReroll: () => void;
 }
 
 const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({ 
   isOpen, 
-  onClose 
+  onClose,
+  selectedPunishment,
+  currentPunishment,
+  isSelecting,
+  onPunish,
+  onReroll
 }) => {
-  const { punishments } = usePunishments();
-  
-  const {
-    selectedPunishment,
-    isSelecting,
-    getCurrentPunishment,
-    handleReroll
-  } = useRandomPunishmentSelection(punishments, isOpen);
-  
-  const { handlePunish } = useApplyRandomPunishment(onClose);
-  
-  const currentPunishment = getCurrentPunishment();
-  
-  const onPunishClick = () => {
-    handlePunish(selectedPunishment);
-  };
-  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="bg-navy border-light-navy text-white max-w-md">
@@ -57,8 +48,8 @@ const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({
           <RandomPunishmentActions
             isSelecting={isSelecting}
             selectedPunishment={selectedPunishment}
-            onPunish={onPunishClick}
-            onReroll={handleReroll}
+            onPunish={onPunish}
+            onReroll={onReroll}
             onCancel={onClose}
           />
         </div>
