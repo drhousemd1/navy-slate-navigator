@@ -1,7 +1,6 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -9,6 +8,7 @@ import Auth from "./pages/auth";
 import { AuthProvider, useAuth } from "./contexts/auth";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+import { createQueryClient } from "./lib/react-query-config";
 
 // Create empty placeholder pages for our navigation
 import Rules from "./pages/Rules";
@@ -42,7 +42,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   
-  // Add debugging for admin route
   console.log('AdminRoute check - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin, 'loading:', loading);
   
   if (loading) {
@@ -56,29 +55,15 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/auth" />;
   }
   
-  // IMPORTANT: For testing purposes, temporarily allow all authenticated users to access admin pages
-  // This allows us to test the admin testing page without requiring admin privileges
   console.log('AdminRoute - Allowing access to admin page for testing purposes');
   return <>{children}</>;
 };
 
-// Create a client with aggressive caching to maintain state between page navigations
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
-      refetchOnWindowFocus: false,
-      refetchOnMount: true,
-      refetchOnReconnect: true,
-      retry: 1,
-    },
-  },
-});
+// Create QueryClient using our centralized configuration
+const queryClient = createQueryClient();
 
 // Configure routes with proper nesting to ensure context is available
 const AppRoutes = () => {
-  // Add debugging for routing using standard React hooks
   React.useEffect(() => {
     console.log('AppRoutes component initialized. Routes ready to be matched.');
   }, []);
@@ -105,7 +90,6 @@ const AppRoutes = () => {
 
 // Main App component
 const App = () => {
-  // Use proper React hooks inside the component function
   React.useEffect(() => {
     console.log('App component initialized. React Router ready.');
   }, []);

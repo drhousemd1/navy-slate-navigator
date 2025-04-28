@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext } from 'react';
 import { PunishmentsContextType } from './types';
-import { usePunishmentsData } from '@/data/PunishmentsDataHandler';
+import { usePunishmentsData } from '@/data/punishments/usePunishmentsData';
 
 const PunishmentsContext = createContext<PunishmentsContextType | undefined>(undefined);
 
