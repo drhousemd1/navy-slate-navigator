@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/lib/rewardUtils';
 
@@ -6,7 +5,6 @@ export const REWARDS_QUERY_KEY = ['rewards'];
 export const REWARDS_POINTS_QUERY_KEY = ['rewards', 'points'];
 export const REWARDS_SUPPLY_QUERY_KEY = ['rewards', 'supply'];
 
-// Optimized query with fields selection to reduce data transfer
 export const fetchRewards = async (): Promise<Reward[]> => {
   console.log("[fetchRewards] Starting rewards fetch");
   const startTime = performance.now();
@@ -14,17 +12,16 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   const { data, error } = await supabase
     .from('rewards')
     .select('*')
-    .order('created_at', { ascending: false }); // Order by created_at desc to show newest first
-  
-  const endTime = performance.now();
-  console.log(`[fetchRewards] Fetch completed in ${endTime - startTime}ms`);
+    .order('created_at', { ascending: false });
   
   if (error) {
     console.error('[fetchRewards] Error:', error);
     throw error;
   }
   
-  console.log(`[fetchRewards] Retrieved ${data?.length || 0} rewards`);
+  const endTime = performance.now();
+  console.log(`[fetchRewards] Fetch completed in ${endTime - startTime}ms, retrieved ${data?.length || 0} rewards`);
+  
   return data || [];
 };
 

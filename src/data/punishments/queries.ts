@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { startOfWeek, format } from 'date-fns';
@@ -15,15 +14,14 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
     .select('*')
     .order('created_at', { ascending: false });
 
-  const endTime = performance.now();
-  console.log(`[fetchPunishments] Fetch completed in ${endTime - startTime}ms`);
-  
   if (error) {
     console.error('[fetchPunishments] Error:', error);
     throw error;
   }
   
-  console.log(`[fetchPunishments] Retrieved ${data?.length || 0} punishments`);
+  const endTime = performance.now();
+  console.log(`[fetchPunishments] Fetch completed in ${endTime - startTime}ms, retrieved ${data?.length || 0} punishments`);
+  
   return data || [];
 };
 

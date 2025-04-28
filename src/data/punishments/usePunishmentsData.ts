@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { 
@@ -13,14 +12,7 @@ import {
   applyPunishmentMutation,
   deletePunishmentMutation
 } from './mutations';
-
-// Centralized configuration for React Query
-const QUERY_CONFIG = {
-  staleTime: 1000 * 60 * 5,  // 5 minutes
-  gcTime: 1000 * 60 * 30,    // 30 minutes
-  refetchOnWindowFocus: false,
-  refetchOnMount: true
-};
+import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 
 export const usePunishmentsData = () => {
   const queryClient = useQueryClient();
@@ -33,7 +25,7 @@ export const usePunishmentsData = () => {
   } = useQuery({
     queryKey: PUNISHMENTS_QUERY_KEY,
     queryFn: fetchPunishments,
-    ...QUERY_CONFIG
+    ...STANDARD_QUERY_CONFIG
   });
 
   const {
@@ -44,7 +36,7 @@ export const usePunishmentsData = () => {
   } = useQuery({
     queryKey: PUNISHMENT_HISTORY_QUERY_KEY,
     queryFn: fetchCurrentWeekPunishmentHistory,
-    ...QUERY_CONFIG
+    ...STANDARD_QUERY_CONFIG
   });
 
   const createPunishmentMut = useMutation({
@@ -105,11 +97,9 @@ export const usePunishmentsData = () => {
     isSelectingRandom: false,
     selectedPunishment: null,
     createPunishment: createPunishmentMut.mutateAsync,
-    updatePunishment: (id: string, punishment: Partial<PunishmentData>) => 
-      updatePunishmentMut.mutateAsync({ id, punishment }),
+    updatePunishment: updatePunishmentMut.mutateAsync,
     deletePunishment: deletePunishmentMut.mutateAsync,
-    applyPunishment: (punishment: { id: string; points: number }) => 
-      applyPunishmentMut.mutateAsync(punishment),
+    applyPunishment: applyPunishmentMut.mutateAsync,
     selectRandomPunishment: () => {},
     resetRandomSelection: () => {},
     fetchPunishments: fetchPunishmentsTyped,

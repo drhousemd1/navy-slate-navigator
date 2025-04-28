@@ -9,7 +9,7 @@ export const createQueryClient = () => {
         staleTime: 1000 * 60 * 5, // 5 minutes
         gcTime: 1000 * 60 * 30,   // 30 minutes
         refetchOnWindowFocus: false,
-        refetchOnMount: true,
+        refetchOnMount: false,     // Changed from true to false
         retry: 1,
         networkMode: 'online',
       },
@@ -26,7 +26,7 @@ export const STANDARD_QUERY_CONFIG = {
   staleTime: 1000 * 60 * 5,  // 5 minutes
   gcTime: 1000 * 60 * 30,    // 30 minutes
   refetchOnWindowFocus: false,
-  refetchOnMount: true,
+  refetchOnMount: false,      // Changed from true to false
   retry: 1,
 };
 
