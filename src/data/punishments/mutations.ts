@@ -5,197 +5,167 @@ import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { PUNISHMENTS_QUERY_KEY, PUNISHMENT_HISTORY_QUERY_KEY } from './queries';
 
-export const createPunishmentMutation = (queryClient: QueryClient, onSuccess?: () => void) => ({
-  mutationFn: async (newPunishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => {
-    const { data, error } = await supabase
-      .from('punishments')
-      .insert(newPunishment)
-      .select()
-      .single();
+// Helper for consistent toast handling
+const showToast = (title: string, description: string, variant: 'default' | 'destructive' = 'default') => {
+  toast({
+    title,
+    description,
+    variant,
+  });
+};
 
-    if (error) throw error;
-    return data;
-  },
-  onMutate: async (newPunishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => {
-    await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-    const previousData = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
+export const createPunishmentMutation = (queryClient: QueryClient, onSuccess?: () => void) => 
+  async (newPunishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => {
+    console.log("[createPunishmentMutation] Creating punishment:", newPunishment);
+    const startTime = performance.now();
     
-    queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) => [
-      {
-        ...newPunishment,
-        id: `temp-${Date.now()}`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      } as PunishmentData,
-      ...old
-    ]);
-    
-    return { previousData };
-  },
-  onSuccess: () => {
-    toast({
-      title: "Success",
-      description: "Punishment created successfully",
-    });
-    
-    // Call the success callback if provided
-    if (onSuccess) {
-      onSuccess();
+    try {
+      const { data, error } = await supabase
+        .from('punishments')
+        .insert(newPunishment)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Update cache directly for immediate UI feedback
+      queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) => 
+        [data, ...old]
+      );
+      
+      const endTime = performance.now();
+      console.log(`[createPunishmentMutation] Operation completed in ${endTime - startTime}ms`);
+      
+      showToast("Success", "Punishment created successfully");
+      
+      // Call the success callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      return data;
+    } catch (error) {
+      console.error("[createPunishmentMutation] Error:", error);
+      
+      showToast("Error", "Failed to create punishment", "destructive");
+      
+      throw error;
     }
+  };
 
-    // Refetch data in background
-    queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-  },
-  onError: (err: Error, _: unknown, context: { previousData: PunishmentData[] } | undefined) => {
-    queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousData);
-    toast({
-      title: "Error",
-      description: "Failed to create punishment",
-      variant: "destructive",
-    });
-  }
-});
+export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: () => void) => 
+  async ({ id, punishment }: { id: string; punishment: Partial<PunishmentData> }) => {
+    console.log("[updatePunishmentMutation] Updating punishment:", { id, punishment });
+    const startTime = performance.now();
+    
+    try {
+      const { data, error } = await supabase
+        .from('punishments')
+        .update(punishment)
+        .eq('id', id)
+        .select()
+        .single();
 
-export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: () => void) => ({
-  mutationFn: async ({ id, punishment }: { id: string; punishment: Partial<PunishmentData> }) => {
-    const { data, error } = await supabase
-      .from('punishments')
-      .update(punishment)
-      .eq('id', id)
-      .select()
-      .single();
+      if (error) throw error;
+      
+      // Update cache directly for immediate UI feedback
+      queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) =>
+        old.map(p =>
+          p.id === id ? data : p
+        )
+      );
+      
+      const endTime = performance.now();
+      console.log(`[updatePunishmentMutation] Operation completed in ${endTime - startTime}ms`);
+      
+      showToast("Success", "Punishment updated successfully");
+      
+      // Call the success callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
 
-    if (error) throw error;
-    return data;
-  },
-  onMutate: async ({ id, punishment }: { id: string; punishment: Partial<PunishmentData> }) => {
-    await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-    const previousData = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
-    
-    queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) =>
-      old.map(p =>
-        p.id === id ? { ...p, ...punishment, updated_at: new Date().toISOString() } : p
-      )
-    );
-    
-    return { previousData };
-  },
-  onSuccess: () => {
-    toast({
-      title: "Success",
-      description: "Punishment updated successfully",
-    });
-    
-    // Call the success callback if provided
-    if (onSuccess) {
-      onSuccess();
+      return data;
+    } catch (error) {
+      console.error("[updatePunishmentMutation] Error:", error);
+      
+      showToast("Error", "Failed to update punishment", "destructive");
+      
+      throw error;
     }
+  };
 
-    // Refetch data in background
-    queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-  },
-  onError: (err: Error, _: unknown, context: { previousData: PunishmentData[] } | undefined) => {
-    queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousData);
-    toast({
-      title: "Error",
-      description: "Failed to update punishment",
-      variant: "destructive",
-    });
-  }
-});
-
-export const applyPunishmentMutation = (queryClient: QueryClient) => ({
-  mutationFn: async (punishment: { id: string; points: number }) => {
-    const historyEntry = {
-      punishment_id: punishment.id,
-      points_deducted: punishment.points,
-      day_of_week: new Date().getDay()
-    };
-
-    const { data, error } = await supabase
-      .from('punishment_history')
-      .insert(historyEntry)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
-  onMutate: async (punishment: { id: string; points: number }) => {
-    await queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
-    const previousData = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY);
+export const applyPunishmentMutation = (queryClient: QueryClient) => 
+  async (punishment: { id: string; points: number }) => {
+    console.log("[applyPunishmentMutation] Applying punishment:", punishment);
+    const startTime = performance.now();
     
-    const newHistoryEntry = {
-      id: 'temp-' + Date.now(),
-      punishment_id: punishment.id,
-      points_deducted: punishment.points,
-      day_of_week: new Date().getDay(),
-      applied_date: new Date().toISOString()
-    } as PunishmentHistoryItem;
+    try {
+      const historyEntry = {
+        punishment_id: punishment.id,
+        points_deducted: punishment.points,
+        day_of_week: new Date().getDay()
+      };
 
-    queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => [
-      newHistoryEntry,
-      ...old
-    ]);
-    
-    return { previousData };
-  },
-  onSuccess: () => {
-    toast({
-      title: "Success",
-      description: "Punishment applied successfully",
-    });
-    queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
-  },
-  onError: (err: Error, _: unknown, context: { previousData: PunishmentHistoryItem[] } | undefined) => {
-    queryClient.setQueryData(PUNISHMENT_HISTORY_QUERY_KEY, context?.previousData);
-    toast({
-      title: "Error",
-      description: "Failed to apply punishment",
-      variant: "destructive",
-    });
-  }
-});
+      const { data, error } = await supabase
+        .from('punishment_history')
+        .insert(historyEntry)
+        .select()
+        .single();
 
-export const deletePunishmentMutation = (queryClient: QueryClient) => ({
-  mutationFn: async (id: string) => {
-    const { error } = await supabase
-      .from('punishments')
-      .delete()
-      .eq('id', id);
+      if (error) throw error;
+      
+      // Update cache directly for immediate UI feedback
+      queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => 
+        [data, ...old]
+      );
+      
+      const endTime = performance.now();
+      console.log(`[applyPunishmentMutation] Operation completed in ${endTime - startTime}ms`);
+      
+      showToast("Success", "Punishment applied successfully");
+      
+      return data;
+    } catch (error) {
+      console.error("[applyPunishmentMutation] Error:", error);
+      
+      showToast("Error", "Failed to apply punishment", "destructive");
+      
+      throw error;
+    }
+  };
 
-    if (error) throw error;
-  },
-  onMutate: async (id: string) => {
-    await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-    await queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
+export const deletePunishmentMutation = (queryClient: QueryClient) => 
+  async (id: string) => {
+    console.log("[deletePunishmentMutation] Deleting punishment:", id);
+    const startTime = performance.now();
     
-    const previousPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
-    const previousHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY);
-    
-    queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, 
-      (old = []) => old.filter(p => p.id !== id)
-    );
-    
-    queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY,
-      (old = []) => old.filter(h => h.punishment_id !== id)
-    );
-    
-    return { previousPunishments, previousHistory };
-  },
-  onError: (err: Error, _: unknown, context: { previousPunishments: PunishmentData[], previousHistory: PunishmentHistoryItem[] } | undefined) => {
-    queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, context?.previousPunishments);
-    queryClient.setQueryData(PUNISHMENT_HISTORY_QUERY_KEY, context?.previousHistory);
-    toast({
-      title: "Error",
-      description: "Failed to delete punishment",
-      variant: "destructive",
-    });
-  },
-  onSuccess: () => {
-    toast({
-      title: "Success",
-      description: "Punishment deleted successfully",
-    });
-  }
-});
+    try {
+      const { error } = await supabase
+        .from('punishments')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      // Update cache directly for immediate UI feedback
+      queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, 
+        (old = []) => old.filter(p => p.id !== id)
+      );
+      
+      queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY,
+        (old = []) => old.filter(h => h.punishment_id !== id)
+      );
+      
+      const endTime = performance.now();
+      console.log(`[deletePunishmentMutation] Operation completed in ${endTime - startTime}ms`);
+      
+      showToast("Success", "Punishment deleted successfully");
+    } catch (error) {
+      console.error("[deletePunishmentMutation] Error:", error);
+      
+      showToast("Error", "Failed to delete punishment", "destructive");
+      
+      throw error;
+    }
+  };

@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { 
@@ -13,6 +14,14 @@ import {
   deletePunishmentMutation
 } from './mutations';
 
+// Centralized configuration for React Query
+const QUERY_CONFIG = {
+  staleTime: 1000 * 60 * 5,  // 5 minutes
+  gcTime: 1000 * 60 * 30,    // 30 minutes
+  refetchOnWindowFocus: false,
+  refetchOnMount: true
+};
+
 export const usePunishmentsData = () => {
   const queryClient = useQueryClient();
 
@@ -24,10 +33,7 @@ export const usePunishmentsData = () => {
   } = useQuery({
     queryKey: PUNISHMENTS_QUERY_KEY,
     queryFn: fetchPunishments,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30,   // 30 minutes
-    refetchOnWindowFocus: false,
-    refetchInterval: false
+    ...QUERY_CONFIG
   });
 
   const {
@@ -38,16 +44,33 @@ export const usePunishmentsData = () => {
   } = useQuery({
     queryKey: PUNISHMENT_HISTORY_QUERY_KEY,
     queryFn: fetchCurrentWeekPunishmentHistory,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: false,
-    refetchInterval: false
+    ...QUERY_CONFIG
   });
 
-  const createPunishmentMut = useMutation(createPunishmentMutation(queryClient));
-  const updatePunishmentMut = useMutation(updatePunishmentMutation(queryClient));
-  const applyPunishmentMut = useMutation(applyPunishmentMutation(queryClient));
-  const deletePunishmentMut = useMutation(deletePunishmentMutation(queryClient));
+  const createPunishmentMut = useMutation({
+    mutationFn: createPunishmentMutation(queryClient),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY, exact: true });
+    }
+  });
+
+  const updatePunishmentMut = useMutation({
+    mutationFn: updatePunishmentMutation(queryClient),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY, exact: true });
+    }
+  });
+
+  const applyPunishmentMut = useMutation({
+    mutationFn: applyPunishmentMutation(queryClient),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY, exact: true });
+    }
+  });
+
+  const deletePunishmentMut = useMutation({
+    mutationFn: deletePunishmentMutation(queryClient)
+  });
 
   const getPunishmentHistory = (punishmentId: string): PunishmentHistoryItem[] => {
     return punishmentHistory.filter(item => item.punishment_id === punishmentId);
@@ -67,12 +90,10 @@ export const usePunishmentsData = () => {
   };
 
   const fetchPunishmentsTyped = async (): Promise<void> => {
-    const promises: Promise<void>[] = [
+    await Promise.all([
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY })
-    ];
-    
-    await Promise.all(promises);
+    ]);
   };
 
   return {

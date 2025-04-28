@@ -1,19 +1,20 @@
 
-import { useToast } from "@/hooks/use-toast"
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from "@/components/ui/toast"
-import { Toaster as SonnerToaster } from "sonner"
+import { useToast } from "@/hooks/use-toast";
+import { Toaster as SonnerToaster } from "sonner";
 
 export function Toaster() {
-  const { toasts } = useToast()
+  const { toasts } = useToast();
 
   return (
-    <SonnerToaster position="top-right" />
-  )
+    <SonnerToaster 
+      position="top-right"
+      toastOptions={{
+        duration: 3000,
+        className: "shadow-lg border-border bg-background text-foreground",
+        descriptionClassName: "text-muted-foreground text-sm",
+      }}
+      closeButton
+      richColors
+    />
+  );
 }

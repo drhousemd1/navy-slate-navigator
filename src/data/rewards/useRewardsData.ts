@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
 import { 
@@ -16,6 +17,14 @@ import {
   updateUserPointsMutation
 } from './mutations';
 
+// Centralized configuration for React Query
+const QUERY_CONFIG = {
+  staleTime: 1000 * 60 * 5,  // 5 minutes
+  gcTime: 1000 * 60 * 30,    // 30 minutes
+  refetchOnWindowFocus: false,
+  refetchOnMount: true
+};
+
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
 
@@ -27,9 +36,7 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30,   // 30 minutes
-    refetchOnWindowFocus: false
+    ...QUERY_CONFIG
   });
 
   const {
@@ -38,9 +45,7 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: REWARDS_POINTS_QUERY_KEY,
     queryFn: fetchUserPoints,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: false
+    ...QUERY_CONFIG
   });
 
   const {
@@ -49,18 +54,38 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: REWARDS_SUPPLY_QUERY_KEY,
     queryFn: fetchTotalRewardsSupply,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: false
+    ...QUERY_CONFIG
   });
 
   // Configure mutations with toast disabled in the handlers
   // Toast messages will be handled at the UI level instead
-  const saveRewardMut = useMutation(saveRewardMutation(queryClient, false));
-  const deleteRewardMut = useMutation(deleteRewardMutation(queryClient, false));
-  const buyRewardMut = useMutation(buyRewardMutation(queryClient));
-  const useRewardMut = useMutation(useRewardMutation(queryClient));
-  const updatePointsMut = useMutation(updateUserPointsMutation(queryClient));
+  const saveRewardMut = useMutation({
+    mutationFn: saveRewardMutation(queryClient, false),
+    // Prevent unnecessary rerenders by using more specific invalidation
+    onSettled: () => {
+      // Instead of full invalidation, update the cache more precisely
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY, exact: true });
+    }
+  });
+
+  const deleteRewardMut = useMutation({
+    mutationFn: deleteRewardMutation(queryClient, false),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY, exact: true });
+    }
+  });
+
+  const buyRewardMut = useMutation({
+    mutationFn: buyRewardMutation(queryClient)
+  });
+
+  const useRewardMut = useMutation({
+    mutationFn: useRewardMutation(queryClient)
+  });
+
+  const updatePointsMut = useMutation({
+    mutationFn: updateUserPointsMutation(queryClient)
+  });
 
   const refetchRewardsTyped = (options?: RefetchOptions) => {
     return refetchRewards(options) as Promise<QueryObserverResult<Reward[], Error>>;

@@ -20,15 +20,14 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
   const [currentRewardIndex, setCurrentRewardIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Ensure we have the latest data when component mounts
+  // Ensure we have the latest data when component mounts - but don't cause unnecessary refetches
   useEffect(() => {
-    console.log("RewardsContent mounted, refreshing data");
-    refetchRewards();
-  }, [refetchRewards]);
+    console.log("RewardsContent mounted");
+  }, []);
 
   // Handle editing a reward
   const handleEdit = (index: number) => {
-    console.log("Editing reward at index:", index, "with data:", rewards[index]);
+    console.log("Editing reward at index:", index);
     // Store the index in the reward data so we can access it during delete
     const rewardWithIndex = {
       ...rewards[index],
@@ -53,27 +52,13 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     try {
       setIsSaving(true);
       
-      // Log the order of rewards before saving
-      console.log("Rewards order BEFORE saving:", 
-        rewards.map((r, i) => `${i}: ${r.title} (${r.id})`));
-      
       await handleSaveReward(rewardData, currentRewardIndex);
       
-      // Log the order of rewards after saving to verify it hasn't changed
-      console.log("Rewards order AFTER saving:", 
-        rewards.map((r, i) => `${i}: ${r.title} (${r.id})`));
-      
-      // Toast message is handled in the mutation, no need to show it here
-      
+      // Toast notification now handled in mutations.ts
       closeEditor();
     } catch (error) {
       console.error("Failed to save reward:", error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to save reward. Please try again.",
-        variant: "destructive",
-      });
+      // Toast notification now handled in mutations.ts
     } finally {
       setIsSaving(false);
     }
@@ -84,18 +69,11 @@ const RewardsContent: React.FC<RewardsContentProps> = ({ isEditorOpen, setIsEdit
     console.log("Deleting reward at index:", index);
     try {
       await handleDeleteReward(index);
-      
-      // Toast message is handled in the mutation, no need to show it here
-      
+      // Toast notification now handled in mutations.ts
       closeEditor();
     } catch (error) {
       console.error("Failed to delete reward:", error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to delete reward. Please try again.",
-        variant: "destructive",
-      });
+      // Toast notification now handled in mutations.ts
     }
   };
 

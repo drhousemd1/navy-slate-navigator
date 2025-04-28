@@ -11,11 +11,14 @@ type ToastProps = {
   variant?: "default" | "destructive";
 };
 
+// Centralized toast function with consistent configuration
 const toast = ({ title, description, action, variant }: ToastProps) => {
   sonnerToast(title as string, {
     description,
     action,
     className: variant === "destructive" ? "destructive" : "",
+    position: "top-right", // Consistent positioning
+    duration: 3000, // Reasonable duration
   });
 };
 
