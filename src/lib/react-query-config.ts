@@ -34,47 +34,38 @@ export const createPersistedQueryClient = () => {
   // Only setup persistence in browser environments
   if (typeof window !== 'undefined') {
     try {
-      // Create a simplified persister without custom serialization
-      const storageKey = 'kingdom-app-cache';
-      
-      // Store the cache manually instead of using the problematic persistQueryClient
-      // This avoids the type conflict while still maintaining persistence
-      queryClient.mount(); // Ensure client is initialized
-      
-      // Add event listener to save cache before page unload
-      window.addEventListener('beforeunload', () => {
-        try {
-          const state = queryClient.getQueryCache().getAll().map(query => ({
-            queryKey: query.queryKey,
-            data: query.state.data,
-          }));
-          
-          if (state.length > 0) {
-            localStorage.setItem(storageKey, JSON.stringify(state));
-            console.log(`Saved ${state.length} queries to localStorage`);
+      // Create a localStorage persister
+      const persister = createSyncStoragePersister({
+        key: 'kingdom-app-cache',
+        storage: window.localStorage,
+        throttleTime: 1000, // Only save cache once per second max
+        serialize: data => {
+          try {
+            return JSON.stringify(data);
+          } catch (error) {
+            console.error("Error serializing cache:", error);
+            return '';
           }
-        } catch (e) {
-          console.error("Error saving query cache:", e);
+        },
+        deserialize: data => {
+          try {
+            return JSON.parse(data || '{}');
+          } catch (error) {
+            console.error("Error deserializing cache:", error);
+            return {};
+          }
         }
       });
       
-      // Try to restore cache on initialization
-      try {
-        const savedCache = localStorage.getItem(storageKey);
-        if (savedCache) {
-          const queries = JSON.parse(savedCache);
-          queries.forEach(item => {
-            if (item.queryKey && item.data !== undefined) {
-              queryClient.setQueryData(item.queryKey, item.data);
-            }
-          });
-          console.log(`Restored ${queries.length} queries from localStorage`);
-        }
-      } catch (e) {
-        console.error("Error restoring query cache:", e);
-      }
+      // Setup persistence with maximum cache size
+      persistQueryClient({
+        queryClient,
+        persister,
+        maxAge: Infinity, // Never expire the cache
+        buster: import.meta.env.VITE_APP_VERSION || '1.0.0', // Cache buster if app version changes
+      });
       
-      console.log("Manual query persistence configured");
+      console.log("Query persistence configured");
     } catch (e) {
       console.error("Error setting up query persistence:", e);
       // Fallback to non-persistent client if setup fails
