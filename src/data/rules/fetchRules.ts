@@ -22,15 +22,48 @@ export const fetchRules = async (): Promise<Rule[]> => {
     
     logQueryPerformance('fetchRules', startTime, data?.length);
     
+    // Transform and validate the data to ensure it matches the Rule interface
+    const validatedRules: Rule[] = (data || []).map(rule => {
+      // Validate priority is one of the allowed values, default to 'medium' if not
+      const priority = ['low', 'medium', 'high'].includes(rule.priority) 
+        ? (rule.priority as 'low' | 'medium' | 'high') 
+        : 'medium';
+      
+      // Return a properly formatted Rule object
+      return {
+        id: rule.id,
+        title: rule.title,
+        description: rule.description,
+        priority: priority,
+        background_image_url: rule.background_image_url,
+        background_opacity: rule.background_opacity,
+        icon_url: rule.icon_url,
+        icon_name: rule.icon_name,
+        title_color: rule.title_color,
+        subtext_color: rule.subtext_color,
+        calendar_color: rule.calendar_color,
+        icon_color: rule.icon_color,
+        highlight_effect: rule.highlight_effect,
+        focal_point_x: rule.focal_point_x,
+        focal_point_y: rule.focal_point_y,
+        frequency: rule.frequency as 'daily' | 'weekly',
+        frequency_count: rule.frequency_count,
+        usage_data: rule.usage_data || [],
+        created_at: rule.created_at,
+        updated_at: rule.updated_at,
+        user_id: rule.user_id
+      };
+    });
+    
     // Save to localStorage as a backup cache
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data || []));
-      console.log(`[fetchRules] Saved ${data?.length || 0} rules to localStorage cache`);
+      localStorage.setItem(CACHE_KEY, JSON.stringify(validatedRules));
+      console.log(`[fetchRules] Saved ${validatedRules.length} rules to localStorage cache`);
     } catch (e) {
       console.warn('[fetchRules] Could not save rules to localStorage:', e);
     }
     
-    return data || [];
+    return validatedRules;
   } catch (error) {
     console.error('[fetchRules] Fetch failed:', error);
     
