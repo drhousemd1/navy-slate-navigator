@@ -29,6 +29,17 @@ export const fetchRules = async (): Promise<Rule[]> => {
         ? (rule.priority as 'low' | 'medium' | 'high') 
         : 'medium';
       
+      // Ensure usage_data is always a number array
+      let usageData: number[];
+      
+      if (Array.isArray(rule.usage_data)) {
+        // Ensure all items in the array are numbers
+        usageData = rule.usage_data.map(item => typeof item === 'number' ? item : 0);
+      } else {
+        // Default to an array of zeros if usage_data is not an array
+        usageData = [0, 0, 0, 0, 0, 0, 0];
+      }
+      
       // Return a properly formatted Rule object
       return {
         id: rule.id,
@@ -48,7 +59,7 @@ export const fetchRules = async (): Promise<Rule[]> => {
         focal_point_y: rule.focal_point_y,
         frequency: rule.frequency as 'daily' | 'weekly',
         frequency_count: rule.frequency_count,
-        usage_data: rule.usage_data || [],
+        usage_data: usageData,
         created_at: rule.created_at,
         updated_at: rule.updated_at,
         user_id: rule.user_id
