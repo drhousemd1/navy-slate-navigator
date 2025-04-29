@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData } from '@/contexts/punishments/types';
+import { logQueryPerformance } from './queryUtils';
 
 export const fetchPunishments = async (): Promise<PunishmentData[]> => {
   console.log("[fetchPunishments] Starting punishments fetch");
@@ -16,8 +17,7 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
     throw error;
   }
   
-  const endTime = performance.now();
-  console.log(`[fetchPunishments] Fetch completed in ${endTime - startTime}ms, retrieved ${data?.length || 0} punishments`);
+  logQueryPerformance('fetchPunishments', startTime, data?.length);
   
   return data || [];
 };

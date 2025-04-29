@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { startOfWeek, format } from 'date-fns';
+import { logQueryPerformance } from './queryUtils';
 
 export const fetchCurrentWeekPunishmentHistory = async (): Promise<PunishmentHistoryItem[]> => {
   console.log("[fetchCurrentWeekPunishmentHistory] Starting history fetch");
@@ -18,14 +19,12 @@ export const fetchCurrentWeekPunishmentHistory = async (): Promise<PunishmentHis
     .lte('applied_date', format(today, 'yyyy-MM-dd'))
     .order('applied_date', { ascending: false });
 
-  const endTime = performance.now();
-  console.log(`[fetchCurrentWeekPunishmentHistory] Fetch completed in ${endTime - startTime}ms`);
-  
   if (error) {
     console.error('[fetchCurrentWeekPunishmentHistory] Error:', error);
     throw error;
   }
   
-  console.log(`[fetchCurrentWeekPunishmentHistory] Retrieved ${data?.length || 0} history items`);
+  logQueryPerformance('fetchCurrentWeekPunishmentHistory', startTime, data?.length);
+  
   return data || [];
 };

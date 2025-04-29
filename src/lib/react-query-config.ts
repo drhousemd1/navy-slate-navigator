@@ -1,9 +1,11 @@
 
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, dehydrate, hydrate } from '@tanstack/react-query';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { persistQueryClient } from '@tanstack/react-query-persist-client';
 
 // Create a centralized QueryClient with optimized settings for infinite caching
 export const createQueryClient = () => {
-  return new QueryClient({
+  const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: Infinity, // Cache data forever, never consider it stale
@@ -20,6 +22,39 @@ export const createQueryClient = () => {
       },
     },
   });
+
+  return queryClient;
+};
+
+// Create a persisted query client that preserves the cache between page refreshes
+export const createPersistedQueryClient = () => {
+  const queryClient = createQueryClient();
+  
+  // Only setup persistence in browser environments
+  if (typeof window !== 'undefined') {
+    const persister = createSyncStoragePersister({
+      storage: window.localStorage,
+      key: 'kingdom-app-cache', // A unique key for the cache
+      throttleTime: 1000, // Only save to storage at most once per second
+      serialize: (data) => JSON.stringify(data),
+      deserialize: (data) => JSON.parse(data),
+    });
+
+    // Set up persistence
+    persistQueryClient({
+      queryClient,
+      persister,
+      maxAge: Infinity, // Cache persisted data forever
+      dehydrateOptions: {
+        shouldDehydrateQuery: (query) => {
+          // Only persist successful queries with data
+          return query.state.status === 'success' && !!query.state.data;
+        },
+      },
+    });
+  }
+  
+  return queryClient;
 };
 
 // Standardized query config that can be used across the app

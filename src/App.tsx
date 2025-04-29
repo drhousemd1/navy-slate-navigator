@@ -8,7 +8,7 @@ import Auth from "./pages/auth";
 import { AuthProvider, useAuth } from "./contexts/auth";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
-import { createQueryClient } from "./lib/react-query-config";
+import { createPersistedQueryClient } from "./lib/react-query-config";
 
 // Create empty placeholder pages for our navigation
 import Rules from "./pages/Rules";
@@ -59,8 +59,8 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Create QueryClient using our centralized configuration
-const queryClient = createQueryClient();
+// Create persisted QueryClient using our centralized configuration
+const queryClient = createPersistedQueryClient();
 
 // Configure routes with proper nesting to ensure context is available
 const AppRoutes = () => {
