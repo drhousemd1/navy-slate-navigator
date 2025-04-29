@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -64,8 +65,9 @@ const queryClient = createPersistedQueryClient();
 
 // Configure routes with proper nesting to ensure context is available
 const AppRoutes = () => {
-  React.useEffect(() => {
+  useEffect(() => {
     console.log('AppRoutes component initialized. Routes ready to be matched.');
+    console.log('Cache status:', queryClient.getQueryCache().getAll().length > 0 ? 'Cache populated' : 'Empty cache');
   }, []);
 
   return (
@@ -90,8 +92,23 @@ const AppRoutes = () => {
 
 // Main App component
 const App = () => {
-  React.useEffect(() => {
+  useEffect(() => {
     console.log('App component initialized. React Router ready.');
+    
+    // Add additional error handling for network issues
+    window.addEventListener('online', () => {
+      console.log('App is back online. Resuming normal operation.');
+      queryClient.resumePausedMutations();
+    });
+    
+    window.addEventListener('offline', () => {
+      console.log('App is offline. Pausing mutations.');
+    });
+    
+    return () => {
+      window.removeEventListener('online', () => {});
+      window.removeEventListener('offline', () => {});
+    };
   }, []);
 
   return (

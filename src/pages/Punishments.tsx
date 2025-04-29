@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
-import { Skull } from 'lucide-react';
+import { Skull, Loader2 } from 'lucide-react';
 import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments } from '../contexts/PunishmentsContext';
@@ -11,9 +11,20 @@ import PunishmentEditor from '../components/PunishmentEditor';
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
 }> = ({ contentRef }) => {
-  const { punishments, loading, createPunishment, updatePunishment } = usePunishments();
+  const { punishments, loading, error, createPunishment, updatePunishment } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // Track initial mount and set loading state appropriately
+  useEffect(() => {
+    // Consider initial load complete after a short delay
+    const timer = setTimeout(() => {
+      setIsInitialLoad(false);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleEditorClose = () => {
     setIsEditorOpen(false);
@@ -25,18 +36,42 @@ const PunishmentsContent: React.FC<{
     setIsEditorOpen(true);
   };
   
-  React.useEffect(() => {
+  useEffect(() => {
     contentRef.current.handleAddNewPunishment = handleAddNewPunishment;
     return () => {
       contentRef.current = {};
     };
   }, [contentRef]);
 
+  // Only show the loading indicator on initial page load, not on subsequent data refreshes
+  const showLoading = loading && isInitialLoad;
+
+  // Show errors if they occur
+  if (error && !showLoading) {
+    return (
+      <div className="p-4 pt-6 PunishmentsContent">
+        <PunishmentsHeader />
+        <div className="text-center py-12 text-red-400">
+          <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
+          <h3 className="text-xl font-semibold mb-2">Error Loading Punishments</h3>
+          <p className="mb-4">{error.message || "There was an error loading your punishments."}</p>
+          <p className="text-sm text-gray-400">Try refreshing the page or check your internet connection.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 pt-6 PunishmentsContent">
       <PunishmentsHeader />
 
-      {punishments.length === 0 && !loading ? (
+      {showLoading ? (
+        <div className="text-center py-12 text-gray-400">
+          <Loader2 className="mx-auto h-12 w-12 mb-4 opacity-50 animate-spin" />
+          <h3 className="text-xl font-semibold mb-2">Loading Punishments</h3>
+          <p>Please wait while we load your punishment data.</p>
+        </div>
+      ) : punishments.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Skull className="mx-auto h-12 w-12 mb-4 opacity-50" />
           <h3 className="text-xl font-semibold mb-2">No Punishments Yet</h3>

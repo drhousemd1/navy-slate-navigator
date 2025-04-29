@@ -18,6 +18,23 @@ import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 export const usePunishmentsData = () => {
   const queryClient = useQueryClient();
 
+  // Log that punishment data is being requested
+  console.log("[usePunishmentsData] Initializing punishment data hooks");
+  
+  // Check if we have cached data already
+  const cachedPunishments = queryClient.getQueryData(PUNISHMENTS_QUERY_KEY);
+  const cachedHistory = queryClient.getQueryData(PUNISHMENT_HISTORY_QUERY_KEY);
+  
+  if (cachedPunishments) {
+    console.log("[usePunishmentsData] Using cached punishments data:", 
+      (cachedPunishments as any[]).length, "items");
+  }
+
+  if (cachedHistory) {
+    console.log("[usePunishmentsData] Using cached history data:", 
+      (cachedHistory as any[]).length, "items");
+  }
+
   const {
     data: punishments = [],
     isLoading: punishmentsLoading,
@@ -70,21 +87,29 @@ export const usePunishmentsData = () => {
   );
 
   const refetchPunishmentsTyped = (options?: RefetchOptions) => {
+    console.log("[usePunishmentsData] Explicitly refetching punishments data");
     return refetchPunishments(options) as Promise<QueryObserverResult<PunishmentData[], Error>>;
   };
 
   const refetchHistoryTyped = (options?: RefetchOptions) => {
+    console.log("[usePunishmentsData] Explicitly refetching history data");
     return refetchHistory(options) as Promise<QueryObserverResult<PunishmentHistoryItem[], Error>>;
   };
 
   // Update this to not invalidate queries
   const fetchPunishmentsTyped = async (): Promise<void> => {
-    // Instead of invalidating (which causes refetches), we just refresh the data if needed
-    const newPunishments = await fetchPunishments();
-    queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, newPunishments);
-    
-    const newHistory = await fetchCurrentWeekPunishmentHistory();
-    queryClient.setQueryData(PUNISHMENT_HISTORY_QUERY_KEY, newHistory);
+    console.log("[usePunishmentsData] Manually fetching fresh punishment data");
+    try {
+      // Instead of invalidating (which causes refetches), we just refresh the data if needed
+      const newPunishments = await fetchPunishments();
+      queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, newPunishments);
+      
+      const newHistory = await fetchCurrentWeekPunishmentHistory();
+      queryClient.setQueryData(PUNISHMENT_HISTORY_QUERY_KEY, newHistory);
+    } catch (error) {
+      console.error("[usePunishmentsData] Error fetching fresh data:", error);
+      // On error, we don't update the cache to preserve existing data
+    }
   };
 
   // Create a wrapper function that adapts to the expected interface
@@ -100,8 +125,8 @@ export const usePunishmentsData = () => {
   return {
     punishments,
     punishmentHistory,
-    loading: punishmentsLoading,
-    historyLoading,
+    loading: punishmentsLoading && !cachedPunishments, // Only show loading if we don't have cached data
+    historyLoading: historyLoading && !cachedHistory,
     error: punishmentsError || historyError,
     isSelectingRandom: false,
     selectedPunishment: null,
