@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData } from '@/contexts/punishments/types';
-import { logQueryPerformance } from './queryUtils';
+import { logQueryPerformance } from '@/lib/react-query-config';
 
 export const fetchPunishments = async (): Promise<PunishmentData[]> => {
   console.log("[fetchPunishments] Starting punishments fetch");

@@ -38,18 +38,17 @@ export const createPersistedQueryClient = () => {
       throttleTime: 1000, // Only save to storage at most once per second
     });
 
-    // Set up persistence
-    persistQueryClient({
-      queryClient,
-      persister,
-      maxAge: Infinity, // Cache persisted data forever
-      dehydrateOptions: {
-        shouldDehydrateQuery: (query) => {
-          // Only persist successful queries with data
-          return query.state.status === 'success' && !!query.state.data;
-        },
-      },
-    });
+    // Set up persistence with a simplified configuration
+    try {
+      persistQueryClient({
+        queryClient,
+        persister,
+        maxAge: Infinity, // Cache persisted data forever
+      });
+    } catch (e) {
+      console.error("Error setting up query persistence:", e);
+      // Fallback to non-persistent client if setup fails
+    }
   }
   
   return queryClient;

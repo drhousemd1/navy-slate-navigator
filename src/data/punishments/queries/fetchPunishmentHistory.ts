@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { startOfWeek, format } from 'date-fns';
-import { logQueryPerformance } from './queryUtils';
+import { logQueryPerformance } from '@/lib/react-query-config';
 
 export const fetchCurrentWeekPunishmentHistory = async (): Promise<PunishmentHistoryItem[]> => {
   console.log("[fetchCurrentWeekPunishmentHistory] Starting history fetch");
