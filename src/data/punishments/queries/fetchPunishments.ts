@@ -7,6 +7,8 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
   console.log("[fetchPunishments] Starting punishments fetch");
   const startTime = performance.now();
   
+  const CACHE_KEY = 'kingdom-app-punishments';
+  
   try {
     const { data, error } = await supabase
       .from('punishments')
@@ -20,12 +22,20 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
     
     logQueryPerformance('fetchPunishments', startTime, data?.length);
     
+    // Store in localStorage as a backup cache
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data || []));
+      console.log(`[fetchPunishments] Saved ${data?.length || 0} punishments to localStorage cache`);
+    } catch (e) {
+      console.warn('[fetchPunishments] Could not save to localStorage:', e);
+    }
+    
     return data || [];
   } catch (error) {
     console.error('[fetchPunishments] Fetch failed:', error);
     
     // In case of failure, check browser storage for cached data
-    const cachedData = localStorage.getItem('kingdom-app-punishments');
+    const cachedData = localStorage.getItem(CACHE_KEY);
     if (cachedData) {
       console.log('[fetchPunishments] Using cached punishments data');
       try {

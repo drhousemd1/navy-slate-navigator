@@ -8,6 +8,7 @@ import { deleteRuleFromDb } from '@/data/rules/deleteRule';
 import { recordRuleViolationInDb } from '@/data/rules/recordViolation';
 import { getMondayBasedDay } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
+import { STANDARD_QUERY_CONFIG, logQueryPerformance } from '@/lib/react-query-config';
 
 // Keys for queries
 const RULES_QUERY_KEY = ['rules'];
@@ -15,7 +16,7 @@ const RULES_QUERY_KEY = ['rules'];
 export const useRulesData = () => {
   const queryClient = useQueryClient();
 
-  // Query for fetching all rules
+  // Query for fetching all rules - NOW USING STANDARD_QUERY_CONFIG
   const {
     data: rules = [],
     isLoading,
@@ -24,10 +25,7 @@ export const useRulesData = () => {
   } = useQuery({
     queryKey: RULES_QUERY_KEY,
     queryFn: fetchRules,
-    staleTime: 1000 * 60 * 20, // 20 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
-    refetchOnWindowFocus: true,
-    refetchInterval: 30000,
+    ...STANDARD_QUERY_CONFIG
   });
 
   // Mutation for saving a rule (create or update)

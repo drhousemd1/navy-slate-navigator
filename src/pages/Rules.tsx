@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +14,7 @@ const RulesWithContext: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
-  const { rules, isLoading, saveRule, deleteRule, markRuleBroken } = useRules();
+  const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken } = useRules();
 
   const handleAddRule = () => {
     console.log('handleAddRule called in RulesWithContext');
@@ -71,13 +72,69 @@ const RulesWithContext: React.FC = () => {
     }
   };
 
+  // Check if we have an error but rules are available from cache
+  if (error && rules.length > 0) {
+    return (
+      <div className="container mx-auto px-4 py-6 RulesContent">
+        <RulesHeader />
+        <div className="mb-4 p-4 bg-yellow-500/20 border border-yellow-600 rounded-md text-yellow-200">
+          <p className="font-medium">Having trouble connecting to server. Showing cached rules.</p>
+        </div>
+        <RulesList
+          rules={rules}
+          isLoading={false}
+          onEditRule={handleEditRule}
+          onRuleBroken={handleRuleBroken}
+        />
+
+        <RuleEditor
+          isOpen={isEditorOpen}
+          onClose={() => {
+            setIsEditorOpen(false);
+            setCurrentRule(null);
+          }}
+          ruleData={currentRule || undefined}
+          onSave={handleSaveRule}
+          onDelete={handleDeleteRule}
+        />
+      </div>
+    );
+  }
+
+  // Show error message if there's an error and no cached rules
+  if (error && !rules.length) {
+    return (
+      <div className="container mx-auto px-4 py-6 RulesContent">
+        <RulesHeader />
+        <div className="flex flex-col items-center justify-center mt-8">
+          <div className="text-red-500 p-4 border border-red-400 rounded-md bg-red-900/20">
+            <h3 className="font-bold mb-2">Error Loading Rules</h3>
+            <p>{error.message || "Couldn't connect to the server. Please try again."}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading indicator only if actually loading and no cached data
+  if (isLoading && !rules.length) {
+    return (
+      <div className="container mx-auto px-4 py-6 RulesContent">
+        <RulesHeader />
+        <div className="flex justify-center mt-8">
+          <div className="text-white text-center">Loading rules...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-6 RulesContent">
       <RulesHeader />
 
       <RulesList
         rules={rules}
-        isLoading={isLoading}
+        isLoading={false}
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
       />

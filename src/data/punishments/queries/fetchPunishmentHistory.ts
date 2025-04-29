@@ -8,6 +8,8 @@ export const fetchCurrentWeekPunishmentHistory = async (): Promise<PunishmentHis
   console.log("[fetchCurrentWeekPunishmentHistory] Starting history fetch");
   const startTime = performance.now();
   
+  const CACHE_KEY = 'kingdom-app-punishment-history';
+  
   try {
     const today = new Date();
     const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 1 });
@@ -29,7 +31,8 @@ export const fetchCurrentWeekPunishmentHistory = async (): Promise<PunishmentHis
     
     // Store in localStorage as a backup cache
     try {
-      localStorage.setItem('kingdom-app-punishment-history', JSON.stringify(data || []));
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data || []));
+      console.log(`[fetchCurrentWeekPunishmentHistory] Saved ${data?.length || 0} history items to localStorage cache`);
     } catch (e) {
       console.warn('[fetchCurrentWeekPunishmentHistory] Could not save to localStorage:', e);
     }
@@ -39,7 +42,7 @@ export const fetchCurrentWeekPunishmentHistory = async (): Promise<PunishmentHis
     console.error('[fetchCurrentWeekPunishmentHistory] Fetch failed:', error);
     
     // In case of failure, check browser storage for cached data
-    const cachedData = localStorage.getItem('kingdom-app-punishment-history');
+    const cachedData = localStorage.getItem(CACHE_KEY);
     if (cachedData) {
       console.log('[fetchCurrentWeekPunishmentHistory] Using cached history data');
       try {
