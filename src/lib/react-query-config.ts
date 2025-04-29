@@ -1,5 +1,5 @@
 
-import { QueryClient, dehydrate, hydrate } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { persistQueryClient } from '@tanstack/react-query-persist-client';
 
@@ -36,8 +36,6 @@ export const createPersistedQueryClient = () => {
       storage: window.localStorage,
       key: 'kingdom-app-cache', // A unique key for the cache
       throttleTime: 1000, // Only save to storage at most once per second
-      serialize: (data) => JSON.stringify(data),
-      deserialize: (data) => JSON.parse(data),
     });
 
     // Set up persistence
