@@ -38,17 +38,14 @@ export const createPersistedQueryClient = () => {
         storage: window.localStorage,
         key: 'kingdom-app-cache', // A unique key for the cache
         throttleTime: 1000, // Only save to storage at most once per second
-        serialize: data => JSON.stringify(data),
-        deserialize: data => JSON.parse(data),
       });
 
-      // Set up persistence with a typesafe configuration
+      // Use a more compatible configuration to avoid type errors
       persistQueryClient({
         queryClient,
         persister,
-        maxAge: Infinity, // Cache persisted data forever
-        // Use explicit typing to avoid type conflicts
-        buster: process.env.BUILD_ID || 'v1',
+        maxAge: 1000 * 60 * 60 * 24, // 24 hours
+        buster: 'v1',
       });
       
       console.log("Query persistence successfully configured");
