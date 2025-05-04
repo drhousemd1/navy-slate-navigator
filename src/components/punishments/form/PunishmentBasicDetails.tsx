@@ -14,27 +14,41 @@ interface PunishmentBasicDetailsProps {
 }
 
 const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control, setValue }) => {
-  // Fixed increment/decrement functions to explicitly add/subtract exactly 1
+  // Completely rewritten increment/decrement functions to force exactly +1/-1 change
   const handleDecrementPoints = () => {
     setValue('points', (val: number) => {
-      const newValue = val - 1;
+      console.log('Current points before decrement:', val);
+      const newValue = parseInt(String(val)) - 1;
+      console.log('New points after decrement:', Math.max(0, newValue));
       return Math.max(0, newValue);
     });
   };
 
   const handleIncrementPoints = () => {
-    setValue('points', (val: number) => val + 1);
+    setValue('points', (val: number) => {
+      console.log('Current points before increment:', val);
+      const newValue = parseInt(String(val)) + 1;
+      console.log('New points after increment:', newValue);
+      return newValue;
+    });
   };
   
   const handleDecrementDomPoints = () => {
     setValue('dom_points', (val: number) => {
-      const newValue = val - 1;
+      console.log('Current dom points before decrement:', val);
+      const newValue = parseInt(String(val)) - 1;
+      console.log('New dom points after decrement:', Math.max(0, newValue));
       return Math.max(0, newValue);
     });
   };
 
   const handleIncrementDomPoints = () => {
-    setValue('dom_points', (val: number) => val + 1);
+    setValue('dom_points', (val: number) => {
+      console.log('Current dom points before increment:', val);
+      const newValue = parseInt(String(val)) + 1;
+      console.log('New dom points after increment:', newValue);
+      return newValue;
+    });
   };
 
   return (
@@ -71,7 +85,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
         )}
       />
       
-      {/* Submissive Points Lost field - modified handlers */}
+      {/* Submissive Points Lost field - completely rewritten handlers */}
       <FormField
         control={control}
         name="points"
@@ -117,7 +131,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
         )}
       />
       
-      {/* Dom Points Earned field - modified handlers */}
+      {/* Dom Points Earned field - completely rewritten handlers */}
       <FormField
         control={control}
         name="dom_points"

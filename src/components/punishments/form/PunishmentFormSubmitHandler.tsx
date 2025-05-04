@@ -25,13 +25,14 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   const [isSaving, setIsSaving] = useState(false);
 
   const onSubmit = async (values: any) => {
+    // Make sure we're using exact values, not references
     const icon_name = selectedIconName || null;
     const background_image_url = imagePreview || null;
     
-    // Ensure dom_points is handled correctly
+    // Force explicit assignment of dom_points to avoid any reference issues
     const dom_points = values.dom_points !== undefined 
-      ? values.dom_points 
-      : Math.ceil(values.points / 2);
+      ? parseInt(String(values.dom_points)) 
+      : Math.ceil(parseInt(String(values.points)) / 2);
     
     const dataToSave: PunishmentData = {
       ...values,
