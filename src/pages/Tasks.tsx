@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
 import TasksHeader from '../components/task/TasksHeader';
 import TasksList from '../components/task/TasksList';
-import { RewardsProvider } from '@/contexts/RewardsContext';
+import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TasksProvider, useTasks } from '../contexts/TasksContext';
 import { Task } from '@/lib/taskUtils';
 
@@ -12,6 +13,7 @@ const TasksWithContext: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion } = useTasks();
+  const { refreshPointsFromDatabase } = useRewards();
 
   const handleAddTask = () => {
     console.log('handleAddTask called in TasksWithContext');
@@ -60,6 +62,25 @@ const TasksWithContext: React.FC = () => {
     }
   };
 
+  const handleToggleCompletion = async (taskId: string, completed: boolean) => {
+    try {
+      await toggleTaskCompletion(taskId, completed);
+      // Always refresh points after task completion
+      if (completed) {
+        setTimeout(() => {
+          refreshPointsFromDatabase();
+        }, 300);
+      }
+    } catch (err) {
+      console.error('Error toggling task completion:', err);
+    }
+  };
+
+  useEffect(() => {
+    // Refresh points when component mounts
+    refreshPointsFromDatabase();
+  }, [refreshPointsFromDatabase]);
+
   return (
     <div className="p-4 pt-6 TasksContent">
       <TasksHeader />
@@ -68,7 +89,7 @@ const TasksWithContext: React.FC = () => {
         tasks={tasks}
         isLoading={isLoading}
         onEditTask={handleEditTask}
-        onToggleCompletion={toggleTaskCompletion}
+        onToggleCompletion={handleToggleCompletion}
       />
 
       <TaskEditor

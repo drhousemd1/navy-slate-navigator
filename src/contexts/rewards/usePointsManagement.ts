@@ -72,10 +72,24 @@ export const usePointsManagement = () => {
     }
   }, [user, isAuthenticated]);
 
+  // Add this effect to check for auth changes and refresh points
   useEffect(() => {
     if (isAuthenticated) {
       fetchTotalPoints();
     }
+  }, [fetchTotalPoints, isAuthenticated]);
+
+  // Also add an effect to listen to auth state changes
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      if (isAuthenticated) {
+        fetchTotalPoints();
+      }
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, [fetchTotalPoints, isAuthenticated]);
 
   const updatePointsInDatabase = useCallback(async (newPoints: number) => {

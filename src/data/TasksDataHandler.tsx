@@ -360,8 +360,12 @@ export const useTasksData = () => {
             variant: 'default',
           });
           
-          // Invalidate related queries
+          // Invalidate related queries to ensure UI updates
           queryClient.invalidateQueries({ queryKey: ['user-points'] });
+          queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
+          
+          // Also directly invalidate the rewards data to make sure UI updates
+          queryClient.invalidateQueries({ queryKey: ['rewards'] });
         }
       }
 
