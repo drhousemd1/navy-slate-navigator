@@ -3,11 +3,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const usePointsManagement = () => {
   const [totalPoints, setTotalPoints] = useState<number>(0);
   const [domPoints, setDomPoints] = useState<number>(0);
   const { user, isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
 
   const fetchTotalPoints = useCallback(async () => {
     if (!isAuthenticated || !user) {
@@ -47,6 +49,13 @@ export const usePointsManagement = () => {
           console.log('Created new profile with points:', newProfileData.points, 'and dom_points:', newProfileData.dom_points || 0);
           setTotalPoints(newProfileData.points);
           setDomPoints(newProfileData.dom_points || 0);
+          
+          // Update React Query cache directly with the fresh values
+          if (queryClient) {
+            console.log('Setting React Query cache with fresh points value:', newProfileData.points);
+            queryClient.setQueryData(['rewards', 'points'], newProfileData.points);
+          }
+          
           return;
         }
         
@@ -62,7 +71,6 @@ export const usePointsManagement = () => {
         setDomPoints(data.dom_points || 0);
         
         // Update React Query cache directly with the fresh values
-        const queryClient = window?.__REACT_QUERY_GLOBAL_CLIENT__;
         if (queryClient) {
           console.log('Setting React Query cache with fresh points value:', data.points);
           queryClient.setQueryData(['rewards', 'points'], data.points);
@@ -77,7 +85,7 @@ export const usePointsManagement = () => {
       setTotalPoints(0);
       setDomPoints(0);
     }
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, queryClient]);
 
   // Add this effect to check for auth changes and refresh points
   useEffect(() => {
@@ -149,7 +157,6 @@ export const usePointsManagement = () => {
       setTotalPoints(newPoints);
       
       // Update React Query cache directly with the new value
-      const queryClient = window?.__REACT_QUERY_GLOBAL_CLIENT__;
       if (queryClient) {
         console.log('Setting React Query cache with updated points value:', newPoints);
         queryClient.setQueryData(['rewards', 'points'], newPoints);
@@ -160,7 +167,7 @@ export const usePointsManagement = () => {
       console.error('Error in updatePointsInDatabase:', error);
       return false;
     }
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, queryClient]);
 
   return {
     totalPoints,

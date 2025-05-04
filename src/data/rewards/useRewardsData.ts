@@ -1,4 +1,5 @@
 
+import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
 import { 
@@ -47,7 +48,7 @@ export const useRewardsData = () => {
 
   // Ensure React Query cache always has the latest points value
   // This ensures that any component or function using the cache gets the correct value
-  React.useEffect(() => {
+  useEffect(() => {
     if (totalPoints > 0) {
       queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, totalPoints);
     }
