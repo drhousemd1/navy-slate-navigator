@@ -17,9 +17,11 @@ import {
   updateUserPointsMutation
 } from './mutations';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
+import { usePointsManagement } from '@/contexts/rewards/usePointsManagement';
 
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
+  const { totalPoints, domPoints, updatePointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
 
   const {
     data: rewards = [],
@@ -29,15 +31,6 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
-    ...STANDARD_QUERY_CONFIG
-  });
-
-  const {
-    data: totalPoints = 0,
-    refetch: refetchPoints
-  } = useQuery({
-    queryKey: REWARDS_POINTS_QUERY_KEY,
-    queryFn: fetchUserPoints,
     ...STANDARD_QUERY_CONFIG
   });
 
@@ -80,20 +73,12 @@ export const useRewardsData = () => {
     return refetchRewards(options) as Promise<QueryObserverResult<Reward[], Error>>;
   };
 
-  // This function now just updates the local cache, not triggering any fetches
-  const refreshPointsFromDatabase = async () => {
-    const points = await fetchUserPoints();
-    queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, points);
-    
-    const supply = await fetchTotalRewardsSupply();
-    queryClient.setQueryData(REWARDS_SUPPLY_QUERY_KEY, supply);
-  };
-
   return {
     // Data
     rewards,
     totalPoints,
     totalRewardsSupply,
+    domPoints,
     
     // Loading state
     isLoading: rewardsLoading,
@@ -108,7 +93,7 @@ export const useRewardsData = () => {
     
     // Refetch functions - maintained for compatibility
     refetchRewards: refetchRewardsTyped,
-    refetchPoints,
+    refetchPoints: refreshPointsFromDatabase,
     refreshPointsFromDatabase
   };
 };

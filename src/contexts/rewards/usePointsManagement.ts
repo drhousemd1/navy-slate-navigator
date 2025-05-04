@@ -114,7 +114,7 @@ export const usePointsManagement = () => {
         // Create new profile
         const { error: insertError } = await supabase
           .from('profiles')
-          .insert({ id: user.id, points: newPoints, dom_points: domPoints });
+          .insert({ id: user.id, points: newPoints, dom_points: 0 });
         
         if (insertError) {
           console.error('Error creating profile with points:', insertError);
@@ -129,7 +129,7 @@ export const usePointsManagement = () => {
       console.error('Error in updatePointsInDatabase:', error);
       return false;
     }
-  }, [user, isAuthenticated, domPoints]);
+  }, [user, isAuthenticated]);
 
   return {
     totalPoints,

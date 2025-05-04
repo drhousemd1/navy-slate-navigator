@@ -1,3 +1,4 @@
+
 import { Reward } from '@/lib/rewardUtils';
 import { QueryObserverResult } from '@tanstack/react-query';
 
@@ -5,7 +6,7 @@ export interface RewardsContextType {
   rewards: Reward[];
   totalPoints: number;
   totalRewardsSupply: number;
-  domPoints: number; // Add this new property
+  domPoints: number;
   setTotalPoints: (points: number) => Promise<void>;
   isLoading: boolean;
   refetchRewards: () => Promise<QueryObserverResult<Reward[], Error>>;
