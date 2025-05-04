@@ -199,6 +199,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          dom_points: number | null
           id: string
           linked_partner_id: string | null
           partner_link_code: string | null
@@ -208,6 +209,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          dom_points?: number | null
           id: string
           linked_partner_id?: string | null
           partner_link_code?: string | null
@@ -217,6 +219,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          dom_points?: number | null
           id?: string
           linked_partner_id?: string | null
           partner_link_code?: string | null
