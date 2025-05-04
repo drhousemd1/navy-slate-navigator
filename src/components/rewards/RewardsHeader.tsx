@@ -9,6 +9,7 @@ const RewardsHeader: React.FC = () => {
 
   // Refresh points when component mounts
   useEffect(() => {
+    console.log("RewardsHeader mounted, refreshing points from database");
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
 

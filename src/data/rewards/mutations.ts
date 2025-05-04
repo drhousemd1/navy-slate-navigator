@@ -165,16 +165,35 @@ export const buyRewardMutation = (queryClient: QueryClient) =>
     
     try {
       // Get current points and reward data for optimistic updates
-      const currentPoints = queryClient.getQueryData<number>(REWARDS_POINTS_QUERY_KEY) || 0;
+      // Instead of only trusting the cache, we'll also check with the database
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      
+      if (!userId) {
+        throw new Error('User is not logged in');
+      }
+      
+      // Get the latest points directly from the database
+      const { data: userPoints, error: pointsError } = await supabase
+        .from('profiles')
+        .select('points')
+        .eq('id', userId)
+        .single();
+      
+      if (pointsError) throw pointsError;
+      
+      const currentPoints = userPoints?.points || 0;
+      
+      // Check if we have enough points
+      if (currentPoints < cost) {
+        throw new Error(`Not enough points to buy this reward. Required: ${cost}, Available: ${currentPoints}`);
+      }
+      
+      // Get rewards for optimistic updates
       const rewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
       const reward = rewards.find(r => r.id === rewardId);
       
       if (!reward) throw new Error('Reward not found in cache');
-      
-      // Check if we have enough points locally (to fail fast)
-      if (currentPoints < cost) {
-        throw new Error('Not enough points to buy this reward');
-      }
       
       // Apply optimistic updates
       const newPoints = currentPoints - cost;
@@ -188,26 +207,6 @@ export const buyRewardMutation = (queryClient: QueryClient) =>
         old.map(r => r.id === rewardId ? updatedReward : r)
       );
       
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-      
-      if (!userId) {
-        throw new Error('User is not logged in');
-      }
-      
-      // First, check user points
-      const { data: userPoints, error: pointsError } = await supabase
-        .from('profiles')
-        .select('points')
-        .eq('id', userId)
-        .single();
-      
-      if (pointsError) throw pointsError;
-      
-      if (!userPoints || userPoints.points < cost) {
-        throw new Error('Not enough points to buy this reward');
-      }
-      
       // Then, check if reward is available
       const { data: rewardData, error: rewardError } = await supabase
         .from('rewards')
@@ -219,7 +218,7 @@ export const buyRewardMutation = (queryClient: QueryClient) =>
       
       // Start transaction-like operations
       // First, deduct points
-      const serverNewPoints = userPoints.points - cost;
+      const serverNewPoints = currentPoints - cost;
       const { error: updatePointsError } = await supabase
         .from('profiles')
         .update({ points: serverNewPoints })

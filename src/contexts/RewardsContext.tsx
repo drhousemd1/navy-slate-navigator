@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
 import { Reward } from '@/lib/rewardUtils';
@@ -67,6 +67,11 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     refreshPointsFromDatabase,
   } = useRewardsData();
 
+  // Refresh points when the provider mounts
+  useEffect(() => {
+    refreshPointsFromDatabase();
+  }, [refreshPointsFromDatabase]);
+
   const handleSaveReward = async (rewardData: any, index: number | null) => {
     const result = await saveReward({ rewardData, currentIndex: index });
     return result?.id || null;
@@ -80,15 +85,28 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const handleBuyReward = async (id: string, cost: number) => {
+    // Make sure we have the most up-to-date points
+    await refreshPointsFromDatabase();
+    
+    // Now attempt to buy the reward with fresh point data
     await buyReward({ rewardId: id, cost });
+    
+    // Refresh points again to ensure UI is in sync
+    await refreshPointsFromDatabase();
   };
 
   const handleUseReward = async (id: string) => {
     await useReward(id);
+    
+    // Refresh everything to ensure UI is in sync
+    await refreshPointsFromDatabase();
   };
 
   const setTotalPoints = async (points: number) => {
     await updatePoints(points);
+    
+    // Make sure points are refreshed after updating
+    await refreshPointsFromDatabase();
   };
 
   const value = {

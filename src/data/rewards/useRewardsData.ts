@@ -23,6 +23,7 @@ export const useRewardsData = () => {
   const queryClient = useQueryClient();
   const { totalPoints, domPoints, updatePointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
 
+  // Query for fetching all rewards
   const {
     data: rewards = [],
     isLoading: rewardsLoading,
@@ -34,6 +35,7 @@ export const useRewardsData = () => {
     ...STANDARD_QUERY_CONFIG
   });
 
+  // Query for fetching total rewards supply
   const {
     data: totalRewardsSupply = 0,
     refetch: refetchSupply
@@ -42,6 +44,14 @@ export const useRewardsData = () => {
     queryFn: fetchTotalRewardsSupply,
     ...STANDARD_QUERY_CONFIG
   });
+
+  // Ensure React Query cache always has the latest points value
+  // This ensures that any component or function using the cache gets the correct value
+  React.useEffect(() => {
+    if (totalPoints > 0) {
+      queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, totalPoints);
+    }
+  }, [totalPoints, queryClient]);
 
   // Configure mutations with toast disabled in the handlers
   const saveRewardMut = useMutation({

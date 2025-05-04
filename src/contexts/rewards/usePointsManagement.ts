@@ -60,6 +60,13 @@ export const usePointsManagement = () => {
         console.log('Fetched points from database:', data.points, 'and dom_points:', data.dom_points || 0);
         setTotalPoints(data.points);
         setDomPoints(data.dom_points || 0);
+        
+        // Update React Query cache directly with the fresh values
+        const queryClient = window?.__REACT_QUERY_GLOBAL_CLIENT__;
+        if (queryClient) {
+          console.log('Setting React Query cache with fresh points value:', data.points);
+          queryClient.setQueryData(['rewards', 'points'], data.points);
+        }
       } else {
         console.log('No points data found, using default');
         setTotalPoints(0);
@@ -75,6 +82,7 @@ export const usePointsManagement = () => {
   // Add this effect to check for auth changes and refresh points
   useEffect(() => {
     if (isAuthenticated) {
+      console.log('User authenticated, fetching points');
       fetchTotalPoints();
     }
   }, [fetchTotalPoints, isAuthenticated]);
@@ -83,6 +91,7 @@ export const usePointsManagement = () => {
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(() => {
       if (isAuthenticated) {
+        console.log('Auth state changed, refreshing points');
         fetchTotalPoints();
       }
     });
@@ -138,6 +147,14 @@ export const usePointsManagement = () => {
       
       console.log('Points updated in database:', newPoints);
       setTotalPoints(newPoints);
+      
+      // Update React Query cache directly with the new value
+      const queryClient = window?.__REACT_QUERY_GLOBAL_CLIENT__;
+      if (queryClient) {
+        console.log('Setting React Query cache with updated points value:', newPoints);
+        queryClient.setQueryData(['rewards', 'points'], newPoints);
+      }
+      
       return true;
     } catch (error) {
       console.error('Error in updatePointsInDatabase:', error);
