@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { getMondayBasedDay } from '@/lib/utils';
+import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 
 const TASKS_QUERY_KEY = ['tasks'];
 const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
