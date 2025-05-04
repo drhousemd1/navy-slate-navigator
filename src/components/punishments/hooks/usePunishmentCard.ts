@@ -68,6 +68,7 @@ export const usePunishmentCard = ({ id, points, dom_points }: UsePunishmentCardP
     setIsEditorOpen,
     weekData,
     frequencyCount,
+    punishment, // Now returning the full punishment data from context
     handlePunish,
     handleEdit,
     handleSavePunishment,

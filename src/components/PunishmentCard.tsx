@@ -50,11 +50,15 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
     setIsEditorOpen,
     weekData,
     frequencyCount,
+    punishment, // Now getting the full punishment object from context
     handlePunish,
     handleEdit,
     handleSavePunishment,
     handleDeletePunishment
   } = usePunishmentCard({ id, points, dom_points });
+
+  // Use dom_points from the punishment context data if available, otherwise fall back to props
+  const displayDomPoints = punishment?.dom_points !== undefined ? punishment.dom_points : dom_points;
 
   return (
     <>
@@ -69,7 +73,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
         <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
           <PunishmentCardHeader 
             points={points}
-            dom_points={dom_points}
+            dom_points={displayDomPoints} 
             onPunish={handlePunish}
           />
           
@@ -100,7 +104,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
           title,
           description,
           points,
-          dom_points,
+          dom_points: displayDomPoints, // Use the value from context if available
           icon_name,
           icon_color,
           title_color,
