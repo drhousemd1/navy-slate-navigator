@@ -6,6 +6,7 @@ export interface PunishmentData {
   title: string;
   description?: string;
   points: number;
+  dom_points?: number; // Added this property
   icon_name?: string;
   icon_color?: string;
   title_color?: string;
@@ -17,6 +18,7 @@ export interface PunishmentData {
   focal_point_x?: number;
   focal_point_y?: number;
   usage_data?: number[];
+  frequency_count?: number; // Added this property
   created_at?: string;
   updated_at?: string;
 }
