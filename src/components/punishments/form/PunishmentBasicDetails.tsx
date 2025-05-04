@@ -1,19 +1,37 @@
 
 import React from 'react';
-import { Control, UseFormSetValue } from 'react-hook-form';
-import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import NumberField from '../../task-editor/NumberField';
+import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Control } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
+import { Minus, Plus } from 'lucide-react';
+import { PunishmentFormValues } from './PunishmentFormProvider';
 
 interface PunishmentBasicDetailsProps {
-  control: Control<any>;
-  setValue: UseFormSetValue<any>;
+  control: Control<PunishmentFormValues>;
+  setValue: any;
 }
 
 const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control, setValue }) => {
+  const handleDecrementPoints = () => {
+    setValue('points', (val: number) => Math.max(0, val - 1));
+  };
+
+  const handleIncrementPoints = () => {
+    setValue('points', (val: number) => val + 1);
+  };
+  
+  const handleDecrementDomPoints = () => {
+    setValue('dom_points', (val: number) => Math.max(0, val - 1));
+  };
+
+  const handleIncrementDomPoints = () => {
+    setValue('dom_points', (val: number) => val + 1);
+  };
+
   return (
-    <>
+    <div className="space-y-4">
       <FormField
         control={control}
         name="title"
@@ -22,7 +40,6 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
             <FormLabel className="text-white">Title</FormLabel>
             <FormControl>
               <Input 
-                placeholder="Punishment title" 
                 className="bg-dark-navy border-light-navy text-white" 
                 {...field} 
               />
@@ -39,30 +56,106 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
             <FormLabel className="text-white">Description</FormLabel>
             <FormControl>
               <Textarea 
-                placeholder="Punishment description" 
-                className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
+                className="bg-dark-navy border-light-navy text-white" 
                 {...field} 
               />
             </FormControl>
           </FormItem>
         )}
       />
-
-      <NumberField
+      
+      {/* Submissive Points Lost field */}
+      <FormField
         control={control}
         name="points"
-        label="Points"
-        onIncrement={() => {
-          const currentPoints = control._getWatch('points') || 0;
-          setValue('points', currentPoints + 1);
-        }}
-        onDecrement={() => {
-          const currentPoints = control._getWatch('points') || 0;
-          setValue('points', Math.max(0, currentPoints - 1));
-        }}
-        minValue={0}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-white">Submissive Points Lost</FormLabel>
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                size="icon"
+                type="button"
+                onClick={handleDecrementPoints}
+                className="bg-light-navy hover:bg-navy border-light-navy"
+              >
+                <Minus className="h-4 w-4 text-white" />
+              </Button>
+              <FormControl>
+                <Input
+                  type="number"
+                  className="bg-dark-navy border-light-navy text-white text-center w-20"
+                  {...field}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (!isNaN(value)) {
+                      field.onChange(Math.max(0, value));
+                    } else {
+                      field.onChange(0);
+                    }
+                  }}
+                />
+              </FormControl>
+              <Button 
+                variant="outline" 
+                size="icon"
+                type="button"
+                onClick={handleIncrementPoints}
+                className="bg-light-navy hover:bg-navy border-light-navy"
+              >
+                <Plus className="h-4 w-4 text-white" />
+              </Button>
+            </div>
+          </FormItem>
+        )}
       />
-    </>
+      
+      {/* Dom Points Earned field */}
+      <FormField
+        control={control}
+        name="dom_points"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-white">Dom Points Earned</FormLabel>
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                size="icon"
+                type="button"
+                onClick={handleDecrementDomPoints}
+                className="bg-light-navy hover:bg-navy border-light-navy"
+              >
+                <Minus className="h-4 w-4 text-white" />
+              </Button>
+              <FormControl>
+                <Input
+                  type="number"
+                  className="bg-dark-navy border-light-navy text-white text-center w-20"
+                  {...field}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (!isNaN(value)) {
+                      field.onChange(Math.max(0, value));
+                    } else {
+                      field.onChange(0);
+                    }
+                  }}
+                />
+              </FormControl>
+              <Button 
+                variant="outline" 
+                size="icon"
+                type="button"
+                onClick={handleIncrementDomPoints}
+                className="bg-light-navy hover:bg-navy border-light-navy"
+              >
+                <Plus className="h-4 w-4 text-white" />
+              </Button>
+            </div>
+          </FormItem>
+        )}
+      />
+    </div>
   );
 };
 

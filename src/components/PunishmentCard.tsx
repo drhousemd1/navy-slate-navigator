@@ -13,6 +13,7 @@ interface PunishmentCardProps {
   title: string;
   description: string;
   points: number;
+  dom_points?: number;
   icon?: React.ReactNode;
   id?: string;
   icon_name?: string;
@@ -31,6 +32,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   title,
   description,
   points,
+  dom_points,
   id,
   icon_name,
   icon_color = '#ea384c',
@@ -52,7 +54,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
     handleEdit,
     handleSavePunishment,
     handleDeletePunishment
-  } = usePunishmentCard({ id, points });
+  } = usePunishmentCard({ id, points, dom_points });
 
   return (
     <>
@@ -67,6 +69,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
         <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
           <PunishmentCardHeader 
             points={points}
+            dom_points={dom_points}
             onPunish={handlePunish}
           />
           
@@ -97,6 +100,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
           title,
           description,
           points,
+          dom_points,
           icon_name,
           icon_color,
           title_color,

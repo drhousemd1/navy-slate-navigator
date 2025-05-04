@@ -7,9 +7,10 @@ import { supabase } from '@/integrations/supabase/client';
 interface UsePunishmentApplyProps {
   id?: string;
   points: number;
+  dom_points?: number;
 }
 
-export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
+export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentApplyProps) => {
   const { applyPunishment, refetchPunishments } = usePunishments();
   const { totalPoints, refreshPointsFromDatabase } = useRewards();
   
@@ -30,8 +31,9 @@ export const usePunishmentApply = ({ id, points }: UsePunishmentApplyProps) => {
         points: Math.abs(points) // Ensure points is positive (will be negated in the backend)
       });
       
-      // Award dom points (half the punishment points) to the dom user
-      const domPointsToAdd = Math.ceil(Math.abs(points) / 2);
+      // Award dom points to the dom user
+      // Use the explicit dom_points value if provided, otherwise calculate it
+      const domPointsToAdd = dom_points !== undefined ? dom_points : Math.ceil(Math.abs(points) / 2);
       
       // Get the current user
       const { data: { user } } = await supabase.auth.getUser();

@@ -6,15 +6,17 @@ import { Minus, Crown } from 'lucide-react';
 
 interface PunishmentCardHeaderProps {
   points: number;
+  dom_points?: number;
   onPunish: () => void;
 }
 
 const PunishmentCardHeader: React.FC<PunishmentCardHeaderProps> = ({
   points,
+  dom_points,
   onPunish
 }) => {
-  // Dom points will be half the points deducted from submissive (for now)
-  const domPoints = Math.ceil(Math.abs(points) / 2);
+  // If dom_points is not provided, use half the points as default
+  const displayDomPoints = dom_points !== undefined ? dom_points : Math.ceil(Math.abs(points) / 2);
 
   return (
     <div className="flex justify-between items-center mb-3">
@@ -36,7 +38,7 @@ const PunishmentCardHeader: React.FC<PunishmentCardHeaderProps> = ({
           variant="default"
         >
           <Crown className="h-3 w-3" />
-          {domPoints}
+          {displayDomPoints}
         </Badge>
         
         {/* Punish button */}

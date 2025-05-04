@@ -32,7 +32,8 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       ...values,
       icon_name: icon_name,
       background_image_url: background_image_url,
-      icon_color: values.icon_color || '#ea384c'
+      icon_color: values.icon_color || '#ea384c',
+      dom_points: values.dom_points || Math.ceil(values.points / 2)
     };
     
     if (punishmentData?.id) {

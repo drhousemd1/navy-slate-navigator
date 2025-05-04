@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,6 +10,7 @@ export const punishmentFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   points: z.number().min(0, "Points must be 0 or greater"),
+  dom_points: z.number().min(0, "Dom Points must be 0 or greater").default(0),
   icon_color: z.string().optional(),
   title_color: z.string().default('#FFFFFF'),
   subtext_color: z.string().default('#8E9196'),
@@ -36,6 +38,7 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
       title: punishmentData?.title || '',
       description: punishmentData?.description || '',
       points: punishmentData?.points || 5,
+      dom_points: punishmentData?.dom_points || Math.ceil((punishmentData?.points || 5) / 2) || 2,
       icon_color: punishmentData?.icon_color || '#ea384c',
       title_color: punishmentData?.title_color || '#FFFFFF',
       subtext_color: punishmentData?.subtext_color || '#8E9196',
