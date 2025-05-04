@@ -23,10 +23,18 @@ export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: (
         throw new Error("Punishment not found in cache");
       }
       
+      // Ensure dom_points is included explicitly
+      let updatedPunishment = { ...punishment };
+      if (updatedPunishment.dom_points === undefined && punishment.points !== undefined) {
+        // If points was updated but dom_points wasn't, recalculate dom_points as half of points (rounded up)
+        updatedPunishment.dom_points = Math.ceil(punishment.points / 2);
+        console.log("[updatePunishmentMutation] Auto-calculated dom_points:", updatedPunishment.dom_points);
+      }
+      
       // Create optimistic update
       const optimisticUpdate = {
         ...currentItem,
-        ...punishment,
+        ...updatedPunishment,
         updated_at: new Date().toISOString()
       };
       
@@ -36,11 +44,12 @@ export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: (
       );
       
       console.log("[updatePunishmentMutation] Making API call to update punishment:", id);
+      console.log("[updatePunishmentMutation] Data being sent:", updatedPunishment);
       
       // Make the actual API call
       const { data, error } = await supabase
         .from('punishments')
-        .update(punishment)
+        .update(updatedPunishment)
         .eq('id', id)
         .select()
         .single();
