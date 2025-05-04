@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Form } from '@/components/ui/form';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
+import { toast } from '@/hooks/use-toast';
 
 interface PunishmentFormSubmitHandlerProps {
   punishmentData?: PunishmentData;
@@ -25,6 +26,12 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   const [isSaving, setIsSaving] = useState(false);
 
   const onSubmit = async (values: any) => {
+    // Prevent multiple submissions
+    if (isSaving) {
+      console.log("Form submission prevented - already saving");
+      return;
+    }
+
     console.log("Form submitted with values:", values);
     // Make sure we're using exact primitive values, not references
     const icon_name = selectedIconName || null;
@@ -56,10 +63,17 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     try {
       setIsSaving(true);
       await onSave(dataToSave);
+      // Only reset the form after successful save
       form.reset();
       onCancel();
     } catch (error) {
       console.error("Error saving punishment:", error);
+      // Show save error toast only once
+      toast({
+        title: "Save Failed",
+        description: "Failed to save punishment. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }

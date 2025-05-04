@@ -11,46 +11,78 @@ import { PunishmentFormValues } from './PunishmentFormProvider';
 interface PunishmentBasicDetailsProps {
   control: Control<PunishmentFormValues>;
   setValue: any;
+  isSaving?: boolean;
 }
 
-const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control, setValue }) => {
+const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ 
+  control, 
+  setValue, 
+  isSaving = false 
+}) => {
   // Using useCallback to prevent recreating these functions on every render
-  const handleDecrementPoints = useCallback(() => {
-    // Direct implementation that explicitly sets the value rather than using a callback
+  const handleDecrementPoints = useCallback((e: React.MouseEvent) => {
+    // Prevent any form submission
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Skip updating if saving is in progress
+    if (isSaving) return;
+    
     const currentPoints = control._formValues.points;
     console.log('Current points before decrement:', currentPoints);
     const numericPoints = typeof currentPoints === 'number' ? currentPoints : parseInt(String(currentPoints || 0), 10);
     const newValue = Math.max(0, numericPoints - 1); // Ensure we only subtract 1
     console.log('Setting points to:', newValue);
     setValue('points', newValue, { shouldValidate: true });
-  }, [control._formValues.points, setValue]);
+  }, [control._formValues.points, setValue, isSaving]);
 
-  const handleIncrementPoints = useCallback(() => {
+  const handleIncrementPoints = useCallback((e: React.MouseEvent) => {
+    // Prevent any form submission
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Skip updating if saving is in progress
+    if (isSaving) return;
+    
     const currentPoints = control._formValues.points;
     console.log('Current points before increment:', currentPoints);
     const numericPoints = typeof currentPoints === 'number' ? currentPoints : parseInt(String(currentPoints || 0), 10);
     const newValue = numericPoints + 1; // Ensure we only add 1
     console.log('Setting points to:', newValue);
     setValue('points', newValue, { shouldValidate: true });
-  }, [control._formValues.points, setValue]);
+  }, [control._formValues.points, setValue, isSaving]);
   
-  const handleDecrementDomPoints = useCallback(() => {
+  const handleDecrementDomPoints = useCallback((e: React.MouseEvent) => {
+    // Prevent any form submission
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Skip updating if saving is in progress
+    if (isSaving) return;
+    
     const currentDomPoints = control._formValues.dom_points;
     console.log('Current dom points before decrement:', currentDomPoints);
     const numericDomPoints = typeof currentDomPoints === 'number' ? currentDomPoints : parseInt(String(currentDomPoints || 0), 10);
     const newValue = Math.max(0, numericDomPoints - 1); // Ensure we only subtract 1
     console.log('Setting dom_points to:', newValue);
     setValue('dom_points', newValue, { shouldValidate: true });
-  }, [control._formValues.dom_points, setValue]);
+  }, [control._formValues.dom_points, setValue, isSaving]);
 
-  const handleIncrementDomPoints = useCallback(() => {
+  const handleIncrementDomPoints = useCallback((e: React.MouseEvent) => {
+    // Prevent any form submission
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Skip updating if saving is in progress
+    if (isSaving) return;
+    
     const currentDomPoints = control._formValues.dom_points;
     console.log('Current dom points before increment:', currentDomPoints);
     const numericDomPoints = typeof currentDomPoints === 'number' ? currentDomPoints : parseInt(String(currentDomPoints || 0), 10);
     const newValue = numericDomPoints + 1; // Ensure we only add 1
     console.log('Setting dom_points to:', newValue);
     setValue('dom_points', newValue, { shouldValidate: true });
-  }, [control._formValues.dom_points, setValue]);
+  }, [control._formValues.dom_points, setValue, isSaving]);
 
   return (
     <div className="space-y-4">
@@ -64,6 +96,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
               <Input 
                 className="bg-dark-navy border-light-navy text-white" 
                 {...field} 
+                disabled={isSaving}
               />
             </FormControl>
           </FormItem>
@@ -80,6 +113,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
               <Textarea 
                 className="bg-dark-navy border-light-navy text-white" 
                 {...field} 
+                disabled={isSaving}
               />
             </FormControl>
           </FormItem>
@@ -95,11 +129,12 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
             <FormLabel className="text-white">Submissive Points Lost</FormLabel>
             <div className="flex items-center space-x-2">
               <Button 
+                type="button"
                 variant="outline" 
                 size="icon"
-                type="button"
                 onClick={handleDecrementPoints}
                 className="bg-light-navy hover:bg-navy border-light-navy"
+                disabled={isSaving}
               >
                 <Minus className="h-4 w-4 text-white" />
               </Button>
@@ -110,6 +145,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
                   min="0"
                   className="bg-dark-navy border-light-navy text-white text-center w-20"
                   {...field}
+                  disabled={isSaving}
                   onChange={(e) => {
                     const value = parseInt(e.target.value);
                     if (!isNaN(value)) {
@@ -121,11 +157,12 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
                 />
               </FormControl>
               <Button 
+                type="button"
                 variant="outline" 
                 size="icon"
-                type="button"
                 onClick={handleIncrementPoints}
                 className="bg-light-navy hover:bg-navy border-light-navy"
+                disabled={isSaving}
               >
                 <Plus className="h-4 w-4 text-white" />
               </Button>
@@ -143,11 +180,12 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
             <FormLabel className="text-white">Dom Points Earned</FormLabel>
             <div className="flex items-center space-x-2">
               <Button 
+                type="button"
                 variant="outline" 
                 size="icon"
-                type="button"
                 onClick={handleDecrementDomPoints}
                 className="bg-light-navy hover:bg-navy border-light-navy"
+                disabled={isSaving}
               >
                 <Minus className="h-4 w-4 text-white" />
               </Button>
@@ -158,6 +196,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
                   min="0"
                   className="bg-dark-navy border-light-navy text-white text-center w-20"
                   {...field}
+                  disabled={isSaving}
                   onChange={(e) => {
                     const value = parseInt(e.target.value);
                     if (!isNaN(value)) {
@@ -169,11 +208,12 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
                 />
               </FormControl>
               <Button 
+                type="button"
                 variant="outline" 
                 size="icon"
-                type="button"
                 onClick={handleIncrementDomPoints}
                 className="bg-light-navy hover:bg-navy border-light-navy"
+                disabled={isSaving}
               >
                 <Plus className="h-4 w-4 text-white" />
               </Button>
