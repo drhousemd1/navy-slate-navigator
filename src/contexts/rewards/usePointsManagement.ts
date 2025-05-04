@@ -6,12 +6,14 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export const usePointsManagement = () => {
   const [totalPoints, setTotalPoints] = useState<number>(0);
+  const [domPoints, setDomPoints] = useState<number>(0);
   const { user, isAuthenticated } = useAuth();
 
   const fetchTotalPoints = useCallback(async () => {
     if (!isAuthenticated || !user) {
       console.log('User not authenticated, returning 0 points');
       setTotalPoints(0);
+      setDomPoints(0);
       return;
     }
 
@@ -20,7 +22,7 @@ export const usePointsManagement = () => {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('points')
+        .select('points, dom_points')
         .eq('id', user.id)
         .single();
         
@@ -31,36 +33,42 @@ export const usePointsManagement = () => {
           
           const { data: newProfileData, error: createError } = await supabase
             .from('profiles')
-            .insert({ id: user.id, points: 0 })
+            .insert({ id: user.id, points: 0, dom_points: 0 })
             .select()
             .single();
             
           if (createError) {
             console.error('Error creating profile:', createError);
             setTotalPoints(0);
+            setDomPoints(0);
             return;
           }
           
-          console.log('Created new profile with points:', newProfileData.points);
+          console.log('Created new profile with points:', newProfileData.points, 'and dom_points:', newProfileData.dom_points || 0);
           setTotalPoints(newProfileData.points);
+          setDomPoints(newProfileData.dom_points || 0);
           return;
         }
         
         console.error('Error fetching points:', error);
         setTotalPoints(0);
+        setDomPoints(0);
         return;
       }
       
       if (data) {
-        console.log('Fetched points from database:', data.points);
+        console.log('Fetched points from database:', data.points, 'and dom_points:', data.dom_points || 0);
         setTotalPoints(data.points);
+        setDomPoints(data.dom_points || 0);
       } else {
         console.log('No points data found, using default');
         setTotalPoints(0);
+        setDomPoints(0);
       }
     } catch (error) {
       console.error('Error fetching total points:', error);
       setTotalPoints(0);
+      setDomPoints(0);
     }
   }, [user, isAuthenticated]);
 
@@ -106,7 +114,7 @@ export const usePointsManagement = () => {
         // Create new profile
         const { error: insertError } = await supabase
           .from('profiles')
-          .insert({ id: user.id, points: newPoints });
+          .insert({ id: user.id, points: newPoints, dom_points: domPoints });
         
         if (insertError) {
           console.error('Error creating profile with points:', insertError);
@@ -121,10 +129,11 @@ export const usePointsManagement = () => {
       console.error('Error in updatePointsInDatabase:', error);
       return false;
     }
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, domPoints]);
 
   return {
     totalPoints,
+    domPoints,
     setTotalPoints,
     updatePointsInDatabase,
     refreshPointsFromDatabase: fetchTotalPoints

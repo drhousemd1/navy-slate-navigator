@@ -38,6 +38,7 @@ const RewardsContext = createContext<RewardsContextType>({
   rewards: [],
   totalPoints: 0,
   totalRewardsSupply: 0,
+  domPoints: 0, // Add domPoints with default value of 0
   setTotalPoints: () => {},
   isLoading: true,
   refetchRewards: async () => mockQueryResult,
@@ -55,6 +56,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     rewards,
     totalPoints,
     totalRewardsSupply,
+    domPoints = 0, // Add with default value
     isLoading,
     saveReward,
     deleteReward,
@@ -92,6 +94,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     rewards,
     totalPoints,
     totalRewardsSupply,
+    domPoints, // Add to context value
     setTotalPoints,
     isLoading,
     refetchRewards,

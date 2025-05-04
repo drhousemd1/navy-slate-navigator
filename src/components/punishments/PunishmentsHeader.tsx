@@ -2,13 +2,13 @@
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { useRewards } from '@/contexts/RewardsContext';
-import { Box, Coins, Shuffle } from 'lucide-react';
+import { Box, Coins, Crown, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import RandomPunishmentSelections from './RandomPunishmentSelections';
 
 const PunishmentsHeader: React.FC = () => {
-  const { totalPoints, totalRewardsSupply } = useRewards();
+  const { totalPoints, totalRewardsSupply, domPoints = 0 } = useRewards();
   const { punishments } = usePunishments();
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
 
@@ -32,6 +32,10 @@ const PunishmentsHeader: React.FC = () => {
         <Badge className="bg-cyan-500 text-white font-bold px-3 py-1 flex items-center gap-1">
           <Coins className="w-3 h-3" />
           <span>{totalPoints}</span>
+        </Badge>
+        <Badge className="bg-red-500 text-white font-bold px-3 py-1 flex items-center gap-1">
+          <Crown className="w-3 h-3" />
+          <span>{domPoints}</span>
         </Badge>
       </div>
       
