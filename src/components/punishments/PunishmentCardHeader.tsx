@@ -2,7 +2,7 @@
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Minus, Crown } from 'lucide-react';
+import { Minus, Crown, Coins } from 'lucide-react';
 
 interface PunishmentCardHeaderProps {
   points: number;
@@ -23,13 +23,16 @@ const PunishmentCardHeader: React.FC<PunishmentCardHeaderProps> = ({
       <div className="h-6"></div>
       
       <div className="flex items-center gap-2">
-        {/* Points badge for deduction */}
+        {/* Points badge for deduction - updated with Coins icon */}
         <Badge 
-          className="bg-red-500 text-white font-bold flex items-center gap-1"
+          className="bg-red-500 text-white font-bold flex items-center gap-1 px-2"
           variant="default"
         >
-          <Minus className="h-3 w-3" />
-          {Math.abs(points)}
+          <Coins className="h-3 w-3" />
+          <span className="flex items-center">
+            <Minus className="h-2 w-2 mr-0.5" />
+            {Math.abs(points)}
+          </span>
         </Badge>
         
         {/* Points badge for dom rewards */}
