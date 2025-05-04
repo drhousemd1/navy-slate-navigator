@@ -25,26 +25,33 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   const [isSaving, setIsSaving] = useState(false);
 
   const onSubmit = async (values: any) => {
-    // Make sure we're using exact values, not references
+    console.log("Form submitted with values:", values);
+    // Make sure we're using exact primitive values, not references
     const icon_name = selectedIconName || null;
     const background_image_url = imagePreview || null;
     
-    // Force explicit assignment of dom_points to avoid any reference issues
+    // Force explicit assignment of dom_points with Number() constructor to ensure number type
+    const points = Number(values.points);
     const dom_points = values.dom_points !== undefined 
-      ? parseInt(String(values.dom_points)) 
-      : Math.ceil(parseInt(String(values.points)) / 2);
+      ? Number(values.dom_points)
+      : Math.ceil(points / 2);
+    
+    console.log("Calculated dom_points:", dom_points, "from points:", points);
     
     const dataToSave: PunishmentData = {
       ...values,
+      points: points,
+      dom_points: dom_points,
       icon_name: icon_name,
       background_image_url: background_image_url,
-      icon_color: values.icon_color || '#ea384c',
-      dom_points: dom_points
+      icon_color: values.icon_color || '#ea384c'
     };
     
     if (punishmentData?.id) {
       dataToSave.id = punishmentData.id;
     }
+    
+    console.log("Saving punishment data:", dataToSave);
     
     try {
       setIsSaving(true);

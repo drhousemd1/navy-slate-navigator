@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,42 +14,43 @@ interface PunishmentBasicDetailsProps {
 }
 
 const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control, setValue }) => {
-  // Completely rewritten increment/decrement functions to force exactly +1/-1 change
-  const handleDecrementPoints = () => {
-    setValue('points', (val: number) => {
-      console.log('Current points before decrement:', val);
-      const newValue = parseInt(String(val)) - 1;
-      console.log('New points after decrement:', Math.max(0, newValue));
-      return Math.max(0, newValue);
-    });
-  };
+  // Using useCallback to prevent recreating these functions on every render
+  const handleDecrementPoints = useCallback(() => {
+    // Direct implementation that explicitly sets the value rather than using a callback
+    const currentPoints = control._formValues.points;
+    console.log('Current points before decrement:', currentPoints);
+    const numericPoints = typeof currentPoints === 'number' ? currentPoints : parseInt(String(currentPoints || 0), 10);
+    const newValue = Math.max(0, numericPoints - 1); // Ensure we only subtract 1
+    console.log('Setting points to:', newValue);
+    setValue('points', newValue, { shouldValidate: true });
+  }, [control._formValues.points, setValue]);
 
-  const handleIncrementPoints = () => {
-    setValue('points', (val: number) => {
-      console.log('Current points before increment:', val);
-      const newValue = parseInt(String(val)) + 1;
-      console.log('New points after increment:', newValue);
-      return newValue;
-    });
-  };
+  const handleIncrementPoints = useCallback(() => {
+    const currentPoints = control._formValues.points;
+    console.log('Current points before increment:', currentPoints);
+    const numericPoints = typeof currentPoints === 'number' ? currentPoints : parseInt(String(currentPoints || 0), 10);
+    const newValue = numericPoints + 1; // Ensure we only add 1
+    console.log('Setting points to:', newValue);
+    setValue('points', newValue, { shouldValidate: true });
+  }, [control._formValues.points, setValue]);
   
-  const handleDecrementDomPoints = () => {
-    setValue('dom_points', (val: number) => {
-      console.log('Current dom points before decrement:', val);
-      const newValue = parseInt(String(val)) - 1;
-      console.log('New dom points after decrement:', Math.max(0, newValue));
-      return Math.max(0, newValue);
-    });
-  };
+  const handleDecrementDomPoints = useCallback(() => {
+    const currentDomPoints = control._formValues.dom_points;
+    console.log('Current dom points before decrement:', currentDomPoints);
+    const numericDomPoints = typeof currentDomPoints === 'number' ? currentDomPoints : parseInt(String(currentDomPoints || 0), 10);
+    const newValue = Math.max(0, numericDomPoints - 1); // Ensure we only subtract 1
+    console.log('Setting dom_points to:', newValue);
+    setValue('dom_points', newValue, { shouldValidate: true });
+  }, [control._formValues.dom_points, setValue]);
 
-  const handleIncrementDomPoints = () => {
-    setValue('dom_points', (val: number) => {
-      console.log('Current dom points before increment:', val);
-      const newValue = parseInt(String(val)) + 1;
-      console.log('New dom points after increment:', newValue);
-      return newValue;
-    });
-  };
+  const handleIncrementDomPoints = useCallback(() => {
+    const currentDomPoints = control._formValues.dom_points;
+    console.log('Current dom points before increment:', currentDomPoints);
+    const numericDomPoints = typeof currentDomPoints === 'number' ? currentDomPoints : parseInt(String(currentDomPoints || 0), 10);
+    const newValue = numericDomPoints + 1; // Ensure we only add 1
+    console.log('Setting dom_points to:', newValue);
+    setValue('dom_points', newValue, { shouldValidate: true });
+  }, [control._formValues.dom_points, setValue]);
 
   return (
     <div className="space-y-4">
@@ -85,7 +86,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
         )}
       />
       
-      {/* Submissive Points Lost field - completely rewritten handlers */}
+      {/* Submissive Points Lost field - completely rewritten with direct value setting */}
       <FormField
         control={control}
         name="points"
@@ -105,6 +106,8 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
               <FormControl>
                 <Input
                   type="number"
+                  step="1"
+                  min="0"
                   className="bg-dark-navy border-light-navy text-white text-center w-20"
                   {...field}
                   onChange={(e) => {
@@ -131,7 +134,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
         )}
       />
       
-      {/* Dom Points Earned field - completely rewritten handlers */}
+      {/* Dom Points Earned field - completely rewritten with direct value setting */}
       <FormField
         control={control}
         name="dom_points"
@@ -151,6 +154,8 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
               <FormControl>
                 <Input
                   type="number"
+                  step="1"
+                  min="0"
                   className="bg-dark-navy border-light-navy text-white text-center w-20"
                   {...field}
                   onChange={(e) => {
