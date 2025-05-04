@@ -28,12 +28,17 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     const icon_name = selectedIconName || null;
     const background_image_url = imagePreview || null;
     
+    // Ensure dom_points is handled correctly
+    const dom_points = values.dom_points !== undefined 
+      ? values.dom_points 
+      : Math.ceil(values.points / 2);
+    
     const dataToSave: PunishmentData = {
       ...values,
       icon_name: icon_name,
       background_image_url: background_image_url,
       icon_color: values.icon_color || '#ea384c',
-      dom_points: values.dom_points || Math.ceil(values.points / 2)
+      dom_points: dom_points
     };
     
     if (punishmentData?.id) {

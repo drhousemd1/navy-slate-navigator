@@ -14,8 +14,12 @@ interface PunishmentBasicDetailsProps {
 }
 
 const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control, setValue }) => {
+  // Fixed increment/decrement functions to explicitly add/subtract exactly 1
   const handleDecrementPoints = () => {
-    setValue('points', (val: number) => Math.max(0, val - 1));
+    setValue('points', (val: number) => {
+      const newValue = val - 1;
+      return Math.max(0, newValue);
+    });
   };
 
   const handleIncrementPoints = () => {
@@ -23,7 +27,10 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
   };
   
   const handleDecrementDomPoints = () => {
-    setValue('dom_points', (val: number) => Math.max(0, val - 1));
+    setValue('dom_points', (val: number) => {
+      const newValue = val - 1;
+      return Math.max(0, newValue);
+    });
   };
 
   const handleIncrementDomPoints = () => {
@@ -64,7 +71,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
         )}
       />
       
-      {/* Submissive Points Lost field */}
+      {/* Submissive Points Lost field - modified handlers */}
       <FormField
         control={control}
         name="points"
@@ -110,7 +117,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
         )}
       />
       
-      {/* Dom Points Earned field */}
+      {/* Dom Points Earned field - modified handlers */}
       <FormField
         control={control}
         name="dom_points"
