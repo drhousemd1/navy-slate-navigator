@@ -28,12 +28,24 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     // Skip updating if saving is in progress
     if (isSaving) return;
     
+    // Get current value and ensure it's a number
     const currentPoints = control._formValues.points;
     console.log('Current points before decrement:', currentPoints);
-    const numericPoints = typeof currentPoints === 'number' ? currentPoints : parseInt(String(currentPoints || 0), 10);
-    const newValue = Math.max(0, numericPoints - 1); // Ensure we only subtract 1
+    
+    const numericPoints = typeof currentPoints === 'number' 
+      ? currentPoints 
+      : parseInt(String(currentPoints || 0), 10);
+    
+    // Ensure we only subtract 1 and don't go below 0
+    const newValue = Math.max(0, numericPoints - 1);
     console.log('Setting points to:', newValue);
-    setValue('points', newValue, { shouldValidate: true });
+    
+    // Use setValue with explicit options to ensure proper form update
+    setValue('points', newValue, { 
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true
+    });
   }, [control._formValues.points, setValue, isSaving]);
 
   const handleIncrementPoints = useCallback((e: React.MouseEvent) => {
@@ -44,12 +56,24 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     // Skip updating if saving is in progress
     if (isSaving) return;
     
+    // Get current value and ensure it's a number
     const currentPoints = control._formValues.points;
     console.log('Current points before increment:', currentPoints);
-    const numericPoints = typeof currentPoints === 'number' ? currentPoints : parseInt(String(currentPoints || 0), 10);
-    const newValue = numericPoints + 1; // Ensure we only add 1
+    
+    const numericPoints = typeof currentPoints === 'number' 
+      ? currentPoints 
+      : parseInt(String(currentPoints || 0), 10);
+    
+    // Ensure we only add 1
+    const newValue = numericPoints + 1;
     console.log('Setting points to:', newValue);
-    setValue('points', newValue, { shouldValidate: true });
+    
+    // Use setValue with explicit options to ensure proper form update
+    setValue('points', newValue, { 
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true
+    });
   }, [control._formValues.points, setValue, isSaving]);
   
   const handleDecrementDomPoints = useCallback((e: React.MouseEvent) => {
@@ -60,12 +84,24 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     // Skip updating if saving is in progress
     if (isSaving) return;
     
+    // Get current value and ensure it's a number
     const currentDomPoints = control._formValues.dom_points;
     console.log('Current dom points before decrement:', currentDomPoints);
-    const numericDomPoints = typeof currentDomPoints === 'number' ? currentDomPoints : parseInt(String(currentDomPoints || 0), 10);
-    const newValue = Math.max(0, numericDomPoints - 1); // Ensure we only subtract 1
+    
+    const numericDomPoints = typeof currentDomPoints === 'number' 
+      ? currentDomPoints 
+      : parseInt(String(currentDomPoints || 0), 10);
+    
+    // Ensure we only subtract 1 and don't go below 0
+    const newValue = Math.max(0, numericDomPoints - 1);
     console.log('Setting dom_points to:', newValue);
-    setValue('dom_points', newValue, { shouldValidate: true });
+    
+    // Use setValue with explicit options to ensure proper form update
+    setValue('dom_points', newValue, { 
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true
+    });
   }, [control._formValues.dom_points, setValue, isSaving]);
 
   const handleIncrementDomPoints = useCallback((e: React.MouseEvent) => {
@@ -76,12 +112,24 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     // Skip updating if saving is in progress
     if (isSaving) return;
     
+    // Get current value and ensure it's a number
     const currentDomPoints = control._formValues.dom_points;
     console.log('Current dom points before increment:', currentDomPoints);
-    const numericDomPoints = typeof currentDomPoints === 'number' ? currentDomPoints : parseInt(String(currentDomPoints || 0), 10);
-    const newValue = numericDomPoints + 1; // Ensure we only add 1
+    
+    const numericDomPoints = typeof currentDomPoints === 'number' 
+      ? currentDomPoints 
+      : parseInt(String(currentDomPoints || 0), 10);
+    
+    // Ensure we only add 1
+    const newValue = numericDomPoints + 1;
     console.log('Setting dom_points to:', newValue);
-    setValue('dom_points', newValue, { shouldValidate: true });
+    
+    // Use setValue with explicit options to ensure proper form update
+    setValue('dom_points', newValue, { 
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true
+    });
   }, [control._formValues.dom_points, setValue, isSaving]);
 
   return (
@@ -141,13 +189,15 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
               <FormControl>
                 <Input
                   type="number"
-                  step="1"
-                  min="0"
+                  inputMode="numeric"
+                  step={1}
+                  min={0}
                   className="bg-dark-navy border-light-navy text-white text-center w-20"
                   {...field}
                   disabled={isSaving}
+                  value={field.value || 0}
                   onChange={(e) => {
-                    const value = parseInt(e.target.value);
+                    const value = parseInt(e.target.value, 10);
                     if (!isNaN(value)) {
                       field.onChange(Math.max(0, value));
                     } else {
@@ -192,13 +242,15 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
               <FormControl>
                 <Input
                   type="number"
-                  step="1"
-                  min="0"
+                  inputMode="numeric"
+                  step={1}
+                  min={0}
                   className="bg-dark-navy border-light-navy text-white text-center w-20"
                   {...field}
                   disabled={isSaving}
+                  value={field.value || 0}
                   onChange={(e) => {
-                    const value = parseInt(e.target.value);
+                    const value = parseInt(e.target.value, 10);
                     if (!isNaN(value)) {
                       field.onChange(Math.max(0, value));
                     } else {

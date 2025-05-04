@@ -24,8 +24,12 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   children
 }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [hasShownErrorToast, setHasShownErrorToast] = useState(false);
 
   const onSubmit = async (values: any) => {
+    // Reset toast tracking on new submission attempt
+    setHasShownErrorToast(false);
+    
     // Prevent multiple submissions
     if (isSaving) {
       console.log("Form submission prevented - already saving");
@@ -33,6 +37,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     }
 
     console.log("Form submitted with values:", values);
+    
     // Make sure we're using exact primitive values, not references
     const icon_name = selectedIconName || null;
     const background_image_url = imagePreview || null;
@@ -63,17 +68,26 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     try {
       setIsSaving(true);
       await onSave(dataToSave);
-      // Only reset the form after successful save
+      // Only reset the form and close after successful save
       form.reset();
       onCancel();
+      // Show success toast
+      toast({
+        title: "Success",
+        description: "Punishment saved successfully.",
+      });
     } catch (error) {
       console.error("Error saving punishment:", error);
-      // Show save error toast only once
-      toast({
-        title: "Save Failed",
-        description: "Failed to save punishment. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Show save error toast only once per submission attempt
+      if (!hasShownErrorToast) {
+        toast({
+          title: "Save Failed",
+          description: "Failed to save punishment. Please try again.",
+          variant: "destructive",
+        });
+        setHasShownErrorToast(true);
+      }
     } finally {
       setIsSaving(false);
     }

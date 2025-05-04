@@ -18,7 +18,10 @@ export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: (
       const currentData = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY) || [];
       const currentItem = currentData.find(p => p.id === id);
       
-      if (!currentItem) throw new Error("Punishment not found in cache");
+      if (!currentItem) {
+        console.error("[updatePunishmentMutation] Punishment not found in cache:", id);
+        throw new Error("Punishment not found in cache");
+      }
       
       // Create optimistic update
       const optimisticUpdate = {
@@ -32,6 +35,8 @@ export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: (
         old.map(p => p.id === id ? optimisticUpdate : p)
       );
       
+      console.log("[updatePunishmentMutation] Making API call to update punishment:", id);
+      
       // Make the actual API call
       const { data, error } = await supabase
         .from('punishments')
@@ -40,7 +45,12 @@ export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: (
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[updatePunishmentMutation] Supabase error:", error);
+        throw error;
+      }
+      
+      console.log("[updatePunishmentMutation] API call successful, received data:", data);
       
       // Update cache with actual data from server
       queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) =>
@@ -50,11 +60,6 @@ export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: (
       const endTime = performance.now();
       console.log(`[updatePunishmentMutation] Operation completed in ${endTime - startTime}ms`);
       
-      toast({
-        title: "Success",
-        description: "Punishment updated successfully"
-      });
-      
       // Call the success callback if provided
       if (onSuccess) {
         onSuccess();
@@ -62,16 +67,10 @@ export const updatePunishmentMutation = (queryClient: QueryClient, onSuccess?: (
 
       return data;
     } catch (error) {
-      console.error("[updatePunishmentMutation] Error:", error);
+      console.error("[updatePunishmentMutation] Error details:", error);
       
-      // Revert cache in case of error - but don't invalidate to trigger refetch
+      // Revert cache in case of error
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      
-      toast({
-        title: "Error",
-        description: "Failed to update punishment",
-        variant: "destructive",
-      });
       
       throw error;
     }
