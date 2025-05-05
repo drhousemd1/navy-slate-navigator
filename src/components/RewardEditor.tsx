@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { RewardEditorForm } from './reward-editor/RewardEditorForm';
@@ -25,6 +24,12 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [isSaving, setIsSaving] = useState(false);
+  
+  useEffect(() => {
+    if (rewardData) {
+      console.log("RewardEditor opened with data:", rewardData);
+    }
+  }, [rewardData, isOpen]);
   
   const handleSave = async (formData: any) => {
     console.log("RewardEditor handling save with form data:", formData);

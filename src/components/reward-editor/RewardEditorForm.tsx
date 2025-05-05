@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form } from "@/components/ui/form"; // Import the Form component
@@ -25,6 +26,8 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [iconPreview, setIconPreview] = React.useState<string | null>(null);
+
+  console.log("RewardEditorForm initialized with data:", rewardData);
 
   // Form handling with react-hook-form
   const form = useForm({
@@ -54,14 +57,18 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   const imagePreview = watch('background_image_url');
   const isDomReward = watch('is_dom_reward');
 
+  console.log("RewardEditorForm - isDomReward watched value:", isDomReward);
+
   // Load existing reward data if available
   useEffect(() => {
     if (rewardData) {
+      console.log("Setting form data from rewardData:", rewardData);
+      
       reset({
         title: rewardData.title || '',
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
-        is_dom_reward: rewardData.is_dom_reward || false,
+        is_dom_reward: Boolean(rewardData.is_dom_reward) || false,
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
         title_color: rewardData.title_color || '#FFFFFF',
@@ -73,6 +80,8 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         focal_point_x: rewardData.focal_point_x || 50,
         focal_point_y: rewardData.focal_point_y || 50,
       });
+      
+      console.log("Form reset with is_dom_reward:", Boolean(rewardData.is_dom_reward));
     }
   }, [rewardData, reset]);
 
@@ -121,6 +130,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   };
 
   const onSubmit = async (data: any) => {
+    console.log("Submitting form with data:", data);
     await onSave(data);
   };
 

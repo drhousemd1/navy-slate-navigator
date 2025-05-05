@@ -76,6 +76,9 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [refreshPointsFromDatabase]);
 
   const handleSaveReward = async (rewardData: any, index: number | null) => {
+    console.log("RewardsContext - handleSaveReward called with data:", rewardData);
+    console.log("is_dom_reward value in handleSaveReward:", rewardData.is_dom_reward);
+    
     const result = await saveReward({ rewardData, currentIndex: index });
     return result?.id || null;
   };
@@ -87,16 +90,20 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return true;
   };
 
-  const handleBuyReward = async (id: string, cost: number) => {
+  const handleBuyReward = async (id: string, cost: number, isDomReward?: boolean) => {
     // Make sure we have the most up-to-date points
     await refreshPointsFromDatabase();
     
     // Find the reward to check if it's a dom reward
     const reward = rewards.find(r => r.id === id);
-    const isDomReward = reward?.is_dom_reward || false;
+    
+    // Override with the explicit parameter if provided
+    const isRewardDominant = isDomReward !== undefined ? isDomReward : (reward?.is_dom_reward || false);
+    
+    console.log("Buying reward with id:", id, "cost:", cost, "isDomReward:", isRewardDominant);
     
     // Now attempt to buy the reward with fresh point data
-    await buyReward({ rewardId: id, cost, isDomReward });
+    await buyReward({ rewardId: id, cost, isDomReward: isRewardDominant });
     
     // Refresh points again to ensure UI is in sync
     await refreshPointsFromDatabase();

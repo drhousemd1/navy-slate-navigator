@@ -1,3 +1,4 @@
+
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
 import { BuyRewardParams, SaveRewardParams } from '@/contexts/rewards/rewardTypes';
@@ -13,12 +14,14 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
         throw new Error("Reward must have a title");
       }
 
+      console.log("Saving reward with data:", JSON.stringify(rewardData));
+
       // Prepare data for saving - update with correct type properties
       const dataToSave = {
         title: rewardData.title,
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
-        is_dom_reward: rewardData.is_dom_reward || false,
+        is_dom_reward: rewardData.is_dom_reward || false, // Make sure this is included in the dataToSave
         supply: 0, // Default value 
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
@@ -31,6 +34,8 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
         subtext_color: rewardData.subtext_color || '#8E9196',
         calendar_color: rewardData.calendar_color || '#7E69AB',
       };
+
+      console.log("Data being sent to Supabase:", dataToSave);
 
       let result: Reward | null = null;
 

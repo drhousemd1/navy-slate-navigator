@@ -83,6 +83,9 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       console.log('[saveReward] Updating reward with clean data (no timestamps):', 
         { id: existingId, ...cleanRewardData });
       
+      // Make sure is_dom_reward is properly included
+      console.log("is_dom_reward value before update:", cleanRewardData.is_dom_reward);
+      
       const { data, error } = await supabase
         .from('rewards')
         .update(cleanRewardData)
@@ -96,6 +99,10 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
     } else {
       // Create new reward
       console.log('[saveReward] Creating new reward:', reward);
+      
+      // Make sure is_dom_reward is included when creating a new reward
+      console.log("is_dom_reward value for new reward:", reward.is_dom_reward);
+      
       const { data, error } = await supabase
         .from('rewards')
         .insert(reward)

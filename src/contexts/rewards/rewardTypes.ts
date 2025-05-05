@@ -13,7 +13,7 @@ export interface RewardsContextType {
   refetchRewards: () => Promise<QueryObserverResult<Reward[], Error>>;
   handleSaveReward: (rewardData: any, index: number | null) => Promise<string | null>;
   handleDeleteReward: (index: number) => Promise<boolean>;
-  handleBuyReward: (id: string, cost: number) => Promise<void>;
+  handleBuyReward: (id: string, cost: number, isDomReward?: boolean) => Promise<void>;
   handleUseReward: (id: string) => Promise<void>;
   refreshPointsFromDatabase: () => Promise<void>;
 }
@@ -27,7 +27,6 @@ export interface SaveRewardParams {
     image_url?: string | null;
     is_enabled?: boolean;
     is_dom_reward?: boolean;
-    // Add missing properties that were in the errors
     supply?: number;
     icon_name?: string | null;
     icon_color?: string;
