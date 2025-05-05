@@ -5,9 +5,11 @@ import { Reward } from '@/lib/rewardUtils';
 import { 
   REWARDS_QUERY_KEY, 
   REWARDS_POINTS_QUERY_KEY,
+  REWARDS_DOM_POINTS_QUERY_KEY,
   REWARDS_SUPPLY_QUERY_KEY,
   fetchRewards,
   fetchUserPoints,
+  fetchUserDomPoints,
   fetchTotalRewardsSupply
 } from './queries';
 import {
@@ -22,7 +24,7 @@ import { usePointsManagement } from '@/contexts/rewards/usePointsManagement';
 
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
-  const { totalPoints, domPoints, updatePointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
+  const { totalPoints, domPoints, updatePointsInDatabase, updateDomPointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
 
   // Query for fetching all rewards
   const {
@@ -46,13 +48,18 @@ export const useRewardsData = () => {
     ...STANDARD_QUERY_CONFIG
   });
 
-  // Ensure React Query cache always has the latest points value
-  // This ensures that any component or function using the cache gets the correct value
+  // Ensure React Query cache always has the latest points and dom points values
   useEffect(() => {
     if (totalPoints > 0) {
       queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, totalPoints);
     }
   }, [totalPoints, queryClient]);
+
+  useEffect(() => {
+    if (domPoints > 0) {
+      queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, domPoints);
+    }
+  }, [domPoints, queryClient]);
 
   // Configure mutations with toast disabled in the handlers
   const saveRewardMut = useMutation({
@@ -101,6 +108,7 @@ export const useRewardsData = () => {
     buyReward: buyRewardMut.mutateAsync,
     useReward: useRewardMut.mutateAsync,
     updatePoints: updatePointsMut.mutateAsync,
+    updateDomPoints: updateDomPointsInDatabase, // Add this new function
     
     // Refetch functions - maintained for compatibility
     refetchRewards: refetchRewardsTyped,

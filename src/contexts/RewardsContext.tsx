@@ -40,6 +40,7 @@ const RewardsContext = createContext<RewardsContextType>({
   totalRewardsSupply: 0,
   domPoints: 0,
   setTotalPoints: async () => Promise.resolve(),
+  setDomPoints: async () => Promise.resolve(),
   isLoading: true,
   refetchRewards: async () => mockQueryResult,
   handleSaveReward: async () => null,
@@ -63,12 +64,14 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     buyReward,
     useReward,
     updatePoints,
+    updateDomPoints,
     refetchRewards,
     refreshPointsFromDatabase,
   } = useRewardsData();
 
   // Refresh points when the provider mounts
   useEffect(() => {
+    console.log("RewardsProvider: Refreshing points from database on mount");
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
 
@@ -109,12 +112,20 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await refreshPointsFromDatabase();
   };
 
+  const setDomPoints = async (points: number) => {
+    await updateDomPoints(points);
+    
+    // Make sure points are refreshed after updating
+    await refreshPointsFromDatabase();
+  };
+
   const value = {
     rewards,
     totalPoints,
     totalRewardsSupply,
     domPoints,
     setTotalPoints,
+    setDomPoints,
     isLoading,
     refetchRewards,
     handleSaveReward,

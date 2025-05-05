@@ -3,6 +3,8 @@ import { usePunishments } from '@/contexts/PunishmentsContext';
 import { useRewards } from '@/contexts/RewardsContext';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 
 interface UsePunishmentApplyProps {
   id?: string;
@@ -12,7 +14,8 @@ interface UsePunishmentApplyProps {
 
 export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentApplyProps) => {
   const { applyPunishment, refetchPunishments } = usePunishments();
-  const { totalPoints, refreshPointsFromDatabase } = useRewards();
+  const { totalPoints, refreshPointsFromDatabase, setDomPoints } = useRewards();
+  const queryClient = useQueryClient();
   
   const handlePunish = async () => {
     if (!id) {
@@ -51,10 +54,11 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
           const currentDomPoints = data.dom_points || 0;
           const newDomPoints = currentDomPoints + domPointsToAdd;
           
-          await supabase
-            .from('profiles')
-            .update({ dom_points: newDomPoints })
-            .eq('id', user.id);
+          // First update the React Query cache with optimistic value
+          queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, newDomPoints);
+          
+          // Then update the database
+          await setDomPoints(newDomPoints);
         }
       }
       

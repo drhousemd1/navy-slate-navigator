@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -7,6 +6,7 @@ import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import { PunishmentsProvider, usePunishments } from '../contexts/PunishmentsContext';
 import PunishmentEditor from '../components/PunishmentEditor';
+import { useSyncManager } from '@/hooks/useSyncManager';
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -16,15 +16,20 @@ const PunishmentsContent: React.FC<{
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   
+  // Use the sync manager to keep data in sync
+  const { syncNow } = useSyncManager({ intervalMs: 30000 }); // Sync every 30 seconds
+  
   // Track initial mount and set loading state appropriately
   useEffect(() => {
     // Consider initial load complete after a short delay
     const timer = setTimeout(() => {
       setIsInitialLoad(false);
+      // Force a sync on initial load completion
+      syncNow();
     }, 500);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [syncNow]);
 
   const handleEditorClose = () => {
     setIsEditorOpen(false);
@@ -86,6 +91,7 @@ const PunishmentsContent: React.FC<{
               title={punishment.title}
               description={punishment.description || ''}
               points={punishment.points}
+              dom_points={punishment.dom_points}
               icon_name={punishment.icon_name}
               icon_color={punishment.icon_color}
               title_color={punishment.title_color}
@@ -113,6 +119,8 @@ const PunishmentsContent: React.FC<{
               await createPunishment(data);
             }
             handleEditorClose();
+            // Force a sync after saving a punishment
+            syncNow();
           } catch (error) {
             console.error("Error saving punishment:", error);
           }

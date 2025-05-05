@@ -8,6 +8,7 @@ export interface RewardsContextType {
   totalRewardsSupply: number;
   domPoints: number;
   setTotalPoints: (points: number) => Promise<void>;
+  setDomPoints: (points: number) => Promise<void>;
   isLoading: boolean;
   refetchRewards: () => Promise<QueryObserverResult<Reward[], Error>>;
   handleSaveReward: (rewardData: any, index: number | null) => Promise<string | null>;

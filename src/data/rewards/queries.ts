@@ -1,10 +1,10 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/lib/rewardUtils';
 import { logQueryPerformance } from '@/lib/react-query-config';
 
 export const REWARDS_QUERY_KEY = ['rewards'];
 export const REWARDS_POINTS_QUERY_KEY = ['rewards', 'points'];
+export const REWARDS_DOM_POINTS_QUERY_KEY = ['rewards', 'dom_points'];
 export const REWARDS_SUPPLY_QUERY_KEY = ['rewards', 'supply'];
 
 export const fetchRewards = async (): Promise<Reward[]> => {
@@ -102,6 +102,61 @@ export const fetchUserPoints = async (): Promise<number> => {
         return JSON.parse(cachedPoints);
       } catch (parseError) {
         console.error('[fetchUserPoints] Error parsing cached points:', parseError);
+      }
+    }
+    
+    return 0;
+  }
+};
+
+export const fetchUserDomPoints = async (): Promise<number> => {
+  console.log("[fetchUserDomPoints] Starting dom points fetch");
+  const startTime = performance.now();
+  
+  const CACHE_KEY = 'kingdom-app-user-dom-points';
+  
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    
+    if (!userId) {
+      console.log("[fetchUserDomPoints] No user ID found, returning 0 dom points");
+      return 0;
+    }
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('dom_points')
+      .eq('id', userId)
+      .single();
+    
+    if (error) {
+      console.error('[fetchUserDomPoints] Error:', error);
+      throw error;
+    }
+    
+    logQueryPerformance('fetchUserDomPoints', startTime);
+    
+    // Cache the dom points value
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data?.dom_points || 0));
+    } catch (e) {
+      console.warn('[fetchUserDomPoints] Could not cache dom points:', e);
+    }
+    
+    console.log(`[fetchUserDomPoints] Retrieved ${data?.dom_points || 0} dom points`);
+    return data?.dom_points || 0;
+  } catch (error) {
+    console.error('[fetchUserDomPoints] Fetch failed:', error);
+    
+    // Try to get cached data
+    const cachedDomPoints = localStorage.getItem(CACHE_KEY);
+    if (cachedDomPoints) {
+      console.log('[fetchUserDomPoints] Using cached dom points data');
+      try {
+        return JSON.parse(cachedDomPoints);
+      } catch (parseError) {
+        console.error('[fetchUserDomPoints] Error parsing cached dom points:', parseError);
       }
     }
     

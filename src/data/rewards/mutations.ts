@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { Reward } from '@/lib/rewardUtils';
-import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY } from './queries';
+import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from './queries';
 
 // Helper for consistent toast handling
 const showToast = (title: string, description: string, variant: 'default' | 'destructive' = 'default') => {
@@ -424,6 +424,44 @@ export const updateUserPointsMutation = (queryClient: QueryClient) =>
       console.error("[updateUserPointsMutation] Error:", error);
       
       showToast("Error", "Failed to update points", "destructive");
+      
+      throw error;
+    }
+  };
+
+export const updateUserDomPointsMutation = (queryClient: QueryClient) => 
+  async (domPoints: number): Promise<boolean> => {
+    console.log("[updateUserDomPointsMutation] Updating dom points:", domPoints);
+    const startTime = performance.now();
+    
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      
+      if (!userId) {
+        throw new Error('User is not logged in');
+      }
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ dom_points: domPoints })
+        .eq('id', userId);
+      
+      if (error) throw error;
+      
+      // Update cache directly for immediate UI feedback
+      queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, domPoints);
+      
+      const endTime = performance.now();
+      console.log(`[updateUserDomPointsMutation] Operation completed in ${endTime - startTime}ms`);
+      
+      showToast("Success", `Dom points updated to ${domPoints}`);
+      
+      return true;
+    } catch (error) {
+      console.error("[updateUserDomPointsMutation] Error:", error);
+      
+      showToast("Error", "Failed to update dom points", "destructive");
       
       throw error;
     }
