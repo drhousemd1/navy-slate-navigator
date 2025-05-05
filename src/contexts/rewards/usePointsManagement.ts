@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -246,6 +245,7 @@ export const usePointsManagement = () => {
     totalPoints,
     domPoints,
     setTotalPoints,
+    setDomPoints, // Ensure we expose this function
     updatePointsInDatabase,
     updateDomPointsInDatabase,
     refreshPointsFromDatabase: fetchTotalPoints

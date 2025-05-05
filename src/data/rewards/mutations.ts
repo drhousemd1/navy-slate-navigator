@@ -1,26 +1,27 @@
-import { queryClient } from "@/lib/react-query-config";
+
+import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
 import { BuyRewardParams, SaveRewardParams } from '@/contexts/rewards/rewardTypes';
 import { supabase } from '@/integrations/supabase/client';
-import { toast as showToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY } from './queries';
 
 // This function returns the mutation function for saving a reward, with optional toast
-export const saveRewardMutation = (queryClient: any, showToastMessages = true) => {
+export const saveRewardMutation = (queryClient: QueryClient, showToastMessages = true) => {
   return async ({ rewardData, currentIndex }: SaveRewardParams): Promise<Reward | null> => {
     try {
       if (!rewardData.title) {
         throw new Error("Reward must have a title");
       }
 
-      // Prepare data for saving
+      // Prepare data for saving - update with correct type properties
       const dataToSave = {
         title: rewardData.title,
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
-        is_dom_reward: rewardData.is_dom_reward || false, // Add this field
-        supply: rewardData.supply || 0,
-        icon_name: rewardData.icon_name,
+        is_dom_reward: rewardData.is_dom_reward || false,
+        supply: 0, // Default value 
+        icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
         background_image_url: rewardData.background_image_url || null,
         background_opacity: rewardData.background_opacity || 100,
@@ -49,8 +50,8 @@ export const saveRewardMutation = (queryClient: any, showToastMessages = true) =
         if (error) throw error;
         result = updatedReward;
 
-        // Update the cache
-        queryClient.setQueryData<Reward[]>(
+        // Update the cache - fix type parameter issues
+        queryClient.setQueryData(
           REWARDS_QUERY_KEY, 
           (oldRewards: Reward[] = []) => {
             return oldRewards.map(r => r.id === result?.id ? result : r);
@@ -72,8 +73,8 @@ export const saveRewardMutation = (queryClient: any, showToastMessages = true) =
         if (error) throw error;
         result = newReward;
 
-        // Update the cache
-        queryClient.setQueryData<Reward[]>(
+        // Update the cache - fix type parameter issues
+        queryClient.setQueryData(
           REWARDS_QUERY_KEY, 
           (oldRewards: Reward[] = []) => {
             return [result as Reward, ...oldRewards];
@@ -83,7 +84,7 @@ export const saveRewardMutation = (queryClient: any, showToastMessages = true) =
 
       // Show success toast
       if (showToastMessages) {
-        showToast({
+        toast({
           title: "Success",
           description: `Reward ${rewardData.id ? 'updated' : 'created'} successfully`,
         });
@@ -97,7 +98,7 @@ export const saveRewardMutation = (queryClient: any, showToastMessages = true) =
       console.error("Error saving reward:", error);
       
       if (showToastMessages) {
-        showToast({
+        toast({
           title: "Error",
           description: `Failed to ${rewardData.id ? 'update' : 'create'} reward. Please try again.`,
           variant: "destructive",
@@ -109,7 +110,7 @@ export const saveRewardMutation = (queryClient: any, showToastMessages = true) =
   };
 };
 
-export const buyRewardMutation = (queryClient: any) => {
+export const buyRewardMutation = (queryClient: QueryClient) => {
   return async ({ rewardId, cost, isDomReward = false }: BuyRewardParams): Promise<void> => {
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -211,7 +212,7 @@ export const buyRewardMutation = (queryClient: any) => {
     } catch (error) {
       console.error("Error buying reward:", error);
       
-      showToast({
+      toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to buy reward",
         variant: "destructive",
@@ -236,7 +237,7 @@ export const deleteRewardMutation = (queryClient: QueryClient, showToasts: boole
       if (error) throw error;
       
       // Update cache directly for immediate UI feedback
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
+      queryClient.setQueryData(REWARDS_QUERY_KEY, (old: Reward[] = []) => 
         old.filter(r => r.id !== rewardId)
       );
       
@@ -244,7 +245,10 @@ export const deleteRewardMutation = (queryClient: QueryClient, showToasts: boole
       console.log(`[deleteRewardMutation] Operation completed in ${endTime - startTime}ms`);
       
       if (showToasts) {
-        showToast("Success", "Reward deleted successfully");
+        toast({
+          title: "Success",
+          description: "Reward deleted successfully"
+        });
       }
       
       return true;
@@ -252,7 +256,11 @@ export const deleteRewardMutation = (queryClient: QueryClient, showToasts: boole
       console.error("[deleteRewardMutation] Error:", error);
       
       if (showToasts) {
-        showToast("Error", "Failed to delete reward", "destructive");
+        toast({
+          title: "Error",
+          description: "Failed to delete reward",
+          variant: "destructive"
+        });
       }
       
       throw error;
@@ -304,7 +312,7 @@ export const useRewardMutation = (queryClient: QueryClient) =>
         });
       
       // Update cache directly for immediate UI feedback
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
+      queryClient.setQueryData(REWARDS_QUERY_KEY, (old: Reward[] = []) => 
         old.map(r => {
           if (r.id === rewardId) {
             return { ...r, supply: Math.max(0, r.supply - 1) };
@@ -316,17 +324,20 @@ export const useRewardMutation = (queryClient: QueryClient) =>
       const endTime = performance.now();
       console.log(`[useRewardMutation] Operation completed in ${endTime - startTime}ms`);
       
-      showToast("Success", `You used ${reward.title || 'a reward'}`);
+      toast({
+        title: "Success",
+        description: `You used ${reward.title || 'a reward'}`
+      });
       
       return true;
     } catch (error) {
       console.error("[useRewardMutation] Error:", error);
       
-      showToast(
-        "Error", 
-        error instanceof Error ? error.message : 'Failed to use reward',
-        "destructive"
-      );
+      toast({
+        title: "Error", 
+        description: error instanceof Error ? error.message : 'Failed to use reward',
+        variant: "destructive"
+      });
       
       throw error;
     }
@@ -358,13 +369,20 @@ export const updateUserPointsMutation = (queryClient: QueryClient) =>
       const endTime = performance.now();
       console.log(`[updateUserPointsMutation] Operation completed in ${endTime - startTime}ms`);
       
-      showToast("Success", `Points updated to ${points}`);
+      toast({
+        title: "Success",
+        description: `Points updated to ${points}`
+      });
       
       return true;
     } catch (error) {
       console.error("[updateUserPointsMutation] Error:", error);
       
-      showToast("Error", "Failed to update points", "destructive");
+      toast({
+        title: "Error",
+        description: "Failed to update points",
+        variant: "destructive"
+      });
       
       throw error;
     }
@@ -396,13 +414,20 @@ export const updateUserDomPointsMutation = (queryClient: QueryClient) =>
       const endTime = performance.now();
       console.log(`[updateUserDomPointsMutation] Operation completed in ${endTime - startTime}ms`);
       
-      showToast("Success", `Dom points updated to ${domPoints}`);
+      toast({
+        title: "Success",
+        description: `Dom points updated to ${domPoints}`
+      });
       
       return true;
     } catch (error) {
       console.error("[updateUserDomPointsMutation] Error:", error);
       
-      showToast("Error", "Failed to update dom points", "destructive");
+      toast({
+        title: "Error",
+        description: "Failed to update dom points",
+        variant: "destructive"
+      });
       
       throw error;
     }
