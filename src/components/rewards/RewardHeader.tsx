@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Badge } from '../ui/badge';
-import { Box, Ticket } from 'lucide-react';
+import { Box, Ticket, Coins, Minus } from 'lucide-react';
 import { Button } from '../ui/button';
 import PointsBadge from '../task/PointsBadge';
 
@@ -42,7 +42,17 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
       </div>
       
       <div className="flex items-center gap-2">
-        <PointsBadge points={-cost} />
+        {/* Updated cost badge to match punishment style */}
+        <Badge 
+          className="bg-nav-active text-white font-bold flex items-center gap-1 px-2"
+          variant="default"
+        >
+          <Coins className="h-3 w-3" />
+          <span className="flex items-center">
+            <Minus className="h-2 w-2 mr-0.5" />
+            {cost}
+          </span>
+        </Badge>
         <Button
           variant="default"
           size="sm"
