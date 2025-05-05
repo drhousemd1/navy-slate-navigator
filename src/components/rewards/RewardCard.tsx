@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { Reward } from '@/lib/rewardUtils';
 import { Badge } from '@/components/ui/badge';
 import { useRewards } from '@/contexts/RewardsContext';
 import { cn } from '@/lib/utils';
-import { Crown, Coins, Box } from 'lucide-react';
+import { Crown, Coins, Box, Loader2 } from 'lucide-react';
 
 interface RewardCardProps {
   reward: Reward;
@@ -19,14 +20,15 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
   
   // Explicitly enforce boolean type for is_dom_reward
   const isDomReward = Boolean(reward.is_dom_reward);
-  console.log(`RewardCard: ${reward.title}, isDomReward: ${isDomReward}`);
-
+  
   // Use appropriate points based on reward type
   const currentPoints = isDomReward ? domPoints : totalPoints;
   const canAfford = currentPoints >= reward.cost;
   const hasAvailable = reward.supply > 0;
 
   const handleBuyClick = async () => {
+    if (buying) return; // Prevent multiple clicks
+    
     try {
       setBuying(true);
       // Pass the isDomReward flag explicitly to ensure it's handled correctly
@@ -34,18 +36,22 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
     } catch (error) {
       console.error('Error buying reward:', error);
     } finally {
-      setBuying(false);
+      // Set buying false after a short delay to prevent multiple clicks
+      setTimeout(() => setBuying(false), 500);
     }
   };
 
   const handleUseClick = async () => {
+    if (using) return; // Prevent multiple clicks
+    
     try {
       setUsing(true);
       await handleUseReward(reward.id);
     } catch (error) {
       console.error('Error using reward:', error);
     } finally {
-      setUsing(false);
+      // Set using false after a short delay to prevent multiple clicks
+      setTimeout(() => setUsing(false), 500);
     }
   };
 
@@ -163,18 +169,28 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
               size="sm"
               disabled={!hasAvailable || using}
               onClick={handleUseClick}
-              className="border-light-navy hover:bg-light-navy"
+              className="border-light-navy hover:bg-light-navy min-w-[60px]"
             >
-              {using ? "Using..." : "Use"}
+              {using ? (
+                <span className="flex items-center">
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  <span>...</span>
+                </span>
+              ) : "Use"}
             </Button>
             
             <Button
               size="sm"
               disabled={!canAfford || buying}
               onClick={handleBuyClick}
-              className={`${canAfford ? buyButtonColor : 'bg-dark-navy text-light-navy'}`}
+              className={`${canAfford ? buyButtonColor : 'bg-dark-navy text-light-navy'} min-w-[60px]`}
             >
-              {buying ? "Buying..." : "Buy"}
+              {buying ? (
+                <span className="flex items-center">
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  <span>...</span>
+                </span>
+              ) : "Buy"}
             </Button>
           </div>
         </div>

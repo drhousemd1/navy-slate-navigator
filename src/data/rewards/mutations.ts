@@ -156,78 +156,85 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
 
 export const buyRewardMutation = (queryClient: QueryClient) => {
   return async ({ rewardId, cost, isDomReward = false }: BuyRewardParams): Promise<void> => {
+    console.log("[buyRewardMutation] Starting with params:", { rewardId, cost, isDomReward });
+    const startTime = performance.now();
+    
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) {
         throw new Error("User not authenticated");
       }
       
-      // Get the reward to confirm it exists and check if it's a dom reward
-      const { data: rewardData, error: rewardError } = await supabase
-        .from('rewards')
-        .select('id, title, supply, is_dom_reward')
-        .eq('id', rewardId)
-        .single();
-        
+      // Combine the profile fetch and reward fetch into a single promise.all to improve performance
+      const [profileResult, rewardResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select(isDomReward ? 'dom_points' : 'points')
+          .eq('id', userData.user.id)
+          .single(),
+        supabase
+          .from('rewards')
+          .select('id, title, supply, is_dom_reward')
+          .eq('id', rewardId)
+          .single()
+      ]);
+      
+      const profileError = profileResult.error;
+      const rewardError = rewardResult.error;
+      const profileData = profileResult.data;
+      const rewardData = rewardResult.data;
+      
+      if (profileError || !profileData) {
+        throw new Error("Could not fetch user profile");
+      }
+      
       if (rewardError || !rewardData) {
         throw new Error("Reward not found");
       }
       
       // Determine if this is a dom reward from the reward itself if not explicitly provided
       const isRewardDominant = isDomReward !== undefined ? isDomReward : Boolean(rewardData.is_dom_reward ?? false);
-      console.log("Buy reward - Using is_dom_reward value from database:", rewardData.is_dom_reward);
-      console.log("Buy reward - Final isDomReward determination:", isRewardDominant);
       
-      // Check which points field to update based on reward type
+      // Check which points field to use
       const pointsField = isRewardDominant ? 'dom_points' : 'points';
-      
-      // First check user's points
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select(`${pointsField}`)
-        .eq('id', userData.user.id)
-        .single();
-        
-      if (profileError || !userProfile) {
-        throw new Error("User profile not found");
-      }
-      
-      const currentPoints = userProfile[pointsField] || 0;
+      const currentPoints = profileData[pointsField] || 0;
       
       if (currentPoints < cost) {
         throw new Error(`Not enough ${isRewardDominant ? 'dom ' : ''}points to buy this reward`);
       }
       
+      // Calculate new points
       const newPoints = currentPoints - cost;
       
-      // Update points in a transaction-like manner
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ [pointsField]: newPoints })
-        .eq('id', userData.user.id);
+      // Rather than making sequential requests, use a transaction-like approach
+      // by running a PostgreSQL transaction via a custom RPC function
+      // For now, just run the two updates in parallel:
+      const [updatePointsResult, updateSupplyResult] = await Promise.all([
+        // Update points
+        supabase
+          .from('profiles')
+          .update({ [pointsField]: newPoints })
+          .eq('id', userData.user.id),
         
-      if (updateError) {
-        throw updateError;
+        // Update reward supply
+        supabase
+          .from('rewards')
+          .update({ 
+            supply: rewardData.supply + 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', rewardId)
+      ]);
+      
+      if (updatePointsResult.error) {
+        throw updatePointsResult.error;
       }
       
-      // Update reward supply
-      const { error: supplyError } = await supabase
-        .from('rewards')
-        .update({ 
-          supply: rewardData.supply + 1,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', rewardId);
-        
-      if (supplyError) {
-        // Try to revert the points change if updating supply fails
-        await supabase
-          .from('profiles')
-          .update({ [pointsField]: currentPoints })
-          .eq('id', userData.user.id);
-          
-        throw supplyError;
+      if (updateSupplyResult.error) {
+        throw updateSupplyResult.error;
       }
+      
+      // At this point, both updates were successful
       
       // Update the cache
       if (isRewardDominant) {
@@ -248,25 +255,16 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         }
       );
       
-      // Update the total supply - Explicitly type oldSupply as number
+      // Update the total supply
       queryClient.setQueryData(
         REWARDS_SUPPLY_QUERY_KEY,
         (oldSupply: number = 0) => oldSupply + 1
       );
       
-      toast({
-        title: "Reward Purchased",
-        description: `You purchased "${rewardData.title}"`,
-      });
+      const endTime = performance.now();
+      console.log(`[buyRewardMutation] Operation completed in ${endTime - startTime}ms`);
     } catch (error) {
-      console.error("Error buying reward:", error);
-      
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to buy reward",
-        variant: "destructive",
-      });
-      
+      console.error("[buyRewardMutation] Error:", error);
       throw error;
     }
   };
@@ -351,14 +349,17 @@ export const useRewardMutation = (queryClient: QueryClient) =>
       const dayOfWeek = today.getDay();
       const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
       
-      await supabase
+      // Not awaiting this to speed up the operation
+      supabase
         .from('reward_usage')
         .insert({
           reward_id: rewardId,
           day_of_week: dayOfWeek,
           used: true,
           week_number: weekNumber
-        });
+        })
+        .then(() => console.log("Reward usage recorded successfully"))
+        .catch(err => console.error("Error recording reward usage (non-critical):", err));
       
       // Update cache directly for immediate UI feedback
       queryClient.setQueryData(REWARDS_QUERY_KEY, (old: Reward[] = []) => 
@@ -372,11 +373,6 @@ export const useRewardMutation = (queryClient: QueryClient) =>
       
       const endTime = performance.now();
       console.log(`[useRewardMutation] Operation completed in ${endTime - startTime}ms`);
-      
-      toast({
-        title: "Success",
-        description: `You used ${reward.title || 'a reward'}`
-      });
       
       return true;
     } catch (error) {

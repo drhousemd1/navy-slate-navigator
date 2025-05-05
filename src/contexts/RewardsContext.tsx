@@ -4,6 +4,7 @@ import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
 import { Reward } from '@/lib/rewardUtils';
 import { QueryObserverResult } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 
 // Create a complete mock observer result that satisfies the QueryObserverResult type
 const mockQueryResult: QueryObserverResult<Reward[], Error> = {
@@ -69,6 +70,10 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     refetchRewards,
     refreshPointsFromDatabase,
     totalDomRewardsSupply,
+    // Extract setter functions for optimistic updates
+    setRewardsOptimistically,
+    setPointsOptimistically,
+    setDomPointsOptimistically,
   } = useRewardsData();
 
   // Refresh points when the provider mounts
@@ -93,43 +98,151 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const handleBuyReward = async (id: string, cost: number, isDomReward?: boolean) => {
-    // Make sure we have the most up-to-date points
-    await refreshPointsFromDatabase();
-    
     // Find the reward to check if it's a dom reward
     const reward = rewards.find(r => r.id === id);
+    if (!reward) {
+      toast({
+        title: "Error",
+        description: "Reward not found",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Override with the explicit parameter if provided
     const isRewardDominant = isDomReward !== undefined ? isDomReward : (reward?.is_dom_reward || false);
     
     console.log("Buying reward with id:", id, "cost:", cost, "isDomReward:", isRewardDominant);
     
-    // Now attempt to buy the reward with fresh point data
-    await buyReward({ rewardId: id, cost, isDomReward: isRewardDominant });
+    // Check if we have enough points
+    const currentPointsValue = isRewardDominant ? domPoints : totalPoints;
+    if (currentPointsValue < cost) {
+      toast({
+        title: "Not Enough Points",
+        description: `You need ${cost} ${isRewardDominant ? "dom " : ""}points to buy this reward.`,
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // Refresh points again to ensure UI is in sync
-    await refreshPointsFromDatabase();
+    // Optimistic updates for immediate UI feedback
+    try {
+      // 1. Update points optimistically
+      const newPointsValue = currentPointsValue - cost;
+      if (isRewardDominant) {
+        setDomPointsOptimistically(newPointsValue);
+      } else {
+        setPointsOptimistically(newPointsValue);
+      }
+      
+      // 2. Update reward supply optimistically
+      const updatedRewards = rewards.map(r => {
+        if (r.id === id) {
+          return { ...r, supply: r.supply + 1 };
+        }
+        return r;
+      });
+      setRewardsOptimistically(updatedRewards);
+      
+      // 3. Show toast for immediate feedback
+      toast({
+        title: "Reward Purchased",
+        description: `You purchased ${reward.title}`,
+      });
+      
+      // 4. Perform the actual API call in the background
+      await buyReward({ rewardId: id, cost, isDomReward: isRewardDominant });
+    } catch (error) {
+      console.error("Error in handleBuyReward:", error);
+      
+      // Revert optimistic updates on error
+      refreshPointsFromDatabase();
+      refetchRewards();
+      
+      toast({
+        title: "Error",
+        description: "Failed to purchase reward. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleUseReward = async (id: string) => {
-    await useReward(id);
+    const reward = rewards.find(r => r.id === id);
+    if (!reward) {
+      toast({
+        title: "Error",
+        description: "Reward not found",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // Refresh everything to ensure UI is in sync
-    await refreshPointsFromDatabase();
+    if (reward.supply <= 0) {
+      toast({
+        title: "Cannot Use Reward",
+        description: "You don't have any of this reward to use.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Optimistic update for immediate UI feedback
+      const updatedRewards = rewards.map(r => {
+        if (r.id === id) {
+          return { ...r, supply: Math.max(0, r.supply - 1) };
+        }
+        return r;
+      });
+      setRewardsOptimistically(updatedRewards);
+      
+      // Show toast for immediate feedback
+      toast({
+        title: "Reward Used",
+        description: `You used ${reward.title}`,
+      });
+      
+      // Perform the actual API call in the background
+      await useReward(id);
+    } catch (error) {
+      console.error("Error in handleUseReward:", error);
+      
+      // Revert optimistic updates on error
+      refetchRewards();
+      
+      toast({
+        title: "Error",
+        description: "Failed to use reward. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const setTotalPoints = async (points: number) => {
-    await updatePoints(points);
+    // Optimistic update
+    setPointsOptimistically(points);
     
-    // Make sure points are refreshed after updating
-    await refreshPointsFromDatabase();
+    // Persist to database
+    try {
+      await updatePoints(points);
+    } catch (error) {
+      console.error("Error setting total points:", error);
+      refreshPointsFromDatabase(); // Revert on error
+    }
   };
 
   const setDomPoints = async (points: number) => {
-    await updateDomPoints(points);
+    // Optimistic update
+    setDomPointsOptimistically(points);
     
-    // Make sure points are refreshed after updating
-    await refreshPointsFromDatabase();
+    // Persist to database
+    try {
+      await updateDomPoints(points);
+    } catch (error) {
+      console.error("Error setting dom points:", error);
+      refreshPointsFromDatabase(); // Revert on error
+    }
   };
 
   const value = {
