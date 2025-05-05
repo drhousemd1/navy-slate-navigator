@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
@@ -67,6 +68,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     updateDomPoints,
     refetchRewards,
     refreshPointsFromDatabase,
+    totalDomRewardsSupply,
   } = useRewardsData();
 
   // Refresh points when the provider mounts
@@ -74,13 +76,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log("RewardsProvider: Refreshing points from database on mount");
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
-
-  // Calculate total dom rewards supply
-  const totalDomRewardsSupply = React.useMemo(() => {
-    return rewards.reduce((total, reward) => {
-      return total + (reward.is_dom_reward ? reward.supply : 0);
-    }, 0);
-  }, [rewards]);
 
   const handleSaveReward = async (rewardData: any, index: number | null) => {
     console.log("RewardsContext - handleSaveReward called with data:", rewardData);

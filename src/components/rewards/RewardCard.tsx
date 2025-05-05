@@ -78,6 +78,9 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
     boxShadow: hasAvailable ? `0 0 8px 2px rgba(${isDomReward ? '234, 56, 76, 0.6' : '254, 247, 205, 0.6'})` : undefined
   };
 
+  // Define supply badge color based on if it's a dom reward
+  const supplyBadgeColor = isDomReward ? "bg-red-500" : "bg-blue-500";
+
   return (
     <Card className="relative overflow-hidden bg-dark-navy border-2 border-light-navy text-white"
           style={cardBorderStyle}>
@@ -148,8 +151,11 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
         </div>
         
         <div className="mt-auto pt-4 flex justify-between items-center">
-          <div className="text-sm text-light-navy">
-            Available: {reward.supply}
+          <div className="flex items-center">
+            <Badge className={`${supplyBadgeColor} text-white font-bold flex items-center gap-1`}>
+              <Box className="h-3 w-3" />
+              <span>{reward.supply}</span>
+            </Badge>
           </div>
           
           <div className="flex space-x-2">

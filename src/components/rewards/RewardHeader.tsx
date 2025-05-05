@@ -30,6 +30,9 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
     ? "bg-red-600" 
     : "bg-nav-active";
   
+  // Supply badge color based on reward type
+  const supplyBadgeColor = isDomReward ? "bg-red-500" : "bg-blue-500";
+  
   // Use Crown icon for dom rewards, Coins for sub rewards
   const CostIcon = isDomReward ? Crown : Coins;
   
@@ -38,7 +41,7 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
   return (
     <div className="flex justify-between items-start mb-3">
       <div className="flex items-center gap-2">
-        <Badge className="bg-blue-500 text-white font-bold flex items-center gap-1">
+        <Badge className={`${supplyBadgeColor} text-white font-bold flex items-center gap-1`}>
           <Box className="h-3 w-3" />
           <span>{supply}</span>
         </Badge>
