@@ -2,11 +2,22 @@
 import { Reward } from '@/lib/rewardUtils';
 import { QueryObserverResult } from '@tanstack/react-query';
 
+export interface SaveRewardParams {
+  rewardData: any;
+  currentIndex: number | null;
+}
+
+export interface BuyRewardParams {
+  rewardId: string;
+  cost: number;
+  isDomReward?: boolean;
+}
+
 export interface RewardsContextType {
   rewards: Reward[];
   totalPoints: number;
   totalRewardsSupply: number;
-  totalDomRewardsSupply: number; // Add new property
+  totalDomRewardsSupply: number;
   domPoints: number;
   setTotalPoints: (points: number) => Promise<void>;
   setDomPoints: (points: number) => Promise<void>;
