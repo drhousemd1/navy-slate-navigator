@@ -72,8 +72,8 @@ const RewardsContent: React.FC<{
         }}
         onDelete={async (id) => {
           try {
-            // Fix: Use strict equality with the correct type
-            const index = rewards.findIndex(r => r.id === id);
+            // Fix: Convert both sides to string for comparison to ensure type consistency
+            const index = rewards.findIndex(r => String(r.id) === String(id));
             if (index !== -1) {
               await handleDeleteReward(index);
             }
