@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
 import { Reward } from '@/lib/rewardUtils';
@@ -38,6 +37,7 @@ const RewardsContext = createContext<RewardsContextType>({
   rewards: [],
   totalPoints: 0,
   totalRewardsSupply: 0,
+  totalDomRewardsSupply: 0,
   domPoints: 0,
   setTotalPoints: async () => Promise.resolve(),
   setDomPoints: async () => Promise.resolve(),
@@ -74,6 +74,13 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log("RewardsProvider: Refreshing points from database on mount");
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
+
+  // Calculate total dom rewards supply
+  const totalDomRewardsSupply = React.useMemo(() => {
+    return rewards.reduce((total, reward) => {
+      return total + (reward.is_dom_reward ? reward.supply : 0);
+    }, 0);
+  }, [rewards]);
 
   const handleSaveReward = async (rewardData: any, index: number | null) => {
     console.log("RewardsContext - handleSaveReward called with data:", rewardData);
@@ -134,6 +141,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     rewards,
     totalPoints,
     totalRewardsSupply,
+    totalDomRewardsSupply,
     domPoints,
     setTotalPoints,
     setDomPoints,

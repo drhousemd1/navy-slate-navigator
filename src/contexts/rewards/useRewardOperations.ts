@@ -39,6 +39,13 @@ export const useRewardOperations = () => {
   const getTotalRewardsSupply = useCallback(() => {
     return rewards.reduce((total, reward) => total + reward.supply, 0);
   }, [rewards]);
+  
+  const getTotalDomRewardsSupply = useCallback(() => {
+    return rewards.reduce((total, reward) => {
+      // Only count supplies for dom rewards
+      return total + (reward.is_dom_reward ? reward.supply : 0);
+    }, 0);
+  }, [rewards]);
 
   const handleSaveReward = useCallback(async (rewardData: any, index: number | null): Promise<Reward | null> => {
     console.log("[RewardsContext] Handling save reward with data:", rewardData, "at index:", index);
@@ -464,6 +471,7 @@ export const useRewardOperations = () => {
       }
     }, [rewards]),
     getTotalRewardsSupply,
+    getTotalDomRewardsSupply,
     refreshPointsFromDatabase
   };
 };

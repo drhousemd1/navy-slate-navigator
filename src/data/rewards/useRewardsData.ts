@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
@@ -47,6 +46,13 @@ export const useRewardsData = () => {
     queryFn: fetchTotalRewardsSupply,
     ...STANDARD_QUERY_CONFIG
   });
+  
+  // Calculate total dom rewards supply
+  const totalDomRewardsSupply = React.useMemo(() => {
+    return rewards.reduce((total, reward) => {
+      return total + (reward.is_dom_reward ? reward.supply : 0);
+    }, 0);
+  }, [rewards]);
 
   // Ensure React Query cache always has the latest points and dom points values
   useEffect(() => {
@@ -96,6 +102,7 @@ export const useRewardsData = () => {
     rewards,
     totalPoints,
     totalRewardsSupply,
+    totalDomRewardsSupply,
     domPoints,
     
     // Loading state
@@ -108,7 +115,7 @@ export const useRewardsData = () => {
     buyReward: buyRewardMut.mutateAsync,
     useReward: useRewardMut.mutateAsync,
     updatePoints: updatePointsMut.mutateAsync,
-    updateDomPoints: updateDomPointsInDatabase, // Add this new function
+    updateDomPoints: updateDomPointsInDatabase,
     
     // Refetch functions - maintained for compatibility
     refetchRewards: refetchRewardsTyped,

@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRewards } from '@/contexts/RewardsContext';
 
 const RulesHeader: React.FC = () => {
-  const { totalPoints, totalRewardsSupply, domPoints = 0, refreshPointsFromDatabase } = useRewards();
+  const { totalPoints, totalRewardsSupply, totalDomRewardsSupply, domPoints = 0, refreshPointsFromDatabase } = useRewards();
 
   // Refresh points when component mounts - exactly like in TasksHeader
   useEffect(() => {
@@ -20,6 +20,11 @@ const RulesHeader: React.FC = () => {
         <Badge className="bg-blue-500 text-white font-bold px-3 py-1 flex items-center gap-1">
           <Box className="w-3 h-3" />
           <span>{totalRewardsSupply}</span>
+        </Badge>
+        {/* Add dom rewards supply badge */}
+        <Badge className="bg-red-500 text-white font-bold px-3 py-1 flex items-center gap-1">
+          <Box className="w-3 h-3" />
+          <span>{totalDomRewardsSupply}</span>
         </Badge>
         <Badge className="bg-cyan-500 text-white font-bold px-3 py-1 flex items-center gap-1">
           <Coins className="w-3 h-3" />
