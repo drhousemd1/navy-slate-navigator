@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -71,6 +72,7 @@ const RewardsContent: React.FC<{
         }}
         onDelete={async (id) => {
           try {
+            // Fix: Use strict equality with the correct type
             const index = rewards.findIndex(r => r.id === id);
             if (index !== -1) {
               await handleDeleteReward(index);
