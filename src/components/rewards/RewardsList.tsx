@@ -33,12 +33,12 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
       index: i, 
       id: r.id, 
       title: r.title, 
+      is_dom_reward: r.is_dom_reward,
       created_at: r.created_at,
       updated_at: r.updated_at
     }))
   );
 
-  // Changed to full-width flex column layout - removed max-w-3xl and mx-auto
   return (
     <div className="flex flex-col gap-4">
       {rewards.map((reward, index) => (
@@ -48,6 +48,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           description={reward.description || ''}
           cost={reward.cost}
           supply={reward.supply}
+          isDomReward={reward.is_dom_reward}
           iconName={reward.icon_name}
           iconColor={reward.icon_color}
           onBuy={() => handleBuyReward(reward.id, reward.cost)}

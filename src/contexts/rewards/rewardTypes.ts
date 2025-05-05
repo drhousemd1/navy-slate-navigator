@@ -26,6 +26,7 @@ export interface SaveRewardParams {
     cost: number;
     image_url?: string | null;
     is_enabled?: boolean;
+    is_dom_reward?: boolean; // Added this field
   };
   currentIndex: number | null;
 }
@@ -33,4 +34,5 @@ export interface SaveRewardParams {
 export interface BuyRewardParams {
   rewardId: string;
   cost: number;
+  isDomReward?: boolean; // Added this field
 }

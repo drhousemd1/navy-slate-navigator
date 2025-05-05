@@ -1,285 +1,226 @@
-import { QueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/react-query-config";
 import { Reward } from '@/lib/rewardUtils';
-import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from './queries';
+import { BuyRewardParams, SaveRewardParams } from '@/contexts/rewards/rewardTypes';
+import { supabase } from '@/integrations/supabase/client';
+import { toast as showToast } from '@/hooks/use-toast';
+import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY } from './queries';
 
-// Helper for consistent toast handling
-const showToast = (title: string, description: string, variant: 'default' | 'destructive' = 'default') => {
-  toast({
-    title,
-    description,
-    variant,
-  });
-};
-
-export const saveRewardMutation = (queryClient: QueryClient, showToasts: boolean = true) => 
-  async (params: { rewardData: Partial<Reward>; currentIndex?: number | null }): Promise<Reward> => {
-    const { rewardData } = params;
-    console.log("[saveRewardMutation] Saving reward:", rewardData);
-    const startTime = performance.now();
-    
+// This function returns the mutation function for saving a reward, with optional toast
+export const saveRewardMutation = (queryClient: any, showToastMessages = true) => {
+  return async ({ rewardData, currentIndex }: SaveRewardParams): Promise<Reward | null> => {
     try {
-      let result: Reward;
-      
-      // Handle optimistic updates before the actual API call
+      if (!rewardData.title) {
+        throw new Error("Reward must have a title");
+      }
+
+      // Prepare data for saving
+      const dataToSave = {
+        title: rewardData.title,
+        description: rewardData.description || '',
+        cost: rewardData.cost || 10,
+        is_dom_reward: rewardData.is_dom_reward || false, // Add this field
+        supply: rewardData.supply || 0,
+        icon_name: rewardData.icon_name,
+        icon_color: rewardData.icon_color || '#9b87f5',
+        background_image_url: rewardData.background_image_url || null,
+        background_opacity: rewardData.background_opacity || 100,
+        focal_point_x: rewardData.focal_point_x || 50,
+        focal_point_y: rewardData.focal_point_y || 50,
+        highlight_effect: rewardData.highlight_effect || false,
+        title_color: rewardData.title_color || '#FFFFFF',
+        subtext_color: rewardData.subtext_color || '#8E9196',
+        calendar_color: rewardData.calendar_color || '#7E69AB',
+      };
+
+      let result: Reward | null = null;
+
       if (rewardData.id) {
-        // Get current data for optimistic update
-        const currentRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
-        const currentReward = currentRewards.find(r => r.id === rewardData.id);
-        
-        if (!currentReward) throw new Error("Reward not found in cache");
-        
-        // Create optimistic update
-        const optimisticReward = {
-          ...currentReward,
-          ...rewardData,
-          updated_at: new Date().toISOString()
-        };
-        
-        // Update cache immediately
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
-          old.map(r => r.id === rewardData.id ? optimisticReward : r)
-        );
-        
-        // Make the actual API call
-        const { data, error } = await supabase
+        // Update existing reward
+        const { data: updatedReward, error } = await supabase
           .from('rewards')
           .update({
-            title: rewardData.title,
-            description: rewardData.description,
-            cost: rewardData.cost,
-            supply: rewardData.supply,
-            background_image_url: rewardData.background_image_url,
-            background_opacity: rewardData.background_opacity,
-            icon_name: rewardData.icon_name,
-            icon_color: rewardData.icon_color,
-            title_color: rewardData.title_color,
-            subtext_color: rewardData.subtext_color,
-            calendar_color: rewardData.calendar_color,
-            highlight_effect: rewardData.highlight_effect,
-            focal_point_x: rewardData.focal_point_x,
-            focal_point_y: rewardData.focal_point_y,
+            ...dataToSave,
             updated_at: new Date().toISOString()
           })
           .eq('id', rewardData.id)
           .select('*')
           .single();
-          
+
         if (error) throw error;
-        result = data;
-        
-        // Update cache with actual server data
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
-          old.map(r => r.id === result.id ? result : r)
+        result = updatedReward;
+
+        // Update the cache
+        queryClient.setQueryData<Reward[]>(
+          REWARDS_QUERY_KEY, 
+          (oldRewards: Reward[] = []) => {
+            return oldRewards.map(r => r.id === result?.id ? result : r);
+          }
         );
       } else {
-        // Create new reward - generate temp ID for optimistic update
-        const tempId = `temp-${Date.now()}`;
-        
-        // Create new reward data
-        const newReward = {
-          id: tempId as string,
-          title: rewardData.title || 'New Reward',
-          description: rewardData.description || '',
-          cost: rewardData.cost || 10,
-          supply: rewardData.supply || 0,
-          background_image_url: rewardData.background_image_url,
-          background_opacity: rewardData.background_opacity || 100,
-          icon_name: rewardData.icon_name,
-          icon_color: rewardData.icon_color || '#9b87f5',
-          title_color: rewardData.title_color || '#FFFFFF',
-          subtext_color: rewardData.subtext_color || '#8E9196',
-          calendar_color: rewardData.calendar_color || '#7E69AB',
-          highlight_effect: rewardData.highlight_effect || false,
-          focal_point_x: rewardData.focal_point_x || 50,
-          focal_point_y: rewardData.focal_point_y || 50,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        } as Reward;
-        
-        // Add to cache immediately
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
-          [newReward, ...old]
-        );
-        
-        // Create actual reward in database
-        const { data, error } = await supabase
+        // Create new reward
+        const { data: newReward, error } = await supabase
           .from('rewards')
           .insert({
-            title: newReward.title,
-            description: newReward.description,
-            cost: newReward.cost,
-            supply: newReward.supply,
-            background_image_url: newReward.background_image_url,
-            background_opacity: newReward.background_opacity,
-            icon_name: newReward.icon_name,
-            icon_color: newReward.icon_color,
-            title_color: newReward.title_color,
-            subtext_color: newReward.subtext_color,
-            calendar_color: newReward.calendar_color,
-            highlight_effect: newReward.highlight_effect,
-            focal_point_x: newReward.focal_point_x,
-            focal_point_y: newReward.focal_point_y
+            ...dataToSave,
+            supply: 0, // Start with 0 supply
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           })
           .select('*')
           .single();
-          
+
         if (error) throw error;
-        result = data;
-        
-        // Replace optimistic reward with actual one
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
-          old.map(r => r.id === tempId ? result : r)
+        result = newReward;
+
+        // Update the cache
+        queryClient.setQueryData<Reward[]>(
+          REWARDS_QUERY_KEY, 
+          (oldRewards: Reward[] = []) => {
+            return [result as Reward, ...oldRewards];
+          }
         );
       }
-      
-      const endTime = performance.now();
-      console.log(`[saveRewardMutation] Operation completed in ${endTime - startTime}ms`);
-      
-      if (showToasts) {
-        showToast("Success", "Reward saved successfully");
+
+      // Show success toast
+      if (showToastMessages) {
+        showToast({
+          title: "Success",
+          description: `Reward ${rewardData.id ? 'updated' : 'created'} successfully`,
+        });
       }
-      
+
+      // Invalidate queries to force refetch
+      queryClient.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
+
       return result;
     } catch (error) {
-      console.error("[saveRewardMutation] Error:", error);
+      console.error("Error saving reward:", error);
       
-      // Remove the optimistic update in case of error
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
-        old.filter(r => !r.id.toString().startsWith('temp-'))
-      );
-      
-      if (showToasts) {
-        showToast("Error", "Failed to save reward. Please try again.", "destructive");
+      if (showToastMessages) {
+        showToast({
+          title: "Error",
+          description: `Failed to ${rewardData.id ? 'update' : 'create'} reward. Please try again.`,
+          variant: "destructive",
+        });
       }
       
       throw error;
     }
   };
+};
 
-export const buyRewardMutation = (queryClient: QueryClient) => 
-  async ({ rewardId, cost }: { rewardId: string, cost: number }): Promise<{ success: boolean, newPoints: number }> => {
-    console.log("[buyRewardMutation] Buying reward:", { rewardId, cost });
-    const startTime = performance.now();
-    
+export const buyRewardMutation = (queryClient: any) => {
+  return async ({ rewardId, cost, isDomReward = false }: BuyRewardParams): Promise<void> => {
     try {
-      // Get current points and reward data for optimistic updates
-      // Instead of only trusting the cache, we'll also check with the database
       const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-      
-      if (!userId) {
-        throw new Error('User is not logged in');
+      if (!userData?.user?.id) {
+        throw new Error("User not authenticated");
       }
       
-      // Get the latest points directly from the database
-      const { data: userPoints, error: pointsError } = await supabase
-        .from('profiles')
-        .select('points')
-        .eq('id', userId)
-        .single();
-      
-      if (pointsError) throw pointsError;
-      
-      const currentPoints = userPoints?.points || 0;
-      
-      // Check if we have enough points
-      if (currentPoints < cost) {
-        throw new Error(`Not enough points to buy this reward. Required: ${cost}, Available: ${currentPoints}`);
-      }
-      
-      // Get rewards for optimistic updates
-      const rewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
-      const reward = rewards.find(r => r.id === rewardId);
-      
-      if (!reward) throw new Error('Reward not found in cache');
-      
-      // Apply optimistic updates
-      const newPoints = currentPoints - cost;
-      const updatedReward = { ...reward, supply: reward.supply + 1 };
-      
-      // Update points in cache
-      queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, newPoints);
-      
-      // Update reward in cache
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => 
-        old.map(r => r.id === rewardId ? updatedReward : r)
-      );
-      
-      // Then, check if reward is available
+      // Get the reward to confirm it exists
       const { data: rewardData, error: rewardError } = await supabase
         .from('rewards')
-        .select('supply, title')
+        .select('id, title, supply')
         .eq('id', rewardId)
         .single();
+        
+      if (rewardError || !rewardData) {
+        throw new Error("Reward not found");
+      }
       
-      if (rewardError) throw rewardError;
+      // Check which points field to update based on reward type
+      const pointsField = isDomReward ? 'dom_points' : 'points';
       
-      // Start transaction-like operations
-      // First, deduct points
-      const serverNewPoints = currentPoints - cost;
-      const { error: updatePointsError } = await supabase
+      // First check user's points
+      const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
-        .update({ points: serverNewPoints })
-        .eq('id', userId);
+        .select(`${pointsField}`)
+        .eq('id', userData.user.id)
+        .single();
+        
+      if (profileError || !userProfile) {
+        throw new Error("User profile not found");
+      }
       
-      if (updatePointsError) throw updatePointsError;
+      const currentPoints = userProfile[pointsField] || 0;
       
-      // Then, increment reward supply
-      const { error: updateSupplyError } = await supabase
+      if (currentPoints < cost) {
+        throw new Error(`Not enough ${isDomReward ? 'dom ' : ''}points to buy this reward`);
+      }
+      
+      const newPoints = currentPoints - cost;
+      
+      // Update points in a transaction-like manner
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ [pointsField]: newPoints })
+        .eq('id', userData.user.id);
+        
+      if (updateError) {
+        throw updateError;
+      }
+      
+      // Update reward supply
+      const { error: supplyError } = await supabase
         .from('rewards')
         .update({ 
           supply: rewardData.supply + 1,
           updated_at: new Date().toISOString()
         })
         .eq('id', rewardId);
-      
-      if (updateSupplyError) {
-        // Try to revert the points update on error
+        
+      if (supplyError) {
+        // Try to revert the points change if updating supply fails
         await supabase
           .from('profiles')
-          .update({ points: userPoints.points })
-          .eq('id', userId);
-        throw updateSupplyError;
+          .update({ [pointsField]: currentPoints })
+          .eq('id', userData.user.id);
+          
+        throw supplyError;
       }
       
-      // Record usage
-      const today = new Date();
-      const dayOfWeek = today.getDay();
-      const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
+      // Update the cache
+      if (isDomReward) {
+        queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, newPoints);
+      } else {
+        queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, newPoints);
+      }
       
-      await supabase
-        .from('reward_usage')
-        .insert({
-          reward_id: rewardId,
-          day_of_week: dayOfWeek,
-          used: false, // It's not used yet, just bought
-          week_number: weekNumber
-        });
-      
-      const endTime = performance.now();
-      console.log(`[buyRewardMutation] Operation completed in ${endTime - startTime}ms`);
-      
-      showToast("Success", `You purchased ${rewardData.title || 'a reward'}`);
-      
-      return { success: true, newPoints: serverNewPoints };
-    } catch (error) {
-      console.error("[buyRewardMutation] Error:", error);
-      
-      // Revert cache on error
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
-      
-      showToast(
-        "Error", 
-        error instanceof Error ? error.message : 'Failed to buy reward',
-        "destructive"
+      // Update the rewards cache
+      queryClient.setQueryData<Reward[]>(
+        REWARDS_QUERY_KEY, 
+        (oldRewards: Reward[] = []) => {
+          return oldRewards.map(reward => 
+            reward.id === rewardId 
+              ? { ...reward, supply: reward.supply + 1 }
+              : reward
+          );
+        }
       );
+      
+      // Update the total supply
+      queryClient.setQueryData<number>(
+        REWARDS_SUPPLY_QUERY_KEY,
+        (oldSupply = 0) => oldSupply + 1
+      );
+      
+      showToast({
+        title: "Reward Purchased",
+        description: `You purchased "${rewardData.title}"`,
+      });
+    } catch (error) {
+      console.error("Error buying reward:", error);
+      
+      showToast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to buy reward",
+        variant: "destructive",
+      });
       
       throw error;
     }
   };
+};
 
 export const deleteRewardMutation = (queryClient: QueryClient, showToasts: boolean = true) => 
   async (rewardId: string): Promise<boolean> => {

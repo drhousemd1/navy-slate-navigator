@@ -11,6 +11,7 @@ interface RewardCardProps {
   description: string;
   cost: number;
   supply: number;
+  isDomReward?: boolean;
   iconName?: string;
   iconColor?: string;
   onBuy?: (cost: number) => void;
@@ -33,6 +34,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
   description,
   cost,
   supply,
+  isDomReward = false,
   iconName = 'Gift',
   iconColor = '#9b87f5',
   onBuy,
@@ -68,16 +70,19 @@ const RewardCard: React.FC<RewardCardProps> = ({
     }
   };
 
-  const cardBorderStyle = supply > 0 
-    ? {
-        borderColor: '#FEF7CD', // Changed from #FFD700 to #FEF7CD for a whiter yellow
-        boxShadow: '0 0 8px 2px rgba(254, 247, 205, 0.6)' // Updated shadow to match new color
-      } 
-    : {};
+  // Define border color based on if it's a dom reward and if there's supply
+  const cardBorderColor = isDomReward 
+    ? "#ea384c" // Red for dom rewards
+    : (supply > 0 ? "#FEF7CD" : "#00f0ff"); // Yellow for sub rewards with supply, blue otherwise
+  
+  const cardBorderStyle = {
+    borderColor: cardBorderColor,
+    boxShadow: supply > 0 ? `0 0 8px 2px rgba(${isDomReward ? '234, 56, 76, 0.6' : '254, 247, 205, 0.6'})` : undefined
+  };
 
   return (
     <Card 
-      className="relative overflow-hidden border-2 border-[#00f0ff] bg-navy z-0"
+      className="relative overflow-hidden border-2 bg-navy z-0"
       style={cardBorderStyle}
     >
       {backgroundImage && (
@@ -96,6 +101,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
           title={title}
           supply={supply}
           cost={cost}
+          isDomReward={isDomReward}
           onBuy={handleBuy}
           onUse={handleUse}
         />

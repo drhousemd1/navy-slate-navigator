@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form } from "@/components/ui/form"; // Import the Form component
@@ -33,6 +32,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       title: '',
       description: '',
       cost: 10,
+      is_dom_reward: false,
       icon_name: null as string | null,
       icon_color: '#9b87f5',
       title_color: '#FFFFFF',
@@ -52,6 +52,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   const iconName = watch('icon_name');
   const iconColor = watch('icon_color');
   const imagePreview = watch('background_image_url');
+  const isDomReward = watch('is_dom_reward');
 
   // Load existing reward data if available
   useEffect(() => {
@@ -60,6 +61,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         title: rewardData.title || '',
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
+        is_dom_reward: rewardData.is_dom_reward || false,
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
         title_color: rewardData.title_color || '#FFFFFF',

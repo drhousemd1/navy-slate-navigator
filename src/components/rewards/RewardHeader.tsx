@@ -1,14 +1,14 @@
 
 import React from 'react';
 import { Badge } from '../ui/badge';
-import { Box, Ticket, Coins, Minus } from 'lucide-react';
+import { Box, Ticket, Coins, Crown, Minus } from 'lucide-react';
 import { Button } from '../ui/button';
-import PointsBadge from '../task/PointsBadge';
 
 interface RewardHeaderProps {
   title: string;
   supply: number;
   cost: number;
+  isDomReward?: boolean;
   onBuy: (cost: number) => void;
   onUse: () => void;
 }
@@ -17,9 +17,21 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
   title,
   supply,
   cost,
+  isDomReward = false,
   onBuy,
   onUse
 }) => {
+  // Colors based on reward type
+  const buyButtonColor = isDomReward 
+    ? "bg-red-600 hover:bg-red-700" 
+    : "bg-nav-active hover:bg-nav-active/90";
+  
+  const costBadgeColor = isDomReward 
+    ? "bg-red-600" 
+    : "bg-nav-active";
+  
+  const CostIcon = isDomReward ? Crown : Coins;
+
   return (
     <div className="flex justify-between items-start mb-3">
       <div className="flex items-center gap-2">
@@ -42,12 +54,11 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
       </div>
       
       <div className="flex items-center gap-2">
-        {/* Updated cost badge to match punishment style */}
         <Badge 
-          className="bg-nav-active text-white font-bold flex items-center gap-1 px-2"
+          className={`${costBadgeColor} text-white font-bold flex items-center gap-1 px-2`}
           variant="default"
         >
-          <Coins className="h-3 w-3" />
+          <CostIcon className="h-3 w-3" />
           <span className="flex items-center">
             <Minus className="h-2 w-2 mr-0.5" />
             {cost}
@@ -56,7 +67,7 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
         <Button
           variant="default"
           size="sm"
-          className="bg-nav-active text-white hover:bg-nav-active/90 h-7"
+          className={`${buyButtonColor} text-white h-7`}
           onClick={() => onBuy(cost)}
         >
           Buy

@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const useRewardOperations = () => {
   const [rewards, setRewards] = useState<Reward[]>([]);
-  const { totalPoints, setTotalPoints, updatePointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
+  const { totalPoints, domPoints, setTotalPoints, setDomPoints, updatePointsInDatabase, updateDomPointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
   
   const { 
     data: fetchedRewards = [], 
@@ -174,42 +174,63 @@ export const useRewardOperations = () => {
     }
   }, [rewards]);
 
-  const handleBuyReward = useCallback(async (id: string, cost: number) => {
-    console.log("Handling buy reward with ID:", id, "Cost:", cost);
+  const handleBuyReward = useCallback(async ({ rewardId, cost, isDomReward = false }: { rewardId: string, cost: number, isDomReward?: boolean }) => {
+    console.log("Handling buy reward with ID:", rewardId, "Cost:", cost, "Is Dom Reward:", isDomReward);
     
     try {
-      if (totalPoints < cost) {
+      // Check if we have enough points based on reward type
+      const currentPoints = isDomReward ? domPoints : totalPoints;
+      
+      if (currentPoints < cost) {
         toast({
           title: "Not Enough Points",
-          description: `You need ${cost} points to buy this reward.`,
+          description: `You need ${cost} ${isDomReward ? "dom " : ""}points to buy this reward.`,
           variant: "destructive",
         });
         return;
       }
       
-      const rewardIndex = rewards.findIndex(r => r.id === id);
+      const rewardIndex = rewards.findIndex(r => r.id === rewardId);
       if (rewardIndex === -1) {
-        console.error("Reward not found with ID:", id);
+        console.error("Reward not found with ID:", rewardId);
         return;
       }
       
       const reward = rewards[rewardIndex];
       
-      const newTotalPoints = totalPoints - cost;
-      setTotalPoints(newTotalPoints);
+      // Deduct points based on reward type
+      const newPoints = currentPoints - cost;
       
-      const pointsUpdateSuccess = await updatePointsInDatabase(newTotalPoints);
-      
-      if (!pointsUpdateSuccess) {
-        console.error("Failed to update points in database");
-        setTotalPoints(totalPoints);
+      if (isDomReward) {
+        setDomPoints(newPoints);
+        const pointsUpdateSuccess = await updateDomPointsInDatabase(newPoints);
         
-        toast({
-          title: "Error",
-          description: "Failed to update points. Please try again.",
-          variant: "destructive",
-        });
-        return;
+        if (!pointsUpdateSuccess) {
+          console.error("Failed to update dom points in database");
+          setDomPoints(domPoints);
+          
+          toast({
+            title: "Error",
+            description: "Failed to update dom points. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        setTotalPoints(newPoints);
+        const pointsUpdateSuccess = await updatePointsInDatabase(newPoints);
+        
+        if (!pointsUpdateSuccess) {
+          console.error("Failed to update points in database");
+          setTotalPoints(totalPoints);
+          
+          toast({
+            title: "Error",
+            description: "Failed to update points. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
       }
       
       const updatedSupply = reward.supply + 1;
@@ -236,7 +257,7 @@ export const useRewardOperations = () => {
         variant: "destructive",
       });
     }
-  }, [rewards, totalPoints, updatePointsInDatabase, setTotalPoints]);
+  }, [rewards, totalPoints, domPoints, updatePointsInDatabase, updateDomPointsInDatabase, setTotalPoints, setDomPoints]);
 
   const handleUseReward = useCallback(async (id: string) => {
     console.log("Handling use reward with ID:", id);
@@ -314,7 +335,9 @@ export const useRewardOperations = () => {
     isLoading,
     fetchedRewards,
     totalPoints,
+    domPoints,
     setTotalPoints,
+    setDomPoints,
     refetchRewards,
     handleSaveReward,
     handleDeleteReward,

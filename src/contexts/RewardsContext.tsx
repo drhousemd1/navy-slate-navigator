@@ -91,8 +91,12 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Make sure we have the most up-to-date points
     await refreshPointsFromDatabase();
     
+    // Find the reward to check if it's a dom reward
+    const reward = rewards.find(r => r.id === id);
+    const isDomReward = reward?.is_dom_reward || false;
+    
     // Now attempt to buy the reward with fresh point data
-    await buyReward({ rewardId: id, cost });
+    await buyReward({ rewardId: id, cost, isDomReward });
     
     // Refresh points again to ensure UI is in sync
     await refreshPointsFromDatabase();
