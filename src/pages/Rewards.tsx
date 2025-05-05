@@ -13,8 +13,8 @@ const RewardsContent: React.FC<{
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<any>(undefined);
   
-  // Use the sync manager to keep data in sync
-  const { syncNow } = useSyncManager({ intervalMs: 30000 }); // Sync every 30 seconds
+  // Use the sync manager to keep data in sync - add enabled parameter
+  const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
   
   // Sync on initial render
   useEffect(() => {
@@ -50,17 +50,17 @@ const RewardsContent: React.FC<{
       <RewardsHeader />
       
       <RewardsList
-        rewards={rewards}
-        isLoading={isLoading}
-        onEditReward={handleEditReward}
+        onEdit={handleEditReward}
       />
       
       <RewardEditor
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
         rewardData={rewardBeingEdited}
-        onSave={async (data, index) => {
+        onSave={async (data) => {
           try {
+            // Get the index from the rewardBeingEdited if it exists
+            const index = rewardBeingEdited?.index !== undefined ? rewardBeingEdited.index : null;
             await handleSaveReward(data, index);
             setIsEditorOpen(false);
             // Force a sync after saving a reward

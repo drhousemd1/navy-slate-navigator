@@ -8,7 +8,15 @@ interface RewardsListProps {
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
-  const { rewards, handleBuyReward, handleUseReward } = useRewards();
+  const { rewards, handleBuyReward, handleUseReward, isLoading } = useRewards();
+  
+  if (isLoading) {
+    return (
+      <div className="text-center p-10">
+        <p className="text-light-navy">Loading rewards...</p>
+      </div>
+    );
+  }
   
   if (!rewards || rewards.length === 0) {
     return (

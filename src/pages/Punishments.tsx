@@ -16,8 +16,8 @@ const PunishmentsContent: React.FC<{
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   
-  // Use the sync manager to keep data in sync
-  const { syncNow } = useSyncManager({ intervalMs: 30000 }); // Sync every 30 seconds
+  // Use the sync manager to keep data in sync - add enabled parameter
+  const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
   
   // Track initial mount and set loading state appropriately
   useEffect(() => {
