@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/lib/rewardUtils';
 import { logQueryPerformance } from '@/lib/react-query-config';
@@ -34,7 +35,13 @@ export const fetchRewards = async (): Promise<Reward[]> => {
       console.warn('[fetchRewards] Could not save to localStorage:', e);
     }
     
-    return data || [];
+    // Ensure is_dom_reward is always defined in the returned data
+    const rewardsWithDomProperty = data?.map(reward => ({
+      ...reward,
+      is_dom_reward: reward.is_dom_reward ?? false // Default to false if not present
+    })) as Reward[];
+    
+    return rewardsWithDomProperty || [];
   } catch (error) {
     console.error('[fetchRewards] Fetch failed:', error);
     
@@ -44,7 +51,12 @@ export const fetchRewards = async (): Promise<Reward[]> => {
       console.log('[fetchRewards] Using cached rewards data');
       try {
         const parsedData = JSON.parse(cachedData);
-        return parsedData;
+        // Ensure is_dom_reward is defined for cached data too
+        const cachedWithDomProperty = parsedData.map((reward: any) => ({
+          ...reward,
+          is_dom_reward: reward.is_dom_reward ?? false
+        })) as Reward[];
+        return cachedWithDomProperty;
       } catch (parseError) {
         console.error('[fetchRewards] Error parsing cached data:', parseError);
       }

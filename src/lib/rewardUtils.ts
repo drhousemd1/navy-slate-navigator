@@ -19,7 +19,7 @@ export interface Reward {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
-  is_dom_reward: boolean;
+  is_dom_reward?: boolean; // Make this optional since it might not exist in DB yet
   created_at?: string;
   updated_at?: string;
 }
@@ -51,14 +51,20 @@ export const fetchRewards = async (): Promise<Reward[]> => {
         position: i,
         id: r.id, 
         title: r.title,
-        is_dom_reward: r.is_dom_reward,
+        is_dom_reward: r.is_dom_reward ?? false, // Default to false if not present
         created_at: r.created_at,
         updated_at: r.updated_at
       }))
     );
     
+    // Ensure is_dom_reward is always defined in the returned data
+    const rewardsWithDomProperty = data?.map(reward => ({
+      ...reward,
+      is_dom_reward: reward.is_dom_reward ?? false // Default to false if not present
+    })) as Reward[];
+    
     // Return data sorted with newest first
-    return data as Reward[];
+    return rewardsWithDomProperty || [];
   } catch (err) {
     console.error('[fetchRewards] Unexpected error fetching rewards:', err);
     toast({
@@ -113,10 +119,16 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
         throw new Error("No data returned from update operation");
       }
       
-      console.log('[saveReward] Reward updated successfully, returned data:', data[0]);
-      console.log('Updated reward is_dom_reward:', data[0]?.is_dom_reward);
+      // Ensure is_dom_reward is defined in the result
+      const result = {
+        ...data[0],
+        is_dom_reward: data[0]?.is_dom_reward ?? false
+      } as Reward;
       
-      return data[0] as Reward;
+      console.log('[saveReward] Reward updated successfully, returned data:', result);
+      console.log('Updated reward is_dom_reward:', result?.is_dom_reward);
+      
+      return result;
     } else {
       // Create new reward
       console.log('[saveReward] Creating new reward:', reward);
@@ -147,10 +159,16 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
         throw new Error("No data returned from insert operation");
       }
       
-      console.log('[saveReward] New reward created:', data[0]);
-      console.log('New reward is_dom_reward:', data[0]?.is_dom_reward);
+      // Ensure is_dom_reward is defined in the result
+      const result = {
+        ...data[0],
+        is_dom_reward: data[0]?.is_dom_reward ?? false
+      } as Reward;
       
-      return data[0] as Reward;
+      console.log('[saveReward] New reward created:', result);
+      console.log('New reward is_dom_reward:', result?.is_dom_reward);
+      
+      return result;
     }
   } catch (err: any) {
     console.error('[saveReward] Error saving reward:', err);

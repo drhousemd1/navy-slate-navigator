@@ -67,7 +67,12 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
           throw new Error("No data returned from update operation");
         }
         
-        result = updatedReward;
+        // Ensure is_dom_reward is defined in the result
+        result = {
+          ...updatedReward,
+          is_dom_reward: updatedReward?.is_dom_reward ?? false
+        } as Reward;
+        
         console.log("Updated reward result:", result);
         console.log("Updated reward is_dom_reward:", result?.is_dom_reward);
 
@@ -104,7 +109,12 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
           throw new Error("No data returned from insert operation");
         }
         
-        result = newReward;
+        // Ensure is_dom_reward is defined in the result
+        result = {
+          ...newReward,
+          is_dom_reward: newReward?.is_dom_reward ?? false
+        } as Reward;
+        
         console.log("New reward result:", result);
         console.log("New reward is_dom_reward:", result?.is_dom_reward);
 

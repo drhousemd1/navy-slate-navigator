@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
@@ -53,6 +52,9 @@ export const useRewardOperations = () => {
       if (!dataToSave.background_image_url) {
         dataToSave.background_image_url = null;
       }
+      
+      // Ensure is_dom_reward is properly included and is a boolean
+      dataToSave.is_dom_reward = Boolean(dataToSave.is_dom_reward);
       
       let result: Reward | null = null;
       
@@ -111,8 +113,9 @@ export const useRewardOperations = () => {
         if (data && data.length > 0) {
           result = {
             ...data[0],
+            is_dom_reward: data[0]?.is_dom_reward ?? false, // Default to false if not present
             created_at: existingReward.created_at
-          };
+          } as Reward;
           
           const updatedRewards = [...rewards];
           updatedRewards[index] = result;
