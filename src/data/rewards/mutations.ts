@@ -188,7 +188,7 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
       }
       
       // Update the rewards cache
-      queryClient.setQueryData<Reward[]>(
+      queryClient.setQueryData(
         REWARDS_QUERY_KEY, 
         (oldRewards: Reward[] = []) => {
           return oldRewards.map(reward => 
@@ -200,12 +200,13 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
       );
       
       // Update the total supply
-      queryClient.setQueryData<number>(
+      queryClient.setQueryData(
         REWARDS_SUPPLY_QUERY_KEY,
         (oldSupply = 0) => oldSupply + 1
       );
       
-      showToast({
+      // Fix: Replace showToast with the correct toast function
+      toast({
         title: "Reward Purchased",
         description: `You purchased "${rewardData.title}"`,
       });
