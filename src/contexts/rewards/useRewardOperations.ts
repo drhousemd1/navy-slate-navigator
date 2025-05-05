@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
@@ -54,7 +55,7 @@ export const useRewardOperations = () => {
       }
       
       // Ensure is_dom_reward is properly included and is a boolean
-      dataToSave.is_dom_reward = Boolean(dataToSave.is_dom_reward);
+      dataToSave.is_dom_reward = Boolean(dataToSave.is_dom_reward ?? false);
       
       let result: Reward | null = null;
       
@@ -368,9 +369,100 @@ export const useRewardOperations = () => {
     setDomPoints,
     refetchRewards,
     handleSaveReward,
-    handleDeleteReward,
+    handleDeleteReward: useCallback(async (index: number): Promise<boolean> => {
+      console.log("Handling delete reward at index:", index);
+      
+      try {
+        const rewardToDelete = rewards[index];
+        if (!rewardToDelete || !rewardToDelete.id) {
+          console.error("Invalid reward index or reward has no ID:", index);
+          return false;
+        }
+        
+        const success = await deleteReward(rewardToDelete.id);
+        
+        if (success) {
+          console.log("Reward deleted successfully");
+          setRewards(prevRewards => prevRewards.filter((_, i) => i !== index));
+          return true;
+        }
+        
+        return false;
+      } catch (error) {
+        console.error("Error in handleDeleteReward:", error);
+        throw error;
+      }
+    }, [rewards]),
     handleBuyReward,
-    handleUseReward,
+    handleUseReward: useCallback(async (id: string) => {
+      console.log("Handling use reward with ID:", id);
+      
+      try {
+        const rewardIndex = rewards.findIndex(r => r.id === id);
+        if (rewardIndex === -1) {
+          console.error("Reward not found with ID:", id);
+          return;
+        }
+        
+        const reward = rewards[rewardIndex];
+        
+        if (reward.supply <= 0) {
+          console.error("Cannot use reward with no supply");
+          
+          toast({
+            title: "Cannot Use Reward",
+            description: "You don't have any of this reward to use.",
+            variant: "destructive",
+          });
+          
+          return;
+        }
+        
+        const updatedSupply = reward.supply - 1;
+        const success = await updateRewardSupply(reward.id, updatedSupply);
+        
+        if (success) {
+          console.log("Reward used successfully");
+          
+          const today = new Date();
+          const dayOfWeek = today.getDay(); // 0-6, where 0 is Sunday
+          const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
+          
+          const { error: usageError } = await supabase
+            .from('reward_usage')
+            .insert({
+              reward_id: reward.id,
+              day_of_week: dayOfWeek,
+              week_number: weekNumber,
+              used: true,
+              created_at: new Date().toISOString()
+            });
+            
+          if (usageError) {
+            console.error("Error recording reward usage:", usageError);
+          } else {
+            console.log("Reward usage recorded successfully");
+          }
+          
+          const updatedRewards = [...rewards];
+          updatedRewards[rewardIndex] = { ...reward, supply: updatedSupply };
+          setRewards(updatedRewards);
+          
+          toast({
+            title: "Reward Used",
+            description: `You used ${reward.title}`,
+          });
+        }
+      } catch (error) {
+        console.error("Error in handleUseReward:", error);
+        
+        toast({
+          title: "Error",
+          description: "Failed to use reward. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }, [rewards]),
     getTotalRewardsSupply,
     refreshPointsFromDatabase
   };

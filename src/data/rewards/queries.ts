@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/lib/rewardUtils';
 import { logQueryPerformance } from '@/lib/react-query-config';

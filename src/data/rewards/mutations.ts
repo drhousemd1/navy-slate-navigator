@@ -1,4 +1,3 @@
-
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
 import { BuyRewardParams, SaveRewardParams } from '@/contexts/rewards/rewardTypes';
@@ -22,7 +21,7 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
         title: rewardData.title,
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
-        is_dom_reward: Boolean(rewardData.is_dom_reward), // Ensure proper boolean conversion
+        is_dom_reward: Boolean(rewardData.is_dom_reward ?? false), // Ensure proper boolean conversion with default
         supply: rewardData.supply || 0, 
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
@@ -175,7 +174,7 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
       }
       
       // Determine if this is a dom reward from the reward itself if not explicitly provided
-      const isRewardDominant = isDomReward !== undefined ? isDomReward : Boolean(rewardData.is_dom_reward);
+      const isRewardDominant = isDomReward !== undefined ? isDomReward : Boolean(rewardData.is_dom_reward ?? false);
       console.log("Buy reward - Using is_dom_reward value from database:", rewardData.is_dom_reward);
       console.log("Buy reward - Final isDomReward determination:", isRewardDominant);
       

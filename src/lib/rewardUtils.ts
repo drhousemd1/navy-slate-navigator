@@ -19,7 +19,7 @@ export interface Reward {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
-  is_dom_reward?: boolean; // Make this optional since it might not exist in DB yet
+  is_dom_reward: boolean; // Make this required since we're using it throughout the app
   created_at?: string;
   updated_at?: string;
 }
@@ -139,7 +139,7 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       // Ensure is_dom_reward is a boolean
       const dataToSave = {
         ...reward,
-        is_dom_reward: Boolean(reward.is_dom_reward)
+        is_dom_reward: Boolean(reward.is_dom_reward ?? false)
       };
       
       const { data, error } = await supabase
