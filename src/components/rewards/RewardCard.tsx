@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Reward } from '@/lib/rewardUtils';
 import { Badge } from '@/components/ui/badge';
 import { useRewards } from '@/contexts/RewardsContext';
 import { cn } from '@/lib/utils';
-import { Crown, Coins } from 'lucide-react';
+import { Crown, Coins, Box } from 'lucide-react';
 
 interface RewardCardProps {
   reward: Reward;
