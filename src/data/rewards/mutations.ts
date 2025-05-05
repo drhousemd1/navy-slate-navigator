@@ -1,3 +1,4 @@
+
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
 import { BuyRewardParams, SaveRewardParams } from '@/contexts/rewards/rewardTypes';
@@ -61,6 +62,11 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
           throw error;
         }
         
+        // Make sure we have a result before accessing properties
+        if (!updatedReward) {
+          throw new Error("No data returned from update operation");
+        }
+        
         result = updatedReward;
         console.log("Updated reward result:", result);
         console.log("Updated reward is_dom_reward:", result?.is_dom_reward);
@@ -91,6 +97,11 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
         if (error) {
           console.error("Supabase insert error:", error);
           throw error;
+        }
+        
+        // Make sure we have a result before accessing properties
+        if (!newReward) {
+          throw new Error("No data returned from insert operation");
         }
         
         result = newReward;

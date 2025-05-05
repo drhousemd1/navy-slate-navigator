@@ -19,7 +19,7 @@ export interface Reward {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
-  is_dom_reward?: boolean;
+  is_dom_reward: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -109,6 +109,10 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
         throw error;
       }
       
+      if (!data || data.length === 0) {
+        throw new Error("No data returned from update operation");
+      }
+      
       console.log('[saveReward] Reward updated successfully, returned data:', data[0]);
       console.log('Updated reward is_dom_reward:', data[0]?.is_dom_reward);
       
@@ -137,6 +141,10 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       if (error) {
         console.error("Supabase insert error:", error);
         throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error("No data returned from insert operation");
       }
       
       console.log('[saveReward] New reward created:', data[0]);
