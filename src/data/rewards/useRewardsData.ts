@@ -90,31 +90,35 @@ export const useRewardsData = () => {
 
   // Setup real-time subscriptions to profiles table for points updates
   useEffect(() => {
-    const { data: userData } = supabase.auth.getSession();
-    const userId = userData?.session?.user.id;
+    // Use getSession instead of getUser as it returns a synchronous result
+    const sessionData = supabase.auth.getSession();
     
-    if (!userId) return;
+    sessionData.then(({ data }) => {
+      const userId = data?.session?.user.id;
+      
+      if (!userId) return;
 
-    const pointsChannel = supabase
-      .channel('profiles-changes')
-      .on('postgres_changes', 
-        {
-          event: 'UPDATE', 
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${userId}`
-        }, 
-        (payload) => {
-          console.log('Real-time points update:', payload);
-          // Refresh points when profile is updated
-          refreshPointsFromDatabase();
-        }
-      )
-      .subscribe();
+      const pointsChannel = supabase
+        .channel('profiles-changes')
+        .on('postgres_changes', 
+          {
+            event: 'UPDATE', 
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${userId}`
+          }, 
+          (payload) => {
+            console.log('Real-time points update:', payload);
+            // Refresh points when profile is updated
+            refreshPointsFromDatabase();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(pointsChannel);
-    };
+      return () => {
+        supabase.removeChannel(pointsChannel);
+      };
+    });
   }, [refreshPointsFromDatabase]);
 
   // Optimistic update setters
