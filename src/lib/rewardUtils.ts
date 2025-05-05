@@ -19,7 +19,7 @@ export interface Reward {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
-  is_dom_reward: boolean; // Make this required since we're using it throughout the app
+  is_dom_reward: boolean; // Make sure this is included in the interface
   created_at?: string;
   updated_at?: string;
 }

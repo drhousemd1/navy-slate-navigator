@@ -383,6 +383,7 @@ export type Database = {
           icon_color: string | null
           icon_name: string | null
           id: string
+          is_dom_reward: boolean | null
           subtext_color: string | null
           supply: number
           title: string
@@ -402,6 +403,7 @@ export type Database = {
           icon_color?: string | null
           icon_name?: string | null
           id?: string
+          is_dom_reward?: boolean | null
           subtext_color?: string | null
           supply?: number
           title: string
@@ -421,6 +423,7 @@ export type Database = {
           icon_color?: string | null
           icon_name?: string | null
           id?: string
+          is_dom_reward?: boolean | null
           subtext_color?: string | null
           supply?: number
           title?: string

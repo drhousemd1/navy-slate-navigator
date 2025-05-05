@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
@@ -358,6 +357,7 @@ export const useRewardOperations = () => {
     }
   }, [rewards]);
 
+  
   return {
     rewards,
     setRewards,
