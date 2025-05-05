@@ -1,4 +1,3 @@
-
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
 import { BuyRewardParams, SaveRewardParams } from '@/contexts/rewards/rewardTypes';
@@ -50,7 +49,7 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
         if (error) throw error;
         result = updatedReward;
 
-        // Update the cache - fix type parameter issues
+        // Update the cache
         queryClient.setQueryData(
           REWARDS_QUERY_KEY, 
           (oldRewards: Reward[] = []) => {
@@ -73,7 +72,7 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
         if (error) throw error;
         result = newReward;
 
-        // Update the cache - fix type parameter issues
+        // Update the cache
         queryClient.setQueryData(
           REWARDS_QUERY_KEY, 
           (oldRewards: Reward[] = []) => {
@@ -199,13 +198,12 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         }
       );
       
-      // Update the total supply
+      // Update the total supply - FIX: explicitly cast oldSupply to number to fix the type error
       queryClient.setQueryData(
         REWARDS_SUPPLY_QUERY_KEY,
-        (oldSupply = 0) => oldSupply + 1
+        (oldSupply: number = 0) => oldSupply + 1
       );
       
-      // Fix: Replace showToast with the correct toast function
       toast({
         title: "Reward Purchased",
         description: `You purchased "${rewardData.title}"`,
