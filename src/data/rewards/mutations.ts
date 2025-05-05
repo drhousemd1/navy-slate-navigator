@@ -349,17 +349,25 @@ export const useRewardMutation = (queryClient: QueryClient) =>
       const dayOfWeek = today.getDay();
       const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
       
-      // Not awaiting this to speed up the operation
-      supabase
+      // Not awaiting this to speed up the operation - FIX: Remove .catch() and handle differently
+      // Store the promise to handle it properly
+      const usagePromise = supabase
         .from('reward_usage')
         .insert({
           reward_id: rewardId,
           day_of_week: dayOfWeek,
           used: true,
           week_number: weekNumber
-        })
-        .then(() => console.log("Reward usage recorded successfully"))
-        .catch(err => console.error("Error recording reward usage (non-critical):", err));
+        });
+        
+      // Handle the promise without using .catch()
+      void usagePromise.then(result => {
+        if (result.error) {
+          console.error("Error recording reward usage (non-critical):", result.error);
+        } else {
+          console.log("Reward usage recorded successfully");
+        }
+      });
       
       // Update cache directly for immediate UI feedback
       queryClient.setQueryData(REWARDS_QUERY_KEY, (old: Reward[] = []) => 
