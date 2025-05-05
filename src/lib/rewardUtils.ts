@@ -51,6 +51,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
         position: i,
         id: r.id, 
         title: r.title,
+        is_dom_reward: r.is_dom_reward,
         created_at: r.created_at,
         updated_at: r.updated_at
       }))
@@ -71,6 +72,11 @@ export const fetchRewards = async (): Promise<Reward[]> => {
 
 export const saveReward = async (reward: Partial<Reward> & { title: string }, existingId?: string): Promise<Reward | null> => {
   try {
+    console.log("[saveReward] Starting with data:", { ...reward, existingId });
+    console.log("is_dom_reward value in saveReward:", reward.is_dom_reward);
+    
+    const startTime = performance.now();
+    
     if (existingId) {
       // CRITICAL FIX: When updating an existing reward:
       // 1. Never update the created_at timestamp
@@ -79,6 +85,9 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       
       // Create a clean copy of the reward data without any timestamp fields
       const { created_at, updated_at, ...cleanRewardData } = reward;
+      
+      // Ensure is_dom_reward is properly included and is a boolean
+      cleanRewardData.is_dom_reward = Boolean(cleanRewardData.is_dom_reward);
       
       console.log('[saveReward] Updating reward with clean data (no timestamps):', 
         { id: existingId, ...cleanRewardData });
@@ -92,9 +101,17 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
         .eq('id', existingId)
         .select();
       
-      if (error) throw error;
+      const endTime = performance.now();
+      console.log(`[saveReward] Update operation took ${endTime - startTime}ms`);
+      
+      if (error) {
+        console.error("Supabase update error:", error);
+        throw error;
+      }
       
       console.log('[saveReward] Reward updated successfully, returned data:', data[0]);
+      console.log('Updated reward is_dom_reward:', data[0]?.is_dom_reward);
+      
       return data[0] as Reward;
     } else {
       // Create new reward
@@ -103,13 +120,28 @@ export const saveReward = async (reward: Partial<Reward> & { title: string }, ex
       // Make sure is_dom_reward is included when creating a new reward
       console.log("is_dom_reward value for new reward:", reward.is_dom_reward);
       
+      // Ensure is_dom_reward is a boolean
+      const dataToSave = {
+        ...reward,
+        is_dom_reward: Boolean(reward.is_dom_reward)
+      };
+      
       const { data, error } = await supabase
         .from('rewards')
-        .insert(reward)
+        .insert(dataToSave)
         .select();
       
-      if (error) throw error;
+      const endTime = performance.now();
+      console.log(`[saveReward] Insert operation took ${endTime - startTime}ms`);
+      
+      if (error) {
+        console.error("Supabase insert error:", error);
+        throw error;
+      }
+      
       console.log('[saveReward] New reward created:', data[0]);
+      console.log('New reward is_dom_reward:', data[0]?.is_dom_reward);
+      
       return data[0] as Reward;
     }
   } catch (err: any) {

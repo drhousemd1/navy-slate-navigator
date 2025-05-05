@@ -1,4 +1,3 @@
-
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
 import { BuyRewardParams, SaveRewardParams } from '@/contexts/rewards/rewardTypes';
@@ -15,14 +14,15 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
       }
 
       console.log("Saving reward with data:", JSON.stringify(rewardData));
+      console.log("is_dom_reward value in saveRewardMutation:", rewardData.is_dom_reward);
 
       // Prepare data for saving - update with correct type properties
       const dataToSave = {
         title: rewardData.title,
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
-        is_dom_reward: rewardData.is_dom_reward || false, // Make sure this is included in the dataToSave
-        supply: 0, // Default value 
+        is_dom_reward: Boolean(rewardData.is_dom_reward), // Ensure proper boolean conversion
+        supply: rewardData.supply || 0, 
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
         background_image_url: rewardData.background_image_url || null,
@@ -36,8 +36,10 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
       };
 
       console.log("Data being sent to Supabase:", dataToSave);
+      console.log("Final is_dom_reward value in data:", dataToSave.is_dom_reward);
 
       let result: Reward | null = null;
+      const startTime = performance.now();
 
       if (rewardData.id) {
         // Update existing reward
@@ -51,8 +53,17 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
           .select('*')
           .single();
 
-        if (error) throw error;
+        const endTime = performance.now();
+        console.log(`[saveRewardMutation] Update operation took ${endTime - startTime}ms`);
+        
+        if (error) {
+          console.error("Supabase update error:", error);
+          throw error;
+        }
+        
         result = updatedReward;
+        console.log("Updated reward result:", result);
+        console.log("Updated reward is_dom_reward:", result?.is_dom_reward);
 
         // Update the cache
         queryClient.setQueryData(
@@ -74,8 +85,17 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
           .select('*')
           .single();
 
-        if (error) throw error;
+        const endTime = performance.now();
+        console.log(`[saveRewardMutation] Insert operation took ${endTime - startTime}ms`);
+        
+        if (error) {
+          console.error("Supabase insert error:", error);
+          throw error;
+        }
+        
         result = newReward;
+        console.log("New reward result:", result);
+        console.log("New reward is_dom_reward:", result?.is_dom_reward);
 
         // Update the cache
         queryClient.setQueryData(
@@ -122,10 +142,10 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         throw new Error("User not authenticated");
       }
       
-      // Get the reward to confirm it exists
+      // Get the reward to confirm it exists and check if it's a dom reward
       const { data: rewardData, error: rewardError } = await supabase
         .from('rewards')
-        .select('id, title, supply')
+        .select('id, title, supply, is_dom_reward')
         .eq('id', rewardId)
         .single();
         
@@ -133,8 +153,13 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         throw new Error("Reward not found");
       }
       
+      // Determine if this is a dom reward from the reward itself if not explicitly provided
+      const isRewardDominant = isDomReward !== undefined ? isDomReward : Boolean(rewardData.is_dom_reward);
+      console.log("Buy reward - Using is_dom_reward value from database:", rewardData.is_dom_reward);
+      console.log("Buy reward - Final isDomReward determination:", isRewardDominant);
+      
       // Check which points field to update based on reward type
-      const pointsField = isDomReward ? 'dom_points' : 'points';
+      const pointsField = isRewardDominant ? 'dom_points' : 'points';
       
       // First check user's points
       const { data: userProfile, error: profileError } = await supabase
@@ -150,7 +175,7 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
       const currentPoints = userProfile[pointsField] || 0;
       
       if (currentPoints < cost) {
-        throw new Error(`Not enough ${isDomReward ? 'dom ' : ''}points to buy this reward`);
+        throw new Error(`Not enough ${isRewardDominant ? 'dom ' : ''}points to buy this reward`);
       }
       
       const newPoints = currentPoints - cost;
@@ -185,7 +210,7 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
       }
       
       // Update the cache
-      if (isDomReward) {
+      if (isRewardDominant) {
         queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, newPoints);
       } else {
         queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, newPoints);
@@ -203,7 +228,7 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         }
       );
       
-      // Update the total supply - FIX: explicitly cast oldSupply to number to fix the type error
+      // Update the total supply - Explicitly type oldSupply as number
       queryClient.setQueryData(
         REWARDS_SUPPLY_QUERY_KEY,
         (oldSupply: number = 0) => oldSupply + 1

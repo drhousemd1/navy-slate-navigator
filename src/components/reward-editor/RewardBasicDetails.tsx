@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -95,25 +95,28 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
         <FormField
           control={control}
           name="is_dom_reward"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-lg border border-light-navy p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-white">Reward Type</FormLabel>
-                <FormDescription className="text-gray-400">
-                  {field.value ? "Dominant Reward" : "Submissive Reward"}
-                </FormDescription>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={(checked) => {
-                    console.log("Switch toggled to:", checked);
-                    field.onChange(checked);
-                  }}
-                />
-              </FormControl>
-            </FormItem>
-          )}
+          render={({ field }) => {
+            console.log("Rendering is_dom_reward switch with value:", field.value);
+            return (
+              <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-lg border border-light-navy p-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-white">Reward Type</FormLabel>
+                  <FormDescription className="text-gray-400">
+                    {field.value ? "Dominant Reward" : "Submissive Reward"}
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      console.log("Switch toggled to:", checked);
+                      field.onChange(checked);
+                    }}
+                  />
+                </FormControl>
+              </FormItem>
+            );
+          }}
         />
       </div>
     </>

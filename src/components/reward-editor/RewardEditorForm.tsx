@@ -28,6 +28,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   const [iconPreview, setIconPreview] = React.useState<string | null>(null);
 
   console.log("RewardEditorForm initialized with data:", rewardData);
+  console.log("RewardEditorForm - initial is_dom_reward value:", rewardData?.is_dom_reward);
 
   // Form handling with react-hook-form
   const form = useForm({
@@ -63,12 +64,17 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   useEffect(() => {
     if (rewardData) {
       console.log("Setting form data from rewardData:", rewardData);
+      console.log("is_dom_reward value from rewardData:", rewardData.is_dom_reward);
+      
+      // Explicitly ensure is_dom_reward is a proper boolean, not a string or other type
+      const isDomRewardValue = Boolean(rewardData.is_dom_reward);
+      console.log("Converted is_dom_reward value to boolean:", isDomRewardValue);
       
       reset({
         title: rewardData.title || '',
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
-        is_dom_reward: Boolean(rewardData.is_dom_reward) || false,
+        is_dom_reward: isDomRewardValue,
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
         title_color: rewardData.title_color || '#FFFFFF',
@@ -81,7 +87,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         focal_point_y: rewardData.focal_point_y || 50,
       });
       
-      console.log("Form reset with is_dom_reward:", Boolean(rewardData.is_dom_reward));
+      console.log("Form reset with is_dom_reward:", isDomRewardValue);
     }
   }, [rewardData, reset]);
 
@@ -131,6 +137,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   const onSubmit = async (data: any) => {
     console.log("Submitting form with data:", data);
+    console.log("is_dom_reward in submitted data:", data.is_dom_reward);
     await onSave(data);
   };
 

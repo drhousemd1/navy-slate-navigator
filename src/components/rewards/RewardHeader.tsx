@@ -30,7 +30,10 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
     ? "bg-red-600" 
     : "bg-nav-active";
   
+  // Use Crown icon for dom rewards, Coins for sub rewards
   const CostIcon = isDomReward ? Crown : Coins;
+  
+  console.log("RewardHeader rendered with isDomReward:", isDomReward);
 
   return (
     <div className="flex justify-between items-start mb-3">

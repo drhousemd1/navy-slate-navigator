@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
@@ -42,6 +43,9 @@ export const useRewardOperations = () => {
 
   const handleSaveReward = useCallback(async (rewardData: any, index: number | null): Promise<Reward | null> => {
     console.log("[RewardsContext] Handling save reward with data:", rewardData, "at index:", index);
+    console.log("[RewardsContext] is_dom_reward value:", rewardData.is_dom_reward);
+    
+    const startTime = performance.now();
     
     try {
       const dataToSave = { ...rewardData };
@@ -60,6 +64,7 @@ export const useRewardOperations = () => {
             position: i,
             id: r.id,
             title: r.title,
+            is_dom_reward: r.is_dom_reward,
             created_at: r.created_at,
             updated_at: r.updated_at
           }))
@@ -67,12 +72,15 @@ export const useRewardOperations = () => {
         
         console.log("[RewardsContext] Updating reward at position:", index, 
           "with ID:", existingReward.id, 
-          "title:", existingReward.title);
+          "title:", existingReward.title,
+          "is_dom_reward:", dataToSave.is_dom_reward);
         
+        // Include is_dom_reward in the fields to update
         const fieldsToUpdate = {
           title: dataToSave.title,
           description: dataToSave.description,
           cost: dataToSave.cost,
+          is_dom_reward: dataToSave.is_dom_reward, // Added this field explicitly
           icon_name: dataToSave.icon_name,
           icon_url: dataToSave.icon_url,
           icon_color: dataToSave.icon_color,
@@ -86,13 +94,17 @@ export const useRewardOperations = () => {
           calendar_color: dataToSave.calendar_color,
         };
         
-        console.log("[RewardsContext] Updating only these fields:", Object.keys(fieldsToUpdate));
+        console.log("[RewardsContext] Updating with these fields:", Object.keys(fieldsToUpdate));
+        console.log("[RewardsContext] is_dom_reward value being sent:", fieldsToUpdate.is_dom_reward);
         
         const { data, error } = await supabase
           .from('rewards')
           .update(fieldsToUpdate)
           .eq('id', existingReward.id)
           .select();
+        
+        const endDbTime = performance.now();
+        console.log(`[RewardsContext] Database update took ${endDbTime - startTime}ms`);
         
         if (error) throw error;
         
@@ -107,13 +119,15 @@ export const useRewardOperations = () => {
           
           console.log("[RewardsContext] Updated reward at position", index, 
             "ID:", result.id, 
-            "title:", result.title);
+            "title:", result.title,
+            "is_dom_reward:", result.is_dom_reward);
           
           console.log("[RewardsContext] Rewards list AFTER update:", 
             updatedRewards.map((r, i) => ({
               position: i,
               id: r.id,
               title: r.title,
+              is_dom_reward: r.is_dom_reward,
               created_at: r.created_at,
               updated_at: r.updated_at
             }))
@@ -122,6 +136,8 @@ export const useRewardOperations = () => {
           setRewards(updatedRewards);
         }
       } else {
+        // For new rewards, is_dom_reward is already included in dataToSave
+        console.log("[RewardsContext] Creating new reward with is_dom_reward:", dataToSave.is_dom_reward);
         result = await saveReward(dataToSave as Reward & { title: string });
         
         if (result) {
@@ -133,6 +149,7 @@ export const useRewardOperations = () => {
                 position: i,
                 id: r.id,
                 title: r.title,
+                is_dom_reward: r.is_dom_reward,
                 created_at: r.created_at
               }))
             );
@@ -141,6 +158,9 @@ export const useRewardOperations = () => {
           });
         }
       }
+      
+      const endTime = performance.now();
+      console.log(`[RewardsContext] Total save operation took ${endTime - startTime}ms`);
       
       return result;
     } catch (error) {
@@ -197,11 +217,16 @@ export const useRewardOperations = () => {
       }
       
       const reward = rewards[rewardIndex];
+      console.log("Found reward:", reward.title, "is_dom_reward:", reward.is_dom_reward);
+      
+      // Determine if this is a dom reward from the reward itself if not explicitly provided
+      const isRewardDominant = isDomReward !== undefined ? isDomReward : Boolean(reward.is_dom_reward);
+      console.log("Final determination of isDomReward:", isRewardDominant);
       
       // Deduct points based on reward type
       const newPoints = currentPoints - cost;
       
-      if (isDomReward) {
+      if (isRewardDominant) {
         setDomPoints(newPoints);
         const pointsUpdateSuccess = await updateDomPointsInDatabase(newPoints);
         

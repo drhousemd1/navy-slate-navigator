@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
@@ -28,15 +29,31 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   useEffect(() => {
     if (rewardData) {
       console.log("RewardEditor opened with data:", rewardData);
+      console.log("is_dom_reward value in RewardEditor useEffect:", rewardData.is_dom_reward);
     }
   }, [rewardData, isOpen]);
   
   const handleSave = async (formData: any) => {
     console.log("RewardEditor handling save with form data:", formData);
+    console.log("is_dom_reward value in handleSave:", formData.is_dom_reward);
+    
+    const startTime = performance.now();
+    
     try {
       setIsSaving(true);
-      const dataToSave = rewardData ? { ...formData, id: rewardData.id } : formData;
+      const dataToSave = rewardData ? { 
+        ...formData, 
+        id: rewardData.id,
+        is_dom_reward: Boolean(formData.is_dom_reward) // Ensure proper boolean conversion
+      } : formData;
+      
+      console.log("Final data being sent to save:", dataToSave);
+      console.log("Final is_dom_reward value:", dataToSave.is_dom_reward);
+      
       await onSave(dataToSave);
+      
+      const endTime = performance.now();
+      console.log(`Save operation completed in ${endTime - startTime}ms`);
       
       // Display a single toast message on success
       toast({

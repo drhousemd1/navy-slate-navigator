@@ -6,7 +6,7 @@ import { Reward } from '@/lib/rewardUtils';
 import { Badge } from '@/components/ui/badge';
 import { useRewards } from '@/contexts/RewardsContext';
 import { cn } from '@/lib/utils';
-import { Crown } from 'lucide-react';
+import { Crown, Coins } from 'lucide-react';
 
 interface RewardCardProps {
   reward: Reward;
@@ -18,7 +18,11 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
   const [buying, setBuying] = React.useState(false);
   const [using, setUsing] = React.useState(false);
   
+  // Explicitly enforce boolean type for is_dom_reward
   const isDomReward = Boolean(reward.is_dom_reward);
+  console.log(`RewardCard: ${reward.title}, isDomReward: ${isDomReward}`);
+
+  // Use appropriate points based on reward type
   const currentPoints = isDomReward ? domPoints : totalPoints;
   const canAfford = currentPoints >= reward.cost;
   const hasAvailable = reward.supply > 0;
@@ -46,7 +50,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
     }
   };
 
-  // Calculate background style with focal points and opacity
+  // Get background style with focal points and opacity
   const getBgStyle = () => {
     if (!reward.background_image_url) return {};
     
@@ -58,8 +62,25 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
     };
   };
 
+  // Define styles based on if it's a dom reward
+  const costBadgeColor = isDomReward ? "bg-red-600" : "bg-nav-active";
+  const buyButtonColor = isDomReward 
+    ? "bg-red-600 hover:bg-red-700" 
+    : "bg-nav-active hover:bg-nav-active/80";
+
+  // Define border color based on if it's a dom reward and if there's supply
+  const cardBorderColor = isDomReward 
+    ? "#ea384c" // Red for dom rewards
+    : (hasAvailable ? "#FEF7CD" : "#00f0ff"); // Yellow for sub rewards with supply, blue otherwise
+  
+  const cardBorderStyle = {
+    borderColor: cardBorderColor,
+    boxShadow: hasAvailable ? `0 0 8px 2px rgba(${isDomReward ? '234, 56, 76, 0.6' : '254, 247, 205, 0.6'})` : undefined
+  };
+
   return (
-    <Card className="relative overflow-hidden bg-dark-navy border-light-navy text-white">
+    <Card className="relative overflow-hidden bg-dark-navy border-2 border-light-navy text-white"
+          style={cardBorderStyle}>
       {/* Background image with opacity */}
       {reward.background_image_url && (
         <div 
@@ -113,9 +134,14 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
             )}
             
             <div 
-              className="text-sm font-medium rounded-full px-3 py-1 mt-1" 
-              style={{ backgroundColor: reward.calendar_color || '#7E69AB' }}
+              className="text-sm font-medium rounded-full px-3 py-1 mt-1 flex items-center" 
+              style={{ backgroundColor: isDomReward ? "#ea384c" : (reward.calendar_color || '#7E69AB') }}
             >
+              {isDomReward ? (
+                <Crown className="h-3 w-3 mr-1" />
+              ) : (
+                <Coins className="h-3 w-3 mr-1" />
+              )}
               {reward.cost} pts
             </div>
           </div>
@@ -141,7 +167,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
               size="sm"
               disabled={!canAfford || buying}
               onClick={handleBuyClick}
-              className={`${canAfford ? 'bg-nav-active hover:bg-nav-active/80' : 'bg-dark-navy text-light-navy'}`}
+              className={`${canAfford ? buyButtonColor : 'bg-dark-navy text-light-navy'}`}
             >
               {buying ? "Buying..." : "Buy"}
             </Button>
