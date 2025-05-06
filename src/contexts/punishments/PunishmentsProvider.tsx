@@ -15,7 +15,7 @@ const PunishmentsContext = createContext<PunishmentsContextType>({
   selectedPunishment: null,
   createPunishment: async () => ({ id: '', title: '', points: 0 }),
   updatePunishment: async () => ({ id: '', title: '', points: 0 }),
-  deletePunishment: async () => false, // Updated return type to boolean
+  deletePunishment: async () => false,
   applyPunishment: async () => ({} as PunishmentHistoryItem),
   selectRandomPunishment: () => {},
   resetRandomSelection: () => {},
@@ -33,7 +33,7 @@ export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ childre
   
   // Provide the context value
   return (
-    <PunishmentsContext.Provider value={punishmentsData}>
+    <PunishmentsContext.Provider value={punishmentsData as PunishmentsContextType}>
       {children}
     </PunishmentsContext.Provider>
   );

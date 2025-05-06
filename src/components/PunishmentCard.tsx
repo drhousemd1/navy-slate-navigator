@@ -11,7 +11,7 @@ import { usePunishmentCard } from './punishments/hooks/usePunishmentCard';
 
 interface PunishmentCardProps {
   title: string;
-  description?: string; // Make description optional to match punishment data
+  description?: string;
   points: number;
   dom_points?: number;
   icon?: React.ReactNode;
@@ -26,7 +26,7 @@ interface PunishmentCardProps {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
-  onEdit?: () => void; // Add this prop to fix the type error
+  onEdit?: () => void;
 }
 
 const PunishmentCard: React.FC<PunishmentCardProps> = ({

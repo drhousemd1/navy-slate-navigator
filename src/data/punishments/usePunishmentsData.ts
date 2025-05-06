@@ -4,8 +4,8 @@ import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/ty
 import { 
   PUNISHMENTS_QUERY_KEY, 
   PUNISHMENT_HISTORY_QUERY_KEY,
-  fetchPunishmentsQuery,
-  fetchPunishmentHistoryQuery,
+  fetchPunishments,
+  fetchCurrentWeekPunishmentHistory,
 } from './queries';
 import { 
   createPunishmentMutation, 
@@ -34,7 +34,7 @@ export const usePunishmentsData = () => {
     refetch: refetchPunishmentsOriginal
   } = useQuery({
     queryKey: PUNISHMENTS_QUERY_KEY,
-    queryFn: fetchPunishmentsQuery,
+    queryFn: fetchPunishments,
     staleTime: Infinity,
     gcTime: Infinity,
   });
@@ -46,7 +46,7 @@ export const usePunishmentsData = () => {
     refetch: refetchHistoryOriginal
   } = useQuery({
     queryKey: PUNISHMENT_HISTORY_QUERY_KEY,
-    queryFn: fetchPunishmentHistoryQuery,
+    queryFn: fetchCurrentWeekPunishmentHistory,
     staleTime: Infinity,
     gcTime: Infinity,
   });
@@ -63,7 +63,7 @@ export const usePunishmentsData = () => {
   );
   
   // Calculate total points deducted
-  const totalPointsDeducted = punishmentHistory.reduce(
+  const totalPointsDeducted = (punishmentHistory as PunishmentHistoryItem[]).reduce(
     (sum, item) => sum + item.points_deducted, 
     0
   );
@@ -179,7 +179,11 @@ export const usePunishmentsData = () => {
   // Update an existing punishment
   const updatePunishment = async (id: string, punishmentData: Partial<PunishmentData>): Promise<PunishmentData> => {
     try {
-      const result = await updatePunishmentMutate.mutateAsync({ id, ...punishmentData });
+      // Fix the argument format to match the expected type
+      const result = await updatePunishmentMutate.mutateAsync({ 
+        id, 
+        punishment: punishmentData 
+      });
       return result;
     } catch (error) {
       console.error("Error in updatePunishment:", error);
@@ -211,7 +215,7 @@ export const usePunishmentsData = () => {
   
   // Get history for a specific punishment
   const getPunishmentHistory = (punishmentId: string): PunishmentHistoryItem[] => {
-    return punishmentHistory.filter(item => item.punishment_id === punishmentId);
+    return (punishmentHistory as PunishmentHistoryItem[]).filter(item => item.punishment_id === punishmentId);
   };
   
   // Handle random punishment selection
@@ -223,7 +227,7 @@ export const usePunishmentsData = () => {
     
     // Simulate selection process with a timer
     setTimeout(() => {
-      if (punishments.length === 0) {
+      if ((punishments as PunishmentData[]).length === 0) {
         toast({
           title: "Error",
           description: "No punishments available",
@@ -234,8 +238,8 @@ export const usePunishmentsData = () => {
       }
       
       // Select a random punishment
-      const randomIndex = Math.floor(Math.random() * punishments.length);
-      setSelectedPunishment(punishments[randomIndex]);
+      const randomIndex = Math.floor(Math.random() * (punishments as PunishmentData[]).length);
+      setSelectedPunishment((punishments as PunishmentData[])[randomIndex]);
       setIsSelectingRandom(false);
     }, 2000); // 2 seconds delay for animation
   };
@@ -252,8 +256,8 @@ export const usePunishmentsData = () => {
   }, [fetchPunishments]);
   
   return {
-    punishments,
-    punishmentHistory,
+    punishments: punishments as PunishmentData[],
+    punishmentHistory: punishmentHistory as PunishmentHistoryItem[],
     loading,
     historyLoading,
     error,
