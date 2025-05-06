@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -139,11 +140,6 @@
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
     line-height: 1.6;
-  }
-  
-  /* Dom badge style - black background with red border */
-  .dom-badge {
-    @apply bg-black/90 text-white font-bold px-3 py-1 flex items-center gap-1 border-2 border-red-500;
   }
   
   /* Toast styling for single line at top */

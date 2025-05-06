@@ -24,11 +24,11 @@ const TasksHeader: React.FC = () => {
           <Coins className="w-3 h-3" />
           <span>{totalPoints}</span>
         </Badge>
-        <Badge className="dom-badge rounded-md">
+        <Badge className="bg-red-500 text-white font-bold px-3 py-1 flex items-center gap-1">
           <Box className="w-3 h-3" />
           <span>{totalDomRewardsSupply}</span>
         </Badge>
-        <Badge className="dom-badge rounded-md">
+        <Badge className="bg-red-500 text-white font-bold px-3 py-1 flex items-center gap-1">
           <Crown className="w-3 h-3" />
           <span>{domPoints}</span>
         </Badge>
