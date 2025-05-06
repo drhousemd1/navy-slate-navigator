@@ -7,10 +7,10 @@ export function Toaster() {
 
   return (
     <SonnerToaster 
-      position="top-right"
+      position="top-center"
       toastOptions={{
         duration: 3000,
-        className: "shadow-lg border-border bg-background text-foreground",
+        className: "shadow-lg border-border bg-background text-foreground max-w-full w-full single-line-toast",
         descriptionClassName: "text-muted-foreground text-sm",
       }}
       closeButton

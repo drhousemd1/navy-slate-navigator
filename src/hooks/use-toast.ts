@@ -17,8 +17,8 @@ const toast = ({ title, description, action, variant }: ToastProps) => {
     description,
     action,
     className: variant === "destructive" ? "destructive" : "",
-    position: "top-right", // Consistent positioning
-    duration: 3000, // Reasonable duration
+    position: "top-center", // Changed from top-right to top-center
+    duration: 3000, // Keeping the reasonable duration
   });
 };
 

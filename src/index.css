@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -140,6 +139,23 @@
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
     line-height: 1.6;
+  }
+  
+  /* Toast styling for single line at top */
+  .single-line-toast {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    margin: 0;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
   }
   
   /* Hide scrollbar utility */
