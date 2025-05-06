@@ -206,14 +206,9 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
       const newPoints = currentPoints - cost;
       queryClient.setQueryData(pointsQueryKey, newPoints);
       
-      queryClient.setQueryData(
-        REWARDS_QUERY_KEY, 
-        currentRewards.map(reward => 
-          reward.id === rewardId 
-            ? { ...reward, supply: reward.supply + 1 }
-            : reward
-        )
-      );
+      // IMPORTANT FIX: We're no longer updating the rewards cache optimistically
+      // This prevents the double-counting issue since the real-time subscription
+      // will handle updating the cache when the database changes
       
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) {
@@ -246,11 +241,8 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         throw updateSupplyResult.error;
       }
       
-      // Update the total supply
-      queryClient.setQueryData(
-        REWARDS_SUPPLY_QUERY_KEY,
-        (oldSupply: number = 0) => oldSupply + 1
-      );
+      // IMPORTANT FIX: We're not updating the total supply here anymore
+      // The real-time subscription will handle that when the database changes
       
       const endTime = performance.now();
       console.log(`[buyRewardMutation] Operation completed in ${endTime - startTime}ms`);
