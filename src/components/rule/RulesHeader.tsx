@@ -1,7 +1,8 @@
 
 import React, { useEffect } from 'react';
 import { Badge } from '../ui/badge';
-import { Box, Coins, Crown } from 'lucide-react';
+import { DOMBadge } from '../ui/dom-badge';
+import { Box, Coins } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { useRewards } from '@/contexts/RewardsContext';
 
@@ -25,14 +26,8 @@ const RulesHeader: React.FC = () => {
           <Coins className="w-3 h-3" />
           <span>{totalPoints}</span>
         </Badge>
-        <Badge variant="outline" className="dom-badge">
-          <Box className="w-3 h-3" />
-          <span>{totalDomRewardsSupply}</span>
-        </Badge>
-        <Badge variant="outline" className="dom-badge">
-          <Crown className="w-3 h-3" />
-          <span>{domPoints}</span>
-        </Badge>
+        <DOMBadge icon="box" value={totalDomRewardsSupply} />
+        <DOMBadge icon="crown" value={domPoints} />
       </div>
     </div>
   );

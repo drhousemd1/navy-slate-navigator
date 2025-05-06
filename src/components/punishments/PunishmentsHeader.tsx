@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Badge } from '../ui/badge';
+import { DOMBadge } from '../ui/dom-badge';
 import { useRewards } from '@/contexts/RewardsContext';
-import { Box, Coins, Crown, Shuffle } from 'lucide-react';
+import { Box, Coins, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import RandomPunishmentSelections from './RandomPunishmentSelections';
@@ -33,14 +34,8 @@ const PunishmentsHeader: React.FC = () => {
           <Coins className="w-3 h-3" />
           <span>{totalPoints}</span>
         </Badge>
-        <Badge variant="outline" className="dom-badge">
-          <Box className="w-3 h-3" />
-          <span>{totalDomRewardsSupply}</span>
-        </Badge>
-        <Badge variant="outline" className="dom-badge">
-          <Crown className="w-3 h-3" />
-          <span>{domPoints}</span>
-        </Badge>
+        <DOMBadge icon="box" value={totalDomRewardsSupply} />
+        <DOMBadge icon="crown" value={domPoints} />
       </div>
       
       <RandomPunishmentSelections

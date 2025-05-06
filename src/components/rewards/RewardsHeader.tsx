@@ -1,8 +1,9 @@
 
 import React, { useEffect } from 'react';
 import { Badge } from '../../components/ui/badge';
+import { DOMBadge } from '../ui/dom-badge';
 import { useRewards } from '../../contexts/RewardsContext';
-import { Box, Coins, Crown } from 'lucide-react';
+import { Box, Coins } from 'lucide-react';
 
 const RewardsHeader: React.FC = () => {
   const { totalPoints, totalRewardsSupply, totalDomRewardsSupply, domPoints = 0, refreshPointsFromDatabase } = useRewards();
@@ -25,14 +26,8 @@ const RewardsHeader: React.FC = () => {
           <Coins className="w-3 h-3" />
           <span>{totalPoints}</span>
         </Badge>
-        <Badge variant="outline" className="dom-badge">
-          <Box className="w-3 h-3" />
-          <span>{totalDomRewardsSupply}</span>
-        </Badge>
-        <Badge variant="outline" className="dom-badge">
-          <Crown className="w-3 h-3" />
-          <span>{domPoints}</span>
-        </Badge>
+        <DOMBadge icon="box" value={totalDomRewardsSupply} />
+        <DOMBadge icon="crown" value={domPoints} />
       </div>
     </div>
   );
