@@ -125,37 +125,20 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
     
-    // Optimistic updates for immediate UI feedback
     try {
-      // 1. Update points optimistically
-      const newPointsValue = currentPointsValue - cost;
-      if (isRewardDominant) {
-        setDomPointsOptimistically(newPointsValue);
-      } else {
-        setPointsOptimistically(newPointsValue);
-      }
-      
-      // 2. Update reward supply optimistically
-      const updatedRewards = rewards.map(r => {
-        if (r.id === id) {
-          return { ...r, supply: r.supply + 1 };
-        }
-        return r;
-      });
-      setRewardsOptimistically(updatedRewards);
-      
-      // 3. Show toast for immediate feedback
+      // REMOVED OPTIMISTIC UPDATES HERE TO FIX DOUBLE COUNTING
+      // Only show toast for immediate feedback
       toast({
         title: "Reward Purchased",
         description: `You purchased ${reward.title}`,
       });
       
-      // 4. Perform the actual API call in the background
+      // Perform the actual API call which will handle the optimistic updates
       await buyReward({ rewardId: id, cost, isDomReward: isRewardDominant });
     } catch (error) {
       console.error("Error in handleBuyReward:", error);
       
-      // Revert optimistic updates on error
+      // On error, refresh data from the server
       refreshPointsFromDatabase();
       refetchRewards();
       
