@@ -1,4 +1,3 @@
-
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
 import { BuyRewardParams, SaveRewardParams } from '@/contexts/rewards/rewardTypes';
@@ -195,7 +194,7 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         throw new Error("Reward not found in cache");
       }
       
-      // Determine which points query key to use based on the reward type
+      // Determine which points field to use based on the reward type
       const pointsQueryKey = isDomReward ? REWARDS_DOM_POINTS_QUERY_KEY : REWARDS_POINTS_QUERY_KEY;
       const currentPoints = queryClient.getQueryData<number>(pointsQueryKey) || 0;
       
@@ -203,14 +202,10 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         throw new Error(`Not enough ${isDomReward ? 'dom ' : ''}points to buy this reward`);
       }
       
-      // Apply optimistic updates immediately
+      // Apply optimistic updates immediately for consistent UI feedback
       const newPoints = currentPoints - cost;
-      
-      // Update points in the cache immediately based on reward type
       queryClient.setQueryData(pointsQueryKey, newPoints);
-      console.log(`[buyRewardMutation] Optimistically updated ${isDomReward ? 'dom ' : ''}points: ${currentPoints} -> ${newPoints}`);
       
-      // Update reward supply in the cache immediately
       queryClient.setQueryData(
         REWARDS_QUERY_KEY, 
         currentRewards.map(reward => 
@@ -220,7 +215,6 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         )
       );
       
-      // Get authenticated user
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) {
         throw new Error("User not authenticated");

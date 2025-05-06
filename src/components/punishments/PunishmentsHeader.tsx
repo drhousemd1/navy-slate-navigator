@@ -33,11 +33,11 @@ const PunishmentsHeader: React.FC = () => {
           <Coins className="w-3 h-3" />
           <span>{totalPoints}</span>
         </Badge>
-        <Badge className="dom-badge">
+        <Badge variant="outline" className="dom-badge">
           <Box className="w-3 h-3" />
           <span>{totalDomRewardsSupply}</span>
         </Badge>
-        <Badge className="dom-badge">
+        <Badge variant="outline" className="dom-badge">
           <Crown className="w-3 h-3" />
           <span>{domPoints}</span>
         </Badge>

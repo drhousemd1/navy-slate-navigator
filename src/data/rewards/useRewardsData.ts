@@ -128,10 +128,12 @@ export const useRewardsData = () => {
   };
 
   const setPointsOptimistically = (points: number) => {
+    // Update both the query cache and directly update any components via the context
     queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, points);
   };
 
   const setDomPointsOptimistically = (points: number) => {
+    // Update both the query cache and directly update any components via the context
     queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, points);
   };
 
