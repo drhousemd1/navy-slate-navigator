@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
@@ -126,14 +125,34 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     try {
+      // Perform optimistic update for immediate UI feedback
+      const newPointsValue = currentPointsValue - cost;
+      
+      // Update the appropriate points immediately - both local state and cache
+      if (isRewardDominant) {
+        // Update DOM points optimistically
+        setDomPointsOptimistically(newPointsValue);
+      } else {
+        // Update regular points optimistically
+        setPointsOptimistically(newPointsValue);
+      }
+      
+      // Optimistically update the reward supply
+      const updatedRewards = rewards.map(r => {
+        if (r.id === id) {
+          return { ...r, supply: r.supply + 1 };
+        }
+        return r;
+      });
+      setRewardsOptimistically(updatedRewards);
+      
       // Show toast for immediate feedback
       toast({
         title: "Reward Purchased",
         description: `You purchased ${reward.title}`,
       });
       
-      // Perform the actual API call with proper parameters
-      // Pass the isDomReward flag to ensure it updates the correct points and counts
+      // Perform the actual API call in the background with proper parameters
       await buyReward({ rewardId: id, cost, isDomReward: isRewardDominant });
     } catch (error) {
       console.error("Error in handleBuyReward:", error);
