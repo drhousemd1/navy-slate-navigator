@@ -69,7 +69,7 @@ export const usePunishmentsData = () => {
   );
   
   // Initial data fetch
-  const fetchPunishments = useCallback(async () => {
+  const fetchInitialData = useCallback(async () => {
     try {
       await refetchPunishments();
       await refetchHistory();
@@ -252,8 +252,8 @@ export const usePunishmentsData = () => {
   
   // Auto-fetch on mount
   useEffect(() => {
-    fetchPunishments();
-  }, [fetchPunishments]);
+    fetchInitialData();
+  }, [fetchInitialData]);
   
   return {
     punishments: punishments as PunishmentData[],

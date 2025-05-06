@@ -315,7 +315,12 @@ export const useRewardMutation = (queryClient: QueryClient) =>
       
       if (error) throw error;
       
-      // Record usage - use proper promise chain with then/catch
+      // Record usage with properly defined variables
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
+      
+      // Use a proper promise chain with then/catch
       supabase
         .from('reward_usage')
         .insert({
