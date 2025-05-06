@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -84,6 +83,7 @@ const PunishmentsContent: React.FC<{
             <PunishmentCard
               key={punishment.id}
               {...punishment}
+              // Pass the function directly, no need for onEdit callback
               onEdit={() => handleEditPunishment(punishment)}
             />
           ))}

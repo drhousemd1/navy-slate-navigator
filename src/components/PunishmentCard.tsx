@@ -26,6 +26,7 @@ interface PunishmentCardProps {
   background_opacity?: number;
   focal_point_x?: number;
   focal_point_y?: number;
+  onEdit?: () => void; // Add this prop to fix the type error
 }
 
 const PunishmentCard: React.FC<PunishmentCardProps> = ({
@@ -43,7 +44,8 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
   background_image_url,
   background_opacity = 50,
   focal_point_x = 50,
-  focal_point_y = 50
+  focal_point_y = 50,
+  onEdit // Optional prop that will be used if provided
 }) => {
   const {
     isEditorOpen,
@@ -59,6 +61,9 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
 
   // Use dom_points from the punishment context data if available, otherwise fall back to props
   const displayDomPoints = punishment?.dom_points !== undefined ? punishment.dom_points : dom_points;
+
+  // Use the provided onEdit prop if available, otherwise use the hook's handleEdit
+  const handleEditAction = onEdit || handleEdit;
 
   return (
     <>
@@ -91,7 +96,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
             frequency_count={frequencyCount}
             calendar_color={calendar_color}
             usage_data={weekData}
-            onEdit={handleEdit}
+            onEdit={handleEditAction} // Use the correct edit handler
           />
         </div>
       </Card>

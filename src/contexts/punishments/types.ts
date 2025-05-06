@@ -41,7 +41,7 @@ export interface PunishmentsContextType {
   error: Error | null;
   createPunishment: (punishment: Omit<Partial<PunishmentData>, 'title'> & { title: string }) => Promise<PunishmentData>;
   updatePunishment: (id: string, punishment: Partial<PunishmentData>) => Promise<PunishmentData>;
-  deletePunishment: (id: string) => Promise<void>;
+  deletePunishment: (id: string) => Promise<boolean>; // Changed return type from void to boolean
   applyPunishment: (punishment: PunishmentData | { id: string; points: number }) => Promise<PunishmentHistoryItem>;
   selectRandomPunishment: () => void;
   resetRandomSelection: () => void;

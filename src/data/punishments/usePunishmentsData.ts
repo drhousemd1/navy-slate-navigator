@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { 
@@ -142,6 +141,7 @@ export const usePunishmentsData = () => {
       const optimisticPunishment: PunishmentData = {
         ...newPunishment,
         id: `temp-${Date.now()}`,
+        points: newPunishment.points || 0, // Ensure points is included
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };

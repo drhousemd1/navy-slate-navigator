@@ -330,7 +330,7 @@ export const useRewardMutation = (queryClient: QueryClient) =>
           week_number: weekNumber
         })
         .then(() => console.log("Reward usage recorded successfully"))
-        .catch(err => console.error("Error recording reward usage (non-critical):", err));
+        .catch(error => console.error("Error recording reward usage (non-critical):", error));
       
       // Update cache directly for immediate UI feedback
       queryClient.setQueryData(REWARDS_QUERY_KEY, (old: Reward[] = []) => 

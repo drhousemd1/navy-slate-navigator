@@ -15,7 +15,7 @@ const PunishmentsContext = createContext<PunishmentsContextType>({
   selectedPunishment: null,
   createPunishment: async () => ({ id: '', title: '', points: 0 }),
   updatePunishment: async () => ({ id: '', title: '', points: 0 }),
-  deletePunishment: async () => false,
+  deletePunishment: async () => false, // Updated return type to boolean
   applyPunishment: async () => ({} as PunishmentHistoryItem),
   selectRandomPunishment: () => {},
   resetRandomSelection: () => {},
