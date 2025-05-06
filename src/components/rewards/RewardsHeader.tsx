@@ -25,11 +25,11 @@ const RewardsHeader: React.FC = () => {
           <Coins className="w-3 h-3" />
           <span>{totalPoints}</span>
         </Badge>
-        <Badge className="dom-badge rounded-md">
+        <Badge className="dom-badge">
           <Box className="w-3 h-3" />
           <span>{totalDomRewardsSupply}</span>
         </Badge>
-        <Badge className="dom-badge rounded-md">
+        <Badge className="dom-badge">
           <Crown className="w-3 h-3" />
           <span>{domPoints}</span>
         </Badge>
