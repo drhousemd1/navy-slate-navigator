@@ -202,7 +202,7 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         throw new Error(`Not enough ${isDomReward ? 'dom ' : ''}points to buy this reward`);
       }
       
-      // Apply optimistic updates immediately for consistent UI feedback
+      // Apply optimistic updates immediately
       const newPoints = currentPoints - cost;
       queryClient.setQueryData(pointsQueryKey, newPoints);
       
