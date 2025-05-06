@@ -17,11 +17,11 @@ const RewardsContent: React.FC<{
   // Use the sync manager to keep data in sync - add enabled parameter
   const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
   
-  // Sync on initial render
+  // Sync on initial render only
   useEffect(() => {
-    // Force a sync on initial load completion
+    // Force a sync on initial load completion - only once
     syncNow();
-  }, [syncNow]);
+  }, []);
   
   const handleAddNewReward = () => {
     setRewardBeingEdited(undefined);
@@ -62,10 +62,12 @@ const RewardsContent: React.FC<{
           try {
             // Get the index from the rewardBeingEdited if it exists
             const index = rewardBeingEdited?.index !== undefined ? rewardBeingEdited.index : null;
+            
+            // Save reward without forcing immediate sync
             await handleSaveReward(data, index);
-            setIsEditorOpen(false);
-            // Force a sync after saving a reward
-            syncNow();
+            
+            // No need to force sync immediately - rely on background updates
+            // Removed: syncNow();
           } catch (error) {
             console.error("Error saving reward:", error);
           }
@@ -78,8 +80,9 @@ const RewardsContent: React.FC<{
               await handleDeleteReward(index);
             }
             setIsEditorOpen(false);
-            // Force a sync after deleting a reward
-            syncNow();
+            
+            // Sync is still useful after delete, but delay it slightly
+            setTimeout(syncNow, 500);
           } catch (error) {
             console.error("Error deleting reward:", error);
           }

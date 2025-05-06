@@ -16,6 +16,8 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
       console.log("Saving reward with data:", JSON.stringify(rewardData));
       console.log("is_dom_reward value in saveRewardMutation:", rewardData.is_dom_reward);
 
+      // Create optimistic update for immediate UI feedback
+      const optimisticId = rewardData.id || `temp-${Date.now()}`;
       // Prepare data for saving - update with correct type properties
       const dataToSave = {
         title: rewardData.title,
@@ -34,6 +36,32 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
         subtext_color: rewardData.subtext_color || '#8E9196',
         calendar_color: rewardData.calendar_color || '#7E69AB',
       };
+      
+      // Apply optimistic update immediately
+      if (rewardData.id) {
+        // Update existing reward in cache
+        queryClient.setQueryData(
+          REWARDS_QUERY_KEY, 
+          (oldRewards: Reward[] = []) => {
+            return oldRewards.map(r => r.id === rewardData.id ? { ...r, ...dataToSave } : r);
+          }
+        );
+      } else {
+        // Add new reward to cache
+        const optimisticReward = {
+          id: optimisticId,
+          ...dataToSave,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        queryClient.setQueryData(
+          REWARDS_QUERY_KEY, 
+          (oldRewards: Reward[] = []) => {
+            return [optimisticReward, ...(oldRewards || [])];
+          }
+        );
+      }
 
       console.log("Data being sent to Supabase:", dataToSave);
       console.log("Final is_dom_reward value in data:", dataToSave.is_dom_reward);
@@ -41,8 +69,9 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
       let result: Reward | null = null;
       const startTime = performance.now();
 
+      // Database operations with more efficient error handling
       if (rewardData.id) {
-        // Update existing reward
+        // Update existing reward - run in background
         const { data: updatedReward, error } = await supabase
           .from('rewards')
           .update({
@@ -72,10 +101,7 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
           is_dom_reward: updatedReward?.is_dom_reward ?? false
         } as Reward;
         
-        console.log("Updated reward result:", result);
-        console.log("Updated reward is_dom_reward:", result?.is_dom_reward);
-
-        // Update the cache
+        // Update the cache with actual server response
         queryClient.setQueryData(
           REWARDS_QUERY_KEY, 
           (oldRewards: Reward[] = []) => {
@@ -114,14 +140,14 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
           is_dom_reward: newReward?.is_dom_reward ?? false
         } as Reward;
         
-        console.log("New reward result:", result);
-        console.log("New reward is_dom_reward:", result?.is_dom_reward);
-
-        // Update the cache
+        // Update the cache with actual server response, replacing the optimistic one
         queryClient.setQueryData(
           REWARDS_QUERY_KEY, 
           (oldRewards: Reward[] = []) => {
-            return [result as Reward, ...oldRewards];
+            return [
+              result as Reward,
+              ...(oldRewards || []).filter(r => r.id !== optimisticId)
+            ];
           }
         );
       }
@@ -134,12 +160,12 @@ export const saveRewardMutation = (queryClient: QueryClient, showToastMessages =
         });
       }
 
-      // Invalidate queries to force refetch
-      queryClient.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
-
       return result;
     } catch (error) {
       console.error("Error saving reward:", error);
+      
+      // Update failed, revert optimistic update
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
       
       if (showToastMessages) {
         toast({

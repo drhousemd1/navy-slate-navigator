@@ -37,10 +37,9 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
     console.log("RewardEditor handling save with form data:", formData);
     console.log("is_dom_reward value in handleSave:", formData.is_dom_reward);
     
-    const startTime = performance.now();
-    
     try {
       setIsSaving(true);
+      
       const dataToSave = rewardData ? { 
         ...formData, 
         id: rewardData.id,
@@ -50,26 +49,39 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
       console.log("Final data being sent to save:", dataToSave);
       console.log("Final is_dom_reward value:", dataToSave.is_dom_reward);
       
-      await onSave(dataToSave);
-      
-      const endTime = performance.now();
-      console.log(`Save operation completed in ${endTime - startTime}ms`);
-      
-      // Display a single toast message on success
+      // Show optimistic toast immediately
       toast({
-        title: "Success",
-        description: "Reward saved successfully",
+        title: "Saving",
+        description: "Your reward is being saved...",
       });
+      
+      // Close the modal immediately to improve perceived performance
       onClose();
+      
+      // Process the save in the background
+      setTimeout(() => {
+        onSave(dataToSave).then(() => {
+          // Success notification handled by the provider
+          console.log("Save completed successfully");
+        }).catch(error => {
+          console.error("Error in RewardEditor save handler:", error);
+          toast({
+            title: "Error",
+            description: "Failed to save reward. Please try again.",
+            variant: "destructive",
+          });
+        }).finally(() => {
+          setIsSaving(false);
+        });
+      }, 0);
     } catch (error) {
       console.error("Error in RewardEditor save handler:", error);
+      setIsSaving(false);
       toast({
         title: "Error",
         description: "Failed to save reward. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
