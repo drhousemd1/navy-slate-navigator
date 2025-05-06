@@ -176,6 +176,13 @@
     padding: 0 1rem !important;
   }
   
+  /* DOM badge styling - black background with red border */
+  .dom-badge {
+    background-color: #000000 !important;
+    border: 1.5px solid #ea384c !important;
+    color: white !important;
+  }
+  
   /* Hide scrollbar utility */
   .hide-scrollbar {
     scrollbar-width: none; /* Firefox */
@@ -186,3 +193,4 @@
     display: none; /* Chrome, Safari, Opera */
   }
 }
+
