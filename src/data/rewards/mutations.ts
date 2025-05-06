@@ -320,7 +320,7 @@ export const useRewardMutation = (queryClient: QueryClient) =>
       const dayOfWeek = today.getDay();
       const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
       
-      // Not awaiting this to speed up the operation
+      // Fixed catch issue - use Promise.catch properly
       supabase
         .from('reward_usage')
         .insert({

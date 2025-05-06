@@ -11,7 +11,7 @@ import { usePunishmentCard } from './punishments/hooks/usePunishmentCard';
 
 interface PunishmentCardProps {
   title: string;
-  description: string;
+  description?: string; // Make description optional to match punishment data
   points: number;
   dom_points?: number;
   icon?: React.ReactNode;
@@ -31,7 +31,7 @@ interface PunishmentCardProps {
 
 const PunishmentCard: React.FC<PunishmentCardProps> = ({
   title,
-  description,
+  description = "", // Provide default empty string for description
   points,
   dom_points,
   id,
