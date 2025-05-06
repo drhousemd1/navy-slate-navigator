@@ -1,38 +1,79 @@
 
-import React, { useEffect } from 'react';
-import { Badge } from '../../components/ui/badge';
+import React from 'react';
 import { useRewards } from '../../contexts/RewardsContext';
-import { Box, Coins, Crown } from 'lucide-react';
+import { clearQueryCache } from '@/lib/react-query-config';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
+import { RefreshCw } from 'lucide-react';
+import { Button } from '../ui/button';
 
-const RewardsHeader: React.FC = () => {
-  const { totalPoints, totalRewardsSupply, totalDomRewardsSupply, domPoints = 0, refreshPointsFromDatabase } = useRewards();
+const RewardsHeader = () => {
+  const { totalPoints, domPoints, totalRewardsSupply, totalDomRewardsSupply, refreshPointsFromDatabase, refetchRewards } = useRewards();
+  const queryClient = useQueryClient();
 
-  // Refresh points when component mounts
-  useEffect(() => {
-    console.log("RewardsHeader mounted, refreshing points from database");
-    refreshPointsFromDatabase();
-  }, [refreshPointsFromDatabase]);
+  const handleRefreshData = async () => {
+    try {
+      toast({
+        title: "Refreshing data...",
+        description: "Clearing cache and fetching latest data",
+      });
+      
+      // Clear cache
+      clearQueryCache();
+      
+      // Invalidate all queries to force a refetch
+      queryClient.invalidateQueries();
+      
+      // Refetch rewards and points
+      await refreshPointsFromDatabase();
+      await refetchRewards();
+      
+      toast({
+        title: "Success",
+        description: "Data refreshed successfully",
+      });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
-    <div className="flex items-center mb-6">
-      <h1 className="text-base font-semibold text-white mr-auto">My Rewards</h1>
-      <div className="flex items-center gap-2">
-        <Badge className="bg-blue-500 text-white font-bold px-3 py-1 flex items-center gap-1">
-          <Box className="w-3 h-3" />
-          <span>{totalRewardsSupply}</span>
-        </Badge>
-        <Badge className="bg-cyan-500 text-white font-bold px-3 py-1 flex items-center gap-1">
-          <Coins className="w-3 h-3" />
-          <span>{totalPoints}</span>
-        </Badge>
-        <Badge className="bg-red-500 text-white font-bold px-3 py-1 flex items-center gap-1">
-          <Box className="w-3 h-3" />
-          <span>{totalDomRewardsSupply}</span>
-        </Badge>
-        <Badge className="bg-red-500 text-white font-bold px-3 py-1 flex items-center gap-1">
-          <Crown className="w-3 h-3" />
-          <span>{domPoints}</span>
-        </Badge>
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-2">
+        <h1 className="text-2xl font-bold text-white">Rewards</h1>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRefreshData}
+          className="flex items-center gap-1"
+        >
+          <RefreshCw className="h-4 w-4" />
+          <span>Refresh</span>
+        </Button>
+      </div>
+      
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-navy-dark p-4 rounded-lg text-center">
+        <div>
+          <p className="text-sm text-muted-foreground">Sub Points</p>
+          <p className="text-xl font-bold text-amber-300">{totalPoints}</p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Dom Points</p>
+          <p className="text-xl font-bold text-rose-400">{domPoints}</p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Sub Rewards</p>
+          <p className="text-xl font-bold text-amber-300">{totalRewardsSupply - totalDomRewardsSupply}</p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Dom Rewards</p>
+          <p className="text-xl font-bold text-rose-400">{totalDomRewardsSupply}</p>
+        </div>
       </div>
     </div>
   );
