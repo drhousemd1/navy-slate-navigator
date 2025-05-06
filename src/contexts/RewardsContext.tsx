@@ -126,14 +126,14 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     try {
-      // REMOVED OPTIMISTIC UPDATES HERE TO FIX DOUBLE COUNTING
-      // Only show toast for immediate feedback
+      // Show toast for immediate feedback
       toast({
         title: "Reward Purchased",
         description: `You purchased ${reward.title}`,
       });
       
-      // Perform the actual API call which will handle the optimistic updates
+      // Perform the actual API call with proper parameters
+      // Pass the isDomReward flag to ensure it updates the correct points and counts
       await buyReward({ rewardId: id, cost, isDomReward: isRewardDominant });
     } catch (error) {
       console.error("Error in handleBuyReward:", error);
