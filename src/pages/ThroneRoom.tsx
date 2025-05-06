@@ -11,9 +11,8 @@ import { useRewards } from '@/contexts/RewardsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns'; // Import format from date-fns
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
-import { useSyncManager } from '@/hooks/useSyncManager';
 
 // Import extracted components
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
@@ -26,26 +25,7 @@ const ThroneRoom: React.FC = () => {
   const { rewards } = useRewards();
   const queryClient = useQueryClient();
   
-  // Use enhanced sync manager with forced sync on page load
-  const { syncNow } = useSyncManager({ 
-    intervalMs: 30000, 
-    enabled: true,
-    forceSync: true 
-  });
-  
-  // Sync on initial render
-  useEffect(() => {
-    console.log('[ThroneRoomPage] Initial mount, forcing data synchronization');
-    localStorage.setItem('current-page', 'throne-room');
-    // Force a sync on initial load
-    syncNow();
-    
-    return () => {
-      localStorage.removeItem('current-page');
-    };
-  }, [syncNow]);
-  
-  // Fetch summary data with React Query and improved cache management
+  // Fetch summary data with React Query and infinite caching
   const fetchSummaryData = async (): Promise<WeeklyMetricsSummary> => {
     try {
       // Get current week's start and end dates (Monday-based)
@@ -105,19 +85,12 @@ const ThroneRoom: React.FC = () => {
       if (punishmentError) throw new Error(`Error fetching punishments: ${punishmentError.message}`);
       
       // Calculate summary counts
-      const result = {
+      return {
         tasksCompleted: uniqueTasksPerDay.size || 0,
         rulesBroken: ruleViolations?.length || 0,
         rewardsRedeemed: rewardUsages?.length || 0,
         punishments: punishments?.length || 0
       };
-      
-      // Store the summary with version information
-      const dataVersion = localStorage.getItem('app-data-version') || '0';
-      localStorage.setItem('weekly-metrics-version', dataVersion);
-      localStorage.setItem('weekly-metrics-timestamp', new Date().toISOString());
-      
-      return result;
     } catch (err) {
       console.error('Error fetching metrics summary data:', err);
       return {
@@ -129,7 +102,7 @@ const ThroneRoom: React.FC = () => {
     }
   };
   
-  // Use React Query with improved cache settings
+  // Use React Query with infinite cache settings
   const { data: metricsSummary = { 
     tasksCompleted: 0, 
     rulesBroken: 0, 
@@ -138,12 +111,10 @@ const ThroneRoom: React.FC = () => {
   }} = useQuery({
     queryKey: ['weekly-metrics-summary'],
     queryFn: fetchSummaryData,
-    ...STANDARD_QUERY_CONFIG,
-    // Add a shorter staleTime for metrics
-    staleTime: 1000 * 60 * 5, // 5 minutes instead of infinity
+    ...STANDARD_QUERY_CONFIG
   });
 
-  // Force update data when page is mounted or URL has ?fresh param
+  // Force update data only when page is mounted or URL has ?fresh param
   useEffect(() => {
     // Add a check for URL params that indicate a fresh page load from reset
     const urlParams = new URLSearchParams(window.location.search);

@@ -76,82 +76,25 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setDomPointsOptimistically,
   } = useRewardsData();
 
-  // Store the latest data version when we receive fresh data
-  useEffect(() => {
-    if (rewards.length > 0) {
-      const currentVersion = localStorage.getItem('app-data-version') || '0';
-      localStorage.setItem('rewards-data-version', currentVersion);
-      localStorage.setItem('rewards-data-timestamp', new Date().toISOString());
-    }
-  }, [rewards]);
-
-  // Refresh points when the provider mounts with improved version tracking
+  // Refresh points when the provider mounts
   useEffect(() => {
     console.log("RewardsProvider: Refreshing points from database on mount");
-    
-    // Check last refresh time to avoid excessive refreshes
-    const lastRefreshTime = localStorage.getItem('points-refresh-time');
-    const now = Date.now();
-    
-    if (!lastRefreshTime || (now - parseInt(lastRefreshTime)) > 5000) {
-      refreshPointsFromDatabase().then(() => {
-        localStorage.setItem('points-refresh-time', now.toString());
-      });
-    } else {
-      console.log("Points were refreshed recently, skipping redundant refresh");
-    }
+    refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
 
   const handleSaveReward = async (rewardData: any, index: number | null) => {
     console.log("RewardsContext - handleSaveReward called with data:", rewardData);
     console.log("is_dom_reward value in handleSaveReward:", rewardData.is_dom_reward);
     
-    try {
-      const result = await saveReward({ rewardData, currentIndex: index });
-      
-      // After successful save, increment the data version to trigger sync
-      const currentVersion = parseInt(localStorage.getItem('app-data-version') || '0');
-      localStorage.setItem('app-data-version', (currentVersion + 1).toString());
-      
-      return result?.id || null;
-    } catch (error) {
-      console.error("Error in handleSaveReward:", error);
-      
-      // Show error toast
-      toast({
-        title: "Error Saving Reward",
-        description: "Failed to save reward. Please try again.",
-        variant: "destructive",
-      });
-      
-      return null;
-    }
+    const result = await saveReward({ rewardData, currentIndex: index });
+    return result?.id || null;
   };
 
   const handleDeleteReward = async (index: number) => {
     const rewardToDelete = rewards[index];
     if (!rewardToDelete?.id) return false;
-    
-    try {
-      await deleteReward(rewardToDelete.id);
-      
-      // After successful delete, increment the data version to trigger sync
-      const currentVersion = parseInt(localStorage.getItem('app-data-version') || '0');
-      localStorage.setItem('app-data-version', (currentVersion + 1).toString());
-      
-      return true;
-    } catch (error) {
-      console.error("Error in handleDeleteReward:", error);
-      
-      // Show error toast
-      toast({
-        title: "Error Deleting Reward",
-        description: "Failed to delete reward. Please try again.",
-        variant: "destructive",
-      });
-      
-      return false;
-    }
+    await deleteReward(rewardToDelete.id);
+    return true;
   };
 
   const handleBuyReward = async (id: string, cost: number, isDomReward?: boolean) => {
@@ -209,10 +152,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       // 4. Perform the actual API call in the background
       await buyReward({ rewardId: id, cost, isDomReward: isRewardDominant });
-      
-      // 5. After successful buy, increment the data version to trigger sync
-      const currentVersion = parseInt(localStorage.getItem('app-data-version') || '0');
-      localStorage.setItem('app-data-version', (currentVersion + 1).toString());
     } catch (error) {
       console.error("Error in handleBuyReward:", error);
       
@@ -266,10 +205,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       // Perform the actual API call in the background
       await useReward(id);
-      
-      // After successful use, increment the data version to trigger sync
-      const currentVersion = parseInt(localStorage.getItem('app-data-version') || '0');
-      localStorage.setItem('app-data-version', (currentVersion + 1).toString());
     } catch (error) {
       console.error("Error in handleUseReward:", error);
       
@@ -291,10 +226,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Persist to database
     try {
       await updatePoints(points);
-      
-      // After successful update, increment the data version to trigger sync
-      const currentVersion = parseInt(localStorage.getItem('app-data-version') || '0');
-      localStorage.setItem('app-data-version', (currentVersion + 1).toString());
     } catch (error) {
       console.error("Error setting total points:", error);
       refreshPointsFromDatabase(); // Revert on error
@@ -308,10 +239,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Persist to database
     try {
       await updateDomPoints(points);
-      
-      // After successful update, increment the data version to trigger sync
-      const currentVersion = parseInt(localStorage.getItem('app-data-version') || '0');
-      localStorage.setItem('app-data-version', (currentVersion + 1).toString());
     } catch (error) {
       console.error("Error setting dom points:", error);
       refreshPointsFromDatabase(); // Revert on error

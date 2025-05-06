@@ -14,25 +14,13 @@ const RewardsContent: React.FC<{
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<any>(undefined);
   
-  // Use the enhanced sync manager with forced sync on page load
-  const { syncNow, isSyncing } = useSyncManager({ 
-    intervalMs: 30000, 
-    enabled: true,
-    forceSync: true // Force sync when component mounts
-  });
+  // Use the sync manager to keep data in sync - add enabled parameter
+  const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
   
-  // Sync on initial render with proper version checking
+  // Sync on initial render
   useEffect(() => {
-    console.log('[RewardsPage] Initial mount, forcing data synchronization');
-    // Set a flag to track this page view for version checking
-    localStorage.setItem('current-page', 'rewards');
     // Force a sync on initial load completion
     syncNow();
-    
-    return () => {
-      // Clean up
-      localStorage.removeItem('current-page');
-    };
   }, [syncNow]);
   
   const handleAddNewReward = () => {

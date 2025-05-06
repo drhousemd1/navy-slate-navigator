@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/lib/rewardUtils';
 import { logQueryPerformance } from '@/lib/react-query-config';
@@ -27,16 +26,10 @@ export const fetchRewards = async (): Promise<Reward[]> => {
     
     logQueryPerformance('fetchRewards', startTime, data?.length);
     
-    // Store in localStorage as a backup cache with version information
+    // Store in localStorage as a backup cache
     try {
-      const cacheData = {
-        version: parseInt(localStorage.getItem('app-data-version') || '0'),
-        timestamp: Date.now(),
-        data: data || []
-      };
-      
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-      console.log(`[fetchRewards] Saved ${data?.length || 0} rewards to localStorage cache with version ${cacheData.version}`);
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data || []));
+      console.log(`[fetchRewards] Saved ${data?.length || 0} rewards to localStorage cache`);
     } catch (e) {
       console.warn('[fetchRewards] Could not save to localStorage:', e);
     }
@@ -51,32 +44,18 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   } catch (error) {
     console.error('[fetchRewards] Fetch failed:', error);
     
-    // Try to get cached data from localStorage with version check
+    // Try to get cached data from localStorage
     const cachedData = localStorage.getItem(CACHE_KEY);
     if (cachedData) {
-      console.log('[fetchRewards] Attempting to use cached rewards data');
+      console.log('[fetchRewards] Using cached rewards data');
       try {
-        const cacheObject = JSON.parse(cachedData);
-        const currentVersion = parseInt(localStorage.getItem('app-data-version') || '0');
-        const cacheVersion = cacheObject.version || 0;
-        const cacheAge = Date.now() - (cacheObject.timestamp || 0);
-        const maxCacheAge = 1000 * 60 * 30; // 30 minutes
-        
-        if (cacheVersion === currentVersion && cacheAge < maxCacheAge) {
-          // Cache is valid, use it
-          console.log(`[fetchRewards] Using valid cached data (version ${cacheVersion}, age ${cacheAge}ms)`);
-          
-          // Ensure is_dom_reward is defined for cached data too
-          const cachedWithDomProperty = cacheObject.data.map((reward: any) => ({
-            ...reward,
-            is_dom_reward: reward.is_dom_reward ?? false
-          })) as Reward[];
-          
-          return cachedWithDomProperty;
-        } else {
-          console.log(`[fetchRewards] Cached data invalid or outdated: cache=${cacheVersion}, current=${currentVersion}, age=${cacheAge}ms`);
-          throw error; // Rethrow to trigger refetch
-        }
+        const parsedData = JSON.parse(cachedData);
+        // Ensure is_dom_reward is defined for cached data too
+        const cachedWithDomProperty = parsedData.map((reward: any) => ({
+          ...reward,
+          is_dom_reward: reward.is_dom_reward ?? false
+        })) as Reward[];
+        return cachedWithDomProperty;
       } catch (parseError) {
         console.error('[fetchRewards] Error parsing cached data:', parseError);
       }
@@ -114,16 +93,9 @@ export const fetchUserPoints = async (): Promise<number> => {
     
     logQueryPerformance('fetchUserPoints', startTime);
     
-    // Cache the points value with version information
+    // Cache the points value
     try {
-      const cacheData = {
-        version: parseInt(localStorage.getItem('app-data-version') || '0'),
-        timestamp: Date.now(),
-        points: data?.points || 0
-      };
-      
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-      console.log(`[fetchUserPoints] Cached ${cacheData.points} points with version ${cacheData.version}`);
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data?.points || 0));
     } catch (e) {
       console.warn('[fetchUserPoints] Could not cache points:', e);
     }
@@ -133,23 +105,12 @@ export const fetchUserPoints = async (): Promise<number> => {
   } catch (error) {
     console.error('[fetchUserPoints] Fetch failed:', error);
     
-    // Try to get cached data with version check
-    const cachedPointsData = localStorage.getItem(CACHE_KEY);
-    if (cachedPointsData) {
+    // Try to get cached data
+    const cachedPoints = localStorage.getItem(CACHE_KEY);
+    if (cachedPoints) {
+      console.log('[fetchUserPoints] Using cached points data');
       try {
-        const cacheObject = JSON.parse(cachedPointsData);
-        const currentVersion = parseInt(localStorage.getItem('app-data-version') || '0');
-        const cacheVersion = cacheObject.version || 0;
-        const cacheAge = Date.now() - (cacheObject.timestamp || 0);
-        const maxCacheAge = 1000 * 60 * 30; // 30 minutes
-        
-        if (cacheVersion === currentVersion && cacheAge < maxCacheAge) {
-          // Cache is valid, use it
-          console.log(`[fetchUserPoints] Using valid cached points: ${cacheObject.points} (version ${cacheVersion}, age ${cacheAge}ms)`);
-          return cacheObject.points;
-        } else {
-          console.log(`[fetchUserPoints] Cached points outdated: cache=${cacheVersion}, current=${currentVersion}, age=${cacheAge}ms`);
-        }
+        return JSON.parse(cachedPoints);
       } catch (parseError) {
         console.error('[fetchUserPoints] Error parsing cached points:', parseError);
       }
@@ -187,16 +148,9 @@ export const fetchUserDomPoints = async (): Promise<number> => {
     
     logQueryPerformance('fetchUserDomPoints', startTime);
     
-    // Cache the dom points value with version information
+    // Cache the dom points value
     try {
-      const cacheData = {
-        version: parseInt(localStorage.getItem('app-data-version') || '0'),
-        timestamp: Date.now(),
-        dom_points: data?.dom_points || 0
-      };
-      
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-      console.log(`[fetchUserDomPoints] Cached ${cacheData.dom_points} dom points with version ${cacheData.version}`);
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data?.dom_points || 0));
     } catch (e) {
       console.warn('[fetchUserDomPoints] Could not cache dom points:', e);
     }
@@ -206,23 +160,12 @@ export const fetchUserDomPoints = async (): Promise<number> => {
   } catch (error) {
     console.error('[fetchUserDomPoints] Fetch failed:', error);
     
-    // Try to get cached data with version check
-    const cachedDomPointsData = localStorage.getItem(CACHE_KEY);
-    if (cachedDomPointsData) {
+    // Try to get cached data
+    const cachedDomPoints = localStorage.getItem(CACHE_KEY);
+    if (cachedDomPoints) {
+      console.log('[fetchUserDomPoints] Using cached dom points data');
       try {
-        const cacheObject = JSON.parse(cachedDomPointsData);
-        const currentVersion = parseInt(localStorage.getItem('app-data-version') || '0');
-        const cacheVersion = cacheObject.version || 0;
-        const cacheAge = Date.now() - (cacheObject.timestamp || 0);
-        const maxCacheAge = 1000 * 60 * 30; // 30 minutes
-        
-        if (cacheVersion === currentVersion && cacheAge < maxCacheAge) {
-          // Cache is valid, use it
-          console.log(`[fetchUserDomPoints] Using valid cached dom points: ${cacheObject.dom_points} (version ${cacheVersion}, age ${cacheAge}ms)`);
-          return cacheObject.dom_points;
-        } else {
-          console.log(`[fetchUserDomPoints] Cached dom points outdated: cache=${cacheVersion}, current=${currentVersion}, age=${cacheAge}ms`);
-        }
+        return JSON.parse(cachedDomPoints);
       } catch (parseError) {
         console.error('[fetchUserDomPoints] Error parsing cached dom points:', parseError);
       }
@@ -252,16 +195,9 @@ export const fetchTotalRewardsSupply = async (): Promise<number> => {
     
     logQueryPerformance('fetchTotalRewardsSupply', startTime);
     
-    // Cache the supply value with version information
+    // Cache the supply value
     try {
-      const cacheData = {
-        version: parseInt(localStorage.getItem('app-data-version') || '0'),
-        timestamp: Date.now(),
-        supply: total
-      };
-      
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-      console.log(`[fetchTotalRewardsSupply] Cached total supply: ${total} with version ${cacheData.version}`);
+      localStorage.setItem(CACHE_KEY, JSON.stringify(total));
     } catch (e) {
       console.warn('[fetchTotalRewardsSupply] Could not cache supply:', e);
     }
@@ -271,23 +207,12 @@ export const fetchTotalRewardsSupply = async (): Promise<number> => {
   } catch (error) {
     console.error('[fetchTotalRewardsSupply] Fetch failed:', error);
     
-    // Try to get cached data with version check
-    const cachedSupplyData = localStorage.getItem(CACHE_KEY);
-    if (cachedSupplyData) {
+    // Try to get cached data
+    const cachedSupply = localStorage.getItem(CACHE_KEY);
+    if (cachedSupply) {
+      console.log('[fetchTotalRewardsSupply] Using cached supply data');
       try {
-        const cacheObject = JSON.parse(cachedSupplyData);
-        const currentVersion = parseInt(localStorage.getItem('app-data-version') || '0');
-        const cacheVersion = cacheObject.version || 0;
-        const cacheAge = Date.now() - (cacheObject.timestamp || 0);
-        const maxCacheAge = 1000 * 60 * 30; // 30 minutes
-        
-        if (cacheVersion === currentVersion && cacheAge < maxCacheAge) {
-          // Cache is valid, use it
-          console.log(`[fetchTotalRewardsSupply] Using valid cached supply: ${cacheObject.supply} (version ${cacheVersion}, age ${cacheAge}ms)`);
-          return cacheObject.supply;
-        } else {
-          console.log(`[fetchTotalRewardsSupply] Cached supply outdated: cache=${cacheVersion}, current=${currentVersion}, age=${cacheAge}ms`);
-        }
+        return JSON.parse(cachedSupply);
       } catch (parseError) {
         console.error('[fetchTotalRewardsSupply] Error parsing cached supply:', parseError);
       }

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useNavigate } from 'react-router-dom';
 import RuleEditor from '../components/RuleEditor';
@@ -8,33 +8,13 @@ import RulesList from '../components/rule/RulesList';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { RulesProvider, useRules } from '@/contexts/RulesContext';
 import { Rule } from '@/data/interfaces/Rule';
-import { useSyncManager } from '@/hooks/useSyncManager';
 
 // Separate component to use the useRules hook inside RulesProvider
 const RulesWithContext: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
-  const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken, refetchRules } = useRules();
-  
-  // Use enhanced sync manager with forced sync on page load
-  const { syncNow } = useSyncManager({ 
-    intervalMs: 30000, 
-    enabled: true,
-    forceSync: true 
-  });
-
-  // Sync on initial render with proper version checking
-  useEffect(() => {
-    console.log('[RulesPage] Initial mount, forcing data synchronization');
-    localStorage.setItem('current-page', 'rules');
-    syncNow();
-    refetchRules();
-    
-    return () => {
-      localStorage.removeItem('current-page');
-    };
-  }, [syncNow, refetchRules]);
+  const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken } = useRules();
 
   const handleAddRule = () => {
     console.log('handleAddRule called in RulesWithContext');
@@ -68,7 +48,6 @@ const RulesWithContext: React.FC = () => {
       await saveRule(ruleData);
       setIsEditorOpen(false);
       setCurrentRule(null);
-      syncNow(); // Force sync after save
     } catch (err) {
       console.error('Error saving rule:', err);
     }
@@ -79,7 +58,6 @@ const RulesWithContext: React.FC = () => {
       await deleteRule(ruleId);
       setCurrentRule(null);
       setIsEditorOpen(false);
-      syncNow(); // Force sync after delete
     } catch (err) {
       console.error('Error deleting rule:', err);
     }
@@ -88,7 +66,6 @@ const RulesWithContext: React.FC = () => {
   const handleRuleBroken = async (rule: Rule) => {
     try {
       await markRuleBroken(rule);
-      syncNow(); // Force sync after marking rule broken
       navigate('/punishments');
     } catch (err) {
       console.error('Error marking rule as broken:', err);

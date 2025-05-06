@@ -7,33 +7,13 @@ import TasksList from '../components/task/TasksList';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TasksProvider, useTasks } from '../contexts/TasksContext';
 import { Task } from '@/lib/taskUtils';
-import { useSyncManager } from '@/hooks/useSyncManager';
 
 // Separate component that uses useTasks hook inside TasksProvider
 const TasksWithContext: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion, refetchTasks } = useTasks();
+  const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion } = useTasks();
   const { refreshPointsFromDatabase } = useRewards();
-  
-  // Use enhanced sync manager with forced sync on page load
-  const { syncNow } = useSyncManager({ 
-    intervalMs: 30000, 
-    enabled: true,
-    forceSync: true 
-  });
-
-  // Sync on initial render with proper version checking
-  useEffect(() => {
-    console.log('[TasksPage] Initial mount, forcing data synchronization');
-    localStorage.setItem('current-page', 'tasks');
-    syncNow();
-    refetchTasks();
-    
-    return () => {
-      localStorage.removeItem('current-page');
-    };
-  }, [syncNow, refetchTasks]);
 
   const handleAddTask = () => {
     console.log('handleAddTask called in TasksWithContext');
@@ -67,7 +47,6 @@ const TasksWithContext: React.FC = () => {
       await saveTask(taskData);
       setIsEditorOpen(false);
       setCurrentTask(null);
-      syncNow(); // Force sync after save
     } catch (err) {
       console.error('Error saving task:', err);
     }
@@ -78,7 +57,6 @@ const TasksWithContext: React.FC = () => {
       await deleteTask(taskId);
       setCurrentTask(null);
       setIsEditorOpen(false);
-      syncNow(); // Force sync after delete
     } catch (err) {
       console.error('Error deleting task:', err);
     }
@@ -91,7 +69,6 @@ const TasksWithContext: React.FC = () => {
       if (completed) {
         setTimeout(() => {
           refreshPointsFromDatabase();
-          syncNow(); // Force sync after completion
         }, 300);
       }
     } catch (err) {

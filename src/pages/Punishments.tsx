@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -17,18 +16,11 @@ const PunishmentsContent: React.FC<{
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   
-  // Use enhanced sync manager with forced sync on page load
-  const { syncNow } = useSyncManager({ 
-    intervalMs: 30000, 
-    enabled: true,
-    forceSync: true 
-  });
+  // Use the sync manager to keep data in sync - add enabled parameter
+  const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
   
   // Track initial mount and set loading state appropriately
   useEffect(() => {
-    console.log('[PunishmentsPage] Initial mount, forcing data synchronization');
-    localStorage.setItem('current-page', 'punishments');
-    
     // Consider initial load complete after a short delay
     const timer = setTimeout(() => {
       setIsInitialLoad(false);
@@ -36,10 +28,7 @@ const PunishmentsContent: React.FC<{
       syncNow();
     }, 500);
     
-    return () => {
-      clearTimeout(timer);
-      localStorage.removeItem('current-page');
-    };
+    return () => clearTimeout(timer);
   }, [syncNow]);
 
   const handleEditorClose = () => {
