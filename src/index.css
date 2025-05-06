@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -143,19 +144,36 @@
   
   /* Toast styling for single line at top */
   .single-line-toast {
-    width: 100%;
-    max-width: 100%;
-    border-radius: 0;
-    margin: 0;
-    padding: 0.5rem 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 9999;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0.25rem 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 9999 !important;
+    height: auto !important;
+    min-height: 24px !important;
+    backdrop-filter: blur(4px) !important;
+    font-size: 0.75rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    opacity: 0.9 !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .single-line-toast > div {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding: 0 1rem !important;
   }
   
   /* Hide scrollbar utility */

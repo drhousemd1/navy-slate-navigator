@@ -14,11 +14,11 @@ type ToastProps = {
 // Centralized toast function with consistent configuration
 const toast = ({ title, description, action, variant }: ToastProps) => {
   sonnerToast(title as string, {
-    description,
+    description: null, // Force no description for single line
     action,
-    className: variant === "destructive" ? "destructive" : "",
-    position: "top-center", // Changed from top-right to top-center
-    duration: 3000, // Keeping the reasonable duration
+    className: variant === "destructive" ? "destructive single-line-toast" : "single-line-toast",
+    position: "top-center",
+    duration: 2000, // Reduced duration
   });
 };
 

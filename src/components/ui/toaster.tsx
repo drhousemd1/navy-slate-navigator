@@ -9,11 +9,11 @@ export function Toaster() {
     <SonnerToaster 
       position="top-center"
       toastOptions={{
-        duration: 3000,
-        className: "shadow-lg border-border bg-background text-foreground max-w-full w-full single-line-toast",
-        descriptionClassName: "text-muted-foreground text-sm",
+        duration: 2000, // Reduced duration for less intrusion
+        className: "shadow-none border-none bg-background/80 text-foreground text-sm single-line-toast",
+        descriptionClassName: "text-muted-foreground text-xs hidden", // Hide description for single line
       }}
-      closeButton
+      closeButton={false} // Remove close button for cleaner look
       richColors
     />
   );
