@@ -160,67 +160,53 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
     const startTime = performance.now();
     
     try {
+      // Get current cached state for optimistic updates
+      const currentRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
+      const rewardToUpdate = currentRewards.find(r => r.id === rewardId);
+      
+      if (!rewardToUpdate) {
+        throw new Error("Reward not found in cache");
+      }
+      
+      // Determine which points field to use based on the reward type
+      const pointsQueryKey = isDomReward ? REWARDS_DOM_POINTS_QUERY_KEY : REWARDS_POINTS_QUERY_KEY;
+      const currentPoints = queryClient.getQueryData<number>(pointsQueryKey) || 0;
+      
+      if (currentPoints < cost) {
+        throw new Error(`Not enough ${isDomReward ? 'dom ' : ''}points to buy this reward`);
+      }
+      
+      // Apply optimistic updates immediately
+      const newPoints = currentPoints - cost;
+      queryClient.setQueryData(pointsQueryKey, newPoints);
+      
+      queryClient.setQueryData(
+        REWARDS_QUERY_KEY, 
+        currentRewards.map(reward => 
+          reward.id === rewardId 
+            ? { ...reward, supply: reward.supply + 1 }
+            : reward
+        )
+      );
+      
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) {
         throw new Error("User not authenticated");
       }
       
-      // Combine the profile fetch and reward fetch into a single promise.all to improve performance
-      const [profileResult, rewardResult] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select(isDomReward ? 'dom_points' : 'points')
-          .eq('id', userData.user.id)
-          .single(),
-        supabase
-          .from('rewards')
-          .select('id, title, supply, is_dom_reward')
-          .eq('id', rewardId)
-          .single()
-      ]);
-      
-      const profileError = profileResult.error;
-      const rewardError = rewardResult.error;
-      const profileData = profileResult.data;
-      const rewardData = rewardResult.data;
-      
-      if (profileError || !profileData) {
-        throw new Error("Could not fetch user profile");
-      }
-      
-      if (rewardError || !rewardData) {
-        throw new Error("Reward not found");
-      }
-      
-      // Determine if this is a dom reward from the reward itself if not explicitly provided
-      const isRewardDominant = isDomReward !== undefined ? isDomReward : Boolean(rewardData.is_dom_reward ?? false);
-      
-      // Check which points field to use
-      const pointsField = isRewardDominant ? 'dom_points' : 'points';
-      const currentPoints = profileData[pointsField] || 0;
-      
-      if (currentPoints < cost) {
-        throw new Error(`Not enough ${isRewardDominant ? 'dom ' : ''}points to buy this reward`);
-      }
-      
-      // Calculate new points
-      const newPoints = currentPoints - cost;
-      
-      // Rather than making sequential requests, use a transaction-like approach
-      // by running a PostgreSQL transaction via a custom RPC function
-      // For now, just run the two updates in parallel:
+      // Run both updates in parallel for better performance
       const [updatePointsResult, updateSupplyResult] = await Promise.all([
         // Update points
         supabase
           .from('profiles')
-          .update({ [pointsField]: newPoints })
+          .update({ [isDomReward ? 'dom_points' : 'points']: newPoints })
           .eq('id', userData.user.id),
         
         // Update reward supply
         supabase
           .from('rewards')
           .update({ 
-            supply: rewardData.supply + 1,
+            supply: rewardToUpdate.supply + 1,
             updated_at: new Date().toISOString()
           })
           .eq('id', rewardId)
@@ -234,27 +220,6 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         throw updateSupplyResult.error;
       }
       
-      // At this point, both updates were successful
-      
-      // Update the cache
-      if (isRewardDominant) {
-        queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, newPoints);
-      } else {
-        queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, newPoints);
-      }
-      
-      // Update the rewards cache
-      queryClient.setQueryData(
-        REWARDS_QUERY_KEY, 
-        (oldRewards: Reward[] = []) => {
-          return oldRewards.map(reward => 
-            reward.id === rewardId 
-              ? { ...reward, supply: reward.supply + 1 }
-              : reward
-          );
-        }
-      );
-      
       // Update the total supply
       queryClient.setQueryData(
         REWARDS_SUPPLY_QUERY_KEY,
@@ -265,6 +230,12 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
       console.log(`[buyRewardMutation] Operation completed in ${endTime - startTime}ms`);
     } catch (error) {
       console.error("[buyRewardMutation] Error:", error);
+      
+      // Revert optimistic updates on error by refetching
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
+      
       throw error;
     }
   };

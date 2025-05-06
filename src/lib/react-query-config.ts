@@ -84,7 +84,7 @@ export const createPersistedQueryClient = () => {
   return queryClient;
 };
 
-// Standardized query config that can be used across the app
+// Standardized query config that should be used across ALL pages in the app
 export const STANDARD_QUERY_CONFIG = {
   staleTime: Infinity,  // Cache data forever, never consider it stale
   gcTime: Infinity,     // Never garbage collect the cache
