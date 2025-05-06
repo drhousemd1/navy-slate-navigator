@@ -14,15 +14,15 @@ enableRealtimeSupport().catch(err => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <Routes>
           <Route path="/" element={<Tasks />} />
           <Route path="/rewards" element={<Rewards />} />
         </Routes>
-      </Router>
-      <Toaster />
-    </AuthProvider>
+        <Toaster />
+      </AuthProvider>
+    </Router>
   );
 };
 
