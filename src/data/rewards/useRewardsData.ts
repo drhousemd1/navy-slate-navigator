@@ -42,7 +42,8 @@ export const useRewardsData = () => {
 
   // Set local rewards whenever server data changes
   useEffect(() => {
-    if (rewards.length > 0) {
+    if (rewards && rewards.length > 0) {
+      console.log("[useRewardsData] Setting local rewards from server data:", rewards);
       setLocalRewards(rewards);
     }
   }, [rewards]);
@@ -64,8 +65,9 @@ export const useRewardsData = () => {
     }, 0);
   }, [localRewards]);
 
-  // Setup real-time subscriptions to rewards table
+  // Setup real-time subscriptions to rewards table with explicit logging
   useEffect(() => {
+    console.log("[useRewardsData] Setting up real-time subscription to rewards table");
     const rewardsChannel = supabase
       .channel('rewards-changes')
       .on('postgres_changes', 
@@ -75,15 +77,18 @@ export const useRewardsData = () => {
           table: 'rewards'
         }, 
         (payload) => {
-          console.log('Real-time rewards update:', payload);
+          console.log('[useRewardsData] Real-time rewards update received:', payload);
           // Force refetch when rewards table changes
           refetchRewards();
           refetchSupply();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[useRewardsData] Subscription status:", status);
+      });
 
     return () => {
+      console.log("[useRewardsData] Removing rewards channel subscription");
       supabase.removeChannel(rewardsChannel);
     };
   }, [refetchRewards, refetchSupply]);
@@ -123,6 +128,7 @@ export const useRewardsData = () => {
 
   // Optimistic update setters
   const setRewardsOptimistically = (newRewards: Reward[]) => {
+    console.log("[useRewardsData] Setting rewards optimistically:", newRewards);
     setLocalRewards(newRewards);
     queryClient.setQueryData(REWARDS_QUERY_KEY, newRewards);
   };

@@ -202,13 +202,13 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
         throw new Error(`Not enough ${isDomReward ? 'dom ' : ''}points to buy this reward`);
       }
       
-      // Apply optimistic updates immediately
+      // Apply optimistic updates immediately for points only
       const newPoints = currentPoints - cost;
       queryClient.setQueryData(pointsQueryKey, newPoints);
       
-      // IMPORTANT FIX: We're no longer updating the rewards cache optimistically
-      // This prevents the double-counting issue since the real-time subscription
-      // will handle updating the cache when the database changes
+      // We don't update the rewards cache optimistically anymore
+      // The UI update will come from the provider component's state update
+      // and ultimately from the real-time subscription
       
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) {
@@ -240,9 +240,6 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
       if (updateSupplyResult.error) {
         throw updateSupplyResult.error;
       }
-      
-      // IMPORTANT FIX: We're not updating the total supply here anymore
-      // The real-time subscription will handle that when the database changes
       
       const endTime = performance.now();
       console.log(`[buyRewardMutation] Operation completed in ${endTime - startTime}ms`);

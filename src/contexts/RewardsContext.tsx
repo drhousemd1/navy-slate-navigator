@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
@@ -134,9 +135,10 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setPointsOptimistically(newPointsValue);
       }
       
-      // IMPORTANT FIX: We're NOT updating the rewards optimistically anymore
-      // This prevents the double-counting issue
-      // Instead, we'll rely on the real-time updates from Supabase
+      // For UI responsiveness, update the local rewards state
+      // but DON'T increment the supply (that happens via Supabase real-time)
+      const updatedRewards = [...rewards];
+      setRewardsOptimistically(updatedRewards);
       
       // 3. Show toast for immediate feedback
       toast({
