@@ -27,7 +27,6 @@ export const useRewardsData = () => {
   const queryClient = useQueryClient();
   const { totalPoints, domPoints, updatePointsInDatabase, updateDomPointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
   const [localRewards, setLocalRewards] = React.useState<Reward[]>([]);
-  const [dataLoaded, setDataLoaded] = React.useState(false);
 
   // Query for fetching all rewards
   const {
@@ -45,7 +44,6 @@ export const useRewardsData = () => {
   useEffect(() => {
     if (rewards.length > 0) {
       setLocalRewards(rewards);
-      setDataLoaded(true);
     }
   }, [rewards]);
 
@@ -79,10 +77,8 @@ export const useRewardsData = () => {
         (payload) => {
           console.log('Real-time rewards update:', payload);
           // Force refetch when rewards table changes
-          if (dataLoaded) {
-            refetchRewards();
-            refetchSupply();
-          }
+          refetchRewards();
+          refetchSupply();
         }
       )
       .subscribe();
@@ -90,13 +86,15 @@ export const useRewardsData = () => {
     return () => {
       supabase.removeChannel(rewardsChannel);
     };
-  }, [refetchRewards, refetchSupply, dataLoaded]);
+  }, [refetchRewards, refetchSupply]);
 
   // Setup real-time subscriptions to profiles table for points updates
   useEffect(() => {
-    async function setupProfilesChannel() {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user.id;
+    // Use getSession instead of getUser as it returns a synchronous result
+    const sessionData = supabase.auth.getSession();
+    
+    sessionData.then(({ data }) => {
+      const userId = data?.session?.user.id;
       
       if (!userId) return;
 
@@ -112,9 +110,7 @@ export const useRewardsData = () => {
           (payload) => {
             console.log('Real-time points update:', payload);
             // Refresh points when profile is updated
-            if (dataLoaded) {
-              refreshPointsFromDatabase();
-            }
+            refreshPointsFromDatabase();
           }
         )
         .subscribe();
@@ -122,10 +118,8 @@ export const useRewardsData = () => {
       return () => {
         supabase.removeChannel(pointsChannel);
       };
-    }
-    
-    setupProfilesChannel();
-  }, [refreshPointsFromDatabase, dataLoaded]);
+    });
+  }, [refreshPointsFromDatabase]);
 
   // Optimistic update setters
   const setRewardsOptimistically = (newRewards: Reward[]) => {
@@ -171,30 +165,6 @@ export const useRewardsData = () => {
     return refetchRewards(options) as Promise<QueryObserverResult<Reward[], Error>>;
   };
 
-  // Force refresh all data function
-  const forceRefreshAllData = async () => {
-    console.log("Forcing refresh of all rewards data");
-    try {
-      // Invalidate all related queries
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
-      
-      // Refetch everything
-      await Promise.all([
-        refetchRewards(),
-        refreshPointsFromDatabase(),
-        refetchSupply()
-      ]);
-      
-      return true;
-    } catch (error) {
-      console.error("Error refreshing all data:", error);
-      return false;
-    }
-  };
-
   return {
     // Data
     rewards: localRewards, // Use local state for immediate updates
@@ -223,9 +193,6 @@ export const useRewardsData = () => {
     // Refetch functions - maintained for compatibility
     refetchRewards: refetchRewardsTyped,
     refetchPoints: refreshPointsFromDatabase,
-    refreshPointsFromDatabase,
-    
-    // New function to force refresh all data
-    forceRefreshAllData
+    refreshPointsFromDatabase
   };
 };
