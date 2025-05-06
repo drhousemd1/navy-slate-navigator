@@ -320,17 +320,20 @@ export const useRewardMutation = (queryClient: QueryClient) =>
       const dayOfWeek = today.getDay();
       const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
       
-      // Use a proper promise chain with then/catch
-      supabase
-        .from('reward_usage')
-        .insert({
-          reward_id: rewardId,
-          day_of_week: dayOfWeek,
-          used: true,
-          week_number: weekNumber
-        })
-        .then(() => console.log("Reward usage recorded successfully"))
-        .catch(error => console.error("Error recording reward usage (non-critical):", error));
+      // Convert this to an async/await pattern to avoid the .catch issue
+      try {
+        await supabase
+          .from('reward_usage')
+          .insert({
+            reward_id: rewardId,
+            day_of_week: dayOfWeek,
+            used: true,
+            week_number: weekNumber
+          });
+        console.log("Reward usage recorded successfully");
+      } catch (error) {
+        console.error("Error recording reward usage (non-critical):", error);
+      }
       
       // Update cache directly for immediate UI feedback
       queryClient.setQueryData(REWARDS_QUERY_KEY, (old: Reward[] = []) => 

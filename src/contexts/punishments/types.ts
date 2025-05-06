@@ -45,7 +45,8 @@ export interface PunishmentsContextType {
   applyPunishment: (punishment: PunishmentData | { id: string; points: number }) => Promise<PunishmentHistoryItem>;
   selectRandomPunishment: () => void;
   resetRandomSelection: () => void;
-  fetchPunishments: () => Promise<void>;
+  // Change return type to match the function's implementation which returns Promise<PunishmentData[]>
+  fetchPunishments: () => Promise<PunishmentData[]>;
   refetchPunishments: (options?: RefetchOptions) => Promise<QueryObserverResult<PunishmentData[], Error>>;
   refetchHistory: (options?: RefetchOptions) => Promise<QueryObserverResult<PunishmentHistoryItem[], Error>>;
   getPunishmentHistory: (punishmentId: string) => PunishmentHistoryItem[];

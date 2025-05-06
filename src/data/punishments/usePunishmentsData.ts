@@ -1,10 +1,11 @@
+
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { 
   PUNISHMENTS_QUERY_KEY, 
   PUNISHMENT_HISTORY_QUERY_KEY,
   // Import the functions with their correct export names
-  fetchPunishments,
+  fetchPunishments as fetchPunishmentsQuery,
   fetchCurrentWeekPunishmentHistory,
 } from './queries';
 import { 
@@ -34,7 +35,7 @@ export const usePunishmentsData = () => {
     refetch: refetchPunishmentsOriginal
   } = useQuery({
     queryKey: PUNISHMENTS_QUERY_KEY,
-    queryFn: fetchPunishments,
+    queryFn: fetchPunishmentsQuery,
     staleTime: Infinity,
     gcTime: Infinity,
   });
@@ -67,6 +68,12 @@ export const usePunishmentsData = () => {
     (sum, item) => sum + item.points_deducted, 
     0
   );
+
+  // Wrapper for fetchPunishmentsQuery that matches the interface
+  const fetchPunishments = useCallback(async (): Promise<PunishmentData[]> => {
+    const result = await fetchPunishmentsQuery();
+    return result;
+  }, []);
   
   // Initial data fetch
   const fetchInitialData = useCallback(async () => {
