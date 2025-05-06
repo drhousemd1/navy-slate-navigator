@@ -135,9 +135,13 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setPointsOptimistically(newPointsValue);
       }
       
-      // For UI responsiveness, update the local rewards state
-      // but DON'T increment the supply (that happens via Supabase real-time)
-      const updatedRewards = [...rewards];
+      // 2. Update reward supply optimistically
+      const updatedRewards = rewards.map(r => {
+        if (r.id === id) {
+          return { ...r, supply: r.supply + 1 };
+        }
+        return r;
+      });
       setRewardsOptimistically(updatedRewards);
       
       // 3. Show toast for immediate feedback
