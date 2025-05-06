@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Tasks from './pages/Tasks';
 import Rewards from './pages/Rewards';
 import { AuthProvider } from './contexts/AuthContext';
-import { ToastContainer } from './hooks/use-toast';
+import { Toaster } from "@/components/ui/toaster"; // Import our custom Toaster component
 import { enableRealtimeSupport } from './integrations/supabase/enableRealtime';
 
 // Enable real-time support when the app loads
@@ -21,7 +21,7 @@ const App: React.FC = () => {
           <Route path="/rewards" element={<Rewards />} />
         </Routes>
       </Router>
-      <ToastContainer position="bottom-right" autoClose={5000} />
+      <Toaster />
     </AuthProvider>
   );
 };
