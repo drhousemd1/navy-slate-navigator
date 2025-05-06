@@ -3,15 +3,34 @@ import React, { useEffect } from 'react';
 import { Badge } from '../../components/ui/badge';
 import { useRewards } from '../../contexts/RewardsContext';
 import { Box, Coins, Crown } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 
 const RewardsHeader: React.FC = () => {
   const { totalPoints, totalRewardsSupply, totalDomRewardsSupply, domPoints = 0, refreshPointsFromDatabase } = useRewards();
+  const queryClient = useQueryClient();
 
-  // Refresh points when component mounts
+  // Refresh points when component mounts with improved version checking
   useEffect(() => {
     console.log("RewardsHeader mounted, refreshing points from database");
-    refreshPointsFromDatabase();
-  }, [refreshPointsFromDatabase]);
+    
+    // Check last refresh time to avoid excessive refreshes
+    const lastRefreshTime = localStorage.getItem('rewards-points-refresh-time');
+    const now = Date.now();
+    
+    if (!lastRefreshTime || (now - parseInt(lastRefreshTime)) > 5000) {
+      // If no refresh in last 5 seconds, force a refresh
+      refreshPointsFromDatabase().then(() => {
+        localStorage.setItem('rewards-points-refresh-time', now.toString());
+      });
+    } else {
+      console.log("Points were refreshed recently, using cached data");
+      
+      // Still invalidate cached data to ensure we get fresh data on next fetch
+      queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY });
+    }
+  }, [refreshPointsFromDatabase, queryClient]);
 
   return (
     <div className="flex items-center mb-6">
