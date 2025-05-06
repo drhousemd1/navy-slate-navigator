@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
@@ -11,7 +10,7 @@ interface RewardEditorProps {
   isOpen: boolean;
   onClose: () => void;
   rewardData?: any;
-  onSave: (rewardData: any) => void;
+  onSave: (rewardData: any) => Promise<void> | void; // Update return type to allow both Promise<void> and void
   onDelete?: (id: number) => void;
 }
 
@@ -59,20 +58,21 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
       onClose();
       
       // Process the save in the background
-      setTimeout(() => {
-        onSave(dataToSave).then(() => {
-          // Success notification handled by the provider
+      setTimeout(async () => {
+        try {
+          // Use await instead of .then to properly handle the Promise
+          await onSave(dataToSave);
           console.log("Save completed successfully");
-        }).catch(error => {
+        } catch (error) {
           console.error("Error in RewardEditor save handler:", error);
           toast({
             title: "Error",
             description: "Failed to save reward. Please try again.",
             variant: "destructive",
           });
-        }).finally(() => {
+        } finally {
           setIsSaving(false);
-        });
+        }
       }, 0);
     } catch (error) {
       console.error("Error in RewardEditor save handler:", error);
