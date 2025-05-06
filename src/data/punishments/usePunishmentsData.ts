@@ -1,9 +1,9 @@
-
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { 
   PUNISHMENTS_QUERY_KEY, 
   PUNISHMENT_HISTORY_QUERY_KEY,
+  // Import the functions with their correct export names
   fetchPunishments,
   fetchCurrentWeekPunishmentHistory,
 } from './queries';
