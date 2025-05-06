@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -142,6 +141,11 @@
     line-height: 1.6;
   }
   
+  /* Dom badge style - black background with red border */
+  .dom-badge {
+    @apply bg-black/90 text-white font-bold px-3 py-1 flex items-center gap-1 border-2 border-red-500;
+  }
+  
   /* Toast styling for single line at top */
   .single-line-toast {
     width: 100% !important;
@@ -176,13 +180,6 @@
     padding: 0 1rem !important;
   }
   
-  /* DOM badge styling - black background with red border */
-  .dom-badge {
-    background-color: #000000 !important;
-    border: 1.5px solid #ea384c !important;
-    color: white !important;
-  }
-  
   /* Hide scrollbar utility */
   .hide-scrollbar {
     scrollbar-width: none; /* Firefox */
@@ -193,4 +190,3 @@
     display: none; /* Chrome, Safari, Opera */
   }
 }
-
