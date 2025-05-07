@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import RewardHeader from './rewards/RewardHeader';
@@ -51,7 +50,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
   usageData = Array(7).fill(false)
 }) => {
   const { toast } = useToast();
-
+  
   const handleBuy = (cost: number) => {
     if (onBuy) {
       onBuy(cost);
