@@ -30,10 +30,9 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
     ? "bg-red-600" 
     : "bg-nav-active";
   
-  // Changed: Supply badge now has black background for non-dom rewards
-  // We're using inline style to apply the specific #00f0ff color as border
+  // Updated: Both DOM and non-DOM rewards now have black backgrounds with colored borders
   const supplyBadgeStyle = isDomReward 
-    ? { backgroundColor: "#ea384c" } // Red background for dom rewards (unchanged)
+    ? { backgroundColor: "#000000", borderColor: "#ea384c", borderWidth: "1px" } // Black with red border for dom rewards
     : { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" }; // Black with blue border for sub rewards
   
   // Use Crown icon for dom rewards, Coins for sub rewards
