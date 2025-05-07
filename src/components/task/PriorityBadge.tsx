@@ -6,7 +6,7 @@ interface PriorityBadgeProps {
 }
 
 const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority }) => {
-  // Get priority color while keeping the neon effect
+  // Get priority color - keeping the same colors
   const getPriorityColor = () => {
     switch (priority) {
       case 'high':
@@ -30,12 +30,7 @@ const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority }) => {
       className="font-bold capitalize px-3 py-1 text-sm flex items-center"
       style={badgeStyle}
     >
-      <span
-        style={{ 
-          color: color,
-          textShadow: `0 0 5px ${color}, 0 0 10px ${color}` 
-        }}
-      >
+      <span style={{ color: color }}>
         {priority}
       </span>
     </Badge>
