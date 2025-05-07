@@ -30,8 +30,11 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
     ? "bg-red-600" 
     : "bg-nav-active";
   
-  // Supply badge color based on reward type
-  const supplyBadgeColor = isDomReward ? "bg-red-500" : "bg-blue-500";
+  // Changed: Supply badge now has black background for non-dom rewards
+  // We're using inline style to apply the specific #00f0ff color as border
+  const supplyBadgeStyle = isDomReward 
+    ? { backgroundColor: "#ea384c" } // Red background for dom rewards (unchanged)
+    : { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" }; // Black with blue border for sub rewards
   
   // Use Crown icon for dom rewards, Coins for sub rewards
   const CostIcon = isDomReward ? Crown : Coins;
@@ -41,7 +44,10 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
   return (
     <div className="flex justify-between items-start mb-3">
       <div className="flex items-center gap-2">
-        <Badge className={`${supplyBadgeColor} text-white font-bold flex items-center gap-1`}>
+        <Badge 
+          className="text-white font-bold flex items-center gap-1" 
+          style={supplyBadgeStyle} // Apply the style directly to the badge
+        >
           <Box className="h-3 w-3" />
           <span>{supply}</span>
         </Badge>
