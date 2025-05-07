@@ -77,7 +77,8 @@ const RewardCard: React.FC<RewardCardProps> = ({
   
   const cardBorderStyle = {
     borderColor: cardBorderColor,
-    boxShadow: supply > 0 ? `0 0 8px 2px rgba(${isDomReward ? '234, 56, 76, 0.6' : '254, 247, 205, 0.6'})` : undefined
+    boxShadow: supply > 0 ? `0 0 8px 2px rgba(${isDomReward ? '234, 56, 76, 0.6' : '254, 247, 205, 0.6'})` : undefined,
+    backgroundColor: '#000000' // Adding black background as requested
   };
 
   return (
