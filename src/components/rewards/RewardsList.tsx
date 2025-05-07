@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useRewards } from '../../contexts/RewardsContext';
-import RewardCard from './RewardCard'; // Update import path to use the card in the same directory
+import RewardCard from '../RewardCard';
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
@@ -44,8 +44,24 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
       {rewards.map((reward, index) => (
         <RewardCard
           key={reward.id}
-          reward={reward}
+          title={reward.title}
+          description={reward.description || ''}
+          cost={reward.cost}
+          supply={reward.supply}
+          isDomReward={reward.is_dom_reward}
+          iconName={reward.icon_name}
+          iconColor={reward.icon_color}
+          onBuy={() => handleBuyReward(reward.id, reward.cost)}
+          onUse={() => handleUseReward(reward.id)}
           onEdit={() => onEdit(index)}
+          backgroundImage={reward.background_image_url}
+          backgroundOpacity={reward.background_opacity}
+          focalPointX={reward.focal_point_x}
+          focalPointY={reward.focal_point_y}
+          highlight_effect={reward.highlight_effect}
+          title_color={reward.title_color}
+          subtext_color={reward.subtext_color}
+          calendar_color={reward.calendar_color}
         />
       ))}
     </div>
