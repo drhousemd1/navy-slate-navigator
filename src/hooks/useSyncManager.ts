@@ -94,7 +94,7 @@ export const useSyncManager = (options: SyncOptions = {}) => {
         toast({
           title: "Data synchronized",
           description: `Successfully synchronized app data at ${new Date().toLocaleTimeString()}`,
-          duration: 3000,
+          variant: "default"
         });
       }
       
@@ -177,7 +177,7 @@ export const useSyncManager = (options: SyncOptions = {}) => {
     toast({
       title: "Cache refreshed",
       description: "All data has been refreshed from the server",
-      duration: 3000,
+      variant: "default"
     });
   };
   
