@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Badge } from '../ui/badge';
-import { Plus, Minus, Coins } from 'lucide-react';
+import { Minus, Coins } from 'lucide-react';
 
 interface PointsBadgeProps {
   points: number;
@@ -13,12 +13,14 @@ const PointsBadge: React.FC<PointsBadgeProps> = ({ points }) => {
 
   return (
     <Badge 
-      className="text-white font-bold flex items-center gap-1"
+      className="text-white font-bold flex items-center gap-1 px-2"
       style={badgeStyle}
     >
-      <Coins className="h-3 w-3 mr-1" />
-      {points > 0 ? <Plus className="h-3 w-3 mr-0.5" /> : <Minus className="h-3 w-3 mr-0.5" />}
-      {Math.abs(points)}
+      <Coins className="h-3 w-3" />
+      <span className="flex items-center">
+        {points < 0 && <Minus className="h-2 w-2 mr-0.5" />}
+        {Math.abs(points)}
+      </span>
     </Badge>
   );
 };
