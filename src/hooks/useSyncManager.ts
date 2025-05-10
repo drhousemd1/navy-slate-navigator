@@ -23,11 +23,12 @@ interface SyncOptions {
   includeKeys?: string[][];
   excludeKeys?: string[][];
   showToasts?: boolean;
+  maxRetries?: number;
 }
 
 /**
  * Enhanced custom hook that manages synchronization of critical data
- * with improved React Query integration and more control options.
+ * with improved React Query integration, error handling, and more control options.
  */
 export const useSyncManager = (options: SyncOptions = {}) => {
   const {
@@ -35,11 +36,13 @@ export const useSyncManager = (options: SyncOptions = {}) => {
     enabled = true,
     includeKeys = Object.values(CRITICAL_QUERY_KEYS),
     excludeKeys = [],
-    showToasts = false
+    showToasts = false,
+    maxRetries = 3
   } = options;
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [syncErrors, setSyncErrors] = useState<Record<string, number>>({});
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
@@ -59,6 +62,17 @@ export const useSyncManager = (options: SyncOptions = {}) => {
     });
   };
 
+  // Function to check authentication without throwing
+  const checkAuthentication = async (): Promise<boolean> => {
+    try {
+      const { data } = await supabase.auth.getUser();
+      return !!data?.user?.id;
+    } catch (error) {
+      console.error('[SyncManager] Auth check error:', error);
+      return false;
+    }
+  };
+
   // Function to sync critical data
   const syncCriticalData = async (specificKeys?: unknown[][]) => {
     if (!enabled) return;
@@ -67,15 +81,20 @@ export const useSyncManager = (options: SyncOptions = {}) => {
       console.log('[SyncManager] Starting background sync of critical data');
       setIsSyncing(true);
       
-      // Get current user
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user?.id) {
+      // Get current user - with error handling
+      const isAuthenticated = await checkAuthentication();
+      if (!isAuthenticated) {
         console.log('[SyncManager] No user logged in, skipping sync');
         return;
       }
       
       // Refresh points data from database
-      await refreshPointsFromDatabase();
+      try {
+        await refreshPointsFromDatabase();
+      } catch (error) {
+        console.error('[SyncManager] Error refreshing points:', error);
+        // Don't fail the entire sync process for this
+      }
       
       // Invalidate specific query keys that need refreshing
       const keysToInvalidate = specificKeys || Object.values(CRITICAL_QUERY_KEYS);
@@ -84,8 +103,34 @@ export const useSyncManager = (options: SyncOptions = {}) => {
       const filteredKeys = keysToInvalidate.filter(shouldSyncKey);
       
       for (const key of filteredKeys) {
-        queryClient.invalidateQueries({ queryKey: key });
-        console.log(`[SyncManager] Invalidated cache for key: ${JSON.stringify(key)}`);
+        try {
+          const keyStr = JSON.stringify(key);
+          
+          // Skip keys that have failed too many times
+          if (syncErrors[keyStr] && syncErrors[keyStr] >= maxRetries) {
+            console.log(`[SyncManager] Skipping key ${keyStr} - too many failures`);
+            continue;
+          }
+          
+          queryClient.invalidateQueries({ queryKey: key });
+          console.log(`[SyncManager] Invalidated cache for key: ${keyStr}`);
+          
+          // Reset error count for successful keys
+          if (syncErrors[keyStr]) {
+            setSyncErrors(prev => ({
+              ...prev,
+              [keyStr]: 0
+            }));
+          }
+        } catch (error) {
+          console.error(`[SyncManager] Error invalidating key ${JSON.stringify(key)}:`, error);
+          
+          const keyStr = JSON.stringify(key);
+          setSyncErrors(prev => ({
+            ...prev,
+            [keyStr]: (prev[keyStr] || 0) + 1
+          }));
+        }
       }
       
       setLastSyncTime(new Date());
@@ -112,6 +157,30 @@ export const useSyncManager = (options: SyncOptions = {}) => {
     } finally {
       setIsSyncing(false);
     }
+  };
+  
+  // Function to reset the sync state completely
+  const resetSyncState = () => {
+    console.log('[SyncManager] Resetting sync state');
+    setSyncErrors({});
+    setLastSyncTime(null);
+    setIsSyncing(false);
+    
+    // Clear any pending timeouts
+    if (timeoutRef.current) {
+      clearInterval(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    // Start a new sync cycle after a brief delay
+    setTimeout(() => {
+      syncCriticalData();
+      
+      // Restart interval
+      if (enabled && intervalMs > 0) {
+        timeoutRef.current = setInterval(syncCriticalData, intervalMs);
+      }
+    }, 1000);
   };
   
   // Set up the periodic sync
@@ -169,10 +238,30 @@ export const useSyncManager = (options: SyncOptions = {}) => {
     };
   }, [enabled]);
   
+  // Listen for auth state changes to reset sync if needed
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      console.log('[SyncManager] Auth state changed:', event);
+      
+      if (event === 'SIGNED_IN') {
+        console.log('[SyncManager] User signed in, resetting sync state');
+        resetSyncState();
+      } else if (event === 'SIGNED_OUT') {
+        console.log('[SyncManager] User signed out, clearing cache');
+        queryClient.clear();
+      }
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+  
   // Function to force a complete refresh of all cache
   const forceFullRefresh = async () => {
+    console.log('[SyncManager] Forcing full cache refresh');
     queryClient.clear(); // Clear the entire cache
-    await syncCriticalData(); // Then resync everything
+    resetSyncState(); // Reset sync state and trigger a new sync cycle
     
     toast({
       title: "Cache refreshed",
@@ -186,11 +275,13 @@ export const useSyncManager = (options: SyncOptions = {}) => {
     syncNow: syncCriticalData,
     isSyncing,
     lastSyncTime,
+    syncErrors,
     forceRefreshPoints: refreshPointsFromDatabase,
     invalidateCache: (keys?: string[][]) => {
       queryClient.invalidateQueries({ queryKey: keys || CRITICAL_QUERY_KEYS.TASKS });
       syncCriticalData(keys);
     },
-    forceFullRefresh
+    forceFullRefresh,
+    resetSyncState
   };
 };
