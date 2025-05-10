@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -27,7 +28,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <CacheCleanup />
-      <ThemeProvider>
+      <ThemeProvider defaultTheme="dark">
         <ToastProvider>
           <BrowserRouter>
             <AuthProvider>

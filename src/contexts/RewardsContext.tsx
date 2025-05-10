@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
@@ -6,37 +5,7 @@ import { Reward } from '@/lib/rewardUtils';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 
-// Create a simple mock query result for initial context value
-const mockQueryResult: QueryObserverResult<Reward[], Error> = {
-  data: [],
-  error: null,
-  isError: false,
-  isSuccess: true,
-  isLoading: false,
-  isPending: false,
-  isLoadingError: false,
-  isRefetchError: false,
-  failureCount: 0,
-  failureReason: null,
-  status: 'success',
-  fetchStatus: 'idle',
-  dataUpdatedAt: Date.now(),
-  errorUpdatedAt: 0,
-  isFetched: true,
-  isFetchedAfterMount: true,
-  isFetching: false,
-  isPlaceholderData: false,
-  isRefetching: false,
-  isStale: false,
-  errorUpdateCount: 0,
-  isInitialLoading: false,
-  isPaused: false,
-  refetch: async () => mockQueryResult,
-};
-
-// Add the promise property separately to avoid circular reference
-mockQueryResult.promise = Promise.resolve([]);
-
+// Create a context with default values
 const RewardsContext = createContext<RewardsContextType>({
   rewards: [],
   totalPoints: 0,
@@ -46,7 +15,35 @@ const RewardsContext = createContext<RewardsContextType>({
   setTotalPoints: async () => Promise.resolve(),
   setDomPoints: async () => Promise.resolve(),
   isLoading: false,
-  refetchRewards: async () => mockQueryResult,
+  refetchRewards: async () => {
+    return {
+      data: [],
+      error: null,
+      isError: false,
+      isSuccess: true,
+      isLoading: false,
+      isPending: false,
+      isLoadingError: false,
+      isRefetchError: false,
+      failureCount: 0,
+      failureReason: null,
+      status: 'success',
+      fetchStatus: 'idle',
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      isFetched: true,
+      isFetchedAfterMount: true,
+      isFetching: false,
+      isPlaceholderData: false,
+      isRefetching: false,
+      isStale: false,
+      errorUpdateCount: 0,
+      isInitialLoading: false,
+      isPaused: false,
+      refetch: async () => ({} as any),
+      promise: Promise.resolve([])
+    } as QueryObserverResult<Reward[], Error>;
+  },
   handleSaveReward: async () => null,
   handleDeleteReward: async () => false,
   handleBuyReward: async () => {},
