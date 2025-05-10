@@ -1,22 +1,44 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
-import { logQueryPerformance } from '@/lib/react-query-config';
+import { logQueryPerformance, withTimeout } from '@/lib/react-query-config';
 
 export const fetchRules = async (): Promise<Rule[]> => {
   console.log("[fetchRules] Starting rules fetch");
   const startTime = performance.now();
   
   const CACHE_KEY = 'kingdom-app-rules';
+  let cachedRules: Rule[] | null = null;
+  
+  // Try to get cached data first
+  try {
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    if (cachedData) {
+      cachedRules = JSON.parse(cachedData);
+      console.log(`[fetchRules] Found ${cachedRules.length} cached rules`);
+    }
+  } catch (parseError) {
+    console.error('[fetchRules] Error parsing cached rules:', parseError);
+  }
   
   try {
-    const { data, error } = await supabase
-      .from('rules')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // Wrap the database query with a timeout to prevent hanging
+    const { data, error } = await withTimeout(
+      supabase
+        .from('rules')
+        .select('*')
+        .order('created_at', { ascending: false }),
+      10000, // 10 second timeout
+      { data: [], error: null }
+    );
       
     if (error) {
       console.error('[fetchRules] Error:', error);
+      // If we have cached data, return it instead of throwing
+      if (cachedRules) {
+        console.log('[fetchRules] Returning cached rules due to error');
+        return cachedRules;
+      }
       throw error;
     }
     
@@ -78,18 +100,14 @@ export const fetchRules = async (): Promise<Rule[]> => {
   } catch (error) {
     console.error('[fetchRules] Fetch failed:', error);
     
-    // In case of failure, check browser storage for cached data
-    const cachedData = localStorage.getItem(CACHE_KEY);
-    if (cachedData) {
-      console.log('[fetchRules] Using cached rules data');
-      try {
-        const parsedData = JSON.parse(cachedData);
-        return parsedData;
-      } catch (parseError) {
-        console.error('[fetchRules] Error parsing cached data:', parseError);
-      }
+    // Return cached data if available instead of throwing
+    if (cachedRules) {
+      console.log('[fetchRules] Returning cached rules due to error');
+      return cachedRules;
     }
     
-    throw error;
+    // If no cached data, return empty array instead of throwing
+    console.log('[fetchRules] No cached data available, returning empty array');
+    return [];
   }
 };

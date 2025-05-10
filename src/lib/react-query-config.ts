@@ -1,4 +1,3 @@
-
 import { QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { persistQueryClient } from '@tanstack/react-query-persist-client';
@@ -11,15 +10,20 @@ export const createQueryClient = () => {
         staleTime: 60000,    // Cache considered fresh for 1 minute (instead of Infinity)
         gcTime: 300000,      // Garbage collect after 5 minutes (instead of Infinity)
         refetchOnWindowFocus: false,
-        refetchOnMount: false,
-        refetchOnReconnect: false,
-        retry: 3,            // Increase retry attempts for network issues
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+        refetchOnMount: true, // Changed to true to check for updates
+        refetchOnReconnect: true, // Changed to true to check for updates on reconnection
+        retry: 1,            // Reduce retry attempts to avoid timeout cascades
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000), // Shorter retries
         networkMode: 'online',
+        // Add timeout configuration to prevent hanging requests
+        queryFn: async ({ queryKey }) => {
+          console.log(`[QueryClient] Executing query for: ${JSON.stringify(queryKey)}`);
+          throw new Error(`No queryFn defined for key: ${JSON.stringify(queryKey)}`);
+        },
       },
       mutations: {
         networkMode: 'online',
-        retry: 2,            // Allow mutation retries
+        retry: 1,            // Reduce mutation retries
       },
     },
   });
@@ -113,11 +117,13 @@ export const STANDARD_QUERY_CONFIG = {
   staleTime: 60000,    // Cache considered fresh for 1 minute
   gcTime: 300000,      // Garbage collect after 5 minutes
   refetchOnWindowFocus: false,
-  refetchOnMount: false,
-  refetchOnReconnect: false,
-  retry: 3,            // Increased retry count
-  retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+  refetchOnMount: true, // Check for updates when component mounts
+  refetchOnReconnect: true, // Check for updates when reconnecting
+  retry: 1,            // Reduced retry count to avoid timeout loops
+  retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000), // Shorter retry delays
   keepPreviousData: true, // Show previous data while fetching
+  // Add timeout to prevent hanging requests
+  networkMode: 'always', // Try to fetch even when offline to get better error handling
 };
 
 // Helper function to purge the cache manually
@@ -198,4 +204,32 @@ export const useCachedQuery = (queryClient: QueryClient, queryKey: unknown[], qu
   
   // If no cached data, fetch normally
   return null; // This will show loading state
+};
+
+// New utility function to handle database timeouts gracefully
+export const withTimeout = <T>(promise: Promise<T>, timeoutMs = 5000, fallback?: T): Promise<T> => {
+  let timeoutHandle: NodeJS.Timeout;
+  
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new Error(`Request timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+  
+  return Promise.race([
+    promise,
+    timeoutPromise
+  ])
+    .then((result) => {
+      clearTimeout(timeoutHandle);
+      return result as T;
+    })
+    .catch((error) => {
+      clearTimeout(timeoutHandle);
+      console.error('Operation timed out or failed:', error);
+      if (fallback !== undefined) {
+        return fallback;
+      }
+      throw error;
+    });
 };

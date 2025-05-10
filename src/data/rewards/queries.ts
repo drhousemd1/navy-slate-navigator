@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/lib/rewardUtils';
-import { logQueryPerformance } from '@/lib/react-query-config';
+import { logQueryPerformance, withTimeout } from '@/lib/react-query-config';
 
 export const REWARDS_QUERY_KEY = ['rewards'];
 export const REWARDS_POINTS_QUERY_KEY = ['rewards', 'points'];
@@ -12,15 +12,43 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   const startTime = performance.now();
   
   const CACHE_KEY = 'kingdom-app-rewards';
+  let cachedRewards: Reward[] | null = null;
+  
+  // Try to get cached data first for immediate response
+  try {
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    if (cachedData) {
+      try {
+        cachedRewards = JSON.parse(cachedData);
+        console.log(`[fetchRewards] Found ${cachedRewards.length} cached rewards`);
+      } catch (parseError) {
+        console.error('[fetchRewards] Error parsing cached rewards:', parseError);
+      }
+    }
+  } catch (e) {
+    console.warn('[fetchRewards] Could not access localStorage:', e);
+  }
   
   try {
-    const { data, error } = await supabase
-      .from('rewards')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // Wrap the database query with a timeout to prevent hanging
+    const result = await withTimeout(
+      supabase
+        .from('rewards')
+        .select('*')
+        .order('created_at', { ascending: false }),
+      8000,  // 8 second timeout
+      { data: [], error: null }
+    );
+    
+    const { data, error } = result;
     
     if (error) {
       console.error('[fetchRewards] Error:', error);
+      // If we have cached data, return it instead of throwing
+      if (cachedRewards) {
+        console.log('[fetchRewards] Returning cached rewards due to error');
+        return cachedRewards;
+      }
       throw error;
     }
     
@@ -44,24 +72,15 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   } catch (error) {
     console.error('[fetchRewards] Fetch failed:', error);
     
-    // Try to get cached data from localStorage
-    const cachedData = localStorage.getItem(CACHE_KEY);
-    if (cachedData) {
-      console.log('[fetchRewards] Using cached rewards data');
-      try {
-        const parsedData = JSON.parse(cachedData);
-        // Ensure is_dom_reward is defined for cached data too
-        const cachedWithDomProperty = parsedData.map((reward: any) => ({
-          ...reward,
-          is_dom_reward: reward.is_dom_reward ?? false
-        })) as Reward[];
-        return cachedWithDomProperty;
-      } catch (parseError) {
-        console.error('[fetchRewards] Error parsing cached data:', parseError);
-      }
+    // Return cached data if available instead of throwing
+    if (cachedRewards) {
+      console.log('[fetchRewards] Returning cached rewards due to error');
+      return cachedRewards;
     }
     
-    throw error;
+    // If no cached data and error, return empty array instead of throwing
+    console.log('[fetchRewards] No cached rewards available, returning empty array');
+    return [];
   }
 };
 
@@ -70,6 +89,18 @@ export const fetchUserPoints = async (): Promise<number> => {
   const startTime = performance.now();
   
   const CACHE_KEY = 'kingdom-app-user-points';
+  let cachedPoints: number = 0;
+  
+  // Try to get cached points first
+  try {
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    if (cachedData) {
+      cachedPoints = JSON.parse(cachedData);
+      console.log('[fetchUserPoints] Found cached points:', cachedPoints);
+    }
+  } catch (e) {
+    console.warn('[fetchUserPoints] Could not access localStorage for points:', e);
+  }
   
   try {
     const { data: userData } = await supabase.auth.getUser();
@@ -80,15 +111,23 @@ export const fetchUserPoints = async (): Promise<number> => {
       return 0;
     }
     
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('points')
-      .eq('id', userId)
-      .single();
+    // Wrap the database query with a timeout
+    const result = await withTimeout(
+      supabase
+        .from('profiles')
+        .select('points')
+        .eq('id', userId)
+        .maybeSingle(),
+      5000, // 5 second timeout
+      { data: { points: cachedPoints }, error: null }
+    );
+    
+    const { data, error } = result;
     
     if (error) {
       console.error('[fetchUserPoints] Error:', error);
-      throw error;
+      // Return cached points on error
+      return cachedPoints;
     }
     
     logQueryPerformance('fetchUserPoints', startTime);
@@ -96,6 +135,7 @@ export const fetchUserPoints = async (): Promise<number> => {
     // Cache the points value
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(data?.points || 0));
+      console.log(`[fetchUserPoints] Cached points value: ${data?.points || 0}`);
     } catch (e) {
       console.warn('[fetchUserPoints] Could not cache points:', e);
     }
@@ -104,19 +144,8 @@ export const fetchUserPoints = async (): Promise<number> => {
     return data?.points || 0;
   } catch (error) {
     console.error('[fetchUserPoints] Fetch failed:', error);
-    
-    // Try to get cached data
-    const cachedPoints = localStorage.getItem(CACHE_KEY);
-    if (cachedPoints) {
-      console.log('[fetchUserPoints] Using cached points data');
-      try {
-        return JSON.parse(cachedPoints);
-      } catch (parseError) {
-        console.error('[fetchUserPoints] Error parsing cached points:', parseError);
-      }
-    }
-    
-    return 0;
+    // Return cached points on error
+    return cachedPoints;
   }
 };
 
@@ -180,15 +209,35 @@ export const fetchTotalRewardsSupply = async (): Promise<number> => {
   const startTime = performance.now();
   
   const CACHE_KEY = 'kingdom-app-rewards-supply';
+  let cachedSupply: number = 0;
+  
+  // Try to get cached supply first
+  try {
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    if (cachedData) {
+      cachedSupply = JSON.parse(cachedData);
+      console.log('[fetchTotalRewardsSupply] Found cached supply:', cachedSupply);
+    }
+  } catch (e) {
+    console.warn('[fetchTotalRewardsSupply] Could not access localStorage for supply:', e);
+  }
   
   try {
-    const { data, error } = await supabase
-      .from('rewards')
-      .select('supply');
+    // Wrap the database query with a timeout
+    const result = await withTimeout(
+      supabase
+        .from('rewards')
+        .select('supply'),
+      5000, // 5 second timeout
+      { data: [], error: null }
+    );
+    
+    const { data, error } = result;
     
     if (error) {
       console.error('[fetchTotalRewardsSupply] Error:', error);
-      throw error;
+      // Return cached supply on error
+      return cachedSupply;
     }
     
     const total = data?.reduce((total, reward) => total + reward.supply, 0) || 0;
@@ -198,6 +247,7 @@ export const fetchTotalRewardsSupply = async (): Promise<number> => {
     // Cache the supply value
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(total));
+      console.log(`[fetchTotalRewardsSupply] Cached supply value: ${total}`);
     } catch (e) {
       console.warn('[fetchTotalRewardsSupply] Could not cache supply:', e);
     }
@@ -206,18 +256,7 @@ export const fetchTotalRewardsSupply = async (): Promise<number> => {
     return total;
   } catch (error) {
     console.error('[fetchTotalRewardsSupply] Fetch failed:', error);
-    
-    // Try to get cached data
-    const cachedSupply = localStorage.getItem(CACHE_KEY);
-    if (cachedSupply) {
-      console.log('[fetchTotalRewardsSupply] Using cached supply data');
-      try {
-        return JSON.parse(cachedSupply);
-      } catch (parseError) {
-        console.error('[fetchTotalRewardsSupply] Error parsing cached supply:', parseError);
-      }
-    }
-    
-    return 0;
+    // Return cached supply on error
+    return cachedSupply;
   }
 };

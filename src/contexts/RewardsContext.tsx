@@ -5,36 +5,46 @@ import { Reward } from '@/lib/rewardUtils';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 
-// Create a complete mock observer result that satisfies the QueryObserverResult type
-const mockQueryResult: QueryObserverResult<Reward[], Error> = {
-  data: [],
-  error: null,
-  isError: false as const,
-  isSuccess: true as const,
-  isLoading: false as const,
-  isPending: false as const,
-  isLoadingError: false as const,
-  isRefetchError: false as const,
-  failureCount: 0,
-  failureReason: null,
-  status: 'success' as const,
-  fetchStatus: 'idle' as const,
-  dataUpdatedAt: Date.now(),
-  errorUpdatedAt: 0,
-  isFetched: true,
-  isFetchedAfterMount: true,
-  isFetching: false,
-  isPlaceholderData: false,
-  isRefetching: false,
-  isStale: false,
-  errorUpdateCount: 0,
-  isInitialLoading: false,
-  isPaused: false,
-  // The refetch function needs to return the same type
-  refetch: async () => mockQueryResult,
-  // Add the missing promise property to fix the TypeScript error
-  promise: Promise.resolve(mockQueryResult)
+// Create the mock observer result first
+const createMockQueryResult = (): QueryObserverResult<Reward[], Error> => {
+  // Create a properly typed mock result
+  const result: QueryObserverResult<Reward[], Error> = {
+    data: [],
+    error: null,
+    isError: false as const,
+    isSuccess: true as const,
+    isLoading: false as const,
+    isPending: false as const,
+    isLoadingError: false as const,
+    isRefetchError: false as const,
+    failureCount: 0,
+    failureReason: null,
+    status: 'success' as const,
+    fetchStatus: 'idle' as const,
+    dataUpdatedAt: Date.now(),
+    errorUpdatedAt: 0,
+    isFetched: true,
+    isFetchedAfterMount: true,
+    isFetching: false,
+    isPlaceholderData: false,
+    isRefetching: false,
+    isStale: false,
+    errorUpdateCount: 0,
+    isInitialLoading: false,
+    isPaused: false,
+    refetch: async () => result
+  };
+
+  // Add the promise property with correct typing
+  Object.defineProperty(result, 'promise', {
+    value: Promise.resolve(result)
+  });
+
+  return result;
 };
+
+// Use the function to create a mock result
+const mockQueryResult = createMockQueryResult();
 
 const RewardsContext = createContext<RewardsContextType>({
   rewards: [],
