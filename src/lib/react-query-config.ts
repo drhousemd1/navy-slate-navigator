@@ -3,13 +3,13 @@ import { QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { persistQueryClient } from '@tanstack/react-query-persist-client';
 
-// Create a centralized QueryClient with optimized settings for infinite caching
+// Create a centralized QueryClient with optimized settings for moderate caching
 export const createQueryClient = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: Infinity, // Cache data forever, never consider it stale
-        gcTime: Infinity,    // Never garbage collect the cache
+        staleTime: 60000,    // Cache considered fresh for 1 minute (instead of Infinity)
+        gcTime: 300000,      // Garbage collect after 5 minutes (instead of Infinity)
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false,
@@ -27,6 +27,13 @@ export const createQueryClient = () => {
   return queryClient;
 };
 
+// Version identifier for cache invalidation
+export const APP_CACHE_VERSION = '1.0.0';
+const CACHE_VERSION_KEY = 'kingdom-app-cache-version';
+const CACHE_TIMESTAMP_KEY = 'kingdom-app-cache-timestamp';
+const CACHE_STORAGE_KEY = 'kingdom-app-cache';
+const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 // Create a persisted query client that preserves the cache between page refreshes
 export const createPersistedQueryClient = () => {
   const queryClient = createQueryClient();
@@ -34,24 +41,41 @@ export const createPersistedQueryClient = () => {
   // Only setup persistence in browser environments
   if (typeof window !== 'undefined') {
     try {
-      // Create a simplified persister without custom serialization
-      const storageKey = 'kingdom-app-cache';
+      // Check if we need to invalidate the cache based on version or age
+      const savedVersion = localStorage.getItem(CACHE_VERSION_KEY);
+      const savedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+      const currentTime = Date.now();
       
-      // Store the cache manually instead of using the problematic persistQueryClient
-      // This avoids the type conflict while still maintaining persistence
-      queryClient.mount(); // Ensure client is initialized
+      // Clear cache if version mismatch or cache is too old
+      if (
+        savedVersion !== APP_CACHE_VERSION || 
+        !savedTimestamp || 
+        currentTime - parseInt(savedTimestamp, 10) > CACHE_MAX_AGE_MS
+      ) {
+        console.log('Cache version changed or expired, clearing cache');
+        localStorage.removeItem(CACHE_STORAGE_KEY);
+        localStorage.setItem(CACHE_VERSION_KEY, APP_CACHE_VERSION);
+        localStorage.setItem(CACHE_TIMESTAMP_KEY, currentTime.toString());
+      }
       
       // Add event listener to save cache before page unload
       window.addEventListener('beforeunload', () => {
         try {
-          const state = queryClient.getQueryCache().getAll().map(query => ({
-            queryKey: query.queryKey,
-            data: query.state.data,
-          }));
+          // Only cache essential queries (tasks, rewards, punishments)
+          const state = queryClient.getQueryCache().getAll()
+            .filter(query => {
+              const key = Array.isArray(query.queryKey) ? query.queryKey[0] : query.queryKey;
+              return ['tasks', 'rewards', 'punishments', 'rules'].includes(String(key));
+            })
+            .map(query => ({
+              queryKey: query.queryKey,
+              data: query.state.data,
+            }));
           
           if (state.length > 0) {
-            localStorage.setItem(storageKey, JSON.stringify(state));
-            console.log(`Saved ${state.length} queries to localStorage`);
+            localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(state));
+            localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+            console.log(`Saved ${state.length} essential queries to localStorage`);
           }
         } catch (e) {
           console.error("Error saving query cache:", e);
@@ -60,7 +84,7 @@ export const createPersistedQueryClient = () => {
       
       // Try to restore cache on initialization
       try {
-        const savedCache = localStorage.getItem(storageKey);
+        const savedCache = localStorage.getItem(CACHE_STORAGE_KEY);
         if (savedCache) {
           const queries = JSON.parse(savedCache);
           queries.forEach(item => {
@@ -74,7 +98,7 @@ export const createPersistedQueryClient = () => {
         console.error("Error restoring query cache:", e);
       }
       
-      console.log("Manual query persistence configured");
+      console.log("Query persistence configured with version control");
     } catch (e) {
       console.error("Error setting up query persistence:", e);
       // Fallback to non-persistent client if setup fails
@@ -86,14 +110,22 @@ export const createPersistedQueryClient = () => {
 
 // Standardized query config that should be used across ALL pages in the app
 export const STANDARD_QUERY_CONFIG = {
-  staleTime: Infinity,  // Cache data forever, never consider it stale
-  gcTime: Infinity,     // Never garbage collect the cache
+  staleTime: 60000,    // Cache considered fresh for 1 minute
+  gcTime: 300000,      // Garbage collect after 5 minutes
   refetchOnWindowFocus: false,
   refetchOnMount: false,
   refetchOnReconnect: false,
-  retry: 3,             // Increased retry count
+  retry: 3,            // Increased retry count
   retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   keepPreviousData: true, // Show previous data while fetching
+};
+
+// Helper function to purge the cache manually
+export const purgeQueryCache = (queryClient: QueryClient) => {
+  queryClient.clear();
+  localStorage.removeItem(CACHE_STORAGE_KEY);
+  localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+  console.log('Query cache purged manually');
 };
 
 // Centralized helper for performance logging

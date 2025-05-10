@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useNavigate } from 'react-router-dom';
 import RuleEditor from '../components/RuleEditor';
@@ -8,6 +7,7 @@ import RulesList from '../components/rule/RulesList';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { RulesProvider, useRules } from '@/contexts/RulesContext';
 import { Rule } from '@/data/interfaces/Rule';
+import { useSyncManager } from '@/hooks/useSyncManager';
 
 // Separate component to use the useRules hook inside RulesProvider
 const RulesWithContext: React.FC = () => {
@@ -15,6 +15,17 @@ const RulesWithContext: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken } = useRules();
+
+  // Use the sync manager to keep data in sync
+  const { syncNow, lastSyncTime } = useSyncManager({ 
+    intervalMs: 30000, // 30 seconds, consistent with other pages
+    enabled: true 
+  });
+  
+  // Initial sync when component mounts
+  useEffect(() => {
+    syncNow(); // Force a sync when the Rules page is loaded
+  }, []);
 
   const handleAddRule = () => {
     console.log('handleAddRule called in RulesWithContext');
@@ -48,6 +59,9 @@ const RulesWithContext: React.FC = () => {
       await saveRule(ruleData);
       setIsEditorOpen(false);
       setCurrentRule(null);
+      
+      // Synchronize data after rule save
+      setTimeout(() => syncNow(), 500);
     } catch (err) {
       console.error('Error saving rule:', err);
     }
@@ -58,6 +72,9 @@ const RulesWithContext: React.FC = () => {
       await deleteRule(ruleId);
       setCurrentRule(null);
       setIsEditorOpen(false);
+      
+      // Synchronize data after rule delete
+      setTimeout(() => syncNow(), 500);
     } catch (err) {
       console.error('Error deleting rule:', err);
     }
