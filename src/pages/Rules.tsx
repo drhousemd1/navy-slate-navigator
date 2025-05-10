@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useNavigate } from 'react-router-dom';
 import RuleEditor from '../components/RuleEditor';
@@ -14,7 +14,15 @@ const RulesWithContext: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
-  const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken } = useRules();
+  const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken, refetchRules } = useRules();
+
+  // Force a data refresh when the component mounts
+  useEffect(() => {
+    console.log('RulesWithContext: Forcing data refresh');
+    refetchRules().catch(err => 
+      console.error('Error refreshing rules:', err)
+    );
+  }, [refetchRules]);
 
   const handleAddRule = () => {
     console.log('handleAddRule called in RulesWithContext');

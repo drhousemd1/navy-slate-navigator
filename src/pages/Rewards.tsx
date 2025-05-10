@@ -10,18 +10,21 @@ import { useSyncManager } from '@/hooks/useSyncManager';
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
-  const { rewards, isLoading, handleSaveReward, handleDeleteReward } = useRewards();
+  const { rewards, isLoading, handleSaveReward, handleDeleteReward, refetchRewards } = useRewards();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<any>(undefined);
   
   // Use the sync manager to keep data in sync - add enabled parameter
   const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
   
-  // Sync on initial render only
+  // Force data refresh on mount
   useEffect(() => {
-    // Force a sync on initial load completion - only once
+    console.log('RewardsContent: Forcing initial data refresh');
     syncNow();
-  }, []);
+    refetchRewards().catch(err => 
+      console.error('Error refreshing rewards:', err)
+    );
+  }, [refetchRewards, syncNow]);
   
   const handleAddNewReward = () => {
     setRewardBeingEdited(undefined);
@@ -63,11 +66,9 @@ const RewardsContent: React.FC<{
             // Get the index from the rewardBeingEdited if it exists
             const index = rewardBeingEdited?.index !== undefined ? rewardBeingEdited.index : null;
             
-            // Save reward without forcing immediate sync
+            // Save reward
             await handleSaveReward(data, index);
-            
-            // No need to force sync immediately - rely on background updates
-            // Removed: syncNow();
+            setIsEditorOpen(false);
           } catch (error) {
             console.error("Error saving reward:", error);
           }

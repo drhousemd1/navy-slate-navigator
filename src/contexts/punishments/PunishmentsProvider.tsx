@@ -1,10 +1,10 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem } from './types';
 import { usePunishmentsData } from '@/data/punishments/usePunishmentsData';
 import { QueryObserverResult } from '@tanstack/react-query';
 
-// Create a context with a default value
+// Create a context with defaults
 const PunishmentsContext = createContext<PunishmentsContextType>({
   punishments: [],
   punishmentHistory: [],
@@ -19,17 +19,28 @@ const PunishmentsContext = createContext<PunishmentsContextType>({
   applyPunishment: async () => ({} as PunishmentHistoryItem),
   selectRandomPunishment: () => {},
   resetRandomSelection: () => {},
-  fetchPunishments: async () => [], // Update the return type to match the implementation
+  fetchPunishments: async () => [],
   refetchPunishments: async () => ({} as QueryObserverResult<PunishmentData[], Error>),
   refetchHistory: async () => ({} as QueryObserverResult<PunishmentHistoryItem[], Error>),
   getPunishmentHistory: () => [],
   totalPointsDeducted: 0
 });
 
-// Create a provider component
+// Provider component
 export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Use the data hook
   const punishmentsData = usePunishmentsData();
+  
+  // Force initial data fetch
+  useEffect(() => {
+    console.log('PunishmentsProvider: Initial data fetch');
+    punishmentsData.refetchPunishments().catch(err => 
+      console.error('Error fetching punishments:', err)
+    );
+    punishmentsData.refetchHistory().catch(err =>
+      console.error('Error fetching punishment history:', err)
+    );
+  }, [punishmentsData]);
   
   // Provide the context value
   return (
@@ -39,7 +50,7 @@ export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ childre
   );
 };
 
-// Create a hook to use the context
+// Hook to use the context
 export const usePunishments = () => {
   const context = useContext(PunishmentsContext);
   if (context === undefined) {

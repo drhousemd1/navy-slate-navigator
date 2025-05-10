@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { addDays, format, startOfWeek } from "date-fns";
@@ -39,3 +38,24 @@ export function convertToMondayBasedIndex(jsDayIndex: number): number {
 export function convertToJSDayIndex(mondayBasedIndex: number): number {
   return mondayBasedIndex === 6 ? 0 : mondayBasedIndex + 1;
 }
+
+/**
+ * Clears all localStorage cached data related to the app
+ */
+export const clearAppCache = () => {
+  try {
+    // Remove all cached queries
+    localStorage.removeItem('kingdom-app-cache');
+    localStorage.removeItem('kingdom-app-rules');
+    localStorage.removeItem('kingdom-app-rewards');
+    localStorage.removeItem('kingdom-app-rewards-supply');
+    localStorage.removeItem('kingdom-app-user-points');
+    localStorage.removeItem('kingdom-app-user-dom-points');
+    
+    console.log('App cache successfully cleared');
+    return true;
+  } catch (e) {
+    console.error('Error clearing app cache:', e);
+    return false;
+  }
+};
