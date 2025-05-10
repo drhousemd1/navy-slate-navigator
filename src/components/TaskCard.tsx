@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -6,7 +5,6 @@ import { Edit } from 'lucide-react';
 import PriorityBadge from './task/PriorityBadge';
 import PointsBadge from './task/PointsBadge';
 import CompletionButton from './task/CompletionButton';
-import CompletionCounter from './task/CompletionCounter';
 import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
 import HighlightedText from './task/HighlightedText';
@@ -86,10 +84,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {onToggleCompletion && (
             <div className="flex items-center gap-2">
               <PointsBadge points={points} />
-              <CompletionCounter 
-                currentCompletions={currentCompletions}
-                maxCompletions={maxCompletions}
-              />
               <CompletionButton 
                 completed={completed} 
                 onToggleCompletion={onToggleCompletion}

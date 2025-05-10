@@ -10,9 +10,6 @@ import { AuthProvider, useAuth } from "./contexts/auth";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import { createPersistedQueryClient } from "./lib/react-query-config";
-import { useSyncManager } from "./hooks/useSyncManager";
-import { toast } from "./hooks/use-toast";
-import { supabase } from "./integrations/supabase/client";
 
 // Create empty placeholder pages for our navigation
 import Rules from "./pages/Rules";
@@ -24,48 +21,6 @@ import Encyclopedia from "./pages/Encyclopedia";
 import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
 import AdminTesting from "./pages/AdminTesting";
-
-// Authentication checker wrapper for routes
-const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
-  const { syncNow, forceFullRefresh } = useSyncManager({ 
-    showToasts: true,
-    intervalMs: 30000 // More frequent updates during potential issues
-  });
-  
-  // Try to check authentication status directly, with error handling
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data?.session) {
-          console.log("AuthWrapper: Valid session found, syncing data");
-          syncNow();
-        } else {
-          console.log("AuthWrapper: No session found");
-        }
-      } catch (error) {
-        console.error("AuthWrapper: Error checking session:", error);
-        toast({
-          title: "Connection issue",
-          description: "Having trouble connecting to the server. Click 'Refresh Data' to try again.",
-          variant: "destructive",
-          action: (
-            <button 
-              onClick={forceFullRefresh}
-              className="px-3 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Refresh Data
-            </button>
-          )
-        });
-      }
-    };
-    
-    checkAuth();
-  }, []);
-  
-  return <>{children}</>;
-};
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -81,7 +36,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/auth" />;
   }
   
-  return <AuthWrapper>{children}</AuthWrapper>;
+  return <>{children}</>;
 };
 
 // Admin-only route component
@@ -102,7 +57,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   console.log('AdminRoute - Allowing access to admin page for testing purposes');
-  return <AuthWrapper>{children}</AuthWrapper>;
+  return <>{children}</>;
 };
 
 // Create persisted QueryClient using our centralized configuration
@@ -135,46 +90,22 @@ const AppRoutes = () => {
   );
 };
 
-// Main App component with error boundary
+// Main App component
 const App = () => {
-  // Add app-wide error handling
   useEffect(() => {
-    // Global error handler for uncaught exceptions
-    const handleError = (event: ErrorEvent) => {
-      console.error("Uncaught error:", event.error);
-      toast({
-        title: "Application Error",
-        description: "Something went wrong. Please try refreshing the page.",
-        variant: "destructive",
-      });
-    };
-    
-    window.addEventListener('error', handleError);
+    console.log('App component initialized. React Router ready.');
     
     // Add additional error handling for network issues
     window.addEventListener('online', () => {
       console.log('App is back online. Resuming normal operation.');
       queryClient.resumePausedMutations();
-      
-      toast({
-        title: "Connection Restored",
-        description: "You are back online.",
-        variant: "default",
-      });
     });
     
     window.addEventListener('offline', () => {
       console.log('App is offline. Pausing mutations.');
-      
-      toast({
-        title: "Connection Lost",
-        description: "You are currently offline. Some features may be unavailable.",
-        variant: "destructive",
-      });
     });
     
     return () => {
-      window.removeEventListener('error', handleError);
       window.removeEventListener('online', () => {});
       window.removeEventListener('offline', () => {});
     };

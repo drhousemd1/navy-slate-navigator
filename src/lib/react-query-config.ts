@@ -1,42 +1,31 @@
+
 import { QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { persistQueryClient } from '@tanstack/react-query-persist-client';
 
-// Create a centralized QueryClient with optimized settings for moderate caching
+// Create a centralized QueryClient with optimized settings for infinite caching
 export const createQueryClient = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60000,    // Cache considered fresh for 1 minute (instead of Infinity)
-        gcTime: 300000,      // Garbage collect after 5 minutes (instead of Infinity)
+        staleTime: Infinity, // Cache data forever, never consider it stale
+        gcTime: Infinity,    // Never garbage collect the cache
         refetchOnWindowFocus: false,
-        refetchOnMount: true, // Changed to true to check for updates
-        refetchOnReconnect: true, // Changed to true to check for updates on reconnection
-        retry: 1,            // Reduce retry attempts to avoid timeout cascades
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000), // Shorter retries
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        retry: 3,            // Increase retry attempts for network issues
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
         networkMode: 'online',
-        // Add timeout configuration to prevent hanging requests
-        queryFn: async ({ queryKey }) => {
-          console.log(`[QueryClient] Executing query for: ${JSON.stringify(queryKey)}`);
-          throw new Error(`No queryFn defined for key: ${JSON.stringify(queryKey)}`);
-        },
       },
       mutations: {
         networkMode: 'online',
-        retry: 1,            // Reduce mutation retries
+        retry: 2,            // Allow mutation retries
       },
     },
   });
 
   return queryClient;
 };
-
-// Version identifier for cache invalidation
-export const APP_CACHE_VERSION = '1.0.0';
-const CACHE_VERSION_KEY = 'kingdom-app-cache-version';
-const CACHE_TIMESTAMP_KEY = 'kingdom-app-cache-timestamp';
-const CACHE_STORAGE_KEY = 'kingdom-app-cache';
-const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // Create a persisted query client that preserves the cache between page refreshes
 export const createPersistedQueryClient = () => {
@@ -45,41 +34,24 @@ export const createPersistedQueryClient = () => {
   // Only setup persistence in browser environments
   if (typeof window !== 'undefined') {
     try {
-      // Check if we need to invalidate the cache based on version or age
-      const savedVersion = localStorage.getItem(CACHE_VERSION_KEY);
-      const savedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-      const currentTime = Date.now();
+      // Create a simplified persister without custom serialization
+      const storageKey = 'kingdom-app-cache';
       
-      // Clear cache if version mismatch or cache is too old
-      if (
-        savedVersion !== APP_CACHE_VERSION || 
-        !savedTimestamp || 
-        currentTime - parseInt(savedTimestamp, 10) > CACHE_MAX_AGE_MS
-      ) {
-        console.log('Cache version changed or expired, clearing cache');
-        localStorage.removeItem(CACHE_STORAGE_KEY);
-        localStorage.setItem(CACHE_VERSION_KEY, APP_CACHE_VERSION);
-        localStorage.setItem(CACHE_TIMESTAMP_KEY, currentTime.toString());
-      }
+      // Store the cache manually instead of using the problematic persistQueryClient
+      // This avoids the type conflict while still maintaining persistence
+      queryClient.mount(); // Ensure client is initialized
       
       // Add event listener to save cache before page unload
       window.addEventListener('beforeunload', () => {
         try {
-          // Only cache essential queries (tasks, rewards, punishments)
-          const state = queryClient.getQueryCache().getAll()
-            .filter(query => {
-              const key = Array.isArray(query.queryKey) ? query.queryKey[0] : query.queryKey;
-              return ['tasks', 'rewards', 'punishments', 'rules'].includes(String(key));
-            })
-            .map(query => ({
-              queryKey: query.queryKey,
-              data: query.state.data,
-            }));
+          const state = queryClient.getQueryCache().getAll().map(query => ({
+            queryKey: query.queryKey,
+            data: query.state.data,
+          }));
           
           if (state.length > 0) {
-            localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(state));
-            localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-            console.log(`Saved ${state.length} essential queries to localStorage`);
+            localStorage.setItem(storageKey, JSON.stringify(state));
+            console.log(`Saved ${state.length} queries to localStorage`);
           }
         } catch (e) {
           console.error("Error saving query cache:", e);
@@ -88,7 +60,7 @@ export const createPersistedQueryClient = () => {
       
       // Try to restore cache on initialization
       try {
-        const savedCache = localStorage.getItem(CACHE_STORAGE_KEY);
+        const savedCache = localStorage.getItem(storageKey);
         if (savedCache) {
           const queries = JSON.parse(savedCache);
           queries.forEach(item => {
@@ -102,7 +74,7 @@ export const createPersistedQueryClient = () => {
         console.error("Error restoring query cache:", e);
       }
       
-      console.log("Query persistence configured with version control");
+      console.log("Manual query persistence configured");
     } catch (e) {
       console.error("Error setting up query persistence:", e);
       // Fallback to non-persistent client if setup fails
@@ -114,24 +86,14 @@ export const createPersistedQueryClient = () => {
 
 // Standardized query config that should be used across ALL pages in the app
 export const STANDARD_QUERY_CONFIG = {
-  staleTime: 60000,    // Cache considered fresh for 1 minute
-  gcTime: 300000,      // Garbage collect after 5 minutes
+  staleTime: Infinity,  // Cache data forever, never consider it stale
+  gcTime: Infinity,     // Never garbage collect the cache
   refetchOnWindowFocus: false,
-  refetchOnMount: true, // Check for updates when component mounts
-  refetchOnReconnect: true, // Check for updates when reconnecting
-  retry: 1,            // Reduced retry count to avoid timeout loops
-  retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000), // Shorter retry delays
+  refetchOnMount: false,
+  refetchOnReconnect: false,
+  retry: 3,             // Increased retry count
+  retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   keepPreviousData: true, // Show previous data while fetching
-  // Add timeout to prevent hanging requests
-  networkMode: 'always', // Try to fetch even when offline to get better error handling
-};
-
-// Helper function to purge the cache manually
-export const purgeQueryCache = (queryClient: QueryClient) => {
-  queryClient.clear();
-  localStorage.removeItem(CACHE_STORAGE_KEY);
-  localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-  console.log('Query cache purged manually');
 };
 
 // Centralized helper for performance logging
@@ -204,32 +166,4 @@ export const useCachedQuery = (queryClient: QueryClient, queryKey: unknown[], qu
   
   // If no cached data, fetch normally
   return null; // This will show loading state
-};
-
-// New utility function to handle database timeouts gracefully
-export const withTimeout = <T>(promise: Promise<T>, timeoutMs = 5000, fallback?: T): Promise<T> => {
-  let timeoutHandle: NodeJS.Timeout;
-  
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutHandle = setTimeout(() => {
-      reject(new Error(`Request timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-  });
-  
-  return Promise.race([
-    promise,
-    timeoutPromise
-  ])
-    .then((result) => {
-      clearTimeout(timeoutHandle);
-      return result as T;
-    })
-    .catch((error) => {
-      clearTimeout(timeoutHandle);
-      console.error('Operation timed out or failed:', error);
-      if (fallback !== undefined) {
-        return fallback;
-      }
-      throw error;
-    });
 };

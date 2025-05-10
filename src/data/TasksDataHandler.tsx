@@ -1,19 +1,16 @@
+
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { getMondayBasedDay } from '@/lib/utils';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
-import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 
 const TASKS_QUERY_KEY = ['tasks'];
 const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
 const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
 
 const fetchTasks = async (): Promise<Task[]> => {
-  const startTime = performance.now();
-  console.log('[TasksDataHandler] Fetching tasks from the server');
-  
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -60,8 +57,6 @@ const fetchTasks = async (): Promise<Task[]> => {
   );
 
   if (tasksToReset.length > 0) {
-    console.log(`[TasksDataHandler] Resetting ${tasksToReset.length} daily tasks that are not completed today`);
-    
     const updates = tasksToReset.map(task => ({
       id: task.id,
       completed: false
@@ -75,21 +70,13 @@ const fetchTasks = async (): Promise<Task[]> => {
     }
 
     // Update tasks in memory rather than refetching
-    const updatedTasks = tasks.map(task => {
+    return tasks.map(task => {
       if (tasksToReset.some(resetTask => resetTask.id === task.id)) {
         return { ...task, completed: false };
       }
       return task;
     });
-    
-    const endTime = performance.now();
-    console.log(`[TasksDataHandler] Fetched and processed ${tasks.length} tasks in ${(endTime - startTime).toFixed(2)}ms`);
-    
-    return updatedTasks;
   }
-  
-  const endTime = performance.now();
-  console.log(`[TasksDataHandler] Fetched ${tasks.length} tasks in ${(endTime - startTime).toFixed(2)}ms`);
 
   return tasks;
 };
@@ -105,7 +92,10 @@ export const useTasksData = () => {
   } = useQuery({
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
-    ...STANDARD_QUERY_CONFIG, // Use our standardized configuration from react-query-config.ts
+    staleTime: 1000 * 60 * 5, // 5 minutes, increase from the current setting
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    refetchInterval: false
   });
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
@@ -399,7 +389,6 @@ export const useTasksData = () => {
   const refetchTasks = async (
     options?: RefetchOptions
   ): Promise<QueryObserverResult<Task[], Error>> => {
-    console.log('[TasksDataHandler] Manually refetching tasks');
     return refetch(options);
   };
 
