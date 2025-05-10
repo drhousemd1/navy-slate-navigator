@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
@@ -31,8 +30,10 @@ const mockQueryResult: QueryObserverResult<Reward[], Error> = {
   errorUpdateCount: 0,
   isInitialLoading: false,
   isPaused: false,
-  // Add the missing property
-  refetch: async () => mockQueryResult as QueryObserverResult<Reward[], Error>
+  // Add the missing promise property required by QueryObserverSuccessResult
+  refetch: async () => mockQueryResult as QueryObserverResult<Reward[], Error>,
+  // Add missing promise property
+  promise: Promise.resolve(mockQueryResult as QueryObserverResult<Reward[], Error>)
 };
 
 const RewardsContext = createContext<RewardsContextType>({
