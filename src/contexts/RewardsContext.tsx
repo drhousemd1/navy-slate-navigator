@@ -30,11 +30,13 @@ const mockQueryResult: QueryObserverResult<Reward[], Error> = {
   errorUpdateCount: 0,
   isInitialLoading: false,
   isPaused: false,
-  // Add the missing promise property required by QueryObserverSuccessResult
-  refetch: async () => mockQueryResult as QueryObserverResult<Reward[], Error>,
-  // Add missing promise property
-  promise: Promise.resolve(mockQueryResult as QueryObserverResult<Reward[], Error>)
+  // Create refetch function that returns a promise of the mock result
+  refetch: async () => mockQueryResult,
 };
+
+// Add the promise property separately after the object is defined to avoid circular reference
+// This ensures the promise returns Reward[] data directly rather than the QueryObserverResult
+mockQueryResult.promise = Promise.resolve(mockQueryResult.data);
 
 const RewardsContext = createContext<RewardsContextType>({
   rewards: [],
