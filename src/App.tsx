@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ThemeProvider } from './components/theme-provider';
-import { ToastProvider } from './hooks/use-toast.tsx'; // Updated import to specify the .tsx extension
+import { ToastProvider } from './hooks/use-toast.tsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Dashboard from './pages/Dashboard';
 import Tasks from './pages/Tasks';
@@ -16,6 +16,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import CacheCleanup from './CacheCleanup';
+import Auth from './pages/auth/index';
 
 function App() {
   const queryClient = new QueryClient();
@@ -33,8 +34,10 @@ function App() {
           <BrowserRouter>
             <AuthProvider>
               <Routes>
-                <Route path="/login" element={<Login />} />
+                {/* Use the Auth component for the login route */}
+                <Route path="/login" element={<Auth />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
                 <Route path="/tasks" element={<PrivateRoute><Tasks /></PrivateRoute>} />
                 <Route path="/rewards" element={<PrivateRoute><Rewards /></PrivateRoute>} />
