@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
@@ -32,8 +33,8 @@ const mockQueryResult: QueryObserverResult<Reward[], Error> = {
   isPaused: false,
   // The refetch function needs to return the same type
   refetch: async () => mockQueryResult,
-  // Add the missing promise property required by React Query v5
-  promise: Promise.resolve(mockQueryResult)
+  // Add the missing promise property with the correct type
+  promise: Promise.resolve([]) // Promise resolves to empty array of Reward[]
 };
 
 const RewardsContext = createContext<RewardsContextType>({
