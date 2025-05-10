@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -78,7 +79,7 @@ const PunishmentsContent: React.FC<{
         <div className="bg-red-900/20 border border-red-700 rounded p-4 mb-4 text-red-300">
           <p>Error refreshing data. Showing cached punishments.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex flex-col space-y-4">
           {punishments.map((punishment) => (
             <PunishmentCard
               key={punishment.id}
@@ -141,7 +142,7 @@ const PunishmentsContent: React.FC<{
     <div className="p-4 pt-6">
       <PunishmentsHeader />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex flex-col space-y-4">
         {punishments.map((punishment) => (
           <PunishmentCard
             key={punishment.id}
