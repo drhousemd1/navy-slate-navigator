@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Task, saveTask, deleteTask, updateTaskCompletion } from '@/lib/taskUtils';
@@ -32,13 +32,22 @@ export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     refetchTasks 
   } = useTasksData();
 
-  // Use cached data if available when there are connection issues
-  const cachedTasks = queryClient.getQueryData<Task[]>(['tasks']);
-  const effectiveTasks = error && cachedTasks ? cachedTasks : tasks;
+  // Debug logging to see what's actually happening with the data
+  useEffect(() => {
+    console.log('TasksContext data:', { 
+      tasksExist: Boolean(tasks), 
+      tasksLength: tasks?.length || 0, 
+      isLoading, 
+      hasError: Boolean(error) 
+    });
+  }, [tasks, isLoading, error]);
+
+  // Explicitly initialize tasks as an empty array if it's undefined
+  const effectiveTasks = tasks || [];
 
   const value: TasksContextType = {
-    tasks: effectiveTasks || [],
-    isLoading: isLoading && !effectiveTasks?.length,
+    tasks: effectiveTasks,
+    isLoading,
     error,
     saveTask: saveTaskToDb,
     deleteTask: deleteTaskFromDb,

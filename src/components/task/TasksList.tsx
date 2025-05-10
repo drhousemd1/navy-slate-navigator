@@ -17,6 +17,13 @@ const TasksList: React.FC<TasksListProps> = ({
   onEditTask,
   onToggleCompletion 
 }) => {
+  // Add console logs to diagnose the actual issue
+  console.log('TasksList received props:', { 
+    tasksLength: tasks?.length || 0, 
+    isLoading,
+    tasksIsArray: Array.isArray(tasks)
+  });
+
   if (isLoading) {
     return (
       <div className="text-center py-10">
@@ -26,15 +33,15 @@ const TasksList: React.FC<TasksListProps> = ({
     );
   }
 
-  // Network or server error indicator
-  if (!tasks && !isLoading) {
+  // Better error detection - check if tasks is actually an array
+  if (!tasks || !Array.isArray(tasks)) {
     return (
       <div className="text-center py-10 space-y-4">
         <ServerCrash className="h-12 w-12 mx-auto text-red-400" />
         <div>
-          <p className="text-white mb-2 font-semibold">Connection issue detected</p>
-          <p className="text-gray-400">We're having trouble reaching the server.</p>
-          <p className="text-gray-400">Please check your connection and try again.</p>
+          <p className="text-white mb-2 font-semibold">Data loading issue detected</p>
+          <p className="text-gray-400">We couldn't properly load your tasks data.</p>
+          <p className="text-gray-400">Please refresh the page or try again later.</p>
         </div>
       </div>
     );

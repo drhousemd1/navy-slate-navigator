@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -7,12 +8,13 @@ import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TasksProvider, useTasks } from '../contexts/TasksContext';
 import { Task } from '@/lib/taskUtils';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { toast } from '@/hooks/use-toast';
 
 // Separate component that uses useTasks hook inside TasksProvider
 const TasksWithContext: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion, refetchTasks } = useTasks();
+  const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion, refetchTasks, error } = useTasks();
   const { refreshPointsFromDatabase } = useRewards();
   
   // Use the sync manager to keep data in sync
@@ -21,10 +23,38 @@ const TasksWithContext: React.FC = () => {
     enabled: true 
   });
   
-  // Initial sync when component mounts
+  // Initial sync and data fetching when component mounts
   useEffect(() => {
-    syncNow(); // Force a sync when the Tasks page is loaded
+    console.log('TasksWithContext mounted, forcing initial data fetch');
+    // Force an immediate refetch when the component loads
+    refetchTasks().then(result => {
+      console.log('Initial task refetch result:', { 
+        success: result.isSuccess, 
+        tasksCount: result.data?.length || 0 
+      });
+      
+      if (result.error) {
+        console.error('Error fetching tasks:', result.error);
+        toast({
+          title: 'Could not load tasks',
+          description: 'Please check your connection and try again.',
+          variant: 'destructive'
+        });
+      }
+    });
+
+    // Also ensure sync is triggered
+    syncNow();
   }, []);
+
+  // Log when tasks data changes for debugging
+  useEffect(() => {
+    console.log('Tasks data updated:', { 
+      count: tasks?.length || 0, 
+      isLoading, 
+      hasError: Boolean(error)
+    });
+  }, [tasks, isLoading, error]);
 
   const handleAddTask = () => {
     console.log('handleAddTask called in TasksWithContext');
