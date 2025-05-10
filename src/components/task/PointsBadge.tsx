@@ -1,20 +1,35 @@
 
 import React from 'react';
 import { Badge } from '../ui/badge';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Coins } from 'lucide-react';
 
 interface PointsBadgeProps {
   points: number;
 }
 
 const PointsBadge: React.FC<PointsBadgeProps> = ({ points }) => {
+  // Style for badge - black background with cyan border to match submissive rewards
+  const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
+
   return (
     <Badge 
-      className="bg-nav-active text-white font-bold flex items-center gap-1"
-      variant="default"
+      className="text-white font-bold flex items-center gap-1 px-2"
+      style={badgeStyle}
     >
-      {points > 0 ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-      {Math.abs(points)}
+      <Coins className="h-3 w-3" />
+      <span className="flex items-center">
+        {points >= 0 ? (
+          <>
+            <Plus className="h-2 w-2 mr-0.5" />
+            {Math.abs(points)}
+          </>
+        ) : (
+          <>
+            <Minus className="h-2 w-2 mr-0.5" />
+            {Math.abs(points)}
+          </>
+        )}
+      </span>
     </Badge>
   );
 };
