@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Task, saveTask, deleteTask, updateTaskCompletion } from '@/lib/taskUtils';
@@ -19,9 +19,6 @@ interface TasksContextType {
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const queryClient = useQueryClient();
-  
-  // Get tasks with improved error handling
   const { 
     tasks, 
     isLoading, 
@@ -32,21 +29,8 @@ export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     refetchTasks 
   } = useTasksData();
 
-  // Debug logging to see what's actually happening with the data
-  useEffect(() => {
-    console.log('TasksContext data:', { 
-      tasksExist: Boolean(tasks), 
-      tasksLength: tasks?.length || 0, 
-      isLoading, 
-      hasError: Boolean(error) 
-    });
-  }, [tasks, isLoading, error]);
-
-  // Explicitly initialize tasks as an empty array if it's undefined
-  const effectiveTasks = tasks || [];
-
   const value: TasksContextType = {
-    tasks: effectiveTasks,
+    tasks,
     isLoading,
     error,
     saveTask: saveTaskToDb,

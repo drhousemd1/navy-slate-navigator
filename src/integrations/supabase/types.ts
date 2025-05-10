@@ -598,7 +598,6 @@ export type Database = {
           title_color: string
           updated_at: string
           usage_data: Json | null
-          week_identifier: string | null
         }
         Insert: {
           background_image_url?: string | null
@@ -626,7 +625,6 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
-          week_identifier?: string | null
         }
         Update: {
           background_image_url?: string | null
@@ -654,7 +652,6 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
-          week_identifier?: string | null
         }
         Relationships: []
       }

@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
@@ -10,93 +11,79 @@ const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
 const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
 
 const fetchTasks = async (): Promise<Task[]> => {
-  console.log('[TasksDataHandler] Starting to fetch tasks from the server');
-  
-  try {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('[TasksDataHandler] Error fetching tasks:', error);
-      throw error;
-    }
+  if (error) {
+    console.error('Error fetching tasks:', error);
+    throw error;
+  }
 
-    if (!data || !Array.isArray(data)) {
-      console.error('[TasksDataHandler] Invalid data returned from server', data);
-      return [];
-    }
+  const tasks: Task[] = data.map(task => ({
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    points: task.points,
+    priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
+    completed: task.completed,
+    background_image_url: task.background_image_url,
+    background_opacity: task.background_opacity,
+    focal_point_x: task.focal_point_x,
+    focal_point_y: task.focal_point_y,
+    frequency: task.frequency as 'daily' | 'weekly',
+    frequency_count: task.frequency_count,
+    usage_data: Array.isArray(task.usage_data) 
+      ? task.usage_data.map(val => typeof val === 'number' ? val : Number(val)) 
+      : [0, 0, 0, 0, 0, 0, 0],
+    icon_name: task.icon_name,
+    icon_url: task.icon_url,
+    icon_color: task.icon_color,
+    highlight_effect: task.highlight_effect,
+    title_color: task.title_color,
+    subtext_color: task.subtext_color,
+    calendar_color: task.calendar_color,
+    last_completed_date: task.last_completed_date,
+    created_at: task.created_at,
+    updated_at: task.updated_at
+  }));
 
-    console.log(`[TasksDataHandler] Successfully fetched ${data.length} tasks`);
+  const today = getLocalDateString();
+  const tasksToReset = tasks.filter(task => 
+    task.completed && 
+    task.frequency === 'daily' && 
+    task.last_completed_date !== today
+  );
 
-    const tasks: Task[] = data.map(task => ({
+  if (tasksToReset.length > 0) {
+    const updates = tasksToReset.map(task => ({
       id: task.id,
-      title: task.title,
-      description: task.description,
-      points: task.points,
-      priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
-      completed: task.completed,
-      background_image_url: task.background_image_url,
-      background_opacity: task.background_opacity,
-      focal_point_x: task.focal_point_x,
-      focal_point_y: task.focal_point_y,
-      frequency: task.frequency as 'daily' | 'weekly',
-      frequency_count: task.frequency_count,
-      usage_data: Array.isArray(task.usage_data) 
-        ? task.usage_data.map(val => typeof val === 'number' ? val : Number(val)) 
-        : [0, 0, 0, 0, 0, 0, 0],
-      icon_name: task.icon_name,
-      icon_url: task.icon_url,
-      icon_color: task.icon_color,
-      highlight_effect: task.highlight_effect,
-      title_color: task.title_color,
-      subtext_color: task.subtext_color,
-      calendar_color: task.calendar_color,
-      last_completed_date: task.last_completed_date,
-      created_at: task.created_at,
-      updated_at: task.updated_at
+      completed: false
     }));
 
-    const today = getLocalDateString();
-    const tasksToReset = tasks.filter(task => 
-      task.completed && 
-      task.frequency === 'daily' && 
-      task.last_completed_date !== today
-    );
-
-    if (tasksToReset.length > 0) {
-      console.log(`[TasksDataHandler] Resetting ${tasksToReset.length} daily tasks that are not completed today`);
-      
-      try {
-        // Reset tasks in the database
-        for (const task of tasksToReset) {
-          await supabase
-            .from('tasks')
-            .update({ completed: false })
-            .eq('id', task.id);
-            
-          // Also update in our local data
-          task.completed = false;
-        }
-      } catch (resetError) {
-        console.error('[TasksDataHandler] Error resetting tasks:', resetError);
-        // Continue with the function even if resetting fails
-      }
+    for (const update of updates) {
+      await supabase
+        .from('tasks')
+        .update({ completed: false })
+        .eq('id', update.id);
     }
-    
-    return tasks;
-  } catch (err) {
-    console.error('[TasksDataHandler] Unexpected error fetching tasks:', err);
-    // Instead of returning an empty array, we'll rethrow to trigger error handling
-    throw err;
+
+    // Update tasks in memory rather than refetching
+    return tasks.map(task => {
+      if (tasksToReset.some(resetTask => resetTask.id === task.id)) {
+        return { ...task, completed: false };
+      }
+      return task;
+    });
   }
+
+  return tasks;
 };
 
 export const useTasksData = () => {
   const queryClient = useQueryClient();
 
-  // Improve query configuration with additional fallback mechanisms
   const {
     data: tasks = [],
     isLoading,
@@ -105,12 +92,10 @@ export const useTasksData = () => {
   } = useQuery({
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
-    staleTime: 60000,     // Consider data fresh for 1 minute
-    gcTime: 300000,       // Cache data for 5 minutes
+    staleTime: 1000 * 60 * 5, // 5 minutes, increase from the current setting
+    gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
-    refetchOnMount: true,
-    retry: 2,             // Retry failed requests up to 2 times
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
+    refetchInterval: false
   });
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
@@ -404,7 +389,6 @@ export const useTasksData = () => {
   const refetchTasks = async (
     options?: RefetchOptions
   ): Promise<QueryObserverResult<Task[], Error>> => {
-    console.log('[TasksDataHandler] Manually refetching tasks');
     return refetch(options);
   };
 
