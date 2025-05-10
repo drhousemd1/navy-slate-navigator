@@ -31,8 +31,8 @@ const mockQueryResult: QueryObserverResult<Reward[], Error> = {
   errorUpdateCount: 0,
   isInitialLoading: false,
   isPaused: false,
-  // The refetch function needs to return the same type
-  refetch: async () => mockQueryResult
+  // Add the missing property
+  refetch: async () => mockQueryResult as QueryObserverResult<Reward[], Error>
 };
 
 const RewardsContext = createContext<RewardsContextType>({

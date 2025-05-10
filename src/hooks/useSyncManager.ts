@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { useRewards } from '@/contexts/RewardsContext';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * Custom hook that manages periodic background synchronization of critical data
@@ -26,14 +27,34 @@ export const useSyncManager = (options = { intervalMs: 60000, enabled: true }) =
       setIsSyncing(true);
       
       // Get current user
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('[SyncManager] Error fetching user:', userError);
+        toast({
+          title: "Sync Error",
+          description: "There was an issue syncing your data. Please refresh the page.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       if (!userData?.user?.id) {
         console.log('[SyncManager] No user logged in, skipping sync');
         return;
       }
       
       // Refresh points data from database
-      await refreshPointsFromDatabase();
+      try {
+        await refreshPointsFromDatabase();
+      } catch (error) {
+        console.error('[SyncManager] Error refreshing points:', error);
+        toast({
+          title: "Sync Error",
+          description: "There was an issue updating your points. Using cached data.",
+          variant: "default", // Changed from "warning" to "default"
+        });
+      }
       
       // Additional data syncs can be added here
       
