@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -12,42 +11,25 @@ import { useSyncManager } from '@/hooks/useSyncManager';
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
 }> = ({ contentRef }) => {
-  const { 
-    punishments, 
-    loading, 
-    error, 
-    createPunishment, 
-    updatePunishment, 
-    refetchPunishments,
-    refetchHistory
-  } = usePunishments();
-  
+  const { punishments, loading, error, createPunishment, updatePunishment } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   // Use the sync manager with minimal refreshing
   const { syncNow } = useSyncManager({ 
-    intervalMs: 60000, 
+    intervalMs: 60000, // Longer interval to avoid excessive refreshing
     enabled: true 
   });
   
-  // Force data refresh when component mounts
+  // Track initial mount and set loading state appropriately
   useEffect(() => {
-    console.log('PunishmentsContent: Forcing initial data refresh');
-    syncNow();
-    
-    // Explicitly fetch both punishments and history
-    Promise.all([
-      refetchPunishments(),
-      refetchHistory()
-    ]).catch(err => 
-      console.error('Error fetching punishment data:', err)
-    ).finally(() => {
-      // Set initial load to false after data fetching completes
+    // Consider initial load complete after a short delay
+    const timer = setTimeout(() => {
       setIsInitialLoad(false);
-    });
-  }, [refetchPunishments, refetchHistory, syncNow]);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
   
   // Only show loader on initial load when no cached data
   const showLoader = isInitialLoad && loading && punishments.length === 0;
@@ -83,9 +65,6 @@ const PunishmentsContent: React.FC<{
       }
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
-      
-      // Refresh data after save
-      refetchPunishments();
     } catch (error) {
       console.error("Error saving punishment:", error);
     }
@@ -104,6 +83,7 @@ const PunishmentsContent: React.FC<{
             <PunishmentCard
               key={punishment.id}
               {...punishment}
+              // Pass the function directly, no need for onEdit callback
               onEdit={() => handleEditPunishment(punishment)}
             />
           ))}

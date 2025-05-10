@@ -1,6 +1,6 @@
 
-import React, { createContext, useContext, ReactNode, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useQuery, useMutation, useQueryClient, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule';
 import { useRulesData } from '@/data/hooks/useRulesData';
@@ -28,14 +28,6 @@ export const RulesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     markRuleBroken,
     refetchRules 
   } = useRulesData();
-
-  // Force initial data fetch
-  useEffect(() => {
-    console.log('RulesProvider: Initial data fetch');
-    refetchRules().catch(err => 
-      console.error('Error fetching rules:', err)
-    );
-  }, [refetchRules]);
 
   const value: RulesContextType = {
     rules,

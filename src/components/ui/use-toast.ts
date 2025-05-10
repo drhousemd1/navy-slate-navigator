@@ -1,5 +1,3 @@
-
-// Import from the .tsx file directly for consistency
-import { useToast, toast } from "@/hooks/use-toast.tsx";
+import { useToast, toast } from "@/hooks/use-toast";
 
 export { useToast, toast };

@@ -1,11 +1,40 @@
-import React, { createContext, useContext, useEffect } from 'react';
+
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
 import { Reward } from '@/lib/rewardUtils';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 
-// Create a context with default values
+// Create a complete mock observer result that satisfies the QueryObserverResult type
+const mockQueryResult: QueryObserverResult<Reward[], Error> = {
+  data: [],
+  error: null,
+  isError: false as const,
+  isSuccess: true as const,
+  isLoading: false as const,
+  isPending: false as const,
+  isLoadingError: false as const,
+  isRefetchError: false as const,
+  failureCount: 0,
+  failureReason: null,
+  status: 'success' as const,
+  fetchStatus: 'idle' as const,
+  dataUpdatedAt: Date.now(),
+  errorUpdatedAt: 0,
+  isFetched: true,
+  isFetchedAfterMount: true,
+  isFetching: false,
+  isPlaceholderData: false,
+  isRefetching: false,
+  isStale: false,
+  errorUpdateCount: 0,
+  isInitialLoading: false,
+  isPaused: false,
+  // The refetch function needs to return the same type
+  refetch: async () => mockQueryResult
+};
+
 const RewardsContext = createContext<RewardsContextType>({
   rewards: [],
   totalPoints: 0,
@@ -14,36 +43,8 @@ const RewardsContext = createContext<RewardsContextType>({
   domPoints: 0,
   setTotalPoints: async () => Promise.resolve(),
   setDomPoints: async () => Promise.resolve(),
-  isLoading: false,
-  refetchRewards: async () => {
-    return {
-      data: [],
-      error: null,
-      isError: false,
-      isSuccess: true,
-      isLoading: false,
-      isPending: false,
-      isLoadingError: false,
-      isRefetchError: false,
-      failureCount: 0,
-      failureReason: null,
-      status: 'success',
-      fetchStatus: 'idle',
-      dataUpdatedAt: Date.now(),
-      errorUpdatedAt: 0,
-      isFetched: true,
-      isFetchedAfterMount: true,
-      isFetching: false,
-      isPlaceholderData: false,
-      isRefetching: false,
-      isStale: false,
-      errorUpdateCount: 0,
-      isInitialLoading: false,
-      isPaused: false,
-      refetch: async () => ({} as any),
-      promise: Promise.resolve([])
-    } as QueryObserverResult<Reward[], Error>;
-  },
+  isLoading: true,
+  refetchRewards: async () => mockQueryResult,
   handleSaveReward: async () => null,
   handleDeleteReward: async () => false,
   handleBuyReward: async () => {},
@@ -69,6 +70,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     refetchRewards,
     refreshPointsFromDatabase,
     totalDomRewardsSupply,
+    // Extract setter functions for optimistic updates
     setRewardsOptimistically,
     setPointsOptimistically,
     setDomPointsOptimistically,
@@ -80,15 +82,14 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
 
-  // Handle save reward
   const handleSaveReward = async (rewardData: any, index: number | null) => {
     console.log("RewardsContext - handleSaveReward called with data:", rewardData);
+    console.log("is_dom_reward value in handleSaveReward:", rewardData.is_dom_reward);
     
     const result = await saveReward({ rewardData, currentIndex: index });
     return result?.id || null;
   };
 
-  // Handle delete reward
   const handleDeleteReward = async (index: number) => {
     const rewardToDelete = rewards[index];
     if (!rewardToDelete?.id) return false;
@@ -96,7 +97,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return true;
   };
 
-  // Handle buy reward with optimistic update
   const handleBuyReward = async (id: string, cost: number, isDomReward?: boolean) => {
     // Find the reward to check if it's a dom reward
     const reward = rewards.find(r => r.id === id);
@@ -112,6 +112,8 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Override with the explicit parameter if provided
     const isRewardDominant = isDomReward !== undefined ? isDomReward : (reward?.is_dom_reward || false);
     
+    console.log("Buying reward with id:", id, "cost:", cost, "isDomReward:", isRewardDominant);
+    
     // Check if we have enough points
     const currentPointsValue = isRewardDominant ? domPoints : totalPoints;
     if (currentPointsValue < cost) {
@@ -124,25 +126,19 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     try {
-      // Optimistic update
-      if (isRewardDominant) {
-        setDomPointsOptimistically(domPoints - cost);
-      } else {
-        setPointsOptimistically(totalPoints - cost);
-      }
-      
-      // Show immediate feedback
+      // Show toast for immediate feedback
       toast({
         title: "Reward Purchased",
         description: `You purchased ${reward.title}`,
       });
       
-      // Perform API call
+      // Perform the actual API call with proper parameters
+      // Pass the isDomReward flag to ensure it updates the correct points and counts
       await buyReward({ rewardId: id, cost, isDomReward: isRewardDominant });
     } catch (error) {
       console.error("Error in handleBuyReward:", error);
       
-      // Refresh data on error
+      // On error, refresh data from the server
       refreshPointsFromDatabase();
       refetchRewards();
       
@@ -154,7 +150,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Handle use reward
   const handleUseReward = async (id: string) => {
     const reward = rewards.find(r => r.id === id);
     if (!reward) {
@@ -176,7 +171,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     try {
-      // Optimistic update
+      // Optimistic update for immediate UI feedback
       const updatedRewards = rewards.map(r => {
         if (r.id === id) {
           return { ...r, supply: Math.max(0, r.supply - 1) };
@@ -185,16 +180,18 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
       setRewardsOptimistically(updatedRewards);
       
-      // Show toast
+      // Show toast for immediate feedback
       toast({
         title: "Reward Used",
         description: `You used ${reward.title}`,
       });
       
-      // API call
+      // Perform the actual API call in the background
       await useReward(id);
     } catch (error) {
       console.error("Error in handleUseReward:", error);
+      
+      // Revert optimistic updates on error
       refetchRewards();
       
       toast({
@@ -205,27 +202,29 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Set total points
   const setTotalPoints = async (points: number) => {
+    // Optimistic update
     setPointsOptimistically(points);
     
+    // Persist to database
     try {
       await updatePoints(points);
     } catch (error) {
       console.error("Error setting total points:", error);
-      refreshPointsFromDatabase();
+      refreshPointsFromDatabase(); // Revert on error
     }
   };
 
-  // Set dom points
   const setDomPoints = async (points: number) => {
+    // Optimistic update
     setDomPointsOptimistically(points);
     
+    // Persist to database
     try {
       await updateDomPoints(points);
     } catch (error) {
       console.error("Error setting dom points:", error);
-      refreshPointsFromDatabase();
+      refreshPointsFromDatabase(); // Revert on error
     }
   };
 
