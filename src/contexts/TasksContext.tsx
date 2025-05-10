@@ -19,6 +19,9 @@ interface TasksContextType {
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
+  
+  // Get tasks with improved error handling
   const { 
     tasks, 
     isLoading, 
@@ -29,9 +32,13 @@ export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     refetchTasks 
   } = useTasksData();
 
+  // Use cached data if available when there are connection issues
+  const cachedTasks = queryClient.getQueryData<Task[]>(['tasks']);
+  const effectiveTasks = error && cachedTasks ? cachedTasks : tasks;
+
   const value: TasksContextType = {
-    tasks,
-    isLoading,
+    tasks: effectiveTasks || [],
+    isLoading: isLoading && !effectiveTasks?.length,
     error,
     saveTask: saveTaskToDb,
     deleteTask: deleteTaskFromDb,

@@ -40,6 +40,7 @@ export const useSyncManager = (options: SyncOptions = {}) => {
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [syncErrors, setSyncErrors] = useState<Record<string, boolean>>({});
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
   const { refreshPointsFromDatabase } = useRewards();
@@ -59,7 +60,7 @@ export const useSyncManager = (options: SyncOptions = {}) => {
     });
   };
 
-  // Function to sync critical data
+  // Function to sync critical data with improved error handling
   const syncCriticalData = async (specificKeys?: unknown[][]) => {
     if (!enabled) return;
     
@@ -67,15 +68,29 @@ export const useSyncManager = (options: SyncOptions = {}) => {
       console.log('[SyncManager] Starting background sync of critical data');
       setIsSyncing(true);
       
-      // Get current user
-      const { data: userData } = await supabase.auth.getUser();
+      // Get current user with timeout handling
+      const userPromise = supabase.auth.getUser();
+      const userTimeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('User fetch timed out')), 5000);
+      });
+      
+      const { data: userData } = await Promise.race([
+        userPromise, 
+        userTimeoutPromise
+      ]) as { data: { user?: { id: string } } };
+      
       if (!userData?.user?.id) {
         console.log('[SyncManager] No user logged in, skipping sync');
         return;
       }
       
-      // Refresh points data from database
-      await refreshPointsFromDatabase();
+      // Try to refresh points data from local cache if database fails
+      try {
+        await refreshPointsFromDatabase();
+      } catch (error) {
+        console.error('[SyncManager] Error refreshing points:', error);
+        // Continue with other operations even if points refresh fails
+      }
       
       // Invalidate specific query keys that need refreshing
       const keysToInvalidate = specificKeys || Object.values(CRITICAL_QUERY_KEYS);
@@ -83,29 +98,55 @@ export const useSyncManager = (options: SyncOptions = {}) => {
       // Filter keys based on inclusion/exclusion rules
       const filteredKeys = keysToInvalidate.filter(shouldSyncKey);
       
+      // Track successful syncs
+      const successfulSyncs: string[] = [];
+      const failedSyncs: string[] = [];
+      
       for (const key of filteredKeys) {
-        queryClient.invalidateQueries({ queryKey: key });
-        console.log(`[SyncManager] Invalidated cache for key: ${JSON.stringify(key)}`);
+        try {
+          await queryClient.invalidateQueries({ queryKey: key });
+          console.log(`[SyncManager] Invalidated cache for key: ${JSON.stringify(key)}`);
+          successfulSyncs.push(JSON.stringify(key));
+          
+          // Clear any previous error for this key
+          setSyncErrors(prev => ({ ...prev, [JSON.stringify(key)]: false }));
+        } catch (keyError) {
+          console.error(`[SyncManager] Error invalidating key ${JSON.stringify(key)}:`, keyError);
+          failedSyncs.push(JSON.stringify(key));
+          
+          // Track error for this key
+          setSyncErrors(prev => ({ ...prev, [JSON.stringify(key)]: true }));
+        }
       }
       
       setLastSyncTime(new Date());
       
       if (showToasts) {
-        toast({
-          title: "Data synchronized",
-          description: `Successfully synchronized app data at ${new Date().toLocaleTimeString()}`,
-          variant: "default"
-        });
+        if (successfulSyncs.length > 0) {
+          toast({
+            title: "Data synchronized",
+            description: `Successfully synchronized app data at ${new Date().toLocaleTimeString()}`,
+            variant: "default"
+          });
+        }
+        
+        if (failedSyncs.length > 0) {
+          toast({
+            title: "Partial sync failure",
+            description: "Some data couldn't be synchronized. Using cached data where available.",
+            variant: "warning"
+          });
+        }
       }
       
-      console.log('[SyncManager] Background sync completed successfully');
+      console.log('[SyncManager] Background sync completed');
     } catch (error) {
       console.error('[SyncManager] Error during background sync:', error);
       
       if (showToasts) {
         toast({
           title: "Sync failed",
-          description: "Could not synchronize data. Please check your connection.",
+          description: "Could not synchronize data. Using cached data where available.",
           variant: "destructive",
         });
       }
@@ -169,28 +210,26 @@ export const useSyncManager = (options: SyncOptions = {}) => {
     };
   }, [enabled]);
   
-  // Function to force a complete refresh of all cache
-  const forceFullRefresh = async () => {
-    queryClient.clear(); // Clear the entire cache
-    await syncCriticalData(); // Then resync everything
-    
-    toast({
-      title: "Cache refreshed",
-      description: "All data has been refreshed from the server",
-      variant: "default"
-    });
-  };
-  
   // Return enhanced control functions and state
   return {
     syncNow: syncCriticalData,
     isSyncing,
     lastSyncTime,
+    syncErrors,
     forceRefreshPoints: refreshPointsFromDatabase,
     invalidateCache: (keys?: string[][]) => {
       queryClient.invalidateQueries({ queryKey: keys || CRITICAL_QUERY_KEYS.TASKS });
       syncCriticalData(keys);
     },
-    forceFullRefresh
+    forceFullRefresh: async () => {
+      queryClient.clear(); // Clear the entire cache
+      await syncCriticalData(); // Then resync everything
+      
+      toast({
+        title: "Cache refreshed",
+        description: "All data has been refreshed from the server",
+        variant: "default"
+      });
+    }
   };
 };

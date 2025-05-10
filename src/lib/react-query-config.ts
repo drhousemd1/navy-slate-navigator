@@ -1,4 +1,3 @@
-
 import { QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { persistQueryClient } from '@tanstack/react-query-persist-client';
@@ -11,15 +10,17 @@ export const createQueryClient = () => {
         staleTime: 60000,    // Cache considered fresh for 1 minute (instead of Infinity)
         gcTime: 300000,      // Garbage collect after 5 minutes (instead of Infinity)
         refetchOnWindowFocus: false,
-        refetchOnMount: false,
-        refetchOnReconnect: false,
-        retry: 3,            // Increase retry attempts for network issues
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-        networkMode: 'online',
+        refetchOnMount: true,
+        refetchOnReconnect: true,
+        retry: 2,            // Reduce retry attempts to avoid long timeouts
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000), // Cap at 10 seconds
+        networkMode: 'always', // Always try to fetch, even when offline
+        timeout: 10000,      // Reduce timeout to 10 seconds to avoid hanging
       },
       mutations: {
-        networkMode: 'online',
-        retry: 2,            // Allow mutation retries
+        networkMode: 'always',
+        retry: 1,            // Reduce mutation retries
+        timeout: 8000,       // 8 second timeout for mutations
       },
     },
   });
@@ -58,6 +59,23 @@ export const createPersistedQueryClient = () => {
         localStorage.setItem(CACHE_TIMESTAMP_KEY, currentTime.toString());
       }
       
+      // Immediately try to restore cache on initialization
+      try {
+        const savedCache = localStorage.getItem(CACHE_STORAGE_KEY);
+        if (savedCache) {
+          const queries = JSON.parse(savedCache);
+          queries.forEach(item => {
+            if (item.queryKey && item.data !== undefined) {
+              queryClient.setQueryData(item.queryKey, item.data);
+              console.log(`Restored query data for key: ${JSON.stringify(item.queryKey)}`);
+            }
+          });
+          console.log(`Restored ${queries.length} queries from localStorage`);
+        }
+      } catch (e) {
+        console.error("Error restoring query cache:", e);
+      }
+      
       // Add event listener to save cache before page unload
       window.addEventListener('beforeunload', () => {
         try {
@@ -82,22 +100,6 @@ export const createPersistedQueryClient = () => {
         }
       });
       
-      // Try to restore cache on initialization
-      try {
-        const savedCache = localStorage.getItem(CACHE_STORAGE_KEY);
-        if (savedCache) {
-          const queries = JSON.parse(savedCache);
-          queries.forEach(item => {
-            if (item.queryKey && item.data !== undefined) {
-              queryClient.setQueryData(item.queryKey, item.data);
-            }
-          });
-          console.log(`Restored ${queries.length} queries from localStorage`);
-        }
-      } catch (e) {
-        console.error("Error restoring query cache:", e);
-      }
-      
       console.log("Query persistence configured with version control");
     } catch (e) {
       console.error("Error setting up query persistence:", e);
@@ -113,9 +115,9 @@ export const STANDARD_QUERY_CONFIG = {
   staleTime: 60000,    // Cache considered fresh for 1 minute
   gcTime: 300000,      // Garbage collect after 5 minutes
   refetchOnWindowFocus: false,
-  refetchOnMount: false,
-  refetchOnReconnect: false,
-  retry: 3,            // Increased retry count
+  refetchOnMount: true,
+  refetchOnReconnect: true,
+  retry: 2,            // Increased retry count
   retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   keepPreviousData: true, // Show previous data while fetching
 };

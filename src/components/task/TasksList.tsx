@@ -2,6 +2,7 @@
 import React from 'react';
 import TaskCard from '../TaskCard';
 import { Task } from '@/lib/taskUtils';
+import { AlertCircle, ServerCrash, Loader2 } from 'lucide-react';
 
 interface TasksListProps {
   tasks: Task[];
@@ -16,22 +17,40 @@ const TasksList: React.FC<TasksListProps> = ({
   onEditTask,
   onToggleCompletion 
 }) => {
-  if (isLoading && tasks.length === 0) {
+  if (isLoading) {
     return (
       <div className="text-center py-10">
-        <p className="text-white mb-4">Loading tasks...</p>
+        <Loader2 className="h-8 w-8 mx-auto animate-spin text-cyan-500" />
+        <p className="text-white mt-4">Loading tasks...</p>
       </div>
     );
   }
 
+  // Network or server error indicator
+  if (!tasks && !isLoading) {
+    return (
+      <div className="text-center py-10 space-y-4">
+        <ServerCrash className="h-12 w-12 mx-auto text-red-400" />
+        <div>
+          <p className="text-white mb-2 font-semibold">Connection issue detected</p>
+          <p className="text-gray-400">We're having trouble reaching the server.</p>
+          <p className="text-gray-400">Please check your connection and try again.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No tasks found
   if (tasks.length === 0) {
     return (
-      <div className="text-center py-10">
+      <div className="text-center py-10 space-y-4">
+        <AlertCircle className="h-12 w-12 mx-auto text-cyan-500" />
         <p className="text-white mb-4">No tasks found. Create your first task!</p>
       </div>
     );
   }
 
+  // Display tasks
   return (
     <div className="space-y-4">
       {tasks.map((task) => (
