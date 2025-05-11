@@ -8,7 +8,7 @@ import MessageList from '@/components/messages/MessageList';
 import MessageInput from '@/components/messages/MessageInput';
 
 const Messages: React.FC = () => {
-  const { user, getNickname } = useAuth();
+  const { user, getNickname, getProfileImage } = useAuth();
   const [message, setMessage] = useState('');
   const messagesSentRef = useRef(0);
   const messageListRef = useRef<{ scrollToBottom: (behavior: ScrollBehavior) => void }>(null);
@@ -43,6 +43,7 @@ const Messages: React.FC = () => {
   }, [partnerId, isLoading, refetch]);
 
   const userNickname = getNickname();
+  const avatarUrl = getProfileImage(); // Get user's avatar URL
 
   const handleSendMessage = useCallback(async () => {
     if (!user || (!message.trim() && !imageFile)) return;
@@ -154,6 +155,7 @@ const Messages: React.FC = () => {
               handleLoadOlderMessages={handleLoadOlderMessages}
               userNickname={userNickname}
               userId={user?.id}
+              avatarUrl={avatarUrl} // Pass avatar URL to MessageList
             />
           )}
         </div>

@@ -11,6 +11,7 @@ interface MessageListProps {
   handleLoadOlderMessages: () => void;
   userNickname: string | null;
   userId: string | undefined;
+  avatarUrl?: string | null; // Add this prop to receive avatar URL
 }
 
 const MessageList = forwardRef<
@@ -21,7 +22,8 @@ const MessageList = forwardRef<
   loadingOlder,
   handleLoadOlderMessages,
   userNickname,
-  userId
+  userId,
+  avatarUrl = null // Default to null if not provided
 }, ref) => {
   const messageEndRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +75,7 @@ const MessageList = forwardRef<
                   message={msg}
                   isSentByMe={isSentByMe}
                   userNickname={userNickname}
+                  avatarUrl={avatarUrl} // Pass the avatarUrl prop
                   onImageLoad={() => {
                     // Add a short timeout to ensure layout settles first
                     setTimeout(() => {
