@@ -1,19 +1,11 @@
-
 import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Plus, MessageSquare } from 'lucide-react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from './ui/dropdown-menu';
-import AccountSheet from './AccountSheet';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import AccountSheet from './AccountSheet';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -23,7 +15,7 @@ interface AppLayoutProps {
 const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, getNickname, getProfileImage, getUserRole } = useAuth();
+  const { getNickname, getProfileImage, getUserRole } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
   // Only show "Add" button for specific routes
@@ -42,57 +34,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
     }
   };
   
-  // Get profile image and nickname for the avatar
+  // Get profile image and nickname for the avatar directly from context
   const nickname = getNickname();
-  
-  // Get user role with proper capitalization
   const userRole = getUserRole();
 
-  // Fetch profile directly from Supabase to ensure we get the latest data
+  // Get profile image from context - no direct Supabase calls
   useEffect(() => {
-    const fetchProfileImage = async () => {
-      if (!user) {
-        setProfileImage(null);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .eq('id', user.id)
-          .single();
-        
-        if (error) {
-          console.error('Error fetching profile image:', error);
-          return;
-        }
-        
-        if (data && data.avatar_url) {
-          console.log('Profile image from DB:', data.avatar_url);
-          setProfileImage(data.avatar_url);
-        } else {
-          console.log('No profile image found in DB for user', user.id);
-          setProfileImage(null);
-        }
-      } catch (err) {
-        console.error('Exception fetching profile:', err);
-      }
-    };
-
-    fetchProfileImage();
-  }, [user]);
-
-  // Use context function as fallback
-  useEffect(() => {
-    if (!profileImage) {
-      const contextImage = getProfileImage();
-      if (contextImage) {
-        console.log('Using profile image from context:', contextImage);
-        setProfileImage(contextImage);
-      }
+    const contextImage = getProfileImage();
+    if (contextImage) {
+      console.log('Using profile image from context:', contextImage);
+      setProfileImage(contextImage);
     }
-  }, [getProfileImage, profileImage]);
+  }, [getProfileImage]);
 
   // Determine if we're on the rewards page, tasks page, punishments page, or rules page for special styling
   const isRewardsPage = location.pathname === '/rewards';
@@ -133,6 +86,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               <p className="text-gray-400 text-xs leading-tight">{userRole}</p>
             </div>
           </div>
+          
           <div className="flex items-center gap-3">
             {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />

@@ -1,10 +1,7 @@
-
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { Message } from '@/hooks/useMessages';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { X, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +10,7 @@ interface MessageItemProps {
   message: Message;
   isSentByMe: boolean;
   userNickname: string | null;
+  avatarUrl: string | null; // Get avatar URL from parent
   onImageLoad?: () => void;
 }
 
@@ -20,30 +18,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isSentByMe,
   userNickname,
+  avatarUrl,
   onImageLoad
 }) => {
-  const { user } = useAuth();
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isImageOpen, setIsImageOpen] = useState(false);
   const messageRef = useRef<HTMLDivElement>(null);
   const hasContent = !!message.content;
   const hasImage = !!message.image_url;
-
-  useEffect(() => {
-    const fetchAvatar = async () => {
-      const targetUserId = isSentByMe ? user?.id : message.sender_id;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('avatar_url')
-        .eq('id', targetUserId)
-        .single();
-
-      if (!error && data?.avatar_url) {
-        setAvatarUrl(data.avatar_url);
-      }
-    };
-    fetchAvatar();
-  }, [isSentByMe, user?.id, message.sender_id]);
 
   const formatMessageTime = (timestamp: string) => {
     try {

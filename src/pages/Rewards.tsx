@@ -1,11 +1,16 @@
 
+/**
+ * DO NOT REPLICATE LOGIC OUTSIDE THIS FILE.
+ * All fetching, mutation, sync, and cache logic must live in centralized hooks only.
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
 import RewardEditor from '../components/RewardEditor';
 import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import RewardsHeader from '../components/rewards/RewardsHeader';
-import { useSyncManager } from '@/hooks/useSyncManager';
+import { useSyncManager } from '@/data/sync/useSyncManager';
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
@@ -65,9 +70,6 @@ const RewardsContent: React.FC<{
             
             // Save reward without forcing immediate sync
             await handleSaveReward(data, index);
-            
-            // No need to force sync immediately - rely on background updates
-            // Removed: syncNow();
           } catch (error) {
             console.error("Error saving reward:", error);
           }

@@ -16,8 +16,8 @@ const TasksWithContext: React.FC = () => {
   const { refreshPointsFromDatabase } = useRewards();
   
   // Use the sync manager to keep data in sync
-  const { syncNow, lastSyncTime } = useSyncManager({ 
-    intervalMs: 30000, // 30 seconds, matching Rewards page
+  const { syncNow } = useSyncManager({ 
+    intervalMs: 30000,
     enabled: true 
   });
   

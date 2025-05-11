@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -12,7 +11,6 @@ import { UserCircle2, User, LogOut, BookOpen, Terminal } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 
 const AccountSheet = () => {
   const navigate = useNavigate();
@@ -58,49 +56,14 @@ const AccountSheet = () => {
     }
   }, [user]);
 
+  // Use context function to get profile image - no direct Supabase calls
   useEffect(() => {
-    const fetchProfileImage = async () => {
-      if (!user) {
-        setProfileImage(null);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .eq('id', user.id)
-          .single();
-        
-        if (error) {
-          console.error('AccountSheet: Error fetching profile image:', error);
-          return;
-        }
-        
-        if (data && data.avatar_url) {
-          console.log('AccountSheet: Profile image from DB:', data.avatar_url);
-          setProfileImage(data.avatar_url);
-        } else {
-          console.log('AccountSheet: No profile image found in DB for user', user.id);
-          setProfileImage(null);
-        }
-      } catch (err) {
-        console.error('AccountSheet: Exception fetching profile:', err);
-      }
-    };
-
-    fetchProfileImage();
-  }, [user]);
-
-  useEffect(() => {
-    if (!profileImage) {
-      const contextImage = getProfileImage();
-      if (contextImage) {
-        console.log('AccountSheet: Using profile image from context:', contextImage);
-        setProfileImage(contextImage);
-      }
+    const contextImage = getProfileImage();
+    if (contextImage) {
+      console.log('AccountSheet: Using profile image from context:', contextImage);
+      setProfileImage(contextImage);
     }
-  }, [getProfileImage, profileImage]);
+  }, [getProfileImage]);
   
   // Function to check if user is admin (case-insensitive email check)
   const isAdminUser = () => {
