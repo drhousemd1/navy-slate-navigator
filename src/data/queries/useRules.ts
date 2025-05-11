@@ -49,26 +49,15 @@ const fetchRules = async (): Promise<Rule[]> => {
   return validatedRules;
 };
 
-// Function to load cached rules data for placeholderData
-const loadCachedRules = async (): Promise<Rule[]> => {
-  try {
-    const cachedRules = await loadRulesFromDB();
-    return cachedRules || [];
-  } catch (error) {
-    console.error("Error loading cached rules:", error);
-    return [];
-  }
-};
-
 // Hook for accessing rules
 export function useRules() {
   return useQuery({
     queryKey: ['rules'],
     queryFn: fetchRules,
-    initialData: [], // Direct array instead of function
+    initialData: [], 
     staleTime: Infinity,
     placeholderData: () => {
-      // React Query expects the actual data type, not a Promise
+      // Return empty array as placeholder until the real data loads
       return [];
     },
     // Use this option to control how long to keep data in cache

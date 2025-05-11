@@ -21,10 +21,32 @@ const fetchRewards = async (): Promise<Reward[]> => {
     throw error;
   }
   
-  // Save to IndexedDB for offline access
-  await saveRewardsToDB(data || []);
+  // Transform data to ensure it matches the Reward interface
+  const transformedRewards: Reward[] = (data || []).map(reward => ({
+    id: reward.id,
+    title: reward.title,
+    description: reward.description || "",
+    cost: reward.cost,
+    supply: reward.supply,
+    is_dom_reward: reward.is_dom_reward === true, // Ensure boolean type
+    background_image_url: reward.background_image_url,
+    background_opacity: reward.background_opacity || 100,
+    focal_point_x: reward.focal_point_x || 50,
+    focal_point_y: reward.focal_point_y || 50,
+    highlight_effect: reward.highlight_effect || false,
+    icon_name: reward.icon_name,
+    icon_color: reward.icon_color || "#9b87f5",
+    title_color: reward.title_color || "#FFFFFF",
+    subtext_color: reward.subtext_color || "#8E9196",
+    calendar_color: reward.calendar_color || "#7E69AB",
+    created_at: reward.created_at || new Date().toISOString(),
+    updated_at: reward.updated_at || new Date().toISOString(),
+  }));
   
-  return data || [];
+  // Save to IndexedDB for offline access
+  await saveRewardsToDB(transformedRewards);
+  
+  return transformedRewards;
 };
 
 // Fetch user points
@@ -46,9 +68,10 @@ const fetchUserPoints = async (): Promise<number> => {
     throw error;
   }
   
-  await savePointsToDB(data?.points || 0);
+  const points = data?.points ?? 0;
+  await savePointsToDB(points);
   
-  return data?.points || 0;
+  return points;
 };
 
 // Fetch dom points
@@ -70,39 +93,10 @@ const fetchDomPoints = async (): Promise<number> => {
     throw error;
   }
   
-  await saveDomPointsToDB(data?.dom_points || 0);
+  const domPoints = data?.dom_points ?? 0;
+  await saveDomPointsToDB(domPoints);
   
-  return data?.dom_points || 0;
-};
-
-// Functions to load cached data for placeholderData
-const loadCachedRewards = async (): Promise<Reward[]> => {
-  try {
-    return await loadRewardsFromDB() || [];
-  } catch (error) {
-    console.error("Error loading cached rewards:", error);
-    return [];
-  }
-};
-
-const loadCachedPoints = async (): Promise<number> => {
-  try {
-    const cachedPoints = await loadPointsFromDB();
-    return cachedPoints !== null ? cachedPoints : 0;
-  } catch (error) {
-    console.error("Error loading cached points:", error);
-    return 0;
-  }
-};
-
-const loadCachedDomPoints = async (): Promise<number> => {
-  try {
-    const cachedDomPoints = await loadDomPointsFromDB();
-    return cachedDomPoints !== null ? cachedDomPoints : 0;
-  } catch (error) {
-    console.error("Error loading cached dom points:", error);
-    return 0;
-  }
+  return domPoints;
 };
 
 // Hook for accessing rewards
@@ -110,7 +104,7 @@ export function useRewards() {
   const rewardsQuery = useQuery({
     queryKey: ['rewards'],
     queryFn: fetchRewards,
-    initialData: [], // Direct array instead of function
+    initialData: [], 
     staleTime: Infinity,
     placeholderData: () => {
       // Return empty array as placeholder
@@ -122,7 +116,7 @@ export function useRewards() {
   const pointsQuery = useQuery({
     queryKey: ['points'],
     queryFn: fetchUserPoints,
-    initialData: 0, // Direct value instead of function
+    initialData: 0,
     staleTime: Infinity,
     placeholderData: () => {
       // Return 0 as placeholder
@@ -134,7 +128,7 @@ export function useRewards() {
   const domPointsQuery = useQuery({
     queryKey: ['dom_points'],
     queryFn: fetchDomPoints,
-    initialData: 0, // Direct value instead of function
+    initialData: 0,
     staleTime: Infinity,
     placeholderData: () => {
       // Return 0 as placeholder

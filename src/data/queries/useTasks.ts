@@ -1,3 +1,4 @@
+
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -20,21 +21,37 @@ const fetchTasks = async (): Promise<Task[]> => {
     throw error;
   }
   
-  // Save to IndexedDB for offline access
-  await saveTasksToDB(data || []);
+  // Transform data to ensure it matches the Task interface type
+  const transformedTasks: Task[] = (data || []).map(task => ({
+    id: task.id,
+    title: task.title,
+    description: task.description || "",
+    points: task.points,
+    priority: (task.priority as "low" | "medium" | "high") || "medium",
+    completed: task.completed,
+    background_image_url: task.background_image_url,
+    background_opacity: task.background_opacity,
+    focal_point_x: task.focal_point_x,
+    focal_point_y: task.focal_point_y,
+    frequency: task.frequency as "daily" | "weekly",
+    frequency_count: task.frequency_count,
+    usage_data: Array.isArray(task.usage_data) ? task.usage_data : [0, 0, 0, 0, 0, 0, 0],
+    icon_name: task.icon_name,
+    icon_url: task.icon_url,
+    icon_color: task.icon_color,
+    highlight_effect: task.highlight_effect,
+    title_color: task.title_color,
+    subtext_color: task.subtext_color,
+    calendar_color: task.calendar_color,
+    last_completed_date: task.last_completed_date,
+    created_at: task.created_at,
+    updated_at: task.updated_at
+  }));
   
-  return data || [];
-};
-
-// Function to load cached tasks for placeholderData
-const loadCachedTasks = async (): Promise<Task[]> => {
-  try {
-    const cachedTasks = await loadTasksFromDB();
-    return cachedTasks || [];
-  } catch (error) {
-    console.error("Error loading cached tasks:", error);
-    return [];
-  }
+  // Save to IndexedDB for offline access
+  await saveTasksToDB(transformedTasks);
+  
+  return transformedTasks;
 };
 
 // Hook for accessing tasks
@@ -42,11 +59,10 @@ export function useTasks() {
   return useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
-    initialData: [], // Direct array instead of function
+    initialData: [], 
     staleTime: Infinity,
     placeholderData: () => {
-      // React Query expects the actual data type, not a Promise
-      // We'll return an empty array and then later replace it when the real data loads
+      // Return empty array as placeholder until the real data loads
       return [];
     },
     // Use this option to control how long to keep data in cache

@@ -22,10 +22,31 @@ const fetchPunishments = async (): Promise<PunishmentData[]> => {
     throw error;
   }
   
-  // Save to IndexedDB for offline access
-  await savePunishmentsToDB(data || []);
+  // Transform the data to ensure it matches the PunishmentData interface
+  const transformedPunishments: PunishmentData[] = (data || []).map(punishment => ({
+    id: punishment.id,
+    title: punishment.title,
+    description: punishment.description || "",
+    points: punishment.points,
+    dom_points: punishment.dom_points || 0,
+    background_image_url: punishment.background_image_url,
+    background_opacity: punishment.background_opacity || 50,
+    focal_point_x: punishment.focal_point_x || 50,
+    focal_point_y: punishment.focal_point_y || 50,
+    highlight_effect: punishment.highlight_effect || false,
+    icon_name: punishment.icon_name,
+    icon_color: punishment.icon_color || "#ea384c",
+    subtext_color: punishment.subtext_color || "#8E9196",
+    calendar_color: punishment.calendar_color || "#ea384c",
+    title_color: punishment.title_color || "#FFFFFF",
+    created_at: punishment.created_at || new Date().toISOString(),
+    updated_at: punishment.updated_at || new Date().toISOString(),
+  }));
   
-  return data || [];
+  // Save to IndexedDB for offline access
+  await savePunishmentsToDB(transformedPunishments);
+  
+  return transformedPunishments;
 };
 
 // Fetch punishment history for the current week
@@ -45,31 +66,19 @@ const fetchPunishmentHistory = async (): Promise<PunishmentHistoryItem[]> => {
     throw error;
   }
   
-  // Save to IndexedDB for offline access
-  await savePunishmentHistoryToDB(data || []);
+  // Transform and validate the punishment history data
+  const transformedHistory: PunishmentHistoryItem[] = (data || []).map(item => ({
+    id: item.id,
+    punishment_id: item.punishment_id || "",
+    applied_date: item.applied_date || new Date().toISOString(),
+    day_of_week: item.day_of_week,
+    points_deducted: item.points_deducted
+  }));
   
-  return data || [];
-};
-
-// Functions to load cached data for placeholderData
-const loadCachedPunishments = async (): Promise<PunishmentData[]> => {
-  try {
-    const cachedPunishments = await loadPunishmentsFromDB();
-    return cachedPunishments || [];
-  } catch (error) {
-    console.error("Error loading cached punishments:", error);
-    return [];
-  }
-};
-
-const loadCachedPunishmentHistory = async (): Promise<PunishmentHistoryItem[]> => {
-  try {
-    const cachedHistory = await loadPunishmentHistoryFromDB();
-    return cachedHistory || [];
-  } catch (error) {
-    console.error("Error loading cached punishment history:", error);
-    return [];
-  }
+  // Save to IndexedDB for offline access
+  await savePunishmentHistoryToDB(transformedHistory);
+  
+  return transformedHistory;
 };
 
 // Hook for accessing punishments
@@ -77,10 +86,10 @@ export function usePunishments() {
   const punishmentsQuery = useQuery({
     queryKey: ['punishments'],
     queryFn: fetchPunishments,
-    initialData: [], // Direct array instead of function
+    initialData: [], 
     staleTime: Infinity,
     placeholderData: () => {
-      // Return empty array as placeholder until the real data loads
+      // Return empty array as placeholder
       return [];
     },
     gcTime: 5 * 60 * 1000 // 5 minutes
@@ -89,10 +98,10 @@ export function usePunishments() {
   const historyQuery = useQuery({
     queryKey: ['punishment_history'],
     queryFn: fetchPunishmentHistory,
-    initialData: [], // Direct array instead of function
+    initialData: [], 
     staleTime: Infinity,
     placeholderData: () => {
-      // Return empty array as placeholder until the real data loads
+      // Return empty array as placeholder
       return [];
     },
     gcTime: 5 * 60 * 1000 // 5 minutes
