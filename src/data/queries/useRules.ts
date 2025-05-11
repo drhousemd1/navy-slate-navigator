@@ -50,6 +50,17 @@ const fetchRules = async (): Promise<Rule[]> => {
   return validatedRules;
 };
 
+// Function to load cached rules data for placeholderData
+const loadCachedRules = async (): Promise<Rule[]> => {
+  try {
+    const cachedRules = await loadRulesFromDB();
+    return cachedRules || [];
+  } catch (error) {
+    console.error("Error loading cached rules:", error);
+    return [];
+  }
+};
+
 // Hook for accessing rules
 export function useRules() {
   return useQuery({
@@ -57,13 +68,6 @@ export function useRules() {
     queryFn: fetchRules,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    placeholderData: async () => {
-      try {
-        return await loadRulesFromDB() || [];
-      } catch (error) {
-        console.error("Error loading cached rules:", error);
-        return [];
-      }
-    }
+    placeholderData: loadCachedRules
   });
 }
