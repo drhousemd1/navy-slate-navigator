@@ -8,7 +8,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from '@/integrations/supabase/client';
 import { Task } from "@/lib/taskUtils";
-import { loadTasksFromDB, saveTasksToDB } from "../indexeddb/useIndexedDB";
+import { loadTasksFromDB, saveTasksToDB } from "../indexedDB/useIndexedDB";
 
 // Fetch tasks from Supabase
 const fetchTasks = async (): Promise<Task[]> => {
@@ -32,14 +32,16 @@ export function useTasks() {
   return useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
-    initialData: async () => {
-      try {
-        const cachedTasks = await loadTasksFromDB();
-        return cachedTasks || [];
-      } catch (error) {
-        console.error("Error loading cached tasks:", error);
-        return [];
-      }
+    initialData: () => {
+      return Promise.resolve([]).then(async () => {
+        try {
+          const cachedTasks = await loadTasksFromDB();
+          return cachedTasks || [];
+        } catch (error) {
+          console.error("Error loading cached tasks:", error);
+          return [];
+        }
+      });
     },
     staleTime: Infinity,
   });

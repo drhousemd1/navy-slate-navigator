@@ -8,7 +8,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from "@/data/interfaces/Rule";
-import { loadRulesFromDB, saveRulesToDB } from "../indexeddb/useIndexedDB";
+import { loadRulesFromDB, saveRulesToDB } from "../indexedDB/useIndexedDB";
 
 // Fetch rules from Supabase
 const fetchRules = async (): Promise<Rule[]> => {
@@ -40,14 +40,16 @@ export function useRules() {
   return useQuery({
     queryKey: ['rules'],
     queryFn: fetchRules,
-    initialData: async () => {
-      try {
-        const cachedRules = await loadRulesFromDB();
-        return cachedRules || [];
-      } catch (error) {
-        console.error("Error loading cached rules:", error);
-        return [];
-      }
+    initialData: () => {
+      return Promise.resolve([]).then(async () => {
+        try {
+          const cachedRules = await loadRulesFromDB();
+          return cachedRules || [];
+        } catch (error) {
+          console.error("Error loading cached rules:", error);
+          return [];
+        }
+      });
     },
     staleTime: Infinity,
   });
