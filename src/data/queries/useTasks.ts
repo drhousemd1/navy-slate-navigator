@@ -45,6 +45,14 @@ export function useTasks() {
     queryFn: fetchTasks,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    placeholderData: loadCachedTasks
+    // Fix: Use a function that returns a Promise<Task[]> as type for placeholderData
+    placeholderData: async () => {
+      try {
+        return await loadCachedTasks();
+      } catch (error) {
+        console.error("Error loading placeholder data for tasks:", error);
+        return [];
+      }
+    }
   });
 }

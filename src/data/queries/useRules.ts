@@ -68,6 +68,14 @@ export function useRules() {
     queryFn: fetchRules,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    placeholderData: loadCachedRules
+    // Fix: Use a function that returns a Promise<Rule[]> as type for placeholderData
+    placeholderData: async () => {
+      try {
+        return await loadCachedRules();
+      } catch (error) {
+        console.error("Error loading placeholder data for rules:", error);
+        return [];
+      }
+    }
   });
 }
