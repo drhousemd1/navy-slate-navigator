@@ -56,41 +56,6 @@ export function useSyncManager(options: SyncOptions = {}) {
     });
   };
 
-  // Sync a specific card by ID
-  const syncCardById = useCallback(async (
-    id: string, 
-    type: 'tasks' | 'rules' | 'rewards' | 'punishments' | 'admin_testing_cards'
-  ): Promise<void> => {
-    if (!id) return;
-    
-    try {
-      setIsSyncing(true);
-      
-      // Fetch just this single card from Supabase
-      const { data, error } = await supabase
-        .from(type)
-        .select('*')
-        .eq('id', id)
-        .single();
-        
-      if (error) throw error;
-      
-      if (data) {
-        // Map the appropriate queryKey based on type
-        const queryKey = type === 'admin_testing_cards' ? 'adminCards' : type;
-        
-        // Update just this one item in the cache
-        queryClient.setQueryData([queryKey], (oldData: any[] = []) => {
-          return Array.isArray(oldData) ? oldData.map(item => item.id === id ? data : item) : [];
-        });
-      }
-    } catch (err) {
-      console.error(`Error syncing ${type} item ${id}:`, err);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, []);
-
   // Sync all data
   const syncNow = useCallback(async (specificKeys?: unknown[][]) => {
     if (!enabled) return;
@@ -172,7 +137,7 @@ export function useSyncManager(options: SyncOptions = {}) {
   };
 }
 
-// Export single-use functions
+// Export single-use function to sync a specific card
 export const syncCardById = async (
   id: string,
   type: 'tasks' | 'rules' | 'rewards' | 'punishments' | 'admin_testing_cards'
@@ -180,6 +145,8 @@ export const syncCardById = async (
   if (!id) return;
   
   try {
+    console.log(`[syncCardById] Syncing ${type} item with ID ${id}`);
+    
     // Fetch just this single card from Supabase
     const { data, error } = await supabase
       .from(type)
@@ -187,7 +154,10 @@ export const syncCardById = async (
       .eq('id', id)
       .single();
       
-    if (error) throw error;
+    if (error) {
+      console.error(`Error syncing ${type} item ${id}:`, error);
+      throw error;
+    }
     
     if (data) {
       // Map the appropriate queryKey based on type
@@ -197,6 +167,8 @@ export const syncCardById = async (
       queryClient.setQueryData([queryKey], (oldData: any[] = []) => {
         return Array.isArray(oldData) ? oldData.map(item => item.id === id ? data : item) : [];
       });
+      
+      console.log(`[syncCardById] Successfully synced ${type} item with ID ${id}`);
     }
   } catch (err) {
     console.error(`Error syncing ${type} item ${id}:`, err);

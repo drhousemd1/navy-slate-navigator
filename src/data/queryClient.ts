@@ -1,11 +1,21 @@
 
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
- * Central configuration for React Query.
+ * No query, mutation, or sync logic is allowed in components or page files.
+ * All logic must use these shared, optimized hooks and utilities only.
  */
 
 import { QueryClient } from '@tanstack/react-query';
-import { createQueryClient } from '@/lib/react-query-config';
 
-// Create a single, app-wide QueryClient instance
-export const queryClient = createQueryClient();
+// Create a client
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+      retry: 2,
+    },
+  },
+});
