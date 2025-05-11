@@ -228,7 +228,7 @@ export function useAdminCards() {
         const createdCard = await createAdminCard(newCard);
         
         // Update local cache
-        queryClient.setQueryData(['adminCards'], (oldCards = []) => [...oldCards, createdCard]);
+        queryClient.setQueryData(['adminCards'], (oldCards: AdminTestingCardData[] | undefined = []) => [...oldCards, createdCard]);
         
         // Update IndexedDB
         const updatedCards = [...adminCards, createdCard];
@@ -298,9 +298,10 @@ export function useAdminCards() {
     mutationFn: async (cardId: string) => {
       try {
         // Optimistically update UI
-        queryClient.setQueryData(['adminCards'], (oldCards: AdminTestingCardData[] = []) => 
-          oldCards.filter(card => card.id !== cardId)
-        );
+        queryClient.setQueryData(['adminCards'], (oldCards: AdminTestingCardData[] | undefined) => {
+          // Make sure oldCards is an array before filtering
+          return Array.isArray(oldCards) ? oldCards.filter(card => card.id !== cardId) : [];
+        });
         
         // Delete from Supabase
         await deleteAdminCard(cardId);
