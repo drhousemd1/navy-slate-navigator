@@ -80,49 +80,46 @@ export function useRewards() {
   const rewardsQuery = useQuery({
     queryKey: ['rewards'],
     queryFn: fetchRewards,
-    initialData: [], // Fixed: Direct array instead of function
+    initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    placeholderData: async () => {
-      try {
-        const cachedRewards = await loadRewardsFromDB();
+    placeholderData: () => {
+      return loadRewardsFromDB().then(cachedRewards => {
         return cachedRewards || [];
-      } catch (error) {
+      }).catch(error => {
         console.error("Error loading cached rewards:", error);
         return [];
-      }
-    },
+      });
+    }
   });
 
   const pointsQuery = useQuery({
     queryKey: ['points'],
     queryFn: fetchUserPoints,
-    initialData: 0, // Fixed: Direct value instead of function
+    initialData: 0, // Direct value instead of function
     staleTime: Infinity,
-    placeholderData: async () => {
-      try {
-        const cachedPoints = await loadPointsFromDB();
+    placeholderData: () => {
+      return loadPointsFromDB().then(cachedPoints => {
         return cachedPoints !== null ? cachedPoints : 0;
-      } catch (error) {
+      }).catch(error => {
         console.error("Error loading cached points:", error);
         return 0;
-      }
-    },
+      });
+    }
   });
 
   const domPointsQuery = useQuery({
     queryKey: ['dom_points'],
     queryFn: fetchDomPoints,
-    initialData: 0, // Fixed: Direct value instead of function
+    initialData: 0, // Direct value instead of function
     staleTime: Infinity,
-    placeholderData: async () => {
-      try {
-        const cachedDomPoints = await loadDomPointsFromDB();
+    placeholderData: () => {
+      return loadDomPointsFromDB().then(cachedDomPoints => {
         return cachedDomPoints !== null ? cachedDomPoints : 0;
-      } catch (error) {
+      }).catch(error => {
         console.error("Error loading cached dom points:", error);
         return 0;
-      }
-    },
+      });
+    }
   });
 
   return {

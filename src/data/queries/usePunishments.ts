@@ -56,7 +56,7 @@ export function usePunishments() {
   const punishmentsQuery = useQuery({
     queryKey: ['punishments'],
     queryFn: fetchPunishments,
-    initialData: [], // Fixed: Direct array instead of function
+    initialData: [], // Direct array instead of function
     staleTime: Infinity,
     placeholderData: async () => {
       try {
@@ -72,7 +72,7 @@ export function usePunishments() {
   const historyQuery = useQuery({
     queryKey: ['punishment_history'],
     queryFn: fetchPunishmentHistory,
-    initialData: [], // Fixed: Direct array instead of function
+    initialData: [], // Direct array instead of function
     staleTime: Infinity,
     placeholderData: async () => {
       try {
