@@ -24,7 +24,7 @@ const fetchRules = async (): Promise<Rule[]> => {
   // Transform data to ensure it matches the Rule interface type
   const validatedRules: Rule[] = (data || []).map(rule => ({
     ...rule,
-    priority: rule.priority as 'low' | 'medium' | 'high', // Type assertion for safety
+    priority: rule.priority as 'low' | 'medium' | 'high', 
     frequency: rule.frequency as 'daily' | 'weekly',
     usage_data: rule.usage_data || []
   }));
