@@ -1,0 +1,118 @@
+
+/**
+ * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
+ * No query, mutation, or sync logic is allowed in components or page files.
+ * All logic must use these shared, optimized hooks and utilities only.
+ */
+
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from '@/integrations/supabase/client';
+import { Reward } from "@/lib/rewardUtils";
+import { loadRewardsFromDB, saveRewardsToDB, loadPointsFromDB, saveDomPointsToDB, loadDomPointsFromDB, savePointsToDB } from "../indexeddb/useIndexedDB";
+
+// Fetch rewards from Supabase
+const fetchRewards = async (): Promise<Reward[]> => {
+  const { data, error } = await supabase
+    .from('rewards')
+    .select('*')
+    .order('created_at', { ascending: false });
+    
+  if (error) {
+    throw error;
+  }
+  
+  // Save to IndexedDB for offline access
+  await saveRewardsToDB(data || []);
+  
+  return data || [];
+};
+
+// Fetch user points
+const fetchUserPoints = async (): Promise<number> => {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  
+  if (!userId) {
+    return 0;
+  }
+  
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('points')
+    .eq('id', userId)
+    .single();
+  
+  if (error) {
+    throw error;
+  }
+  
+  await savePointsToDB(data?.points || 0);
+  
+  return data?.points || 0;
+};
+
+// Fetch dom points
+const fetchDomPoints = async (): Promise<number> => {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  
+  if (!userId) {
+    return 0;
+  }
+  
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('dom_points')
+    .eq('id', userId)
+    .single();
+  
+  if (error) {
+    throw error;
+  }
+  
+  await saveDomPointsToDB(data?.dom_points || 0);
+  
+  return data?.dom_points || 0;
+};
+
+// Hook for accessing rewards
+export function useRewards() {
+  const rewardsQuery = useQuery({
+    queryKey: ['rewards'],
+    queryFn: fetchRewards,
+    initialData: async () => {
+      const cachedRewards = await loadRewardsFromDB();
+      return cachedRewards || [];
+    },
+    staleTime: Infinity,
+  });
+
+  const pointsQuery = useQuery({
+    queryKey: ['points'],
+    queryFn: fetchUserPoints,
+    initialData: async () => {
+      const cachedPoints = await loadPointsFromDB();
+      return cachedPoints || 0;
+    },
+    staleTime: Infinity,
+  });
+
+  const domPointsQuery = useQuery({
+    queryKey: ['dom_points'],
+    queryFn: fetchDomPoints,
+    initialData: async () => {
+      const cachedDomPoints = await loadDomPointsFromDB();
+      return cachedDomPoints || 0;
+    },
+    staleTime: Infinity,
+  });
+
+  return {
+    rewards: rewardsQuery.data || [],
+    isLoading: rewardsQuery.isLoading,
+    error: rewardsQuery.error,
+    totalPoints: pointsQuery.data || 0,
+    domPoints: domPointsQuery.data || 0,
+    refetchRewards: rewardsQuery.refetch,
+  };
+}

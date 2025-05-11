@@ -2,6 +2,7 @@
 import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./data/queryClient";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -9,7 +10,6 @@ import Auth from "./pages/auth";
 import { AuthProvider, useAuth } from "./contexts/auth";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
-import { createPersistedQueryClient } from "./lib/react-query-config";
 
 // Create empty placeholder pages for our navigation
 import Rules from "./pages/Rules";
@@ -59,9 +59,6 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   console.log('AdminRoute - Allowing access to admin page for testing purposes');
   return <>{children}</>;
 };
-
-// Create persisted QueryClient using our centralized configuration
-const queryClient = createPersistedQueryClient();
 
 // Configure routes with proper nesting to ensure context is available
 const AppRoutes = () => {

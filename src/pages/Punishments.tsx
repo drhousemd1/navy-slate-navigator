@@ -3,16 +3,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
 import { Skull, Loader2 } from 'lucide-react';
-import { RewardsProvider } from '../contexts/RewardsContext';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
-import { PunishmentsProvider, usePunishments } from '../contexts/PunishmentsContext';
 import PunishmentEditor from '../components/PunishmentEditor';
-import { useSyncManager } from '@/hooks/useSyncManager';
+import { useSyncManager } from '@/data/sync/useSyncManager';
+import { usePunishments } from '@/data/queries/usePunishments';
+import { useMutation } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { PunishmentData } from '@/contexts/punishments/types';
+import { queryClient } from '@/data/queryClient';
+import { savePunishmentsToDB } from '@/data/indexeddb/useIndexedDB';
+import { toast } from '@/hooks/use-toast';
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
 }> = ({ contentRef }) => {
-  const { punishments, loading, error, createPunishment, updatePunishment } = usePunishments();
+  const { punishments, isLoading, error, refetchPunishments } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -21,6 +26,84 @@ const PunishmentsContent: React.FC<{
   const { syncNow } = useSyncManager({ 
     intervalMs: 60000, // Longer interval to avoid excessive refreshing
     enabled: true 
+  });
+
+  // Create punishment mutation
+  const createPunishment = useMutation({
+    mutationFn: async (punishmentData: Partial<PunishmentData>) => {
+      const { data, error } = await supabase
+        .from('punishments')
+        .insert({
+          title: punishmentData.title,
+          description: punishmentData.description,
+          points: punishmentData.points || 10,
+          icon_name: punishmentData.icon_name,
+          icon_color: punishmentData.icon_color || '#ea384c',
+          background_image_url: punishmentData.background_image_url,
+          background_opacity: punishmentData.background_opacity || 50,
+          title_color: punishmentData.title_color || '#FFFFFF',
+          subtext_color: punishmentData.subtext_color || '#8E9196',
+          calendar_color: punishmentData.calendar_color || '#ea384c',
+          highlight_effect: punishmentData.highlight_effect || false,
+          focal_point_x: punishmentData.focal_point_x || 50,
+          focal_point_y: punishmentData.focal_point_y || 50,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (newPunishment) => {
+      queryClient.setQueryData(['punishments'], (oldPunishments: PunishmentData[] = []) => {
+        const updatedPunishments = [newPunishment, ...oldPunishments];
+        savePunishmentsToDB(updatedPunishments);
+        return updatedPunishments;
+      });
+      toast({ title: "Success", description: "Punishment created successfully" });
+    }
+  });
+
+  // Update punishment mutation
+  const updatePunishment = useMutation({
+    mutationFn: async ({ id, punishment }: { id: string, punishment: Partial<PunishmentData> }) => {
+      const { data, error } = await supabase
+        .from('punishments')
+        .update({
+          title: punishment.title,
+          description: punishment.description,
+          points: punishment.points,
+          icon_name: punishment.icon_name,
+          icon_color: punishment.icon_color,
+          background_image_url: punishment.background_image_url,
+          background_opacity: punishment.background_opacity,
+          title_color: punishment.title_color,
+          subtext_color: punishment.subtext_color,
+          calendar_color: punishment.calendar_color,
+          highlight_effect: punishment.highlight_effect,
+          focal_point_x: punishment.focal_point_x,
+          focal_point_y: punishment.focal_point_y,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (updatedPunishment) => {
+      queryClient.setQueryData(['punishments'], (oldPunishments: PunishmentData[] = []) => {
+        const updatedPunishments = oldPunishments.map(p => 
+          p.id === updatedPunishment.id ? updatedPunishment : p
+        );
+        savePunishmentsToDB(updatedPunishments);
+        return updatedPunishments;
+      });
+      toast({ title: "Success", description: "Punishment updated successfully" });
+    }
   });
   
   // Track initial mount and set loading state appropriately
@@ -33,7 +116,7 @@ const PunishmentsContent: React.FC<{
   }, []);
   
   // Only show loader on initial load when no cached data
-  const showLoader = isInitialLoad && loading && punishments.length === 0;
+  const showLoader = isInitialLoad && isLoading && punishments.length === 0;
   
   const handleAddNewPunishment = () => {
     setCurrentPunishment(undefined);
@@ -59,15 +142,23 @@ const PunishmentsContent: React.FC<{
     try {
       if (punishmentData.id) {
         // Update existing punishment
-        await updatePunishment(punishmentData.id, punishmentData);
+        await updatePunishment.mutateAsync({
+          id: punishmentData.id,
+          punishment: punishmentData
+        });
       } else {
         // Create new punishment
-        await createPunishment(punishmentData);
+        await createPunishment.mutateAsync(punishmentData);
       }
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
     } catch (error) {
       console.error("Error saving punishment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save punishment",
+        variant: "destructive"
+      });
     }
   };
   
@@ -84,7 +175,6 @@ const PunishmentsContent: React.FC<{
             <PunishmentCard
               key={punishment.id}
               {...punishment}
-              // Pass the function directly, no need for onEdit callback
               onEdit={() => handleEditPunishment(punishment)}
             />
           ))}
@@ -111,7 +201,7 @@ const PunishmentsContent: React.FC<{
   }
   
   // Show empty state
-  if (!loading && punishments.length === 0) {
+  if (!isLoading && punishments.length === 0) {
     return (
       <div className="p-4 pt-6">
         <PunishmentsHeader />
@@ -173,11 +263,7 @@ const Punishments: React.FC = () => {
   
   return (
     <AppLayout onAddNewItem={handleAddNewPunishment}>
-      <RewardsProvider>
-        <PunishmentsProvider>
-          <PunishmentsContent contentRef={contentRef} />
-        </PunishmentsProvider>
-      </RewardsProvider>
+      <PunishmentsContent contentRef={contentRef} />
     </AppLayout>
   );
 };
