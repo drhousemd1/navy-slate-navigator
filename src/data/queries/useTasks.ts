@@ -32,15 +32,17 @@ export function useTasks() {
   return useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
-    initialData: async () => {
+    // Fix: initialData needs to be direct data, not a function returning a Promise
+    initialData: [],
+    staleTime: Infinity,
+    // Add placeholderData to load cached data asynchronously
+    placeholderData: async () => {
       try {
-        const cachedTasks = await loadTasksFromDB();
-        return cachedTasks || [];
+        return await loadTasksFromDB() || [];
       } catch (error) {
         console.error("Error loading cached tasks:", error);
         return [];
       }
     },
-    staleTime: Infinity,
   });
 }

@@ -56,31 +56,35 @@ export function usePunishments() {
   const punishmentsQuery = useQuery({
     queryKey: ['punishments'],
     queryFn: fetchPunishments,
-    initialData: async () => {
+    // Fix: initialData needs to be direct data, not a function returning a Promise
+    initialData: [],
+    staleTime: Infinity,
+    // Add placeholderData to load cached data asynchronously
+    placeholderData: async () => {
       try {
-        const cachedPunishments = await loadPunishmentsFromDB();
-        return cachedPunishments || [];
+        return await loadPunishmentsFromDB() || [];
       } catch (error) {
         console.error("Error loading cached punishments:", error);
         return [];
       }
-    },
-    staleTime: Infinity,
+    }
   });
 
   const historyQuery = useQuery({
     queryKey: ['punishment_history'],
     queryFn: fetchPunishmentHistory,
-    initialData: async () => {
+    // Fix: initialData needs to be direct data, not a function returning a Promise
+    initialData: [],
+    staleTime: Infinity,
+    // Add placeholderData to load cached data asynchronously
+    placeholderData: async () => {
       try {
-        const cachedHistory = await loadPunishmentHistoryFromDB();
-        return cachedHistory || [];
+        return await loadPunishmentHistoryFromDB() || [];
       } catch (error) {
         console.error("Error loading cached punishment history:", error);
         return [];
       }
-    },
-    staleTime: Infinity,
+    }
   });
 
   return {

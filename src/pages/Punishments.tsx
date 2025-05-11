@@ -11,7 +11,7 @@ import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { queryClient } from '@/data/queryClient';
-import { savePunishmentsToDB } from '@/data/indexeddb/useIndexedDB';
+import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; // Fixed case sensitivity
 import { toast } from '@/hooks/use-toast';
 
 const PunishmentsContent: React.FC<{

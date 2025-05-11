@@ -80,46 +80,52 @@ export function useRewards() {
   const rewardsQuery = useQuery({
     queryKey: ['rewards'],
     queryFn: fetchRewards,
-    initialData: async () => {
+    // Fix: initialData needs to be direct data, not a function returning a Promise
+    initialData: [],
+    staleTime: Infinity,
+    // Add placeholderData to load cached data asynchronously
+    placeholderData: async () => {
       try {
-        const cachedRewards = await loadRewardsFromDB();
-        return cachedRewards || [];
+        return await loadRewardsFromDB() || [];
       } catch (error) {
         console.error("Error loading cached rewards:", error);
         return [];
       }
     },
-    staleTime: Infinity,
   });
 
   const pointsQuery = useQuery({
     queryKey: ['points'],
     queryFn: fetchUserPoints,
-    initialData: async () => {
+    // Fix: initialData needs to be direct data, not a function returning a Promise
+    initialData: 0,
+    staleTime: Infinity,
+    // Add placeholderData to load cached data asynchronously
+    placeholderData: async () => {
       try {
-        const cachedPoints = await loadPointsFromDB();
-        return cachedPoints || 0;
+        return await loadPointsFromDB() || 0;
       } catch (error) {
         console.error("Error loading cached points:", error);
         return 0;
       }
     },
-    staleTime: Infinity,
   });
 
   const domPointsQuery = useQuery({
     queryKey: ['dom_points'],
     queryFn: fetchDomPoints,
-    initialData: async () => {
+    // Fix: initialData needs to be direct data, not a function returning a Promise
+    initialData: 0,
+    staleTime: Infinity,
+    // Add placeholderData to load cached data asynchronously
+    placeholderData: async () => {
       try {
-        const cachedDomPoints = await loadDomPointsFromDB();
-        return cachedDomPoints || 0;
+        return await loadDomPointsFromDB() || 0;
       } catch (error) {
         console.error("Error loading cached dom points:", error);
         return 0;
       }
     },
-    staleTime: Infinity,
   });
 
   return {

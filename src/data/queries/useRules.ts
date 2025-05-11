@@ -26,7 +26,13 @@ const fetchRules = async (): Promise<Rule[]> => {
     ...rule,
     priority: rule.priority as 'low' | 'medium' | 'high', 
     frequency: rule.frequency as 'daily' | 'weekly',
-    usage_data: rule.usage_data || []
+    usage_data: rule.usage_data || [],
+    // Ensure all required fields are cast to the right types
+    id: rule.id,
+    title: rule.title,
+    description: rule.description || "",
+    created_at: rule.created_at,
+    updated_at: rule.updated_at
   }));
   
   // Save to IndexedDB for offline access
@@ -40,15 +46,17 @@ export function useRules() {
   return useQuery({
     queryKey: ['rules'],
     queryFn: fetchRules,
-    initialData: async () => {
+    // Fix: initialData needs to be the data directly, not a function returning a Promise
+    initialData: [],
+    staleTime: Infinity,
+    // Add a placeholder getter that loads data asynchronously
+    placeholderData: async () => {
       try {
-        const cachedRules = await loadRulesFromDB();
-        return cachedRules || [];
+        return await loadRulesFromDB() || [];
       } catch (error) {
         console.error("Error loading cached rules:", error);
         return [];
       }
     },
-    staleTime: Infinity,
   });
 }
