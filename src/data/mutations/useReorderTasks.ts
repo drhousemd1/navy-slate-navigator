@@ -42,7 +42,7 @@ const reorderTasks = async ({ taskId, newIndex }: ReorderTasksParams): Promise<T
   // No need to update in database since we're just changing local order
   // If we needed persistence, we could add an 'order' field to the tasks table
   
-  return reorderedTasks;
+  return reorderedTasks as Task[];
 };
 
 // Hook for reordering tasks
