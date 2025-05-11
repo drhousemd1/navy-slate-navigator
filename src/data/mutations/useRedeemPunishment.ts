@@ -5,92 +5,80 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useMutation } from "@tanstack/react-query";
-import { queryClient } from "../queryClient";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { PunishmentData, PunishmentHistoryItem } from "@/contexts/punishments/types";
-import { savePunishmentHistoryToDB, savePointsToDB, saveDomPointsToDB } from "../indexedDB/useIndexedDB";
+import { PunishmentData } from '@/contexts/punishments/types';
+import { toast } from '@/hooks/use-toast';
+import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 
-// Interface for redeeming a punishment
 interface RedeemPunishmentParams {
-  punishmentId: string;
-  pointsToDeduct: number;
-  isDomPunishment?: boolean;
+  punishment: PunishmentData;
 }
 
-// Function to redeem a punishment
-const redeemPunishment = async (
-  { punishmentId, pointsToDeduct, isDomPunishment = false }: RedeemPunishmentParams
-): Promise<PunishmentHistoryItem> => {
-  // Get current user
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData?.user?.id) {
-    throw new Error("User not authenticated");
-  }
-  
-  // Get current points
-  const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
-    .select('points, dom_points')
-    .eq('id', userData.user.id)
-    .single();
-    
-  if (profileError) throw profileError;
-  
-  // Calculate new points value
-  const pointsField = isDomPunishment ? 'dom_points' : 'points';
-  const currentPoints = isDomPunishment ? (profileData?.dom_points || 0) : (profileData?.points || 0);
-  const newPoints = Math.max(0, currentPoints - pointsToDeduct);
-  
-  // Update user points
-  const { error: pointsError } = await supabase
-    .from('profiles')
-    .update({ [pointsField]: newPoints })
-    .eq('id', userData.user.id);
-    
-  if (pointsError) throw pointsError;
-  
-  // Record the punishment in history
-  const historyEntry = {
-    punishment_id: punishmentId,
-    points_deducted: pointsToDeduct,
-    applied_date: new Date().toISOString(),
-    day_of_week: new Date().getDay()
-  };
-  
-  const { data: historyData, error: historyError } = await supabase
-    .from('punishment_history')
-    .insert(historyEntry)
-    .select()
-    .single();
-    
-  if (historyError) throw historyError;
-  
-  // Update points in cache
-  if (isDomPunishment) {
-    queryClient.setQueryData(['dom_points'], newPoints);
-    await saveDomPointsToDB(newPoints);
-  } else {
-    queryClient.setQueryData(['points'], newPoints);
-    await savePointsToDB(newPoints);
-  }
-  
-  return historyData as PunishmentHistoryItem;
-};
-
-// Hook for redeeming punishments
 export function useRedeemPunishment() {
+  const queryClient = useQueryClient();
+  
   return useMutation({
-    mutationFn: redeemPunishment,
-    onSuccess: (historyEntry) => {
-      // Update punishment history in cache
-      queryClient.setQueryData(['punishment_history'], (oldHistory: PunishmentHistoryItem[] = []) => {
-        const updatedHistory = [historyEntry, ...oldHistory];
+    mutationFn: async ({ punishment }: RedeemPunishmentParams): Promise<void> => {
+      try {
+        // Get current user
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) {
+          throw new Error('User not authenticated');
+        }
         
-        // Update IndexedDB
-        savePunishmentHistoryToDB(updatedHistory);
+        const now = new Date();
+        const dayOfWeek = now.getDay();
         
-        return updatedHistory;
+        // Record the punishment in history
+        const { error: historyError } = await supabase
+          .from('punishment_history')
+          .insert({
+            punishment_id: punishment.id,
+            applied_date: now.toISOString(),
+            day_of_week: dayOfWeek,
+            points_deducted: punishment.points || 0
+          });
+          
+        if (historyError) {
+          throw historyError;
+        }
+        
+        // Reduce points if applicable
+        if (punishment.points && punishment.points > 0) {
+          const { error: pointsError } = await supabase.rpc(
+            'deduct_points',
+            { points_to_deduct: punishment.points }
+          );
+          
+          if (pointsError) {
+            throw pointsError;
+          }
+        }
+        
+        return;
+      } catch (err) {
+        console.error('Error redeeming punishment:', err);
+        throw err;
+      }
+    },
+    onSuccess: () => {
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
+      
+      toast({
+        title: 'Punishment Applied',
+        description: 'Punishment has been recorded'
+      });
+    },
+    onError: (error: Error) => {
+      console.error('Error in useRedeemPunishment:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to apply punishment',
+        variant: 'destructive'
       });
     }
   });

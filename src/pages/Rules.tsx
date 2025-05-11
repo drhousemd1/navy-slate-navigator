@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +8,7 @@ import RulesList from '../components/rule/RulesList';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { RulesProvider, useRules } from '@/contexts/RulesContext';
 import { Rule } from '@/data/interfaces/Rule';
-import { useSyncManager } from '@/hooks/useSyncManager';
+import { useSyncManager } from '@/data/sync/useSyncManager';
 
 // Separate component to use the useRules hook inside RulesProvider
 const RulesWithContext: React.FC = () => {
@@ -16,30 +17,27 @@ const RulesWithContext: React.FC = () => {
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken } = useRules();
 
-  // Use the sync manager to keep data in sync
-  const { syncNow, lastSyncTime } = useSyncManager({ 
-    intervalMs: 30000, // 30 seconds, consistent with other pages
+  // Use the sync manager from the centralized data folder
+  const { syncNow } = useSyncManager({ 
+    intervalMs: 30000,
     enabled: true 
   });
   
   // Initial sync when component mounts
   useEffect(() => {
-    syncNow(); // Force a sync when the Rules page is loaded
+    syncNow();
   }, []);
 
   const handleAddRule = () => {
-    console.log('handleAddRule called in RulesWithContext');
     setCurrentRule(null);
     setIsEditorOpen(true);
   };
 
   // Expose the handleAddRule function to be called from outside
   React.useEffect(() => {
-    console.log('Setting up event listener for add-new-rule');
     const element = document.querySelector('.RulesContent');
     if (element) {
       const handleAddEvent = () => {
-        console.log('Received add-new-rule event');
         handleAddRule();
       };
       element.addEventListener('add-new-rule', handleAddEvent);
@@ -59,9 +57,6 @@ const RulesWithContext: React.FC = () => {
       await saveRule(ruleData);
       setIsEditorOpen(false);
       setCurrentRule(null);
-      
-      // Synchronize data after rule save
-      setTimeout(() => syncNow(), 500);
     } catch (err) {
       console.error('Error saving rule:', err);
     }
@@ -72,9 +67,6 @@ const RulesWithContext: React.FC = () => {
       await deleteRule(ruleId);
       setCurrentRule(null);
       setIsEditorOpen(false);
-      
-      // Synchronize data after rule delete
-      setTimeout(() => syncNow(), 500);
     } catch (err) {
       console.error('Error deleting rule:', err);
     }
@@ -174,10 +166,8 @@ const RulesWithContext: React.FC = () => {
 const Rules: React.FC = () => {
   return (
     <AppLayout onAddNewItem={() => {
-      console.log('AppLayout onAddNewItem called for Rules');
       const content = document.querySelector('.RulesContent');
       if (content) {
-        console.log('Dispatching add-new-rule event');
         const event = new CustomEvent('add-new-rule');
         content.dispatchEvent(event);
       }

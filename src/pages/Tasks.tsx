@@ -6,7 +6,7 @@ import TasksList from '../components/task/TasksList';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TasksProvider, useTasks } from '../contexts/TasksContext';
 import { Task } from '@/lib/taskUtils';
-import { useSyncManager } from '@/hooks/useSyncManager';
+import { useSyncManager } from '@/data/sync/useSyncManager';
 
 // Separate component that uses useTasks hook inside TasksProvider
 const TasksWithContext: React.FC = () => {
@@ -58,9 +58,6 @@ const TasksWithContext: React.FC = () => {
       await saveTask(taskData);
       setIsEditorOpen(false);
       setCurrentTask(null);
-      
-      // Synchronize data after task save
-      setTimeout(() => syncNow(), 500);
     } catch (err) {
       console.error('Error saving task:', err);
     }
@@ -71,9 +68,6 @@ const TasksWithContext: React.FC = () => {
       await deleteTask(taskId);
       setCurrentTask(null);
       setIsEditorOpen(false);
-      
-      // Synchronize data after task delete
-      setTimeout(() => syncNow(), 500);
     } catch (err) {
       console.error('Error deleting task:', err);
     }
@@ -86,7 +80,6 @@ const TasksWithContext: React.FC = () => {
       if (completed) {
         setTimeout(() => {
           refreshPointsFromDatabase();
-          syncNow(); // Ensure data is synchronized after completion
         }, 300);
       }
     } catch (err) {

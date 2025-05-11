@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useQuery, useMutation, useQueryClient, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
+import { QueryObserverResult } from '@tanstack/react-query';
 import { Rule } from '@/data/interfaces/Rule';
 import { useRulesData } from '@/data/hooks/useRulesData';
 
@@ -19,6 +18,7 @@ interface RulesContextType {
 const RulesContext = createContext<RulesContextType | undefined>(undefined);
 
 export const RulesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Use the centralized data hook
   const { 
     rules, 
     isLoading, 

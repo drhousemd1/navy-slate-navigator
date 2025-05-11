@@ -1,8 +1,7 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useQuery, useMutation, useQueryClient, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
-import { Task, saveTask, deleteTask, updateTaskCompletion } from '@/lib/taskUtils';
+import { QueryObserverResult } from '@tanstack/react-query';
+import { Task } from '@/lib/taskUtils';
 import { useTasksData } from '@/data/TasksDataHandler';
 
 // Define the context type
@@ -19,6 +18,7 @@ interface TasksContextType {
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Use the centralized data handler
   const { 
     tasks, 
     isLoading, 

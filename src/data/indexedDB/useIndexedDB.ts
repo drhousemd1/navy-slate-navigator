@@ -11,6 +11,8 @@ import { Rule } from "@/data/interfaces/Rule";
 import { Reward } from "@/lib/rewardUtils";
 import { PunishmentData, PunishmentHistoryItem } from "@/contexts/punishments/types";
 import { AdminTestingCardData } from "@/components/admin-testing/defaultAdminTestingCards";
+import { MonthlyMetricsResult } from "@/data/queries/useMonthlyMetrics";
+import { WeeklyMetricsSummary } from "@/data/queries/useWeeklyMetrics";
 
 // Configure localforage
 localforage.config({
@@ -89,6 +91,24 @@ export async function savePunishmentHistoryToDB(history: PunishmentHistoryItem[]
 
 export async function loadPunishmentHistoryFromDB(): Promise<PunishmentHistoryItem[] | null> {
   return localforage.getItem<PunishmentHistoryItem[]>("punishment_history");
+}
+
+// Monthly Metrics
+export async function saveMonthlyMetricsToDB(data: MonthlyMetricsResult): Promise<void> {
+  await localforage.setItem("monthly_metrics", data);
+}
+
+export async function loadMonthlyMetricsFromDB(): Promise<MonthlyMetricsResult | null> {
+  return localforage.getItem<MonthlyMetricsResult>("monthly_metrics");
+}
+
+// Weekly Metrics
+export async function saveWeeklyMetricsToDB(data: WeeklyMetricsSummary): Promise<void> {
+  await localforage.setItem("weekly_metrics", data);
+}
+
+export async function loadWeeklyMetricsFromDB(): Promise<WeeklyMetricsSummary | null> {
+  return localforage.getItem<WeeklyMetricsSummary>("weekly_metrics");
 }
 
 // Helper to clear all cached data
