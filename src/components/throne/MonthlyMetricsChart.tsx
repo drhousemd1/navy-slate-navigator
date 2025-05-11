@@ -7,7 +7,7 @@ import { format, parseISO } from 'date-fns';
 const MonthlyMetricsChart = () => {
   // Fixed the call to useMonthlyMetrics passing the required arguments
   const { data, isLoading, error } = useMonthlyMetrics({
-    enabled: true,
+    enabled: true, 
     staleTime: 300000 // 5 minutes
   });
 

@@ -13,7 +13,7 @@ import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY, REWARDS_QUERY_K
 
 // Define reward mutation functions
 export const saveRewardMutation = (queryClient: any, showToast = true) => 
-  async (reward: Partial<Reward>): Promise<Reward | null> => {
+  async (reward: Partial<Reward> & { title: string }): Promise<Reward | null> => {
     try {
       let result: Reward | null = null;
       
@@ -21,7 +21,23 @@ export const saveRewardMutation = (queryClient: any, showToast = true) =>
         // Update existing reward
         const { data, error } = await supabase
           .from('rewards')
-          .update(reward)
+          .update({
+            title: reward.title, // Title is required
+            description: reward.description,
+            cost: reward.cost,
+            supply: reward.supply,
+            is_dom_reward: reward.is_dom_reward,
+            background_image_url: reward.background_image_url,
+            background_opacity: reward.background_opacity,
+            focal_point_x: reward.focal_point_x,
+            focal_point_y: reward.focal_point_y,
+            icon_name: reward.icon_name,
+            icon_color: reward.icon_color,
+            title_color: reward.title_color,
+            subtext_color: reward.subtext_color,
+            calendar_color: reward.calendar_color,
+            highlight_effect: reward.highlight_effect
+          })
           .eq('id', reward.id)
           .select()
           .single();
@@ -32,7 +48,23 @@ export const saveRewardMutation = (queryClient: any, showToast = true) =>
         // Create new reward
         const { data, error } = await supabase
           .from('rewards')
-          .insert(reward)
+          .insert({
+            title: reward.title, // Title is required
+            description: reward.description || '',
+            cost: reward.cost || 10,
+            supply: reward.supply || 0,
+            is_dom_reward: reward.is_dom_reward || false,
+            background_image_url: reward.background_image_url || null,
+            background_opacity: reward.background_opacity || 100,
+            focal_point_x: reward.focal_point_x || 50,
+            focal_point_y: reward.focal_point_y || 50,
+            icon_name: reward.icon_name || 'gift',
+            icon_color: reward.icon_color || '#9b87f5',
+            title_color: reward.title_color || '#FFFFFF',
+            subtext_color: reward.subtext_color || '#8E9196',
+            calendar_color: reward.calendar_color || '#7E69AB',
+            highlight_effect: reward.highlight_effect || false
+          })
           .select()
           .single();
           
@@ -121,9 +153,12 @@ export const buyRewardMutation = (queryClient: any) =>
         
       if (profileError || !profileData) throw profileError;
       
-      const currentPoints = reward.is_dom_reward ? 
-        (profileData.dom_points || 0) : 
-        (profileData.points || 0);
+      let currentPoints = 0;
+      if (reward.is_dom_reward) {
+        currentPoints = profileData.dom_points || 0;
+      } else {
+        currentPoints = profileData.points || 0;
+      }
       
       // Check if enough points
       if (currentPoints < reward.cost) {
@@ -137,9 +172,15 @@ export const buyRewardMutation = (queryClient: any) =>
       
       // Deduct points
       const newPoints = currentPoints - reward.cost;
+      
+      // Fix type error by using type guards for update payload
+      const updatePayload = reward.is_dom_reward 
+        ? { dom_points: newPoints } 
+        : { points: newPoints };
+        
       const { error: pointsError } = await supabase
         .from('profiles')
-        .update({ [column]: newPoints })
+        .update(updatePayload)
         .eq('id', user.id);
         
       if (pointsError) throw pointsError;

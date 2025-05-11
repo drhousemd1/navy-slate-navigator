@@ -11,7 +11,6 @@ import { useRewardsQuery } from '../queries/useRewardsQuery';
 import { useBuyReward } from '../mutations/useBuyReward';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from '../rewards/queries';
 
 export function useRewardsData() {
   const { data: rewards = [], isLoading, error, refetch: refetchRewards } = useRewardsQuery();
@@ -27,7 +26,7 @@ export function useRewardsData() {
   
   // Query for points
   const { data: pointsData } = useQuery({
-    queryKey: REWARDS_POINTS_QUERY_KEY,
+    queryKey: ['rewards', 'points'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return 0;
@@ -47,7 +46,7 @@ export function useRewardsData() {
   
   // Query for dom points
   const { data: domPointsData } = useQuery({
-    queryKey: REWARDS_DOM_POINTS_QUERY_KEY,
+    queryKey: ['rewards', 'dom-points'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return 0;
@@ -80,24 +79,35 @@ export function useRewardsData() {
   
   // Calculate rewards supply
   useEffect(() => {
-    const regularRewards = rewards.filter(r => !r.is_dom_reward);
-    const domRewards = rewards.filter(r => r.is_dom_reward);
-    
-    const regularSupply = regularRewards.reduce((sum, r) => sum + (r.supply || 0), 0);
-    const domSupply = domRewards.reduce((sum, r) => sum + (r.supply || 0), 0);
-    
-    setTotalRewardsSupply(regularSupply);
-    setTotalDomRewardsSupply(domSupply);
+    if (Array.isArray(rewards)) {
+      const regularRewards = rewards.filter(r => !r.is_dom_reward);
+      const domRewards = rewards.filter(r => r.is_dom_reward);
+      
+      const regularSupply = regularRewards.reduce((sum, r) => sum + (r.supply || 0), 0);
+      const domSupply = domRewards.reduce((sum, r) => sum + (r.supply || 0), 0);
+      
+      setTotalRewardsSupply(regularSupply);
+      setTotalDomRewardsSupply(domSupply);
+    }
   }, [rewards]);
 
   const refreshPointsFromDatabase = useCallback(async (): Promise<void> => {
     try {
-      await queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: ['rewards', 'points'] });
+      await queryClient.invalidateQueries({ queryKey: ['rewards', 'dom-points'] });
     } catch (err) {
       console.error('Error refreshing points:', err);
     }
   }, [queryClient]);
+  
+  // Optimistic update setters
+  const setPointsOptimistically = (points: number) => {
+    setTotalPoints(points);
+  };
+  
+  const setDomPointsOptimistically = (points: number) => {
+    setDomPoints(points);
+  };
   
   const saveReward = async (rewardData: Partial<Reward>, currentIndex?: number | null): Promise<Reward | null> => {
     // Not implemented in this iteration - would be a dedicated useCreateReward or useUpdateReward hook
@@ -121,6 +131,12 @@ export function useRewardsData() {
       return false;
     }
   };
+
+  const useReward = async (reward: Reward): Promise<boolean> => {
+    // Not implemented yet
+    console.error('Use reward not implemented yet');
+    return false;
+  };
   
   return {
     rewards,
@@ -129,13 +145,14 @@ export function useRewardsData() {
     saveReward,
     deleteReward,
     buyReward,
+    useReward,
     refetchRewards,
     totalPoints,
     totalRewardsSupply,
     totalDomRewardsSupply,
     domPoints,
     refreshPointsFromDatabase,
-    setTotalPoints,
-    setDomPoints
+    setPointsOptimistically,
+    setDomPointsOptimistically
   };
 }
