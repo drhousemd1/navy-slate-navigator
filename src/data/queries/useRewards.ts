@@ -76,31 +76,34 @@ const fetchDomPoints = async (): Promise<number> => {
 };
 
 // Helper functions for placeholderData to fix TypeScript errors
-const loadRewardsPlaceholder = (): Promise<Reward[]> => {
-  return loadRewardsFromDB()
-    .then(cachedRewards => cachedRewards || [])
-    .catch(error => {
-      console.error("Error loading cached rewards:", error);
-      return [];
-    });
+const loadRewardsPlaceholder = async (): Promise<Reward[]> => {
+  try {
+    const cachedRewards = await loadRewardsFromDB();
+    return cachedRewards || [];
+  } catch (error) {
+    console.error("Error loading cached rewards:", error);
+    return [];
+  }
 };
 
-const loadPointsPlaceholder = (): Promise<number> => {
-  return loadPointsFromDB()
-    .then(cachedPoints => cachedPoints !== null ? cachedPoints : 0)
-    .catch(error => {
-      console.error("Error loading cached points:", error);
-      return 0;
-    });
+const loadPointsPlaceholder = async (): Promise<number> => {
+  try {
+    const cachedPoints = await loadPointsFromDB();
+    return cachedPoints !== null ? cachedPoints : 0;
+  } catch (error) {
+    console.error("Error loading cached points:", error);
+    return 0;
+  }
 };
 
-const loadDomPointsPlaceholder = (): Promise<number> => {
-  return loadDomPointsFromDB()
-    .then(cachedDomPoints => cachedDomPoints !== null ? cachedDomPoints : 0)
-    .catch(error => {
-      console.error("Error loading cached dom points:", error);
-      return 0;
-    });
+const loadDomPointsPlaceholder = async (): Promise<number> => {
+  try {
+    const cachedDomPoints = await loadDomPointsFromDB();
+    return cachedDomPoints !== null ? cachedDomPoints : 0;
+  } catch (error) {
+    console.error("Error loading cached dom points:", error);
+    return 0;
+  }
 };
 
 // Hook for accessing rewards

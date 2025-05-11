@@ -32,7 +32,16 @@ const fetchRules = async (): Promise<Rule[]> => {
     title: rule.title,
     description: rule.description || "",
     created_at: rule.created_at,
-    updated_at: rule.updated_at
+    updated_at: rule.updated_at,
+    title_color: rule.title_color,
+    subtext_color: rule.subtext_color,
+    calendar_color: rule.calendar_color,
+    icon_color: rule.icon_color,
+    background_opacity: rule.background_opacity,
+    focal_point_x: rule.focal_point_x,
+    focal_point_y: rule.focal_point_y,
+    highlight_effect: rule.highlight_effect,
+    frequency_count: rule.frequency_count
   }));
   
   // Save to IndexedDB for offline access
@@ -42,13 +51,14 @@ const fetchRules = async (): Promise<Rule[]> => {
 };
 
 // Helper function for placeholderData to fix TypeScript error
-const loadRulesPlaceholder = (): Promise<Rule[]> => {
-  return loadRulesFromDB()
-    .then(cachedRules => cachedRules || [])
-    .catch(error => {
-      console.error("Error loading cached rules:", error);
-      return [];
-    });
+const loadRulesPlaceholder = async (): Promise<Rule[]> => {
+  try {
+    const cachedRules = await loadRulesFromDB();
+    return cachedRules || [];
+  } catch (error) {
+    console.error("Error loading cached rules:", error);
+    return [];
+  }
 };
 
 // Hook for accessing rules

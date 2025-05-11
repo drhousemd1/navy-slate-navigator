@@ -52,23 +52,25 @@ const fetchPunishmentHistory = async (): Promise<PunishmentHistoryItem[]> => {
 };
 
 // Helper function for placeholderData to fix TypeScript error
-const loadPunishmentsPlaceholder = (): Promise<PunishmentData[]> => {
-  return loadPunishmentsFromDB()
-    .then(cachedPunishments => cachedPunishments || [])
-    .catch(error => {
-      console.error("Error loading cached punishments:", error);
-      return [];
-    });
+const loadPunishmentsPlaceholder = async (): Promise<PunishmentData[]> => {
+  try {
+    const cachedPunishments = await loadPunishmentsFromDB();
+    return cachedPunishments || [];
+  } catch (error) {
+    console.error("Error loading cached punishments:", error);
+    return [];
+  }
 };
 
 // Helper function for history placeholderData to fix TypeScript error
-const loadHistoryPlaceholder = (): Promise<PunishmentHistoryItem[]> => {
-  return loadPunishmentHistoryFromDB()
-    .then(cachedHistory => cachedHistory || [])
-    .catch(error => {
-      console.error("Error loading cached punishment history:", error);
-      return [];
-    });
+const loadHistoryPlaceholder = async (): Promise<PunishmentHistoryItem[]> => {
+  try {
+    const cachedHistory = await loadPunishmentHistoryFromDB();
+    return cachedHistory || [];
+  } catch (error) {
+    console.error("Error loading cached punishment history:", error);
+    return [];
+  }
 };
 
 // Hook for accessing punishments

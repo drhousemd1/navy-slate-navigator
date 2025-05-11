@@ -28,13 +28,14 @@ const fetchTasks = async (): Promise<Task[]> => {
 };
 
 // Helper function for placeholderData to fix TypeScript error
-const loadTasksPlaceholder = (): Promise<Task[]> => {
-  return loadTasksFromDB()
-    .then(cachedTasks => cachedTasks || [])
-    .catch(error => {
-      console.error("Error loading cached tasks:", error);
-      return [];
-    });
+const loadTasksPlaceholder = async (): Promise<Task[]> => {
+  try {
+    const cachedTasks = await loadTasksFromDB();
+    return cachedTasks || [];
+  } catch (error) {
+    console.error("Error loading cached tasks:", error);
+    return [];
+  }
 };
 
 // Hook for accessing tasks
