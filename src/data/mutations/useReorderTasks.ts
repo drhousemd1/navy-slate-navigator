@@ -63,6 +63,13 @@ export function useReorderTasks() {
       // Update IndexedDB
       saveTasksToDB(reorderedTasks);
       
+      // For each task, call syncCardById
+      reorderedTasks.forEach(task => {
+        if (task.id) {
+          syncCardById(task.id, 'tasks');
+        }
+      });
+      
       toast({
         title: 'Success',
         description: 'Tasks reordered successfully'

@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
+import { syncCardById } from '@/data/sync/useSyncManager';
 
 interface RedeemPunishmentParams {
   punishment: PunishmentData;
@@ -76,7 +77,12 @@ export function useRedeemPunishment() {
         throw err;
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, { punishment }) => {
+      // Sync the individual punishment card
+      if (punishment.id) {
+        syncCardById(punishment.id, 'punishments');
+      }
+      
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });

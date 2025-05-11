@@ -1,8 +1,13 @@
 
+/**
+ * DO NOT IMPLEMENT DATA LOGIC HERE.
+ * This is only a wrapper around the centralized data hooks in /src/data/
+ */
+
 import React, { createContext, useContext, ReactNode } from 'react';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { Task } from '@/lib/taskUtils';
-import { useTasksData } from '@/data/TasksDataHandler';
+import { useTasksData } from '@/data';
 
 // Define the context type
 interface TasksContextType {
@@ -18,14 +23,14 @@ interface TasksContextType {
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Use the centralized data handler
+  // Use the centralized data hook
   const { 
     tasks, 
     isLoading, 
     error, 
-    saveTask: saveTaskToDb, 
-    deleteTask: deleteTaskFromDb, 
-    toggleTaskCompletion: toggleTaskCompletionInDb,
+    saveTask, 
+    deleteTask, 
+    toggleTaskCompletion,
     refetchTasks 
   } = useTasksData();
 
@@ -33,9 +38,9 @@ export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     tasks,
     isLoading,
     error,
-    saveTask: saveTaskToDb,
-    deleteTask: deleteTaskFromDb,
-    toggleTaskCompletion: toggleTaskCompletionInDb,
+    saveTask,
+    deleteTask,
+    toggleTaskCompletion,
     refetchTasks
   };
 

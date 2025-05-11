@@ -1,8 +1,13 @@
 
+/**
+ * DO NOT IMPLEMENT DATA LOGIC HERE.
+ * This is only a wrapper around the centralized data hooks in /src/data/
+ */
+
 import React, { createContext, useContext, ReactNode } from 'react';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { Rule } from '@/data/interfaces/Rule';
-import { useRulesData } from '@/data/hooks/useRulesData';
+import { useRulesData } from '@/data';
 
 // Define the context type
 interface RulesContextType {

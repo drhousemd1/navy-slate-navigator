@@ -5,136 +5,172 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { endOfMonth, startOfMonth, format, eachDayOfInterval } from 'date-fns';
-import { loadMonthlyMetricsFromDB, saveMonthlyMetricsToDB } from "../indexedDB/useIndexedDB";
+import { subDays, format } from 'date-fns';
+import { loadMonthlyMetricsFromDB, saveMonthlyMetricsToDB } from '@/data/indexedDB/useIndexedDB';
 
-// Types
-export interface MonthlyDataItem {
+export interface MonthlyMetricsSummary {
+  totalTaskCompletions: number;
+  totalPointsEarned: number;
+  totalRuleViolations: number;
+}
+
+interface DailyMetrics {
   date: string;
   taskCompletions: number;
   pointsEarned: number;
-  pointsSpent: number;
-  taskCreations: number;
   ruleViolations: number;
-}
-
-export interface MonthlyMetricsSummary {
-  taskCompletions: number;
-  pointsEarned: number;
-  pointsSpent: number;
-  taskCreations: number;
-  ruleViolations: number;
-  punishments: number;
 }
 
 export interface MonthlyMetricsResult {
-  dataArray: MonthlyDataItem[];
+  dataArray: DailyMetrics[];
   monthlyTotals: MonthlyMetricsSummary;
 }
 
-// Hook for monthly metrics data
 export function useMonthlyMetrics() {
-  const {
-    data,
-    isLoading,
-    error,
-    refetch
-  } = useQuery({
+  return useQuery({
     queryKey: ['monthly-metrics'],
-    queryFn: async () => {
+    queryFn: async (): Promise<MonthlyMetricsResult> => {
       try {
-        // First try to get from IndexedDB
-        const cachedData = await loadMonthlyMetricsFromDB();
-
-        if (cachedData) {
-          console.log('Found cached monthly metrics in IndexedDB');
-          return cachedData;
-        }
-
-        // If no cache, fetch from API
-        console.log('No cached monthly metrics found, fetching from API');
-
+        // Get current date and date 30 days ago
         const today = new Date();
-        const start = startOfMonth(today);
-        const end = endOfMonth(today);
-
+        const thirtyDaysAgo = subDays(today, 30);
+        
+        // Format dates for Supabase queries
+        const fromDate = thirtyDaysAgo.toISOString();
+        const toDate = today.toISOString();
+        
+        // Fetch task completions for the past 30 days
         const { data: taskCompletions, error: taskError } = await supabase
           .from('task_completion_history')
-          .select('*')
-          .gte('completed_at', start.toISOString())
-          .lte('completed_at', end.toISOString());
-
+          .select('completed_at, task_id')
+          .gte('completed_at', fromDate)
+          .lte('completed_at', toDate);
+          
         if (taskError) {
-          console.error('Error loading task_completion_history', taskError);
+          console.error('Error fetching task completions:', taskError);
+          throw taskError;
         }
-
+        
+        // Fetch rule violations for the past 30 days
         const { data: ruleViolations, error: ruleError } = await supabase
           .from('rule_violations')
-          .select('*')
-          .gte('violation_date', start.toISOString())
-          .lte('violation_date', end.toISOString());
-
+          .select('violation_date, rule_id')
+          .gte('violation_date', fromDate)
+          .lte('violation_date', toDate);
+          
         if (ruleError) {
-          console.error('Error loading rule_violations', ruleError);
+          console.error('Error fetching rule violations:', ruleError);
+          throw ruleError;
         }
-
-        // Mock data for points earned and spent
-        const pointsEarned = Math.floor(Math.random() * 100);
-        const pointsSpent = Math.floor(Math.random() * 50);
-
-        // Mock data for task creations
-        const taskCreations = Math.floor(Math.random() * 10);
-
-        // Generate array of dates for the current month
-        const monthDates = eachDayOfInterval({ start, end }).map(date => format(date, 'yyyy-MM-dd'));
-
-        // Combine data into a single array
-        const dataArray: MonthlyDataItem[] = monthDates.map(date => {
-          const taskCompletionsForDate = taskCompletions?.filter(item => format(new Date(item.completed_at), 'yyyy-MM-dd') === date).length || 0;
-          const ruleViolationsForDate = ruleViolations?.filter(item => format(new Date(item.violation_date), 'yyyy-MM-dd') === date).length || 0;
-
-          return {
-            date,
-            taskCompletions: taskCompletionsForDate,
-            pointsEarned,
-            pointsSpent,
-            taskCreations,
-            ruleViolations: ruleViolationsForDate
-          };
+        
+        // Get all tasks to calculate points
+        const { data: tasks, error: tasksError } = await supabase
+          .from('tasks')
+          .select('id, points');
+          
+        if (tasksError) {
+          console.error('Error fetching tasks:', tasksError);
+          throw tasksError;
+        }
+        
+        // Create a map of task IDs to points
+        const taskPoints = new Map();
+        tasks.forEach((task) => {
+          taskPoints.set(task.id, task.points || 0);
         });
-
+        
+        // Group data by date
+        const dataByDate = new Map<string, DailyMetrics>();
+        
+        // Initialize the past 30 days in the map
+        for (let i = 0; i <= 30; i++) {
+          const date = subDays(today, i);
+          const dateStr = format(date, 'yyyy-MM-dd');
+          dataByDate.set(dateStr, {
+            date: dateStr,
+            taskCompletions: 0,
+            pointsEarned: 0,
+            ruleViolations: 0
+          });
+        }
+        
+        // Process task completions
+        taskCompletions.forEach((completion) => {
+          const date = format(new Date(completion.completed_at), 'yyyy-MM-dd');
+          const dayData = dataByDate.get(date) || {
+            date,
+            taskCompletions: 0,
+            pointsEarned: 0,
+            ruleViolations: 0
+          };
+          
+          dayData.taskCompletions += 1;
+          dayData.pointsEarned += taskPoints.get(completion.task_id) || 0;
+          
+          dataByDate.set(date, dayData);
+        });
+        
+        // Process rule violations
+        ruleViolations.forEach((violation) => {
+          const date = format(new Date(violation.violation_date), 'yyyy-MM-dd');
+          const dayData = dataByDate.get(date) || {
+            date,
+            taskCompletions: 0,
+            pointsEarned: 0,
+            ruleViolations: 0
+          };
+          
+          dayData.ruleViolations += 1;
+          
+          dataByDate.set(date, dayData);
+        });
+        
+        // Convert map to array and sort by date
+        const dataArray = Array.from(dataByDate.values()).sort((a, b) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        
         // Calculate monthly totals
-        const monthlyTotals: MonthlyMetricsSummary = {
-          taskCompletions: dataArray.reduce((acc, item) => acc + item.taskCompletions, 0),
-          pointsEarned: dataArray.reduce((acc, item) => acc + item.pointsEarned, 0),
-          pointsSpent: dataArray.reduce((acc, item) => acc + item.pointsSpent, 0),
-          taskCreations: dataArray.reduce((acc, item) => acc + item.taskCreations, 0),
-          ruleViolations: dataArray.reduce((acc, item) => acc + item.ruleViolations, 0),
-          punishments: 0
+        const monthlyTotals = dataArray.reduce(
+          (acc, day) => {
+            acc.totalTaskCompletions += day.taskCompletions;
+            acc.totalPointsEarned += day.pointsEarned;
+            acc.totalRuleViolations += day.ruleViolations;
+            return acc;
+          },
+          {
+            totalTaskCompletions: 0,
+            totalPointsEarned: 0,
+            totalRuleViolations: 0
+          }
+        );
+        
+        const result = {
+          dataArray,
+          monthlyTotals
         };
-
-        const result = { dataArray, monthlyTotals };
-
-        // Save to IndexedDB
+        
+        // Cache the result
         await saveMonthlyMetricsToDB(result);
-
+        
         return result;
       } catch (error) {
-        console.error('Error in monthly metrics query:', error);
+        console.error('Error in monthly metrics:', error);
+        
+        // Try to return cached data if available
+        const cachedData = await loadMonthlyMetricsFromDB();
+        if (cachedData) {
+          return cachedData;
+        }
+        
         throw error;
       }
     },
-    refetchInterval: 5000, // More aggressive refresh for metrics data
-    staleTime: 0,
-    gcTime: 0
+    staleTime: 60 * 60 * 1000, // 1 hour
+    initialData: async () => {
+      return await loadMonthlyMetricsFromDB();
+    }
   });
-
-  return {
-    data,
-    isLoading,
-    error,
-    refetch
-  };
 }

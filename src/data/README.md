@@ -1,73 +1,53 @@
 
 # Centralized Data Architecture
 
-This directory contains all data-related logic for the application. The architecture is designed to ensure that:
+This folder contains the central data management logic for the application. The main goal of this architecture is to ensure that:
 
-1. All data fetching, mutations, and sync operations are centralized
-2. Components and pages are kept clean of data logic
-3. Data is cached locally using IndexedDB
-4. Sync operations are optimized to minimize network requests
+1. All query and mutation logic lives in shared files inside `/src/data/`
+2. Pages and components may NOT use useQuery, useMutation, queryClient, or Supabase directly
+3. Each user action (complete, create, buy, redeem, reorder) uses a named mutation hook
+4. The centralized sync manager updates ONLY the touched card (not all cards)
+5. A local cache using IndexedDB ensures pages load instantly
+6. Query hooks use initialData from IndexedDB
+7. Pages are never stuck in a loading state due to live fetches
 
 ## Directory Structure
 
-- `/queries/` - React Query hooks for fetching data
-- `/mutations/` - React Query hooks for modifying data
-- `/sync/` - Sync manager for coordinating data synchronization
-- `/indexedDB/` - Utilities for local data persistence
-- `/interfaces/` - TypeScript interfaces for data models
+- `/queries/`: Contains all query hooks that fetch data from the server
+- `/mutations/`: Contains all mutation hooks that make changes to the server
+- `/sync/`: Contains logic for syncing data between the client and server
+- `/indexedDB/`: Contains logic for caching data locally
+- `/hooks/`: Contains high-level data hooks that pages/components should use
 
 ## Usage Guidelines
 
-### ❌ NEVER DO THIS:
+### DO NOT:
+- Import useQuery or useMutation directly in components or pages
+- Make direct Supabase calls outside of this folder
+- Manage cache manually outside of these hooks
+- Show loading states when data can be loaded from cache
 
-- Import `supabase` directly in components or pages
-- Use `useQuery` or `useMutation` outside of this directory
-- Implement data fetching logic in components
-- Duplicate data access patterns
+### DO:
+- Import hooks from this folder like `useTasksData()` in your components/pages
+- Use the provided mutation functions like `saveTask()`, `buyReward()`, etc.
+- Let the central hooks handle caching, syncing, and error handling
 
-### ✅ ALWAYS DO THIS:
+## Adding New Features
 
-- Import hooks from this directory (e.g., `useAdminCards`, `useTasks`)
-- Use the `syncCardById` function after mutations
-- Store data in IndexedDB for offline capabilities
-- Update React Query cache optimistically when possible
+When adding a new domain/entity:
 
-## Adding New Data Types
+1. Create a query hook in `/queries/` to fetch data
+2. Create mutation hooks in `/mutations/` for each action (create, update, delete, etc.)
+3. Create a data hook in `/hooks/` that uses the query and mutation hooks
+4. Export the data hook from `index.ts`
+5. Add cache functions in `/indexedDB/useIndexedDB.ts`
 
-When adding a new data type:
+## Components and Pages
 
-1. Create a new query hook in `/queries/`
-2. Create mutation hooks in `/mutations/`
-3. Add IndexedDB functions in `/indexedDB/useIndexedDB.ts`
-4. Update `useSyncManager.ts` to handle the new type
-5. Add appropriate interfaces in `/interfaces/`
+Components and pages should:
+- Import only the matching hook (e.g., `useTasksData()`)
+- Use the data and functions provided by the hook
+- Never implement data fetch/mutation logic themselves
+- Show placeholder content from cache while data loads
 
-## Sync Manager
-
-The sync manager (`useSyncManager.ts`) provides:
-
-- Individual card syncing with `syncCardById`
-- Batch synchronization with `syncNow`
-- Background sync with configurable intervals
-
-## IndexedDB Caching
-
-All data is cached in IndexedDB for:
-
-- Instant loading on repeated visits
-- Offline capabilities
-- Reduced server load
-
-## Implementation Notes
-
-- All API calls should use optimistic updates
-- Query invalidations should be targeted (avoid full cache invalidation)
-- Error states should fallback to cached data when possible
-- Components should never know about the data source (API vs cache)
-
-## Important Warning
-
-**DO NOT REPLICATE THIS LOGIC OUTSIDE /src/data/**
-
-All fetching, mutations, syncs, and caching must route through centralized hooks only.
-This ensures consistent data handling, optimized network usage, and maintainable code.
+This architecture ensures consistent, maintainable data management across the application.

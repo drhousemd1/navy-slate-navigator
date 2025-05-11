@@ -32,7 +32,7 @@ const DEFAULT_TASK: Task = {
   focal_point_x: 50,
   focal_point_y: 50,
   highlight_effect: false,
-  usage_data: [0, 0, 0, 0, 0, 0, 0] 
+  usage_data: [0, 0, 0, 0, 0, 0, 0]
 };
 
 export function useCreateTask() {
