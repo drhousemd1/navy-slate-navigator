@@ -46,13 +46,12 @@ export function useRules() {
   return useQuery({
     queryKey: ['rules'],
     queryFn: fetchRules,
-    // Fix: initialData needs to be the data directly, not a function returning a Promise
-    initialData: [],
+    initialData: [], // Fixed: Direct array instead of function
     staleTime: Infinity,
-    // Add a placeholder getter that loads data asynchronously
     placeholderData: async () => {
       try {
-        return await loadRulesFromDB() || [];
+        const cachedRules = await loadRulesFromDB();
+        return cachedRules || [];
       } catch (error) {
         console.error("Error loading cached rules:", error);
         return [];

@@ -80,13 +80,12 @@ export function useRewards() {
   const rewardsQuery = useQuery({
     queryKey: ['rewards'],
     queryFn: fetchRewards,
-    // Fix: initialData needs to be direct data, not a function returning a Promise
-    initialData: [],
+    initialData: [], // Fixed: Direct array instead of function
     staleTime: Infinity,
-    // Add placeholderData to load cached data asynchronously
     placeholderData: async () => {
       try {
-        return await loadRewardsFromDB() || [];
+        const cachedRewards = await loadRewardsFromDB();
+        return cachedRewards || [];
       } catch (error) {
         console.error("Error loading cached rewards:", error);
         return [];
@@ -97,13 +96,12 @@ export function useRewards() {
   const pointsQuery = useQuery({
     queryKey: ['points'],
     queryFn: fetchUserPoints,
-    // Fix: initialData needs to be direct data, not a function returning a Promise
-    initialData: 0,
+    initialData: 0, // Fixed: Direct value instead of function
     staleTime: Infinity,
-    // Add placeholderData to load cached data asynchronously
     placeholderData: async () => {
       try {
-        return await loadPointsFromDB() || 0;
+        const cachedPoints = await loadPointsFromDB();
+        return cachedPoints !== null ? cachedPoints : 0;
       } catch (error) {
         console.error("Error loading cached points:", error);
         return 0;
@@ -114,13 +112,12 @@ export function useRewards() {
   const domPointsQuery = useQuery({
     queryKey: ['dom_points'],
     queryFn: fetchDomPoints,
-    // Fix: initialData needs to be direct data, not a function returning a Promise
-    initialData: 0,
+    initialData: 0, // Fixed: Direct value instead of function
     staleTime: Infinity,
-    // Add placeholderData to load cached data asynchronously
     placeholderData: async () => {
       try {
-        return await loadDomPointsFromDB() || 0;
+        const cachedDomPoints = await loadDomPointsFromDB();
+        return cachedDomPoints !== null ? cachedDomPoints : 0;
       } catch (error) {
         console.error("Error loading cached dom points:", error);
         return 0;

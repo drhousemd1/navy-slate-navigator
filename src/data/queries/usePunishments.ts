@@ -56,13 +56,12 @@ export function usePunishments() {
   const punishmentsQuery = useQuery({
     queryKey: ['punishments'],
     queryFn: fetchPunishments,
-    // Fix: initialData needs to be direct data, not a function returning a Promise
-    initialData: [],
+    initialData: [], // Fixed: Direct array instead of function
     staleTime: Infinity,
-    // Add placeholderData to load cached data asynchronously
     placeholderData: async () => {
       try {
-        return await loadPunishmentsFromDB() || [];
+        const cachedData = await loadPunishmentsFromDB();
+        return cachedData || [];
       } catch (error) {
         console.error("Error loading cached punishments:", error);
         return [];
@@ -73,13 +72,12 @@ export function usePunishments() {
   const historyQuery = useQuery({
     queryKey: ['punishment_history'],
     queryFn: fetchPunishmentHistory,
-    // Fix: initialData needs to be direct data, not a function returning a Promise
-    initialData: [],
+    initialData: [], // Fixed: Direct array instead of function
     staleTime: Infinity,
-    // Add placeholderData to load cached data asynchronously
     placeholderData: async () => {
       try {
-        return await loadPunishmentHistoryFromDB() || [];
+        const cachedData = await loadPunishmentHistoryFromDB();
+        return cachedData || [];
       } catch (error) {
         console.error("Error loading cached punishment history:", error);
         return [];
