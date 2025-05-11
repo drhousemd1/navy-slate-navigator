@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -45,14 +44,12 @@ export function useTasks() {
     queryFn: fetchTasks,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    // Fix: Use a function that returns a Promise<Task[]> as type for placeholderData
-    placeholderData: async () => {
-      try {
-        return await loadCachedTasks();
-      } catch (error) {
-        console.error("Error loading placeholder data for tasks:", error);
-        return [];
-      }
-    }
+    placeholderData: () => {
+      // React Query expects the actual data type, not a Promise
+      // We'll return an empty array and then later replace it when the real data loads
+      return [];
+    },
+    // Use this option to control how long to keep data in cache
+    gcTime: 5 * 60 * 1000 // 5 minutes
   });
 }

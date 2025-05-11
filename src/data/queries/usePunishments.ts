@@ -79,15 +79,11 @@ export function usePunishments() {
     queryFn: fetchPunishments,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    // Fix: Use a function that returns the correct type instead of Promise directly
-    placeholderData: async () => {
-      try {
-        return await loadCachedPunishments();
-      } catch (error) {
-        console.error("Error loading placeholder data for punishments:", error);
-        return [];
-      }
-    }
+    placeholderData: () => {
+      // Return empty array as placeholder until the real data loads
+      return [];
+    },
+    gcTime: 5 * 60 * 1000 // 5 minutes
   });
 
   const historyQuery = useQuery({
@@ -95,15 +91,11 @@ export function usePunishments() {
     queryFn: fetchPunishmentHistory,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    // Fix: Use a function that returns the correct type instead of Promise directly
-    placeholderData: async () => {
-      try {
-        return await loadCachedPunishmentHistory();
-      } catch (error) {
-        console.error("Error loading placeholder data for punishment history:", error);
-        return [];
-      }
-    }
+    placeholderData: () => {
+      // Return empty array as placeholder until the real data loads
+      return [];
+    },
+    gcTime: 5 * 60 * 1000 // 5 minutes
   });
 
   return {

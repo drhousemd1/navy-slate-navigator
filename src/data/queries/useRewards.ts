@@ -112,15 +112,11 @@ export function useRewards() {
     queryFn: fetchRewards,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    // Fix: Use a function that returns the correct type instead of Promise directly
-    placeholderData: async () => {
-      try {
-        return await loadCachedRewards();
-      } catch (error) {
-        console.error("Error loading placeholder data for rewards:", error);
-        return [];
-      }
-    }
+    placeholderData: () => {
+      // Return empty array as placeholder
+      return [];
+    },
+    gcTime: 5 * 60 * 1000 // 5 minutes
   });
 
   const pointsQuery = useQuery({
@@ -128,15 +124,11 @@ export function useRewards() {
     queryFn: fetchUserPoints,
     initialData: 0, // Direct value instead of function
     staleTime: Infinity,
-    // Fix: Use a function that returns the correct type instead of Promise directly
-    placeholderData: async () => {
-      try {
-        return await loadCachedPoints();
-      } catch (error) {
-        console.error("Error loading placeholder data for points:", error);
-        return 0;
-      }
-    }
+    placeholderData: () => {
+      // Return 0 as placeholder
+      return 0;
+    },
+    gcTime: 5 * 60 * 1000 // 5 minutes
   });
 
   const domPointsQuery = useQuery({
@@ -144,15 +136,11 @@ export function useRewards() {
     queryFn: fetchDomPoints,
     initialData: 0, // Direct value instead of function
     staleTime: Infinity,
-    // Fix: Use a function that returns the correct type instead of Promise directly
-    placeholderData: async () => {
-      try {
-        return await loadCachedDomPoints();
-      } catch (error) {
-        console.error("Error loading placeholder data for dom points:", error);
-        return 0;
-      }
-    }
+    placeholderData: () => {
+      // Return 0 as placeholder
+      return 0;
+    },
+    gcTime: 5 * 60 * 1000 // 5 minutes
   });
 
   return {
