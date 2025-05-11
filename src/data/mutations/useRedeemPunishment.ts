@@ -46,11 +46,25 @@ export function useRedeemPunishment() {
         
         // Reduce points if applicable
         if (punishment.points && punishment.points > 0) {
-          const { error: pointsError } = await supabase.rpc(
-            'deduct_points',
-            { points_to_deduct: punishment.points }
-          );
+          // Instead of using RPC, update the points directly with a query
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('points')
+            .eq('id', userData.user.id)
+            .single();
+            
+          if (profileError) {
+            throw profileError;
+          }
           
+          const currentPoints = profileData.points || 0;
+          const newPoints = Math.max(0, currentPoints - punishment.points);
+          
+          const { error: pointsError } = await supabase
+            .from('profiles')
+            .update({ points: newPoints })
+            .eq('id', userData.user.id);
+            
           if (pointsError) {
             throw pointsError;
           }

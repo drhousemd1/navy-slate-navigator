@@ -27,7 +27,7 @@ export interface MonthlyMetricsSummary {
   punishments: number;
 }
 
-interface MonthlyMetricsResult {
+export interface MonthlyMetricsResult {
   dataArray: MonthlyDataItem[];
   monthlyTotals: MonthlyMetricsSummary;
 }

@@ -50,11 +50,18 @@ export function useCompleteTask() {
       
       // If task was completed, record the completion in history
       if (completed) {
+        // Get the current user
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) {
+          throw new Error('User not authenticated');
+        }
+        
         const { error: historyError } = await supabase
           .from('task_completion_history')
           .insert({
             task_id: taskId,
-            completed_at: now.toISOString()
+            completed_at: now.toISOString(),
+            user_id: userData.user.id
           });
           
         if (historyError) {

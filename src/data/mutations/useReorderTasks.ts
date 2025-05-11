@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -34,21 +33,20 @@ export function useReorderTasks() {
           order: index
         }));
         
-        // We'll batch update all tasks with their new orders
-        const updates = reorderedTasks.map(task => ({
-          id: task.id,
-          order: task.order,
-          updated_at: new Date().toISOString()
-        }));
-        
-        // Update all tasks in Supabase
-        const { data, error } = await supabase
-          .from('tasks')
-          .upsert(updates, { onConflict: 'id' })
-          .select();
-          
-        if (error) {
-          throw error;
+        // Update each task individually to avoid bulk update issues
+        for (const task of reorderedTasks) {
+          const { error } = await supabase
+            .from('tasks')
+            .update({
+              order: task.order,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', task.id);
+            
+          if (error) {
+            console.error(`Error updating task order for ${task.id}:`, error);
+            throw error;
+          }
         }
         
         return reorderedTasks;
