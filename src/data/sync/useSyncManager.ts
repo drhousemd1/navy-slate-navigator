@@ -46,7 +46,7 @@ export function useSyncManager(options: SyncOptions = {}) {
         
         // Update just this one item in the cache
         queryClient.setQueryData([queryKey], (oldData: any[] = []) => {
-          return oldData.map(item => item.id === id ? data : item);
+          return Array.isArray(oldData) ? oldData.map(item => item.id === id ? data : item) : [];
         });
       }
     } catch (err) {
@@ -140,7 +140,7 @@ export const syncCardById = async (
       
       // Update just this one item in the cache
       queryClient.setQueryData([queryKey], (oldData: any[] = []) => {
-        return oldData.map(item => item.id === id ? data : item);
+        return Array.isArray(oldData) ? oldData.map(item => item.id === id ? data : item) : [];
       });
     }
   } catch (err) {
