@@ -26,7 +26,7 @@ const fetchRules = async (): Promise<Rule[]> => {
     ...rule,
     priority: rule.priority as 'low' | 'medium' | 'high', 
     frequency: rule.frequency as 'daily' | 'weekly',
-    usage_data: Array.isArray(rule.usage_data) ? rule.usage_data : [],
+    usage_data: Array.isArray(rule.usage_data) ? rule.usage_data as number[] : [],
     // Ensure all required fields are cast to the right types
     id: rule.id,
     title: rule.title,
@@ -50,17 +50,6 @@ const fetchRules = async (): Promise<Rule[]> => {
   return validatedRules;
 };
 
-// Helper function for placeholderData to fix TypeScript error
-const loadRulesPlaceholder = async (): Promise<Rule[]> => {
-  try {
-    const cachedRules = await loadRulesFromDB();
-    return cachedRules || [];
-  } catch (error) {
-    console.error("Error loading cached rules:", error);
-    return [];
-  }
-};
-
 // Hook for accessing rules
 export function useRules() {
   return useQuery({
@@ -68,6 +57,13 @@ export function useRules() {
     queryFn: fetchRules,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    placeholderData: loadRulesPlaceholder
+    placeholderData: async () => {
+      try {
+        return await loadRulesFromDB() || [];
+      } catch (error) {
+        console.error("Error loading cached rules:", error);
+        return [];
+      }
+    }
   });
 }

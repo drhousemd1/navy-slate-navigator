@@ -75,37 +75,6 @@ const fetchDomPoints = async (): Promise<number> => {
   return data?.dom_points || 0;
 };
 
-// Helper functions for placeholderData to fix TypeScript errors
-const loadRewardsPlaceholder = async (): Promise<Reward[]> => {
-  try {
-    const cachedRewards = await loadRewardsFromDB();
-    return cachedRewards || [];
-  } catch (error) {
-    console.error("Error loading cached rewards:", error);
-    return [];
-  }
-};
-
-const loadPointsPlaceholder = async (): Promise<number> => {
-  try {
-    const cachedPoints = await loadPointsFromDB();
-    return cachedPoints !== null ? cachedPoints : 0;
-  } catch (error) {
-    console.error("Error loading cached points:", error);
-    return 0;
-  }
-};
-
-const loadDomPointsPlaceholder = async (): Promise<number> => {
-  try {
-    const cachedDomPoints = await loadDomPointsFromDB();
-    return cachedDomPoints !== null ? cachedDomPoints : 0;
-  } catch (error) {
-    console.error("Error loading cached dom points:", error);
-    return 0;
-  }
-};
-
 // Hook for accessing rewards
 export function useRewards() {
   const rewardsQuery = useQuery({
@@ -113,7 +82,14 @@ export function useRewards() {
     queryFn: fetchRewards,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    placeholderData: loadRewardsPlaceholder
+    placeholderData: async () => {
+      try {
+        return await loadRewardsFromDB() || [];
+      } catch (error) {
+        console.error("Error loading cached rewards:", error);
+        return [];
+      }
+    }
   });
 
   const pointsQuery = useQuery({
@@ -121,7 +97,15 @@ export function useRewards() {
     queryFn: fetchUserPoints,
     initialData: 0, // Direct value instead of function
     staleTime: Infinity,
-    placeholderData: loadPointsPlaceholder
+    placeholderData: async () => {
+      try {
+        const cachedPoints = await loadPointsFromDB();
+        return cachedPoints !== null ? cachedPoints : 0;
+      } catch (error) {
+        console.error("Error loading cached points:", error);
+        return 0;
+      }
+    }
   });
 
   const domPointsQuery = useQuery({
@@ -129,7 +113,15 @@ export function useRewards() {
     queryFn: fetchDomPoints,
     initialData: 0, // Direct value instead of function
     staleTime: Infinity,
-    placeholderData: loadDomPointsPlaceholder
+    placeholderData: async () => {
+      try {
+        const cachedDomPoints = await loadDomPointsFromDB();
+        return cachedDomPoints !== null ? cachedDomPoints : 0;
+      } catch (error) {
+        console.error("Error loading cached dom points:", error);
+        return 0;
+      }
+    }
   });
 
   return {

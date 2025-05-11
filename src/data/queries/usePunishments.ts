@@ -51,28 +51,6 @@ const fetchPunishmentHistory = async (): Promise<PunishmentHistoryItem[]> => {
   return data || [];
 };
 
-// Helper function for placeholderData to fix TypeScript error
-const loadPunishmentsPlaceholder = async (): Promise<PunishmentData[]> => {
-  try {
-    const cachedPunishments = await loadPunishmentsFromDB();
-    return cachedPunishments || [];
-  } catch (error) {
-    console.error("Error loading cached punishments:", error);
-    return [];
-  }
-};
-
-// Helper function for history placeholderData to fix TypeScript error
-const loadHistoryPlaceholder = async (): Promise<PunishmentHistoryItem[]> => {
-  try {
-    const cachedHistory = await loadPunishmentHistoryFromDB();
-    return cachedHistory || [];
-  } catch (error) {
-    console.error("Error loading cached punishment history:", error);
-    return [];
-  }
-};
-
 // Hook for accessing punishments
 export function usePunishments() {
   const punishmentsQuery = useQuery({
@@ -80,7 +58,14 @@ export function usePunishments() {
     queryFn: fetchPunishments,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    placeholderData: loadPunishmentsPlaceholder
+    placeholderData: async () => {
+      try {
+        return await loadPunishmentsFromDB() || [];
+      } catch (error) {
+        console.error("Error loading cached punishments:", error);
+        return [];
+      }
+    }
   });
 
   const historyQuery = useQuery({
@@ -88,7 +73,14 @@ export function usePunishments() {
     queryFn: fetchPunishmentHistory,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    placeholderData: loadHistoryPlaceholder
+    placeholderData: async () => {
+      try {
+        return await loadPunishmentHistoryFromDB() || [];
+      } catch (error) {
+        console.error("Error loading cached punishment history:", error);
+        return [];
+      }
+    }
   });
 
   return {
