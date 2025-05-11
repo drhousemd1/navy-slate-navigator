@@ -13,7 +13,9 @@ interface RewardCardProps extends Reward {
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({ 
-  id, title, description, cost, supply, icon_name, icon_color, is_dom_reward, onEdit 
+  id, title, description, cost, supply, icon_name, icon_color, is_dom_reward, 
+  background_opacity = 0, title_color = '#FFFFFF', subtext_color = '#8E9196', 
+  calendar_color = '#7E69AB', onEdit 
 }) => {
   const { handleBuyReward, totalPoints, domPoints } = useRewards();
   
@@ -26,10 +28,20 @@ const RewardCard: React.FC<RewardCardProps> = ({
     if (!id) return;
     
     try {
-      await handleBuyReward({
-        id, title, description, cost, supply, 
-        icon_name, icon_color, is_dom_reward
-      });
+      // Create a complete Reward object with default values for missing properties
+      const rewardData: Reward = {
+        id, title, description, cost, supply, icon_name, icon_color, is_dom_reward,
+        background_opacity: background_opacity || 0,
+        title_color: title_color || '#FFFFFF',
+        subtext_color: subtext_color || '#8E9196',
+        calendar_color: calendar_color || '#7E69AB',
+        background_image_url: null,
+        focal_point_x: 50,
+        focal_point_y: 50,
+        highlight_effect: false
+      };
+      
+      await handleBuyReward(rewardData);
     } catch (error) {
       console.error('Error buying reward:', error);
     }
@@ -53,7 +65,10 @@ const RewardCard: React.FC<RewardCardProps> = ({
       )}
       
       <div className="flex items-center justify-between mt-3">
-        <Badge variant="outline" className="bg-black border-primary text-white px-2 py-1 flex items-center gap-1">
+        <Badge 
+          variant="outline" 
+          className="bg-black border-primary text-white px-2 py-1 flex items-center gap-1"
+        >
           <Coins className="w-3 h-3" />
           <span>{cost}</span>
         </Badge>

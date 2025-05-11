@@ -5,7 +5,11 @@ import { useMonthlyMetrics } from '@/data/queries/useMonthlyMetrics';
 import { format, parseISO } from 'date-fns';
 
 const MonthlyMetricsChart = () => {
-  const { data, isLoading, error } = useMonthlyMetrics();
+  // Fixed the call to useMonthlyMetrics passing the required arguments
+  const { data, isLoading, error } = useMonthlyMetrics({
+    enabled: true,
+    staleTime: 300000 // 5 minutes
+  });
 
   // Generate chart data from metrics
   const chartData = useMemo(() => {

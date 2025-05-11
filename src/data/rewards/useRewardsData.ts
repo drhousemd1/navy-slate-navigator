@@ -42,7 +42,7 @@ export const useRewardsData = () => {
 
   // Set local rewards whenever server data changes
   useEffect(() => {
-    if (rewards.length > 0) {
+    if (rewards && rewards.length > 0) {
       setLocalRewards(rewards);
     }
   }, [rewards]);

@@ -40,14 +40,15 @@ export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children })
     saveReward, 
     deleteReward, 
     buyReward,
+    useReward,
     refetchRewards,
     totalPoints,
     totalRewardsSupply,
     totalDomRewardsSupply,
     domPoints,
     refreshPointsFromDatabase,
-    setTotalPoints,
-    setDomPoints
+    setPointsOptimistically: setTotalPoints,
+    setDomPointsOptimistically: setDomPoints
   } = useRewardsData();
 
   const value: RewardsContextType = {
@@ -65,7 +66,7 @@ export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children })
     refreshPointsFromDatabase,
     setTotalPoints,
     setDomPoints,
-    handleUseReward: buyReward // Map handleUseReward to buyReward
+    handleUseReward: useReward
   };
 
   return (

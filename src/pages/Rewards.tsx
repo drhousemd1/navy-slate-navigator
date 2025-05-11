@@ -76,10 +76,12 @@ const RewardsContent: React.FC<{
         }}
         onDelete={async (id) => {
           try {
-            // Fix: Convert both sides to string for comparison to ensure type consistency
-            const index = rewards.findIndex(r => String(r.id) === String(id));
+            // Fix: Convert id to string for comparison
+            const idStr = String(id);
+            // Find the index of the reward with the matching id
+            const index = rewards.findIndex(r => String(r.id) === idStr);
             if (index !== -1) {
-              await handleDeleteReward(index);
+              await handleDeleteReward(idStr);
             }
             setIsEditorOpen(false);
             
