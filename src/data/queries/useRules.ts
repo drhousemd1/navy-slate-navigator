@@ -21,10 +21,18 @@ const fetchRules = async (): Promise<Rule[]> => {
     throw error;
   }
   
-  // Save to IndexedDB for offline access
-  await saveRulesToDB(data || []);
+  // Transform data to ensure it matches the Rule interface type
+  const validatedRules: Rule[] = (data || []).map(rule => ({
+    ...rule,
+    priority: rule.priority as 'low' | 'medium' | 'high', // Type assertion for safety
+    frequency: rule.frequency as 'daily' | 'weekly',
+    usage_data: rule.usage_data || []
+  }));
   
-  return data || [];
+  // Save to IndexedDB for offline access
+  await saveRulesToDB(validatedRules);
+  
+  return validatedRules;
 };
 
 // Hook for accessing rules

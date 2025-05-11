@@ -81,8 +81,13 @@ export function useRewards() {
     queryKey: ['rewards'],
     queryFn: fetchRewards,
     initialData: async () => {
-      const cachedRewards = await loadRewardsFromDB();
-      return cachedRewards || [];
+      try {
+        const cachedRewards = await loadRewardsFromDB();
+        return cachedRewards || [];
+      } catch (error) {
+        console.error("Error loading cached rewards:", error);
+        return [];
+      }
     },
     staleTime: Infinity,
   });
@@ -91,8 +96,13 @@ export function useRewards() {
     queryKey: ['points'],
     queryFn: fetchUserPoints,
     initialData: async () => {
-      const cachedPoints = await loadPointsFromDB();
-      return cachedPoints || 0;
+      try {
+        const cachedPoints = await loadPointsFromDB();
+        return cachedPoints || 0;
+      } catch (error) {
+        console.error("Error loading cached points:", error);
+        return 0;
+      }
     },
     staleTime: Infinity,
   });
@@ -101,8 +111,13 @@ export function useRewards() {
     queryKey: ['dom_points'],
     queryFn: fetchDomPoints,
     initialData: async () => {
-      const cachedDomPoints = await loadDomPointsFromDB();
-      return cachedDomPoints || 0;
+      try {
+        const cachedDomPoints = await loadDomPointsFromDB();
+        return cachedDomPoints || 0;
+      } catch (error) {
+        console.error("Error loading cached dom points:", error);
+        return 0;
+      }
     },
     staleTime: Infinity,
   });

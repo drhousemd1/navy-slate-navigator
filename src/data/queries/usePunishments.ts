@@ -57,8 +57,13 @@ export function usePunishments() {
     queryKey: ['punishments'],
     queryFn: fetchPunishments,
     initialData: async () => {
-      const cachedPunishments = await loadPunishmentsFromDB();
-      return cachedPunishments || [];
+      try {
+        const cachedPunishments = await loadPunishmentsFromDB();
+        return cachedPunishments || [];
+      } catch (error) {
+        console.error("Error loading cached punishments:", error);
+        return [];
+      }
     },
     staleTime: Infinity,
   });
@@ -67,8 +72,13 @@ export function usePunishments() {
     queryKey: ['punishment_history'],
     queryFn: fetchPunishmentHistory,
     initialData: async () => {
-      const cachedHistory = await loadPunishmentHistoryFromDB();
-      return cachedHistory || [];
+      try {
+        const cachedHistory = await loadPunishmentHistoryFromDB();
+        return cachedHistory || [];
+      } catch (error) {
+        console.error("Error loading cached punishment history:", error);
+        return [];
+      }
     },
     staleTime: Infinity,
   });
