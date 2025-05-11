@@ -35,7 +35,10 @@ const fetchTasks = async (): Promise<Task[]> => {
     focal_point_y: task.focal_point_y,
     frequency: task.frequency as "daily" | "weekly",
     frequency_count: task.frequency_count,
-    usage_data: Array.isArray(task.usage_data) ? task.usage_data : [0, 0, 0, 0, 0, 0, 0],
+    // Explicitly convert usage_data to ensure it's a number array
+    usage_data: Array.isArray(task.usage_data) 
+      ? task.usage_data.map((val: any) => Number(val)) 
+      : [0, 0, 0, 0, 0, 0, 0],
     icon_name: task.icon_name,
     icon_url: task.icon_url,
     icon_color: task.icon_color,

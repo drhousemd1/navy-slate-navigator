@@ -28,12 +28,12 @@ const fetchRewards = async (): Promise<Reward[]> => {
     description: reward.description || "",
     cost: reward.cost,
     supply: reward.supply,
-    is_dom_reward: reward.is_dom_reward === true, // Ensure boolean type
+    is_dom_reward: Boolean(reward.is_dom_reward), // Ensure boolean type
     background_image_url: reward.background_image_url,
     background_opacity: reward.background_opacity || 100,
     focal_point_x: reward.focal_point_x || 50,
     focal_point_y: reward.focal_point_y || 50,
-    highlight_effect: reward.highlight_effect || false,
+    highlight_effect: Boolean(reward.highlight_effect) || false, // Ensure boolean type
     icon_name: reward.icon_name,
     icon_color: reward.icon_color || "#9b87f5",
     title_color: reward.title_color || "#FFFFFF",

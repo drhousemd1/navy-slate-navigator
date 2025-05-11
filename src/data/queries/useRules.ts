@@ -1,3 +1,4 @@
+
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -25,7 +26,10 @@ const fetchRules = async (): Promise<Rule[]> => {
     ...rule,
     priority: rule.priority as 'low' | 'medium' | 'high', 
     frequency: rule.frequency as 'daily' | 'weekly',
-    usage_data: Array.isArray(rule.usage_data) ? rule.usage_data as number[] : [],
+    // Explicitly convert usage_data to ensure it's a number array
+    usage_data: Array.isArray(rule.usage_data) 
+      ? rule.usage_data.map((val: any) => Number(val))
+      : [0, 0, 0, 0, 0, 0, 0],
     // Ensure all required fields are cast to the right types
     id: rule.id,
     title: rule.title,
