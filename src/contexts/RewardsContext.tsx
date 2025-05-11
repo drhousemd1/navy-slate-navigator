@@ -18,6 +18,15 @@ interface RewardsContextType {
   handleDeleteReward: (rewardId: string) => Promise<boolean>;
   handleBuyReward: (reward: Reward) => Promise<boolean>;
   refetchRewards: () => Promise<QueryObserverResult<Reward[], Error>>;
+  // Add these missing properties
+  totalPoints: number;
+  totalRewardsSupply: number;
+  totalDomRewardsSupply: number;
+  domPoints: number;
+  refreshPointsFromDatabase: () => Promise<void>;
+  setTotalPoints: (points: number) => void;
+  setDomPoints: (points: number) => void;
+  handleUseReward: (reward: Reward) => Promise<boolean>;
 }
 
 const RewardsContext = createContext<RewardsContextType | undefined>(undefined);
@@ -31,7 +40,14 @@ export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children })
     saveReward, 
     deleteReward, 
     buyReward,
-    refetchRewards 
+    refetchRewards,
+    totalPoints,
+    totalRewardsSupply,
+    totalDomRewardsSupply,
+    domPoints,
+    refreshPointsFromDatabase,
+    setTotalPoints,
+    setDomPoints
   } = useRewardsData();
 
   const value: RewardsContextType = {
@@ -41,7 +57,15 @@ export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children })
     handleSaveReward: saveReward,
     handleDeleteReward: deleteReward,
     handleBuyReward: buyReward,
-    refetchRewards
+    refetchRewards,
+    totalPoints,
+    totalRewardsSupply,
+    totalDomRewardsSupply,
+    domPoints,
+    refreshPointsFromDatabase,
+    setTotalPoints,
+    setDomPoints,
+    handleUseReward: buyReward // Map handleUseReward to buyReward
   };
 
   return (

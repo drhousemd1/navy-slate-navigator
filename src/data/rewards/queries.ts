@@ -7,3 +7,5 @@
 
 export const REWARDS_POINTS_QUERY_KEY = ['rewards', 'points'];
 export const REWARDS_DOM_POINTS_QUERY_KEY = ['rewards', 'dom-points'];
+export const REWARDS_QUERY_KEY = ['rewards'];
+export const REWARDS_SUPPLY_QUERY_KEY = ['rewards', 'supply'];

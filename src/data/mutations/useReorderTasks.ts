@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Task } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
+import { syncCardById } from '@/data/sync/useSyncManager';
 
 interface ReorderTasksParams {
   tasks: Task[];

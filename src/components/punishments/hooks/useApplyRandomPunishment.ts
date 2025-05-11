@@ -17,10 +17,7 @@ export const useApplyRandomPunishment = (onClose: () => void) => {
       setTotalPoints(newTotal);
       
       // Then call the applyPunishment function with the punishment object
-      await applyPunishment({
-        id: selectedPunishment.id,
-        points: selectedPunishment.points
-      });
+      await applyPunishment(selectedPunishment);
       
       // Show success toast
       toast({
