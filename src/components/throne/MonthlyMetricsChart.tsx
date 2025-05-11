@@ -10,7 +10,7 @@ const MonthlyMetricsChart = () => {
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
 
-  // Fixed the call to useMonthlyMetrics passing the required arguments
+  // Pass both required year and month arguments to useMonthlyMetrics
   const { data, isLoading, error } = useMonthlyMetrics(currentYear, currentMonth);
 
   // Generate chart data from metrics

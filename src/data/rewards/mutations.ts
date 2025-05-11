@@ -153,11 +153,22 @@ export const buyRewardMutation = (queryClient: any) =>
         
       if (profileError || !profileData) throw profileError;
       
+      // Determine the correct points value based on reward type
       let currentPoints = 0;
       if (reward.is_dom_reward) {
-        currentPoints = profileData.dom_points || 0;
+        // Type guard to ensure dom_points exists
+        if ('dom_points' in profileData) {
+          currentPoints = profileData.dom_points || 0;
+        } else {
+          throw new Error("Dom points data not available");
+        }
       } else {
-        currentPoints = profileData.points || 0;
+        // Type guard to ensure points exists
+        if ('points' in profileData) {
+          currentPoints = profileData.points || 0;
+        } else {
+          throw new Error("Points data not available");
+        }
       }
       
       // Check if enough points
@@ -173,10 +184,10 @@ export const buyRewardMutation = (queryClient: any) =>
       // Deduct points
       const newPoints = currentPoints - reward.cost;
       
-      // Fix type error by using conditional types
+      // Type assertion for update payload
       const updatePayload = reward.is_dom_reward 
-        ? { dom_points: newPoints } as { dom_points: number }
-        : { points: newPoints } as { points: number };
+        ? { dom_points: newPoints } 
+        : { points: newPoints };
         
       const { error: pointsError } = await supabase
         .from('profiles')
