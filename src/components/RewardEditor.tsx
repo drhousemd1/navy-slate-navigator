@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { RewardEditorForm } from './reward-editor/RewardEditorForm';
-import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -10,7 +10,7 @@ interface RewardEditorProps {
   isOpen: boolean;
   onClose: () => void;
   rewardData?: any;
-  onSave: (rewardData: any) => Promise<void> | void; // Update return type to allow both Promise<void> and void
+  onSave: (rewardData: any) => Promise<void> | void;
   onDelete?: (id: number) => void;
 }
 
@@ -21,7 +21,6 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   onSave,
   onDelete
 }) => {
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [isSaving, setIsSaving] = useState(false);
   

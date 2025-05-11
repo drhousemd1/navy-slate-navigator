@@ -141,25 +141,8 @@ export const useSyncManager = (options: SyncOptions = {}) => {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'profiles' },
         (payload) => {
-          console.log('[SyncManager] Received realtime update for profiles:', payload);
-          // Trigger a sync when the profiles table is updated
+          console.log('[SyncManager] Profile update detected:', payload);
           syncCriticalData([CRITICAL_QUERY_KEYS.PROFILE, CRITICAL_QUERY_KEYS.REWARDS_POINTS]);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tasks' },
-        () => {
-          console.log('[SyncManager] Received realtime update for tasks');
-          syncCriticalData([CRITICAL_QUERY_KEYS.TASKS]);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'rewards' },
-        () => {
-          console.log('[SyncManager] Received realtime update for rewards');
-          syncCriticalData([CRITICAL_QUERY_KEYS.REWARDS]);
         }
       )
       .subscribe();
@@ -169,28 +152,10 @@ export const useSyncManager = (options: SyncOptions = {}) => {
     };
   }, [enabled]);
   
-  // Function to force a complete refresh of all cache
-  const forceFullRefresh = async () => {
-    queryClient.clear(); // Clear the entire cache
-    await syncCriticalData(); // Then resync everything
-    
-    toast({
-      title: "Cache refreshed",
-      description: "All data has been refreshed from the server",
-      variant: "default"
-    });
-  };
-  
-  // Return enhanced control functions and state
   return {
-    syncNow: syncCriticalData,
     isSyncing,
     lastSyncTime,
-    forceRefreshPoints: refreshPointsFromDatabase,
-    invalidateCache: (keys?: string[][]) => {
-      queryClient.invalidateQueries({ queryKey: keys || CRITICAL_QUERY_KEYS.TASKS });
-      syncCriticalData(keys);
-    },
-    forceFullRefresh
+    syncNow: syncCriticalData,
+    syncKeys: (keys: unknown[][]) => syncCriticalData(keys)
   };
 };
