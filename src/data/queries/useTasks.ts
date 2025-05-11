@@ -32,16 +32,14 @@ export function useTasks() {
   return useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
-    initialData: () => {
-      return Promise.resolve([]).then(async () => {
-        try {
-          const cachedTasks = await loadTasksFromDB();
-          return cachedTasks || [];
-        } catch (error) {
-          console.error("Error loading cached tasks:", error);
-          return [];
-        }
-      });
+    initialData: async () => {
+      try {
+        const cachedTasks = await loadTasksFromDB();
+        return cachedTasks || [];
+      } catch (error) {
+        console.error("Error loading cached tasks:", error);
+        return [];
+      }
     },
     staleTime: Infinity,
   });

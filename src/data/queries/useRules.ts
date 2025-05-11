@@ -40,16 +40,14 @@ export function useRules() {
   return useQuery({
     queryKey: ['rules'],
     queryFn: fetchRules,
-    initialData: () => {
-      return Promise.resolve([]).then(async () => {
-        try {
-          const cachedRules = await loadRulesFromDB();
-          return cachedRules || [];
-        } catch (error) {
-          console.error("Error loading cached rules:", error);
-          return [];
-        }
-      });
+    initialData: async () => {
+      try {
+        const cachedRules = await loadRulesFromDB();
+        return cachedRules || [];
+      } catch (error) {
+        console.error("Error loading cached rules:", error);
+        return [];
+      }
     },
     staleTime: Infinity,
   });

@@ -80,16 +80,14 @@ export function useRewards() {
   const rewardsQuery = useQuery({
     queryKey: ['rewards'],
     queryFn: fetchRewards,
-    initialData: () => {
-      return Promise.resolve([]).then(async () => {
-        try {
-          const cachedRewards = await loadRewardsFromDB();
-          return cachedRewards || [];
-        } catch (error) {
-          console.error("Error loading cached rewards:", error);
-          return [];
-        }
-      });
+    initialData: async () => {
+      try {
+        const cachedRewards = await loadRewardsFromDB();
+        return cachedRewards || [];
+      } catch (error) {
+        console.error("Error loading cached rewards:", error);
+        return [];
+      }
     },
     staleTime: Infinity,
   });
@@ -97,16 +95,14 @@ export function useRewards() {
   const pointsQuery = useQuery({
     queryKey: ['points'],
     queryFn: fetchUserPoints,
-    initialData: () => {
-      return Promise.resolve(0).then(async () => {
-        try {
-          const cachedPoints = await loadPointsFromDB();
-          return cachedPoints || 0;
-        } catch (error) {
-          console.error("Error loading cached points:", error);
-          return 0;
-        }
-      });
+    initialData: async () => {
+      try {
+        const cachedPoints = await loadPointsFromDB();
+        return cachedPoints || 0;
+      } catch (error) {
+        console.error("Error loading cached points:", error);
+        return 0;
+      }
     },
     staleTime: Infinity,
   });
@@ -114,16 +110,14 @@ export function useRewards() {
   const domPointsQuery = useQuery({
     queryKey: ['dom_points'],
     queryFn: fetchDomPoints,
-    initialData: () => {
-      return Promise.resolve(0).then(async () => {
-        try {
-          const cachedDomPoints = await loadDomPointsFromDB();
-          return cachedDomPoints || 0;
-        } catch (error) {
-          console.error("Error loading cached dom points:", error);
-          return 0;
-        }
-      });
+    initialData: async () => {
+      try {
+        const cachedDomPoints = await loadDomPointsFromDB();
+        return cachedDomPoints || 0;
+      } catch (error) {
+        console.error("Error loading cached dom points:", error);
+        return 0;
+      }
     },
     staleTime: Infinity,
   });

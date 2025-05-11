@@ -9,7 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "../queryClient";
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData, PunishmentHistoryItem } from "@/contexts/punishments/types";
-import { savePunishmentHistoryToDB, savePointsToDB, saveDomPointsToDB } from "../indexeddb/useIndexedDB";
+import { savePunishmentHistoryToDB, savePointsToDB, saveDomPointsToDB } from "../indexedDB/useIndexedDB";
 
 // Interface for redeeming a punishment
 interface RedeemPunishmentParams {

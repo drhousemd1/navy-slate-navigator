@@ -9,7 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "../queryClient";
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from "@/lib/rewardUtils";
-import { saveRewardsToDB, savePointsToDB, saveDomPointsToDB } from "../indexeddb/useIndexedDB";
+import { saveRewardsToDB, savePointsToDB, saveDomPointsToDB } from "../indexedDB/useIndexedDB";
 
 // Interface for buying a reward
 interface BuyRewardParams {

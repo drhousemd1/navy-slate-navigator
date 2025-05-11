@@ -10,7 +10,7 @@ import { queryClient } from "../queryClient";
 import { supabase } from '@/integrations/supabase/client';
 import { Task } from "@/lib/taskUtils";
 import { syncCardById } from "../sync/useSyncManager";
-import { saveTasksToDB } from "../indexeddb/useIndexedDB";
+import { saveTasksToDB } from "../indexedDB/useIndexedDB";
 
 // Complete a task function
 const completeTask = async (taskId: string): Promise<Task> => {
