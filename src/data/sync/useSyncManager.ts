@@ -24,7 +24,7 @@ export function useSyncManager(options: SyncOptions = {}) {
   // Sync a specific card by ID
   const syncCardById = useCallback(async (
     id: string, 
-    type: 'tasks' | 'rules' | 'rewards' | 'punishments'
+    type: 'tasks' | 'rules' | 'rewards' | 'punishments' | 'admin_testing_cards'
   ): Promise<void> => {
     if (!id) return;
     
@@ -41,8 +41,11 @@ export function useSyncManager(options: SyncOptions = {}) {
       if (error) throw error;
       
       if (data) {
+        // Map the appropriate queryKey based on type
+        const queryKey = type === 'admin_testing_cards' ? 'adminCards' : type;
+        
         // Update just this one item in the cache
-        queryClient.setQueryData([type], (oldData: any[] = []) => {
+        queryClient.setQueryData([queryKey], (oldData: any[] = []) => {
           return oldData.map(item => item.id === id ? data : item);
         });
       }
@@ -117,7 +120,7 @@ export function useSyncManager(options: SyncOptions = {}) {
 // Export single-use functions
 export const syncCardById = async (
   id: string,
-  type: 'tasks' | 'rules' | 'rewards' | 'punishments'
+  type: 'tasks' | 'rules' | 'rewards' | 'punishments' | 'admin_testing_cards'
 ): Promise<void> => {
   if (!id) return;
   
@@ -132,8 +135,11 @@ export const syncCardById = async (
     if (error) throw error;
     
     if (data) {
+      // Map the appropriate queryKey based on type
+      const queryKey = type === 'admin_testing_cards' ? 'adminCards' : type;
+      
       // Update just this one item in the cache
-      queryClient.setQueryData([type], (oldData: any[] = []) => {
+      queryClient.setQueryData([queryKey], (oldData: any[] = []) => {
         return oldData.map(item => item.id === id ? data : item);
       });
     }

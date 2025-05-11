@@ -10,8 +10,8 @@ import { useAdminCardData } from '@/components/admin-testing/hooks/useAdminCardD
 import { useImageCarousel } from '@/components/admin-testing/hooks/useImageCarousel';
 import { renderCardIcon } from '@/components/admin-testing/utils/renderCardIcon';
 import { toast } from "@/hooks/use-toast";
-import { supabase } from '@/integrations/supabase/client';
 import { AdminTestingCardData } from "./defaultAdminTestingCards";
+import { useAdminCards } from '@/data/hooks/useAdminCards';
 
 export interface AdminTestingCardProps {
   title: string;
@@ -38,6 +38,9 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [carouselTimer, setCarouselTimer] = useState(5);
+  
+  // Use our delete card mutation from the central hook
+  const { deleteCard } = useAdminCards();
 
   const {
     cardData,
@@ -74,27 +77,8 @@ const AdminTestingCard: React.FC<AdminTestingCardProps> = ({
 
   const handleDeleteCard = async (cardId: string) => {
     try {
-      // Delete from Supabase
-      const { error } = await supabase
-        .from('admin_testing_cards')
-        .delete()
-        .eq('id', cardId);
-      
-      if (error) {
-        console.error("Error deleting card from Supabase:", error);
-        toast({
-          title: "Error",
-          description: `Failed to delete card: ${error.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Notify about the deletion
-      toast({
-        title: "Card Deleted",
-        description: "The admin testing card has been deleted",
-      });
+      // Use the central data service to delete the card
+      await deleteCard(cardId);
       
       // Close the modal
       setIsEditModalOpen(false);

@@ -10,6 +10,7 @@ import { Task } from "@/lib/taskUtils";
 import { Rule } from "@/data/interfaces/Rule";
 import { Reward } from "@/lib/rewardUtils";
 import { PunishmentData, PunishmentHistoryItem } from "@/contexts/punishments/types";
+import { AdminTestingCardData } from "@/components/admin-testing/defaultAdminTestingCards";
 
 // Configure localforage
 localforage.config({
@@ -53,6 +54,15 @@ export async function savePunishmentsToDB(punishments: PunishmentData[]): Promis
 
 export async function loadPunishmentsFromDB(): Promise<PunishmentData[] | null> {
   return localforage.getItem<PunishmentData[]>("punishments");
+}
+
+// Admin Testing Cards
+export async function saveAdminCardsToDB(cards: AdminTestingCardData[]): Promise<void> {
+  await localforage.setItem("admin_cards", cards);
+}
+
+export async function loadAdminCardsFromDB(): Promise<AdminTestingCardData[] | null> {
+  return localforage.getItem<AdminTestingCardData[]>("admin_cards");
 }
 
 // Points

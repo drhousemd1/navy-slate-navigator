@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form } from '@/components/ui/form';
@@ -12,6 +13,15 @@ import IconSelectionSection from './edit-modal/IconSelectionSection';
 import ColorSettingsSection from './edit-modal/ColorSettingsSection';
 import HighlightEffectToggle from './edit-modal/HighlightEffectToggle';
 import ModalActions from './edit-modal/ModalActions';
+
+/**
+ * IMPORTANT: This component should NOT contain direct Supabase calls.
+ * All data operations should be handled through the central data hooks
+ * in /src/data/hooks/useAdminCards.ts.
+ * 
+ * This modal should focus only on UI state and delegating data operations
+ * to the appropriate hooks.
+ */
 
 interface AdminTestingEditModalProps {
   isOpen: boolean;
