@@ -33,8 +33,13 @@ export function useTasks() {
     queryKey: ['tasks'],
     queryFn: fetchTasks,
     initialData: async () => {
-      const cachedTasks = await loadTasksFromDB();
-      return cachedTasks || [];
+      try {
+        const cachedTasks = await loadTasksFromDB();
+        return cachedTasks || [];
+      } catch (error) {
+        console.error("Error loading cached tasks:", error);
+        return [];
+      }
     },
     staleTime: Infinity,
   });

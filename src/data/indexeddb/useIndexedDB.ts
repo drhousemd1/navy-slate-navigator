@@ -21,7 +21,7 @@ localforage.config({
 
 // Tasks
 export async function saveTasksToDB(tasks: Task[]): Promise<void> {
-  return localforage.setItem("tasks", tasks);
+  await localforage.setItem("tasks", tasks);
 }
 
 export async function loadTasksFromDB(): Promise<Task[] | null> {
@@ -30,7 +30,7 @@ export async function loadTasksFromDB(): Promise<Task[] | null> {
 
 // Rules
 export async function saveRulesToDB(rules: Rule[]): Promise<void> {
-  return localforage.setItem("rules", rules);
+  await localforage.setItem("rules", rules);
 }
 
 export async function loadRulesFromDB(): Promise<Rule[] | null> {
@@ -39,7 +39,7 @@ export async function loadRulesFromDB(): Promise<Rule[] | null> {
 
 // Rewards
 export async function saveRewardsToDB(rewards: Reward[]): Promise<void> {
-  return localforage.setItem("rewards", rewards);
+  await localforage.setItem("rewards", rewards);
 }
 
 export async function loadRewardsFromDB(): Promise<Reward[] | null> {
@@ -48,7 +48,7 @@ export async function loadRewardsFromDB(): Promise<Reward[] | null> {
 
 // Punishments
 export async function savePunishmentsToDB(punishments: PunishmentData[]): Promise<void> {
-  return localforage.setItem("punishments", punishments);
+  await localforage.setItem("punishments", punishments);
 }
 
 export async function loadPunishmentsFromDB(): Promise<PunishmentData[] | null> {
@@ -57,7 +57,7 @@ export async function loadPunishmentsFromDB(): Promise<PunishmentData[] | null> 
 
 // Points
 export async function savePointsToDB(points: number): Promise<void> {
-  return localforage.setItem("points", points);
+  await localforage.setItem("points", points);
 }
 
 export async function loadPointsFromDB(): Promise<number | null> {
@@ -65,7 +65,7 @@ export async function loadPointsFromDB(): Promise<number | null> {
 }
 
 export async function saveDomPointsToDB(points: number): Promise<void> {
-  return localforage.setItem("dom_points", points);
+  await localforage.setItem("dom_points", points);
 }
 
 export async function loadDomPointsFromDB(): Promise<number | null> {
@@ -74,7 +74,7 @@ export async function loadDomPointsFromDB(): Promise<number | null> {
 
 // Punishment History
 export async function savePunishmentHistoryToDB(history: PunishmentHistoryItem[]): Promise<void> {
-  return localforage.setItem("punishment_history", history);
+  await localforage.setItem("punishment_history", history);
 }
 
 export async function loadPunishmentHistoryFromDB(): Promise<PunishmentHistoryItem[] | null> {
@@ -83,7 +83,7 @@ export async function loadPunishmentHistoryFromDB(): Promise<PunishmentHistoryIt
 
 // Helper to clear all cached data
 export async function clearAllCachedData(): Promise<void> {
-  return localforage.clear();
+  await localforage.clear();
 }
 
 // Helper to get all keys in the store

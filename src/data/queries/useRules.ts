@@ -41,8 +41,13 @@ export function useRules() {
     queryKey: ['rules'],
     queryFn: fetchRules,
     initialData: async () => {
-      const cachedRules = await loadRulesFromDB();
-      return cachedRules || [];
+      try {
+        const cachedRules = await loadRulesFromDB();
+        return cachedRules || [];
+      } catch (error) {
+        console.error("Error loading cached rules:", error);
+        return [];
+      }
     },
     staleTime: Infinity,
   });
