@@ -26,7 +26,7 @@ const defaultMonthlyMetrics: MonthlyMetricsResult = {
   }
 };
 
-export const useMonthlyMetrics = (year: number, month: number) => {
+export const useMonthlyMetrics = (year = new Date().getFullYear(), month = new Date().getMonth() + 1) => {
   return useQuery({
     queryKey: ['monthly-metrics', year, month],
     queryFn: async (): Promise<MonthlyMetricsResult> => {
@@ -148,7 +148,7 @@ export const useMonthlyMetrics = (year: number, month: number) => {
         return defaultMonthlyMetrics;
       }
     },
-    initialData: defaultMonthlyMetrics, // Fix: use a default value instead of a function
+    initialData: defaultMonthlyMetrics, // Fixed: use a proper defaultMonthlyMetrics object instead of a function
     staleTime: 300000, // 5 minutes
   });
 };

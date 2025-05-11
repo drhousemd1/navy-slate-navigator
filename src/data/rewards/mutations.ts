@@ -173,10 +173,10 @@ export const buyRewardMutation = (queryClient: any) =>
       // Deduct points
       const newPoints = currentPoints - reward.cost;
       
-      // Fix type error by using type guards for update payload
+      // Fix type error by using conditional types
       const updatePayload = reward.is_dom_reward 
-        ? { dom_points: newPoints } 
-        : { points: newPoints };
+        ? { dom_points: newPoints } as { dom_points: number }
+        : { points: newPoints } as { points: number };
         
       const { error: pointsError } = await supabase
         .from('profiles')

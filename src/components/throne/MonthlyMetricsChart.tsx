@@ -5,11 +5,13 @@ import { useMonthlyMetrics } from '@/data/queries/useMonthlyMetrics';
 import { format, parseISO } from 'date-fns';
 
 const MonthlyMetricsChart = () => {
+  // Get current year and month
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
+
   // Fixed the call to useMonthlyMetrics passing the required arguments
-  const { data, isLoading, error } = useMonthlyMetrics({
-    enabled: true, 
-    staleTime: 300000 // 5 minutes
-  });
+  const { data, isLoading, error } = useMonthlyMetrics(currentYear, currentMonth);
 
   // Generate chart data from metrics
   const chartData = useMemo(() => {
