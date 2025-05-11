@@ -75,6 +75,34 @@ const fetchDomPoints = async (): Promise<number> => {
   return data?.dom_points || 0;
 };
 
+// Helper functions for placeholderData to fix TypeScript errors
+const loadRewardsPlaceholder = (): Promise<Reward[]> => {
+  return loadRewardsFromDB()
+    .then(cachedRewards => cachedRewards || [])
+    .catch(error => {
+      console.error("Error loading cached rewards:", error);
+      return [];
+    });
+};
+
+const loadPointsPlaceholder = (): Promise<number> => {
+  return loadPointsFromDB()
+    .then(cachedPoints => cachedPoints !== null ? cachedPoints : 0)
+    .catch(error => {
+      console.error("Error loading cached points:", error);
+      return 0;
+    });
+};
+
+const loadDomPointsPlaceholder = (): Promise<number> => {
+  return loadDomPointsFromDB()
+    .then(cachedDomPoints => cachedDomPoints !== null ? cachedDomPoints : 0)
+    .catch(error => {
+      console.error("Error loading cached dom points:", error);
+      return 0;
+    });
+};
+
 // Hook for accessing rewards
 export function useRewards() {
   const rewardsQuery = useQuery({
@@ -82,14 +110,7 @@ export function useRewards() {
     queryFn: fetchRewards,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    placeholderData: () => {
-      return loadRewardsFromDB().then(cachedRewards => {
-        return cachedRewards || [];
-      }).catch(error => {
-        console.error("Error loading cached rewards:", error);
-        return [];
-      });
-    }
+    placeholderData: loadRewardsPlaceholder
   });
 
   const pointsQuery = useQuery({
@@ -97,14 +118,7 @@ export function useRewards() {
     queryFn: fetchUserPoints,
     initialData: 0, // Direct value instead of function
     staleTime: Infinity,
-    placeholderData: () => {
-      return loadPointsFromDB().then(cachedPoints => {
-        return cachedPoints !== null ? cachedPoints : 0;
-      }).catch(error => {
-        console.error("Error loading cached points:", error);
-        return 0;
-      });
-    }
+    placeholderData: loadPointsPlaceholder
   });
 
   const domPointsQuery = useQuery({
@@ -112,14 +126,7 @@ export function useRewards() {
     queryFn: fetchDomPoints,
     initialData: 0, // Direct value instead of function
     staleTime: Infinity,
-    placeholderData: () => {
-      return loadDomPointsFromDB().then(cachedDomPoints => {
-        return cachedDomPoints !== null ? cachedDomPoints : 0;
-      }).catch(error => {
-        console.error("Error loading cached dom points:", error);
-        return 0;
-      });
-    }
+    placeholderData: loadDomPointsPlaceholder
   });
 
   return {

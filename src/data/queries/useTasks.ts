@@ -27,6 +27,16 @@ const fetchTasks = async (): Promise<Task[]> => {
   return data || [];
 };
 
+// Helper function for placeholderData to fix TypeScript error
+const loadTasksPlaceholder = (): Promise<Task[]> => {
+  return loadTasksFromDB()
+    .then(cachedTasks => cachedTasks || [])
+    .catch(error => {
+      console.error("Error loading cached tasks:", error);
+      return [];
+    });
+};
+
 // Hook for accessing tasks
 export function useTasks() {
   return useQuery({
@@ -34,13 +44,6 @@ export function useTasks() {
     queryFn: fetchTasks,
     initialData: [], // Direct array instead of function
     staleTime: Infinity,
-    placeholderData: () => {
-      return loadTasksFromDB().then(cachedTasks => {
-        return cachedTasks || [];
-      }).catch(error => {
-        console.error("Error loading cached tasks:", error);
-        return [];
-      });
-    }
+    placeholderData: loadTasksPlaceholder
   });
 }
