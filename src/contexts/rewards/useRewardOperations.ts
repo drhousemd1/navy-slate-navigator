@@ -1,10 +1,13 @@
-
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
 import { toast } from '@/hooks/use-toast';
 import { usePointsManagement } from './usePointsManagement';
 import { supabase } from '@/integrations/supabase/client';
+import { useBuySubReward } from "@/data/mutations/useBuySubReward";
+import { useBuyDomReward } from "@/data/mutations/useBuyDomReward";
+import { useRedeemSubReward } from "@/data/mutations/useRedeemSubReward";
+import { useRedeemDomReward } from "@/data/mutations/useRedeemDomReward";
 
 export const useRewardOperations = () => {
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -247,25 +250,49 @@ export const useRewardOperations = () => {
       
       if (isRewardDominant) {
         await setDomPoints(newPoints);
+        
+        // Get the user
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user?.id) throw new Error("User not authenticated");
+        
+        await buyDom({
+          rewardId,
+          cost,
+          currentSupply: reward.supply,
+          profileId: userData.user.id,
+          currentDomPoints: domPoints
+        });
       } else {
         await setTotalPoints(newPoints);
-      }
-      
-      const updatedSupply = reward.supply + 1;
-      const success = await updateRewardSupply(reward.id, updatedSupply);
-      
-      if (success) {
-        console.log("Reward bought successfully");
         
-        const updatedRewards = [...rewards];
-        updatedRewards[rewardIndex] = { ...reward, supply: updatedSupply };
-        setRewards(updatedRewards);
+        // Get the user
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user?.id) throw new Error("User not authenticated");
         
-        toast({
-          title: "Reward Purchased",
-          description: `You purchased ${reward.title}`,
+        await buySub({
+          rewardId,
+          cost,
+          currentSupply: reward.supply,
+          profileId: userData.user.id,
+          currentPoints: totalPoints
         });
       }
+      
+      // Update the reward list optimistically
+      const updatedRewards = [...rewards];
+      const rewardIndex = updatedRewards.findIndex(r => r.id === rewardId);
+      if (rewardIndex !== -1) {
+        updatedRewards[rewardIndex] = { 
+          ...updatedRewards[rewardIndex], 
+          supply: updatedRewards[rewardIndex].supply + 1 
+        };
+        setRewards(updatedRewards);
+      }
+      
+      toast({
+        title: "Reward Purchased",
+        description: `You purchased ${reward.title}`,
+      });
     } catch (error) {
       console.error("Error in handleBuyReward:", error);
       
@@ -275,7 +302,7 @@ export const useRewardOperations = () => {
         variant: "destructive",
       });
     }
-  }, [rewards, totalPoints, domPoints, setTotalPoints, setDomPoints]);
+  }, [rewards, totalPoints, domPoints, setTotalPoints, setDomPoints, buySub, buyDom]);
 
   const handleUseReward = useCallback(async (id: string) => {
     console.log("Handling use reward with ID:", id);
@@ -301,43 +328,46 @@ export const useRewardOperations = () => {
         return;
       }
       
-      const updatedSupply = reward.supply - 1;
-      const success = await updateRewardSupply(reward.id, updatedSupply);
+      // Get current user ID for database operations
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id) throw new Error("User not authenticated");
       
-      if (success) {
-        console.log("Reward used successfully");
-        
-        const today = new Date();
-        const dayOfWeek = today.getDay(); // 0-6, where 0 is Sunday
-        const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
-        
-        const { error: usageError } = await supabase
-          .from('reward_usage')
-          .insert({
-            reward_id: reward.id,
-            day_of_week: dayOfWeek,
-            week_number: weekNumber,
-            used: true,
-            created_at: new Date().toISOString()
-          });
-          
-        if (usageError) {
-          console.error("Error recording reward usage:", usageError);
-        } else {
-          console.log("Reward usage recorded successfully");
-        }
-        
-        const updatedRewards = [...rewards];
-        updatedRewards[rewardIndex] = { ...reward, supply: updatedSupply };
+      // Update the reward list optimistically
+      const updatedRewards = [...rewards];
+      const rewardIndex = updatedRewards.findIndex(r => r.id === id);
+      if (rewardIndex !== -1) {
+        updatedRewards[rewardIndex] = { 
+          ...updatedRewards[rewardIndex], 
+          supply: Math.max(0, updatedRewards[rewardIndex].supply - 1) 
+        };
         setRewards(updatedRewards);
-        
-        toast({
-          title: "Reward Used",
-          description: `You used ${reward.title}`,
+      }
+      
+      // Show toast for immediate feedback
+      toast({
+        title: "Reward Used",
+        description: `You used ${reward.title}`,
+      });
+      
+      // Perform the actual API call in the background
+      if (reward.is_dom_reward) {
+        await redeemDom({
+          rewardId: id,
+          currentSupply: reward.supply,
+          profileId: userData.user.id
+        });
+      } else {
+        await redeemSub({
+          rewardId: id,
+          currentSupply: reward.supply,
+          profileId: userData.user.id
         });
       }
     } catch (error) {
       console.error("Error in handleUseReward:", error);
+      
+      // Revert optimistic updates on error
+      refetchRewards();
       
       toast({
         title: "Error",
@@ -345,7 +375,7 @@ export const useRewardOperations = () => {
         variant: "destructive",
       });
     }
-  }, [rewards]);
+  }, [rewards, refetchRewards, redeemSub, redeemDom]);
 
   
   return {
