@@ -3,7 +3,7 @@ import { Reward } from '@/lib/rewardUtils';
 import { BuyRewardParams, SaveRewardParams } from '@/contexts/rewards/rewardTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY, TOTAL_REWARDS_SUPPLY_QUERY_KEY } from './queries';
+import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY } from './queries';
 
 // This function returns the mutation function for saving a reward, with optional toast
 export const saveRewardMutation = (queryClient: QueryClient, showToastMessages = true) => {
@@ -248,7 +248,7 @@ export const buyRewardMutation = (queryClient: QueryClient) => {
       
       // Update the total supply
       queryClient.setQueryData(
-        TOTAL_REWARDS_SUPPLY_QUERY_KEY,
+        REWARDS_SUPPLY_QUERY_KEY,
         (oldSupply: number = 0) => oldSupply + 1
       );
       

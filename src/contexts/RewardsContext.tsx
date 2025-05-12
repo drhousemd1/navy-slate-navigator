@@ -5,7 +5,6 @@ import { useRewardsData } from '@/data/rewards/useRewardsData';
 import { Reward } from '@/lib/rewardUtils';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from './AuthContext';
 
 // Create a complete mock observer result that satisfies the QueryObserverResult type
 const mockQueryResult: QueryObserverResult<Reward[], Error> = {
@@ -79,8 +78,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setDomPointsOptimistically,
   } = useRewardsData();
 
-  const { user } = useAuth();
-
   // Refresh points when the provider mounts
   useEffect(() => {
     console.log("RewardsProvider: Refreshing points from database on mount");
@@ -131,12 +128,15 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     try {
-      // Call the new buyReward function from useRewardsData
-      await buyReward({ 
-        rewardId: id, 
-        cost, 
-        isDomReward: isRewardDominant 
+      // Show toast for immediate feedback
+      toast({
+        title: "Reward Purchased",
+        description: `You purchased ${reward.title}`,
       });
+      
+      // Perform the actual API call with proper parameters
+      // Pass the isDomReward flag to ensure it updates the correct points and counts
+      await buyReward({ rewardId: id, cost, isDomReward: isRewardDominant });
     } catch (error) {
       console.error("Error in handleBuyReward:", error);
       
@@ -188,7 +188,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         description: `You used ${reward.title}`,
       });
       
-      // Call the new useReward function from useRewardsData
+      // Perform the actual API call in the background
       await useReward(id);
     } catch (error) {
       console.error("Error in handleUseReward:", error);
@@ -233,7 +233,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const value = {
     rewards,
     totalPoints,
-    totalRewardsSupply: totalRewardsSupply as number,
+    totalRewardsSupply,
     totalDomRewardsSupply,
     domPoints,
     setTotalPoints,

@@ -6,7 +6,11 @@ import {
   REWARDS_QUERY_KEY, 
   REWARDS_POINTS_QUERY_KEY,
   REWARDS_DOM_POINTS_QUERY_KEY,
-  TOTAL_REWARDS_SUPPLY_QUERY_KEY
+  REWARDS_SUPPLY_QUERY_KEY,
+  fetchRewards,
+  fetchUserPoints,
+  fetchUserDomPoints,
+  fetchTotalRewardsSupply
 } from './queries';
 import {
   saveRewardMutation,
@@ -32,18 +36,14 @@ export const useRewardsData = () => {
     refetch: refetchRewards
   } = useQuery({
     queryKey: REWARDS_QUERY_KEY,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('rewards').select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: fetchRewards,
     ...STANDARD_QUERY_CONFIG
   });
 
   // Set local rewards whenever server data changes
   useEffect(() => {
-    if (rewards && rewards.length > 0) {
-      setLocalRewards(rewards as Reward[]);
+    if (rewards.length > 0) {
+      setLocalRewards(rewards);
     }
   }, [rewards]);
 
@@ -52,12 +52,8 @@ export const useRewardsData = () => {
     data: totalRewardsSupply = 0,
     refetch: refetchSupply
   } = useQuery({
-    queryKey: TOTAL_REWARDS_SUPPLY_QUERY_KEY,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('rewards').select('supply, is_dom_reward');
-      if (error) throw error;
-      return data.filter(reward => !reward.is_dom_reward).reduce((total, reward) => total + reward.supply, 0);
-    },
+    queryKey: REWARDS_SUPPLY_QUERY_KEY,
+    queryFn: fetchTotalRewardsSupply,
     ...STANDARD_QUERY_CONFIG
   });
   
