@@ -5,6 +5,7 @@ import { useRewardsData } from '@/data/rewards/useRewardsData';
 import { Reward } from '@/lib/rewardUtils';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // Create a complete mock observer result that satisfies the QueryObserverResult type
 const mockQueryResult: QueryObserverResult<Reward[], Error> = {
@@ -140,13 +141,11 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         throw new Error("User not authenticated");
       }
       
-      // Perform the actual API call with all required parameters
+      // Perform the actual API call with required parameters
       await buyReward({
         rewardId: id,
         cost,
-        currentSupply: reward.supply,
-        profileId: userData.user.id,
-        currentPoints: currentPointsValue
+        isDomReward: isRewardDominant
       });
     } catch (error) {
       console.error("Error in handleBuyReward:", error);

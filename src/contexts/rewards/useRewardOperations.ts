@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
@@ -7,7 +8,15 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const useRewardOperations = () => {
   const [rewards, setRewards] = useState<Reward[]>([]);
-  const { totalPoints, domPoints, setTotalPoints, setDomPoints, updatePointsInDatabase, updateDomPointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
+  const { 
+    totalPoints, 
+    domPoints, 
+    setTotalPoints, 
+    setDomPoints, 
+    updatePointsInDatabase, 
+    updateDomPointsInDatabase, 
+    refreshPointsFromDatabase 
+  } = usePointsManagement();
   
   const { 
     data: fetchedRewards = [], 
@@ -237,35 +246,9 @@ export const useRewardOperations = () => {
       const newPoints = currentPoints - cost;
       
       if (isRewardDominant) {
-        setDomPoints(newPoints);
-        const pointsUpdateSuccess = await updateDomPointsInDatabase(newPoints);
-        
-        if (!pointsUpdateSuccess) {
-          console.error("Failed to update dom points in database");
-          setDomPoints(domPoints);
-          
-          toast({
-            title: "Error",
-            description: "Failed to update dom points. Please try again.",
-            variant: "destructive",
-          });
-          return;
-        }
+        await setDomPoints(newPoints);
       } else {
-        setTotalPoints(newPoints);
-        const pointsUpdateSuccess = await updatePointsInDatabase(newPoints);
-        
-        if (!pointsUpdateSuccess) {
-          console.error("Failed to update points in database");
-          setTotalPoints(totalPoints);
-          
-          toast({
-            title: "Error",
-            description: "Failed to update points. Please try again.",
-            variant: "destructive",
-          });
-          return;
-        }
+        await setTotalPoints(newPoints);
       }
       
       const updatedSupply = reward.supply + 1;
@@ -292,7 +275,7 @@ export const useRewardOperations = () => {
         variant: "destructive",
       });
     }
-  }, [rewards, totalPoints, domPoints, updatePointsInDatabase, updateDomPointsInDatabase, setTotalPoints, setDomPoints]);
+  }, [rewards, totalPoints, domPoints, setTotalPoints, setDomPoints]);
 
   const handleUseReward = useCallback(async (id: string) => {
     console.log("Handling use reward with ID:", id);

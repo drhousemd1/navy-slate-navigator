@@ -1,4 +1,6 @@
+
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export const usePointsManagement = () => {
   const queryClient = useQueryClient();
@@ -7,26 +9,86 @@ export const usePointsManagement = () => {
   const cachedData = queryClient.getQueryData<any>(["profile_points"]) || { points: 0, dom_points: 0 };
   
   const refreshPointsFromDatabase = async () => {
-    // This function now accepts no arguments
-    // Implementation left unchanged as a no-op
+    // Implementation to refresh points from database
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id) return;
+      
+      const { data } = await supabase
+        .from("profiles")
+        .select("points, dom_points")
+        .eq("id", userData.user.id)
+        .single();
+        
+      if (data) {
+        queryClient.setQueryData(["profile_points"], data);
+      }
+    } catch (error) {
+      console.error("Error refreshing points from database:", error);
+    }
   };
 
   const updatePointsInDatabase = async (points: number) => {
-    // Implementation to update points if needed
-    return true;
+    // Implementation to update points
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id) return false;
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update({ points })
+        .eq("id", userData.user.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update the cache
+      queryClient.setQueryData(
+        ["profile_points"], 
+        old => ({ ...old, points })
+      );
+      
+      return true;
+    } catch (error) {
+      console.error("Error updating points:", error);
+      return false;
+    }
   };
 
   const updateDomPointsInDatabase = async (points: number) => {
-    // Implementation to update dom points if needed
-    return true;
+    // Implementation to update dom points
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id) return false;
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update({ dom_points: points })
+        .eq("id", userData.user.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update the cache
+      queryClient.setQueryData(
+        ["profile_points"], 
+        old => ({ ...old, dom_points: points })
+      );
+      
+      return true;
+    } catch (error) {
+      console.error("Error updating dom points:", error);
+      return false;
+    }
   };
   
-  // For compatibility with existing code
   return {
     totalPoints: cachedData.points || 0,
     domPoints: cachedData.dom_points || 0,
-    setTotalPoints: () => {}, // No-op, since we now update via updateProfilePoints
-    setDomPoints: () => {}, // No-op, since we now update via updateProfilePoints
+    setTotalPoints: updatePointsInDatabase,
+    setDomPoints: updateDomPointsInDatabase,
     updatePointsInDatabase,
     updateDomPointsInDatabase,
     refreshPointsFromDatabase

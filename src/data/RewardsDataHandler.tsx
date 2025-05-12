@@ -461,8 +461,23 @@ export const useRewardsData = () => {
       saveRewardMutation.mutateAsync({ rewardData, currentIndex }),
     deleteReward: (rewardId: string) => 
       deleteRewardMutation.mutateAsync(rewardId),
-    buyReward: (rewardId: string, cost: number) => 
-      buyRewardMutation.mutateAsync({ rewardId, cost }),
+    buyReward: async ({ rewardId, cost }: { rewardId: string, cost: number }) => {
+      // Get the reward to get its supply
+      const reward = rewards.find(r => r.id === rewardId);
+      if (!reward) throw new Error("Reward not found");
+      
+      // Get the user
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id) throw new Error("User not authenticated");
+      
+      return buyRewardMutation.mutateAsync({ 
+        rewardId, 
+        cost, 
+        currentSupply: reward.supply,
+        profileId: userData.user.id,
+        currentPoints: totalPoints
+      });
+    },
     
     // Refetch functions
     refetchRewards,
