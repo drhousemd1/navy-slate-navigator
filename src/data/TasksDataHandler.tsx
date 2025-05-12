@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -40,6 +39,7 @@ const fetchTasks = async (): Promise<Task[]> => {
     title: task.title,
     description: task.description,
     points: task.points,
+    // Fix: Ensure priority is strictly typed as one of the allowed values
     priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
     completed: task.completed,
     background_image_url: task.background_image_url,
