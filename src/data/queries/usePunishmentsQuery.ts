@@ -11,6 +11,7 @@ import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/ty
 import { loadPunishmentsFromDB, savePunishmentsToDB, loadPunishmentHistoryFromDB, savePunishmentHistoryToDB } from '@/data/indexedDB/useIndexedDB';
 import { logQueryPerformance } from '@/lib/react-query-config';
 import { useEffect, useState } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 export const PUNISHMENTS_QUERY_KEY = ['punishments'];
 export const PUNISHMENT_HISTORY_QUERY_KEY = ['punishment-history'];
@@ -156,12 +157,26 @@ export function usePunishmentsQuery() {
     enabled: !isLoadingInitial, // Don't run query until initial loading is done
   });
   
+  // Handle errors outside of query options
+  useEffect(() => {
+    if (query.error && (!initialData || initialData.length === 0)) {
+      // Only show error toast if there's no cached data
+      toast({
+        title: "Error loading punishments",
+        description: "Network issues detected. Using cached data if available.",
+        variant: "destructive"
+      });
+    }
+  }, [query.error, initialData]);
+  
   return {
     ...query,
     // Return cached data while waiting for IndexedDB to load
     data: query.data || initialData || [],
     // Only show loading state if there's no data at all
-    isLoading: (query.isLoading || isLoadingInitial) && !initialData?.length
+    isLoading: (query.isLoading || isLoadingInitial) && !initialData?.length,
+    // Show error only if we don't have any data to show
+    error: initialData?.length ? null : query.error
   };
 }
 
@@ -205,6 +220,8 @@ export function usePunishmentHistoryQuery() {
     // Return cached data while waiting for IndexedDB to load
     data: query.data || initialData || [],
     // Only show loading state if there's no data at all
-    isLoading: (query.isLoading || isLoadingInitial) && !initialData?.length
+    isLoading: (query.isLoading || isLoadingInitial) && !initialData?.length,
+    // Show error only if we don't have any data to show
+    error: initialData?.length ? null : query.error
   };
 }

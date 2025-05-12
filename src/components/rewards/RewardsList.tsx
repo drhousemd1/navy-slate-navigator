@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useRewards } from '@/contexts/RewardsContext';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import RewardCard from './RewardCard';
+import RewardCard from '../RewardCard';
 import { Reward } from '@/lib/rewardUtils';
 
 interface RewardsListProps {
@@ -58,7 +58,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
         <TabsTrigger value="regular">Regular Rewards</TabsTrigger>
         <TabsTrigger value="dom">Dom Rewards</TabsTrigger>
       </TabsList>
-      <TabsContent value="regular" className="space-y-4">
+      <TabsContent value="regular" className="grid gap-4">
         {regularRewards.length === 0 ? (
           <p className="text-center text-gray-400 my-8">No regular rewards available.</p>
         ) : (
@@ -71,7 +71,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           ))
         )}
       </TabsContent>
-      <TabsContent value="dom" className="space-y-4">
+      <TabsContent value="dom" className="grid gap-4">
         {domRewards.length === 0 ? (
           <p className="text-center text-gray-400 my-8">No dom rewards available.</p>
         ) : (
