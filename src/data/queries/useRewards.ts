@@ -27,7 +27,7 @@ export function useRewards() {
       let shouldFetch = true;
 
       if (lastSync) {
-        const timeDiff = Date.now() - new Date(lastSync).getTime();
+        const timeDiff = Date.now() - new Date(lastSync as string).getTime();
         if (timeDiff < 1000 * 60 * 30) {
           shouldFetch = false;
         }

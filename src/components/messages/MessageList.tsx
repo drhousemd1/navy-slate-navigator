@@ -73,6 +73,7 @@ const MessageList = forwardRef<
                   message={msg}
                   isSentByMe={isSentByMe}
                   userNickname={userNickname}
+                  avatarUrl={null} // Added missing avatarUrl prop
                   onImageLoad={() => {
                     // Add a short timeout to ensure layout settles first
                     setTimeout(() => {
