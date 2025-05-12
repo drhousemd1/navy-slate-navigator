@@ -59,17 +59,23 @@ export const recordRuleViolationInDb = async (rule: Rule): Promise<void> => {
 // Export the simple version that is called by the RulesDataHandler
 export const recordViolation = async (ruleId: string): Promise<void> => {
   try {
-    const { data: rule, error } = await supabase
+    const { data: rawRule, error } = await supabase
       .from('rules')
       .select('*')
       .eq('id', ruleId)
       .single();
       
-    if (error || !rule) {
+    if (error || !rawRule) {
       throw new Error('Could not find rule to record violation');
     }
     
-    await recordRuleViolationInDb(rule);
+    // Normalize the priority field to ensure it matches the Rule type
+    const normalisedRule = {
+      ...rawRule,
+      priority: (rawRule.priority as "low" | "medium" | "high") ?? "medium"
+    };
+    
+    await recordRuleViolationInDb(normalisedRule as Rule);
   } catch (error) {
     console.error('Error in recordViolation:', error);
     throw error;
