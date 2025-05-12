@@ -125,7 +125,21 @@ async function syncCardByIdImpl(id: string, type: 'tasks' | 'rules' | 'rewards' 
   const cachedList = queryClient.getQueryData<any[]>(cacheKey) || [];
 
   // STEP 3 – Replace the specific card in the list
-  const updatedList = cachedList.map((item) => (item.id === id ? data : item));
+  let updatedList;
+  
+  if (type === "rewards") {
+    // For rewards, ensure is_dom_reward property exists
+    const freshRow = {
+      ...data,
+      is_dom_reward: data.is_dominant
+    };
+    
+    // Update the cached list with the enhanced reward data
+    updatedList = cachedList.map((item) => (item.id === id ? freshRow : item));
+  } else {
+    // For other domains, proceed as before
+    updatedList = cachedList.map((item) => (item.id === id ? data : item));
+  }
 
   // STEP 4 – Update the cache
   queryClient.setQueryData(cacheKey, updatedList);
