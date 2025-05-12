@@ -233,7 +233,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const value = {
     rewards,
     totalPoints,
-    totalRewardsSupply,
+    totalRewardsSupply: totalRewardsSupply as number,
     totalDomRewardsSupply,
     domPoints,
     setTotalPoints,

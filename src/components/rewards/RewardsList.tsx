@@ -1,14 +1,14 @@
 
 import React from 'react';
 import { useRewards } from '../../contexts/RewardsContext';
-import RewardCard from '../RewardCard';
+import RewardCard from './RewardCard';
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
-  const { rewards, handleBuyReward, handleUseReward, isLoading } = useRewards();
+  const { rewards, isLoading } = useRewards();
   
   if (isLoading) {
     return (
@@ -44,7 +44,23 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
       {rewards.map((reward, index) => (
         <RewardCard
           key={reward.id}
-          reward={reward}
+          title={reward.title}
+          description={reward.description || ''}
+          cost={reward.cost}
+          supply={reward.supply}
+          isDomReward={reward.is_dom_reward}
+          iconName={reward.icon_name}
+          iconColor={reward.icon_color}
+          backgroundImage={reward.background_image_url}
+          backgroundOpacity={reward.background_opacity}
+          focalPointX={reward.focal_point_x}
+          focalPointY={reward.focal_point_y}
+          highlight_effect={reward.highlight_effect}
+          title_color={reward.title_color}
+          subtext_color={reward.subtext_color}
+          calendar_color={reward.calendar_color}
+          onBuy={(cost) => reward.id && reward.id}
+          onUse={() => reward.id && reward.id}
           onEdit={() => onEdit(index)}
         />
       ))}

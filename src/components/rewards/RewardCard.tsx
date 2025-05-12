@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,30 +8,69 @@ import { cn } from '@/lib/utils';
 import { Crown, Coins, Box, Loader2 } from 'lucide-react';
 
 interface RewardCardProps {
-  reward: Reward;
+  title: string;
+  description: string;
+  cost: number;
+  supply: number;
+  isDomReward?: boolean;
+  iconName?: string;
+  iconColor?: string;
+  onBuy?: (cost: number) => void;
+  onUse?: () => void;
   onEdit?: () => void;
+  backgroundImage?: string | null;
+  backgroundOpacity?: number;
+  focalPointX?: number;
+  focalPointY?: number;
+  highlight_effect?: boolean;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  usageData?: boolean[];
 }
 
-const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
+const RewardCard: React.FC<RewardCardProps> = ({ 
+  title,
+  description, 
+  cost,
+  supply,
+  isDomReward = false,
+  iconName,
+  iconColor,
+  onBuy,
+  onUse,
+  onEdit,
+  backgroundImage,
+  backgroundOpacity = 100,
+  focalPointX = 50,
+  focalPointY = 50,
+  highlight_effect = false,
+  title_color = '#FFFFFF',
+  subtext_color = '#8E9196',
+  calendar_color = '#7E69AB',
+  usageData = Array(7).fill(false)
+}) => {
   const { handleBuyReward, handleUseReward, totalPoints, domPoints } = useRewards();
   const [buying, setBuying] = React.useState(false);
   const [using, setUsing] = React.useState(false);
   
-  // Explicitly enforce boolean type for is_dom_reward
-  const isDomReward = Boolean(reward.is_dom_reward);
-  
   // Use appropriate points based on reward type
   const currentPoints = isDomReward ? domPoints : totalPoints;
-  const canAfford = currentPoints >= reward.cost;
-  const hasAvailable = reward.supply > 0;
+  const canAfford = currentPoints >= cost;
+  const hasAvailable = supply > 0;
 
   const handleBuyClick = async () => {
     if (buying) return; // Prevent multiple clicks
     
     try {
       setBuying(true);
-      // Pass the isDomReward flag explicitly to ensure it's handled correctly
-      await handleBuyReward(reward.id, reward.cost, isDomReward);
+      // Call onBuy prop if provided
+      if (onBuy) {
+        onBuy(cost);
+      } else {
+        // Otherwise use context function
+        await handleBuyReward(title, cost, isDomReward);
+      }
     } catch (error) {
       console.error('Error buying reward:', error);
     } finally {
@@ -46,7 +84,13 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
     
     try {
       setUsing(true);
-      await handleUseReward(reward.id);
+      // Call onUse prop if provided
+      if (onUse) {
+        onUse();
+      } else {
+        // Otherwise use context function
+        await handleUseReward(title);
+      }
     } catch (error) {
       console.error('Error using reward:', error);
     } finally {
@@ -57,13 +101,13 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
 
   // Get background style with focal points and opacity
   const getBgStyle = () => {
-    if (!reward.background_image_url) return {};
+    if (!backgroundImage) return {};
     
     return {
-      backgroundImage: `url(${reward.background_image_url})`,
+      backgroundImage: `url(${backgroundImage})`,
       backgroundSize: 'cover',
-      backgroundPosition: `${reward.focal_point_x || 50}% ${reward.focal_point_y || 50}%`,
-      opacity: reward.background_opacity / 100,
+      backgroundPosition: `${focalPointX || 50}% ${focalPointY || 50}%`,
+      opacity: backgroundOpacity / 100,
     };
   };
 
@@ -90,7 +134,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
     <Card className="relative overflow-hidden bg-dark-navy border-2 border-light-navy text-white"
           style={cardBorderStyle}>
       {/* Background image with opacity */}
-      {reward.background_image_url && (
+      {backgroundImage && (
         <div 
           className="absolute inset-0 z-0" 
           style={getBgStyle()}
@@ -112,19 +156,19 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
             
             <h3 className={cn(
               "text-lg font-semibold",
-              reward.highlight_effect && "bg-yellow-300/30 px-2 py-1 rounded",
+              highlight_effect && "bg-yellow-300/30 px-2 py-1 rounded",
             )}
-            style={{ color: reward.title_color }}>
-              {reward.title}
+            style={{ color: title_color }}>
+              {title}
             </h3>
             
-            {reward.description && (
+            {description && (
               <p className={cn(
                 "text-sm mt-1",
-                reward.highlight_effect && "bg-yellow-300/20 px-2 py-1 rounded",
+                highlight_effect && "bg-yellow-300/20 px-2 py-1 rounded",
               )}
-              style={{ color: reward.subtext_color }}>
-                {reward.description}
+              style={{ color: subtext_color }}>
+                {description}
               </p>
             )}
           </div>
@@ -143,14 +187,14 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
             
             <div 
               className="text-sm font-medium rounded-full px-3 py-1 mt-1 flex items-center" 
-              style={{ backgroundColor: isDomReward ? "#ea384c" : (reward.calendar_color || '#7E69AB') }}
+              style={{ backgroundColor: isDomReward ? "#ea384c" : (calendar_color || '#7E69AB') }}
             >
               {isDomReward ? (
                 <Crown className="h-3 w-3 mr-1" />
               ) : (
                 <Coins className="h-3 w-3 mr-1" />
               )}
-              {reward.cost} pts
+              {cost} pts
             </div>
           </div>
         </div>
@@ -159,7 +203,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
           <div className="flex items-center">
             <Badge className={`${supplyBadgeColor} text-white font-bold flex items-center gap-1`}>
               <Box className="h-3 w-3" />
-              <span>{reward.supply}</span>
+              <span>{supply}</span>
             </Badge>
           </div>
           
