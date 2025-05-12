@@ -125,21 +125,30 @@ export const useTasksData = () => {
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
       // Fix the task priority and frequency types to ensure they're one of the allowed values
+      // Also ensure usage_data is properly formatted as number[] array
       const processedTaskData = {
         ...taskData,
         // Ensure priority is one of the allowed types
         priority: (taskData.priority || 'medium') as 'low' | 'medium' | 'high',
         // Ensure frequency is one of the allowed types
-        frequency: (taskData.frequency || 'daily') as 'daily' | 'weekly'
+        frequency: (taskData.frequency || 'daily') as 'daily' | 'weekly',
+        // Ensure usage_data is a properly formatted number[] array
+        usage_data: Array.isArray(taskData.usage_data) 
+          ? taskData.usage_data.map(val => typeof val === 'number' ? val : Number(val))
+          : Array(7).fill(0)
       };
       
       const savedTask = await createTaskMutation(processedTaskData);
       
-      // Fix: Ensure the returned task has the correct priority and frequency types
+      // Fix: Ensure the returned task has the correct types
       return {
         ...savedTask,
         priority: (savedTask.priority as 'low' | 'medium' | 'high') || 'medium',
-        frequency: (savedTask.frequency as 'daily' | 'weekly') || 'daily'
+        frequency: (savedTask.frequency as 'daily' | 'weekly') || 'daily',
+        // Ensure usage_data is returned as a proper number array
+        usage_data: Array.isArray(savedTask.usage_data) 
+          ? savedTask.usage_data.map(val => typeof val === 'number' ? val : Number(val))
+          : Array(7).fill(0),
       };
     } catch (err: any) {
       console.error('Error saving task:', err);
