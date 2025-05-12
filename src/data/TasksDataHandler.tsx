@@ -1,10 +1,14 @@
-import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
+import { useQuery, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { getMondayBasedDay } from '@/lib/utils';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
+import { useCreateTask } from "@/data/mutations/useCreateTask";
+import { useCompleteTask } from "@/data/mutations/useCompleteTask";
+import { saveTasksToDB } from "../indexedDB/useIndexedDB";
+import { syncCardById } from "../sync/useSyncManager";
 
 const TASKS_QUERY_KEY = ['tasks'];
 const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
@@ -95,8 +99,6 @@ const fetchTasks = async (): Promise<Task[]> => {
 };
 
 export const useTasksData = () => {
-  const queryClient = useQueryClient();
-
   const {
     data: tasks = [],
     isLoading,
@@ -108,131 +110,14 @@ export const useTasksData = () => {
     ...STANDARD_QUERY_CONFIG, // Use our standardized configuration from react-query-config.ts
   });
 
+  // Use our new mutation hooks
+  const { mutateAsync: createTaskMutation } = useCreateTask();
+  const { mutateAsync: completeTaskMutation } = useCompleteTask();
+
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
-      // Optimistic update
-      let optimisticTask: Task;
-      
-      await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
-      
-      const previousTasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY) || [];
-      
-      if (taskData.id) {
-        // Update existing task
-        optimisticTask = {
-          ...previousTasks.find(t => t.id === taskData.id)!,
-          ...taskData,
-          updated_at: new Date().toISOString()
-        } as Task;
-        
-        queryClient.setQueryData<Task[]>(
-          TASKS_QUERY_KEY,
-          previousTasks.map(t => t.id === taskData.id ? optimisticTask : t)
-        );
-        
-        const { data, error } = await supabase
-          .from('tasks')
-          .update({
-            title: taskData.title,
-            description: taskData.description,
-            points: taskData.points,
-            priority: taskData.priority,
-            background_image_url: taskData.background_image_url,
-            background_opacity: taskData.background_opacity,
-            focal_point_x: taskData.focal_point_x,
-            focal_point_y: taskData.focal_point_y,
-            frequency: taskData.frequency,
-            frequency_count: taskData.frequency_count,
-            highlight_effect: taskData.highlight_effect,
-            title_color: taskData.title_color,
-            subtext_color: taskData.subtext_color,
-            calendar_color: taskData.calendar_color,
-            icon_name: taskData.icon_name,
-            icon_url: taskData.icon_url,
-            icon_color: taskData.icon_color,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', taskData.id)
-          .select()
-          .single();
-
-        if (error) {
-          // Revert optimistic update on error
-          queryClient.setQueryData(TASKS_QUERY_KEY, previousTasks);
-          throw error;
-        }
-
-        return data as Task;
-      } else {
-        // Create new task
-        const tempId = `temp-${Date.now()}`;
-        optimisticTask = {
-          id: tempId,
-          title: taskData.title || 'New Task',
-          description: taskData.description || '',
-          points: taskData.points || 5,
-          priority: taskData.priority || 'medium',
-          completed: false,
-          background_image_url: taskData.background_image_url,
-          background_opacity: taskData.background_opacity || 100,
-          focal_point_x: taskData.focal_point_x || 50,
-          focal_point_y: taskData.focal_point_y || 50,
-          frequency: taskData.frequency || 'daily',
-          frequency_count: taskData.frequency_count || 1,
-          highlight_effect: taskData.highlight_effect || false,
-          title_color: taskData.title_color || '#FFFFFF',
-          subtext_color: taskData.subtext_color || '#8E9196',
-          calendar_color: taskData.calendar_color || '#7E69AB',
-          icon_name: taskData.icon_name,
-          icon_url: taskData.icon_url,
-          icon_color: taskData.icon_color || '#9b87f5',
-          usage_data: Array(7).fill(0),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        } as Task;
-        
-        queryClient.setQueryData<Task[]>(TASKS_QUERY_KEY, [...previousTasks, optimisticTask]);
-        
-        const { data, error } = await supabase
-          .from('tasks')
-          .insert({
-            title: taskData.title,
-            description: taskData.description,
-            points: taskData.points,
-            priority: taskData.priority || 'medium',
-            completed: false,
-            background_image_url: taskData.background_image_url,
-            background_opacity: taskData.background_opacity || 100,
-            focal_point_x: taskData.focal_point_x || 50,
-            focal_point_y: taskData.focal_point_y || 50,
-            frequency: taskData.frequency || 'daily',
-            frequency_count: taskData.frequency_count || 1,
-            highlight_effect: taskData.highlight_effect || false,
-            title_color: taskData.title_color || '#FFFFFF',
-            subtext_color: taskData.subtext_color || '#8E9196',
-            calendar_color: taskData.calendar_color || '#7E69AB',
-            icon_name: taskData.icon_name,
-            icon_url: taskData.icon_url,
-            icon_color: taskData.icon_color || '#9b87f5',
-            usage_data: Array(7).fill(0)
-          })
-          .select()
-          .single();
-
-        if (error) {
-          // Revert optimistic update on error
-          queryClient.setQueryData(TASKS_QUERY_KEY, previousTasks);
-          throw error;
-        }
-
-        // Update cache with the real task (replacing the optimistic one)
-        queryClient.setQueryData<Task[]>(
-          TASKS_QUERY_KEY, 
-          previousTasks.concat([data as Task]).filter(t => t.id !== tempId)
-        );
-
-        return data as Task;
-      }
+      const savedTask = await createTaskMutation(taskData);
+      return savedTask;
     } catch (err: any) {
       console.error('Error saving task:', err);
       toast({
@@ -246,27 +131,21 @@ export const useTasksData = () => {
 
   const deleteTask = async (taskId: string): Promise<boolean> => {
     try {
-      // Optimistic update
-      await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
-      
-      const previousTasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY) || [];
-      
-      queryClient.setQueryData<Task[]>(
-        TASKS_QUERY_KEY,
-        previousTasks.filter(t => t.id !== taskId)
-      );
-      
+      // Delete from Supabase
       const { error } = await supabase
         .from('tasks')
         .delete()
         .eq('id', taskId);
 
-      if (error) {
-        // Revert optimistic update
-        queryClient.setQueryData(TASKS_QUERY_KEY, previousTasks);
-        throw error;
-      }
-
+      if (error) throw error;
+      
+      // Update local cache
+      const previousTasks = tasks || [];
+      const updatedTasks = previousTasks.filter(t => t.id !== taskId);
+      
+      // We keep this direct cache update since deletion isn't part of our mutation hooks
+      await saveTasksToDB(updatedTasks);
+      
       return true;
     } catch (err: any) {
       console.error('Error deleting task:', err);
@@ -281,109 +160,22 @@ export const useTasksData = () => {
 
   const toggleTaskCompletion = async (taskId: string, completed: boolean): Promise<boolean> => {
     try {
-      const task = tasks.find(t => t.id === taskId);
-      
-      if (!task) {
-        throw new Error('Task not found');
-      }
-      
-      // Optimistic update
-      await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
-      
-      const previousTasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY) || [];
-      
-      const dayOfWeek = getMondayBasedDay();
-      const usageData = [...task.usage_data];
-      
       if (completed) {
-        usageData[dayOfWeek] = (usageData[dayOfWeek] || 0) + 1;
-      }
-      
-      const isFullyCompleted = usageData[dayOfWeek] >= (task.frequency_count || 1);
-      
-      // Apply optimistic update
-      queryClient.setQueryData<Task[]>(
-        TASKS_QUERY_KEY,
-        previousTasks.map(t => {
-          if (t.id === taskId) {
-            return {
-              ...t,
-              completed: isFullyCompleted,
-              last_completed_date: completed ? getLocalDateString() : t.last_completed_date,
-              usage_data: usageData
-            };
-          }
-          return t;
-        })
-      );
-      
-      // Perform actual update
-      const { error } = await supabase
-        .from('tasks')
-        .update({ 
-          completed: isFullyCompleted,
-          last_completed_date: completed ? getLocalDateString() : task.last_completed_date,
-          usage_data: usageData
-        })
-        .eq('id', taskId);
-
-      if (error) {
-        // Revert optimistic update
-        queryClient.setQueryData(TASKS_QUERY_KEY, previousTasks);
-        throw error;
-      }
-
-      // Update points if the task was completed
-      if (completed) {
-        const taskPoints = task.points || 0;
-        const { data: authData } = await supabase.auth.getUser();
-        const userId = authData.user?.id;
+        // Only use the completion mutation when marking as completed
+        await completeTaskMutation(taskId);
+      } else {
+        // For unmarking as complete, we can use a simple update
+        await supabase
+          .from('tasks')
+          .update({ 
+            completed: false,
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', taskId);
         
-        if (userId) {
-          // Log the completion to history
-          await supabase
-            .from('task_completion_history')
-            .insert({
-              task_id: taskId,
-              completed_at: new Date().toISOString(),
-              user_id: userId
-            });
-          
-          // Update points in profile if user is authenticated
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('points')
-            .eq('id', userId)
-            .maybeSingle();
-          
-          const currentPoints = profileData?.points || 0;
-          const newPoints = currentPoints + taskPoints;
-          
-          await supabase
-            .from('profiles')
-            .update({ points: newPoints })
-            .eq('id', userId);
-          
-          // Notify user about points earned
-          toast({
-            title: 'Points Earned',
-            description: `You earned ${taskPoints} points!`,
-            variant: 'default',
-          });
-          
-          // Invalidate related queries to ensure UI updates
-          queryClient.invalidateQueries({ queryKey: ['user-points'] });
-          queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
-          
-          // Also directly invalidate the rewards data to make sure UI updates
-          queryClient.invalidateQueries({ queryKey: ['rewards'] });
-        }
+        // Need to sync this card manually since we're not using the mutation
+        await syncCardById(taskId, 'tasks');
       }
-
-      // Always invalidate metrics when task completion changes
-      queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: TASK_COMPLETIONS_QUERY_KEY });
-      
       return true;
     } catch (err: any) {
       console.error('Error updating task completion:', err);

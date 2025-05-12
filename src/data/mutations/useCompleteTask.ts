@@ -73,20 +73,14 @@ export function useCompleteTask() {
   return useMutation({
     mutationFn: completeTask,
     onSuccess: (updatedTask) => {
-      // Update tasks in cache
-      queryClient.setQueryData(['tasks'], (oldTasks: Task[] = []) => {
-        const updatedTasks = oldTasks.map(task => 
-          task.id === updatedTask.id ? updatedTask : task
-        );
-        
-        // Update IndexedDB
-        saveTasksToDB(updatedTasks);
-        
-        return updatedTasks;
-      });
-      
       // Sync the updated task
       syncCardById(updatedTask.id, 'tasks');
+      
+      // Invalidate related queries to ensure UI updates
+      queryClient.invalidateQueries({ queryKey: ['user-points'] });
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['task-completions'] });
     }
   });
 }
