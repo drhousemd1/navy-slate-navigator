@@ -12,6 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
 import { syncCardById } from '@/data/sync/useSyncManager';
 import { format } from 'date-fns';
+import { getMondayBasedDay } from '@/lib/utils';
 
 interface CompleteTaskParams {
   taskId: string;
@@ -40,10 +41,8 @@ export function useCompleteTask() {
       const currentDate = format(now, 'yyyy-MM-dd');
       const currentWeek = `${format(now, 'yyyy')}-W${format(now, 'ww')}`;
       
-      // Get current day of week (0-6, Sunday is 0)
-      // We need to convert to Monday-based (0-6, Monday is 0)
-      const currentDayNum = now.getDay();
-      const mondayBasedDay = currentDayNum === 0 ? 6 : currentDayNum - 1;
+      // Get current Monday-based day of week (0-6, Monday is 0)
+      const mondayBasedDay = getMondayBasedDay();
       
       // Initialize or get the task's usage data array
       const usageData = Array.isArray(taskData.usage_data) ? 
@@ -135,13 +134,15 @@ export function useCompleteTask() {
         description: `Task ${action} successfully`
       });
     },
-    onError: (error) => {
-      console.error('Error in useCompleteTask:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update task completion status',
-        variant: 'destructive'
-      });
+    meta: {
+      onError: (error: any) => {
+        console.error('Error in useCompleteTask:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to update task completion status',
+          variant: 'destructive'
+        });
+      }
     }
   });
 }
