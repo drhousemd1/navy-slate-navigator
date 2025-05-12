@@ -1,11 +1,10 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -138,8 +137,7 @@ const fetchTotalDomRewardsSupply = async (): Promise<number> => {
 export const useRewardsData = () => {
   const { user } = useAuth();
   const profileId = user?.id;
-  const queryClientHook = useQueryClient();
-
+  
   // Use the new mutation hooks
   const { mutateAsync: buySubReward } = useBuySubReward();
   const { mutateAsync: buyDomReward } = useBuyDomReward();

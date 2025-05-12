@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryClient } from "../queryClient";
 import { syncCardById } from "../sync/useSyncManager";
+import { updateProfilePoints } from "../sync/updateProfilePoints";
 
 export function useBuyDomReward() {
   return useMutation({
@@ -36,20 +37,10 @@ export function useBuyDomReward() {
       return { rewardId, newSupply: currentSupply + 1, newDomPoints: currentDomPoints - cost };
     },
 
-    onSuccess: async ({ rewardId, newSupply, newDomPoints }) => {
+    onSuccess: async ({ rewardId, newDomPoints }) => {
+      const prev = queryClient.getQueryData<{points: number, dom_points: number}>(["profile_points"]) || { points: 0, dom_points: 0 };
       await syncCardById(rewardId, "rewards");
-
-      const list = (queryClient.getQueryData<any[]>(["rewards"]) || []).map(r =>
-        r.id === rewardId ? { ...r, supply: newSupply } : r
-      );
-      queryClient.setQueryData(["rewards"], list);
-
-      const subSupply = list.filter(r => !r.is_dom_reward).reduce((n, r) => n + r.supply, 0);
-      const domSupply = list.filter(r => r.is_dom_reward).reduce((n, r) => n + r.supply, 0);
-      queryClient.setQueryData(["totalRewardsSupply"], subSupply);
-      queryClient.setQueryData(["totalDomRewardsSupply"], domSupply);
-
-      queryClient.setQueryData(["rewards", "dom_points"], newDomPoints);
+      await updateProfilePoints(prev.points, newDomPoints);
     }
   });
 }
