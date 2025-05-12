@@ -1,6 +1,6 @@
 
 /**
- * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
+ * CENTRALIZED DATA LOGIC – DO NOT DUPLICATE OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
  * All logic must use these shared, optimized hooks and utilities only.
  */
@@ -16,7 +16,7 @@ import {
 import { PunishmentData } from "@/contexts/punishments/types";
 
 export function usePunishments() {
-  const query = useQuery({
+  const query = useQuery<PunishmentData[]>({
     queryKey: ["punishments"],
     queryFn: async () => {
       const localData = await loadPunishmentsFromDB();
@@ -50,7 +50,9 @@ export function usePunishments() {
     initialData: undefined,
     staleTime: Infinity,
     gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false
   });
 
   // Add custom properties to the query object to be compatible with the expected interface
