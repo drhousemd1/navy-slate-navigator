@@ -124,19 +124,22 @@ export const useTasksData = () => {
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
-      // Fix the task priority type to ensure it's one of the allowed values
+      // Fix the task priority and frequency types to ensure they're one of the allowed values
       const processedTaskData = {
         ...taskData,
         // Ensure priority is one of the allowed types
-        priority: (taskData.priority || 'medium') as 'low' | 'medium' | 'high'
+        priority: (taskData.priority || 'medium') as 'low' | 'medium' | 'high',
+        // Ensure frequency is one of the allowed types
+        frequency: (taskData.frequency || 'daily') as 'daily' | 'weekly'
       };
       
       const savedTask = await createTaskMutation(processedTaskData);
       
-      // Fix: Ensure the returned task has the correct priority type
+      // Fix: Ensure the returned task has the correct priority and frequency types
       return {
         ...savedTask,
-        priority: (savedTask.priority as 'low' | 'medium' | 'high') || 'medium'
+        priority: (savedTask.priority as 'low' | 'medium' | 'high') || 'medium',
+        frequency: (savedTask.frequency as 'daily' | 'weekly') || 'daily'
       };
     } catch (err: any) {
       console.error('Error saving task:', err);
