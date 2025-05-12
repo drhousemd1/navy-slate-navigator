@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
@@ -203,7 +202,7 @@ export default function useRewardOperations() {
         });
         
         // Update local state
-        setDomPoints(prev => prev - cost);
+        setDomPoints(domPoints - cost);
       } else {
         await buySub({
           rewardId: id,
@@ -214,7 +213,7 @@ export default function useRewardOperations() {
         });
         
         // Update local state
-        setTotalPoints(prev => prev - cost);
+        setTotalPoints(totalPoints - cost);
       }
       
       // Update the reward supply in local state

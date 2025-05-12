@@ -9,6 +9,7 @@ import { useRedeemDomReward } from "@/data/mutations/useRedeemDomReward";
 import { useCreateReward } from "@/data/mutations/useCreateReward";
 import { useUpdateReward } from "@/data/mutations/useUpdateReward";
 import { useDeleteReward } from "@/data/mutations/useDeleteReward";
+import type { Reward } from "@/types/reward";
 
 // Keys for our queries
 const REWARDS_QUERY_KEY = ['rewards'];
