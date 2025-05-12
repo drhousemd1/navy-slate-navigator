@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import './App.css';
 import { clearOldCacheVersions } from './data/indexedDB/useIndexedDB';
 
@@ -47,20 +47,19 @@ function App() {
   }, []);
   
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/rules" element={<Rules />} />
-        <Route path="/punishments" element={<Punishments />} />
-        <Route path="/rewards" element={<Rewards />} />
-        <Route path="/encyclopedia" element={<Encyclopedia />} />
-        <Route path="/admin-testing" element={<AdminTesting />} />
-        <Route path="/messages" element={<Messages />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/login" element={<Login />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/tasks" element={<Tasks />} />
+      <Route path="/rules" element={<Rules />} />
+      <Route path="/punishments" element={<Punishments />} />
+      <Route path="/rewards" element={<Rewards />} />
+      <Route path="/encyclopedia" element={<Encyclopedia />} />
+      <Route path="/admin-testing" element={<AdminTesting />} />
+      <Route path="/messages" element={<Messages />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/throne-room" element={<Dashboard />} />
+    </Routes>
   );
 }
 
