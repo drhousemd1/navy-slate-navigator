@@ -60,9 +60,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
   calendar_color = '#7E69AB',
   icon_color = '#9b87f5'
 }) => {
+  // Get the current day of week index (0-6, Monday is 0)
   const currentDayOfWeek = getCurrentDayOfWeek();
-  const currentCompletions = usage_data[currentDayOfWeek] || 0;
+  
+  // Get the number of completions for today
+  // Ensure the usage_data array is valid and has the current day's data
+  const safeUsageData = Array.isArray(usage_data) && usage_data.length === 7 
+    ? usage_data 
+    : Array(7).fill(0);
+    
+  const currentCompletions = safeUsageData[currentDayOfWeek] || 0;
   const maxCompletions = frequency_count || 1;
+  
+  // A task is considered fully completed when the current day's completions
+  // meet or exceed the required frequency count
   const isFullyCompleted = currentCompletions >= maxCompletions;
 
   return (

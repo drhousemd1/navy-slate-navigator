@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Badge } from '../ui/badge';
 
 interface CompletionCounterProps {
   currentCompletions: number;
@@ -8,19 +7,19 @@ interface CompletionCounterProps {
 }
 
 const CompletionCounter: React.FC<CompletionCounterProps> = ({ 
-  currentCompletions = 0,
-  maxCompletions = 1
+  currentCompletions, 
+  maxCompletions 
 }) => {
-  // Style for badge - black background with cyan border to match other elements
-  const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
-
+  // Ensure we never display more completions than the maximum allowed
+  const displayCompletions = Math.min(currentCompletions, maxCompletions);
+  
   return (
-    <Badge 
-      className="text-white font-medium flex items-center"
-      style={badgeStyle}
+    <div 
+      className="flex items-center justify-center bg-gray-700/50 rounded-full px-2 py-0.5 text-xs text-gray-200"
+      title={`${displayCompletions} of ${maxCompletions} completions for today`}
     >
-      <span>{currentCompletions}/{maxCompletions}</span>
-    </Badge>
+      {displayCompletions}/{maxCompletions}
+    </div>
   );
 };
 
