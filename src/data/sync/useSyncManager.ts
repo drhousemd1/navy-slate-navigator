@@ -5,172 +5,69 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { useState, useEffect, useCallback } from 'react';
 import { queryClient } from '../queryClient';
+import { clearAllCachedData, clearOldCacheVersions } from '../indexedDB/useIndexedDB';
 
-interface SyncOptions {
-  showToasts?: boolean;
+interface SyncManagerOptions {
   intervalMs?: number;
   enabled?: boolean;
-  includeKeys?: string[][];
-  excludeKeys?: string[][];
 }
 
-// Define critical query keys for the application
-export const CRITICAL_QUERY_KEYS = {
-  TASKS: ['tasks'],
-  REWARDS: ['rewards'],
-  RULES: ['rules'],
-  PUNISHMENTS: ['punishments'],
-  ADMIN_CARDS: ['adminCards'],
-  MONTHLY_METRICS: ['monthly-metrics'],
-  WEEKLY_METRICS: ['weekly-metrics-summary']
-};
-
-export function useSyncManager(options: SyncOptions = {}) {
-  const { 
-    showToasts = false, 
-    intervalMs = 60000, 
-    enabled = true,
-    includeKeys = Object.values(CRITICAL_QUERY_KEYS),
-    excludeKeys = []
-  } = options;
-  
-  const [isSyncing, setIsSyncing] = useState(false);
+export const useSyncManager = (options: SyncManagerOptions = {}) => {
+  const { intervalMs = 30000, enabled = true } = options;
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-
-  // Helper to check if a key should be synced
-  const shouldSyncKey = (key: unknown[]) => {
-    const keyStr = JSON.stringify(key);
-    // Check if key is explicitly excluded
-    if (excludeKeys.some(excludeKey => JSON.stringify(excludeKey) === keyStr)) {
-      return false;
-    }
-    // Check if key is included in the includeKeys or if includeKeys is empty
-    return includeKeys.some(includeKey => {
-      // Match by prefix (e.g., ['tasks'] matches ['tasks', '123'])
-      const includeKeyStr = JSON.stringify(includeKey);
-      return keyStr.startsWith(includeKeyStr.substring(0, includeKeyStr.length - 1));
-    });
-  };
-
-  // Sync all data
-  const syncNow = useCallback(async (specificKeys?: unknown[][]) => {
-    if (!enabled) return;
+  
+  const syncNow = useCallback(async () => {
+    console.log('Syncing data with server...');
     
     try {
-      setIsSyncing(true);
-      if (showToasts) {
-        toast({
-          title: "Syncing",
-          description: "Syncing data with server...",
-        });
-      }
-
-      // Get current user
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user?.id) {
-        console.log('[SyncManager] No user logged in, skipping sync');
-        return;
-      }
+      // Clear old cache versions first
+      await clearOldCacheVersions();
       
-      // Invalidate specific query keys that need refreshing
-      const keysToInvalidate = specificKeys || Object.values(CRITICAL_QUERY_KEYS);
-      
-      // Filter keys based on inclusion/exclusion rules
-      const filteredKeys = keysToInvalidate.filter(shouldSyncKey);
-      
-      for (const key of filteredKeys) {
-        queryClient.invalidateQueries({ queryKey: key });
-        console.log(`[SyncManager] Invalidated cache for key: ${JSON.stringify(key)}`);
-      }
+      // Invalidate all queries to force refetch
+      await queryClient.invalidateQueries();
       
       setLastSyncTime(new Date());
-      
-      if (showToasts) {
-        toast({
-          title: "Sync Complete",
-          description: "Data successfully synchronized",
-        });
-      }
-      
-      console.log('[SyncManager] Background sync completed successfully');
+      console.log('Sync completed successfully');
+      return true;
     } catch (error) {
-      console.error('Sync error:', error);
-      
-      if (showToasts) {
-        toast({
-          title: "Sync Failed",
-          description: "Could not synchronize data. Will try again later.",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setIsSyncing(false);
+      console.error('Error syncing data:', error);
+      return false;
     }
-  }, [showToasts, enabled, shouldSyncKey]);
-
-  // Set up sync interval
+  }, []);
+  
   useEffect(() => {
     if (!enabled) return;
     
-    // Initial sync when component mounts
-    syncNow();
-    
-    // Setup interval for background syncing
-    const interval = setInterval(() => {
+    const intervalId = setInterval(() => {
       syncNow();
     }, intervalMs);
     
-    return () => {
-      clearInterval(interval);
-    };
-  }, [syncNow, intervalMs, enabled]);
-
+    return () => clearInterval(intervalId);
+  }, [intervalMs, enabled, syncNow]);
+  
+  // Perform a sync when app starts
+  useEffect(() => {
+    if (enabled) {
+      syncNow();
+    }
+  }, [enabled, syncNow]);
+  
   return {
-    isSyncing,
     lastSyncTime,
     syncNow,
-    syncCardById
+    clearCache: clearAllCachedData
   };
-}
+};
 
-// Export single-use function to sync a specific card
-export const syncCardById = async (
-  id: string,
-  type: 'tasks' | 'rules' | 'rewards' | 'punishments' | 'admin_testing_cards'
-): Promise<void> => {
-  if (!id) return;
-  
+export const syncCardById = async (id: string): Promise<boolean> => {
   try {
-    console.log(`[syncCardById] Syncing ${type} item with ID ${id}`);
-    
-    // Fetch just this single card from Supabase
-    const { data, error } = await supabase
-      .from(type)
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    if (error) {
-      console.error(`Error syncing ${type} item ${id}:`, error);
-      throw error;
-    }
-    
-    if (data) {
-      // Map the appropriate queryKey based on type
-      const queryKey = type === 'admin_testing_cards' ? 'adminCards' : type;
-      
-      // Update just this one item in the cache
-      queryClient.setQueryData([queryKey], (oldData: any[] = []) => {
-        return Array.isArray(oldData) ? oldData.map(item => item.id === id ? data : item) : [];
-      });
-      
-      console.log(`[syncCardById] Successfully synced ${type} item with ID ${id}`);
-    }
-  } catch (err) {
-    console.error(`Error syncing ${type} item ${id}:`, err);
+    // Invalidate specific card query to force refetch
+    await queryClient.invalidateQueries({ queryKey: ['admin-card', id] });
+    return true;
+  } catch (error) {
+    console.error(`Error syncing card ${id}:`, error);
+    return false;
   }
 };

@@ -10,9 +10,9 @@ import { QueryClient } from '@tanstack/react-query';
 // Standard configuration for all queries
 export const STANDARD_QUERY_CONFIG = {
   staleTime: 5 * 60 * 1000, // 5 minutes
-  cacheTime: 10 * 60 * 1000, // 10 minutes
+  cacheTime: 15 * 60 * 1000, // 15 minutes
   refetchOnWindowFocus: true,
-  refetchOnMount: true,
+  refetchOnMount: 'always', // force update after hard reload
   refetchOnReconnect: true,
   retry: 1
 };
