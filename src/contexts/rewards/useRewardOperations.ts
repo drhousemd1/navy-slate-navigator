@@ -1,16 +1,22 @@
-import { useState, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchRewards, saveReward, deleteReward, updateRewardSupply, Reward } from '@/lib/rewardUtils';
+import { useState, useCallback, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 import { toast } from '@/hooks/use-toast';
-import { usePointsManagement } from './usePointsManagement';
+import { Reward } from '@/lib/rewardUtils';
 import { supabase } from '@/integrations/supabase/client';
+import usePointsManagement from './usePointsManagement';
+import { fetchRewards, saveReward, deleteReward as deleteRewardUtil } from '@/lib/rewardUtils';
 import { useBuySubReward } from "@/data/mutations/useBuySubReward";
 import { useBuyDomReward } from "@/data/mutations/useBuyDomReward";
 import { useRedeemSubReward } from "@/data/mutations/useRedeemSubReward";
 import { useRedeemDomReward } from "@/data/mutations/useRedeemDomReward";
 
-export const useRewardOperations = () => {
+export default function useRewardOperations() {
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const [totalRewardsSupply, setTotalRewardsSupply] = useState(0);
+  const [totalDomRewardsSupply, setTotalDomRewardsSupply] = useState(0);
+  const queryClient = useQueryClient();
+
   const { 
     totalPoints, 
     domPoints, 
@@ -29,373 +35,292 @@ export const useRewardOperations = () => {
   const { 
     data: fetchedRewards = [], 
     isLoading,
-    refetch 
-  } = useQuery({
-    queryKey: ['rewards'],
+    refetch: refetchRewards
+  } = useQuery<Reward[]>({
+    queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false
   });
 
-  const refetchRewards = useCallback(async () => {
-    console.log("[RewardsContext] Manually refetching rewards");
-    const { data } = await refetch();
-    if (data) {
-      console.log("[RewardsContext] Setting rewards after manual refetch with preserved order:", 
-        data.map((r, i) => ({ 
-          position: i,
-          id: r.id, 
-          title: r.title,
-          created_at: r.created_at
-        }))
-      );
-      setRewards(data);
+  useEffect(() => {
+    if (fetchedRewards && fetchedRewards.length > 0) {
+      setRewards(fetchedRewards);
+      
+      // Calculate total supply
+      const totalSupply = fetchedRewards.reduce((sum, reward) => sum + reward.supply, 0);
+      setTotalRewardsSupply(totalSupply);
+      
+      // Calculate dom rewards supply
+      const domSupply = fetchedRewards
+        .filter(reward => reward.is_dom_reward)
+        .reduce((sum, reward) => sum + reward.supply, 0);
+      setTotalDomRewardsSupply(domSupply);
     }
-    
-    await refreshPointsFromDatabase();
-  }, [refetch, refreshPointsFromDatabase]);
+  }, [fetchedRewards]);
 
-  const getTotalRewardsSupply = useCallback(() => {
-    return rewards.reduce((total, reward) => total + reward.supply, 0);
-  }, [rewards]);
-  
-  const getTotalDomRewardsSupply = useCallback(() => {
-    return rewards.reduce((total, reward) => {
-      // Only count supplies for dom rewards
-      return total + (reward.is_dom_reward ? reward.supply : 0);
-    }, 0);
-  }, [rewards]);
-
-  const handleSaveReward = useCallback(async (rewardData: any, index: number | null): Promise<Reward | null> => {
-    console.log("[RewardsContext] Handling save reward with data:", rewardData, "at index:", index);
-    console.log("[RewardsContext] is_dom_reward value:", rewardData.is_dom_reward);
-    
-    const startTime = performance.now();
-    
+  const handleSaveReward = useCallback(async (rewardData: any, index: number | null) => {
     try {
-      const dataToSave = { ...rewardData };
+      // If we have an index, we're updating an existing reward
+      const existingId = index !== null && rewards[index] ? rewards[index].id : undefined;
       
-      if (!dataToSave.background_image_url) {
-        dataToSave.background_image_url = null;
-      }
+      // Save the reward to the database
+      const savedReward = await saveReward(rewardData, existingId);
       
-      // Ensure is_dom_reward is properly included and is a boolean
-      dataToSave.is_dom_reward = Boolean(dataToSave.is_dom_reward ?? false);
-      
-      let result: Reward | null = null;
-      
-      if (index !== null) {
-        const existingReward = rewards[index];
+      if (savedReward) {
+        // Update the local state
+        const updatedRewards = [...rewards];
         
-        console.log("[RewardsContext] Rewards list BEFORE update:", 
-          rewards.map((r, i) => ({
-            position: i,
-            id: r.id,
-            title: r.title,
-            is_dom_reward: r.is_dom_reward,
-            created_at: r.created_at,
-            updated_at: r.updated_at
-          }))
-        );
-        
-        console.log("[RewardsContext] Updating reward at position:", index, 
-          "with ID:", existingReward.id, 
-          "title:", existingReward.title,
-          "is_dom_reward:", dataToSave.is_dom_reward);
-        
-        // Include is_dom_reward in the fields to update
-        const fieldsToUpdate = {
-          title: dataToSave.title,
-          description: dataToSave.description,
-          cost: dataToSave.cost,
-          is_dom_reward: dataToSave.is_dom_reward, // Added this field explicitly
-          icon_name: dataToSave.icon_name,
-          icon_url: dataToSave.icon_url,
-          icon_color: dataToSave.icon_color,
-          background_image_url: dataToSave.background_image_url,
-          background_opacity: dataToSave.background_opacity,
-          focal_point_x: dataToSave.focal_point_x,
-          focal_point_y: dataToSave.focal_point_y,
-          highlight_effect: dataToSave.highlight_effect,
-          title_color: dataToSave.title_color,
-          subtext_color: dataToSave.subtext_color,
-          calendar_color: dataToSave.calendar_color,
-        };
-        
-        console.log("[RewardsContext] Updating with these fields:", Object.keys(fieldsToUpdate));
-        console.log("[RewardsContext] is_dom_reward value being sent:", fieldsToUpdate.is_dom_reward);
-        
-        const { data, error } = await supabase
-          .from('rewards')
-          .update(fieldsToUpdate)
-          .eq('id', existingReward.id)
-          .select();
-        
-        const endDbTime = performance.now();
-        console.log(`[RewardsContext] Database update took ${endDbTime - startTime}ms`);
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          result = {
-            ...data[0],
-            is_dom_reward: data[0]?.is_dom_reward ?? false, // Default to false if not present
-            created_at: existingReward.created_at
-          } as Reward;
-          
-          const updatedRewards = [...rewards];
-          updatedRewards[index] = result;
-          
-          console.log("[RewardsContext] Updated reward at position", index, 
-            "ID:", result.id, 
-            "title:", result.title,
-            "is_dom_reward:", result.is_dom_reward);
-          
-          console.log("[RewardsContext] Rewards list AFTER update:", 
-            updatedRewards.map((r, i) => ({
-              position: i,
-              id: r.id,
-              title: r.title,
-              is_dom_reward: r.is_dom_reward,
-              created_at: r.created_at,
-              updated_at: r.updated_at
-            }))
-          );
-          
-          setRewards(updatedRewards);
+        if (index !== null && index >= 0 && index < rewards.length) {
+          // Update existing reward
+          updatedRewards[index] = savedReward;
+        } else {
+          // Add new reward
+          updatedRewards.unshift(savedReward);
         }
-      } else {
-        // For new rewards, is_dom_reward is already included in dataToSave
-        console.log("[RewardsContext] Creating new reward with is_dom_reward:", dataToSave.is_dom_reward);
-        result = await saveReward(dataToSave as Reward & { title: string });
         
-        if (result) {
-          setRewards(prevRewards => {
-            const newList = [...prevRewards, result as Reward];
-            
-            console.log("[RewardsContext] Rewards list after adding new reward:", 
-              newList.map((r, i) => ({
-                position: i,
-                id: r.id,
-                title: r.title,
-                is_dom_reward: r.is_dom_reward,
-                created_at: r.created_at
-              }))
-            );
-            
-            return newList;
-          });
-        }
+        setRewards(updatedRewards);
+        
+        // Recalculate supplies
+        const totalSupply = updatedRewards.reduce((sum, reward) => sum + reward.supply, 0);
+        setTotalRewardsSupply(totalSupply);
+        
+        const domSupply = updatedRewards
+          .filter(reward => reward.is_dom_reward)
+          .reduce((sum, reward) => sum + reward.supply, 0);
+        setTotalDomRewardsSupply(domSupply);
+        
+        // Update the query cache
+        queryClient.setQueryData(REWARDS_QUERY_KEY, updatedRewards);
+        
+        return savedReward.id;
       }
-      
-      const endTime = performance.now();
-      console.log(`[RewardsContext] Total save operation took ${endTime - startTime}ms`);
-      
-      return result;
+      return null;
     } catch (error) {
-      console.error("[RewardsContext] Error in handleSaveReward:", error);
-      throw error;
+      console.error('Error saving reward:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save reward. Please try again.',
+        variant: 'destructive',
+      });
+      return null;
     }
-  }, [rewards]);
+  }, [rewards, queryClient]);
 
-  const handleDeleteReward = useCallback(async (index: number): Promise<boolean> => {
-    console.log("Handling delete reward at index:", index);
+  const handleDeleteReward = useCallback(async (index: number) => {
+    if (index < 0 || index >= rewards.length) {
+      console.error('Invalid reward index:', index);
+      return false;
+    }
+    
+    const rewardId = rewards[index].id;
     
     try {
-      const rewardToDelete = rewards[index];
-      if (!rewardToDelete || !rewardToDelete.id) {
-        console.error("Invalid reward index or reward has no ID:", index);
-        return false;
-      }
-      
-      const success = await deleteReward(rewardToDelete.id);
+      const success = await deleteRewardUtil(rewardId);
       
       if (success) {
-        console.log("Reward deleted successfully");
-        setRewards(prevRewards => prevRewards.filter((_, i) => i !== index));
+        // Update local state
+        const updatedRewards = rewards.filter((_, i) => i !== index);
+        setRewards(updatedRewards);
+        
+        // Recalculate supplies
+        const totalSupply = updatedRewards.reduce((sum, reward) => sum + reward.supply, 0);
+        setTotalRewardsSupply(totalSupply);
+        
+        const domSupply = updatedRewards
+          .filter(reward => reward.is_dom_reward)
+          .reduce((sum, reward) => sum + reward.supply, 0);
+        setTotalDomRewardsSupply(domSupply);
+        
+        // Update the query cache
+        queryClient.setQueryData(REWARDS_QUERY_KEY, updatedRewards);
+        
         return true;
       }
-      
       return false;
     } catch (error) {
-      console.error("Error in handleDeleteReward:", error);
-      throw error;
+      console.error('Error deleting reward:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete reward. Please try again.',
+        variant: 'destructive',
+      });
+      return false;
     }
-  }, [rewards]);
+  }, [rewards, queryClient]);
 
-  const handleBuyReward = useCallback(async ({ rewardId, cost, isDomReward = false }: { rewardId: string, cost: number, isDomReward?: boolean }) => {
-    console.log("Handling buy reward with ID:", rewardId, "Cost:", cost, "Is Dom Reward:", isDomReward);
-    
+  const handleBuyReward = useCallback(async (id: string, cost: number, isDomReward = false) => {
     try {
-      // Check if we have enough points based on reward type
-      const currentPoints = isDomReward ? domPoints : totalPoints;
+      // Find the reward in our local state
+      const rewardIndex = rewards.findIndex(r => r.id === id);
+      if (rewardIndex === -1) {
+        throw new Error('Reward not found');
+      }
       
-      if (currentPoints < cost) {
+      const reward = rewards[rewardIndex];
+      
+      // Check if we have enough points
+      if (isDomReward) {
+        if (domPoints < cost) {
+          toast({
+            title: 'Not enough dom points',
+            description: `You need ${cost} dom points to buy this reward.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+      } else {
+        if (totalPoints < cost) {
+          toast({
+            title: 'Not enough points',
+            description: `You need ${cost} points to buy this reward.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+      
+      // Get the user
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id) {
         toast({
-          title: "Not Enough Points",
-          description: `You need ${cost} ${isDomReward ? "dom " : ""}points to buy this reward.`,
-          variant: "destructive",
+          title: 'Error',
+          description: 'You must be logged in to buy rewards.',
+          variant: 'destructive',
         });
         return;
       }
       
-      const rewardIndex = rewards.findIndex(r => r.id === rewardId);
-      if (rewardIndex === -1) {
-        console.error("Reward not found with ID:", rewardId);
-        return;
-      }
-      
-      const reward = rewards[rewardIndex];
-      console.log("Found reward:", reward.title, "is_dom_reward:", reward.is_dom_reward);
-      
-      // Determine if this is a dom reward from the reward itself if not explicitly provided
-      const isRewardDominant = isDomReward !== undefined ? isDomReward : Boolean(reward.is_dom_reward);
-      console.log("Final determination of isDomReward:", isRewardDominant);
-      
-      // Deduct points based on reward type
-      const newPoints = currentPoints - cost;
-      
-      if (isRewardDominant) {
-        await setDomPoints(newPoints);
-        
-        // Get the user
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData?.user?.id) throw new Error("User not authenticated");
-        
+      // Buy the reward
+      if (isDomReward) {
         await buyDom({
-          rewardId,
+          rewardId: id,
           cost,
           currentSupply: reward.supply,
           profileId: userData.user.id,
           currentDomPoints: domPoints
         });
+        
+        // Update local state
+        setDomPoints(prev => prev - cost);
       } else {
-        await setTotalPoints(newPoints);
-        
-        // Get the user
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData?.user?.id) throw new Error("User not authenticated");
-        
         await buySub({
-          rewardId,
+          rewardId: id,
           cost,
           currentSupply: reward.supply,
           profileId: userData.user.id,
           currentPoints: totalPoints
         });
+        
+        // Update local state
+        setTotalPoints(prev => prev - cost);
       }
       
-      // Update the reward list optimistically
+      // Update the reward supply in local state
       const updatedRewards = [...rewards];
-      const updatedRewardIndex = updatedRewards.findIndex(r => r.id === rewardId);
-      if (updatedRewardIndex !== -1) {
-        updatedRewards[updatedRewardIndex] = { 
-          ...updatedRewards[updatedRewardIndex], 
-          supply: updatedRewards[updatedRewardIndex].supply + 1 
-        };
-        setRewards(updatedRewards);
-      }
+      updatedRewards[rewardIndex] = {
+        ...reward,
+        supply: reward.supply - 1
+      };
+      setRewards(updatedRewards);
+      
+      // Recalculate supplies
+      const totalSupply = updatedRewards.reduce((sum, reward) => sum + reward.supply, 0);
+      setTotalRewardsSupply(totalSupply);
+      
+      const domSupply = updatedRewards
+        .filter(reward => reward.is_dom_reward)
+        .reduce((sum, reward) => sum + reward.supply, 0);
+      setTotalDomRewardsSupply(domSupply);
+      
+      // Update the query cache
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
       
       toast({
-        title: "Reward Purchased",
-        description: `You purchased ${reward.title}`,
+        title: 'Reward purchased!',
+        description: `You bought ${reward.title} for ${cost} ${isDomReward ? 'dom ' : ''}points.`,
       });
     } catch (error) {
-      console.error("Error in handleBuyReward:", error);
-      
+      console.error('Error buying reward:', error);
       toast({
-        title: "Error",
-        description: "Failed to purchase reward. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to buy reward. Please try again.',
+        variant: 'destructive',
       });
     }
-  }, [rewards, totalPoints, domPoints, setTotalPoints, setDomPoints, buyDom, buySub]);
+  }, [rewards, totalPoints, domPoints, setTotalPoints, setDomPoints, buyDom, buySub, queryClient]);
 
   const handleUseReward = useCallback(async (id: string) => {
-    console.log("Handling use reward with ID:", id);
-    
     try {
+      // Find the reward in our local state
       const rewardIndex = rewards.findIndex(r => r.id === id);
       if (rewardIndex === -1) {
-        console.error("Reward not found with ID:", id);
-        return;
+        throw new Error('Reward not found');
       }
       
       const reward = rewards[rewardIndex];
       
-      if (reward.supply <= 0) {
-        console.error("Cannot use reward with no supply");
-        
+      // Get the user
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id) {
         toast({
-          title: "Cannot Use Reward",
-          description: "You don't have any of this reward to use.",
-          variant: "destructive",
+          title: 'Error',
+          description: 'You must be logged in to use rewards.',
+          variant: 'destructive',
         });
-        
         return;
       }
       
-      // Get current user ID for database operations
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user?.id) throw new Error("User not authenticated");
-      
-      // Update the reward list optimistically
-      const updatedRewards = [...rewards];
-      updatedRewards[rewardIndex] = { 
-        ...updatedRewards[rewardIndex], 
-        supply: Math.max(0, updatedRewards[rewardIndex].supply - 1) 
-      };
-      setRewards(updatedRewards);
-      
-      // Show toast for immediate feedback
-      toast({
-        title: "Reward Used",
-        description: `You used ${reward.title}`,
-      });
-      
-      // Perform the actual API call in the background
+      // Use the reward
       if (reward.is_dom_reward) {
         await redeemDom({
           rewardId: id,
-          currentSupply: reward.supply,
           profileId: userData.user.id
         });
       } else {
         await redeemSub({
           rewardId: id,
-          currentSupply: reward.supply,
           profileId: userData.user.id
         });
       }
-    } catch (error) {
-      console.error("Error in handleUseReward:", error);
       
-      // Revert optimistic updates on error
-      refetchRewards();
+      // Update the reward in local state if needed
+      const updatedRewards = [...rewards];
+      const rewardIndex = updatedRewards.findIndex(r => r.id === id);
+      if (rewardIndex !== -1) {
+        // If we need to update any properties after using the reward
+        // updatedRewards[rewardIndex] = { ...updatedRewards[rewardIndex], someProperty: newValue };
+        setRewards(updatedRewards);
+      }
       
       toast({
-        title: "Error",
-        description: "Failed to use reward. Please try again.",
-        variant: "destructive",
+        title: 'Reward used!',
+        description: `You used ${reward.title}.`,
+      });
+    } catch (error) {
+      console.error('Error using reward:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to use reward. Please try again.',
+        variant: 'destructive',
       });
     }
-  }, [rewards, refetchRewards, redeemDom, redeemSub]);
+  }, [rewards, redeemDom, redeemSub]);
 
-  
   return {
     rewards,
-    setRewards,
-    isLoading,
-    fetchedRewards,
     totalPoints,
+    totalRewardsSupply,
+    totalDomRewardsSupply,
     domPoints,
     setTotalPoints,
     setDomPoints,
+    isLoading,
     refetchRewards,
     handleSaveReward,
     handleDeleteReward,
     handleBuyReward,
     handleUseReward,
-    getTotalRewardsSupply,
-    getTotalDomRewardsSupply,
     refreshPointsFromDatabase
   };
-};
+}

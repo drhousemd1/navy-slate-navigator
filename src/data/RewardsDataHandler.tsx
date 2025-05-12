@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -245,11 +244,11 @@ export const useRewardsData = () => {
           focal_point_x: rewardData.focal_point_x,
           focal_point_y: rewardData.focal_point_y,
           updated_at: new Date().toISOString(),
-          is_dom_reward: rewardData.is_dom_reward
+          is_dom_reward: Boolean(rewardData.is_dom_reward)
         };
         
         await updateReward({ rewardId: rewardData.id, updates });
-        return await queryClient.fetchQuery(["rewards", rewardData.id]);
+        return await queryClient.fetchQuery({ queryKey: ["rewards", rewardData.id] });
       } else {
         // Create new reward
         const newReward = {
@@ -267,7 +266,7 @@ export const useRewardsData = () => {
           highlight_effect: rewardData.highlight_effect || false,
           focal_point_x: rewardData.focal_point_x || 50,
           focal_point_y: rewardData.focal_point_y || 50,
-          is_dom_reward: !!rewardData.is_dom_reward,
+          is_dom_reward: Boolean(rewardData.is_dom_reward),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };

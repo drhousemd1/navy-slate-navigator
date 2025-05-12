@@ -13,9 +13,10 @@ import {
   getLastSyncTimeForRewards,
   setLastSyncTimeForRewards
 } from "../indexedDB/useIndexedDB";
+import { Reward } from '@/lib/rewardUtils';
 
 export function useRewards() {
-  return useQuery({
+  return useQuery<Reward[]>({
     queryKey: ["rewards"],
     queryFn: async () => {
       const localData = await loadRewardsFromDB();
@@ -30,7 +31,7 @@ export function useRewards() {
       }
 
       if (!shouldFetch && localData) {
-        return localData.map(row => ({
+        return (localData as any[]).map(row => ({
           ...row,
           is_dom_reward: row.is_dominant // Add this property
         }));
@@ -40,7 +41,7 @@ export function useRewards() {
       if (error) throw error;
 
       if (data) {
-        const processedData = data.map(row => ({
+        const processedData = (data as any[]).map(row => ({
           ...row,
           is_dom_reward: row.is_dominant // Add this property
         }));
@@ -49,7 +50,7 @@ export function useRewards() {
         return processedData;
       }
 
-      return localData ? localData.map(row => ({
+      return localData ? (localData as any[]).map(row => ({
         ...row,
         is_dom_reward: row.is_dominant // Add this property
       })) : [];
