@@ -32,7 +32,7 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
       // Create a simplified punishment object with just the needed properties
       const punishment: PunishmentData = {
         id: id,
-        points: Math.abs(points),
+        points: Math.abs(points), 
         title: 'Apply Punishment' // Add required title property
       };
       
@@ -63,7 +63,13 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
           queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, newDomPoints);
           
           // Then update the database
-          await setDomPoints(newDomPoints);
+          await supabase
+            .from('profiles')
+            .update({ dom_points: newDomPoints })
+            .eq('id', user.id);
+            
+          // Update local state
+          setDomPoints(newDomPoints);
         }
       }
       

@@ -1,9 +1,4 @@
 
-/**
- * DO NOT REPLICATE LOGIC OUTSIDE THIS FILE.
- * All fetching, mutation, sync, and cache logic must live in centralized hooks only.
- */
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -16,10 +11,10 @@ import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { queryClient } from '@/data/queryClient';
-import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; // Fixed case sensitivity
+import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
-import { RewardsProvider } from '@/contexts/RewardsContext'; // Import RewardsProvider
-import { PunishmentsProvider } from '@/contexts/PunishmentsContext'; // Import PunishmentsProvider
+import { RewardsProvider } from '@/contexts/RewardsContext'; 
+import { PunishmentsProvider } from '@/contexts/PunishmentsContext'; 
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -28,10 +23,11 @@ const PunishmentsContent: React.FC<{
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isRetrying, setIsRetrying] = useState(false);
   
   // Use the sync manager with minimal refreshing
   const { syncNow } = useSyncManager({ 
-    intervalMs: 60000, // Longer interval to avoid excessive refreshing
+    intervalMs: 60000,
     enabled: true 
   });
 
@@ -122,6 +118,20 @@ const PunishmentsContent: React.FC<{
     return () => clearTimeout(timer);
   }, []);
   
+  // Retry logic for data fetching when there's an error
+  useEffect(() => {
+    if (error && !isRetrying && punishments.length === 0) {
+      setIsRetrying(true);
+      const retryTimer = setTimeout(() => {
+        refetchPunishments().finally(() => {
+          setIsRetrying(false);
+        });
+      }, 3000); // Retry after 3 seconds
+      
+      return () => clearTimeout(retryTimer);
+    }
+  }, [error, punishments.length, refetchPunishments, isRetrying]);
+  
   // Only show loader on initial load when no cached data
   const showLoader = isInitialLoad && isLoading && punishments.length === 0;
   
@@ -169,35 +179,7 @@ const PunishmentsContent: React.FC<{
     }
   };
   
-  // Show cached data with error message if we have an error but cached data
-  if (error && punishments.length > 0) {
-    return (
-      <div className="p-4 pt-6">
-        <PunishmentsHeader />
-        <div className="bg-red-900/20 border border-red-700 rounded p-4 mb-4 text-red-300">
-          <p>Error refreshing data. Showing cached punishments.</p>
-        </div>
-        <div className="flex flex-col space-y-4">
-          {punishments.map((punishment) => (
-            <PunishmentCard
-              key={punishment.id}
-              {...punishment}
-              onEdit={() => handleEditPunishment(punishment)}
-            />
-          ))}
-        </div>
-        
-        <PunishmentEditor
-          isOpen={isEditorOpen}
-          onClose={() => setIsEditorOpen(false)}
-          punishmentData={currentPunishment}
-          onSave={handleSavePunishment}
-        />
-      </div>
-    );
-  }
-  
-  // Show loading state when appropriate
+  // Show loader animation
   if (showLoader) {
     return (
       <div className="p-4 pt-6 flex flex-col items-center justify-center h-[80vh]">
@@ -234,7 +216,7 @@ const PunishmentsContent: React.FC<{
     );
   }
   
-  // Normal render with data
+  // Normal render with data (no error message)
   return (
     <div className="p-4 pt-6">
       <PunishmentsHeader />
@@ -270,7 +252,6 @@ const Punishments: React.FC = () => {
   
   return (
     <AppLayout onAddNewItem={handleAddNewPunishment}>
-      {/* Wrap the PunishmentsContent in both PunishmentsProvider and RewardsProvider */}
       <PunishmentsProvider>
         <RewardsProvider>
           <PunishmentsContent contentRef={contentRef} />

@@ -19,66 +19,106 @@ async function fetchPunishments(): Promise<PunishmentData[]> {
   const startTime = performance.now();
   console.log('[PunishmentsQuery] Fetching punishments from the server');
   
-  const { data, error } = await supabase
-    .from('punishments')
-    .select('*')
-    .order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error('Error fetching punishments:', error);
+  try {
+    // Implement timeout for the fetch operation
+    const fetchPromise = supabase
+      .from('punishments')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    // Create a timeout promise
+    const timeoutPromise = new Promise<{data: null, error: Error}>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Fetch punishments timed out after 15 seconds'));
+      }, 15000);
+    });
+    
+    // Race the fetch against the timeout
+    const { data, error } = await Promise.race([
+      fetchPromise,
+      timeoutPromise
+    ]) as any;
+    
+    if (error) {
+      console.error('Error fetching punishments:', error);
+      throw error;
+    }
+    
+    const punishments = data.map(punishment => ({
+      id: punishment.id,
+      title: punishment.title,
+      description: punishment.description,
+      points: punishment.points,
+      dom_points: punishment.dom_points,
+      background_image_url: punishment.background_image_url,
+      background_opacity: punishment.background_opacity,
+      focal_point_x: punishment.focal_point_x,
+      focal_point_y: punishment.focal_point_y,
+      icon_name: punishment.icon_name,
+      icon_color: punishment.icon_color,
+      title_color: punishment.title_color,
+      subtext_color: punishment.subtext_color,
+      calendar_color: punishment.calendar_color,
+      highlight_effect: punishment.highlight_effect,
+      background_images: punishment.background_images,
+      carousel_timer: punishment.carousel_timer,
+      created_at: punishment.created_at,
+      updated_at: punishment.updated_at
+    } as PunishmentData));
+    
+    // Save to IndexedDB
+    await savePunishmentsToDB(punishments);
+    
+    logQueryPerformance('PunishmentsQuery', startTime, punishments.length);
+    return punishments;
+  } catch (error) {
+    console.error('Error in fetchPunishments:', error);
+    // Re-throw the error after logging it
     throw error;
   }
-  
-  const punishments = data.map(punishment => ({
-    id: punishment.id,
-    title: punishment.title,
-    description: punishment.description,
-    points: punishment.points,
-    dom_points: punishment.dom_points,
-    background_image_url: punishment.background_image_url,
-    background_opacity: punishment.background_opacity,
-    focal_point_x: punishment.focal_point_x,
-    focal_point_y: punishment.focal_point_y,
-    icon_name: punishment.icon_name,
-    icon_color: punishment.icon_color,
-    title_color: punishment.title_color,
-    subtext_color: punishment.subtext_color,
-    calendar_color: punishment.calendar_color,
-    highlight_effect: punishment.highlight_effect,
-    background_images: punishment.background_images,
-    carousel_timer: punishment.carousel_timer,
-    created_at: punishment.created_at,
-    updated_at: punishment.updated_at
-  } as PunishmentData));
-  
-  // Save to IndexedDB
-  await savePunishmentsToDB(punishments);
-  
-  logQueryPerformance('PunishmentsQuery', startTime, punishments.length);
-  return punishments;
 }
 
 async function fetchPunishmentHistory(): Promise<PunishmentHistoryItem[]> {
   const startTime = performance.now();
   console.log('[PunishmentHistoryQuery] Fetching punishment history from the server');
   
-  const { data, error } = await supabase
-    .from('punishment_history')
-    .select('*')
-    .order('applied_date', { ascending: false });
-  
-  if (error) {
-    console.error('Error fetching punishment history:', error);
+  try {
+    // Implement timeout for the fetch operation
+    const fetchPromise = supabase
+      .from('punishment_history')
+      .select('*')
+      .order('applied_date', { ascending: false });
+      
+    // Create a timeout promise
+    const timeoutPromise = new Promise<{data: null, error: Error}>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Fetch punishment history timed out after 15 seconds'));
+      }, 15000);
+    });
+    
+    // Race the fetch against the timeout
+    const { data, error } = await Promise.race([
+      fetchPromise,
+      timeoutPromise
+    ]) as any;
+    
+    if (error) {
+      console.error('Error fetching punishment history:', error);
+      throw error;
+    }
+    
+    const history = data as PunishmentHistoryItem[];
+    
+    // Save to IndexedDB
+    await savePunishmentHistoryToDB(history);
+    
+    logQueryPerformance('PunishmentHistoryQuery', startTime, history.length);
+    return history;
+  } catch (error) {
+    console.error('Error in fetchPunishmentHistory:', error);
+    // Re-throw the error after logging it
     throw error;
   }
-  
-  const history = data as PunishmentHistoryItem[];
-  
-  // Save to IndexedDB
-  await savePunishmentHistoryToDB(history);
-  
-  logQueryPerformance('PunishmentHistoryQuery', startTime, history.length);
-  return history;
 }
 
 export function usePunishmentsQuery() {
@@ -109,7 +149,8 @@ export function usePunishmentsQuery() {
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     refetchOnReconnect: true,
-    retry: 1,
+    retry: 2,               // Increase retries to 2
+    retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000), // Exponential backoff with max 30s
     // Only use initialData once it has been loaded from IndexedDB
     initialData: initialData,
     enabled: !isLoadingInitial, // Don't run query until initial loading is done
@@ -152,7 +193,8 @@ export function usePunishmentHistoryQuery() {
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     refetchOnReconnect: true,
-    retry: 1,
+    retry: 2,               // Increase retries to 2
+    retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000), // Exponential backoff with max 30s
     // Only use initialData once it has been loaded from IndexedDB
     initialData: initialData,
     enabled: !isLoadingInitial, // Don't run query until initial loading is done

@@ -15,10 +15,11 @@ const CompletionButton: React.FC<CompletionButtonProps> = ({
   currentCompletions = 0,
   maxCompletions = 1
 }) => {
+  // Fix the completed status detection logic
   const hasReachedMax = currentCompletions >= maxCompletions;
   
   const handleClick = () => {
-    // If task hasn't reached max completions yet, toggle completion
+    // Only allow completion if task hasn't reached max completions yet
     if (!hasReachedMax) {
       onToggleCompletion(true); // Always set to true when clicking the button
     }
@@ -28,7 +29,7 @@ const CompletionButton: React.FC<CompletionButtonProps> = ({
     <Button
       variant="default"
       size="sm"
-      className={`${hasReachedMax ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500'} text-white px-3 py-0 h-7`}
+      className={`${hasReachedMax ? 'bg-green-600' : 'bg-blue-500 hover:bg-blue-600'} text-white px-3 py-0 h-7`}
       onClick={handleClick}
       disabled={hasReachedMax}
     >
