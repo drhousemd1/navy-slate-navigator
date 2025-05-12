@@ -372,9 +372,14 @@ export const useRewardsData = () => {
 
   // Mutation for buying a reward
   const buyRewardMutation = useMutation({
-    mutationFn: ({ rewardId, cost }: { rewardId: string, cost: number }) => 
-      buyRewardInDb(rewardId, cost),
-    onMutate: async ({ rewardId, cost }) => {
+    mutationFn: ({ rewardId, cost, currentSupply, profileId, currentPoints }: { 
+      rewardId: string, 
+      cost: number, 
+      currentSupply: number, 
+      profileId: string, 
+      currentPoints: number 
+    }) => buyRewardInDb(rewardId, cost, currentSupply, profileId, currentPoints),
+    onMutate: async ({ rewardId, cost, currentSupply, profileId, currentPoints }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
       await queryClient.cancelQueries({ queryKey: POINTS_QUERY_KEY });

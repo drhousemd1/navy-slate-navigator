@@ -134,9 +134,20 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         description: `You purchased ${reward.title}`,
       });
       
-      // Perform the actual API call with proper parameters
-      // Pass the isDomReward flag to ensure it updates the correct points and counts
-      await buyReward({ rewardId: id, cost, isDomReward: isRewardDominant });
+      // Get current user ID for database operations
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error("User not authenticated");
+      }
+      
+      // Perform the actual API call with all required parameters
+      await buyReward({
+        rewardId: id,
+        cost,
+        currentSupply: reward.supply,
+        profileId: userData.user.id,
+        currentPoints: currentPointsValue
+      });
     } catch (error) {
       console.error("Error in handleBuyReward:", error);
       
