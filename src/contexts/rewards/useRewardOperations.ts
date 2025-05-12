@@ -1,10 +1,11 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 import { toast } from '@/hooks/use-toast';
 import { Reward } from '@/lib/rewardUtils';
 import { supabase } from '@/integrations/supabase/client';
-import usePointsManagement from './usePointsManagement';
+import { usePointsManagement } from './usePointsManagement';
 import { fetchRewards, saveReward, deleteReward as deleteRewardUtil } from '@/lib/rewardUtils';
 import { useBuySubReward } from "@/data/mutations/useBuySubReward";
 import { useBuyDomReward } from "@/data/mutations/useBuyDomReward";
@@ -275,23 +276,22 @@ export default function useRewardOperations() {
       if (reward.is_dom_reward) {
         await redeemDom({
           rewardId: id,
-          profileId: userData.user.id
+          profileId: userData.user.id,
+          currentSupply: reward.supply
         });
       } else {
         await redeemSub({
           rewardId: id,
-          profileId: userData.user.id
+          profileId: userData.user.id,
+          currentSupply: reward.supply
         });
       }
       
       // Update the reward in local state if needed
       const updatedRewards = [...rewards];
-      const rewardIndex = updatedRewards.findIndex(r => r.id === id);
-      if (rewardIndex !== -1) {
-        // If we need to update any properties after using the reward
-        // updatedRewards[rewardIndex] = { ...updatedRewards[rewardIndex], someProperty: newValue };
-        setRewards(updatedRewards);
-      }
+      // If we need to update any properties after using the reward
+      // updatedRewards[rewardIndex] = { ...updatedRewards[rewardIndex], someProperty: newValue };
+      setRewards(updatedRewards);
       
       toast({
         title: 'Reward used!',
