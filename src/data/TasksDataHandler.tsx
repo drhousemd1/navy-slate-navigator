@@ -1,3 +1,4 @@
+
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -131,7 +132,12 @@ export const useTasksData = () => {
       };
       
       const savedTask = await createTaskMutation(processedTaskData);
-      return savedTask;
+      
+      // Fix: Ensure the returned task has the correct priority type
+      return {
+        ...savedTask,
+        priority: (savedTask.priority as 'low' | 'medium' | 'high') || 'medium'
+      };
     } catch (err: any) {
       console.error('Error saving task:', err);
       toast({
