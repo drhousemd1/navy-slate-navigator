@@ -8,7 +8,7 @@ interface RewardsListProps {
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
-  const { rewards, isLoading, handleBuyReward, handleUseReward } = useRewards();
+  const { rewards, isLoading } = useRewards();
   
   if (isLoading) {
     return (
@@ -59,8 +59,8 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           title_color={reward.title_color}
           subtext_color={reward.subtext_color}
           calendar_color={reward.calendar_color}
-          onBuy={() => reward.id && handleBuyReward(reward.id, reward.cost, reward.is_dom_reward)}
-          onUse={() => reward.id && handleUseReward(reward.id)}
+          onBuy={(cost) => reward.id && reward.id}
+          onUse={() => reward.id && reward.id}
           onEdit={() => onEdit(index)}
         />
       ))}

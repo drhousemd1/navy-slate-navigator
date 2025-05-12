@@ -37,8 +37,18 @@ export function useRedeemSubReward() {
       return { rewardId, newSupply: currentSupply - 1 };
     },
 
-    onSuccess: async ({ rewardId }) => {
+    onSuccess: async ({ rewardId, newSupply }) => {
       await syncCardById(rewardId, "rewards");
+
+      const list = (queryClient.getQueryData<any[]>(["rewards"]) || []).map(r =>
+        r.id === rewardId ? { ...r, supply: newSupply } : r
+      );
+      queryClient.setQueryData(["rewards"], list);
+
+      const subSupply = list.filter(r => !r.is_dom_reward).reduce((n, r) => n + r.supply, 0);
+      const domSupply = list.filter(r => r.is_dom_reward).reduce((n, r) => n + r.supply, 0);
+      queryClient.setQueryData(["totalRewardsSupply"], subSupply);
+      queryClient.setQueryData(["totalDomRewardsSupply"], domSupply);
     }
   });
 }
