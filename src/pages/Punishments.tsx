@@ -19,6 +19,7 @@ import { queryClient } from '@/data/queryClient';
 import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; // Fixed case sensitivity
 import { toast } from '@/hooks/use-toast';
 import { RewardsProvider } from '@/contexts/RewardsContext'; // Import RewardsProvider
+import { PunishmentsProvider } from '@/contexts/PunishmentsContext'; // Import PunishmentsProvider
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -269,10 +270,12 @@ const Punishments: React.FC = () => {
   
   return (
     <AppLayout onAddNewItem={handleAddNewPunishment}>
-      {/* Wrap the PunishmentsContent in the RewardsProvider */}
-      <RewardsProvider>
-        <PunishmentsContent contentRef={contentRef} />
-      </RewardsProvider>
+      {/* Wrap the PunishmentsContent in both PunishmentsProvider and RewardsProvider */}
+      <PunishmentsProvider>
+        <RewardsProvider>
+          <PunishmentsContent contentRef={contentRef} />
+        </RewardsProvider>
+      </PunishmentsProvider>
     </AppLayout>
   );
 };
