@@ -1,7 +1,10 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useBuySubReward } from "@/data/mutations/useBuySubReward";
+import { useBuyDomReward } from "@/data/mutations/useBuyDomReward";
+import { useRedeemSubReward } from "@/data/mutations/useRedeemSubReward";
+import { useRedeemDomReward } from "@/data/mutations/useRedeemDomReward";
 
 // Keys for our queries
 const REWARDS_QUERY_KEY = ['rewards'];
@@ -166,99 +169,28 @@ const deleteRewardFromDb = async (rewardId: string): Promise<boolean> => {
   return true;
 };
 
-// Buy a reward with user points
+// Buy a reward with user points - now a wrapper for the new hook
 const buyRewardInDb = async (rewardId: string, cost: number): Promise<{ success: boolean, newPoints: number }> => {
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData.user?.id;
-  
-  if (!userId) {
-    throw new Error('User is not logged in');
-  }
-  
-  // First, check user points
-  const { data: userPoints, error: pointsError } = await supabase
-    .from('profiles')
-    .select('points')
-    .eq('id', userId)
-    .single();
-  
-  if (pointsError) {
-    console.error('Error fetching user points:', pointsError);
-    throw pointsError;
-  }
-  
-  if (!userPoints || userPoints.points < cost) {
-    throw new Error('Not enough points to buy this reward');
-  }
-  
-  // Then, check if reward is available
-  const { data: reward, error: rewardError } = await supabase
-    .from('rewards')
-    .select('supply')
-    .eq('id', rewardId)
-    .single();
-  
-  if (rewardError) {
-    console.error('Error fetching reward:', rewardError);
-    throw rewardError;
-  }
-  
-  if (reward.supply <= 0) {
-    throw new Error('Reward is out of stock');
-  }
-  
-  // Start a transaction by updating both tables
-  // First, deduct points
-  const newPoints = userPoints.points - cost;
-  const { error: updatePointsError } = await supabase
-    .from('profiles')
-    .update({ points: newPoints })
-    .eq('id', userId);
-  
-  if (updatePointsError) {
-    console.error('Error updating points:', updatePointsError);
-    throw updatePointsError;
-  }
-  
-  // Then, decrement reward supply
-  const { error: updateSupplyError } = await supabase
-    .from('rewards')
-    .update({ 
-      supply: reward.supply - 1,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', rewardId);
-  
-  if (updateSupplyError) {
-    console.error('Error updating reward supply:', updateSupplyError);
-    // Try to revert the points update on error
-    await supabase
-      .from('profiles')
-      .update({ points: userPoints.points })
-      .eq('id', userId);
-    throw updateSupplyError;
-  }
-  
-  // Record usage
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
-  
-  const { error: usageError } = await supabase
-    .from('reward_usage')
-    .insert({
-      reward_id: rewardId,
-      day_of_week: dayOfWeek,
-      used: true,
-      week_number: weekNumber
-    });
-  
-  if (usageError) {
-    console.error('Error recording reward usage:', usageError);
-    // Continue despite usage recording error
-  }
-  
-  return { success: true, newPoints };
+  const { mutateAsync } = useBuySubReward();
+  return mutateAsync({ rewardId, cost, currentSupply: 0, profileId: "", currentPoints: 0 });
+};
+
+// Buy a dom reward with dom points
+const buyDomRewardInDb = async (rewardId: string, cost: number): Promise<{ success: boolean, newPoints: number }> => {
+  const { mutateAsync } = useBuyDomReward();
+  return mutateAsync({ rewardId, cost, currentSupply: 0, profileId: "", currentDomPoints: 0 });
+};
+
+// Use a reward - now a wrapper for the new hook
+const redeemRewardInDb = async (rewardId: string): Promise<boolean> => {
+  const { mutateAsync } = useRedeemSubReward();
+  return mutateAsync({ rewardId, currentSupply: 0, profileId: "" });
+};
+
+// Use a dom reward
+const redeemDomRewardInDb = async (rewardId: string): Promise<boolean> => {
+  const { mutateAsync } = useRedeemDomReward();
+  return mutateAsync({ rewardId, currentSupply: 0, profileId: "" });
 };
 
 // The main hook to expose all reward-related operations
