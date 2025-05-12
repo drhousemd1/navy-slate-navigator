@@ -43,10 +43,13 @@ export const usePointsManagement = () => {
         throw error;
       }
       
-      // Update the cache
+      // Update the cache - Fix: Use proper type handling for old value
       queryClient.setQueryData(
         ["profile_points"], 
-        old => ({ ...old, points })
+        (old: any) => {
+          // Check if old exists and is an object before spreading
+          return old ? { ...old, points } : { points, dom_points: 0 };
+        }
       );
       
       return true;
@@ -71,10 +74,13 @@ export const usePointsManagement = () => {
         throw error;
       }
       
-      // Update the cache
+      // Update the cache - Fix: Use proper type handling for old value
       queryClient.setQueryData(
         ["profile_points"], 
-        old => ({ ...old, dom_points: points })
+        (old: any) => {
+          // Check if old exists and is an object before spreading
+          return old ? { ...old, dom_points: points } : { points: 0, dom_points: points };
+        }
       );
       
       return true;
