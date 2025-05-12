@@ -47,7 +47,9 @@ export function useRules() {
     // Fix: Remove the async function and use undefined instead
     initialData: undefined,
     staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
     gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
-    refetchOnWindowFocus: false
   });
 }
