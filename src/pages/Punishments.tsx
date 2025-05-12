@@ -11,8 +11,12 @@ import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { queryClient } from '@/data/queryClient';
-import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; // Fixed case sensitivity
+import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
+import { usePreloadPunishments } from "@/data/preload/usePreloadPunishments";
+
+// Preload punishments data from IndexedDB before component renders
+await usePreloadPunishments();
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>

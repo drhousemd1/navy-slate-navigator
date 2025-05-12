@@ -11,6 +11,10 @@ import RewardEditor from '../components/RewardEditor';
 import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import { useSyncManager } from '@/data/sync/useSyncManager';
+import { usePreloadRewards } from "@/data/preload/usePreloadRewards";
+
+// Preload rewards data from IndexedDB before component renders
+await usePreloadRewards();
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
