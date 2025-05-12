@@ -134,15 +134,13 @@ export function useCompleteTask() {
         description: `Task ${action} successfully`
       });
     },
-    meta: {
-      onError: (error: any) => {
-        console.error('Error in useCompleteTask:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to update task completion status',
-          variant: 'destructive'
-        });
-      }
+    onError: (error: any) => {
+      console.error('Error in useCompleteTask:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update task completion status',
+        variant: 'destructive'
+      });
     }
   });
 }

@@ -130,6 +130,7 @@ export function useRewardsQuery() {
     loadInitialData();
   }, []);
   
+  // Use updated React Query v5 error handling pattern
   const query = useQuery({
     queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
@@ -142,33 +143,29 @@ export function useRewardsQuery() {
     // Only use initialData once it has been loaded from IndexedDB
     initialData: initialData,
     enabled: !isLoadingInitial, // Don't run query until initial loading is done
-    meta: {
-      errorHandler: (error: any) => {
-        console.error('[RewardsQuery] Error in React Query:', error);
-        // Only show error toast if there's no cached data
-        if (!initialData?.length) {
-          toast({
-            title: "Error loading rewards",
-            description: "Could not fetch the latest rewards. " + 
-              (error?.message?.includes("timeout") 
-                ? "The server is taking too long to respond."
-                : "Please try again later."),
-            variant: "destructive"
-          });
-        } else {
-          // Silent toast if we have cached data
-          console.log('[RewardsQuery] Using cached data due to fetch error');
-        }
-      }
-    }
   });
   
-  // Add error handling in the component itself instead of in the query options
+  // Handle errors outside of the query options
   useEffect(() => {
-    if (query.error && query.meta?.errorHandler) {
-      (query.meta.errorHandler as Function)(query.error);
+    if (query.error) {
+      console.error('[RewardsQuery] Error in React Query:', query.error);
+      
+      // Only show error toast if there's no cached data
+      if (!initialData?.length) {
+        toast({
+          title: "Error loading rewards",
+          description: "Could not fetch the latest rewards. " + 
+            (query.error?.message?.includes("timeout") 
+              ? "The server is taking too long to respond."
+              : "Please try again later."),
+          variant: "destructive"
+        });
+      } else {
+        // Silent toast if we have cached data
+        console.log('[RewardsQuery] Using cached data due to fetch error');
+      }
     }
-  }, [query.error, query.meta]);
+  }, [query.error, initialData?.length]);
   
   return {
     ...query,

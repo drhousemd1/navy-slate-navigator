@@ -10,7 +10,7 @@ import CompletionCounter from './task/CompletionCounter';
 import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
 import HighlightedText from './task/HighlightedText';
-import { getCurrentDayOfWeek } from '@/lib/taskUtils';
+import { getMondayBasedDay } from '@/lib/utils';
 
 interface TaskCardProps {
   title: string;
@@ -61,7 +61,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   icon_color = '#9b87f5'
 }) => {
   // Get the current day of week index (0-6, Monday is 0)
-  const currentDayOfWeek = getCurrentDayOfWeek();
+  const currentDayOfWeek = getMondayBasedDay();
   
   // Get the number of completions for today
   // Ensure the usage_data array is valid and has the current day's data
