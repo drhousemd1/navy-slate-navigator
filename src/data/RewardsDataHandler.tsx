@@ -4,7 +4,7 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +12,7 @@ import { useBuySubReward } from "@/data/mutations/useBuySubReward";
 import { useBuyDomReward } from "@/data/mutations/useBuyDomReward";
 import { useRedeemSubReward } from "@/data/mutations/useRedeemSubReward";
 import { useRedeemDomReward } from "@/data/mutations/useRedeemDomReward";
+import { queryClient } from "../data/queryClient";
 
 // Keys for our queries
 const REWARDS_QUERY_KEY = ['rewards'];
@@ -137,6 +138,7 @@ const fetchTotalDomRewardsSupply = async (): Promise<number> => {
 export const useRewardsData = () => {
   const { user } = useAuth();
   const profileId = user?.id;
+  const useQueryClient = () => queryClient; // Helper to match the expected pattern
   
   // Use the new mutation hooks
   const { mutateAsync: buySubReward } = useBuySubReward();
@@ -343,15 +345,15 @@ export const useRewardsData = () => {
       saveRewardToDb(rewardData, currentIndex),
     onMutate: async ({ rewardData, currentIndex }) => {
       // Cancel any outgoing refetches
-      await queryClientHook.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
       
       // Snapshot the previous value
-      const previousRewards = queryClientHook.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
       
       // Optimistically update the cache with the new reward
       if (rewardData.id) {
         // Updating existing reward
-        queryClientHook.setQueryData<Reward[]>(
+        queryClient.setQueryData<Reward[]>(
           REWARDS_QUERY_KEY, 
           previousRewards.map(r => 
             r.id === rewardData.id 
@@ -383,7 +385,7 @@ export const useRewardsData = () => {
           updated_at: new Date().toISOString()
         };
         
-        queryClientHook.setQueryData<Reward[]>(
+        queryClient.setQueryData<Reward[]>(
           REWARDS_QUERY_KEY, 
           [optimisticReward, ...previousRewards]
         );
@@ -401,14 +403,14 @@ export const useRewardsData = () => {
       
       // Rollback to the previous state
       if (context) {
-        queryClientHook.setQueryData(REWARDS_QUERY_KEY, context.previousRewards);
+        queryClient.setQueryData(REWARDS_QUERY_KEY, context.previousRewards);
       }
     },
     onSettled: () => {
       // Always refetch after error or success to synchronize with server state
-      queryClientHook.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      queryClientHook.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
-      queryClientHook.invalidateQueries({ queryKey: DOM_REWARDS_SUPPLY_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: DOM_REWARDS_SUPPLY_QUERY_KEY });
     }
   });
 
@@ -416,13 +418,13 @@ export const useRewardsData = () => {
     mutationFn: deleteRewardFromDb,
     onMutate: async (rewardId) => {
       // Cancel any outgoing refetches
-      await queryClientHook.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
       
       // Snapshot the previous value
-      const previousRewards = queryClientHook.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
       
       // Optimistically update the cache by removing the deleted reward
-      queryClientHook.setQueryData<Reward[]>(
+      queryClient.setQueryData<Reward[]>(
         REWARDS_QUERY_KEY, 
         previousRewards.filter(r => r.id !== rewardId)
       );
@@ -439,28 +441,28 @@ export const useRewardsData = () => {
       
       // Rollback to the previous state
       if (context) {
-        queryClientHook.setQueryData(REWARDS_QUERY_KEY, context.previousRewards);
+        queryClient.setQueryData(REWARDS_QUERY_KEY, context.previousRewards);
       }
     },
     onSettled: () => {
       // Always refetch after error or success to synchronize with server state
-      queryClientHook.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      queryClientHook.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
-      queryClientHook.invalidateQueries({ queryKey: DOM_REWARDS_SUPPLY_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: DOM_REWARDS_SUPPLY_QUERY_KEY });
     }
   });
 
   // For optimistic UI updates
   const setRewardsOptimistically = (updatedRewards: Reward[]) => {
-    queryClientHook.setQueryData(REWARDS_QUERY_KEY, updatedRewards);
+    queryClient.setQueryData(REWARDS_QUERY_KEY, updatedRewards);
   };
   
   const setPointsOptimistically = (points: number) => {
-    queryClientHook.setQueryData(POINTS_QUERY_KEY, points);
+    queryClient.setQueryData(POINTS_QUERY_KEY, points);
   };
   
   const setDomPointsOptimistically = (points: number) => {
-    queryClientHook.setQueryData(DOM_POINTS_QUERY_KEY, points);
+    queryClient.setQueryData(DOM_POINTS_QUERY_KEY, points);
   };
 
   return {
