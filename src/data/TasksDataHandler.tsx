@@ -1,4 +1,10 @@
 
+/**
+ * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
+ * No query, mutation, or sync logic is allowed in components or page files.
+ * All logic must use these shared, optimized hooks and utilities only.
+ */
+
 import { useQuery, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
@@ -117,7 +123,14 @@ export const useTasksData = () => {
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
-      const savedTask = await createTaskMutation(taskData);
+      // Fix the task priority type to ensure it's one of the allowed values
+      const processedTaskData = {
+        ...taskData,
+        // Ensure priority is one of the allowed types
+        priority: (taskData.priority || 'medium') as 'low' | 'medium' | 'high'
+      };
+      
+      const savedTask = await createTaskMutation(processedTaskData);
       return savedTask;
     } catch (err: any) {
       console.error('Error saving task:', err);
@@ -162,8 +175,15 @@ export const useTasksData = () => {
   const toggleTaskCompletion = async (taskId: string, completed: boolean): Promise<boolean> => {
     try {
       if (completed) {
-        // Only use the completion mutation when marking as completed
-        await completeTaskMutation(taskId);
+        // Fix: pass an object with taskId and updates properties as required by the completeTaskMutation
+        await completeTaskMutation({
+          taskId,
+          updates: {
+            completed: true,
+            last_completed_date: getLocalDateString(),
+            updated_at: new Date().toISOString()
+          }
+        });
       } else {
         // For unmarking as complete, we can use a simple update
         await supabase
