@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -248,8 +249,7 @@ export const useRewardsData = () => {
         };
         
         await updateReward({ rewardId: rewardData.id, updates });
-        const updatedReward = await syncCardById(rewardData.id, "rewards");
-        return updatedReward;
+        return await queryClient.fetchQuery(["rewards", rewardData.id]);
       } else {
         // Create new reward
         const newReward = {

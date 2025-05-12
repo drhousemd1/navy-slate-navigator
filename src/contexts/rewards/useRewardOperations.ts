@@ -21,6 +21,11 @@ export const useRewardOperations = () => {
     refreshPointsFromDatabase 
   } = usePointsManagement();
   
+  const { mutateAsync: buySub } = useBuySubReward();
+  const { mutateAsync: buyDom } = useBuyDomReward();
+  const { mutateAsync: redeemSub } = useRedeemSubReward();
+  const { mutateAsync: redeemDom } = useRedeemDomReward();
+  
   const { 
     data: fetchedRewards = [], 
     isLoading,
@@ -280,11 +285,11 @@ export const useRewardOperations = () => {
       
       // Update the reward list optimistically
       const updatedRewards = [...rewards];
-      const rewardIndex = updatedRewards.findIndex(r => r.id === rewardId);
-      if (rewardIndex !== -1) {
-        updatedRewards[rewardIndex] = { 
-          ...updatedRewards[rewardIndex], 
-          supply: updatedRewards[rewardIndex].supply + 1 
+      const updatedRewardIndex = updatedRewards.findIndex(r => r.id === rewardId);
+      if (updatedRewardIndex !== -1) {
+        updatedRewards[updatedRewardIndex] = { 
+          ...updatedRewards[updatedRewardIndex], 
+          supply: updatedRewards[updatedRewardIndex].supply + 1 
         };
         setRewards(updatedRewards);
       }
@@ -302,7 +307,7 @@ export const useRewardOperations = () => {
         variant: "destructive",
       });
     }
-  }, [rewards, totalPoints, domPoints, setTotalPoints, setDomPoints, buySub, buyDom]);
+  }, [rewards, totalPoints, domPoints, setTotalPoints, setDomPoints, buyDom, buySub]);
 
   const handleUseReward = useCallback(async (id: string) => {
     console.log("Handling use reward with ID:", id);
@@ -334,14 +339,11 @@ export const useRewardOperations = () => {
       
       // Update the reward list optimistically
       const updatedRewards = [...rewards];
-      const rewardIndex = updatedRewards.findIndex(r => r.id === id);
-      if (rewardIndex !== -1) {
-        updatedRewards[rewardIndex] = { 
-          ...updatedRewards[rewardIndex], 
-          supply: Math.max(0, updatedRewards[rewardIndex].supply - 1) 
-        };
-        setRewards(updatedRewards);
-      }
+      updatedRewards[rewardIndex] = { 
+        ...updatedRewards[rewardIndex], 
+        supply: Math.max(0, updatedRewards[rewardIndex].supply - 1) 
+      };
+      setRewards(updatedRewards);
       
       // Show toast for immediate feedback
       toast({
@@ -375,7 +377,7 @@ export const useRewardOperations = () => {
         variant: "destructive",
       });
     }
-  }, [rewards, refetchRewards, redeemSub, redeemDom]);
+  }, [rewards, refetchRewards, redeemDom, redeemSub]);
 
   
   return {

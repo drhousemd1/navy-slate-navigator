@@ -30,19 +30,29 @@ export function useRewards() {
       }
 
       if (!shouldFetch && localData) {
-        return localData;
+        return localData.map(row => ({
+          ...row,
+          is_dom_reward: row.is_dominant // Add this property
+        }));
       }
 
       const { data, error } = await supabase.from("rewards").select("*");
       if (error) throw error;
 
       if (data) {
-        await saveRewardsToDB(data);
+        const processedData = data.map(row => ({
+          ...row,
+          is_dom_reward: row.is_dominant // Add this property
+        }));
+        await saveRewardsToDB(processedData);
         await setLastSyncTimeForRewards(new Date().toISOString());
-        return data;
+        return processedData;
       }
 
-      return localData;
+      return localData ? localData.map(row => ({
+        ...row,
+        is_dom_reward: row.is_dominant // Add this property
+      })) : [];
     },
     // Fix: Remove the async function and use undefined instead
     initialData: undefined,
