@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
-import { useRewardsData } from '@/data/RewardsDataHandler';
+import { useRewardsData } from '@/data/rewards/useRewardsData';
 import { Reward } from '@/lib/rewardUtils';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -91,7 +91,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log("RewardsContext - handleSaveReward called with data:", rewardData);
     console.log("is_dom_reward value in handleSaveReward:", rewardData.is_dom_reward);
     
-    const result = await saveReward(rewardData, index);
+    const result = await saveReward({ rewardData, currentIndex: index });
     return result?.id || null;
   };
 
@@ -102,9 +102,9 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return true;
   };
 
-  const handleBuyReward = async (rewardId: string, cost: number, isDomReward?: boolean) => {
+  const handleBuyReward = async (id: string, cost: number, isDomReward?: boolean) => {
     // Find the reward to check if it's a dom reward
-    const reward = rewards.find(r => r.id === rewardId);
+    const reward = rewards.find(r => r.id === id);
     if (!reward) {
       toast({
         title: "Error",
@@ -117,7 +117,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Override with the explicit parameter if provided
     const isRewardDominant = isDomReward !== undefined ? isDomReward : (reward?.is_dom_reward || false);
     
-    console.log("Buying reward with id:", rewardId, "cost:", cost, "isDomReward:", isRewardDominant);
+    console.log("Buying reward with id:", id, "cost:", cost, "isDomReward:", isRewardDominant);
     
     // Check if we have enough points
     const currentPointsValue = isRewardDominant ? domPoints : totalPoints;
@@ -131,9 +131,9 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     try {
-      // Call the buyReward function from useRewardsData
+      // Call the new buyReward function from useRewardsData
       await buyReward({ 
-        rewardId, 
+        rewardId: id, 
         cost, 
         isDomReward: isRewardDominant 
       });
@@ -152,8 +152,8 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const handleUseReward = async (rewardId: string) => {
-    const reward = rewards.find(r => r.id === rewardId);
+  const handleUseReward = async (id: string) => {
+    const reward = rewards.find(r => r.id === id);
     if (!reward) {
       toast({
         title: "Error",
@@ -173,17 +173,27 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     try {
-      // Call the new useReward function from useRewardsData
-      await useReward(rewardId);
+      // Optimistic update for immediate UI feedback
+      const updatedRewards = rewards.map(r => {
+        if (r.id === id) {
+          return { ...r, supply: Math.max(0, r.supply - 1) };
+        }
+        return r;
+      });
+      setRewardsOptimistically(updatedRewards);
       
+      // Show toast for immediate feedback
       toast({
         title: "Reward Used",
         description: `You used ${reward.title}`,
       });
+      
+      // Call the new useReward function from useRewardsData
+      await useReward(id);
     } catch (error) {
       console.error("Error in handleUseReward:", error);
       
-      // Refresh data on error
+      // Revert optimistic updates on error
       refetchRewards();
       
       toast({

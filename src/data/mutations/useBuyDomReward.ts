@@ -39,12 +39,8 @@ export function useBuyDomReward() {
 
     onSuccess: async ({ rewardId, newDomPoints }) => {
       const prev = queryClient.getQueryData<{points: number, dom_points: number}>(["profile_points"]) || { points: 0, dom_points: 0 };
-      // Update both the generic profile_points cache key and the reward-specific keys
-      await updateProfilePoints(prev.points, newDomPoints);
-      await queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      await queryClient.invalidateQueries({ queryKey: ['rewards', 'dom_points'] });
-      await queryClient.invalidateQueries({ queryKey: ['totalDomRewardsSupply'] });
       await syncCardById(rewardId, "rewards");
+      await updateProfilePoints(prev.points, newDomPoints);
     }
   });
 }

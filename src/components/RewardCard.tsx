@@ -14,8 +14,8 @@ interface RewardCardProps {
   isDomReward?: boolean;
   iconName?: string;
   iconColor?: string;
-  onBuy: () => void;
-  onUse: () => void;
+  onBuy?: (cost: number) => void;
+  onUse?: () => void;
   onEdit?: () => void;
   backgroundImage?: string | null;
   backgroundOpacity?: number;
@@ -52,9 +52,9 @@ const RewardCard: React.FC<RewardCardProps> = ({
 }) => {
   const { toast } = useToast();
 
-  const handleBuy = () => {
+  const handleBuy = (cost: number) => {
     if (onBuy) {
-      onBuy();
+      onBuy(cost);
     }
   };
 
