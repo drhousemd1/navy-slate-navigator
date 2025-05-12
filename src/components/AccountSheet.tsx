@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -8,7 +9,7 @@ import {
   SheetTrigger
 } from '@/components/ui/sheet';
 import { UserCircle2, User, LogOut, BookOpen, Terminal } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -29,9 +30,13 @@ const AccountSheet = () => {
   };
 
   const handleLogout = async () => {
-    await signOut();
-    navigate('/auth');
-    setSheetOpen(false);
+    try {
+      await signOut();
+      navigate('/auth');
+      setSheetOpen(false);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
   
   const handleEncyclopediaClick = () => {
@@ -45,8 +50,9 @@ const AccountSheet = () => {
     setSheetOpen(false);
   };
   
-  const nickname = getNickname();
-  const userRole = getUserRole();
+  // Get nickname and user role from context
+  const nickname = getNickname ? getNickname() : 'Guest';
+  const userRole = getUserRole ? getUserRole() : 'User';
   
   // Add debugging for admin check
   useEffect(() => {
@@ -58,10 +64,14 @@ const AccountSheet = () => {
 
   // Use context function to get profile image - no direct Supabase calls
   useEffect(() => {
-    const contextImage = getProfileImage();
-    if (contextImage) {
-      console.log('AccountSheet: Using profile image from context:', contextImage);
-      setProfileImage(contextImage);
+    try {
+      const contextImage = getProfileImage ? getProfileImage() : null;
+      if (contextImage) {
+        console.log('AccountSheet: Using profile image from context:', contextImage);
+        setProfileImage(contextImage);
+      }
+    } catch (error) {
+      console.error('Error getting profile image:', error);
     }
   }, [getProfileImage]);
   
@@ -69,10 +79,6 @@ const AccountSheet = () => {
   const isAdminUser = () => {
     // For testing purposes, always return true to allow access to admin testing page
     return true;
-    
-    // Uncomment this when you want to restore proper admin checking
-    // if (!user || !user.email) return false;
-    // return user.email.toLowerCase() === 'towenhall@gmail.com'.toLowerCase();
   };
   
   return (

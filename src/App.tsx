@@ -13,27 +13,15 @@ import AdminTesting from './pages/AdminTesting';
 import Encyclopedia from './pages/Encyclopedia';
 import Messages from './pages/Messages';
 import Profile from './pages/Profile';
+import ThroneRoom from './pages/ThroneRoom';
+import Auth from './pages/auth';
 
-// Create a simple Dashboard component since it doesn't exist
-const Dashboard = () => (
-  <div className="container mx-auto px-4 py-8">
-    <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
-    <p>Welcome to your kingdom dashboard!</p>
-  </div>
-);
+// Create a simple Dashboard component that redirects to ThroneRoom
+import { Navigate } from 'react-router-dom';
+const Dashboard = () => <Navigate to="/throne-room" replace />;
 
-// Create a simple Login component since it doesn't exist
-const Login = () => (
-  <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-[80vh]">
-    <h1 className="text-2xl font-bold mb-6">Login</h1>
-    <div className="w-full max-w-md p-6 bg-gray-800 rounded-lg shadow-md">
-      <p className="text-center mb-4">Please log in to continue</p>
-      <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">
-        Log In
-      </button>
-    </div>
-  </div>
-);
+// Create a simple Login component that redirects to Auth page
+const Login = () => <Navigate to="/auth" replace />;
 
 function App() {
   // Clear old cache versions when app loads
@@ -58,7 +46,8 @@ function App() {
       <Route path="/messages" element={<Messages />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/throne-room" element={<Dashboard />} />
+      <Route path="/throne-room" element={<ThroneRoom />} />
+      <Route path="/auth" element={<Auth />} />
     </Routes>
   );
 }
