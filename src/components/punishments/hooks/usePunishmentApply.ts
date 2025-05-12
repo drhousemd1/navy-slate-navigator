@@ -5,7 +5,6 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries';
-import { PunishmentData } from '@/contexts/punishments/types';
 
 interface UsePunishmentApplyProps {
   id?: string;
@@ -29,15 +28,11 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
     }
     
     try {
-      // Create a simplified punishment object with just the needed properties
-      const punishment: PunishmentData = {
-        id: id,
-        points: Math.abs(points), 
-        title: 'Apply Punishment' // Add required title property
-      };
-      
       // Apply the punishment which deducts points from the submissive user
-      await applyPunishment(punishment);
+      await applyPunishment({
+        id: id,
+        points: Math.abs(points) // Ensure points is positive (will be negated in the backend)
+      });
       
       // Award dom points to the dom user
       // Use the explicit dom_points value if provided, otherwise calculate it
@@ -63,13 +58,7 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
           queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, newDomPoints);
           
           // Then update the database
-          await supabase
-            .from('profiles')
-            .update({ dom_points: newDomPoints })
-            .eq('id', user.id);
-            
-          // Update local state
-          setDomPoints(newDomPoints);
+          await setDomPoints(newDomPoints);
         }
       }
       

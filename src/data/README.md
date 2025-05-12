@@ -1,53 +1,77 @@
 
-# Centralized Data Architecture
+# Data Management System
 
-This folder contains the central data management logic for the application. The main goal of this architecture is to ensure that:
+## Purpose
+This folder contains the centralized data management system that handles all interactions with remote and local data stores. It's designed to provide consistent query and mutation patterns, minimize network requests, and maintain a responsive UI with local caching.
 
-1. All query and mutation logic lives in shared files inside `/src/data/`
-2. Pages and components may NOT use useQuery, useMutation, queryClient, or Supabase directly
-3. Each user action (complete, create, buy, redeem, reorder) uses a named mutation hook
-4. The centralized sync manager updates ONLY the touched card (not all cards)
-5. A local cache using IndexedDB ensures pages load instantly
-6. Query hooks use initialData from IndexedDB
-7. Pages are never stuck in a loading state due to live fetches
+## Architecture
+The data system is structured into these key areas:
 
-## Directory Structure
+### `/queries`
+Contains React Query hooks for fetching and caching data from Supabase and local storage.
+- Each hook follows the pattern `use[EntityName]` (e.g., `useTasks`, `useRules`)
+- Queries automatically integrate with IndexedDB for offline support
 
-- `/queries/`: Contains all query hooks that fetch data from the server
-- `/mutations/`: Contains all mutation hooks that make changes to the server
-- `/sync/`: Contains logic for syncing data between the client and server
-- `/indexedDB/`: Contains logic for caching data locally
-- `/hooks/`: Contains high-level data hooks that pages/components should use
+### `/mutations`
+Contains mutation hooks for updating data, both locally and remotely.
+- Each hook follows the pattern `use[Operation][EntityName]` (e.g., `useCompleteTask`, `useCreateRule`)
+- Mutations update the UI immediately via optimistic updates
+- They sync with the backend without requiring full refetches
+
+### `/indexedDB`
+Provides local storage capabilities using localforage.
+- Implements save and load functions for each entity type
+- Ensures data is available even when offline
+- Acts as a performance accelerator for faster initial page loads
+
+### `/sync`
+Manages intelligent synchronization between client and server.
+- The `useSyncManager` hook provides controlled synchronization
+- `syncCardById` enables targeting specific items for sync rather than entire tables
+- Helps minimize unnecessary network requests
 
 ## Usage Guidelines
 
-### DO NOT:
-- Import useQuery or useMutation directly in components or pages
-- Make direct Supabase calls outside of this folder
-- Manage cache manually outside of these hooks
-- Show loading states when data can be loaded from cache
+### For Fetching Data
+```typescript
+// ✅ Correct pattern
+import { useTasks } from '@/data/queries/useTasks';
 
-### DO:
-- Import hooks from this folder like `useTasksData()` in your components/pages
-- Use the provided mutation functions like `saveTask()`, `buyReward()`, etc.
-- Let the central hooks handle caching, syncing, and error handling
+function TasksPage() {
+  const { tasks, isLoading, error } = useTasks();
+  // Use tasks data in the UI...
+}
+```
 
-## Adding New Features
+### For Updating Data
+```typescript
+// ✅ Correct pattern
+import { useCompleteTask } from '@/data/mutations/useCompleteTask';
 
-When adding a new domain/entity:
+function TaskItem({ task }) {
+  const completeTask = useCompleteTask();
+  
+  const handleComplete = async () => {
+    await completeTask.mutateAsync(task.id);
+    // UI is already updated optimistically, no refetch needed
+  };
+}
+```
 
-1. Create a query hook in `/queries/` to fetch data
-2. Create mutation hooks in `/mutations/` for each action (create, update, delete, etc.)
-3. Create a data hook in `/hooks/` that uses the query and mutation hooks
-4. Export the data hook from `index.ts`
-5. Add cache functions in `/indexedDB/useIndexedDB.ts`
+### Prohibited Patterns
+```typescript
+// ❌ DO NOT DO THIS - Don't use useQuery or useMutation directly in components
+// Don't access Supabase directly in components
+// Don't implement your own IndexedDB logic outside this folder
+```
 
-## Components and Pages
+## Adding New Data Domains
 
-Components and pages should:
-- Import only the matching hook (e.g., `useTasksData()`)
-- Use the data and functions provided by the hook
-- Never implement data fetch/mutation logic themselves
-- Show placeholder content from cache while data loads
+To add a new data domain (e.g., Journals):
 
-This architecture ensures consistent, maintainable data management across the application.
+1. Add query hook in `/queries/useJournals.ts`
+2. Add corresponding IndexedDB functions in `/indexedDB/useIndexedDB.ts`
+3. Add mutation hooks in `/mutations/useCreateJournal.ts`, etc.
+4. Update the sync manager to include the new domain
+
+Follow the existing patterns closely to maintain consistency.

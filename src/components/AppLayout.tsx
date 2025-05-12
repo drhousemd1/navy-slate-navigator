@@ -1,11 +1,10 @@
-
 import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Plus, MessageSquare } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { useAuth } from '@/contexts/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import AccountSheet from './AccountSheet';
 
 interface AppLayoutProps {
@@ -41,14 +40,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 
   // Get profile image from context - no direct Supabase calls
   useEffect(() => {
-    try {
-      const contextImage = getProfileImage();
-      if (contextImage) {
-        console.log('Using profile image from context:', contextImage);
-        setProfileImage(contextImage);
-      }
-    } catch (err) {
-      console.error('Error getting profile image:', err);
+    const contextImage = getProfileImage();
+    if (contextImage) {
+      console.log('Using profile image from context:', contextImage);
+      setProfileImage(contextImage);
     }
   }, [getProfileImage]);
 
@@ -73,7 +68,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               {profileImage ? (
                 <AvatarImage 
                   src={profileImage} 
-                  alt={nickname || 'User'}
+                  alt={nickname}
                   onError={(e) => {
                     console.error('Failed to load avatar image:', profileImage);
                     e.currentTarget.style.display = 'none';
@@ -87,8 +82,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             
             {/* Username and role display */}
             <div className="ml-2">
-              <p className="text-white text-sm font-medium leading-tight">{nickname || 'Guest'}</p>
-              <p className="text-gray-400 text-xs leading-tight">{userRole || 'User'}</p>
+              <p className="text-white text-sm font-medium leading-tight">{nickname}</p>
+              <p className="text-gray-400 text-xs leading-tight">{userRole}</p>
             </div>
           </div>
           

@@ -1,90 +1,70 @@
 
-import React, { useState } from 'react';
-import { useRewards } from '@/contexts/RewardsContext';
-import { Loader2 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import React from 'react';
+import { useRewards } from '../../contexts/RewardsContext';
 import RewardCard from '../RewardCard';
-import { Reward } from '@/lib/rewardUtils';
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
-  const { rewards, isLoading, error } = useRewards();
-  const [activeTab, setActiveTab] = useState('regular');
+  const { rewards, handleBuyReward, handleUseReward, isLoading } = useRewards();
   
-  // Filter rewards based on active tab
-  const regularRewards = rewards.filter(reward => !reward.is_dom_reward);
-  const domRewards = rewards.filter(reward => reward.is_dom_reward);
-  
-  // Show loading state
   if (isLoading) {
     return (
-      <div className="flex justify-center my-8">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      <div className="text-center p-10">
+        <p className="text-light-navy">Loading rewards...</p>
       </div>
     );
   }
   
-  // Show error message if there is an error
-  if (error) {
+  if (!rewards || rewards.length === 0) {
     return (
-      <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 text-white my-6">
-        <h3 className="font-bold mb-2">Error Loading Rewards</h3>
-        <p>{error.message}</p>
+      <div className="text-center p-10">
+        <p className="text-light-navy mb-4">You don't have any rewards yet.</p>
+        <p className="text-light-navy">Click the + button to create your first reward!</p>
       </div>
     );
   }
-  
-  // Show empty state if there are no rewards
-  if (rewards.length === 0) {
-    return (
-      <div className="text-center my-12">
-        <p className="text-gray-400">No rewards available yet.</p>
-        <p className="text-gray-400 mt-1">Click the + button to create your first reward.</p>
-      </div>
-    );
-  }
-  
-  // Find the index of a reward in the original array
-  const findRewardIndex = (reward: Reward) => {
-    return rewards.findIndex(r => r.id === reward.id);
-  };
-  
+
+  // Enhanced debugging logs showing index and ID to track position stability
+  console.log("[RewardsList] Rendering rewards list with stable order:", 
+    rewards.map((r, i) => ({ 
+      index: i, 
+      id: r.id, 
+      title: r.title, 
+      is_dom_reward: r.is_dom_reward,
+      created_at: r.created_at,
+      updated_at: r.updated_at
+    }))
+  );
+
   return (
-    <Tabs defaultValue="regular" className="w-full" onValueChange={setActiveTab} value={activeTab}>
-      <TabsList className="grid w-full grid-cols-2 mb-6">
-        <TabsTrigger value="regular">Regular Rewards</TabsTrigger>
-        <TabsTrigger value="dom">Dom Rewards</TabsTrigger>
-      </TabsList>
-      <TabsContent value="regular" className="grid gap-4">
-        {regularRewards.length === 0 ? (
-          <p className="text-center text-gray-400 my-8">No regular rewards available.</p>
-        ) : (
-          regularRewards.map((reward, i) => (
-            <RewardCard 
-              key={reward.id || i} 
-              {...reward} 
-              onEdit={() => onEdit(findRewardIndex(reward))}
-            />
-          ))
-        )}
-      </TabsContent>
-      <TabsContent value="dom" className="grid gap-4">
-        {domRewards.length === 0 ? (
-          <p className="text-center text-gray-400 my-8">No dom rewards available.</p>
-        ) : (
-          domRewards.map((reward, i) => (
-            <RewardCard 
-              key={reward.id || i} 
-              {...reward}
-              onEdit={() => onEdit(findRewardIndex(reward))}
-            />
-          ))
-        )}
-      </TabsContent>
-    </Tabs>
+    <div className="flex flex-col gap-4">
+      {rewards.map((reward, index) => (
+        <RewardCard
+          key={reward.id}
+          title={reward.title}
+          description={reward.description || ''}
+          cost={reward.cost}
+          supply={reward.supply}
+          isDomReward={reward.is_dom_reward}
+          iconName={reward.icon_name}
+          iconColor={reward.icon_color}
+          onBuy={() => handleBuyReward(reward.id, reward.cost)}
+          onUse={() => handleUseReward(reward.id)}
+          onEdit={() => onEdit(index)}
+          backgroundImage={reward.background_image_url}
+          backgroundOpacity={reward.background_opacity}
+          focalPointX={reward.focal_point_x}
+          focalPointY={reward.focal_point_y}
+          highlight_effect={reward.highlight_effect}
+          title_color={reward.title_color}
+          subtext_color={reward.subtext_color}
+          calendar_color={reward.calendar_color}
+        />
+      ))}
+    </div>
   );
 };
 

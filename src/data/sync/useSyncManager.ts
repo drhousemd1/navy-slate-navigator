@@ -5,70 +5,139 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { queryClient } from '../queryClient';
-import { clearAllCachedData, clearOldCacheVersions } from '../indexedDB/useIndexedDB';
 
-interface SyncManagerOptions {
+interface SyncOptions {
+  showToasts?: boolean;
   intervalMs?: number;
   enabled?: boolean;
 }
 
-export const useSyncManager = (options: SyncManagerOptions = {}) => {
-  const { intervalMs = 30000, enabled = true } = options;
+export function useSyncManager(options: SyncOptions = {}) {
+  const { showToasts = false, intervalMs = 60000, enabled = true } = options;
+  const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  
-  const syncNow = useCallback(async () => {
-    console.log('Syncing data with server...');
+
+  // Sync a specific card by ID
+  const syncCardById = useCallback(async (
+    id: string, 
+    type: 'tasks' | 'rules' | 'rewards' | 'punishments'
+  ): Promise<void> => {
+    if (!id) return;
     
     try {
-      // Clear old cache versions first
-      await clearOldCacheVersions();
+      setIsSyncing(true);
       
-      // Invalidate all queries to force refetch
-      await queryClient.invalidateQueries();
+      // Fetch just this single card from Supabase
+      const { data, error } = await supabase
+        .from(type)
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (error) throw error;
       
-      setLastSyncTime(new Date());
-      console.log('Sync completed successfully');
-      return true;
-    } catch (error) {
-      console.error('Error syncing data:', error);
-      return false;
+      if (data) {
+        // Update just this one item in the cache
+        queryClient.setQueryData([type], (oldData: any[] = []) => {
+          return oldData.map(item => item.id === id ? data : item);
+        });
+      }
+    } catch (err) {
+      console.error(`Error syncing ${type} item ${id}:`, err);
+    } finally {
+      setIsSyncing(false);
     }
   }, []);
-  
+
+  // Sync all data
+  const syncNow = useCallback(async () => {
+    try {
+      setIsSyncing(true);
+      if (showToasts) {
+        toast({
+          title: "Syncing",
+          description: "Syncing data with server...",
+        });
+      }
+
+      // No full table syncs happen here - only when needed in specific queries
+      
+      setLastSyncTime(new Date());
+      
+      if (showToasts) {
+        toast({
+          title: "Sync Complete",
+          description: "Data successfully synchronized",
+        });
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      
+      if (showToasts) {
+        toast({
+          title: "Sync Failed",
+          description: "Could not synchronize data. Will try again later.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [showToasts]);
+
+  // Set up sync interval
   useEffect(() => {
     if (!enabled) return;
     
-    const intervalId = setInterval(() => {
+    // Initial sync when component mounts
+    syncNow();
+    
+    // Setup interval for background syncing
+    const interval = setInterval(() => {
       syncNow();
     }, intervalMs);
     
-    return () => clearInterval(intervalId);
-  }, [intervalMs, enabled, syncNow]);
-  
-  // Perform a sync when app starts
-  useEffect(() => {
-    if (enabled) {
-      syncNow();
-    }
-  }, [enabled, syncNow]);
-  
+    return () => {
+      clearInterval(interval);
+    };
+  }, [syncNow, intervalMs, enabled]);
+
   return {
+    isSyncing,
     lastSyncTime,
     syncNow,
-    clearCache: clearAllCachedData
+    syncCardById
   };
-};
+}
 
-// Fix: Update syncCardById to accept a single ID parameter
-export const syncCardById = async (id: string): Promise<boolean> => {
+// Export single-use functions
+export const syncCardById = async (
+  id: string,
+  type: 'tasks' | 'rules' | 'rewards' | 'punishments'
+): Promise<void> => {
+  if (!id) return;
+  
   try {
-    // Invalidate specific card query to force refetch
-    await queryClient.invalidateQueries({ queryKey: ['admin-card', id] });
-    return true;
-  } catch (error) {
-    console.error(`Error syncing card ${id}:`, error);
-    return false;
+    // Fetch just this single card from Supabase
+    const { data, error } = await supabase
+      .from(type)
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) throw error;
+    
+    if (data) {
+      // Update just this one item in the cache
+      queryClient.setQueryData([type], (oldData: any[] = []) => {
+        return oldData.map(item => item.id === id ? data : item);
+      });
+    }
+  } catch (err) {
+    console.error(`Error syncing ${type} item ${id}:`, err);
   }
 };

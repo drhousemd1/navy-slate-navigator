@@ -15,22 +15,14 @@ const CompletionButton: React.FC<CompletionButtonProps> = ({
   currentCompletions = 0,
   maxCompletions = 1
 }) => {
-  // Check if we've reached maximum completions
   const hasReachedMax = currentCompletions >= maxCompletions;
-  
-  const handleClick = () => {
-    // Only allow marking as completed if we haven't reached max completions
-    if (!hasReachedMax) {
-      onToggleCompletion(true); // Mark as completed
-    }
-  };
   
   return (
     <Button
       variant="default"
       size="sm"
-      className={`${hasReachedMax ? 'bg-green-600 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'} text-white px-3 py-0 h-7`}
-      onClick={handleClick}
+      className={`${hasReachedMax ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500'} text-white px-3 py-0 h-7`}
+      onClick={() => !hasReachedMax && onToggleCompletion(!completed)}
       disabled={hasReachedMax}
     >
       <span className="text-xs">

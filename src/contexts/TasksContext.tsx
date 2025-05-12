@@ -1,13 +1,9 @@
 
-/**
- * DO NOT IMPLEMENT DATA LOGIC HERE.
- * This is only a wrapper around the centralized data hooks in /src/data/
- */
-
 import React, { createContext, useContext, ReactNode } from 'react';
-import { QueryObserverResult } from '@tanstack/react-query';
-import { Task } from '@/lib/taskUtils';
-import { useTasksData } from '@/data';
+import { useQuery, useMutation, useQueryClient, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
+import { Task, saveTask, deleteTask, updateTaskCompletion } from '@/lib/taskUtils';
+import { useTasksData } from '@/data/TasksDataHandler';
 
 // Define the context type
 interface TasksContextType {
@@ -23,14 +19,13 @@ interface TasksContextType {
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Use the centralized data hook
   const { 
     tasks, 
     isLoading, 
     error, 
-    saveTask, 
-    deleteTask, 
-    toggleTaskCompletion,
+    saveTask: saveTaskToDb, 
+    deleteTask: deleteTaskFromDb, 
+    toggleTaskCompletion: toggleTaskCompletionInDb,
     refetchTasks 
   } = useTasksData();
 
@@ -38,9 +33,9 @@ export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     tasks,
     isLoading,
     error,
-    saveTask,
-    deleteTask,
-    toggleTaskCompletion,
+    saveTask: saveTaskToDb,
+    deleteTask: deleteTaskFromDb,
+    toggleTaskCompletion: toggleTaskCompletionInDb,
     refetchTasks
   };
 

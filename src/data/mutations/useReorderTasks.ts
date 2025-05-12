@@ -1,90 +1,60 @@
+
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from "@tanstack/react-query";
+import { queryClient } from "../queryClient";
 import { supabase } from '@/integrations/supabase/client';
-import { Task } from '@/lib/taskUtils';
-import { toast } from '@/hooks/use-toast';
-import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
-import { syncCardById } from '@/data/sync/useSyncManager';
+import { Task } from "@/lib/taskUtils";
+import { saveTasksToDB } from "../indexedDB/useIndexedDB";
 
+// Interface for reordering tasks
 interface ReorderTasksParams {
-  tasks: Task[];
-  newOrder: string[]; // Array of task IDs in the new order
+  taskId: string;
+  newIndex: number;
 }
 
-export function useReorderTasks() {
-  const queryClient = useQueryClient();
+// Function to reorder tasks
+const reorderTasks = async ({ taskId, newIndex }: ReorderTasksParams): Promise<Task[]> => {
+  // Get all current tasks to update their order
+  const { data: tasks, error: fetchError } = await supabase
+    .from('tasks')
+    .select('*')
+    .order('created_at', { ascending: false });
+    
+  if (fetchError) throw fetchError;
   
+  // Find the task to move
+  const taskToMove = tasks?.find(task => task.id === taskId);
+  if (!taskToMove) throw new Error("Task not found");
+  
+  // Create a new array with the task moved to the new position
+  const reorderedTasks = tasks ? 
+    [
+      ...tasks.filter(task => task.id !== taskId).slice(0, newIndex),
+      taskToMove,
+      ...tasks.filter(task => task.id !== taskId).slice(newIndex)
+    ] : [];
+  
+  // No need to update in database since we're just changing local order
+  // If we needed persistence, we could add an 'order' field to the tasks table
+  
+  return reorderedTasks as Task[];
+};
+
+// Hook for reordering tasks
+export function useReorderTasks() {
   return useMutation({
-    mutationFn: async ({ tasks, newOrder }: ReorderTasksParams): Promise<Task[]> => {
-      try {
-        // Create a map of tasks by ID for quick lookup
-        const tasksById = tasks.reduce((acc, task) => {
-          acc[task.id] = task;
-          return acc;
-        }, {} as Record<string, Task>);
-        
-        // Create an array of tasks in the new order
-        const reorderedTasks = newOrder.map((id, index) => ({
-          ...tasksById[id],
-          order: index
-        }));
-        
-        // Update each task individually to avoid bulk update issues
-        for (const task of reorderedTasks) {
-          const { error } = await supabase
-            .from('tasks')
-            .update({
-              order: task.order,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', task.id);
-            
-          if (error) {
-            console.error(`Error updating task order for ${task.id}:`, error);
-            throw error;
-          }
-        }
-        
-        return reorderedTasks;
-      } catch (err) {
-        console.error('Error reordering tasks:', err);
-        throw err;
-      }
-    },
+    mutationFn: reorderTasks,
     onSuccess: (reorderedTasks) => {
-      // Update cache with the reordered tasks
+      // Update tasks in cache
       queryClient.setQueryData(['tasks'], reorderedTasks);
       
       // Update IndexedDB
       saveTasksToDB(reorderedTasks);
-      
-      // For each task, call syncCardById
-      reorderedTasks.forEach(task => {
-        if (task.id) {
-          syncCardById(task.id);
-        }
-      });
-      
-      toast({
-        title: 'Success',
-        description: 'Tasks reordered successfully'
-      });
-    },
-    onError: (error) => {
-      console.error('Error in useReorderTasks:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reorder tasks',
-        variant: 'destructive'
-      });
-      
-      // Refetch tasks to ensure correct order
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     }
   });
 }

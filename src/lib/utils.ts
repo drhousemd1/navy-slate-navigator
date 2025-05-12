@@ -1,51 +1,41 @@
 
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-import { format } from "date-fns";
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+import { addDays, format, startOfWeek } from "date-fns";
 
-/**
- * Combines class names using clsx and tailwind-merge
- */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
 /**
- * Convert a JavaScript day of week (0 = Sunday) to Monday-based (0 = Monday)
+ * Gets the current day of week (0 = Monday, 6 = Sunday)
+ * This is different from JavaScript's native getDay() where 0 = Sunday, 6 = Saturday
  */
-export function getMondayBasedDay(): number {
-  const date = new Date();
-  const jsDay = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  return jsDay === 0 ? 6 : jsDay - 1; // Convert to 0 = Monday, ..., 6 = Sunday
+export function getMondayBasedDay(date: Date = new Date()): number {
+  const jsDay = date.getDay(); // JS day (0 = Sunday, 6 = Saturday)
+  return jsDay === 0 ? 6 : jsDay - 1; // Convert to Monday-based (0 = Monday, 6 = Sunday)
 }
 
 /**
- * Converts a zero-based index (0 = Sunday) to a Monday-based index (0 = Monday)
+ * Generates an array of dates for the current week, starting with Monday
  */
-export function convertToMondayBasedIndex(sundayBasedIndex: number): number {
-  return sundayBasedIndex === 0 ? 6 : sundayBasedIndex - 1;
+export function generateMondayBasedWeekDates(): string[] {
+  const start = startOfWeek(new Date(), { weekStartsOn: 1 }); // Start on Monday
+  return Array.from({ length: 7 }, (_, i) =>
+    format(addDays(start, i), 'yyyy-MM-dd')
+  );
 }
 
 /**
- * Generate an array of dates for a week starting with Monday
- * Returns formatted date strings in yyyy-MM-dd format
+ * Converts JavaScript day index (0=Sunday, 6=Saturday) to Monday-based index (0=Monday, 6=Sunday)
  */
-export function generateMondayBasedWeekDates(startDate: Date = new Date()): string[] {
-  const result: string[] = [];
-  const currentDay = startDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  
-  // Calculate Monday of the week
-  const mondayDate = new Date(startDate);
-  mondayDate.setDate(startDate.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
-  
-  // Generate dates for the week
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(mondayDate);
-    date.setDate(mondayDate.getDate() + i);
-    // Format the date as a string in yyyy-MM-dd format
-    result.push(format(date, 'yyyy-MM-dd'));
-  }
-  
-  return result;
+export function convertToMondayBasedIndex(jsDayIndex: number): number {
+  return jsDayIndex === 0 ? 6 : jsDayIndex - 1;
 }
 
+/**
+ * Converts Monday-based index (0=Monday, 6=Sunday) to JavaScript day index (0=Sunday, 6=Saturday)
+ */
+export function convertToJSDayIndex(mondayBasedIndex: number): number {
+  return mondayBasedIndex === 6 ? 0 : mondayBasedIndex + 1;
+}
