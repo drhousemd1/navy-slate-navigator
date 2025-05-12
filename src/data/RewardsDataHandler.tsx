@@ -1,12 +1,24 @@
+/**
+ * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
+ * No query, mutation, or sync logic is allowed in components or page files.
+ * All logic must use these shared, optimized hooks and utilities only.
+ */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useBuySubReward } from "@/data/mutations/useBuySubReward";
+import { useBuyDomReward } from "@/data/mutations/useBuyDomReward";
+import { useRedeemSubReward } from "@/data/mutations/useRedeemSubReward";
+import { useRedeemDomReward } from "@/data/mutations/useRedeemDomReward";
 
 // Keys for our queries
 const REWARDS_QUERY_KEY = ['rewards'];
 const POINTS_QUERY_KEY = ['rewards', 'points'];
-const REWARDS_SUPPLY_QUERY_KEY = ['rewards', 'supply'];
+const DOM_POINTS_QUERY_KEY = ['rewards', 'dom_points'];
+const REWARDS_SUPPLY_QUERY_KEY = ['totalRewardsSupply'];
+const DOM_REWARDS_SUPPLY_QUERY_KEY = ['totalDomRewardsSupply'];
 
 // Define the Reward type
 export interface Reward {
@@ -15,6 +27,7 @@ export interface Reward {
   description: string | null;
   cost: number;
   supply: number;
+  is_dom_reward: boolean;
   background_image_url?: string | null;
   background_opacity: number;
   icon_name?: string | null;
@@ -68,18 +81,56 @@ const fetchUserPoints = async (): Promise<number> => {
   return data?.points || 0;
 };
 
+// Fetch dom points from the database
+const fetchUserDomPoints = async (): Promise<number> => {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  
+  if (!userId) {
+    // User is not logged in
+    return 0;
+  }
+  
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('dom_points')
+    .eq('id', userId)
+    .single();
+  
+  if (error) {
+    console.error('Error fetching user dom points:', error);
+    throw error;
+  }
+  
+  return data?.dom_points || 0;
+};
+
 // Fetch the total rewards supply
 const fetchTotalRewardsSupply = async (): Promise<number> => {
   const { data, error } = await supabase
     .from('rewards')
-    .select('supply');
+    .select('supply, is_dom_reward');
   
   if (error) {
     console.error('Error fetching total rewards supply:', error);
     throw error;
   }
   
-  return data.reduce((total, reward) => total + reward.supply, 0);
+  return data.filter(reward => !reward.is_dom_reward).reduce((total, reward) => total + reward.supply, 0);
+};
+
+// Fetch the total dom rewards supply
+const fetchTotalDomRewardsSupply = async (): Promise<number> => {
+  const { data, error } = await supabase
+    .from('rewards')
+    .select('supply, is_dom_reward');
+  
+  if (error) {
+    console.error('Error fetching total dom rewards supply:', error);
+    throw error;
+  }
+  
+  return data.filter(reward => reward.is_dom_reward).reduce((total, reward) => total + reward.supply, 0);
 };
 
 // Save a reward to the database
@@ -93,6 +144,7 @@ const saveRewardToDb = async (rewardData: Partial<Reward>, currentIndex?: number
         description: rewardData.description,
         cost: rewardData.cost,
         supply: rewardData.supply,
+        is_dom_reward: rewardData.is_dom_reward,
         background_image_url: rewardData.background_image_url,
         background_opacity: rewardData.background_opacity,
         icon_name: rewardData.icon_name,
@@ -122,6 +174,7 @@ const saveRewardToDb = async (rewardData: Partial<Reward>, currentIndex?: number
       description: rewardData.description || '',
       cost: rewardData.cost || 10,
       supply: rewardData.supply || 0,
+      is_dom_reward: rewardData.is_dom_reward || false,
       background_image_url: rewardData.background_image_url,
       background_opacity: rewardData.background_opacity || 100,
       icon_name: rewardData.icon_name,
@@ -166,104 +219,16 @@ const deleteRewardFromDb = async (rewardId: string): Promise<boolean> => {
   return true;
 };
 
-// Buy a reward with user points
-const buyRewardInDb = async (rewardId: string, cost: number): Promise<{ success: boolean, newPoints: number }> => {
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData.user?.id;
-  
-  if (!userId) {
-    throw new Error('User is not logged in');
-  }
-  
-  // First, check user points
-  const { data: userPoints, error: pointsError } = await supabase
-    .from('profiles')
-    .select('points')
-    .eq('id', userId)
-    .single();
-  
-  if (pointsError) {
-    console.error('Error fetching user points:', pointsError);
-    throw pointsError;
-  }
-  
-  if (!userPoints || userPoints.points < cost) {
-    throw new Error('Not enough points to buy this reward');
-  }
-  
-  // Then, check if reward is available
-  const { data: reward, error: rewardError } = await supabase
-    .from('rewards')
-    .select('supply')
-    .eq('id', rewardId)
-    .single();
-  
-  if (rewardError) {
-    console.error('Error fetching reward:', rewardError);
-    throw rewardError;
-  }
-  
-  if (reward.supply <= 0) {
-    throw new Error('Reward is out of stock');
-  }
-  
-  // Start a transaction by updating both tables
-  // First, deduct points
-  const newPoints = userPoints.points - cost;
-  const { error: updatePointsError } = await supabase
-    .from('profiles')
-    .update({ points: newPoints })
-    .eq('id', userId);
-  
-  if (updatePointsError) {
-    console.error('Error updating points:', updatePointsError);
-    throw updatePointsError;
-  }
-  
-  // Then, decrement reward supply
-  const { error: updateSupplyError } = await supabase
-    .from('rewards')
-    .update({ 
-      supply: reward.supply - 1,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', rewardId);
-  
-  if (updateSupplyError) {
-    console.error('Error updating reward supply:', updateSupplyError);
-    // Try to revert the points update on error
-    await supabase
-      .from('profiles')
-      .update({ points: userPoints.points })
-      .eq('id', userId);
-    throw updateSupplyError;
-  }
-  
-  // Record usage
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
-  
-  const { error: usageError } = await supabase
-    .from('reward_usage')
-    .insert({
-      reward_id: rewardId,
-      day_of_week: dayOfWeek,
-      used: true,
-      week_number: weekNumber
-    });
-  
-  if (usageError) {
-    console.error('Error recording reward usage:', usageError);
-    // Continue despite usage recording error
-  }
-  
-  return { success: true, newPoints };
-};
-
 // The main hook to expose all reward-related operations
 export const useRewardsData = () => {
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const profileId = user?.id;
+
+  // Use the new mutation hooks
+  const { mutateAsync: buySubReward } = useBuySubReward();
+  const { mutateAsync: buyDomReward } = useBuyDomReward();
+  const { mutateAsync: redeemSubReward } = useRedeemSubReward();
+  const { mutateAsync: redeemDomReward } = useRedeemDomReward();
 
   // Query for fetching all rewards
   const {
@@ -274,7 +239,7 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
-    staleTime: 1000 * 60 * 20, // 20 minutes
+    staleTime: Infinity,
     gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnWindowFocus: false
   });
@@ -286,7 +251,19 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: POINTS_QUERY_KEY,
     queryFn: fetchUserPoints,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    refetchOnWindowFocus: false
+  });
+
+  // Query for fetching dom points
+  const {
+    data: domPoints = 0,
+    refetch: refetchDomPoints
+  } = useQuery({
+    queryKey: DOM_POINTS_QUERY_KEY,
+    queryFn: fetchUserDomPoints,
+    staleTime: Infinity,
     gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnWindowFocus: false
   });
@@ -298,12 +275,155 @@ export const useRewardsData = () => {
   } = useQuery({
     queryKey: REWARDS_SUPPLY_QUERY_KEY,
     queryFn: fetchTotalRewardsSupply,
-    staleTime: 1000 * 60 * 20, // 20 minutes
+    staleTime: Infinity,
     gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnWindowFocus: false
   });
 
-  // Mutation for saving a reward (create or update)
+  // Query for fetching total dom rewards supply
+  const {
+    data: totalDomRewardsSupply = 0,
+    refetch: refetchDomSupply
+  } = useQuery({
+    queryKey: DOM_REWARDS_SUPPLY_QUERY_KEY,
+    queryFn: fetchTotalDomRewardsSupply,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    refetchOnWindowFocus: false
+  });
+
+  // Function to handle buying a reward
+  const buyReward = async ({ rewardId, cost, isDomReward = false }: { rewardId: string; cost: number; isDomReward?: boolean }) => {
+    if (!profileId) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to buy rewards",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Find the reward in the current list
+      const reward = rewards.find(r => r.id === rewardId);
+      if (!reward) {
+        throw new Error("Reward not found");
+      }
+
+      // Use the appropriate mutation based on whether it's a dom reward
+      if (isDomReward) {
+        await buyDomReward({
+          rewardId: reward.id,
+          cost: cost,
+          currentSupply: reward.supply,
+          profileId,
+          currentDomPoints: domPoints
+        });
+      } else {
+        await buySubReward({
+          rewardId: reward.id,
+          cost: cost,
+          currentSupply: reward.supply,
+          profileId,
+          currentPoints: totalPoints
+        });
+      }
+
+      toast({
+        title: "Reward Purchased",
+        description: `You purchased ${reward.title}`,
+      });
+    } catch (error) {
+      console.error("Error buying reward:", error);
+      
+      if (error instanceof Error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to buy reward. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  // Function to handle using a reward
+  const useReward = async (rewardId: string) => {
+    if (!profileId) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to use rewards",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Find the reward in the current list
+      const reward = rewards.find(r => r.id === rewardId);
+      if (!reward) {
+        throw new Error("Reward not found");
+      }
+
+      if (reward.supply <= 0) {
+        throw new Error("You don't have any of this reward to use");
+      }
+
+      // Use the appropriate mutation based on whether it's a dom reward
+      if (reward.is_dom_reward) {
+        await redeemDomReward({
+          rewardId: reward.id,
+          currentSupply: reward.supply,
+          profileId
+        });
+      } else {
+        await redeemSubReward({
+          rewardId: reward.id,
+          currentSupply: reward.supply,
+          profileId
+        });
+      }
+
+      toast({
+        title: "Reward Used",
+        description: `You used ${reward.title}`,
+      });
+    } catch (error) {
+      console.error("Error using reward:", error);
+      
+      if (error instanceof Error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to use reward. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  // Function to manually refresh points from database
+  const refreshPointsFromDatabase = async () => {
+    try {
+      await refetchPoints();
+      await refetchDomPoints();
+      await refetchSupply();
+      await refetchDomSupply();
+    } catch (error) {
+      console.error('Error refreshing points from database:', error);
+    }
+  };
+
   const saveRewardMutation = useMutation({
     mutationFn: ({ rewardData, currentIndex }: { rewardData: Partial<Reward>, currentIndex?: number | null }) => 
       saveRewardToDb(rewardData, currentIndex),
@@ -334,6 +454,7 @@ export const useRewardsData = () => {
           description: rewardData.description || '',
           cost: rewardData.cost || 10,
           supply: rewardData.supply || 0,
+          is_dom_reward: rewardData.is_dom_reward || false,
           background_image_url: rewardData.background_image_url,
           background_opacity: rewardData.background_opacity || 100,
           icon_name: rewardData.icon_name,
@@ -373,10 +494,10 @@ export const useRewardsData = () => {
       // Always refetch after error or success to synchronize with server state
       queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: DOM_REWARDS_SUPPLY_QUERY_KEY });
     }
   });
 
-  // Mutation for deleting a reward
   const deleteRewardMutation = useMutation({
     mutationFn: deleteRewardFromDb,
     onMutate: async (rewardId) => {
@@ -411,78 +532,21 @@ export const useRewardsData = () => {
       // Always refetch after error or success to synchronize with server state
       queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: DOM_REWARDS_SUPPLY_QUERY_KEY });
     }
   });
 
-  // Mutation for buying a reward
-  const buyRewardMutation = useMutation({
-    mutationFn: ({ rewardId, cost }: { rewardId: string, cost: number }) => 
-      buyRewardInDb(rewardId, cost),
-    onMutate: async ({ rewardId, cost }) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
-      await queryClient.cancelQueries({ queryKey: POINTS_QUERY_KEY });
-      await queryClient.cancelQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
-      
-      // Snapshot the previous values
-      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
-      const previousPoints = queryClient.getQueryData<number>(POINTS_QUERY_KEY) || 0;
-      const previousSupply = queryClient.getQueryData<number>(REWARDS_SUPPLY_QUERY_KEY) || 0;
-      
-      // Optimistically update the reward supply
-      const updatedRewards = previousRewards.map(r => {
-        if (r.id === rewardId) {
-          return { ...r, supply: Math.max(0, r.supply - 1) };
-        }
-        return r;
-      });
-      
-      queryClient.setQueryData(REWARDS_QUERY_KEY, updatedRewards);
-      
-      // Optimistically update the points
-      const newPoints = Math.max(0, previousPoints - cost);
-      queryClient.setQueryData(POINTS_QUERY_KEY, newPoints);
-      
-      // Optimistically update the total supply
-      queryClient.setQueryData(REWARDS_SUPPLY_QUERY_KEY, Math.max(0, previousSupply - 1));
-      
-      return { 
-        previousRewards, 
-        previousPoints,
-        previousSupply
-      };
-    },
-    onError: (err, variables, context) => {
-      console.error('Error buying reward:', err);
-      toast({
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Failed to buy reward. Please try again.',
-        variant: 'destructive',
-      });
-      
-      // Rollback to the previous state
-      if (context) {
-        queryClient.setQueryData(REWARDS_QUERY_KEY, context.previousRewards);
-        queryClient.setQueryData(POINTS_QUERY_KEY, context.previousPoints);
-        queryClient.setQueryData(REWARDS_SUPPLY_QUERY_KEY, context.previousSupply);
-      }
-    },
-    onSettled: () => {
-      // Always refetch after error or success to synchronize with server state
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: POINTS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
-    }
-  });
-
-  // Function to manually refresh points from database
-  const refreshPointsFromDatabase = async () => {
-    try {
-      await refetchPoints();
-      await refetchSupply();
-    } catch (error) {
-      console.error('Error refreshing points from database:', error);
-    }
+  // For optimistic UI updates
+  const setRewardsOptimistically = (updatedRewards: Reward[]) => {
+    queryClient.setQueryData(REWARDS_QUERY_KEY, updatedRewards);
+  };
+  
+  const setPointsOptimistically = (points: number) => {
+    queryClient.setQueryData(POINTS_QUERY_KEY, points);
+  };
+  
+  const setDomPointsOptimistically = (points: number) => {
+    queryClient.setQueryData(DOM_POINTS_QUERY_KEY, points);
   };
 
   return {
@@ -490,6 +554,8 @@ export const useRewardsData = () => {
     rewards,
     totalPoints,
     totalRewardsSupply,
+    totalDomRewardsSupply,
+    domPoints,
     
     // Loading state
     isLoading,
@@ -500,12 +566,25 @@ export const useRewardsData = () => {
       saveRewardMutation.mutateAsync({ rewardData, currentIndex }),
     deleteReward: (rewardId: string) => 
       deleteRewardMutation.mutateAsync(rewardId),
-    buyReward: (rewardId: string, cost: number) => 
-      buyRewardMutation.mutateAsync({ rewardId, cost }),
+    buyReward,
+    useReward,
+    
+    // Points operations
+    updatePoints: async (points: number) => {
+      // Implementation will be moved to usePointsManagement
+    },
+    updateDomPoints: async (points: number) => {
+      // Implementation will be moved to usePointsManagement
+    },
     
     // Refetch functions
     refetchRewards,
     refetchPoints,
-    refreshPointsFromDatabase
+    refreshPointsFromDatabase,
+    
+    // Optimistic update helpers
+    setRewardsOptimistically,
+    setPointsOptimistically,
+    setDomPointsOptimistically,
   };
 };
