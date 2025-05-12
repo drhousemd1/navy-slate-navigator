@@ -11,11 +11,7 @@ import {
   loadRewardsFromDB,
   saveRewardsToDB,
   getLastSyncTimeForRewards,
-  setLastSyncTimeForRewards,
-  loadPointsFromDB, 
-  saveDomPointsToDB, 
-  loadDomPointsFromDB, 
-  savePointsToDB
+  setLastSyncTimeForRewards
 } from "../indexedDB/useIndexedDB";
 
 export function useRewards() {
@@ -48,9 +44,8 @@ export function useRewards() {
 
       return localData;
     },
-    initialData: async () => {
-      return await loadRewardsFromDB();
-    },
+    // Fix: Remove the async function and use undefined instead
+    initialData: undefined,
     staleTime: Infinity,
     gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
     refetchOnWindowFocus: false

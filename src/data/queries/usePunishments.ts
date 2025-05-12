@@ -45,9 +45,9 @@ export function usePunishments() {
 
       return (localData || []) as PunishmentData[];
     },
-    initialData: async () => {
-      return await loadPunishmentsFromDB() as PunishmentData[] | undefined;
-    },
+    // Fix: Remove the async function and use undefined instead
+    // TanStack Query will handle fetching the initial data in the queryFn
+    initialData: undefined,
     staleTime: Infinity,
     gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
     refetchOnWindowFocus: false

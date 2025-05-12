@@ -44,9 +44,8 @@ export function useTasks() {
 
       return localData;
     },
-    initialData: async () => {
-      return await loadTasksFromDB();
-    },
+    // Fix: Remove the async function and use undefined instead
+    initialData: undefined,
     staleTime: Infinity,
     gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
     refetchOnWindowFocus: false
