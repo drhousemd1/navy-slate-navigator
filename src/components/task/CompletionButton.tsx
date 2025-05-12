@@ -19,7 +19,7 @@ const CompletionButton: React.FC<CompletionButtonProps> = ({
   const hasReachedMax = currentCompletions >= maxCompletions;
   
   const handleClick = () => {
-    // Only allow toggling if we haven't reached max completions
+    // Only allow marking as completed if we haven't reached max completions
     if (!hasReachedMax) {
       onToggleCompletion(true); // Mark as completed
     }

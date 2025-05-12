@@ -11,6 +11,7 @@ import { Task, getLocalDateString } from '@/lib/taskUtils';
 import { loadTasksFromDB, saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
 import { logQueryPerformance } from '@/lib/react-query-config';
 import { useEffect, useState } from 'react';
+import { getMondayBasedDay } from '@/lib/utils';
 
 export const TASKS_QUERY_KEY = ['tasks'];
 
@@ -58,40 +59,52 @@ async function fetchTasks(): Promise<Task[]> {
 
   // Special auto-reset logic for daily tasks
   const today = getLocalDateString();
+  const currentDayOfWeek = getMondayBasedDay(); // Get current day index (0-6, Monday is 0)
+  
   const tasksToReset = tasks.filter(task => 
-    task.completed && 
     task.frequency === 'daily' && 
     task.last_completed_date !== today
   );
 
   if (tasksToReset.length > 0) {
-    console.log(`[TasksQuery] Resetting ${tasksToReset.length} daily tasks that are not completed today`);
+    console.log(`[TasksQuery] Resetting ${tasksToReset.length} daily tasks for a new day`);
     
-    const updates = tasksToReset.map(task => ({
-      id: task.id,
-      completed: false
-    }));
+    const updates = [];
+    
+    for (const task of tasksToReset) {
+      // Create a copy of the usage_data array to avoid direct mutation
+      const updatedUsageData = [...task.usage_data];
+      
+      // Reset today's usage to 0
+      updatedUsageData[currentDayOfWeek] = 0;
+      
+      updates.push({
+        id: task.id,
+        completed: false,
+        usage_data: updatedUsageData
+      });
+      
+      // Also update the task in memory
+      task.completed = false;
+      task.usage_data = updatedUsageData;
+    }
 
+    // Update all tasks in database in a single batch
     for (const update of updates) {
       await supabase
         .from('tasks')
-        .update({ completed: false })
+        .update({ 
+          completed: update.completed, 
+          usage_data: update.usage_data 
+        })
         .eq('id', update.id);
     }
-
-    // Update tasks in memory rather than refetching
-    const updatedTasks = tasks.map(task => {
-      if (tasksToReset.some(resetTask => resetTask.id === task.id)) {
-        return { ...task, completed: false };
-      }
-      return task;
-    });
     
-    // Save to IndexedDB
-    await saveTasksToDB(updatedTasks);
+    // Save updated tasks to IndexedDB
+    await saveTasksToDB(tasks);
     
     logQueryPerformance('TasksQuery', startTime, tasks.length);
-    return updatedTasks;
+    return tasks;
   }
   
   // Save to IndexedDB
