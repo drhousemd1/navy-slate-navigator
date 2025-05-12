@@ -52,7 +52,20 @@ const RewardCard: React.FC<RewardCardProps> = ({
     if (!id || supply <= 0) return;
     
     try {
-      await handleUseReward(id);
+      // Create a complete Reward object to pass to handleUseReward instead of just the id
+      const rewardData: Reward = {
+        id, title, description, cost, supply, icon_name, icon_color, is_dom_reward,
+        background_opacity: background_opacity || 0,
+        title_color: title_color || '#FFFFFF',
+        subtext_color: subtext_color || '#8E9196',
+        calendar_color: calendar_color || '#7E69AB',
+        background_image_url,
+        focal_point_x,
+        focal_point_y,
+        highlight_effect
+      };
+      
+      await handleUseReward(rewardData);
     } catch (error) {
       console.error('Error using reward:', error);
     }
