@@ -9,6 +9,12 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { queryClient } from '../queryClient';
+import {
+  saveTasksToDB, loadTasksFromDB,
+  saveRulesToDB, loadRulesFromDB,
+  saveRewardsToDB, loadRewardsFromDB,
+  savePunishmentsToDB, loadPunishmentsFromDB
+} from "../indexedDB/useIndexedDB";
 
 interface SyncOptions {
   showToasts?: boolean;
