@@ -61,6 +61,7 @@ export const useSyncManager = (options: SyncManagerOptions = {}) => {
   };
 };
 
+// Fix: Update syncCardById to accept a single ID parameter
 export const syncCardById = async (id: string): Promise<boolean> => {
   try {
     // Invalidate specific card query to force refetch

@@ -1,13 +1,18 @@
 
-// This file is kept temporarily for reference
-// and will be deleted once the refactoring is verified
+/**
+ * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
+ * No query, mutation, or sync logic is allowed in components or page files.
+ * All logic must use these shared, optimized hooks and utilities only.
+ */
 
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { startOfWeek, format } from 'date-fns';
 
-export const PUNISHMENTS_QUERY_KEY = ['punishments'];
-export const PUNISHMENT_HISTORY_QUERY_KEY = ['punishment-history'];
+// Query keys with version
+const CACHE_VERSION = 'v2';
+export const PUNISHMENTS_QUERY_KEY = [`${CACHE_VERSION}_punishments`];
+export const PUNISHMENT_HISTORY_QUERY_KEY = [`${CACHE_VERSION}_punishment-history`];
 
 export const fetchPunishments = async (): Promise<PunishmentData[]> => {
   console.log("[fetchPunishments] Starting punishments fetch");

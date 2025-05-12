@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -80,7 +79,7 @@ export function useCreateTask() {
       });
       
       // Sync the individual card
-      syncCardById(newTask.id, 'tasks');
+      syncCardById(newTask.id);
       
       toast({
         title: 'Success',

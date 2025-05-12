@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -86,7 +85,7 @@ export function useCompleteTask() {
       });
       
       // Sync the individual card
-      syncCardById(updatedTask.id, 'tasks');
+      syncCardById(updatedTask.id);
       
       // Invalidate metrics queries since task completion affects them
       queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });

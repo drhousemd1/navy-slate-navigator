@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -126,7 +125,7 @@ export function useBuyReward() {
       });
       
       // Sync the individual card
-      syncCardById(updatedReward.id, 'rewards');
+      syncCardById(updatedReward.id);
       
       // Invalidate points queries
       queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });

@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -67,7 +66,7 @@ export function useReorderTasks() {
       // For each task, call syncCardById
       reorderedTasks.forEach(task => {
         if (task.id) {
-          syncCardById(task.id, 'tasks');
+          syncCardById(task.id);
         }
       });
       

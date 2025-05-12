@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT MODIFY OUTSIDE THIS FOLDER.
  * This hook manages fetching, caching, and syncing admin testing cards.
@@ -332,7 +331,7 @@ export function useAdminCards() {
   // Sync a specific card with Supabase
   const syncCard = useCallback(async (cardId: string) => {
     try {
-      await syncCardById(cardId, 'admin_testing_cards');
+      await syncCardById(cardId);
       refetch();
     } catch (error) {
       console.error('Error syncing admin card:', error);

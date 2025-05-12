@@ -4,7 +4,6 @@ import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/ty
 import { 
   PUNISHMENTS_QUERY_KEY, 
   PUNISHMENT_HISTORY_QUERY_KEY,
-  // Import the functions with their correct export names
   fetchPunishments as fetchPunishmentsQuery,
   fetchCurrentWeekPunishmentHistory,
 } from './queries';
