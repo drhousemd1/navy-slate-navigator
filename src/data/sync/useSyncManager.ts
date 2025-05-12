@@ -36,22 +36,7 @@ export function useSyncManager(options: SyncOptions = {}) {
     
     try {
       setIsSyncing(true);
-      
-      // Fetch just this single card from Supabase
-      const { data, error } = await supabase
-        .from(type)
-        .select('*')
-        .eq('id', id)
-        .single();
-        
-      if (error) throw error;
-      
-      if (data) {
-        // Update just this one item in the cache
-        queryClient.setQueryData([type], (oldData: any[] = []) => {
-          return oldData.map(item => item.id === id ? data : item);
-        });
-      }
+      await syncCardByIdImpl(id, type);
     } catch (err) {
       console.error(`Error syncing ${type} item ${id}:`, err);
     } finally {
@@ -120,30 +105,44 @@ export function useSyncManager(options: SyncOptions = {}) {
   };
 }
 
-// Export single-use functions
-export const syncCardById = async (
-  id: string,
-  type: 'tasks' | 'rules' | 'rewards' | 'punishments'
-): Promise<void> => {
+// Export single-use function for syncing a card by ID
+export async function syncCardById(id: string, type: 'tasks' | 'rules' | 'rewards' | 'punishments'): Promise<void> {
   if (!id) return;
-  
-  try {
-    // Fetch just this single card from Supabase
-    const { data, error } = await supabase
-      .from(type)
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    if (error) throw error;
-    
-    if (data) {
-      // Update just this one item in the cache
-      queryClient.setQueryData([type], (oldData: any[] = []) => {
-        return oldData.map(item => item.id === id ? data : item);
-      });
-    }
-  } catch (err) {
-    console.error(`Error syncing ${type} item ${id}:`, err);
+  await syncCardByIdImpl(id, type);
+}
+
+// Implementation of card sync logic
+async function syncCardByIdImpl(id: string, type: 'tasks' | 'rules' | 'rewards' | 'punishments'): Promise<void> {
+  // STEP 1 – Fetch fresh data for the specified card from Supabase
+  const { data, error } = await supabase.from(type).select("*").eq("id", id).single();
+  if (error || !data) {
+    console.error(`Failed to fetch ${type} card with ID ${id}:`, error);
+    return;
   }
-};
+
+  // STEP 2 – Get current list from React Query cache (fallback to [])
+  const cacheKey = [type];
+  const cachedList = queryClient.getQueryData<any[]>(cacheKey) || [];
+
+  // STEP 3 – Replace the specific card in the list
+  const updatedList = cachedList.map((item) => (item.id === id ? data : item));
+
+  // STEP 4 – Update the cache
+  queryClient.setQueryData(cacheKey, updatedList);
+
+  // STEP 5 – Update IndexedDB based on domain
+  switch (type) {
+    case "tasks":
+      await saveTasksToDB(updatedList);
+      break;
+    case "rules":
+      await saveRulesToDB(updatedList);
+      break;
+    case "rewards":
+      await saveRewardsToDB(updatedList);
+      break;
+    case "punishments":
+      await savePunishmentsToDB(updatedList);
+      break;
+  }
+}
