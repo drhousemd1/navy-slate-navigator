@@ -169,29 +169,53 @@ const deleteRewardFromDb = async (rewardId: string): Promise<boolean> => {
   return true;
 };
 
-// Buy a reward with user points - now a wrapper for the new hook
-const buyRewardInDb = async (rewardId: string, cost: number): Promise<{ success: boolean, newPoints: number }> => {
+// Buy a reward with user points
+async function buyRewardInDb(
+  rewardId: string,
+  cost: number,
+  currentSupply: number,
+  profileId: string,
+  currentPoints: number
+): Promise<boolean> {
   const { mutateAsync } = useBuySubReward();
-  return mutateAsync({ rewardId, cost, currentSupply: 0, profileId: "", currentPoints: 0 });
-};
+  await mutateAsync({ rewardId, cost, currentSupply, profileId, currentPoints });
+  return true;
+}
 
 // Buy a dom reward with dom points
-const buyDomRewardInDb = async (rewardId: string, cost: number): Promise<{ success: boolean, newPoints: number }> => {
+async function buyDomRewardInDb(
+  rewardId: string,
+  cost: number,
+  currentSupply: number,
+  profileId: string,
+  currentDomPoints: number
+): Promise<boolean> {
   const { mutateAsync } = useBuyDomReward();
-  return mutateAsync({ rewardId, cost, currentSupply: 0, profileId: "", currentDomPoints: 0 });
-};
+  await mutateAsync({ rewardId, cost, currentSupply, profileId, currentDomPoints });
+  return true;
+}
 
-// Use a reward - now a wrapper for the new hook
-const redeemRewardInDb = async (rewardId: string): Promise<boolean> => {
+// Use a reward
+async function redeemRewardInDb(
+  rewardId: string,
+  currentSupply: number,
+  profileId: string
+): Promise<{ success: boolean }> {
   const { mutateAsync } = useRedeemSubReward();
-  return mutateAsync({ rewardId, currentSupply: 0, profileId: "" });
-};
+  await mutateAsync({ rewardId, currentSupply, profileId });
+  return { success: true };
+}
 
 // Use a dom reward
-const redeemDomRewardInDb = async (rewardId: string): Promise<boolean> => {
+async function redeemDomRewardInDb(
+  rewardId: string,
+  currentSupply: number,
+  profileId: string
+): Promise<{ success: boolean }> {
   const { mutateAsync } = useRedeemDomReward();
-  return mutateAsync({ rewardId, currentSupply: 0, profileId: "" });
-};
+  await mutateAsync({ rewardId, currentSupply, profileId });
+  return { success: true };
+}
 
 // The main hook to expose all reward-related operations
 export const useRewardsData = () => {

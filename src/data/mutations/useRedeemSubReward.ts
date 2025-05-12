@@ -20,8 +20,15 @@ export function useRedeemSubReward() {
         .update({ supply: currentSupply - 1 })
         .eq("id", rewardId);
 
-      await supabase.from("reward_usage")
-        .insert([{ reward_id: rewardId, profile_id: profileId }]);
+      await supabase.from("reward_usage").insert([{
+        reward_id: rewardId,
+        profile_id: profileId,
+        used: false,
+        day_of_week: new Date().getDay(),
+        week_number: `${new Date().getFullYear()}-W${((d => (d.setUTCDate(d.getUTCDate()+4-(
+          d.getUTCDay()||7)), Math.ceil((((d.getTime()-Date.UTC(d.getUTCFullYear(),0,1))/864e5)+1)/7)
+        )))(new Date()))}`
+      }]);
 
       return { rewardId };
     },
