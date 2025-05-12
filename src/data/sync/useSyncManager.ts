@@ -129,9 +129,10 @@ async function syncCardByIdImpl(id: string, type: 'tasks' | 'rules' | 'rewards' 
   
   if (type === "rewards") {
     // For rewards, ensure is_dom_reward property exists
+    const raw: any = data;   // suppress TS2339
     const freshRow = {
-      ...data,
-      is_dom_reward: data.is_dominant
+      ...raw,
+      is_dom_reward: !!raw.is_dominant
     };
     
     // Update the cached list with the enhanced reward data
