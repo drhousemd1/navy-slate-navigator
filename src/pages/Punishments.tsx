@@ -1,4 +1,9 @@
 
+/**
+ * DO NOT REPLICATE LOGIC OUTSIDE THIS FILE.
+ * All fetching, mutation, sync, and cache logic must live in centralized hooks only.
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -13,6 +18,7 @@ import { PunishmentData } from '@/contexts/punishments/types';
 import { queryClient } from '@/data/queryClient';
 import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; // Fixed case sensitivity
 import { toast } from '@/hooks/use-toast';
+import { RewardsProvider } from '@/contexts/RewardsContext'; // Import RewardsProvider
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -263,7 +269,10 @@ const Punishments: React.FC = () => {
   
   return (
     <AppLayout onAddNewItem={handleAddNewPunishment}>
-      <PunishmentsContent contentRef={contentRef} />
+      {/* Wrap the PunishmentsContent in the RewardsProvider */}
+      <RewardsProvider>
+        <PunishmentsContent contentRef={contentRef} />
+      </RewardsProvider>
     </AppLayout>
   );
 };
