@@ -16,6 +16,9 @@ const RewardsHeader: React.FC = () => {
 
   // Style for badges - black background with cyan border
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
+  
+  // Style for DOM badges - black background with red border
+  const domBadgeStyle = { backgroundColor: "#000000", borderColor: "#ea384c", borderWidth: "1px" };
 
   return (
     <div className="flex items-center mb-6">
@@ -35,8 +38,20 @@ const RewardsHeader: React.FC = () => {
           <Coins className="w-3 h-3" />
           <span>{totalPoints}</span>
         </Badge>
-        <DOMBadge icon="box" value={totalDomRewardsSupply} />
-        <DOMBadge icon="crown" value={domPoints} />
+        <Badge
+          className="text-white font-bold px-3 py-1 flex items-center gap-1"
+          style={domBadgeStyle}
+        >
+          <Box className="w-3 h-3" />
+          <span>{totalDomRewardsSupply}</span>
+        </Badge>
+        <Badge
+          className="text-white font-bold px-3 py-1 flex items-center gap-1"
+          style={domBadgeStyle}
+        >
+          <Coins className="w-3 h-3" />
+          <span>{domPoints}</span>
+        </Badge>
       </div>
     </div>
   );

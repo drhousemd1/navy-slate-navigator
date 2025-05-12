@@ -39,8 +39,12 @@ export function useBuySubReward() {
 
     onSuccess: async ({ rewardId, newPoints }) => {
       const prev = queryClient.getQueryData<{points: number, dom_points: number}>(["profile_points"]) || { points: 0, dom_points: 0 };
-      await syncCardById(rewardId, "rewards");
+      // Update both the generic profile_points cache key and the reward-specific keys
       await updateProfilePoints(newPoints, prev.dom_points);
+      await queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      await queryClient.invalidateQueries({ queryKey: ['rewards', 'points'] }); 
+      await queryClient.invalidateQueries({ queryKey: ['totalRewardsSupply'] });
+      await syncCardById(rewardId, "rewards");
     }
   });
 }

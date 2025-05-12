@@ -8,7 +8,7 @@ interface RewardsListProps {
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
-  const { rewards, isLoading } = useRewards();
+  const { rewards, isLoading, handleBuyReward, handleUseReward } = useRewards();
   
   if (isLoading) {
     return (
@@ -27,7 +27,6 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
     );
   }
 
-  // Enhanced debugging logs showing index and ID to track position stability
   console.log("[RewardsList] Rendering rewards list with stable order:", 
     rewards.map((r, i) => ({ 
       index: i, 
@@ -59,8 +58,8 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           title_color={reward.title_color}
           subtext_color={reward.subtext_color}
           calendar_color={reward.calendar_color}
-          onBuy={(cost) => reward.id && reward.id}
-          onUse={() => reward.id && reward.id}
+          onBuy={() => handleBuyReward(reward.id, reward.cost, reward.is_dom_reward)}
+          onUse={() => handleUseReward(reward.id)}
           onEdit={() => onEdit(index)}
         />
       ))}

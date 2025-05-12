@@ -38,6 +38,9 @@ export function useRedeemSubReward() {
     },
 
     onSuccess: async ({ rewardId }) => {
+      // Use the same query keys that are used in RewardsDataHandler and RewardsContext
+      await queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      await queryClient.invalidateQueries({ queryKey: ['totalRewardsSupply'] });
       await syncCardById(rewardId, "rewards");
     }
   });

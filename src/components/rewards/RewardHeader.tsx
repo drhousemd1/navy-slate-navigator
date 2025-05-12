@@ -9,7 +9,7 @@ interface RewardHeaderProps {
   supply: number;
   cost: number;
   isDomReward?: boolean;
-  onBuy: (cost: number) => void;
+  onBuy: () => void;
   onUse: () => void;
 }
 
@@ -38,15 +38,13 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
   
   // Use Crown icon for dom rewards, Coins for sub rewards
   const CostIcon = isDomReward ? Crown : Coins;
-  
-  console.log("RewardHeader rendered with isDomReward:", isDomReward);
 
   return (
     <div className="flex justify-between items-start mb-3">
       <div className="flex items-center gap-2">
         <Badge 
           className="text-white font-bold flex items-center gap-1" 
-          style={supplyBadgeStyle} // Apply the style directly to the badge
+          style={supplyBadgeStyle} 
         >
           <Box className="h-3 w-3" />
           <span>{supply}</span>
@@ -68,7 +66,7 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
       <div className="flex items-center gap-2">
         <Badge 
           className="text-white font-bold flex items-center gap-1 px-2"
-          style={costBadgeStyle} // Apply the new style to cost badge
+          style={costBadgeStyle}
         >
           <CostIcon className="h-3 w-3" />
           <span className="flex items-center">
@@ -80,7 +78,7 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
           variant="default"
           size="sm"
           className={`${buyButtonColor} text-white h-7`}
-          onClick={() => onBuy(cost)}
+          onClick={onBuy}
         >
           Buy
         </Button>
