@@ -6,6 +6,10 @@ import { Reward } from '@/lib/rewardUtils';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useBuySubReward } from "@/data/mutations/useBuySubReward";
+import { useBuyDomReward } from "@/data/mutations/useBuyDomReward";
+import { useRedeemSubReward } from "@/data/mutations/useRedeemSubReward";
+import { useRedeemDomReward } from "@/data/mutations/useRedeemDomReward";
 
 // Create a complete mock observer result that satisfies the QueryObserverResult type
 const mockQueryResult: QueryObserverResult<Reward[], Error> = {
@@ -78,6 +82,27 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setPointsOptimistically,
     setDomPointsOptimistically,
   } = useRewardsData();
+  
+  const { mutateAsync: buySub } = useBuySubReward();
+  const { mutateAsync: buyDom } = useBuyDomReward();
+  const { mutateAsync: redeemSub } = useRedeemSubReward();
+  const { mutateAsync: redeemDom } = useRedeemDomReward();
+
+  async function handleBuySubReward(args: any) { 
+    await buySub(args); 
+  }
+  
+  async function handleBuyDomReward(args: any) { 
+    await buyDom(args); 
+  }
+  
+  async function handleRedeemSubReward(args: any) { 
+    await redeemSub(args); 
+  }
+  
+  async function handleRedeemDomReward(args: any) { 
+    await redeemDom(args); 
+  }
 
   // Refresh points when the provider mounts
   useEffect(() => {
@@ -142,11 +167,23 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       
       // Perform the actual API call with required parameters
-      await buyReward({
-        rewardId: id,
-        cost,
-        isDomReward: isRewardDominant
-      });
+      if (isRewardDominant) {
+        await handleBuyDomReward({
+          rewardId: id,
+          cost,
+          currentSupply: reward.supply,
+          profileId: userData.user.id,
+          currentDomPoints: domPoints
+        });
+      } else {
+        await handleBuySubReward({
+          rewardId: id,
+          cost,
+          currentSupply: reward.supply,
+          profileId: userData.user.id,
+          currentPoints: totalPoints
+        });
+      }
     } catch (error) {
       console.error("Error in handleBuyReward:", error);
       
@@ -198,8 +235,26 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         description: `You used ${reward.title}`,
       });
       
+      // Get current user ID for database operations
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error("User not authenticated");
+      }
+      
       // Perform the actual API call in the background
-      await useReward(id);
+      if (reward.is_dom_reward) {
+        await handleRedeemDomReward({
+          rewardId: id,
+          currentSupply: reward.supply,
+          profileId: userData.user.id
+        });
+      } else {
+        await handleRedeemSubReward({
+          rewardId: id,
+          currentSupply: reward.supply,
+          profileId: userData.user.id
+        });
+      }
     } catch (error) {
       console.error("Error in handleUseReward:", error);
       

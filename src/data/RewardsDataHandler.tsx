@@ -169,57 +169,13 @@ const deleteRewardFromDb = async (rewardId: string): Promise<boolean> => {
   return true;
 };
 
-// Buy a reward with user points
-async function buyRewardInDb(
-  rewardId: string,
-  cost: number,
-  currentSupply: number,
-  profileId: string,
-  currentPoints: number
-): Promise<boolean> {
-  const { mutateAsync } = useBuySubReward();
-  await mutateAsync({ rewardId, cost, currentSupply, profileId, currentPoints });
-  return true;
-}
-
-// Buy a dom reward with dom points
-async function buyDomRewardInDb(
-  rewardId: string,
-  cost: number,
-  currentSupply: number,
-  profileId: string,
-  currentDomPoints: number
-): Promise<boolean> {
-  const { mutateAsync } = useBuyDomReward();
-  await mutateAsync({ rewardId, cost, currentSupply, profileId, currentDomPoints });
-  return true;
-}
-
-// Use a reward
-async function redeemRewardInDb(
-  rewardId: string,
-  currentSupply: number,
-  profileId: string
-): Promise<{ success: boolean }> {
-  const { mutateAsync } = useRedeemSubReward();
-  await mutateAsync({ rewardId, currentSupply, profileId });
-  return { success: true };
-}
-
-// Use a dom reward
-async function redeemDomRewardInDb(
-  rewardId: string,
-  currentSupply: number,
-  profileId: string
-): Promise<{ success: boolean }> {
-  const { mutateAsync } = useRedeemDomReward();
-  await mutateAsync({ rewardId, currentSupply, profileId });
-  return { success: true };
-}
-
 // The main hook to expose all reward-related operations
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
+  const { mutateAsync: buySub } = useBuySubReward();
+  const { mutateAsync: buyDom } = useBuyDomReward();
+  const { mutateAsync: redeemSub } = useRedeemSubReward();
+  const { mutateAsync: redeemDom } = useRedeemDomReward();
 
   // Query for fetching all rewards
   const {
@@ -372,13 +328,16 @@ export const useRewardsData = () => {
 
   // Mutation for buying a reward
   const buyRewardMutation = useMutation({
-    mutationFn: ({ rewardId, cost, currentSupply, profileId, currentPoints }: { 
+    mutationFn: async ({ rewardId, cost, currentSupply, profileId, currentPoints }: { 
       rewardId: string, 
       cost: number, 
       currentSupply: number, 
       profileId: string, 
       currentPoints: number 
-    }) => buyRewardInDb(rewardId, cost, currentSupply, profileId, currentPoints),
+    }) => {
+      await buySub({ rewardId, cost, currentSupply, profileId, currentPoints });
+      return true;
+    },
     onMutate: async ({ rewardId, cost, currentSupply, profileId, currentPoints }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
