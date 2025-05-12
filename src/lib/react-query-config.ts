@@ -12,7 +12,7 @@ export const STANDARD_QUERY_CONFIG = {
   staleTime: 5 * 60 * 1000, // 5 minutes
   cacheTime: 15 * 60 * 1000, // 15 minutes
   refetchOnWindowFocus: true,
-  refetchOnMount: 'always', // force update after hard reload
+  refetchOnMount: 'always' as const, // force update after hard reload - type fixed
   refetchOnReconnect: true,
   retry: 1
 };
