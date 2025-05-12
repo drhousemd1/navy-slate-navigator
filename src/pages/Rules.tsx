@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +11,7 @@ import { useSyncManager } from '@/hooks/useSyncManager';
 import { usePreloadRules } from "@/data/preload/usePreloadRules";
 
 // Preload rules data from IndexedDB before component renders
-await usePreloadRules();
+usePreloadRules()();
 
 // Separate component to use the useRules hook inside RulesProvider
 const RulesWithContext: React.FC = () => {

@@ -1,4 +1,3 @@
-
 /**
  * DO NOT REPLICATE LOGIC OUTSIDE THIS FILE.
  * All fetching, mutation, sync, and cache logic must live in centralized hooks only.
@@ -14,7 +13,7 @@ import { useSyncManager } from '@/data/sync/useSyncManager';
 import { usePreloadRewards } from "@/data/preload/usePreloadRewards";
 
 // Preload rewards data from IndexedDB before component renders
-await usePreloadRewards();
+usePreloadRewards()();
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>

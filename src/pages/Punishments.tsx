@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -16,7 +15,7 @@ import { toast } from '@/hooks/use-toast';
 import { usePreloadPunishments } from "@/data/preload/usePreloadPunishments";
 
 // Preload punishments data from IndexedDB before component renders
-await usePreloadPunishments();
+usePreloadPunishments()();
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
