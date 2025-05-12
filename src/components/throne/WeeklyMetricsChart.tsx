@@ -31,7 +31,7 @@ const WeeklyMetricsChart: React.FC = () => {
   const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
     console.log('Fetching weekly chart data at', new Date().toISOString());
     try {
-      // Generate all days of the week (Monday to Sunday)
+      // Generate all days of the week (Monday to Sunday) as strings
       const weekDays = generateMondayBasedWeekDates();
       
       // Initialize data structure with all days, starting with zero values
