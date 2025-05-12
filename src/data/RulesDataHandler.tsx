@@ -9,6 +9,25 @@ import { Rule } from '@/data/interfaces/Rule';
 import { fetchRules } from '@/data/rules/fetchRules';
 import { recordViolation } from '@/data/rules/recordViolation';
 
+// Export wrapper functions
+export async function createRuleInDb(newRule: any, profileId?: string): Promise<boolean> {
+  const { mutateAsync } = useCreateRule();
+  await mutateAsync({ ...newRule, profile_id: profileId });
+  return true;
+}
+
+export async function updateRuleInDb(ruleId: string, updates: any): Promise<boolean> {
+  const { mutateAsync } = useUpdateRule();
+  await mutateAsync({ ruleId, updates });
+  return true;
+}
+
+export async function deleteRuleInDb(ruleId: string): Promise<boolean> {
+  const { mutateAsync } = useDeleteRule();
+  await mutateAsync(ruleId);
+  return true;
+}
+
 export const useRulesData = () => {
   const queryClient = useQueryClient();
   const { mutateAsync: createRule } = useCreateRule();
@@ -30,24 +49,6 @@ export const useRulesData = () => {
     refetchOnReconnect: false,
     refetchOnMount: false,
   });
-
-  // Create rule wrapper
-  async function createRuleInDb(newRule: any, profileId?: string): Promise<boolean> {
-    await createRule({ ...newRule, profile_id: profileId });
-    return true;
-  }
-
-  // Update rule wrapper
-  async function updateRuleInDb(ruleId: string, updates: any): Promise<boolean> {
-    await updateRule({ ruleId, updates });
-    return true;
-  }
-
-  // Delete rule wrapper
-  async function deleteRuleInDb(ruleId: string): Promise<boolean> {
-    await deleteRule(ruleId);
-    return true;
-  }
 
   // Mark rule broken
   const markRuleBroken = async (rule: Rule): Promise<void> => {

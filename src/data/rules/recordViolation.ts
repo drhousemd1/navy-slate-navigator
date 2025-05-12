@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 import { Rule } from '@/data/interfaces/Rule';
 import { getMondayBasedDay } from '@/lib/utils';
 
@@ -52,6 +52,26 @@ export const recordRuleViolationInDb = async (rule: Rule): Promise<void> => {
     }
   } catch (error) {
     console.error('Error recording rule violation:', error);
+    throw error;
+  }
+};
+
+// Export the simple version that is called by the RulesDataHandler
+export const recordViolation = async (ruleId: string): Promise<void> => {
+  try {
+    const { data: rule, error } = await supabase
+      .from('rules')
+      .select('*')
+      .eq('id', ruleId)
+      .single();
+      
+    if (error || !rule) {
+      throw new Error('Could not find rule to record violation');
+    }
+    
+    await recordRuleViolationInDb(rule);
+  } catch (error) {
+    console.error('Error in recordViolation:', error);
     throw error;
   }
 };
