@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -7,6 +8,7 @@ import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TasksProvider, useTasks } from '../contexts/TasksContext';
 import { Task } from '@/lib/taskUtils';
 import { syncCardById } from '@/data/sync/useSyncManager';
+import { useSyncManager } from '@/hooks/useSyncManager';
 import { usePreloadTasks } from "@/data/preload/usePreloadTasks";
 
 // Preload tasks data from IndexedDB before component renders

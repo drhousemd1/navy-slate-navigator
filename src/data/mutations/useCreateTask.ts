@@ -9,8 +9,8 @@ import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "../queryClient";
 import { supabase } from '@/integrations/supabase/client';
 import { Task } from "@/lib/taskUtils";
-import { saveTasksToDB } from "../indexedDB/useIndexedDB";
-import { syncCardById } from "../sync/useSyncManager";
+import { saveTasksToDB } from "@/data/indexedDB/useIndexedDB";
+import { syncCardById } from "@/data/sync/useSyncManager";
 
 // Create or update a task
 const createOrUpdateTask = async (taskData: Partial<Task>): Promise<Task> => {

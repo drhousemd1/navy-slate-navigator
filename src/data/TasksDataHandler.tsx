@@ -1,3 +1,4 @@
+
 import { useQuery, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
@@ -7,8 +8,8 @@ import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { useCreateTask } from "@/data/mutations/useCreateTask";
 import { useCompleteTask } from "@/data/mutations/useCompleteTask";
-import { saveTasksToDB } from "../indexedDB/useIndexedDB";
-import { syncCardById } from "../sync/useSyncManager";
+import { saveTasksToDB } from "@/data/indexedDB/useIndexedDB";
+import { syncCardById } from "@/data/sync/useSyncManager";
 
 const TASKS_QUERY_KEY = ['tasks'];
 const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
