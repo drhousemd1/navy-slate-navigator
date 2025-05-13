@@ -22,6 +22,15 @@ import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
 import AdminTesting from "./pages/AdminTesting";
 
+// Import preloading utilities
+import { preloadAllData } from "@/data/preload/usePreloadData";
+
+// Preload all data as soon as the app starts
+// This is outside of any component to run as early as possible
+preloadAllData(queryClient).catch(e => {
+  console.error("Failed to preload app data:", e);
+});
+
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
