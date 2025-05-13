@@ -13,7 +13,7 @@ import localforage from "localforage";
  * for instant loading while fetching fresh data in the background.
  */
 export function usePersistentQuery<TData>(
-  options: UseQueryOptions<TData, Error>
+  options: UseQueryOptions<TData, Error, TData, any>
 ): UseQueryResult<TData, Error> {
   // Convert query key to string for storage key
   const keyString = JSON.stringify(options.queryKey);
@@ -48,8 +48,9 @@ export function usePersistentQuery<TData>(
   return useQuery<TData, Error>({
     ...options,
     initialData: undefined,
-    // We need to correctly type the initialData function
-    initialDataUpdatedAt: async () => {
+    initialDataUpdatedAt: undefined, // Replace async function with undefined
+    placeholderData: async () => {
+      // Use placeholderData instead of initialData for async retrieval
       const cachedData = await getCachedData();
       
       if (cachedData) {
@@ -60,27 +61,29 @@ export function usePersistentQuery<TData>(
         } catch (e) {
           console.warn('[usePersistentQuery] Failed to save to localStorage', e);
         }
-        return Date.now(); // Return current time as the update timestamp
       }
-      return 0; // No cached data available
+      return cachedData;
     },
-    onSuccess: (data) => {
-      // Call the original onSuccess if it exists
-      if (options.onSuccess) {
-        options.onSuccess(data, null as any, { queryKey: options.queryKey, meta: options.meta } as any);
-      }
-      
-      // Save to IndexedDB
-      localforage.setItem(keyString, data).catch(e => {
-        console.warn(`[usePersistentQuery] Failed to save to IndexedDB for ${keyString}`, e);
-        
-        // Fallback to localStorage if IndexedDB fails
-        try {
-          localStorage.setItem(keyString, JSON.stringify(data));
-        } catch (localStorageError) {
-          console.warn(`[usePersistentQuery] Also failed to save to localStorage for ${keyString}`, localStorageError);
+    meta: {
+      ...options.meta,
+      onQuerySuccess: (data: TData) => {
+        // Call the original onSuccess if it exists
+        if (options.meta?.onQuerySuccess) {
+          options.meta.onQuerySuccess(data);
         }
-      });
+        
+        // Save to IndexedDB
+        localforage.setItem(keyString, data).catch(e => {
+          console.warn(`[usePersistentQuery] Failed to save to IndexedDB for ${keyString}`, e);
+          
+          // Fallback to localStorage if IndexedDB fails
+          try {
+            localStorage.setItem(keyString, JSON.stringify(data));
+          } catch (localStorageError) {
+            console.warn(`[usePersistentQuery] Also failed to save to localStorage for ${keyString}`, localStorageError);
+          }
+        });
+      }
     }
   });
 }
