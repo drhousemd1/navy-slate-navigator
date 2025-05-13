@@ -30,7 +30,7 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
             type="button" 
             variant="destructive" 
             onClick={() => setIsDeleteDialogOpen(true)}
-            className="mr-auto"
+            className="mr-auto bg-red-700 text-white hover:bg-red-600"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Delete

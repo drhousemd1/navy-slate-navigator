@@ -17,7 +17,7 @@ const ModalActions: React.FC<ModalActionsProps> = ({ onClose, onDelete, isSaving
         type="button" 
         variant="destructive" 
         onClick={onDelete} 
-        className="mr-auto"
+        className="mr-auto bg-red-700 text-white hover:bg-red-600"
       >
         <Trash2 className="mr-2 h-4 w-4" />
         Delete Card

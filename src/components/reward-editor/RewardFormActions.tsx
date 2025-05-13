@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 
 interface RewardFormActionsProps {
   rewardData?: any;
@@ -21,7 +21,7 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
   isSaving = false
 }) => {
   return (
-    <div className="pt-4 w-full flex items-center justify-end gap-3">
+    <div className="pt-4 w-full flex items-center justify-between">
       {rewardData?.id && onDelete && (
         <Button
           type="button"
@@ -34,22 +34,31 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
           Delete
         </Button>
       )}
-      <Button 
-        type="button" 
-        variant="destructive" 
-        onClick={onCancel}
-        className="bg-red-700 text-white hover:bg-red-600"
-        disabled={isSaving}
-      >
-        Cancel
-      </Button>
-      <Button 
-        type="submit" 
-        className="bg-nav-active text-white hover:bg-nav-active/90"
-        disabled={isSaving}
-      >
-        {isSaving ? 'Saving...' : 'Save Changes'}
-      </Button>
+      <div className="flex items-center gap-3 ml-auto">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onCancel}
+          className="bg-transparent border border-slate-600 text-white hover:bg-slate-800"
+          disabled={isSaving}
+        >
+          Cancel
+        </Button>
+        <Button 
+          type="submit" 
+          className="bg-emerald-600 text-white hover:bg-emerald-700"
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Changes'
+          )}
+        </Button>
+      </div>
     </div>
   );
 };
