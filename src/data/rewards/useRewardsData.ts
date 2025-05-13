@@ -1,7 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { usePersistentQuery as useQuery } from '@/data/queries/usePersistentQuery';
-import { useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward } from '@/lib/rewardUtils';
 import { 
   REWARDS_QUERY_KEY, 
@@ -31,11 +30,11 @@ export const useRewardsData = () => {
 
   // Query for fetching all rewards
   const {
-    data: rewards = [] as Reward[],
+    data: rewards = [],
     isLoading: rewardsLoading,
     error: rewardsError,
     refetch: refetchRewards
-  } = useQuery<Reward[]>({
+  } = useQuery({
     queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
     ...STANDARD_QUERY_CONFIG
@@ -43,8 +42,8 @@ export const useRewardsData = () => {
 
   // Set local rewards whenever server data changes
   useEffect(() => {
-    if (rewards && Array.isArray(rewards) && rewards.length > 0) {
-      setLocalRewards(rewards as Reward[]);
+    if (rewards.length > 0) {
+      setLocalRewards(rewards);
     }
   }, [rewards]);
 
@@ -52,7 +51,7 @@ export const useRewardsData = () => {
   const {
     data: totalRewardsSupply = 0,
     refetch: refetchSupply
-  } = useQuery<number>({
+  } = useQuery({
     queryKey: REWARDS_SUPPLY_QUERY_KEY,
     queryFn: fetchTotalRewardsSupply,
     ...STANDARD_QUERY_CONFIG

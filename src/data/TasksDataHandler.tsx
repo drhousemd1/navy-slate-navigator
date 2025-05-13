@@ -5,8 +5,7 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { usePersistentQuery as useQuery } from '@/data/queries/usePersistentQuery';
-import { QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
+import { useQuery, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
@@ -66,8 +65,7 @@ const fetchTasks = async (): Promise<Task[]> => {
   }));
 
   const today = getLocalDateString();
-  const tasksData = tasks as Task[];
-  const tasksToReset = tasksData.filter(task => 
+  const tasksToReset = tasks.filter(task => 
     task.completed && 
     task.frequency === 'daily' && 
     task.last_completed_date !== today
@@ -89,7 +87,7 @@ const fetchTasks = async (): Promise<Task[]> => {
     }
 
     // Update tasks in memory rather than refetching
-    const updatedTasks = tasksData.map(task => {
+    const updatedTasks = tasks.map(task => {
       if (tasksToReset.some(resetTask => resetTask.id === task.id)) {
         return { ...task, completed: false };
       }
@@ -110,11 +108,11 @@ const fetchTasks = async (): Promise<Task[]> => {
 
 export const useTasksData = () => {
   const {
-    data: tasks = [] as Task[],
+    data: tasks = [],
     isLoading,
     error,
     refetch
-  } = useQuery<Task[]>({
+  } = useQuery({
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
     ...STANDARD_QUERY_CONFIG, // Use our standardized configuration from react-query-config.ts
@@ -233,7 +231,7 @@ export const useTasksData = () => {
     options?: RefetchOptions
   ): Promise<QueryObserverResult<Task[], Error>> => {
     console.log('[TasksDataHandler] Manually refetching tasks');
-    return refetch(options) as Promise<QueryObserverResult<Task[], Error>>;
+    return refetch(options);
   };
 
   return {

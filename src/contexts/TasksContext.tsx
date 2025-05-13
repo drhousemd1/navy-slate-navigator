@@ -30,13 +30,13 @@ export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   } = useTasksData();
 
   const value: TasksContextType = {
-    tasks: tasks as Task[],
+    tasks,
     isLoading,
     error,
     saveTask: saveTaskToDb,
     deleteTask: deleteTaskFromDb,
     toggleTaskCompletion: toggleTaskCompletionInDb,
-    refetchTasks: refetchTasks as () => Promise<QueryObserverResult<Task[], Error>>
+    refetchTasks
   };
 
   return (

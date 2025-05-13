@@ -8,6 +8,10 @@ import { RewardsProvider } from '@/contexts/RewardsContext';
 import { RulesProvider, useRules } from '@/contexts/RulesContext';
 import { Rule } from '@/data/interfaces/Rule';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { usePreloadRules } from "@/data/preload/usePreloadRules";
+
+// Preload rules data from IndexedDB before component renders
+usePreloadRules()();
 
 // Separate component to use the useRules hook inside RulesProvider
 const RulesWithContext: React.FC = () => {
