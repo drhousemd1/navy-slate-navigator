@@ -1,6 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getMondayBasedDay } from "./utils";
+import { queryClient } from "@/data/queryClient";
+import { syncCardById } from "@/data/sync/useSyncManager";
 
 export interface Task {
   id: string;
@@ -31,6 +33,17 @@ export interface Task {
 export const getLocalDateString = (): string => {
   const today = new Date();
   return today.toLocaleDateString('en-CA');
+};
+
+export const todayKey = (): string =>
+  new Date().toLocaleDateString("en-CA");
+
+export const currentWeekKey = (): string => {
+  const d = new Date();
+  const onejan = new Date(d.getFullYear(), 0, 1);
+  const dayOfYear = Math.floor((d.valueOf() - onejan.valueOf()) / 86400000);
+  const weekNo = Math.ceil((dayOfYear + onejan.getDay() + 1) / 7);
+  return `${d.getFullYear()}-${weekNo}`;
 };
 
 export const wasCompletedToday = (task: Task): boolean => {
@@ -102,6 +115,33 @@ export const fetchTasks = async (): Promise<Task[]> => {
       variant: 'destructive',
     });
     return [];
+  }
+};
+
+export const resetTaskCompletions = async (
+  frequency: "daily" | "weekly"
+): Promise<void> => {
+  if (frequency === "daily") {
+    const today = getLocalDateString();
+    const { data, error } = await supabase
+      .from("tasks")
+      .update({ completed: false, frequency_count: 0 })
+      .eq("frequency", "daily")
+      .not("last_completed_date", "eq", today)
+      .select("id");
+    if (error) throw error;
+    if (data)
+      for (const row of data) await syncCardById(row.id, "tasks");
+  } else {
+    // weekly = clear usage_data and counters
+    const { data, error } = await supabase
+      .from("tasks")
+      .update({ frequency_count: 0, usage_data: [] })
+      .eq("frequency", "weekly")
+      .select("id");
+    if (error) throw error;
+    if (data)
+      for (const row of data) await syncCardById(row.id, "tasks");
   }
 };
 
@@ -378,31 +418,6 @@ export const deleteTask = async (id: string): Promise<boolean> => {
     toast({
       title: 'Error deleting task',
       description: err.message || 'Could not delete task',
-      variant: 'destructive',
-    });
-    return false;
-  }
-};
-
-export const resetTaskCompletions = async (frequency: 'daily' | 'weekly'): Promise<boolean> => {
-  try {
-    const today = getLocalDateString();
-    
-    const { error } = await supabase
-      .from('tasks')
-      .update({ 
-        completed: false
-      })
-      .eq('frequency', frequency)
-      .not('last_completed_date', 'eq', today);
-    
-    if (error) throw error;
-    return true;
-  } catch (err: any) {
-    console.error('Error resetting task completions:', err);
-    toast({
-      title: 'Error resetting tasks',
-      description: err.message || 'Could not reset task completion status',
       variant: 'destructive',
     });
     return false;
