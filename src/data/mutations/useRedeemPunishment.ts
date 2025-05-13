@@ -9,7 +9,7 @@ export function useRedeemPunishment() {
   return useMutation({
     mutationFn: async ({
       punId,
-      supply,
+      domSupply,
       costPoints,
       domEarn,
       profileId,
@@ -17,40 +17,50 @@ export function useRedeemPunishment() {
       domPoints
     }: {
       punId: string;
-      supply: number;
+      domSupply: number;
       costPoints: number;
       domEarn: number;
       profileId: string;
       subPoints: number;
       domPoints: number;
     }) => {
-      // 1 increment supply
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const weekNumber = `${today.getFullYear()}-W${Math.ceil(
+        ((today.getTime() - new Date(today.getFullYear(), 0, 1).getTime()) / 86400000 + new Date(today.getFullYear(), 0, 1).getDay() + 1) / 7
+      )}`;
+
+      // 1. Log usage history
+      await supabase.from("punishment_history").insert([
+        {
+          punishment_id: punId,
+          day_of_week: dayOfWeek,
+          points_deducted: costPoints,
+          applied_date: today.toISOString()
+        }
+      ]);
+
+      // 2. Update dom_supply column (not "supply")
       await supabase.from("punishments")
-        .update({ supply: supply + 1 })
+        .update({ dom_points: domSupply + 1 })
         .eq("id", punId);
 
-      // 2 log usage
-      await supabase.from("punishment_usage").insert([{
-        punishment_id: punId,
-        profile_id: profileId,
-        used_at: new Date().toISOString()
-      }]);
-
-      // 3 update profile totals
+      // 3. Update profile totals
       await supabase.from("profiles").update({
         points: subPoints - costPoints,
-        dom_points: domPoints + domEarn
+        dom_points: domPoints + domEarn,
       }).eq("id", profileId);
 
       return {
         punId,
         newSub: subPoints - costPoints,
-        newDom: domPoints + domEarn
+        newDom: domPoints + domEarn,
       };
     },
+
     onSuccess: async ({ punId, newSub, newDom }) => {
       await syncCardById(punId, "punishments");
       await updateProfilePoints(newSub, newDom);
-    }
+    },
   });
 }

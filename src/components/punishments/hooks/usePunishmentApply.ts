@@ -28,16 +28,6 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
     }
     
     try {
-      // Apply the punishment which deducts points from the submissive user
-      await applyPunishment({
-        id: id,
-        points: Math.abs(points) // Ensure points is positive (will be negated in the backend)
-      });
-      
-      // Award dom points to the dom user
-      // Use the explicit dom_points value if provided, otherwise calculate it
-      const domPointsToAdd = dom_points !== undefined ? dom_points : Math.ceil(Math.abs(points) / 2);
-      
       // Get the current user
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -45,32 +35,36 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
         // Fetch the dom_points from the profiles table
         const { data, error } = await supabase
           .from('profiles')
-          .select('dom_points')
+          .select('dom_points, points')
           .eq('id', user.id)
           .single();
           
         if (!error && data) {
-          // Update the dom_points in the profiles table
           const currentDomPoints = data.dom_points || 0;
-          const newDomPoints = currentDomPoints + domPointsToAdd;
+          const currentPoints = data.points || 0;
           
-          // First update the React Query cache with optimistic value
-          queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, newDomPoints);
+          // Apply the punishment using the updated parameter names
+          await applyPunishment({
+            punId: id,
+            domSupply: currentDomPoints, // Use domSupply instead of supply
+            costPoints: Math.abs(points),
+            domEarn: dom_points !== undefined ? dom_points : Math.ceil(Math.abs(points) / 2),
+            profileId: user.id,
+            subPoints: currentPoints,
+            domPoints: currentDomPoints
+          });
           
-          // Then update the database
-          await setDomPoints(newDomPoints);
+          // Show success message
+          toast({
+            title: 'Punishment Applied',
+            description: `${Math.abs(points)} points deducted`,
+          });
+          
+          // Refresh the data
+          await refetchPunishments();
+          await refreshPointsFromDatabase();
         }
       }
-      
-      // Show success message
-      toast({
-        title: 'Punishment Applied',
-        description: `${Math.abs(points)} points deducted and ${domPointsToAdd} dom points awarded`,
-      });
-      
-      // Refresh the data
-      await refetchPunishments();
-      await refreshPointsFromDatabase();
     } catch (error) {
       console.error('Error applying punishment:', error);
       toast({

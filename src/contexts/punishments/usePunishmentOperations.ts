@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from './types';
@@ -55,16 +54,13 @@ export const usePunishmentOperations = () => {
 
   const createPunishment = async (punishmentData: PunishmentData): Promise<string> => {
     try {
-      await savePunishmentInDb(punishmentData, punishmentData.profile_id || '');
+      await savePunishmentInDb(punishmentData, punishmentData.id || '');
       
       toast({
         title: "Success",
         description: "Punishment created successfully",
       });
       
-      // Since we're using our wrapper, the ID will be returned from the hook's flow
-      // but we don't have access to it directly here, so we'll need to fetch again
-      // or the component should handle refreshing
       return punishmentData.id || '';
     } catch (error) {
       console.error('Error creating punishment:', error);
