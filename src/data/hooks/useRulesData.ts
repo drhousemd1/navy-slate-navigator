@@ -1,5 +1,6 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { usePersistentQuery as useQuery } from '@/data/queries/usePersistentQuery';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule';
 import { fetchRules } from '@/data/rules/fetchRules';

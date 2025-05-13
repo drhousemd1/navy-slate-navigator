@@ -5,7 +5,8 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
+import { usePersistentQuery as useQuery } from '@/data/queries/usePersistentQuery';
+import { QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
