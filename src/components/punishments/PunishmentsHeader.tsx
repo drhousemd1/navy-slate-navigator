@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
 import { useRewards } from '@/contexts/RewardsContext';
@@ -10,12 +10,17 @@ import RandomPunishmentSelections from './RandomPunishmentSelections';
 import { useProfilePoints } from "@/data/queries/useProfilePoints";
 
 const PunishmentsHeader: React.FC = () => {
-  const { totalRewardsSupply, totalDomRewardsSupply } = useRewards();
+  const { totalRewardsSupply, totalDomRewardsSupply, refreshPointsFromDatabase } = useRewards();
   const { punishments } = usePunishments();
   const { data: profile } = useProfilePoints();
   const totalPoints = profile?.points ?? 0;
   const domPoints = profile?.dom_points ?? 0;
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
+
+  // Refresh points when component mounts
+  useEffect(() => {
+    refreshPointsFromDatabase();
+  }, [refreshPointsFromDatabase]);
 
   // Style for badges - black background with cyan border
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
