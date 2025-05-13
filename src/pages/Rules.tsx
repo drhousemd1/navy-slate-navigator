@@ -93,14 +93,11 @@ const RulesWithContext: React.FC = () => {
     }
   };
 
-  // Check if we have an error but rules are available from cache
+  // Even if there's an error, if we have cached rules, just show them without the warning
   if (error && rules.length > 0) {
     return (
       <div className="container mx-auto px-4 py-6 RulesContent">
         <RulesHeader />
-        <div className="mb-4 p-4 bg-yellow-500/20 border border-yellow-600 rounded-md text-yellow-200">
-          <p className="font-medium">Having trouble connecting to server. Showing cached rules.</p>
-        </div>
         <RulesList
           rules={rules}
           isLoading={false}
