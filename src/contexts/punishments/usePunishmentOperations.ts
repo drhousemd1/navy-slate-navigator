@@ -1,11 +1,10 @@
+
 import { useState } from 'react';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from './types';
-import {
-  savePunishmentInDb,
-  redeemPunishmentInDb,
-  deletePunishmentInDb
-} from "@/data/PunishmentsDataHandler";
+import { useCreatePunishment } from "@/data/mutations/useCreatePunishment";
+import { useRedeemPunishment } from "@/data/mutations/useRedeemPunishment";
+import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
 import { supabase } from '@/integrations/supabase/client';
 
 export const usePunishmentOperations = () => {
@@ -14,6 +13,11 @@ export const usePunishmentOperations = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [totalPointsDeducted, setTotalPointsDeducted] = useState<number>(0);
+  
+  // Get mutation hooks directly
+  const { mutateAsync: createPunishment } = useCreatePunishment();
+  const { mutateAsync: redeemPunishment } = useRedeemPunishment();
+  const { mutateAsync: deletePunishment } = useDeletePunishment();
 
   const fetchPunishments = async () => {
     try {
@@ -52,9 +56,10 @@ export const usePunishmentOperations = () => {
     }
   };
 
-  const createPunishment = async (punishmentData: PunishmentData): Promise<string> => {
+  const createPunishmentOperation = async (punishmentData: PunishmentData): Promise<string> => {
     try {
-      await savePunishmentInDb(punishmentData, punishmentData.id || '');
+      // Directly use the createPunishment mutation
+      await createPunishment({ ...punishmentData, profile_id: punishmentData.id || '' });
       
       toast({
         title: "Success",
@@ -78,7 +83,6 @@ export const usePunishmentOperations = () => {
       console.log("Updating punishment with ID:", id);
       console.log("Data to update:", punishmentData);
       
-      // Using our wrapper function indirectly
       // For update, we'd need a separate function but for now we'll use the Supabase call directly
       // as this wasn't explicitly migrated
       const { error } = await supabase
@@ -109,9 +113,10 @@ export const usePunishmentOperations = () => {
     }
   };
 
-  const deletePunishment = async (id: string): Promise<void> => {
+  const deletePunishmentOperation = async (id: string): Promise<void> => {
     try {
-      await deletePunishmentInDb(id);
+      // Directly use the deletePunishment mutation
+      await deletePunishment(id);
       
       setPunishments(prev => prev.filter(punishment => punishment.id !== id));
       setPunishmentHistory(prev => prev.filter(item => item.punishment_id !== id));
@@ -182,9 +187,9 @@ export const usePunishmentOperations = () => {
     error,
     totalPointsDeducted,
     fetchPunishments,
-    createPunishment,
+    createPunishment: createPunishmentOperation,
     updatePunishment,
-    deletePunishment,
+    deletePunishment: deletePunishmentOperation,
     applyPunishment,
     getPunishmentHistory
   };
