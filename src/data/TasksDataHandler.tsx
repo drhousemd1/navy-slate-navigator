@@ -66,7 +66,8 @@ const fetchTasks = async (): Promise<Task[]> => {
   }));
 
   const today = getLocalDateString();
-  const tasksToReset = tasks.filter(task => 
+  const tasksData = tasks as Task[];
+  const tasksToReset = tasksData.filter(task => 
     task.completed && 
     task.frequency === 'daily' && 
     task.last_completed_date !== today
@@ -88,7 +89,7 @@ const fetchTasks = async (): Promise<Task[]> => {
     }
 
     // Update tasks in memory rather than refetching
-    const updatedTasks = tasks.map(task => {
+    const updatedTasks = tasksData.map(task => {
       if (tasksToReset.some(resetTask => resetTask.id === task.id)) {
         return { ...task, completed: false };
       }
@@ -109,11 +110,11 @@ const fetchTasks = async (): Promise<Task[]> => {
 
 export const useTasksData = () => {
   const {
-    data: tasks = [],
+    data: tasks = [] as Task[],
     isLoading,
     error,
     refetch
-  } = useQuery({
+  } = useQuery<Task[]>({
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
     ...STANDARD_QUERY_CONFIG, // Use our standardized configuration from react-query-config.ts
@@ -232,7 +233,7 @@ export const useTasksData = () => {
     options?: RefetchOptions
   ): Promise<QueryObserverResult<Task[], Error>> => {
     console.log('[TasksDataHandler] Manually refetching tasks');
-    return refetch(options);
+    return refetch(options) as Promise<QueryObserverResult<Task[], Error>>;
   };
 
   return {

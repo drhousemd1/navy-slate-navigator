@@ -5,7 +5,7 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
 import localforage from "localforage";
 
 /**
@@ -14,7 +14,7 @@ import localforage from "localforage";
  */
 export function usePersistentQuery<TData>(
   options: UseQueryOptions<TData, Error>
-) {
+): UseQueryResult<TData, Error> {
   // Convert query key to string for storage key
   const keyString = JSON.stringify(options.queryKey);
   
@@ -46,7 +46,10 @@ export function usePersistentQuery<TData>(
   
   // Enhanced return from the useQuery hook 
   return useQuery<TData, Error>({
-    initialData: async () => {
+    ...options,
+    initialData: undefined,
+    // We need to correctly type the initialData function
+    initialDataUpdatedAt: async () => {
       const cachedData = await getCachedData();
       
       if (cachedData) {
@@ -57,16 +60,14 @@ export function usePersistentQuery<TData>(
         } catch (e) {
           console.warn('[usePersistentQuery] Failed to save to localStorage', e);
         }
+        return Date.now(); // Return current time as the update timestamp
       }
-      
-      return cachedData;
+      return 0; // No cached data available
     },
-    ...options,
-    // Save successful query results to both caches
     onSuccess: (data) => {
       // Call the original onSuccess if it exists
       if (options.onSuccess) {
-        options.onSuccess(data);
+        options.onSuccess(data, null as any, { queryKey: options.queryKey, meta: options.meta } as any);
       }
       
       // Save to IndexedDB

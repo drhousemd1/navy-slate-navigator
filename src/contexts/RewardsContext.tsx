@@ -295,16 +295,16 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const value = {
-    rewards,
+  const value: RewardsContextType = {
+    rewards: rewards as Reward[],
     totalPoints,
-    totalRewardsSupply,
+    totalRewardsSupply: totalRewardsSupply as number,
     totalDomRewardsSupply,
     domPoints,
     setTotalPoints,
     setDomPoints,
     isLoading,
-    refetchRewards,
+    refetchRewards: refetchRewards as () => Promise<QueryObserverResult<Reward[], Error>>,
     handleSaveReward,
     handleDeleteReward,
     handleBuyReward,

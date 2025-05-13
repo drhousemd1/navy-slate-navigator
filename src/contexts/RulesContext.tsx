@@ -39,13 +39,13 @@ export const RulesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   } = useRulesData();
 
   const value: RulesContextType = {
-    rules,
+    rules: rules as Rule[],
     isLoading,
     error,
     saveRule,
     deleteRule,
     markRuleBroken,
-    refetchRules
+    refetchRules: refetchRules as () => Promise<QueryObserverResult<Rule[], Error>>
   };
 
   return (
