@@ -1,7 +1,7 @@
 
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import { useRewards } from '@/contexts/RewardsContext';
-import { toast } from '@/hooks/use-toast';
+import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries';
@@ -43,7 +43,7 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
           const currentDomPoints = data.dom_points || 0;
           const currentPoints = data.points || 0;
           
-          // Apply the punishment with corrected parameter structure
+          // Apply the punishment with corrected parameter structure and type assertion
           await applyPunishment({
             id,
             costPoints: Math.abs(points),
@@ -51,6 +51,13 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
             profileId: user.id,
             subPoints: currentPoints,
             domPoints: currentDomPoints
+          } as {
+            id: string,
+            costPoints: number,
+            domEarn: number,
+            profileId: string,
+            subPoints: number,
+            domPoints: number
           });
           
           // Show success message
