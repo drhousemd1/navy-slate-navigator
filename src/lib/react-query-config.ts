@@ -1,7 +1,7 @@
-
 import { QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { persistQueryClient } from '@tanstack/react-query-persist-client';
+import localforage from "localforage";
 
 // Create a centralized QueryClient with optimized settings for moderate caching
 export const createQueryClient = () => {
@@ -105,19 +105,32 @@ export const createPersistedQueryClient = () => {
     }
   }
   
+  // Add query cache subscription to persist evicted queries
+  queryClient.getQueryCache().subscribe(event => {
+    if (event?.type === "removed" && event.query?.queryKey) {
+      const key = JSON.stringify(event.query.queryKey);
+      const data = event.query.state.data;
+      if (data !== undefined) {
+        localforage.setItem(key, data);
+        try {
+          localStorage.setItem(key, JSON.stringify(data));
+        } catch (e) {
+          console.error("Error saving to localStorage:", e);
+        }
+      }
+    }
+  });
+  
   return queryClient;
 };
 
 // Standardized query config that should be used across ALL pages in the app
 export const STANDARD_QUERY_CONFIG = {
-  staleTime: 60000,    // Cache considered fresh for 1 minute
-  gcTime: 300000,      // Garbage collect after 5 minutes
+  staleTime: Infinity,    // Cache considered fresh forever
+  gcTime: 3600000,        // Garbage collect after 1 hour
   refetchOnWindowFocus: false,
   refetchOnMount: false,
   refetchOnReconnect: false,
-  retry: 3,            // Increased retry count
-  retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-  keepPreviousData: true, // Show previous data while fetching
 };
 
 // Helper function to purge the cache manually

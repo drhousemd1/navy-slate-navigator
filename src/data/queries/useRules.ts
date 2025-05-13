@@ -5,7 +5,7 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { usePersistentQuery as useQuery } from "./usePersistentQuery";
 import { supabase } from '@/integrations/supabase/client';
 import {
   loadRulesFromDB,

@@ -5,7 +5,7 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { usePersistentQuery as useQuery } from "./usePersistentQuery";
 import { supabase } from '@/integrations/supabase/client';
 import {
   loadPunishmentsFromDB,
@@ -49,7 +49,7 @@ export function usePunishments() {
     // TanStack Query will handle fetching the initial data in the queryFn
     initialData: undefined,
     staleTime: Infinity,
-    gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
+    gcTime: 3600000, // 1 hour
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchOnMount: false
