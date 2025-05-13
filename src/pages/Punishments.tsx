@@ -14,6 +14,7 @@ import { queryClient } from '@/data/queryClient';
 import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
 import { usePreloadPunishments } from "@/data/preload/usePreloadPunishments";
+import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
 
 // Preload punishments data from IndexedDB before component renders
 usePreloadPunishments()();
@@ -25,6 +26,9 @@ const PunishmentsContent: React.FC<{
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // Use the delete punishment mutation hook
+  const { mutateAsync: deletePunishmentAsync } = useDeletePunishment();
   
   // Use the sync manager with minimal refreshing
   const { syncNow } = useSyncManager({ 
@@ -166,6 +170,22 @@ const PunishmentsContent: React.FC<{
     }
   };
   
+  // Handler for deleting a punishment
+  const handleDeletePunishment = async (id: string) => {
+    try {
+      await deletePunishmentAsync(id);
+      setIsEditorOpen(false);
+      setCurrentPunishment(undefined);
+    } catch (error) {
+      console.error("Error deleting punishment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete punishment",
+        variant: "destructive"
+      });
+    }
+  };
+  
   // Show loading state when appropriate
   if (showLoader) {
     return (
@@ -198,6 +218,7 @@ const PunishmentsContent: React.FC<{
           onClose={() => setIsEditorOpen(false)}
           punishmentData={currentPunishment}
           onSave={handleSavePunishment}
+          onDelete={handleDeletePunishment}
         />
       </div>
     );
@@ -223,6 +244,7 @@ const PunishmentsContent: React.FC<{
         onClose={() => setIsEditorOpen(false)}
         punishmentData={currentPunishment}
         onSave={handleSavePunishment}
+        onDelete={handleDeletePunishment}
       />
     </div>
   );
