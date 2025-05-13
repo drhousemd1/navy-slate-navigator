@@ -27,7 +27,7 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
           type="button"
           variant="destructive"
           onClick={() => setIsDeleteDialogOpen(true)}
-          className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
+          className="bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
           disabled={isSaving}
         >
           <Trash2 className="h-4 w-4" />
@@ -37,16 +37,16 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
       <div className="flex items-center gap-3 ml-auto">
         <Button 
           type="button" 
-          variant="outline" 
+          variant="destructive" 
           onClick={onCancel}
-          className="bg-transparent border border-slate-600 text-white hover:bg-slate-800"
+          className="bg-red-600 text-white hover:bg-red-700"
           disabled={isSaving}
         >
           Cancel
         </Button>
         <Button 
           type="submit" 
-          className="bg-emerald-600 text-white hover:bg-emerald-700"
+          className="bg-blue-600 text-white hover:bg-blue-700"
           disabled={isSaving}
         >
           {isSaving ? (

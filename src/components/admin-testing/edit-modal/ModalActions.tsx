@@ -17,24 +17,24 @@ const ModalActions: React.FC<ModalActionsProps> = ({ onClose, onDelete, isSaving
         type="button" 
         variant="destructive" 
         onClick={onDelete} 
-        className="mr-auto bg-red-700 text-white hover:bg-red-600"
+        className="mr-auto bg-red-600 text-white hover:bg-red-700"
       >
         <Trash2 className="mr-2 h-4 w-4" />
-        Delete Card
+        Delete
       </Button>
       
       <div className="flex space-x-2">
         <Button 
           type="button" 
-          variant="outline" 
+          variant="destructive" 
           onClick={onClose} 
-          className="bg-transparent border border-slate-600 text-white hover:bg-slate-800"
+          className="bg-red-600 text-white hover:bg-red-700"
         >
           Cancel
         </Button>
         <Button 
           type="submit"
-          className="bg-emerald-600 text-white hover:bg-emerald-700"
+          className="bg-blue-600 text-white hover:bg-blue-700"
           disabled={isSaving}
         >
           {isSaving ? (
