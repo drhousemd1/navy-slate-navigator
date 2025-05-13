@@ -43,7 +43,7 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
           const currentDomPoints = data.dom_points || 0;
           const currentPoints = data.points || 0;
           
-          // Apply the punishment with corrected parameter structure and type assertion
+          // Apply the punishment with corrected parameter structure
           await applyPunishment({
             id,
             costPoints: Math.abs(points),
@@ -51,13 +51,6 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
             profileId: user.id,
             subPoints: currentPoints,
             domPoints: currentDomPoints
-          } as {
-            id: string,
-            costPoints: number,
-            domEarn: number,
-            profileId: string,
-            subPoints: number,
-            domPoints: number
           });
           
           // Show success message

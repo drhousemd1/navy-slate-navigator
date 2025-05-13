@@ -3,23 +3,40 @@ import { usePunishments } from '@/contexts/PunishmentsContext';
 import { useRewards } from '@/contexts/RewardsContext';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useApplyRandomPunishment = (onClose: () => void) => {
   const { applyPunishment } = usePunishments();
-  const { totalPoints, setTotalPoints } = useRewards();
+  const { totalPoints, setTotalPoints, domPoints } = useRewards();
   
   const handlePunish = async (selectedPunishment: PunishmentData | null) => {
     if (!selectedPunishment || !selectedPunishment.id) return;
     
     try {
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "User not authenticated",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       // First update the total points in the UI immediately
       const newTotal = totalPoints - selectedPunishment.points;
       setTotalPoints(newTotal);
       
-      // Then call the applyPunishment function with the punishment object
+      // Then call the applyPunishment function with the complete object structure
       await applyPunishment({
         id: selectedPunishment.id,
-        points: selectedPunishment.points
+        costPoints: selectedPunishment.points,
+        domEarn: Math.ceil(selectedPunishment.points / 2),
+        profileId: user.id,
+        subPoints: totalPoints,
+        domPoints: domPoints || 0
       });
       
       // Show success toast

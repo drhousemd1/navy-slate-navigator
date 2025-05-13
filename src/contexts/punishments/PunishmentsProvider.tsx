@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem } from './types';
+import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
 import { usePunishmentsData } from '@/data/punishments/usePunishmentsData';
 import { QueryObserverResult } from '@tanstack/react-query';
 
