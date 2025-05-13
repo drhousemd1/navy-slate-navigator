@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -164,34 +165,6 @@ const PunishmentsContent: React.FC<{
       });
     }
   };
-  
-  // Show cached data with error message if we have an error but cached data
-  if (error && punishments.length > 0) {
-    return (
-      <div className="p-4 pt-6">
-        <PunishmentsHeader />
-        <div className="bg-red-900/20 border border-red-700 rounded p-4 mb-4 text-red-300">
-          <p>Error refreshing data. Showing cached punishments.</p>
-        </div>
-        <div className="flex flex-col space-y-4">
-          {punishments.map((punishment) => (
-            <PunishmentCard
-              key={punishment.id}
-              {...punishment}
-              onEdit={() => handleEditPunishment(punishment)}
-            />
-          ))}
-        </div>
-        
-        <PunishmentEditor
-          isOpen={isEditorOpen}
-          onClose={() => setIsEditorOpen(false)}
-          punishmentData={currentPunishment}
-          onSave={handleSavePunishment}
-        />
-      </div>
-    );
-  }
   
   // Show loading state when appropriate
   if (showLoader) {
