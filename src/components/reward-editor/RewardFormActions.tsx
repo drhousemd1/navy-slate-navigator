@@ -21,44 +21,46 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
   isSaving = false
 }) => {
   return (
-    <div className="pt-4 w-full flex items-center justify-between">
+    <div className="pt-4 w-full flex items-center justify-start space-x-3">
       {rewardData?.id && onDelete && (
         <Button
           type="button"
           variant="destructive"
           onClick={() => setIsDeleteDialogOpen(true)}
-          className="bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
-          disabled={isSaving}
+          className="bg-red-600 text-white hover:bg-red-700"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="mr-2 h-4 w-4" />
           Delete
         </Button>
       )}
-      <div className="flex items-center gap-3 ml-auto">
-        <Button 
-          type="button" 
-          variant="destructive" 
-          onClick={onCancel}
-          className="bg-red-600 text-white hover:bg-red-700"
-          disabled={isSaving}
-        >
-          Cancel
-        </Button>
-        <Button 
-          type="submit" 
-          className="bg-blue-600 text-white hover:bg-blue-700"
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            'Save Changes'
-          )}
-        </Button>
-      </div>
+      
+      <Button 
+        type="button" 
+        variant="destructive" 
+        onClick={onCancel}
+        className="bg-red-600 text-white hover:bg-red-700"
+        disabled={isSaving}
+      >
+        Cancel
+      </Button>
+      
+      <Button 
+        type="submit" 
+        className="bg-blue-600 text-white hover:bg-blue-700"
+        disabled={isSaving}
+      >
+        {isSaving ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          <>
+            <Loader2 className="mr-2 h-4 w-4" />
+            Save Changes
+          </>
+        )}
+      </Button>
     </div>
   );
 };

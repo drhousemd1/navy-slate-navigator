@@ -13,17 +13,17 @@ interface ModalActionsProps {
 const ModalActions: React.FC<ModalActionsProps> = ({ onClose, onDelete, isSaving }) => {
   return (
     <DialogFooter className="flex justify-between items-center pt-4">
-      <Button 
-        type="button" 
-        variant="destructive" 
-        onClick={onDelete} 
-        className="mr-auto bg-red-600 text-white hover:bg-red-700"
-      >
-        <Trash2 className="mr-2 h-4 w-4" />
-        Delete
-      </Button>
-      
       <div className="flex space-x-2">
+        <Button 
+          type="button" 
+          variant="destructive" 
+          onClick={onDelete} 
+          className="bg-red-600 text-white hover:bg-red-700"
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete
+        </Button>
+        
         <Button 
           type="button" 
           variant="destructive" 
@@ -32,6 +32,7 @@ const ModalActions: React.FC<ModalActionsProps> = ({ onClose, onDelete, isSaving
         >
           Cancel
         </Button>
+        
         <Button 
           type="submit"
           className="bg-blue-600 text-white hover:bg-blue-700"
@@ -43,7 +44,10 @@ const ModalActions: React.FC<ModalActionsProps> = ({ onClose, onDelete, isSaving
               Saving...
             </>
           ) : (
-            'Save Changes'
+            <>
+              <Loader2 className="mr-2 h-4 w-4" />
+              Save Changes
+            </>
           )}
         </Button>
       </div>

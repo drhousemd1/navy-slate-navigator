@@ -24,44 +24,45 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
 }) => {
   return (
     <div className="flex flex-col space-y-4 mt-6 md:mt-8">
-      <div className="flex justify-between items-center pt-4">
+      <div className="flex items-center space-x-3 pt-4">
         {punishmentData?.id && onDelete && (
           <Button 
             type="button" 
             variant="destructive" 
             onClick={() => setIsDeleteDialogOpen(true)}
-            className="mr-auto bg-red-600 text-white hover:bg-red-700"
+            className="bg-red-600 text-white hover:bg-red-700"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>
         )}
         
-        <div className="flex space-x-4 ml-auto">
-          <Button 
-            type="button" 
-            variant="destructive" 
-            onClick={onCancel}
-            className="bg-red-600 text-white hover:bg-red-700"
-          >
-            Cancel
-          </Button>
-          
-          <Button 
-            type="submit"
-            className="bg-blue-600 text-white hover:bg-blue-700"
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Save Changes'
-            )}
-          </Button>
-        </div>
+        <Button 
+          type="button" 
+          variant="destructive" 
+          onClick={onCancel}
+          className="bg-red-600 text-white hover:bg-red-700"
+        >
+          Cancel
+        </Button>
+        
+        <Button 
+          type="submit"
+          className="bg-blue-600 text-white hover:bg-blue-700"
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Loader2 className="mr-2 h-4 w-4" />
+              Save Changes
+            </>
+          )}
+        </Button>
       </div>
       
       {punishmentData?.id && onDelete && (
