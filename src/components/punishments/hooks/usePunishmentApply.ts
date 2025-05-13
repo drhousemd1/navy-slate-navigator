@@ -43,10 +43,9 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
           const currentDomPoints = data.dom_points || 0;
           const currentPoints = data.points || 0;
           
-          // Apply the punishment with corrected parameter names
+          // Apply the punishment with corrected parameter structure
           await applyPunishment({
-            id, // Changed from punId to id
-            domSupply: currentDomPoints, // Use domSupply instead of supply
+            id,
             costPoints: Math.abs(points),
             domEarn: dom_points !== undefined ? dom_points : Math.ceil(Math.abs(points) / 2),
             profileId: user.id,
