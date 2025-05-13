@@ -90,15 +90,13 @@ export function usePersistentQuery<TData>(
             console.log(`[usePersistentQuery] Cache initialized for future access to ${keyString}`);
           }
         });
-      }
-    },
-    // Use an explicit onSuccess handler to load from cache on first render
-    onSuccess: (data: TData) => {
-      // When data is fetched successfully, save to localStorage as backup
-      try {
-        localStorage.setItem(keyString, JSON.stringify(data));
-      } catch (e) {
-        console.warn('[usePersistentQuery] Failed to save to localStorage', e);
+        
+        // When data is fetched successfully, save to localStorage as backup
+        try {
+          localStorage.setItem(keyString, JSON.stringify(data));
+        } catch (e) {
+          console.warn('[usePersistentQuery] Failed to save to localStorage', e);
+        }
       }
     }
   });
