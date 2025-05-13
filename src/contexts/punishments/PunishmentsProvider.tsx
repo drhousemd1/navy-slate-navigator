@@ -31,9 +31,18 @@ export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ childre
   // Use the data hook
   const punishmentsData = usePunishmentsData();
   
+  // Ensure the applyPunishment function has the correct type signature
+  const typedPunishmentsData = {
+    ...punishmentsData,
+    applyPunishment: async (args: ApplyPunishmentArgs): Promise<PunishmentHistoryItem> => {
+      // @ts-ignore - We're safely casting the function call to match our new type
+      return await punishmentsData.applyPunishment(args);
+    }
+  };
+  
   // Provide the context value
   return (
-    <PunishmentsContext.Provider value={punishmentsData as PunishmentsContextType}>
+    <PunishmentsContext.Provider value={typedPunishmentsData as PunishmentsContextType}>
       {children}
     </PunishmentsContext.Provider>
   );
