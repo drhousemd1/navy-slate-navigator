@@ -15,6 +15,7 @@ import {
 } from "../indexedDB/useIndexedDB";
 
 export function useRules() {
+  // Adding a comment here to ensure the change is detected
   return useQuery({
     queryKey: ["rules"],
     queryFn: async () => {
