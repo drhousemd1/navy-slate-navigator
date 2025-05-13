@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Trash2, Loader2 } from 'lucide-react';
+import { Trash2, Save, Loader2 } from 'lucide-react';
 
 interface RewardFormActionsProps {
   rewardData?: any;
@@ -21,7 +21,7 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
   isSaving = false
 }) => {
   return (
-    <div className="pt-4 w-full flex items-center justify-start space-x-3">
+    <div className="pt-4 w-full flex items-center justify-end space-x-3">
       {rewardData?.id && onDelete && (
         <Button
           type="button"
@@ -46,7 +46,7 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
       
       <Button 
         type="submit" 
-        className="bg-blue-600 text-white hover:bg-blue-700"
+        className="bg-[#0FA0CE] text-white hover:bg-[#0FA0CE]/90"
         disabled={isSaving}
       >
         {isSaving ? (
@@ -56,7 +56,7 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
           </>
         ) : (
           <>
-            <Loader2 className="mr-2 h-4 w-4" />
+            <Save className="mr-2 h-4 w-4" />
             Save Changes
           </>
         )}

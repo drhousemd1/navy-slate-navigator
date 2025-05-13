@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { PunishmentData } from '@/contexts/punishments/types';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2, Save } from 'lucide-react';
 import DeletePunishmentDialog from '../DeletePunishmentDialog';
 
 interface PunishmentFormActionsProps {
@@ -24,7 +24,7 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
 }) => {
   return (
     <div className="flex flex-col space-y-4 mt-6 md:mt-8">
-      <div className="flex items-center space-x-3 pt-4">
+      <div className="flex items-center justify-end space-x-3 pt-4">
         {punishmentData?.id && onDelete && (
           <Button 
             type="button" 
@@ -48,7 +48,7 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
         
         <Button 
           type="submit"
-          className="bg-blue-600 text-white hover:bg-blue-700"
+          className="bg-[#0FA0CE] text-white hover:bg-[#0FA0CE]/90"
           disabled={isSaving}
         >
           {isSaving ? (
@@ -58,7 +58,7 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
             </>
           ) : (
             <>
-              <Loader2 className="mr-2 h-4 w-4" />
+              <Save className="mr-2 h-4 w-4" />
               Save Changes
             </>
           )}
