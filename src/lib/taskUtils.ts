@@ -125,7 +125,11 @@ export const resetTaskCompletions = async (
     const today = getLocalDateString();
     const { data, error } = await supabase
       .from("tasks")
-      .update({ completed: false, frequency_count: 0 })
+      .update({ 
+        completed: false, 
+        frequency_count: 0,
+        usage_data: [] // Added to clear daily tracker circles
+      })
       .eq("frequency", "daily")
       .not("last_completed_date", "eq", today)
       .select("id");
