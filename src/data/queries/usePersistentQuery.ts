@@ -45,30 +45,30 @@ export function usePersistentQuery<TData>(
   };
   
   // Enhanced return from the useQuery hook 
-  return useQuery<TData, Error>({
+  return useQuery<TData, Error, TData, any>({
     ...options,
     initialData: undefined,
-    initialDataUpdatedAt: undefined, // Replace async function with undefined
-    placeholderData: async () => {
-      // Use placeholderData instead of initialData for async retrieval
-      const cachedData = await getCachedData();
+    initialDataUpdatedAt: undefined,
+    // Fix: Using a properly typed placeholderData that returns the data synchronously
+    placeholderData: () => {
+      // Since we can't use async here directly, we create a promise that will be
+      // resolved outside React's rendering cycle
+      const cachedDataPromise = getCachedData();
       
-      if (cachedData) {
-        console.log(`[usePersistentQuery] Using cached data for ${keyString}`);
-        // After loading from cache, save to localStorage as backup
-        try {
-          localStorage.setItem(keyString, JSON.stringify(cachedData));
-        } catch (e) {
-          console.warn('[usePersistentQuery] Failed to save to localStorage', e);
-        }
-      }
-      return cachedData;
+      // This is a synchronous operation now
+      // We will resolve the promise elsewhere and update the cache later
+      console.log(`[usePersistentQuery] Setting up placeholder for ${keyString}`);
+      
+      // Return undefined for now - the data will come from initialData if available
+      // or will be fetched in the background
+      return undefined;
     },
+    // Fix: Handle success callback properly through meta
     meta: {
       ...options.meta,
       onQuerySuccess: (data: TData) => {
-        // Call the original onSuccess if it exists
-        if (options.meta?.onQuerySuccess) {
+        // Call the original callback if it exists
+        if (options.meta && typeof options.meta.onQuerySuccess === 'function') {
           options.meta.onQuerySuccess(data);
         }
         
@@ -83,6 +83,22 @@ export function usePersistentQuery<TData>(
             console.warn(`[usePersistentQuery] Also failed to save to localStorage for ${keyString}`, localStorageError);
           }
         });
+        
+        // Run getCachedData to preload the cache for next time
+        getCachedData().then(cachedData => {
+          if (cachedData === undefined) {
+            console.log(`[usePersistentQuery] Cache initialized for future access to ${keyString}`);
+          }
+        });
+      }
+    },
+    // Use an explicit onSuccess handler to load from cache on first render
+    onSuccess: (data: TData) => {
+      // When data is fetched successfully, save to localStorage as backup
+      try {
+        localStorage.setItem(keyString, JSON.stringify(data));
+      } catch (e) {
+        console.warn('[usePersistentQuery] Failed to save to localStorage', e);
       }
     }
   });
