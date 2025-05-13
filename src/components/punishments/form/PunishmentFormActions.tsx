@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { Loader2, Trash2 } from 'lucide-react';
-import { DeletePunishmentDialog } from '../DeletePunishmentDialog';
+import DeletePunishmentDialog from '../DeletePunishmentDialog';
 
 interface PunishmentFormActionsProps {
   punishmentData?: PunishmentData;
@@ -67,13 +67,13 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
       {punishmentData?.id && onDelete && (
         <DeletePunishmentDialog
           isOpen={isDeleteDialogOpen}
-          onClose={() => setIsDeleteDialogOpen(false)}
-          onConfirm={() => {
+          onOpenChange={setIsDeleteDialogOpen}
+          onDelete={() => {
             if (punishmentData?.id && onDelete) {
               onDelete(punishmentData.id);
-              setIsDeleteDialogOpen(false);
             }
           }}
+          punishmentName={punishmentData.title}
         />
       )}
     </div>
