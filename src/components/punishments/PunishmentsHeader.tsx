@@ -7,10 +7,14 @@ import { Box, Coins, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import RandomPunishmentSelections from './RandomPunishmentSelections';
+import { useProfilePoints } from "@/data/queries/useProfilePoints";
 
 const PunishmentsHeader: React.FC = () => {
-  const { totalPoints, totalRewardsSupply, totalDomRewardsSupply, domPoints = 0 } = useRewards();
+  const { totalRewardsSupply, totalDomRewardsSupply } = useRewards();
   const { punishments } = usePunishments();
+  const { data: profile } = useProfilePoints();
+  const totalPoints = profile?.points ?? 0;
+  const domPoints = profile?.dom_points ?? 0;
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
 
   // Style for badges - black background with cyan border

@@ -3,11 +3,14 @@ import React, { useEffect } from 'react';
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
 import { Box, Coins } from 'lucide-react';
-import { supabase } from "@/integrations/supabase/client";
 import { useRewards } from '@/contexts/RewardsContext';
+import { useProfilePoints } from "@/data/queries/useProfilePoints";
 
 const RulesHeader: React.FC = () => {
-  const { totalPoints, totalRewardsSupply, totalDomRewardsSupply, domPoints = 0, refreshPointsFromDatabase } = useRewards();
+  const { totalRewardsSupply, totalDomRewardsSupply, refreshPointsFromDatabase } = useRewards();
+  const { data: profile } = useProfilePoints();
+  const totalPoints = profile?.points ?? 0;
+  const domPoints = profile?.dom_points ?? 0;
 
   // Refresh points when component mounts - exactly like in TasksHeader
   useEffect(() => {

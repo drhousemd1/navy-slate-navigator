@@ -4,9 +4,13 @@ import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
 import { useRewards } from '../../contexts/RewardsContext';
 import { Box, Coins } from 'lucide-react';
+import { useProfilePoints } from "@/data/queries/useProfilePoints";
 
 const TasksHeader: React.FC = () => {
-  const { totalPoints, totalRewardsSupply, totalDomRewardsSupply, domPoints = 0, refreshPointsFromDatabase } = useRewards();
+  const { totalRewardsSupply, totalDomRewardsSupply, refreshPointsFromDatabase } = useRewards();
+  const { data: profile } = useProfilePoints();
+  const totalPoints = profile?.points ?? 0;
+  const domPoints = profile?.dom_points ?? 0;
 
   // Refresh points when component mounts
   useEffect(() => {
