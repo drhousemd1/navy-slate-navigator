@@ -8,7 +8,7 @@ import { updateProfilePoints } from "../sync/updateProfilePoints";
 export function useRedeemPunishment() {
   return useMutation({
     mutationFn: async ({
-      punId,
+      id,
       domSupply,
       costPoints,
       domEarn,
@@ -16,7 +16,7 @@ export function useRedeemPunishment() {
       subPoints,
       domPoints
     }: {
-      punId: string;
+      id: string;
       domSupply: number;
       costPoints: number;
       domEarn: number;
@@ -33,7 +33,7 @@ export function useRedeemPunishment() {
       // 1. Log usage history
       await supabase.from("punishment_history").insert([
         {
-          punishment_id: punId,
+          punishment_id: id,
           day_of_week: dayOfWeek,
           points_deducted: costPoints,
           applied_date: today.toISOString()
@@ -43,7 +43,7 @@ export function useRedeemPunishment() {
       // 2. Update dom_supply column (not "supply")
       await supabase.from("punishments")
         .update({ dom_points: domSupply + 1 })
-        .eq("id", punId);
+        .eq("id", id);
 
       // 3. Update profile totals
       await supabase.from("profiles").update({
@@ -52,14 +52,14 @@ export function useRedeemPunishment() {
       }).eq("id", profileId);
 
       return {
-        punId,
+        id,
         newSub: subPoints - costPoints,
         newDom: domPoints + domEarn,
       };
     },
 
-    onSuccess: async ({ punId, newSub, newDom }) => {
-      await syncCardById(punId, "punishments");
+    onSuccess: async ({ id, newSub, newDom }) => {
+      await syncCardById(id, "punishments");
       await updateProfilePoints(newSub, newDom);
     },
   });
