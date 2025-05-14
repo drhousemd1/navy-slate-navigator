@@ -20,12 +20,14 @@ const CompletionCounter: React.FC<CompletionCounterProps> = ({
     borderWidth: "1px" 
   };
 
+  // Ensure we always display as a fraction X/Y, never just a number
   return (
     <Badge 
       className="text-white font-medium flex items-center"
       style={badgeStyle}
+      data-testid="completion-counter"
     >
-      <span data-testid="completion-counter">{currentCompletions}/{maxCompletions}</span>
+      {currentCompletions}/{maxCompletions}
     </Badge>
   );
 };

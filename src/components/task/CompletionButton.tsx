@@ -21,12 +21,15 @@ const CompletionButton: React.FC<CompletionButtonProps> = ({
   const hasReachedMax = currentCompletions >= maxCompletions;
   
   const handleClick = () => {
-    // Only toggle if not at max completions
-    if (!hasReachedMax) {
+    // For daily/weekly tasks, we want to increment the counter, not just toggle completion
+    if (taskFrequency === 'daily' || taskFrequency === 'weekly') {
+      console.log('CompletionButton: Incrementing completion count', currentCompletions, maxCompletions);
+      // Always pass true to increment the counter, the actual count will be handled in toggleTaskCompletion
+      onToggleCompletion(true);
+    } else {
+      // For one-time tasks, just toggle the completed state
       console.log('CompletionButton: Toggling completion to', !completed);
       onToggleCompletion(!completed);
-    } else {
-      console.log('CompletionButton: Max completions reached, button disabled');
     }
   };
   

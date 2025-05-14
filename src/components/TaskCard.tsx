@@ -67,6 +67,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   
   console.log(`TaskCard "${title}": frequency=${frequency}, frequency_count=${frequency_count}, usage_data=${JSON.stringify(usage_data)}, currentCompletions=${currentCompletions}, maxCompletions=${maxCompletions}`);
   
+  // Determine if the task is effectively completed based on frequency type
   let isEffectivelyCompleted = completed;
   if (frequency === 'daily' || frequency === 'weekly') {
     isEffectivelyCompleted = currentCompletions >= maxCompletions;
@@ -130,21 +131,21 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
           
           <div className="flex-1 flex flex-col">
-            <h3 className="text-xl font-semibold inline-block">
-              <HighlightedText 
-                text={title} 
-                highlight={highlight_effect || false} 
-                color={title_color} 
-              />
+            <h3 className={`text-xl font-semibold inline-block ${
+              highlight_effect ? "bg-yellow-300/30 px-2 py-1 rounded" : ""
+            }`}
+            style={{ color: title_color }}>
+              {title}
             </h3>
             
-            <div className="text-sm mt-1 inline-block">
-              <HighlightedText 
-                text={description} 
-                highlight={highlight_effect || false} 
-                color={subtext_color} 
-              />
-            </div>
+            {description && (
+              <p className={`text-sm mt-1 inline-block ${
+                highlight_effect ? "bg-yellow-300/20 px-2 py-1 rounded" : ""
+              }`}
+              style={{ color: subtext_color }}>
+                {description}
+              </p>
+            )}
           </div>
         </div>
         
@@ -171,11 +172,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
         </div>
       </div>
       
-      {isEffectivelyCompleted && (frequency === 'daily' || frequency === 'weekly') && (
+      {/* Overlay for completed tasks */}
+      {isEffectivelyCompleted && frequency === 'daily' && (
+        <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
+      )}
+      {isEffectivelyCompleted && frequency === 'weekly' && (
         <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
       )}
       {completed && frequency === 'one-time' && (
-         <div className="absolute inset-0 z-20 bg-green-500/30 rounded pointer-events-none" />
+        <div className="absolute inset-0 z-20 bg-green-500/30 rounded pointer-events-none" />
       )}
     </Card>
   );

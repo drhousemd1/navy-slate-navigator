@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -9,8 +8,6 @@ import { useQuery, QueryObserverResult, RefetchOptions, useQueryClient } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, getCurrentDayOfWeek } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
-import { getMondayBasedDay } from '@/lib/utils';
-import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { useCreateTask } from "@/data/mutations/useCreateTask";
 import { useCompleteTask } from "@/data/mutations/useCompleteTask";
@@ -18,10 +15,9 @@ import { saveTasksToDB } from "@/data/indexedDB/useIndexedDB";
 import { syncCardById } from "@/data/sync/useSyncManager";
 
 const TASKS_QUERY_KEY = ['tasks'];
-const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
-const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
 
 const processRawTask = (rawTask: any): Task => {
+  // Validate and process frequency
   const validFrequencies: Task['frequency'][] = ['daily', 'weekly', 'monthly', 'one-time'];
   let freq: Task['frequency'] = 'one-time'; // Default frequency
   if (rawTask.frequency && validFrequencies.includes(rawTask.frequency as Task['frequency'])) {
@@ -30,20 +26,43 @@ const processRawTask = (rawTask: any): Task => {
     console.warn(`[TasksDataHandler] Invalid frequency value "${rawTask.frequency}" for task ID ${rawTask.id}. Defaulting to 'one-time'.`);
   }
 
+  // Validate and process background_images
   let bgImages: string[] | null = null;
   if (Array.isArray(rawTask.background_images)) {
     if (rawTask.background_images.every((item: any) => typeof item === 'string')) {
       bgImages = rawTask.background_images as string[];
     } else {
-      console.warn(`[TasksDataHandler] Invalid items in background_images for task ID ${rawTask.id}. Expected string array.`, rawTask.background_images);
+      console.warn(`[TasksDataHandler] Invalid items in background_images for task ID ${rawTask.id}.`);
       const filteredImages = rawTask.background_images.filter((item: any) => typeof item === 'string');
       if (filteredImages.length > 0) {
         bgImages = filteredImages;
       }
     }
-  } else if (rawTask.background_images !== null && rawTask.background_images !== undefined) {
-     console.warn(`[TasksDataHandler] background_images for task ID ${rawTask.id} is not an array. Received:`, rawTask.background_images);
   }
+
+  // Process frequency_count - make sure it's a positive number or default to 1
+  const frequencyCount = typeof rawTask.frequency_count === 'number' ? 
+    Math.max(1, rawTask.frequency_count) : // Ensure minimum of 1 if it's a number
+    1; // Default to 1 if not a number
+
+  // Process usage_data - ensure it's an array of 7 values for days of the week
+  let usageData = Array(7).fill(0); // Default to array of 7 zeros
+  
+  if (Array.isArray(rawTask.usage_data)) {
+    // If there's existing data, map it to numbers
+    const processedUsageData = rawTask.usage_data.map((val: any) => {
+      if (typeof val === 'number') return val;
+      const num = Number(val);
+      return isNaN(num) ? 0 : num;
+    });
+    
+    // Fill up to 7 days
+    for (let i = 0; i < Math.min(processedUsageData.length, 7); i++) {
+      usageData[i] = processedUsageData[i];
+    }
+  }
+
+  console.log(`[TasksDataHandler] Processing task "${rawTask.title}" with frequency=${freq}, frequency_count=${frequencyCount}, usage_data=`, usageData);
 
   return {
     id: rawTask.id,
@@ -58,10 +77,8 @@ const processRawTask = (rawTask: any): Task => {
     focal_point_x: rawTask.focal_point_x,
     focal_point_y: rawTask.focal_point_y,
     frequency: freq,
-    frequency_count: typeof rawTask.frequency_count === 'number' && rawTask.frequency_count > 0 ? rawTask.frequency_count : 1, // Ensure positive, default to 1
-    usage_data: Array.isArray(rawTask.usage_data)
-      ? rawTask.usage_data.map((val: any) => (typeof val === 'number' ? val : Number(val)))
-      : Array(7).fill(0),
+    frequency_count: frequencyCount, // Use processed value
+    usage_data: usageData, // Use processed usage_data
     icon_name: rawTask.icon_name,
     icon_url: rawTask.icon_url,
     icon_color: rawTask.icon_color,
@@ -115,7 +132,6 @@ const fetchTasks = async (): Promise<Task[]> => {
         .from('tasks')
         .update({ completed: false })
         .eq('id', update.id);
-      // Consider syncing these individual updates if syncCardById is appropriate here
     }
 
     // Update tasks in memory rather than refetching
@@ -156,16 +172,23 @@ export const useTasksData = () => {
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
-      // createTaskMutation returns raw data from Supabase.
+      // Make sure frequency_count is a positive number
+      if (taskData.frequency_count !== undefined) {
+        taskData.frequency_count = Math.max(1, taskData.frequency_count);
+      }
+      
+      // Initialize usage_data if not set and task is recurring
+      if ((taskData.frequency === 'daily' || taskData.frequency === 'weekly') && !taskData.usage_data) {
+        taskData.usage_data = Array(7).fill(0);
+      }
+      
       const savedRawTaskData = await createTaskMutation(taskData);
       
       if (savedRawTaskData) {
-        // Process the raw data to conform to the Task type.
+        // Process the raw data to conform to the Task type
         const processedTask = processRawTask(savedRawTaskData);
         return processedTask;
       }
-      // If createTaskMutation returns null (e.g., on error handled within the mutation),
-      // or if no data was returned, propagate null.
       return null;
     } catch (err: any) {
       console.error('Error saving task:', err);
@@ -193,10 +216,10 @@ export const useTasksData = () => {
       const updatedTasks = previousTasks.filter(t => t.id !== taskId);
       
       // We keep this direct cache update since deletion isn't part of our mutation hooks
-      await saveTasksToDB(updatedTasks); // This should probably use queryClient.setQueryData
+      await saveTasksToDB(updatedTasks);
       
-      // Invalidate and refetch might be better after deletion
-      // queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+      // Always invalidate queries after deletion
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
 
       return true;
     } catch (err: any) {
@@ -212,18 +235,23 @@ export const useTasksData = () => {
 
   const toggleTaskCompletion = async (taskId: string, completed: boolean): Promise<boolean> => {
     try {
+      console.log(`[TasksDataHandler] toggleTaskCompletion called for task ${taskId}, setting to ${completed}`);
+      
       // First, get the current task
       const task = tasks.find(t => t.id === taskId);
       if (!task) {
-        console.error('Task not found:', taskId);
+        console.error(`[TasksDataHandler] Task not found with ID: ${taskId}`);
         return false;
       }
+      
+      console.log(`[TasksDataHandler] Found task: "${task.title}", frequency=${task.frequency}, frequency_count=${task.frequency_count}`);
+      console.log(`[TasksDataHandler] Current usage_data:`, task.usage_data);
 
       // Handle different task types correctly
       if (task.frequency === 'daily' || task.frequency === 'weekly') {
         // For recurring tasks, we need to update the usage_data array
         const todayIndex = getCurrentDayOfWeek();
-        const maxCompletions = task.frequency_count && task.frequency_count > 0 ? task.frequency_count : 1;
+        const maxCompletions = Math.max(1, task.frequency_count || 1); // Ensure minimum value of 1
         
         // Clone the usage_data array to avoid direct modification
         const newUsageData = [...(task.usage_data || Array(7).fill(0))];
@@ -234,9 +262,10 @@ export const useTasksData = () => {
           // Only increment if not already at max
           if (currentCompletions < maxCompletions) {
             newUsageData[todayIndex] = currentCompletions + 1;
+            const newCompletionCount = newUsageData[todayIndex];
+            console.log(`[TasksDataHandler] Incrementing completions for day ${todayIndex} from ${currentCompletions} to ${newCompletionCount}`);
             
             // Check if we've reached the max completions for the day
-            const newCompletionCount = newUsageData[todayIndex];
             const isFullyCompleted = newCompletionCount >= maxCompletions;
             
             // Update task in Supabase with the new usage_data
@@ -249,8 +278,12 @@ export const useTasksData = () => {
                 updated_at: new Date().toISOString()
               }
             });
+            
+            // Immediately invalidate the query to refetch fresh data
+            queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+            return true;
           } else {
-            console.log('Task already completed maximum times for today');
+            console.log(`[TasksDataHandler] Task already completed maximum times for today: ${currentCompletions}/${maxCompletions}`);
             return false;
           }
         } else {
@@ -258,22 +291,30 @@ export const useTasksData = () => {
           const currentCompletions = newUsageData[todayIndex] || 0;
           if (currentCompletions > 0) {
             newUsageData[todayIndex] = currentCompletions - 1;
+            console.log(`[TasksDataHandler] Decrementing completions for day ${todayIndex} from ${currentCompletions} to ${newUsageData[todayIndex]}`);
             
             // Always mark as not completed when decrementing
-            await supabase
-              .from('tasks')
-              .update({ 
+            await completeTaskMutation({
+              taskId,
+              updates: { 
                 usage_data: newUsageData,
                 completed: false,
                 updated_at: new Date().toISOString() 
-              })
-              .eq('id', taskId);
+              }
+            });
             
-            await syncCardById(taskId, 'tasks');
+            // Immediately invalidate the query to refetch fresh data
+            queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+            return true;
+          } else {
+            console.log(`[TasksDataHandler] Can't decrement - already at 0 completions for day ${todayIndex}`);
+            return false;
           }
         }
       } else {
         // For one-time tasks, simply toggle the completed flag
+        console.log(`[TasksDataHandler] Handling one-time task completion, setting completed=${completed}`);
+        
         if (completed) {
           await completeTaskMutation({
             taskId,
@@ -284,23 +325,21 @@ export const useTasksData = () => {
             }
           });
         } else {
-          await supabase
-            .from('tasks')
-            .update({ 
+          await completeTaskMutation({
+            taskId,
+            updates: { 
               completed: false,
               updated_at: new Date().toISOString() 
-            })
-            .eq('id', taskId);
-          
-          await syncCardById(taskId, 'tasks');
+            }
+          });
         }
+        
+        // Always invalidate query to refresh UI
+        queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+        return true;
       }
-      
-      // Always invalidate query to refresh UI
-      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-      return true;
     } catch (err: any) {
-      console.error('Error updating task completion:', err);
+      console.error('[TasksDataHandler] Error updating task completion:', err);
       toast({
         title: 'Error updating task',
         description: err.message || 'Could not update task completion status',
