@@ -60,18 +60,18 @@ export const getCurrentDayOfWeek = (): number => {
 };
 
 export const canCompleteTask = (task: Task): boolean => {
-  if (!task.frequency_count) {
+  if (!task.frequency_count || task.frequency_count <= 0) { // Ensure frequency_count is positive
     return !task.completed;
   }
   
   const todayIndex = getCurrentDayOfWeek();
   const todayCompletions = task.usage_data?.[todayIndex] || 0;
   
-  return todayCompletions < (task.frequency_count || 1);
+  return todayCompletions < task.frequency_count;
 };
 
 const initializeUsageDataArray = (task: Task): number[] => {
-  return task.usage_data || Array(7).fill(0);
+  return task.usage_data && task.usage_data.length === 7 ? task.usage_data : Array(7).fill(0);
 };
 
 export const fetchTasks = async (): Promise<Task[]> => {
