@@ -21,7 +21,6 @@ const RewardsContent: React.FC<{
   const { rewards, isLoading, handleSaveReward, handleDeleteReward } = useRewards();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<any>(undefined);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   // Use the sync manager to keep data in sync - add enabled parameter
   const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
@@ -31,13 +30,6 @@ const RewardsContent: React.FC<{
     // Force a sync on initial load completion - only once
     syncNow();
   }, []);
-  
-  // Set isInitialLoad to false once rewards have loaded
-  useEffect(() => {
-    if (!isLoading && rewards) {
-      setIsInitialLoad(false);
-    }
-  }, [isLoading, rewards]);
   
   const handleAddNewReward = () => {
     setRewardBeingEdited(undefined);
@@ -66,11 +58,9 @@ const RewardsContent: React.FC<{
     <div className="p-4 pt-6">
       <RewardsHeader />
       
-      {!isInitialLoad && (
-        <RewardsList
-          onEdit={handleEditReward}
-        />
-      )}
+      <RewardsList
+        onEdit={handleEditReward}
+      />
       
       <RewardEditor
         isOpen={isEditorOpen}
