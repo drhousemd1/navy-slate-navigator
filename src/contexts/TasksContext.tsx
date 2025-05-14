@@ -13,7 +13,7 @@ interface TasksContextType {
   saveTask: (taskData: Partial<Task>) => Promise<Task | null>;
   deleteTask: (taskId: string) => Promise<boolean>;
   toggleTaskCompletion: (taskId: string, completed: boolean) => Promise<boolean>;
-  refetchTasks: () => Promise<QueryObserverResult<Task[], Error>>;
+  refetchTasks: (options?: RefetchOptions) => Promise<QueryObserverResult<Task[], Error>>;
 }
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);

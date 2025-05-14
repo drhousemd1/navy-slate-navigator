@@ -21,19 +21,19 @@ export function usePersistentQuery<TData>(
     ...options,
     meta: {
       ...(options.meta || {}),
-      onSuccess: (data: TData) => {
-        if (typeof window !== "undefined" && data) {
-          try {
-            localStorage.setItem(keyString, JSON.stringify(data));
-          } catch (e) {
-            console.warn("Failed to persist query data to localStorage:", e);
-          }
+    },
+    onSuccess: (data: TData) => {
+      if (typeof window !== "undefined" && data) {
+        try {
+          localStorage.setItem(keyString, JSON.stringify(data));
+        } catch (e) {
+          console.warn("Failed to persist query data to localStorage:", e);
         }
-        
-        // Call the original onSuccess if it exists
-        if (options.meta?.onSuccess) {
-          options.meta.onSuccess(data);
-        }
+      }
+      
+      // Call the original onSuccess if it exists
+      if (options.onSuccess) {
+        options.onSuccess(data);
       }
     }
   });

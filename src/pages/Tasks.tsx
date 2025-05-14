@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -17,7 +18,7 @@ usePreloadTasks()();
 const TasksWithContext: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion, refetchTasks } = useTasks();
+  const { tasks, isLoading, error, saveTask, deleteTask, toggleTaskCompletion, refetchTasks } = useTasks();
   const { refreshPointsFromDatabase } = useRewards();
   
   // Use the sync manager to keep data in sync
