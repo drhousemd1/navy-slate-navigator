@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
+import { useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
+import { usePersistentQuery as useQuery } from "@/data/queries/usePersistentQuery";
 import { Reward } from '@/lib/rewardUtils';
 import { 
   REWARDS_QUERY_KEY, 

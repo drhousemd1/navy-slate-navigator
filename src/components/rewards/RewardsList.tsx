@@ -10,7 +10,8 @@ interface RewardsListProps {
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   const { rewards, handleBuyReward, handleUseReward, isLoading } = useRewards();
   
-  if (isLoading) {
+  // Only show loading state if there's no cached data 
+  if (isLoading && (!rewards || rewards.length === 0)) {
     return (
       <div className="text-center p-10">
         <p className="text-light-navy">Loading rewards...</p>

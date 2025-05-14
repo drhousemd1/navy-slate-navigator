@@ -16,6 +16,7 @@ const RulesList: React.FC<RulesListProps> = ({
   onEditRule,
   onRuleBroken 
 }) => {
+  // Only show loading state if there's no cached data
   if (isLoading && rules.length === 0) {
     return (
       <div className="text-center py-10">

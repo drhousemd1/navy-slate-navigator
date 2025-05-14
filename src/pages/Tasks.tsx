@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -12,9 +11,7 @@ import { useSyncManager } from '@/hooks/useSyncManager';
 import { usePreloadTasks } from "@/data/preload/usePreloadTasks";
 
 // Preload tasks data from IndexedDB before component renders
-(async () => {
-  await usePreloadTasks()();
-})();
+usePreloadTasks()();
 
 // Separate component that uses useTasks hook inside TasksProvider
 const TasksWithContext: React.FC = () => {
@@ -102,6 +99,30 @@ const TasksWithContext: React.FC = () => {
     // Refresh points when component mounts
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
+
+  // Show a simple message if there are no tasks, but don't show a loading spinner if we have cached data
+  if (tasks.length === 0 && !isLoading) {
+    return (
+      <div className="p-4 pt-6 TasksContent">
+        <TasksHeader />
+        <div className="text-center p-10">
+          <p className="text-light-navy">No tasks found. Create your first task!</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Only show error if we don't have any cached data
+  if (error && tasks.length === 0) {
+    return (
+      <div className="p-4 pt-6 TasksContent">
+        <TasksHeader />
+        <div className="text-center p-10">
+          <p className="text-red-500">Error loading tasks: {error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 pt-6 TasksContent">

@@ -93,7 +93,7 @@ const RulesWithContext: React.FC = () => {
     }
   };
 
-  // Even if there's an error, if we have cached rules, just show them without the warning
+  // We have cached rules, show them regardless of error state
   if (error && rules.length > 0) {
     return (
       <div className="container mx-auto px-4 py-6 RulesContent">
@@ -152,7 +152,7 @@ const RulesWithContext: React.FC = () => {
 
       <RulesList
         rules={rules}
-        isLoading={false}
+        isLoading={isLoading && rules.length === 0}
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
       />
