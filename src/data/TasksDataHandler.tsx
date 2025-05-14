@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -7,7 +6,7 @@
 
 import { useQuery, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
+import { Task, getLocalDateString } from '@/lib/taskUtils'; // Updated import for Task
 import { toast } from '@/hooks/use-toast';
 import { getMondayBasedDay } from '@/lib/utils';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
@@ -20,6 +19,65 @@ import { syncCardById } from "@/data/sync/useSyncManager";
 const TASKS_QUERY_KEY = ['tasks'];
 const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
 const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
+
+const processRawTask = (rawTask: any): Task => {
+  const validFrequencies: Task['frequency'][] = ['daily', 'weekly', 'monthly', 'one-time'];
+  let freq: Task['frequency'] = 'one-time'; // Default frequency
+  if (rawTask.frequency && validFrequencies.includes(rawTask.frequency as Task['frequency'])) {
+    freq = rawTask.frequency as Task['frequency'];
+  } else if (rawTask.frequency) {
+    console.warn(`[TasksDataHandler] Invalid frequency value "${rawTask.frequency}" for task ID ${rawTask.id}. Defaulting to 'one-time'.`);
+  }
+
+  let bgImages: string[] | null = null;
+  if (Array.isArray(rawTask.background_images)) {
+    if (rawTask.background_images.every((item: any) => typeof item === 'string')) {
+      bgImages = rawTask.background_images as string[];
+    } else {
+      console.warn(`[TasksDataHandler] Invalid items in background_images for task ID ${rawTask.id}. Expected string array.`, rawTask.background_images);
+      const filteredImages = rawTask.background_images.filter((item: any) => typeof item === 'string');
+      if (filteredImages.length > 0) {
+        bgImages = filteredImages;
+      }
+    }
+  } else if (rawTask.background_images !== null && rawTask.background_images !== undefined) {
+     console.warn(`[TasksDataHandler] background_images for task ID ${rawTask.id} is not an array. Received:`, rawTask.background_images);
+  }
+
+  return {
+    id: rawTask.id,
+    title: rawTask.title,
+    description: rawTask.description,
+    points: rawTask.points,
+    priority: (rawTask.priority as Task['priority']) || 'medium',
+    completed: rawTask.completed,
+    background_image_url: rawTask.background_image_url,
+    background_images: bgImages,
+    background_opacity: rawTask.background_opacity,
+    focal_point_x: rawTask.focal_point_x,
+    focal_point_y: rawTask.focal_point_y,
+    frequency: freq,
+    frequency_count: rawTask.frequency_count,
+    usage_data: Array.isArray(rawTask.usage_data)
+      ? rawTask.usage_data.map((val: any) => (typeof val === 'number' ? val : Number(val)))
+      : Array(7).fill(0),
+    icon_name: rawTask.icon_name,
+    icon_url: rawTask.icon_url,
+    icon_color: rawTask.icon_color,
+    highlight_effect: rawTask.highlight_effect,
+    title_color: rawTask.title_color,
+    subtext_color: rawTask.subtext_color,
+    calendar_color: rawTask.calendar_color,
+    last_completed_date: rawTask.last_completed_date,
+    created_at: rawTask.created_at,
+    updated_at: rawTask.updated_at,
+    user_id: rawTask.user_id, // Added user_id
+    // Ensure all properties from Task interface are covered
+    carousel_timer: rawTask.carousel_timer,
+    week_identifier: rawTask.week_identifier,
+  };
+};
+
 
 const fetchTasks = async (): Promise<Task[]> => {
   const startTime = performance.now();
@@ -35,34 +93,7 @@ const fetchTasks = async (): Promise<Task[]> => {
     throw error;
   }
 
-  const tasks: Task[] = data.map(task => ({
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    points: task.points,
-    // Fix: Ensure priority is strictly typed as one of the allowed values
-    priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
-    completed: task.completed,
-    background_image_url: task.background_image_url,
-    background_opacity: task.background_opacity,
-    focal_point_x: task.focal_point_x,
-    focal_point_y: task.focal_point_y,
-    frequency: task.frequency as 'daily' | 'weekly',
-    frequency_count: task.frequency_count,
-    usage_data: Array.isArray(task.usage_data) 
-      ? task.usage_data.map(val => typeof val === 'number' ? val : Number(val)) 
-      : [0, 0, 0, 0, 0, 0, 0],
-    icon_name: task.icon_name,
-    icon_url: task.icon_url,
-    icon_color: task.icon_color,
-    highlight_effect: task.highlight_effect,
-    title_color: task.title_color,
-    subtext_color: task.subtext_color,
-    calendar_color: task.calendar_color,
-    last_completed_date: task.last_completed_date,
-    created_at: task.created_at,
-    updated_at: task.updated_at
-  }));
+  const tasks: Task[] = data ? data.map(processRawTask) : [];
 
   const today = getLocalDateString();
   const tasksToReset = tasks.filter(task => 
@@ -84,6 +115,7 @@ const fetchTasks = async (): Promise<Task[]> => {
         .from('tasks')
         .update({ completed: false })
         .eq('id', update.id);
+      // Consider syncing these individual updates if syncCardById is appropriate here
     }
 
     // Update tasks in memory rather than refetching
@@ -115,41 +147,21 @@ export const useTasksData = () => {
   } = useQuery({
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
-    ...STANDARD_QUERY_CONFIG, // Use our standardized configuration from react-query-config.ts
+    ...STANDARD_QUERY_CONFIG,
   });
 
-  // Use our new mutation hooks
   const { mutateAsync: createTaskMutation } = useCreateTask();
   const { mutateAsync: completeTaskMutation } = useCompleteTask();
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
-      // Fix the task priority and frequency types to ensure they're one of the allowed values
-      // Also ensure usage_data is properly formatted as number[] array
-      const processedTaskData = {
-        ...taskData,
-        // Ensure priority is one of the allowed types
-        priority: (taskData.priority || 'medium') as 'low' | 'medium' | 'high',
-        // Ensure frequency is one of the allowed types
-        frequency: (taskData.frequency || 'daily') as 'daily' | 'weekly',
-        // Ensure usage_data is a properly formatted number[] array
-        usage_data: Array.isArray(taskData.usage_data) 
-          ? taskData.usage_data.map(val => typeof val === 'number' ? val : Number(val))
-          : Array(7).fill(0)
-      };
+      // taskData.frequency and taskData.background_images should already conform to Partial<Task>
+      // The createTaskMutation should handle the raw data and return raw data
+      const savedRawTask = await createTaskMutation(taskData); // This will call lib/taskUtils.saveTask
       
-      const savedTask = await createTaskMutation(processedTaskData);
-      
-      // Fix: Ensure the returned task has the correct types
-      return {
-        ...savedTask,
-        priority: (savedTask.priority as 'low' | 'medium' | 'high') || 'medium',
-        frequency: (savedTask.frequency as 'daily' | 'weekly') || 'daily',
-        // Ensure usage_data is returned as a proper number array
-        usage_data: Array.isArray(savedTask.usage_data) 
-          ? savedTask.usage_data.map(val => typeof val === 'number' ? val : Number(val))
-          : Array(7).fill(0),
-      };
+      // The savedRawTask from useCreateTask already calls processTaskFromDb from lib/taskUtils.saveTask
+      // So it should be correctly typed as Task | null
+      return savedRawTask;
     } catch (err: any) {
       console.error('Error saving task:', err);
       toast({
@@ -176,8 +188,11 @@ export const useTasksData = () => {
       const updatedTasks = previousTasks.filter(t => t.id !== taskId);
       
       // We keep this direct cache update since deletion isn't part of our mutation hooks
-      await saveTasksToDB(updatedTasks);
+      await saveTasksToDB(updatedTasks); // This should probably use queryClient.setQueryData
       
+      // Invalidate and refetch might be better after deletion
+      // queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+
       return true;
     } catch (err: any) {
       console.error('Error deleting task:', err);
@@ -193,17 +208,15 @@ export const useTasksData = () => {
   const toggleTaskCompletion = async (taskId: string, completed: boolean): Promise<boolean> => {
     try {
       if (completed) {
-        // Fix: pass an object with taskId and updates properties as required by the completeTaskMutation
         await completeTaskMutation({
           taskId,
           updates: {
             completed: true,
-            last_completed_date: getLocalDateString(),
+            last_completed_date: getLocalDateString(), // Ensure this is in 'YYYY-MM-DD' or compatible format
             updated_at: new Date().toISOString()
           }
         });
       } else {
-        // For unmarking as complete, we can use a simple update
         await supabase
           .from('tasks')
           .update({ 
@@ -212,9 +225,10 @@ export const useTasksData = () => {
           })
           .eq('id', taskId);
         
-        // Need to sync this card manually since we're not using the mutation
         await syncCardById(taskId, 'tasks');
       }
+      // Consider query invalidation here as well to ensure UI consistency
+      // queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
       return true;
     } catch (err: any) {
       console.error('Error updating task completion:', err);

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -10,7 +9,7 @@ import CompletionCounter from './task/CompletionCounter';
 import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
 import HighlightedText from './task/HighlightedText';
-import { getCurrentDayOfWeek } from '@/lib/taskUtils';
+import { getCurrentDayOfWeek, Task } from '@/lib/taskUtils'; // Import Task type
 
 interface TaskCardProps {
   title: string;
@@ -24,12 +23,12 @@ interface TaskCardProps {
   onEdit: () => void;
   onToggleCompletion?: (completed: boolean) => void;
   onDelete?: () => void;
-  frequency?: 'daily' | 'weekly';
+  frequency?: Task['frequency']; // Use the frequency type from Task interface
   frequency_count?: number;
   usage_data?: number[];
   icon_url?: string;
   icon_name?: string;
-  priority?: 'low' | 'medium' | 'high';
+  priority?: Task['priority']; // Use the priority type from Task interface
   highlight_effect?: boolean;
   title_color?: string;
   subtext_color?: string;
@@ -62,8 +61,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const currentDayOfWeek = getCurrentDayOfWeek();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
-  const maxCompletions = frequency_count || 1;
-  const isFullyCompleted = currentCompletions >= maxCompletions;
+  // maxCompletions should always be at least 1 for tasks with frequency_count
+  const maxCompletions = frequency_count && frequency_count > 0 ? frequency_count : 1;
+  // isFullyCompleted depends on the frequency type.
+  // For 'one-time' tasks, 'completed' prop is the source of truth.
+  // For 'daily'/'weekly' with frequency_count, usage_data drives completion status for the period.
+  let isEffectivelyCompleted = completed;
+  if (frequency === 'daily' || frequency === 'weekly') {
+    isEffectivelyCompleted = currentCompletions >= maxCompletions;
+  }
 
   return (
     <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
@@ -86,15 +92,18 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {onToggleCompletion && (
             <div className="flex items-center gap-2">
               <PointsBadge points={points} />
-              <CompletionCounter 
-                currentCompletions={currentCompletions}
-                maxCompletions={maxCompletions}
-              />
+              {(frequency === 'daily' || frequency === 'weekly') && frequency_count && frequency_count > 1 && (
+                <CompletionCounter 
+                  currentCompletions={currentCompletions}
+                  maxCompletions={maxCompletions}
+                />
+              )}
               <CompletionButton 
-                completed={completed} 
+                completed={isEffectivelyCompleted} // Use effectively completed status for the button
                 onToggleCompletion={onToggleCompletion}
                 currentCompletions={currentCompletions}
                 maxCompletions={maxCompletions}
+                taskFrequency={frequency} // Pass frequency to button if needed for its logic
               />
             </div>
           )}
@@ -131,9 +140,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
         </div>
         
         <div className="flex items-center justify-between mt-4">
-          {frequency && (
+          {(frequency === 'daily' || frequency === 'weekly') && (
             <FrequencyTracker 
-              frequency={frequency} 
+              frequency={frequency as 'daily' | 'weekly'} // Cast here as FrequencyTracker expects more specific types
               frequency_count={frequency_count} 
               calendar_color={calendar_color}
               usage_data={usage_data}
@@ -153,8 +162,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
         </div>
       </div>
       
-      {isFullyCompleted && (
+      {isEffectivelyCompleted && (frequency === 'daily' || frequency === 'weekly') && (
         <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
+      )}
+      {/* For one-time tasks, the simple 'completed' state might be enough if no overlay is desired */}
+      {completed && frequency === 'one-time' && (
+         <div className="absolute inset-0 z-20 bg-green-500/30 rounded pointer-events-none" />
       )}
     </Card>
   );
