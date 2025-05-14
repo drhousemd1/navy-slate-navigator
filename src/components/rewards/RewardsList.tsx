@@ -12,7 +12,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   
   if (isLoading) {
     return (
-      <div className="text-center p-10 animate-fade-in">
+      <div className="text-center p-10">
         <p className="text-light-navy">Loading rewards...</p>
       </div>
     );
@@ -20,7 +20,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   
   if (!rewards || rewards.length === 0) {
     return (
-      <div className="text-center p-10 animate-fade-in">
+      <div className="text-center p-10">
         <p className="text-light-navy mb-4">You don't have any rewards yet.</p>
         <p className="text-light-navy">Click the + button to create your first reward!</p>
       </div>
@@ -40,7 +40,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   );
 
   return (
-    <div className="flex flex-col gap-4 animate-fade-in">
+    <div className="flex flex-col gap-4">
       {rewards.map((reward, index) => (
         <RewardCard
           key={reward.id}
