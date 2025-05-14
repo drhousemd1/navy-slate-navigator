@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -23,12 +24,12 @@ interface TaskCardProps {
   onEdit: () => void;
   onToggleCompletion?: (completed: boolean) => void;
   onDelete?: () => void;
-  frequency?: Task['frequency']; // Use the frequency type from Task interface
+  frequency?: Task['frequency']; // Use Task type for frequency
   frequency_count?: number;
   usage_data?: number[];
   icon_url?: string;
   icon_name?: string;
-  priority?: Task['priority']; // Use the priority type from Task interface
+  priority?: Task['priority']; // Use Task type for priority
   highlight_effect?: boolean;
   title_color?: string;
   subtext_color?: string;
@@ -103,7 +104,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 onToggleCompletion={onToggleCompletion}
                 currentCompletions={currentCompletions}
                 maxCompletions={maxCompletions}
-                taskFrequency={frequency} // Pass frequency to button if needed for its logic
               />
             </div>
           )}

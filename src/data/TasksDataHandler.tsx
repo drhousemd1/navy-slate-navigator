@@ -1,3 +1,4 @@
+
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -71,8 +72,7 @@ const processRawTask = (rawTask: any): Task => {
     last_completed_date: rawTask.last_completed_date,
     created_at: rawTask.created_at,
     updated_at: rawTask.updated_at,
-    user_id: rawTask.user_id, // Added user_id
-    // Ensure all properties from Task interface are covered
+    user_id: rawTask.user_id,
     carousel_timer: rawTask.carousel_timer,
     week_identifier: rawTask.week_identifier,
   };

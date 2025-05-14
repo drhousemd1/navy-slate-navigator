@@ -1,19 +1,22 @@
 
 import React from 'react';
 import { Button } from '../ui/button';
+import { Task } from '@/lib/taskUtils';
 
 interface CompletionButtonProps {
   completed: boolean;
   onToggleCompletion: (completed: boolean) => void;
   currentCompletions: number;
   maxCompletions: number;
+  taskFrequency?: Task['frequency']; // Add this optional prop
 }
 
 const CompletionButton: React.FC<CompletionButtonProps> = ({ 
   completed, 
   onToggleCompletion,
   currentCompletions = 0,
-  maxCompletions = 1
+  maxCompletions = 1,
+  taskFrequency
 }) => {
   const hasReachedMax = currentCompletions >= maxCompletions;
   
