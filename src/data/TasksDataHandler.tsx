@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -109,15 +108,18 @@ const fetchTasks = async (): Promise<Task[]> => {
 
 export const useTasksData = () => {
   const {
-    data: tasks = [],
+    data: fetchedTasks = [],
     isLoading,
     error,
     refetch
-  } = useQuery({
+  } = useQuery<Task[]>({
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
     ...STANDARD_QUERY_CONFIG, // Use our standardized configuration from react-query-config.ts
   });
+  
+  // Ensure tasks is always a proper Task array
+  const tasks: Task[] = Array.isArray(fetchedTasks) ? fetchedTasks : [];
 
   // Use our new mutation hooks
   const { mutateAsync: createTaskMutation } = useCreateTask();
@@ -173,8 +175,7 @@ export const useTasksData = () => {
       if (error) throw error;
       
       // Update local cache
-      const previousTasks = tasks || [];
-      const updatedTasks = previousTasks.filter(t => t.id !== taskId);
+      const updatedTasks = tasks.filter(t => t.id !== taskId);
       
       // We keep this direct cache update since deletion isn't part of our mutation hooks
       await saveTasksToDB(updatedTasks);
@@ -232,7 +233,8 @@ export const useTasksData = () => {
     options?: RefetchOptions
   ): Promise<QueryObserverResult<Task[], Error>> => {
     console.log('[TasksDataHandler] Manually refetching tasks');
-    return refetch(options);
+    const result = await refetch(options);
+    return result as unknown as QueryObserverResult<Task[], Error>;
   };
 
   return {

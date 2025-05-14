@@ -14,7 +14,7 @@ interface RulesContextType {
   saveRule: (ruleData: Partial<Rule>) => Promise<Rule>;
   deleteRule: (ruleId: string) => Promise<boolean>;
   markRuleBroken: (rule: Rule) => Promise<void>;
-  refetchRules: () => Promise<QueryObserverResult<Rule[], Error>>;
+  refetchRules: (options?: RefetchOptions) => Promise<QueryObserverResult<Rule[], Error>>;
 }
 
 const RulesContext = createContext<RulesContextType | undefined>(undefined);
@@ -29,14 +29,23 @@ export const RulesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [preloadRules]);
 
   const { 
-    rules, 
+    rules: fetchedRules, 
     isLoading, 
     error, 
     saveRule, 
     deleteRule, 
     markRuleBroken,
-    refetchRules 
+    refetchRules: refetchRulesData 
   } = useRulesData();
+  
+  // Ensure rules is always an array
+  const rules: Rule[] = Array.isArray(fetchedRules) ? fetchedRules : [];
+  
+  // Wrapper for the refetch function to ensure correct typing
+  const refetchRules = async (options?: RefetchOptions): Promise<QueryObserverResult<Rule[], Error>> => {
+    const result = await refetchRulesData(options);
+    return result as unknown as QueryObserverResult<Rule[], Error>;
+  };
 
   const value: RulesContextType = {
     rules,

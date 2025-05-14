@@ -5,11 +5,11 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
 
 export function usePersistentQuery<TData>(
   options: UseQueryOptions<TData, Error>
-) {
+): UseQueryResult<TData, Error> {
   const keyString = JSON.stringify(options.queryKey);
   const stored =
     typeof window !== "undefined"

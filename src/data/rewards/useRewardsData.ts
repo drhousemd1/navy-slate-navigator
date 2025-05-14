@@ -31,15 +31,18 @@ export const useRewardsData = () => {
 
   // Query for fetching all rewards
   const {
-    data: rewards = [],
+    data: fetchedRewards = [],
     isLoading: rewardsLoading,
     error: rewardsError,
     refetch: refetchRewards
-  } = useQuery({
+  } = useQuery<Reward[]>({
     queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
     ...STANDARD_QUERY_CONFIG
   });
+
+  // Ensure rewards is always an array
+  const rewards: Reward[] = Array.isArray(fetchedRewards) ? fetchedRewards : [];
 
   // Set local rewards whenever server data changes
   useEffect(() => {
@@ -52,7 +55,7 @@ export const useRewardsData = () => {
   const {
     data: totalRewardsSupply = 0,
     refetch: refetchSupply
-  } = useQuery({
+  } = useQuery<number>({
     queryKey: REWARDS_SUPPLY_QUERY_KEY,
     queryFn: fetchTotalRewardsSupply,
     ...STANDARD_QUERY_CONFIG

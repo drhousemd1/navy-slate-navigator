@@ -20,14 +20,23 @@ const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { 
-    tasks, 
+    tasks: fetchedTasks, 
     isLoading, 
     error, 
     saveTask: saveTaskToDb, 
     deleteTask: deleteTaskFromDb, 
     toggleTaskCompletion: toggleTaskCompletionInDb,
-    refetchTasks 
+    refetchTasks: refetchTasksData
   } = useTasksData();
+  
+  // Ensure tasks is always an array
+  const tasks: Task[] = Array.isArray(fetchedTasks) ? fetchedTasks : [];
+  
+  // Wrapper for the refetch function to ensure correct typing
+  const refetchTasks = async (options?: RefetchOptions): Promise<QueryObserverResult<Task[], Error>> => {
+    const result = await refetchTasksData(options);
+    return result as unknown as QueryObserverResult<Task[], Error>;
+  };
 
   const value: TasksContextType = {
     tasks,
