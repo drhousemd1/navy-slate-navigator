@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -155,13 +154,17 @@ export const useTasksData = () => {
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
-      // taskData.frequency and taskData.background_images should already conform to Partial<Task>
-      // The createTaskMutation should handle the raw data and return raw data
-      const savedRawTask = await createTaskMutation(taskData); // This will call lib/taskUtils.saveTask
+      // createTaskMutation returns raw data from Supabase.
+      const savedRawTaskData = await createTaskMutation(taskData);
       
-      // The savedRawTask from useCreateTask already calls processTaskFromDb from lib/taskUtils.saveTask
-      // So it should be correctly typed as Task | null
-      return savedRawTask;
+      if (savedRawTaskData) {
+        // Process the raw data to conform to the Task type.
+        const processedTask = processRawTask(savedRawTaskData);
+        return processedTask;
+      }
+      // If createTaskMutation returns null (e.g., on error handled within the mutation),
+      // or if no data was returned, propagate null.
+      return null;
     } catch (err: any) {
       console.error('Error saving task:', err);
       toast({
