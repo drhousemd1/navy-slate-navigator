@@ -29,8 +29,14 @@ export function usePersistentQuery<
   return useQuery<TQueryFnData, TError, TData, TQueryKey>({
     initialData: stored ?? undefined,
     ...restOptions,
-    onSuccess: (data) => {
-      // First persist the data
+    meta: {
+      ...restOptions.meta,
+      persistSuccessData: true,
+      keyString
+    },
+    gcTime: restOptions.gcTime || 1000 * 60 * 30,
+    select: (data) => {
+      // Persist data when we receive it
       if (typeof window !== "undefined" && data) {
         try {
           localStorage.setItem(keyString, JSON.stringify(data));
@@ -39,10 +45,16 @@ export function usePersistentQuery<
         }
       }
       
-      // Then call the user's onSuccess if provided
+      // Apply any user-defined select transformation, or return data as is
+      const transformedData = restOptions.select ? restOptions.select(data) : data as unknown as TData;
+      
+      // Call the user's onSuccess if provided
       if (userOnSuccess) {
-        userOnSuccess(data);
+        setTimeout(() => userOnSuccess(transformedData), 0);
       }
+      
+      // Return the data (transformed or not)
+      return transformedData;
     }
   });
 }
