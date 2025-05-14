@@ -48,11 +48,16 @@ const RewardsContent: React.FC<{
   };
   
   const handleEditReward = (index: number) => {
-    setRewardBeingEdited({
-      ...rewards[index],
-      index
-    });
-    setIsEditorOpen(true);
+    // Ensure rewards[index] exists before trying to access its properties
+    if (rewards && rewards[index]) {
+      setRewardBeingEdited({
+        ...rewards[index],
+        index
+      });
+      setIsEditorOpen(true);
+    } else {
+      console.warn(`Attempted to edit reward at index ${index}, but it does not exist.`);
+    }
   };
   
   useEffect(() => {
