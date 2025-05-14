@@ -1,3 +1,4 @@
+
 /**
  * DO NOT REPLICATE LOGIC OUTSIDE THIS FILE.
  * All fetching, mutation, sync, and cache logic must live in centralized hooks only.
@@ -32,12 +33,15 @@ const RewardsContent: React.FC<{
     syncNow();
   }, []);
   
-  // Set isInitialLoad to false once rewards have loaded
+  // Add consistent short timeout for initial rendering effect
   useEffect(() => {
-    if (!isLoading && rewards) {
+    // Add small timeout to ensure smooth transition
+    const timer = setTimeout(() => {
       setIsInitialLoad(false);
-    }
-  }, [isLoading, rewards]);
+    }, 200); // Match timing used in Punishments page
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   const handleAddNewReward = () => {
     setRewardBeingEdited(undefined);
@@ -63,7 +67,7 @@ const RewardsContent: React.FC<{
   }, [contentRef]);
   
   return (
-    <div className="p-4 pt-6">
+    <div className="p-4 pt-6 animate-fade-in">
       <RewardsHeader />
       
       {!isInitialLoad && (
