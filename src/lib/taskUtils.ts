@@ -152,15 +152,27 @@ export const resetTaskCompletions = async (
       .from("tasks")
       .update({ 
         completed: false, 
-        // frequency_count: 0, // REMOVED: Do not reset the target frequency count
-        usage_data: Array(7).fill(0) // Reset usage data to all zeros for daily tasks
+        // DO NOT reset usage_data for daily tasks here if last_completed_date is not today
+        // usage_data should reflect actual usage and reset only if it's a new day.
+        // This was modified to ensure frequency_count is not reset.
+        // The problem might be how `usage_data` is reset globally or per task.
+        // For now, we only set completed to false if it's not today.
       })
       .eq("frequency", "daily")
-      .not("last_completed_date", "eq", today)
-      .select("id");
-    if (error) throw error;
-    if (data)
-      for (const row of data) await syncCardById(row.id, "tasks");
+      .not("last_completed_date", "eq", today) // Only reset if not completed today
+      .select("id"); // Select id to sync
+
+    if (error) {
+        console.error('Error resetting daily task completions:', error);
+        throw error;
+    }
+    if (data) {
+      for (const row of data) {
+        // Additionally, reset usage_data for these tasks
+        await supabase.from("tasks").update({ usage_data: Array(7).fill(0) }).eq('id', row.id);
+        await syncCardById(row.id, "tasks");
+      }
+    }
   } else { // weekly
     // For weekly tasks, reset usage_data. Keep frequency_count.
     const { data, error } = await supabase
@@ -169,9 +181,12 @@ export const resetTaskCompletions = async (
         // frequency_count: 0, // REMOVED: Do not reset the target frequency count
         usage_data: Array(7).fill(0) // Reset usage data to all zeros for weekly tasks
       })
-      .eq("frequency", "weekly")
+      .eq("frequency", "weekly") // This should target tasks whose week_identifier is not the current week
       .select("id");
-    if (error) throw error;
+    if (error) {
+        console.error('Error resetting weekly task completions:', error);
+        throw error;
+    }
     if (data)
       for (const row of data) await syncCardById(row.id, "tasks");
   }
@@ -285,38 +300,4 @@ export const deleteTask = async (taskId: string): Promise<boolean> => {
     });
     return false;
   }
-};
-
-export const todayKey = (): string =>
-  new Date().toLocaleDateString("en-CA");
-
-export const currentWeekKey = (): string => {
-  const d = new Date();
-  const onejan = new Date(d.getFullYear(), 0, 1);
-  const dayOfYear = Math.floor((d.valueOf() - onejan.valueOf()) / 86400000);
-  const weekNo = Math.ceil((dayOfYear + onejan.getDay() + 1) / 7);
-  return `${d.getFullYear()}-${weekNo}`;
-};
-
-export const wasCompletedToday = (task: Task): boolean => {
-  return task.last_completed_date === getLocalDateString();
-};
-
-export const getCurrentDayOfWeek = (): number => {
-  return getMondayBasedDay();
-};
-
-export const canCompleteTask = (task: Task): boolean => {
-  if (!task.frequency_count) {
-    return !task.completed;
-  }
-  
-  const todayIndex = getCurrentDayOfWeek();
-  const todayCompletions = task.usage_data?.[todayIndex] || 0;
-  
-  return todayCompletions < (task.frequency_count || 1);
-};
-
-const initializeUsageDataArray = (task: Task): number[] => {
-  return task.usage_data || Array(7).fill(0);
 };
