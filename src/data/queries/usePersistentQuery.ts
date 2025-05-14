@@ -7,11 +7,16 @@
 
 import { useQuery, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
 
-export function usePersistentQuery<TData>(
-  options: Omit<UseQueryOptions<TData, Error, TData>, 'onSuccess'> & {
+export function usePersistentQuery<
+  TQueryFnData = unknown,
+  TError = Error,
+  TData = TQueryFnData,
+  TQueryKey extends unknown[] = unknown[]
+>(
+  options: Omit<UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>, 'onSuccess'> & {
     onSuccess?: (data: TData) => void;
   }
-): UseQueryResult<TData, Error> {
+): UseQueryResult<TData, TError> {
   const keyString = JSON.stringify(options.queryKey);
   const stored =
     typeof window !== "undefined"
@@ -21,10 +26,10 @@ export function usePersistentQuery<TData>(
   // Extract onSuccess from our options to avoid TypeScript errors
   const { onSuccess: userOnSuccess, ...restOptions } = options;
 
-  return useQuery<TData, Error>({
+  return useQuery<TQueryFnData, TError, TData, TQueryKey>({
     initialData: stored ?? undefined,
     ...restOptions,
-    onSuccess: (data: TData) => {
+    onSuccess: (data) => {
       // First persist the data
       if (typeof window !== "undefined" && data) {
         try {
