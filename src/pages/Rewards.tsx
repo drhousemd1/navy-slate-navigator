@@ -21,6 +21,7 @@ const RewardsContent: React.FC<{
   const { rewards, isLoading, handleSaveReward, handleDeleteReward } = useRewards();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<any>(undefined);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   // Use the sync manager to keep data in sync - add enabled parameter
   const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
@@ -29,6 +30,16 @@ const RewardsContent: React.FC<{
   useEffect(() => {
     // Force a sync on initial load completion - only once
     syncNow();
+  }, []);
+  
+  // Add consistent short timeout for initial rendering effect
+  useEffect(() => {
+    // Add small timeout to ensure smooth transition
+    const timer = setTimeout(() => {
+      setIsInitialLoad(false);
+    }, 200); // Match timing used in Punishments page
+    
+    return () => clearTimeout(timer);
   }, []);
   
   const handleAddNewReward = () => {
@@ -58,9 +69,11 @@ const RewardsContent: React.FC<{
     <div className="p-4 pt-6">
       <RewardsHeader />
       
-      <RewardsList
-        onEdit={handleEditReward}
-      />
+      {!isInitialLoad && (
+        <RewardsList
+          onEdit={handleEditReward}
+        />
+      )}
       
       <RewardEditor
         isOpen={isEditorOpen}
