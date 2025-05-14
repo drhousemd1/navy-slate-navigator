@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
@@ -64,7 +65,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const {
     rewards,
     totalPoints,
-    totalRewardsSupply: fetchedSupply,
+    totalRewardsSupply,
     domPoints = 0,
     isLoading,
     saveReward,
@@ -81,9 +82,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setPointsOptimistically,
     setDomPointsOptimistically,
   } = useRewardsData();
-  
-  // Ensure totalRewardsSupply is always a number
-  const totalRewardsSupply = typeof fetchedSupply === 'number' ? fetchedSupply : 0;
   
   const { mutateAsync: buySub } = useBuySubReward();
   const { mutateAsync: buyDom } = useBuyDomReward();
@@ -297,7 +295,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const value: RewardsContextType = {
+  const value = {
     rewards,
     totalPoints,
     totalRewardsSupply,

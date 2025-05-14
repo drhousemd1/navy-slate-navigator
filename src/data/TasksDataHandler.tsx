@@ -1,11 +1,11 @@
+
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
-import { usePersistentQuery as useQuery } from "@/data/queries/usePersistentQuery";
+import { useQuery, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
@@ -108,18 +108,15 @@ const fetchTasks = async (): Promise<Task[]> => {
 
 export const useTasksData = () => {
   const {
-    data: fetchedTasks = [],
+    data: tasks = [],
     isLoading,
     error,
     refetch
-  } = useQuery<Task[]>({
+  } = useQuery({
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
     ...STANDARD_QUERY_CONFIG, // Use our standardized configuration from react-query-config.ts
   });
-  
-  // Ensure tasks is always a proper Task array
-  const tasks: Task[] = Array.isArray(fetchedTasks) ? fetchedTasks : [];
 
   // Use our new mutation hooks
   const { mutateAsync: createTaskMutation } = useCreateTask();
@@ -175,7 +172,8 @@ export const useTasksData = () => {
       if (error) throw error;
       
       // Update local cache
-      const updatedTasks = tasks.filter(t => t.id !== taskId);
+      const previousTasks = tasks || [];
+      const updatedTasks = previousTasks.filter(t => t.id !== taskId);
       
       // We keep this direct cache update since deletion isn't part of our mutation hooks
       await saveTasksToDB(updatedTasks);
@@ -233,8 +231,7 @@ export const useTasksData = () => {
     options?: RefetchOptions
   ): Promise<QueryObserverResult<Task[], Error>> => {
     console.log('[TasksDataHandler] Manually refetching tasks');
-    const result = await refetch(options);
-    return result as unknown as QueryObserverResult<Task[], Error>;
+    return refetch(options);
   };
 
   return {

@@ -1,26 +1,22 @@
 
 import { useMutation } from "@tanstack/react-query";
-import { deletePunishmentMutation } from "../punishments/mutations";
+import { supabase } from "@/integrations/supabase/client";
 import { queryClient } from "../queryClient";
-import { toast } from "@/hooks/use-toast";
+import { savePunishmentsToDB } from "../indexedDB/useIndexedDB";
 
 // DATA‑LAYER ONLY.  Do not duplicate Supabase logic in UI components.
 export function useDeletePunishment() {
   return useMutation({
-    mutationFn: deletePunishmentMutation(queryClient),
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Punishment deleted successfully"
-      });
+    mutationFn: async (punId: string) => {
+      await supabase.from("punishments").delete().eq("id", punId);
+      return punId;
     },
-    onError: (error) => {
-      console.error('Error in useDeletePunishment hook:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete punishment",
-        variant: "destructive",
-      });
+    onSuccess: async (punId) => {
+      const list =
+        (queryClient.getQueryData<any[]>(["punishments"]) || [])
+          .filter(p => p.id !== punId);
+      queryClient.setQueryData(["punishments"], list);
+      await savePunishmentsToDB(list);
     }
   });
 }

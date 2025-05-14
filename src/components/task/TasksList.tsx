@@ -16,7 +16,6 @@ const TasksList: React.FC<TasksListProps> = ({
   onEditTask,
   onToggleCompletion 
 }) => {
-  // Only show loading state if there's no cached data
   if (isLoading && tasks.length === 0) {
     return (
       <div className="text-center py-10">
