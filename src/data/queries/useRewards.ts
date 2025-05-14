@@ -25,49 +25,40 @@ export function useRewards() {
 
       if (lastSync) {
         const timeDiff = Date.now() - new Date(lastSync as string).getTime();
-        if (timeDiff < 1000 * 60 * 30) { // 30 minutes
+        if (timeDiff < 1000 * 60 * 30) {
           shouldFetch = false;
         }
       }
 
-      if (!shouldFetch && localData && (localData as any[]).length > 0) {
-        console.log("[useRewards] Using cached local data, no fetch needed.", localData);
+      if (!shouldFetch && localData) {
         return (localData as any[]).map(row => ({
           ...row,
-          is_dom_reward: row.is_dominant // Ensure this mapping
+          is_dom_reward: row.is_dominant // Add this property
         }));
       }
-      
-      console.log("[useRewards] Fetching data from Supabase or using stale local if fetch fails.");
+
       const { data, error } = await supabase.from("rewards").select("*");
-      if (error) {
-        console.error("[useRewards] Error fetching from Supabase:", error);
-        // If Supabase fetch fails, return localData if available, otherwise throw
-        if (localData && (localData as any[]).length > 0) {
-          console.warn("[useRewards] Supabase fetch failed, returning stale local data.");
-          return (localData as any[]).map(row => ({ ...row, is_dom_reward: row.is_dominant }));
-        }
-        throw error;
-      }
+      if (error) throw error;
 
       if (data) {
-        console.log("[useRewards] Successfully fetched data from Supabase:", data);
         const processedData = (data as any[]).map(row => ({
           ...row,
-          is_dom_reward: row.is_dominant // Ensure this mapping
+          is_dom_reward: row.is_dominant // Add this property
         }));
         await saveRewardsToDB(processedData);
         await setLastSyncTimeForRewards(new Date().toISOString());
         return processedData;
       }
-      
-      // Fallback to localData if Supabase returns no data for some reason
-      console.log("[useRewards] Supabase returned no data, falling back to local data if available.");
-      return localData ? (localData as any[]).map(row => ({ ...row, is_dom_reward: row.is_dominant })) : [];
+
+      return localData ? (localData as any[]).map(row => ({
+        ...row,
+        is_dom_reward: row.is_dominant // Add this property
+      })) : [];
     },
-    initialData: undefined, // Ensured to be undefined
-    staleTime: 1000 * 60 * 5, // 5 minutes, was Infinity
-    gcTime: 1000 * 60 * 30, // 30 minutes
+    // Fix: Remove the async function and use undefined instead
+    initialData: undefined,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
     refetchOnWindowFocus: false
   });
 }

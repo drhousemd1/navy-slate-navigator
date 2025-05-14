@@ -32,15 +32,12 @@ const RewardsContent: React.FC<{
     syncNow();
   }, []);
   
-  // Add consistent short timeout for initial rendering effect
+  // Set isInitialLoad to false once rewards have loaded
   useEffect(() => {
-    // Add small timeout to ensure smooth transition
-    const timer = setTimeout(() => {
+    if (!isLoading && rewards) {
       setIsInitialLoad(false);
-    }, 200); // Match timing used in Punishments page
-    
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [isLoading, rewards]);
   
   const handleAddNewReward = () => {
     setRewardBeingEdited(undefined);
@@ -48,16 +45,11 @@ const RewardsContent: React.FC<{
   };
   
   const handleEditReward = (index: number) => {
-    // Ensure rewards[index] exists before trying to access its properties
-    if (rewards && rewards[index]) {
-      setRewardBeingEdited({
-        ...rewards[index],
-        index
-      });
-      setIsEditorOpen(true);
-    } else {
-      console.warn(`Attempted to edit reward at index ${index}, but it does not exist.`);
-    }
+    setRewardBeingEdited({
+      ...rewards[index],
+      index
+    });
+    setIsEditorOpen(true);
   };
   
   useEffect(() => {
@@ -70,25 +62,15 @@ const RewardsContent: React.FC<{
     };
   }, [contentRef]);
   
-  // Only show loader on initial load when no cached data
-  const showLoader = isInitialLoad && isLoading && (!rewards || rewards.length === 0);
-  
-  // Show loading state when appropriate
-  if (showLoader) {
-    return (
-      <div className="p-4 pt-6 flex flex-col items-center justify-center h-[80vh]">
-        <p className="text-light-navy">Loading rewards...</p>
-      </div>
-    );
-  }
-  
   return (
     <div className="p-4 pt-6">
       <RewardsHeader />
       
-      <RewardsList
-        onEdit={handleEditReward}
-      />
+      {!isInitialLoad && (
+        <RewardsList
+          onEdit={handleEditReward}
+        />
+      )}
       
       <RewardEditor
         isOpen={isEditorOpen}
