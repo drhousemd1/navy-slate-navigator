@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
-import { PunishmentData } from '@/contexts/PunishmentsContext';
+import { PunishmentData } from '@/contexts/punishments/types';
+import { Loader2, Trash2, Save } from 'lucide-react';
 import DeletePunishmentDialog from '../DeletePunishmentDialog';
 
 interface PunishmentFormActionsProps {
@@ -23,41 +23,60 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
   onDelete
 }) => {
   return (
-    <div className="pt-4 w-full flex items-center justify-end gap-3">
-      {punishmentData?.id && onDelete && (
-        <>
-          <Button
-            type="button"
-            variant="destructive"
+    <div className="flex flex-col space-y-4 mt-6 md:mt-8">
+      <div className="flex items-center justify-end space-x-3 pt-4">
+        {punishmentData?.id && onDelete && (
+          <Button 
+            type="button" 
+            variant="destructive" 
             onClick={() => setIsDeleteDialogOpen(true)}
-            className="bg-red-700 text-white hover:bg-red-600 flex items-center gap-2"
+            className="bg-red-600 text-white hover:bg-red-700"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>
-          <DeletePunishmentDialog
-            isOpen={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-            onDelete={() => onDelete(punishmentData.id as string)}
-            punishmentName={punishmentData.title}
-          />
-        </>
+        )}
+        
+        <Button 
+          type="button" 
+          variant="destructive" 
+          onClick={onCancel}
+          className="bg-red-600 text-white hover:bg-red-700"
+        >
+          Cancel
+        </Button>
+        
+        <Button 
+          type="submit"
+          className="bg-[#0FA0CE] text-white hover:bg-[#0FA0CE]/90"
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </>
+          )}
+        </Button>
+      </div>
+      
+      {punishmentData?.id && onDelete && (
+        <DeletePunishmentDialog
+          isOpen={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          onDelete={() => {
+            if (punishmentData?.id && onDelete) {
+              onDelete(punishmentData.id);
+            }
+          }}
+          punishmentName={punishmentData.title}
+        />
       )}
-      <Button 
-        type="button" 
-        variant="destructive" 
-        onClick={onCancel}
-        className="bg-red-700 text-white hover:bg-red-600"
-      >
-        Cancel
-      </Button>
-      <Button 
-        type="submit" 
-        className="bg-nav-active text-white hover:bg-nav-active/90"
-        disabled={isSaving}
-      >
-        {isSaving ? 'Saving...' : 'Save Changes'}
-      </Button>
     </div>
   );
 };

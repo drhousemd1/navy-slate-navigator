@@ -1,9 +1,10 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule';
 import { useRulesData } from '@/data/hooks/useRulesData';
+import { usePreloadRules } from "@/data/preload/usePreloadRules";
 
 // Define the context type
 interface RulesContextType {
@@ -19,6 +20,14 @@ interface RulesContextType {
 const RulesContext = createContext<RulesContextType | undefined>(undefined);
 
 export const RulesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Get the preload function
+  const preloadRules = usePreloadRules();
+
+  // Run it once when provider mounts
+  useEffect(() => {
+    preloadRules();
+  }, [preloadRules]);
+
   const { 
     rules, 
     isLoading, 

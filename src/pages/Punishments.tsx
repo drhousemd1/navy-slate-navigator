@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -13,6 +14,7 @@ import { queryClient } from '@/data/queryClient';
 import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
 import { usePreloadPunishments } from "@/data/preload/usePreloadPunishments";
+import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
 
 // Preload punishments data from IndexedDB before component renders
 usePreloadPunishments()();
@@ -24,6 +26,9 @@ const PunishmentsContent: React.FC<{
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // Use the delete punishment mutation hook
+  const { mutateAsync: deletePunishmentAsync } = useDeletePunishment();
   
   // Use the sync manager with minimal refreshing
   const { syncNow } = useSyncManager({ 
@@ -165,33 +170,21 @@ const PunishmentsContent: React.FC<{
     }
   };
   
-  // Show cached data with error message if we have an error but cached data
-  if (error && punishments.length > 0) {
-    return (
-      <div className="p-4 pt-6">
-        <PunishmentsHeader />
-        <div className="bg-red-900/20 border border-red-700 rounded p-4 mb-4 text-red-300">
-          <p>Error refreshing data. Showing cached punishments.</p>
-        </div>
-        <div className="flex flex-col space-y-4">
-          {punishments.map((punishment) => (
-            <PunishmentCard
-              key={punishment.id}
-              {...punishment}
-              onEdit={() => handleEditPunishment(punishment)}
-            />
-          ))}
-        </div>
-        
-        <PunishmentEditor
-          isOpen={isEditorOpen}
-          onClose={() => setIsEditorOpen(false)}
-          punishmentData={currentPunishment}
-          onSave={handleSavePunishment}
-        />
-      </div>
-    );
-  }
+  // Handler for deleting a punishment
+  const handleDeletePunishment = async (id: string) => {
+    try {
+      await deletePunishmentAsync(id);
+      setIsEditorOpen(false);
+      setCurrentPunishment(undefined);
+    } catch (error) {
+      console.error("Error deleting punishment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete punishment",
+        variant: "destructive"
+      });
+    }
+  };
   
   // Show loading state when appropriate
   if (showLoader) {
@@ -225,6 +218,7 @@ const PunishmentsContent: React.FC<{
           onClose={() => setIsEditorOpen(false)}
           punishmentData={currentPunishment}
           onSave={handleSavePunishment}
+          onDelete={handleDeletePunishment}
         />
       </div>
     );
@@ -250,6 +244,7 @@ const PunishmentsContent: React.FC<{
         onClose={() => setIsEditorOpen(false)}
         punishmentData={currentPunishment}
         onSave={handleSavePunishment}
+        onDelete={handleDeletePunishment}
       />
     </div>
   );
