@@ -29,19 +29,21 @@ export function usePersistentQuery<
   return useQuery<TQueryFnData, TError, TData, TQueryKey>({
     initialData: stored ?? undefined,
     ...restOptions,
-    onSuccess: (data) => {
-      // First persist the data
-      if (typeof window !== "undefined" && data) {
-        try {
-          localStorage.setItem(keyString, JSON.stringify(data));
-        } catch (e) {
-          console.warn("Failed to persist query data to localStorage:", e);
+    callbacks: {
+      onSuccess: (data) => {
+        // First persist the data
+        if (typeof window !== "undefined" && data) {
+          try {
+            localStorage.setItem(keyString, JSON.stringify(data));
+          } catch (e) {
+            console.warn("Failed to persist query data to localStorage:", e);
+          }
         }
-      }
-      
-      // Then call the user's onSuccess if provided
-      if (userOnSuccess) {
-        userOnSuccess(data);
+        
+        // Then call the user's onSuccess if provided
+        if (userOnSuccess) {
+          userOnSuccess(data);
+        }
       }
     }
   });
