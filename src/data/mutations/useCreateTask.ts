@@ -8,12 +8,18 @@
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { syncCardById } from "../sync/useSyncManager";
+import { useAuth } from "@/contexts/AuthContext"; // Import useAuth
 
 // Creates a new task in Supabase, then syncs that task locally
 export function useCreateTask() {
+  const { user } = useAuth(); // Get the authenticated user
+
   return useMutation({
     mutationFn: async (newTask: any) => {
-      const { data, error } = await supabase.from("tasks").insert([newTask]).select().single();
+      if (!user) throw new Error("User not authenticated to create task");
+      
+      const taskWithUser = { ...newTask, user_id: user.id }; // Add user_id
+      const { data, error } = await supabase.from("tasks").insert([taskWithUser]).select().single();
       if (error) throw error;
       return data;
     },
@@ -24,3 +30,4 @@ export function useCreateTask() {
     }
   });
 }
+

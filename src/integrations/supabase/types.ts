@@ -243,6 +243,7 @@ export type Database = {
           id: string
           points_deducted: number
           punishment_id: string | null
+          user_id: string | null
         }
         Insert: {
           applied_date?: string | null
@@ -250,6 +251,7 @@ export type Database = {
           id?: string
           points_deducted: number
           punishment_id?: string | null
+          user_id?: string | null
         }
         Update: {
           applied_date?: string | null
@@ -257,6 +259,7 @@ export type Database = {
           id?: string
           points_deducted?: number
           punishment_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -341,6 +344,7 @@ export type Database = {
           id: string
           reward_id: string | null
           used: boolean | null
+          user_id: string | null
           week_number: string
         }
         Insert: {
@@ -349,6 +353,7 @@ export type Database = {
           id?: string
           reward_id?: string | null
           used?: boolean | null
+          user_id?: string | null
           week_number: string
         }
         Update: {
@@ -357,6 +362,7 @@ export type Database = {
           id?: string
           reward_id?: string | null
           used?: boolean | null
+          user_id?: string | null
           week_number?: string
         }
         Relationships: [
@@ -437,6 +443,7 @@ export type Database = {
           day_of_week: number
           id: string
           rule_id: string | null
+          user_id: string | null
           violation_date: string
           week_number: string
         }
@@ -444,6 +451,7 @@ export type Database = {
           day_of_week: number
           id?: string
           rule_id?: string | null
+          user_id?: string | null
           violation_date?: string
           week_number: string
         }
@@ -451,6 +459,7 @@ export type Database = {
           day_of_week?: number
           id?: string
           rule_id?: string | null
+          user_id?: string | null
           violation_date?: string
           week_number?: string
         }
@@ -598,6 +607,7 @@ export type Database = {
           title_color: string
           updated_at: string
           usage_data: Json | null
+          user_id: string | null
           week_identifier: string | null
         }
         Insert: {
@@ -626,6 +636,7 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
+          user_id?: string | null
           week_identifier?: string | null
         }
         Update: {
@@ -654,6 +665,7 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
+          user_id?: string | null
           week_identifier?: string | null
         }
         Relationships: []

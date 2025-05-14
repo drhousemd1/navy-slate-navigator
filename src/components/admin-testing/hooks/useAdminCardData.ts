@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { AdminTestingCardData } from '../defaultAdminTestingCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { Json } from '@/integrations/supabase/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UseAdminCardDataProps {
   id: string;
@@ -60,6 +60,7 @@ export const useAdminCardData = ({
   background_images = [],
   background_image_url
 }: UseAdminCardDataProps): UseAdminCardDataResult => {
+  const { user } = useAuth();
   const [cardData, setCardData] = useState<AdminTestingCardData>({
     id,
     title,
@@ -90,11 +91,16 @@ export const useAdminCardData = ({
         setIsLoading(true);
         console.log("Fetching card data with ID:", id);
         
-        const { data, error } = await supabase
+        const query = supabase
           .from('admin_testing_cards')
           .select('*')
-          .eq('id', id)
-          .single();
+          .eq('id', id);
+
+        if (user) {
+          query.eq('user_id', user.id);
+        }
+        
+        const { data, error } = await query.single();
         
         if (error) {
           if (error.code !== 'PGRST116') { // Not found is not a critical error
@@ -160,7 +166,7 @@ export const useAdminCardData = ({
     };
 
     fetchCardData();
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => {
     // Initialize images array from props if not loaded from Supabase
@@ -181,18 +187,26 @@ export const useAdminCardData = ({
   }, [isLoading, background_images, background_image_url, images.length]);
 
   const handleSaveCard = async (updatedCard: AdminTestingCardData) => {
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to save card data.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       console.log("Saving card to Supabase:", updatedCard);
       
-      // Make sure we have the complete updated data
       const newCardData = {
         ...cardData,
-        ...updatedCard
+        ...updatedCard,
+        user_id: user.id
       };
       
       setCardData(newCardData);
       
-      // Update images array based on updated card data
       let newImages: string[] = [];
       
       if (Array.isArray(updatedCard.background_images)) {
@@ -203,12 +217,10 @@ export const useAdminCardData = ({
       
       setImages(newImages);
       
-      // Save to Supabase using upsert
       const { error } = await supabase
         .from('admin_testing_cards')
         .upsert({
           ...newCardData,
-          // Explicitly add points to ensure it's included in the upsert
           points: typeof newCardData.points === 'number' ? newCardData.points : 0
         }, { 
           onConflict: 'id',
@@ -240,7 +252,6 @@ export const useAdminCardData = ({
     }
   };
 
-  // Ensure usageData is always an array of numbers
   const usageData = Array.isArray(cardData.usage_data) 
     ? cardData.usage_data as number[]
     : typeof cardData.usage_data === 'object' && cardData.usage_data !== null
