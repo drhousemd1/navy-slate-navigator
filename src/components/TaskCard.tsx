@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -49,7 +48,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onEdit,
   onToggleCompletion,
   frequency,
-  frequency_count = 1,
+  frequency_count = 1, // Default to 1 if not provided
   usage_data = Array(7).fill(0),
   icon_url,
   icon_name,
@@ -62,11 +61,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const currentDayOfWeek = getCurrentDayOfWeek();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
-  // maxCompletions should always be at least 1 for tasks with frequency_count
+  // Ensure maxCompletions is at least 1, using frequency_count if available and positive
   const maxCompletions = frequency_count && frequency_count > 0 ? frequency_count : 1;
-  // isFullyCompleted depends on the frequency type.
-  // For 'one-time' tasks, 'completed' prop is the source of truth.
-  // For 'daily'/'weekly' with frequency_count, usage_data drives completion status for the period.
+  
   let isEffectivelyCompleted = completed;
   if (frequency === 'daily' || frequency === 'weekly') {
     isEffectivelyCompleted = currentCompletions >= maxCompletions;
@@ -93,14 +90,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {onToggleCompletion && (
             <div className="flex items-center gap-2">
               <PointsBadge points={points} />
-              {(frequency === 'daily' || frequency === 'weekly') && frequency_count && frequency_count > 1 && (
+              {/* Show CompletionCounter if frequency is daily/weekly and frequency_count is positive */}
+              {(frequency === 'daily' || frequency === 'weekly') && frequency_count && frequency_count > 0 && (
                 <CompletionCounter 
                   currentCompletions={currentCompletions}
                   maxCompletions={maxCompletions}
                 />
               )}
               <CompletionButton 
-                completed={isEffectivelyCompleted} // Use effectively completed status for the button
+                completed={isEffectivelyCompleted}
                 onToggleCompletion={onToggleCompletion}
                 currentCompletions={currentCompletions}
                 maxCompletions={maxCompletions}
@@ -142,7 +140,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         <div className="flex items-center justify-between mt-4">
           {(frequency === 'daily' || frequency === 'weekly') && (
             <FrequencyTracker 
-              frequency={frequency as 'daily' | 'weekly'} // Cast here as FrequencyTracker expects more specific types
+              frequency={frequency as 'daily' | 'weekly'}
               frequency_count={frequency_count} 
               calendar_color={calendar_color}
               usage_data={usage_data}
@@ -165,7 +163,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
       {isEffectivelyCompleted && (frequency === 'daily' || frequency === 'weekly') && (
         <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
       )}
-      {/* For one-time tasks, the simple 'completed' state might be enough if no overlay is desired */}
       {completed && frequency === 'one-time' && (
          <div className="absolute inset-0 z-20 bg-green-500/30 rounded pointer-events-none" />
       )}
