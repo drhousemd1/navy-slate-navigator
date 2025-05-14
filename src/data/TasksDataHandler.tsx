@@ -4,9 +4,9 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
+import { useQuery, QueryObserverResult, RefetchOptions, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, getLocalDateString } from '@/lib/taskUtils'; // Updated import for Task
+import { Task, getLocalDateString } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { getMondayBasedDay } from '@/lib/utils';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
@@ -57,7 +57,7 @@ const processRawTask = (rawTask: any): Task => {
     focal_point_x: rawTask.focal_point_x,
     focal_point_y: rawTask.focal_point_y,
     frequency: freq,
-    frequency_count: rawTask.frequency_count,
+    frequency_count: typeof rawTask.frequency_count === 'number' && rawTask.frequency_count > 0 ? rawTask.frequency_count : 1, // Ensure positive, default to 1
     usage_data: Array.isArray(rawTask.usage_data)
       ? rawTask.usage_data.map((val: any) => (typeof val === 'number' ? val : Number(val)))
       : Array(7).fill(0),
@@ -138,6 +138,7 @@ const fetchTasks = async (): Promise<Task[]> => {
 };
 
 export const useTasksData = () => {
+  const queryClient = useQueryClient();
   const {
     data: tasks = [],
     isLoading,
@@ -231,7 +232,7 @@ export const useTasksData = () => {
         await syncCardById(taskId, 'tasks');
       }
       // Consider query invalidation here as well to ensure UI consistency
-      // queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
       return true;
     } catch (err: any) {
       console.error('Error updating task completion:', err);
