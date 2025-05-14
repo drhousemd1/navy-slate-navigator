@@ -9,8 +9,8 @@ import CompletionButton from './task/CompletionButton';
 import CompletionCounter from './task/CompletionCounter';
 import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
-// Removed HighlightedText import as it's not directly used for title/desc
-import { getCurrentDayOfWeek, Task } from '@/lib/taskUtils'; // Import Task type
+import HighlightedText from './task/HighlightedText';
+import { getCurrentDayOfWeek } from '@/lib/taskUtils';
 
 interface TaskCardProps {
   title: string;
@@ -24,12 +24,12 @@ interface TaskCardProps {
   onEdit: () => void;
   onToggleCompletion?: (completed: boolean) => void;
   onDelete?: () => void;
-  frequency?: Task['frequency']; // Use Task type for frequency
+  frequency?: 'daily' | 'weekly';
   frequency_count?: number;
   usage_data?: number[];
   icon_url?: string;
   icon_name?: string;
-  priority?: Task['priority']; // Use Task type for priority
+  priority?: 'low' | 'medium' | 'high';
   highlight_effect?: boolean;
   title_color?: string;
   subtext_color?: string;
@@ -48,8 +48,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   focalPointY = 50,
   onEdit,
   onToggleCompletion,
-  frequency = 'one-time',
-  frequency_count = 1, // Default to 1 if not provided
+  frequency,
+  frequency_count = 1,
   usage_data = Array(7).fill(0),
   icon_url,
   icon_name,
@@ -62,43 +62,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const currentDayOfWeek = getCurrentDayOfWeek();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
-  // Ensure maxCompletions is at least 1, using frequency_count if available and positive
-  const maxCompletions = frequency_count && frequency_count > 0 ? frequency_count : 1;
-  
-  console.log(`TaskCard "${title}": frequency=${frequency}, frequency_count=${frequency_count}, usage_data=${JSON.stringify(usage_data)}, currentCompletions=${currentCompletions}, maxCompletions=${maxCompletions}`);
-  
-  // Determine if the task is effectively completed based on frequency type
-  let isEffectivelyCompleted = completed;
-  if (frequency === 'daily' || frequency === 'weekly') {
-    isEffectivelyCompleted = currentCompletions >= maxCompletions;
-  }
-
-  const handleToggleCompletion = (newCompletedState: boolean) => {
-    console.log(`TaskCard "${title}": handleToggleCompletion called with ${newCompletedState}`);
-    if (onToggleCompletion) {
-      onToggleCompletion(newCompletedState);
-    }
-  };
-
-  const titleStyle: React.CSSProperties = {
-    color: title_color,
-    backgroundColor: highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
-    padding: highlight_effect ? '2px 6px' : '0', // Adjusted padding slightly for better visual
-    borderRadius: highlight_effect ? '4px' : '0',
-    display: 'inline', // Ensure inline display for background to wrap content
-    boxDecorationBreak: 'clone', // Better background rendering across lines
-    WebkitBoxDecorationBreak: 'clone',
-  };
-
-  const descriptionStyle: React.CSSProperties = {
-    color: subtext_color,
-    backgroundColor: highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent', // Softer yellow than Tailwind's default /20
-    padding: highlight_effect ? '2px 6px' : '0', // Adjusted padding slightly
-    borderRadius: highlight_effect ? '4px' : '0',
-    display: 'inline',
-    boxDecorationBreak: 'clone',
-    WebkitBoxDecorationBreak: 'clone',
-  };
+  const maxCompletions = frequency_count || 1;
+  const isFullyCompleted = currentCompletions >= maxCompletions;
 
   return (
     <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
@@ -121,19 +86,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {onToggleCompletion && (
             <div className="flex items-center gap-2">
               <PointsBadge points={points} />
-              {/* Show CompletionCounter if frequency is daily/weekly and frequency_count is positive */}
-              {(frequency === 'daily' || frequency === 'weekly') && frequency_count && frequency_count > 0 && (
-                <CompletionCounter 
-                  currentCompletions={currentCompletions}
-                  maxCompletions={maxCompletions}
-                />
-              )}
-              <CompletionButton 
-                completed={isEffectivelyCompleted}
-                onToggleCompletion={handleToggleCompletion}
+              <CompletionCounter 
                 currentCompletions={currentCompletions}
                 maxCompletions={maxCompletions}
-                taskFrequency={frequency}
+              />
+              <CompletionButton 
+                completed={completed} 
+                onToggleCompletion={onToggleCompletion}
+                currentCompletions={currentCompletions}
+                maxCompletions={maxCompletions}
               />
             </div>
           )}
@@ -151,28 +112,28 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
           
           <div className="flex-1 flex flex-col">
-            <h3 
-              className="text-xl font-semibold"
-              style={titleStyle}
-            >
-              {title}
+            <h3 className="text-xl font-semibold inline-block">
+              <HighlightedText 
+                text={title} 
+                highlight={highlight_effect || false} 
+                color={title_color} 
+              />
             </h3>
             
-            {description && (
-              <p 
-                className="text-sm mt-1"
-                style={descriptionStyle}
-              >
-                {description}
-              </p>
-            )}
+            <div className="text-sm mt-1 inline-block">
+              <HighlightedText 
+                text={description} 
+                highlight={highlight_effect || false} 
+                color={subtext_color} 
+              />
+            </div>
           </div>
         </div>
         
         <div className="flex items-center justify-between mt-4">
-          {(frequency === 'daily' || frequency === 'weekly') && (
+          {frequency && (
             <FrequencyTracker 
-              frequency={frequency as 'daily' | 'weekly'}
+              frequency={frequency} 
               frequency_count={frequency_count} 
               calendar_color={calendar_color}
               usage_data={usage_data}
@@ -192,15 +153,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
         </div>
       </div>
       
-      {/* Overlay for completed tasks */}
-      {isEffectivelyCompleted && frequency === 'daily' && (
+      {isFullyCompleted && (
         <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
-      )}
-      {isEffectivelyCompleted && frequency === 'weekly' && (
-        <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
-      )}
-      {completed && frequency === 'one-time' && (
-        <div className="absolute inset-0 z-20 bg-green-500/30 rounded pointer-events-none" />
       )}
     </Card>
   );

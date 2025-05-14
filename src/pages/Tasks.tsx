@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -29,9 +28,8 @@ const TasksWithContext: React.FC = () => {
   
   // Initial sync when component mounts
   useEffect(() => {
-    console.log('Tasks page mounted, forcing sync');
     syncNow(); // Force a sync when the Tasks page is loaded
-  }, [syncNow]);
+  }, []);
 
   const handleAddTask = () => {
     console.log('handleAddTask called in TasksWithContext');
@@ -62,15 +60,12 @@ const TasksWithContext: React.FC = () => {
 
   const handleSaveTask = async (taskData: Task) => {
     try {
-      const savedTask = await saveTask(taskData);
+      await saveTask(taskData);
       setIsEditorOpen(false);
       setCurrentTask(null);
       
-      if (savedTask?.id) {
-        // Synchronize data after task save
-        console.log('Task saved, syncing:', savedTask.id);
-        setTimeout(() => syncCardById(savedTask.id, 'tasks'), 500);
-      }
+      // Synchronize data after task save
+      setTimeout(() => syncCardById(taskData.id, 'tasks'), 500);
     } catch (err) {
       console.error('Error saving task:', err);
     }
@@ -88,14 +83,10 @@ const TasksWithContext: React.FC = () => {
 
   const handleToggleCompletion = async (taskId: string, completed: boolean) => {
     try {
-      console.log(`Tasks page: handleToggleCompletion called for task ${taskId}, setting to ${completed}`);
-      const result = await toggleTaskCompletion(taskId, completed);
-      console.log(`Toggle completion result:`, result);
-      
+      await toggleTaskCompletion(taskId, completed);
       // Always refresh points after task completion
       if (completed) {
         setTimeout(() => {
-          console.log('Refreshing points after task completion');
           refreshPointsFromDatabase();
         }, 300);
       }

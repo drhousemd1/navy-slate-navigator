@@ -1,19 +1,25 @@
+
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery, QueryObserverResult, RefetchOptions, useQueryClient } from '@tanstack/react-query';
+import { useQuery, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, getLocalDateString, getCurrentDayOfWeek, processTaskFromDb } from '@/lib/taskUtils';
+import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
+import { getMondayBasedDay } from '@/lib/utils';
+import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { useCreateTask } from "@/data/mutations/useCreateTask";
 import { useCompleteTask } from "@/data/mutations/useCompleteTask";
 import { saveTasksToDB } from "@/data/indexedDB/useIndexedDB";
+import { syncCardById } from "@/data/sync/useSyncManager";
 
 const TASKS_QUERY_KEY = ['tasks'];
+const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
+const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
 
 const fetchTasks = async (): Promise<Task[]> => {
   const startTime = performance.now();
@@ -29,7 +35,34 @@ const fetchTasks = async (): Promise<Task[]> => {
     throw error;
   }
 
-  const tasks: Task[] = data ? data.map(processTaskFromDb) : [];
+  const tasks: Task[] = data.map(task => ({
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    points: task.points,
+    // Fix: Ensure priority is strictly typed as one of the allowed values
+    priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
+    completed: task.completed,
+    background_image_url: task.background_image_url,
+    background_opacity: task.background_opacity,
+    focal_point_x: task.focal_point_x,
+    focal_point_y: task.focal_point_y,
+    frequency: task.frequency as 'daily' | 'weekly',
+    frequency_count: task.frequency_count,
+    usage_data: Array.isArray(task.usage_data) 
+      ? task.usage_data.map(val => typeof val === 'number' ? val : Number(val)) 
+      : [0, 0, 0, 0, 0, 0, 0],
+    icon_name: task.icon_name,
+    icon_url: task.icon_url,
+    icon_color: task.icon_color,
+    highlight_effect: task.highlight_effect,
+    title_color: task.title_color,
+    subtext_color: task.subtext_color,
+    calendar_color: task.calendar_color,
+    last_completed_date: task.last_completed_date,
+    created_at: task.created_at,
+    updated_at: task.updated_at
+  }));
 
   const today = getLocalDateString();
   const tasksToReset = tasks.filter(task => 
@@ -62,7 +95,7 @@ const fetchTasks = async (): Promise<Task[]> => {
     });
     
     const endTime = performance.now();
-    console.log(`[TasksDataHandler] Fetched and processed ${updatedTasks.length} tasks in ${(endTime - startTime).toFixed(2)}ms`);
+    console.log(`[TasksDataHandler] Fetched and processed ${tasks.length} tasks in ${(endTime - startTime).toFixed(2)}ms`);
     
     return updatedTasks;
   }
@@ -74,7 +107,6 @@ const fetchTasks = async (): Promise<Task[]> => {
 };
 
 export const useTasksData = () => {
-  const queryClient = useQueryClient();
   const {
     data: tasks = [],
     isLoading,
@@ -83,33 +115,41 @@ export const useTasksData = () => {
   } = useQuery({
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
-    ...STANDARD_QUERY_CONFIG,
+    ...STANDARD_QUERY_CONFIG, // Use our standardized configuration from react-query-config.ts
   });
 
+  // Use our new mutation hooks
   const { mutateAsync: createTaskMutation } = useCreateTask();
   const { mutateAsync: completeTaskMutation } = useCompleteTask();
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
-      // Make sure frequency_count is a positive number - this will be handled by processTaskFromDb eventually if data comes from DB
-      // For new/updated tasks, ensure it before sending to DB, or let DB an subsequent fetch handle it via processTaskFromDb
-      if (taskData.frequency_count !== undefined) {
-        taskData.frequency_count = Math.max(1, taskData.frequency_count);
-      }
+      // Fix the task priority and frequency types to ensure they're one of the allowed values
+      // Also ensure usage_data is properly formatted as number[] array
+      const processedTaskData = {
+        ...taskData,
+        // Ensure priority is one of the allowed types
+        priority: (taskData.priority || 'medium') as 'low' | 'medium' | 'high',
+        // Ensure frequency is one of the allowed types
+        frequency: (taskData.frequency || 'daily') as 'daily' | 'weekly',
+        // Ensure usage_data is a properly formatted number[] array
+        usage_data: Array.isArray(taskData.usage_data) 
+          ? taskData.usage_data.map(val => typeof val === 'number' ? val : Number(val))
+          : Array(7).fill(0)
+      };
       
-      // Initialize usage_data if not set and task is recurring
-      if ((taskData.frequency === 'daily' || taskData.frequency === 'weekly') && !taskData.usage_data) {
-        taskData.usage_data = Array(7).fill(0);
-      }
+      const savedTask = await createTaskMutation(processedTaskData);
       
-      const savedRawTaskData = await createTaskMutation(taskData); // This returns raw data from Supabase
-      
-      if (savedRawTaskData) {
-        // Process the raw data to conform to the Task type using the centralized processor
-        const processedTask = processTaskFromDb(savedRawTaskData); 
-        return processedTask;
-      }
-      return null;
+      // Fix: Ensure the returned task has the correct types
+      return {
+        ...savedTask,
+        priority: (savedTask.priority as 'low' | 'medium' | 'high') || 'medium',
+        frequency: (savedTask.frequency as 'daily' | 'weekly') || 'daily',
+        // Ensure usage_data is returned as a proper number array
+        usage_data: Array.isArray(savedTask.usage_data) 
+          ? savedTask.usage_data.map(val => typeof val === 'number' ? val : Number(val))
+          : Array(7).fill(0),
+      };
     } catch (err: any) {
       console.error('Error saving task:', err);
       toast({
@@ -132,16 +172,12 @@ export const useTasksData = () => {
       if (error) throw error;
       
       // Update local cache
-      queryClient.setQueryData(TASKS_QUERY_KEY, (oldTasks: Task[] | undefined) => {
-        return oldTasks ? oldTasks.filter(t => t.id !== taskId) : [];
-      });
+      const previousTasks = tasks || [];
+      const updatedTasks = previousTasks.filter(t => t.id !== taskId);
       
-      // We could also invalidate, but direct cache update is faster for deletions
-      // queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-
-      // Remove from IndexedDB if still relevant (sync manager might handle this via listeners)
-      // For now, direct cache update is primary. saveTasksToDB might be called by sync manager too.
-
+      // We keep this direct cache update since deletion isn't part of our mutation hooks
+      await saveTasksToDB(updatedTasks);
+      
       return true;
     } catch (err: any) {
       console.error('Error deleting task:', err);
@@ -156,100 +192,32 @@ export const useTasksData = () => {
 
   const toggleTaskCompletion = async (taskId: string, completed: boolean): Promise<boolean> => {
     try {
-      console.log(`[TasksDataHandler] toggleTaskCompletion called for task ${taskId}, setting to ${completed}`);
-      
-      const currentTasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY) || [];
-      const task = currentTasks.find(t => t.id === taskId);
-
-      if (!task) {
-        console.error(`[TasksDataHandler] Task not found with ID: ${taskId}`);
-        // Attempt to refetch and find task, could be due to stale cache
-        await queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-        const refreshedTasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY) || [];
-        const refreshedTask = refreshedTasks.find(t => t.id === taskId);
-        if (!refreshedTask) {
-            toast({ title: "Task not found", description: "Could not find the task to update. Please try again.", variant: "destructive" });
-            return false;
-        }
-        // If found after refresh, proceed with refreshedTask (not implemented here to keep it simple, original error stands)
-        return false;
-      }
-      
-      console.log(`[TasksDataHandler] Found task: "${task.title}", frequency=${task.frequency}, frequency_count=${task.frequency_count}`);
-      console.log(`[TasksDataHandler] Current usage_data:`, task.usage_data);
-
-      // Ensure frequency_count is at least 1 for logic below (processTaskFromDb should have handled this)
-      const safeFrequencyCount = Math.max(1, task.frequency_count || 1);
-
-      if (task.frequency === 'daily' || task.frequency === 'weekly') {
-        const todayIndex = getCurrentDayOfWeek();
-        const maxCompletions = safeFrequencyCount;
-        
-        const newUsageData = [...(task.usage_data || Array(7).fill(0))];
-        
-        if (completed) { // User wants to mark as complete / increment
-          const currentCompletions = newUsageData[todayIndex] || 0;
-          if (currentCompletions < maxCompletions) {
-            newUsageData[todayIndex] = currentCompletions + 1;
-            const newCompletionCount = newUsageData[todayIndex];
-            console.log(`[TasksDataHandler] Incrementing completions for day ${todayIndex} from ${currentCompletions} to ${newCompletionCount}`);
-            
-            const isFullyCompletedToday = newCompletionCount >= maxCompletions;
-            
-            await completeTaskMutation({
-              taskId,
-              updates: {
-                usage_data: newUsageData,
-                completed: isFullyCompletedToday, 
-                last_completed_date: getLocalDateString(),
-                updated_at: new Date().toISOString()
-              }
-            });
-            // Let useCompleteTask's onSuccess handle syncCardById, then invalidate for broader consistency
-            queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-            return true;
-          } else {
-            console.log(`[TasksDataHandler] Task already completed maximum times for today: ${currentCompletions}/${maxCompletions}`);
-            toast({ title: "Already completed", description: "This task is already completed the maximum number of times for today.", variant: "default" });
-            return false;
-          }
-        } else { // User wants to mark as incomplete / decrement
-          const currentCompletions = newUsageData[todayIndex] || 0;
-          if (currentCompletions > 0) {
-            newUsageData[todayIndex] = currentCompletions - 1;
-            console.log(`[TasksDataHandler] Decrementing completions for day ${todayIndex} from ${currentCompletions} to ${newUsageData[todayIndex]}`);
-            
-            await completeTaskMutation({
-              taskId,
-              updates: { 
-                usage_data: newUsageData,
-                completed: false, // Always false when decrementing
-                updated_at: new Date().toISOString() 
-              }
-            });
-            queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-            return true;
-          } else {
-            console.log(`[TasksDataHandler] Can't decrement - already at 0 completions for day ${todayIndex}`);
-            return false;
-          }
-        }
-      } else { // One-time tasks
-        console.log(`[TasksDataHandler] Handling one-time task completion, setting completed=${completed}`);
-        
+      if (completed) {
+        // Fix: pass an object with taskId and updates properties as required by the completeTaskMutation
         await completeTaskMutation({
           taskId,
           updates: {
-            completed: completed,
-            last_completed_date: completed ? getLocalDateString() : null,
+            completed: true,
+            last_completed_date: getLocalDateString(),
             updated_at: new Date().toISOString()
           }
         });
-        queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-        return true;
+      } else {
+        // For unmarking as complete, we can use a simple update
+        await supabase
+          .from('tasks')
+          .update({ 
+            completed: false,
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', taskId);
+        
+        // Need to sync this card manually since we're not using the mutation
+        await syncCardById(taskId, 'tasks');
       }
+      return true;
     } catch (err: any) {
-      console.error('[TasksDataHandler] Error updating task completion:', err);
+      console.error('Error updating task completion:', err);
       toast({
         title: 'Error updating task',
         description: err.message || 'Could not update task completion status',
