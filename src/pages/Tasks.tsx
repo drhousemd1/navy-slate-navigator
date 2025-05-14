@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -12,9 +11,7 @@ import { useSyncManager } from '@/hooks/useSyncManager';
 import { usePreloadTasks } from "@/data/preload/usePreloadTasks";
 
 // Preload tasks data from IndexedDB before component renders
-(async () => {
-  await usePreloadTasks()();
-})();
+usePreloadTasks()();
 
 // Separate component that uses useTasks hook inside TasksProvider
 const TasksWithContext: React.FC = () => {

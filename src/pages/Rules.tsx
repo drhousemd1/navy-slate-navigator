@@ -120,7 +120,7 @@ const RulesWithContext: React.FC = () => {
   }
 
   // Show error message if there's an error and no cached rules
-  if (error && !rules.length) {
+  if (error && rules == null) {
     return (
       <div className="container mx-auto px-4 py-6 RulesContent">
         <RulesHeader />
@@ -129,18 +129,6 @@ const RulesWithContext: React.FC = () => {
             <h3 className="font-bold mb-2">Error Loading Rules</h3>
             <p>{error.message || "Couldn't connect to the server. Please try again."}</p>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading indicator only if actually loading and no cached data
-  if (isLoading && !rules.length) {
-    return (
-      <div className="container mx-auto px-4 py-6 RulesContent">
-        <RulesHeader />
-        <div className="flex justify-center mt-8">
-          <div className="text-white text-center">Loading rules...</div>
         </div>
       </div>
     );
