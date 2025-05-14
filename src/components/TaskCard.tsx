@@ -9,7 +9,7 @@ import CompletionButton from './task/CompletionButton';
 import CompletionCounter from './task/CompletionCounter';
 import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
-import HighlightedText from './task/HighlightedText';
+// Removed HighlightedText import as it's not directly used for title/desc
 import { getCurrentDayOfWeek, Task } from '@/lib/taskUtils'; // Import Task type
 
 interface TaskCardProps {
@@ -80,6 +80,26 @@ const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
+  const titleStyle: React.CSSProperties = {
+    color: title_color,
+    backgroundColor: highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent',
+    padding: highlight_effect ? '2px 6px' : '0', // Adjusted padding slightly for better visual
+    borderRadius: highlight_effect ? '4px' : '0',
+    display: 'inline', // Ensure inline display for background to wrap content
+    boxDecorationBreak: 'clone', // Better background rendering across lines
+    WebkitBoxDecorationBreak: 'clone',
+  };
+
+  const descriptionStyle: React.CSSProperties = {
+    color: subtext_color,
+    backgroundColor: highlight_effect ? 'rgba(245, 245, 209, 0.7)' : 'transparent', // Softer yellow than Tailwind's default /20
+    padding: highlight_effect ? '2px 6px' : '0', // Adjusted padding slightly
+    borderRadius: highlight_effect ? '4px' : '0',
+    display: 'inline',
+    boxDecorationBreak: 'clone',
+    WebkitBoxDecorationBreak: 'clone',
+  };
+
   return (
     <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
       {backgroundImage && (
@@ -131,18 +151,18 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
           
           <div className="flex-1 flex flex-col">
-            <h3 className={`text-xl font-semibold inline-block ${
-              highlight_effect ? "bg-yellow-300/30 px-2 py-1 rounded" : ""
-            }`}
-            style={{ color: title_color }}>
+            <h3 
+              className="text-xl font-semibold"
+              style={titleStyle}
+            >
               {title}
             </h3>
             
             {description && (
-              <p className={`text-sm mt-1 inline-block ${
-                highlight_effect ? "bg-yellow-300/20 px-2 py-1 rounded" : ""
-              }`}
-              style={{ color: subtext_color }}>
+              <p 
+                className="text-sm mt-1"
+                style={descriptionStyle}
+              >
                 {description}
               </p>
             )}

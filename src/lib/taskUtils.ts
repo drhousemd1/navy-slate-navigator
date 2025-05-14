@@ -78,68 +78,90 @@ export const fetchTasks = async (): Promise<Task[]> => {
   // RLS will filter by user, no explicit user_id needed in select for fetching owned tasks
   const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
   if (error) {
-    console.error('Error fetching tasks:', error);
+    console.error('[taskUtils.fetchTasks] Error fetching tasks:', error);
     throw error;
   }
   return data ? data.map(processTaskFromDb) : [];
 };
 
-const processTaskFromDb = (dbTask: any): Task => {
+const processTaskFromDb = (rawTask: any): Task => {
+  // Validate and process frequency
   const validFrequencies: Task['frequency'][] = ['daily', 'weekly', 'monthly', 'one-time'];
-  let freq = 'one-time' as Task['frequency'];
-  if (dbTask.frequency && validFrequencies.includes(dbTask.frequency as Task['frequency'])) {
-    freq = dbTask.frequency as Task['frequency'];
-  } else if (dbTask.frequency) {
-    console.warn(`Invalid frequency value "${dbTask.frequency}" for task ID ${dbTask.id}. Defaulting to 'one-time'.`);
+  let freq: Task['frequency'] = 'one-time'; // Default frequency
+  if (rawTask.frequency && validFrequencies.includes(rawTask.frequency as Task['frequency'])) {
+    freq = rawTask.frequency as Task['frequency'];
+  } else if (rawTask.frequency) {
+    console.warn(`[taskUtils.processTaskFromDb] Invalid frequency value "${rawTask.frequency}" for task ID ${rawTask.id}. Defaulting to 'one-time'.`);
   }
 
+  // Validate and process background_images
   let bgImages: string[] | null = null;
-  if (Array.isArray(dbTask.background_images)) {
-    // Ensure all items in the array are strings
-    if (dbTask.background_images.every((item: any) => typeof item === 'string')) {
-      bgImages = dbTask.background_images as string[];
+  if (Array.isArray(rawTask.background_images)) {
+    if (rawTask.background_images.every((item: any) => typeof item === 'string')) {
+      bgImages = rawTask.background_images as string[];
     } else {
-      console.warn(`Invalid items in background_images for task ID ${dbTask.id}. Expected string array.`, dbTask.background_images);
-      // Optionally, filter out non-string items or set to null
-      const filteredImages = dbTask.background_images.filter((item: any) => typeof item === 'string');
+      console.warn(`[taskUtils.processTaskFromDb] Invalid items in background_images for task ID ${rawTask.id}.`);
+      const filteredImages = rawTask.background_images.filter((item: any) => typeof item === 'string');
       if (filteredImages.length > 0) {
         bgImages = filteredImages;
       }
     }
-  } else if (dbTask.background_images !== null && dbTask.background_images !== undefined) {
-    console.warn(`background_images for task ID ${dbTask.id} is not an array. Received:`, dbTask.background_images);
+  } else if (rawTask.background_images !== null && rawTask.background_images !== undefined) {
+    console.warn(`[taskUtils.processTaskFromDb] background_images for task ID ${rawTask.id} is not an array. Received:`, rawTask.background_images);
+  }
+  
+  // Process frequency_count - make sure it's a positive number or default to 1
+  const frequencyCount = typeof rawTask.frequency_count === 'number' && !isNaN(rawTask.frequency_count)
+    ? Math.max(1, rawTask.frequency_count) // Ensure minimum of 1 if it's a number
+    : 1; // Default to 1 if not a number or NaN
+
+  // Process usage_data - ensure it's an array of 7 values for days of the week
+  let usageData = Array(7).fill(0); // Default to array of 7 zeros
+  
+  if (Array.isArray(rawTask.usage_data)) {
+    // If there's existing data, map it to numbers
+    const processedUsageData = rawTask.usage_data.map((val: any) => {
+      if (typeof val === 'number' && !isNaN(val)) return val;
+      const num = Number(val);
+      return isNaN(num) ? 0 : num;
+    });
+    
+    // Fill up to 7 days
+    for (let i = 0; i < Math.min(processedUsageData.length, 7); i++) {
+      usageData[i] = processedUsageData[i];
+    }
   }
 
+  console.log(`[taskUtils.processTaskFromDb] Processing task "${rawTask.title}" ID ${rawTask.id} with frequency=${freq}, frequency_count=${frequencyCount}, usage_data=`, usageData);
+
   return {
-    id: dbTask.id,
-    title: dbTask.title,
-    description: dbTask.description,
-    points: dbTask.points,
-    completed: dbTask.completed,
+    id: rawTask.id,
+    title: rawTask.title,
+    description: rawTask.description,
+    points: rawTask.points,
+    completed: rawTask.completed,
     frequency: freq,
-    frequency_count: dbTask.frequency_count,
-    usage_data: Array.isArray(dbTask.usage_data)
-      ? dbTask.usage_data.map((val: any) => Number(val))
-      : Array(7).fill(0), // Default to 7 days for weekly tracking if not provided
-    priority: (dbTask.priority as Task['priority']) || 'medium',
-    background_image_url: dbTask.background_image_url,
-    background_images: bgImages,
-    carousel_timer: dbTask.carousel_timer,
-    background_opacity: dbTask.background_opacity,
-    focal_point_x: dbTask.focal_point_x,
-    focal_point_y: dbTask.focal_point_y,
-    icon_url: dbTask.icon_url,
-    icon_name: dbTask.icon_name,
-    icon_color: dbTask.icon_color,
-    highlight_effect: dbTask.highlight_effect,
-    title_color: dbTask.title_color,
-    subtext_color: dbTask.subtext_color,
-    calendar_color: dbTask.calendar_color,
-    last_completed_date: dbTask.last_completed_date,
-    week_identifier: dbTask.week_identifier,
-    created_at: dbTask.created_at,
-    updated_at: dbTask.updated_at,
-    user_id: dbTask.user_id,
+    frequency_count: frequencyCount, // Use processed value
+    usage_data: usageData, // Use processed usage_data
+    priority: (rawTask.priority as Task['priority']) || 'medium',
+    background_image_url: rawTask.background_image_url,
+    background_images: bgImages, // Use processed value
+    carousel_timer: rawTask.carousel_timer,
+    background_opacity: rawTask.background_opacity,
+    focal_point_x: rawTask.focal_point_x,
+    focal_point_y: rawTask.focal_point_y,
+    icon_url: rawTask.icon_url,
+    icon_name: rawTask.icon_name,
+    icon_color: rawTask.icon_color,
+    highlight_effect: rawTask.highlight_effect,
+    title_color: rawTask.title_color,
+    subtext_color: rawTask.subtext_color,
+    calendar_color: rawTask.calendar_color,
+    last_completed_date: rawTask.last_completed_date,
+    week_identifier: rawTask.week_identifier,
+    created_at: rawTask.created_at,
+    updated_at: rawTask.updated_at,
+    user_id: rawTask.user_id,
   };
 };
 
