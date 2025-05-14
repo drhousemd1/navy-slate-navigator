@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -47,7 +48,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   focalPointY = 50,
   onEdit,
   onToggleCompletion,
-  frequency,
+  frequency = 'one-time',
   frequency_count = 1, // Default to 1 if not provided
   usage_data = Array(7).fill(0),
   icon_url,
@@ -64,10 +65,19 @@ const TaskCard: React.FC<TaskCardProps> = ({
   // Ensure maxCompletions is at least 1, using frequency_count if available and positive
   const maxCompletions = frequency_count && frequency_count > 0 ? frequency_count : 1;
   
+  console.log(`TaskCard "${title}": frequency=${frequency}, frequency_count=${frequency_count}, usage_data=${JSON.stringify(usage_data)}, currentCompletions=${currentCompletions}, maxCompletions=${maxCompletions}`);
+  
   let isEffectivelyCompleted = completed;
   if (frequency === 'daily' || frequency === 'weekly') {
     isEffectivelyCompleted = currentCompletions >= maxCompletions;
   }
+
+  const handleToggleCompletion = (newCompletedState: boolean) => {
+    console.log(`TaskCard "${title}": handleToggleCompletion called with ${newCompletedState}`);
+    if (onToggleCompletion) {
+      onToggleCompletion(newCompletedState);
+    }
+  };
 
   return (
     <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
@@ -99,9 +109,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
               )}
               <CompletionButton 
                 completed={isEffectivelyCompleted}
-                onToggleCompletion={onToggleCompletion}
+                onToggleCompletion={handleToggleCompletion}
                 currentCompletions={currentCompletions}
                 maxCompletions={maxCompletions}
+                taskFrequency={frequency}
               />
             </div>
           )}

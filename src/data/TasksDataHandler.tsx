@@ -1,3 +1,4 @@
+
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -6,7 +7,7 @@
 
 import { useQuery, QueryObserverResult, RefetchOptions, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, getLocalDateString } from '@/lib/taskUtils';
+import { Task, getLocalDateString, getCurrentDayOfWeek } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { getMondayBasedDay } from '@/lib/utils';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
@@ -211,27 +212,91 @@ export const useTasksData = () => {
 
   const toggleTaskCompletion = async (taskId: string, completed: boolean): Promise<boolean> => {
     try {
-      if (completed) {
-        await completeTaskMutation({
-          taskId,
-          updates: {
-            completed: true,
-            last_completed_date: getLocalDateString(), // Ensure this is in 'YYYY-MM-DD' or compatible format
-            updated_at: new Date().toISOString()
-          }
-        });
-      } else {
-        await supabase
-          .from('tasks')
-          .update({ 
-            completed: false,
-            updated_at: new Date().toISOString() 
-          })
-          .eq('id', taskId);
-        
-        await syncCardById(taskId, 'tasks');
+      // First, get the current task
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) {
+        console.error('Task not found:', taskId);
+        return false;
       }
-      // Consider query invalidation here as well to ensure UI consistency
+
+      // Handle different task types correctly
+      if (task.frequency === 'daily' || task.frequency === 'weekly') {
+        // For recurring tasks, we need to update the usage_data array
+        const todayIndex = getCurrentDayOfWeek();
+        const maxCompletions = task.frequency_count && task.frequency_count > 0 ? task.frequency_count : 1;
+        
+        // Clone the usage_data array to avoid direct modification
+        const newUsageData = [...(task.usage_data || Array(7).fill(0))];
+        
+        // If completing, increment the count for today (up to max)
+        if (completed) {
+          const currentCompletions = newUsageData[todayIndex] || 0;
+          // Only increment if not already at max
+          if (currentCompletions < maxCompletions) {
+            newUsageData[todayIndex] = currentCompletions + 1;
+            
+            // Check if we've reached the max completions for the day
+            const newCompletionCount = newUsageData[todayIndex];
+            const isFullyCompleted = newCompletionCount >= maxCompletions;
+            
+            // Update task in Supabase with the new usage_data
+            await completeTaskMutation({
+              taskId,
+              updates: {
+                usage_data: newUsageData,
+                completed: isFullyCompleted, // Mark as completed only if max reached
+                last_completed_date: getLocalDateString(),
+                updated_at: new Date().toISOString()
+              }
+            });
+          } else {
+            console.log('Task already completed maximum times for today');
+            return false;
+          }
+        } else {
+          // If un-completing, decrement the count for today (not below 0)
+          const currentCompletions = newUsageData[todayIndex] || 0;
+          if (currentCompletions > 0) {
+            newUsageData[todayIndex] = currentCompletions - 1;
+            
+            // Always mark as not completed when decrementing
+            await supabase
+              .from('tasks')
+              .update({ 
+                usage_data: newUsageData,
+                completed: false,
+                updated_at: new Date().toISOString() 
+              })
+              .eq('id', taskId);
+            
+            await syncCardById(taskId, 'tasks');
+          }
+        }
+      } else {
+        // For one-time tasks, simply toggle the completed flag
+        if (completed) {
+          await completeTaskMutation({
+            taskId,
+            updates: {
+              completed: true,
+              last_completed_date: getLocalDateString(),
+              updated_at: new Date().toISOString()
+            }
+          });
+        } else {
+          await supabase
+            .from('tasks')
+            .update({ 
+              completed: false,
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', taskId);
+          
+          await syncCardById(taskId, 'tasks');
+        }
+      }
+      
+      // Always invalidate query to refresh UI
       queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
       return true;
     } catch (err: any) {
