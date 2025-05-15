@@ -46,8 +46,8 @@ const TasksWithContext: React.FC = () => {
   // Preload tasks data from IndexedDB before component renders
   useEffect(() => {
     const preloadData = async () => {
-      const preload = usePreloadTasks();
-      await preload();
+      const preloadTasks = usePreloadTasks();
+      await preloadTasks();
       setIsPreloaded(true);
     };
     

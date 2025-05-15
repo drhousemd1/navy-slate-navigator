@@ -1,3 +1,4 @@
+
 import {
   todayKey,
   currentWeekKey,
@@ -7,7 +8,7 @@ import { loadTasksFromDB } from "../indexedDB/useIndexedDB";
 import { queryClient } from "../queryClient";
 
 export function usePreloadTasks() {
-  return async () => {
+  return async function preloadTasks() {
     try {
       console.log("Preloading tasks data...");
       
