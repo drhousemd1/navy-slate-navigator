@@ -203,13 +203,22 @@ export const useAdminCardData = ({
       
       setImages(newImages);
       
+      // Get current user ID
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData.user?.id;
+      
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+      
       // Save to Supabase using upsert
       const { error } = await supabase
         .from('admin_testing_cards')
         .upsert({
           ...newCardData,
           // Explicitly add points to ensure it's included in the upsert
-          points: typeof newCardData.points === 'number' ? newCardData.points : 0
+          points: typeof newCardData.points === 'number' ? newCardData.points : 0,
+          user_id: userId
         }, { 
           onConflict: 'id',
           ignoreDuplicates: false 
