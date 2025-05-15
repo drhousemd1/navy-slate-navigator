@@ -1,8 +1,3 @@
-/**
- * DO NOT REPLICATE LOGIC OUTSIDE THIS FILE.
- * All fetching, mutation, sync, and cache logic must live in centralized hooks only.
- */
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -12,12 +7,10 @@ import RewardsHeader from '../components/rewards/RewardsHeader';
 import { useSyncManager } from '@/data/sync/useSyncManager';
 import { usePreloadRewards } from "@/data/preload/usePreloadRewards";
 
-// Preload rewards data from IndexedDB before component renders
-usePreloadRewards()();
-
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
+  const preloadRewards = usePreloadRewards();
   const { rewards, isLoading, handleSaveReward, handleDeleteReward } = useRewards();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<any>(undefined);
@@ -25,6 +18,14 @@ const RewardsContent: React.FC<{
   
   // Use the sync manager to keep data in sync - add enabled parameter
   const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
+  
+  // Preload data at component mount time
+  useEffect(() => {
+    const loadData = async () => {
+      await preloadRewards();
+    };
+    loadData();
+  }, []);
   
   // Sync on initial render only
   useEffect(() => {
@@ -109,6 +110,12 @@ const RewardsContent: React.FC<{
 
 const Rewards: React.FC = () => {
   const contentRef = useRef<{ handleAddNewReward?: () => void }>({});
+  const preloadRewards = usePreloadRewards();
+  
+  // Preload data before component renders
+  useEffect(() => {
+    preloadRewards();
+  }, []);
   
   const handleAddNewReward = () => {
     if (contentRef.current.handleAddNewReward) {

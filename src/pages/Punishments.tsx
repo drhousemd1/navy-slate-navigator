@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -16,12 +15,10 @@ import { toast } from '@/hooks/use-toast';
 import { usePreloadPunishments } from "@/data/preload/usePreloadPunishments";
 import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
 
-// Preload punishments data from IndexedDB before component renders
-usePreloadPunishments()();
-
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
 }> = ({ contentRef }) => {
+  const preloadPunishments = usePreloadPunishments();
   const { punishments, isLoading, error, refetchPunishments } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
@@ -35,6 +32,14 @@ const PunishmentsContent: React.FC<{
     intervalMs: 60000, // Longer interval to avoid excessive refreshing
     enabled: true 
   });
+
+  // Preload data at component mount time
+  useEffect(() => {
+    const loadData = async () => {
+      await preloadPunishments();
+    };
+    loadData();
+  }, []);
 
   // Create punishment mutation
   const createPunishment = useMutation({
@@ -124,7 +129,7 @@ const PunishmentsContent: React.FC<{
   }, []);
   
   // Only show loader on initial load when no cached data
-  const showLoader = isInitialLoad && isLoading && punishments.length === 0;
+  const showLoader = isInitialLoad && isLoading && (!punishments || punishments.length === 0);
   
   const handleAddNewPunishment = () => {
     setCurrentPunishment(undefined);
@@ -252,6 +257,12 @@ const PunishmentsContent: React.FC<{
 
 const Punishments: React.FC = () => {
   const contentRef = useRef<{ handleAddNewPunishment?: () => void }>({});
+  const preloadPunishments = usePreloadPunishments();
+  
+  // Preload data before component renders
+  useEffect(() => {
+    preloadPunishments();
+  }, []);
   
   const handleAddNewPunishment = () => {
     if (contentRef.current.handleAddNewPunishment) {

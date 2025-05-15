@@ -1,10 +1,8 @@
-
-import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import React from 'react';
 import './App.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './data/queryClient';
 
 // Lazy load pages
 const Index = lazy(() => import('./pages/Index'));
@@ -54,39 +52,41 @@ const ForgotPasswordPageRoute: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <AuthProvider>
-        <TooltipProvider>
-          <Suspense fallback={<div className="flex items-center justify-center h-screen bg-background text-foreground">Loading...</div>}>
-            <Routes>
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPageRoute />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <AppContent />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Index />} />
-                <Route path="tasks" element={<Tasks />} />
-                <Route path="rules" element={<Rules />} />
-                <Route path="rewards" element={<Rewards />} />
-                <Route path="punishments" element={<Punishments />} />
-                <Route path="throne-room" element={<ThroneRoom />} />
-                <Route path="encyclopedia" element={<Encyclopedia />} />
-                <Route path="profile" element={<Profile />} />
-                <Route path="messages" element={<Messages />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-          <Toaster />
-        </TooltipProvider>
-      </AuthProvider>
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <AuthProvider>
+          <TooltipProvider>
+            <Suspense fallback={<div className="flex items-center justify-center h-screen bg-background text-foreground">Loading...</div>}>
+              <Routes>
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPageRoute />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <AppContent />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Index />} />
+                  <Route path="tasks" element={<Tasks />} />
+                  <Route path="rules" element={<Rules />} />
+                  <Route path="rewards" element={<Rewards />} />
+                  <Route path="punishments" element={<Punishments />} />
+                  <Route path="throne-room" element={<ThroneRoom />} />
+                  <Route path="encyclopedia" element={<Encyclopedia />} />
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="messages" element={<Messages />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+            <Toaster />
+          </TooltipProvider>
+        </AuthProvider>
+      </Router>
+    </QueryClientProvider>
   );
 };
 

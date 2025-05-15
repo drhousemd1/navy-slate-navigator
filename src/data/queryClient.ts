@@ -1,20 +1,13 @@
 
-/**
- * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
- * No query, mutation, or sync logic is allowed in components or page files.
- * All logic must use these shared, optimized hooks and utilities only.
- */
+import { QueryClient } from '@tanstack/react-query';
 
-import { QueryClient } from "@tanstack/react-query";
-
+// Create a client
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: Infinity,
-      gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      refetchOnReconnect: false,
+      staleTime: 60000, // 1 minute
+      retry: 1,
+      refetchOnWindowFocus: false
     },
   },
 });
