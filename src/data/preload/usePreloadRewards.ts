@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { fetchRewards } from '@/data/rewards/queries';
-import type { Reward } from '@/contexts/rewards/rewardTypes'; // Assuming Reward is the type exported
+import type { Reward } from '@/lib/rewardUtils'; // Updated import path
 
 export const usePreloadRewards = () => {
   const queryClient = useQueryClient();
@@ -35,3 +35,4 @@ export const usePreloadRewards = () => {
     prefetchRewards();
   }, [queryClient]);
 };
+

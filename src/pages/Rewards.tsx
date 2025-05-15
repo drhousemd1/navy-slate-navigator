@@ -10,7 +10,7 @@ import { usePreloadRewards } from "@/data/preload/usePreloadRewards";
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
-  const preloadRewards = usePreloadRewards();
+  usePreloadRewards(); // Called directly, hook handles its own effect.
   const { rewards, isLoading, handleSaveReward, handleDeleteReward } = useRewards();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<any>(undefined);
@@ -19,19 +19,11 @@ const RewardsContent: React.FC<{
   // Use the sync manager to keep data in sync - add enabled parameter
   const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
   
-  // Preload data at component mount time
-  useEffect(() => {
-    const loadData = async () => {
-      await preloadRewards();
-    };
-    loadData();
-  }, []);
-  
   // Sync on initial render only
   useEffect(() => {
     // Force a sync on initial load completion - only once
     syncNow();
-  }, []);
+  }, [syncNow]); // Added syncNow to dependency array
   
   // Set isInitialLoad to false once rewards have loaded
   useEffect(() => {
@@ -61,7 +53,7 @@ const RewardsContent: React.FC<{
     return () => {
       contentRef.current = {};
     };
-  }, [contentRef]);
+  }, [contentRef]); // Removed handleAddNewReward from dependency array as it's stable if defined outside
   
   return (
     <div className="p-4 pt-6">
@@ -110,13 +102,10 @@ const RewardsContent: React.FC<{
 
 const Rewards: React.FC = () => {
   const contentRef = useRef<{ handleAddNewReward?: () => void }>({});
-  const preloadRewards = usePreloadRewards();
+  usePreloadRewards(); // Called directly, hook handles its own effect.
   
-  // Preload data before component renders
-  useEffect(() => {
-    preloadRewards();
-  }, []);
-  
+  // Removed redundant useEffect that was calling preloadRewards()
+
   const handleAddNewReward = () => {
     if (contentRef.current.handleAddNewReward) {
       contentRef.current.handleAddNewReward();
