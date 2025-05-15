@@ -1,6 +1,5 @@
-
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -8,7 +7,8 @@ import './App.css';
 
 // Lazy load pages
 const Index = lazy(() => import('./pages/Index'));
-const LoginSignupView = lazy(() => import('./pages/auth'));
+// Correcting lazy import for default export if LoginSignupView is default exported
+const AuthPage = lazy(() => import('./pages/auth').then(module => ({ default: module.default })));
 const ForgotPasswordView = lazy(() => import('./pages/auth/ForgotPasswordView').then(module => ({ default: module.ForgotPasswordView })));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const Tasks = lazy(() => import('./pages/Tasks'));
@@ -45,6 +45,12 @@ const AppContent: React.FC = () => {
   );
 };
 
+// Wrapper component for ForgotPasswordView route
+const ForgotPasswordPageRoute: React.FC = () => {
+  const navigate = useNavigate();
+  return <ForgotPasswordView onBackClick={() => navigate('/auth', { state: { view: 'login' } })} />;
+};
+
 const App: React.FC = () => {
   return (
     <Router>
@@ -52,8 +58,8 @@ const App: React.FC = () => {
         <TooltipProvider>
           <Suspense fallback={<div className="flex items-center justify-center h-screen bg-background text-foreground">Loading...</div>}>
             <Routes>
-              <Route path="/auth" element={<LoginSignupView />} />
-              <Route path="/forgot-password" element={<ForgotPasswordView />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPageRoute />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route
                 path="/"
