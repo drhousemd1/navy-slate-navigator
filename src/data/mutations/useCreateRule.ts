@@ -9,10 +9,7 @@ import { syncCardById } from "../sync/useSyncManager";
 export function useCreateRule() {
   return useMutation({
     mutationFn: async (newRule: any) => {
-      const { data, error } = await supabase.from("rules").insert([{
-        ...newRule,
-        user_id: (await supabase.auth.getUser()).data.user?.id
-      }]).select().single();
+      const { data, error } = await supabase.from("rules").insert([newRule]).select().single();
       if (error) throw error;
       return data;                         // has id
     },

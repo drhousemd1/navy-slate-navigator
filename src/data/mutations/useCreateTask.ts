@@ -13,10 +13,7 @@ import { syncCardById } from "../sync/useSyncManager";
 export function useCreateTask() {
   return useMutation({
     mutationFn: async (newTask: any) => {
-      const { data, error } = await supabase.from("tasks").insert([{
-        ...newTask,
-        user_id: (await supabase.auth.getUser()).data.user?.id
-      }]).select().single();
+      const { data, error } = await supabase.from("tasks").insert([newTask]).select().single();
       if (error) throw error;
       return data;
     },

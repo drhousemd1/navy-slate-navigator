@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -15,10 +16,12 @@ import { toast } from '@/hooks/use-toast';
 import { usePreloadPunishments } from "@/data/preload/usePreloadPunishments";
 import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
 
+// Preload punishments data from IndexedDB before component renders
+usePreloadPunishments()();
+
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
 }> = ({ contentRef }) => {
-  usePreloadPunishments(); // Called directly, hook handles its own effect.
   const { punishments, isLoading, error, refetchPunishments } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
@@ -33,11 +36,10 @@ const PunishmentsContent: React.FC<{
     enabled: true 
   });
 
-  // Removed useEffect that was previously calling preloadPunishments
-
+  // Create punishment mutation
   const createPunishment = useMutation({
     mutationFn: async (punishmentData: Partial<PunishmentData>) => {
-      const { data, error: supabaseError } = await supabase
+      const { data, error } = await supabase
         .from('punishments')
         .insert({
           title: punishmentData.title,
@@ -59,7 +61,7 @@ const PunishmentsContent: React.FC<{
         .select()
         .single();
 
-      if (supabaseError) throw supabaseError;
+      if (error) throw error;
       return data;
     },
     onSuccess: (newPunishment) => {
@@ -72,9 +74,10 @@ const PunishmentsContent: React.FC<{
     }
   });
 
+  // Update punishment mutation
   const updatePunishment = useMutation({
     mutationFn: async ({ id, punishment }: { id: string, punishment: Partial<PunishmentData> }) => {
-      const { data, error: supabaseError } = await supabase
+      const { data, error } = await supabase
         .from('punishments')
         .update({
           title: punishment.title,
@@ -96,7 +99,7 @@ const PunishmentsContent: React.FC<{
         .select()
         .single();
 
-      if (supabaseError) throw supabaseError;
+      if (error) throw error;
       return data;
     },
     onSuccess: (updatedPunishment) => {
@@ -121,7 +124,7 @@ const PunishmentsContent: React.FC<{
   }, []);
   
   // Only show loader on initial load when no cached data
-  const showLoader = isInitialLoad && isLoading && (!punishments || punishments.length === 0);
+  const showLoader = isInitialLoad && isLoading && punishments.length === 0;
   
   const handleAddNewPunishment = () => {
     setCurrentPunishment(undefined);
@@ -136,7 +139,7 @@ const PunishmentsContent: React.FC<{
     return () => {
       contentRef.current = {};
     };
-  }, [contentRef]); // Removed handleAddNewPunishment from dependencies, it's stable
+  }, [contentRef]);
   
   const handleEditPunishment = (punishment: any) => {
     setCurrentPunishment(punishment);
@@ -157,8 +160,8 @@ const PunishmentsContent: React.FC<{
       }
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
-    } catch (err) { // Changed error to err to avoid conflict with error from usePunishments
-      console.error("Error saving punishment:", err);
+    } catch (error) {
+      console.error("Error saving punishment:", error);
       toast({
         title: "Error",
         description: "Failed to save punishment",
@@ -173,8 +176,8 @@ const PunishmentsContent: React.FC<{
       await deletePunishmentAsync(id);
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
-    } catch (err) { // Changed error to err
-      console.error("Error deleting punishment:", err);
+    } catch (error) {
+      console.error("Error deleting punishment:", error);
       toast({
         title: "Error",
         description: "Failed to delete punishment",
@@ -249,9 +252,6 @@ const PunishmentsContent: React.FC<{
 
 const Punishments: React.FC = () => {
   const contentRef = useRef<{ handleAddNewPunishment?: () => void }>({});
-  usePreloadPunishments(); // Called directly, hook handles its own effect.
-  
-  // Removed useEffect that was previously calling preloadPunishments
   
   const handleAddNewPunishment = () => {
     if (contentRef.current.handleAddNewPunishment) {

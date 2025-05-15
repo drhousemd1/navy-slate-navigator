@@ -1,3 +1,8 @@
+/**
+ * DO NOT REPLICATE LOGIC OUTSIDE THIS FILE.
+ * All fetching, mutation, sync, and cache logic must live in centralized hooks only.
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -7,10 +12,12 @@ import RewardsHeader from '../components/rewards/RewardsHeader';
 import { useSyncManager } from '@/data/sync/useSyncManager';
 import { usePreloadRewards } from "@/data/preload/usePreloadRewards";
 
+// Preload rewards data from IndexedDB before component renders
+usePreloadRewards()();
+
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
-  usePreloadRewards(); // Called directly, hook handles its own effect.
   const { rewards, isLoading, handleSaveReward, handleDeleteReward } = useRewards();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<any>(undefined);
@@ -23,7 +30,7 @@ const RewardsContent: React.FC<{
   useEffect(() => {
     // Force a sync on initial load completion - only once
     syncNow();
-  }, [syncNow]); // Added syncNow to dependency array
+  }, []);
   
   // Set isInitialLoad to false once rewards have loaded
   useEffect(() => {
@@ -53,7 +60,7 @@ const RewardsContent: React.FC<{
     return () => {
       contentRef.current = {};
     };
-  }, [contentRef]); // Removed handleAddNewReward from dependency array as it's stable if defined outside
+  }, [contentRef]);
   
   return (
     <div className="p-4 pt-6">
@@ -102,10 +109,7 @@ const RewardsContent: React.FC<{
 
 const Rewards: React.FC = () => {
   const contentRef = useRef<{ handleAddNewReward?: () => void }>({});
-  usePreloadRewards(); // Called directly, hook handles its own effect.
   
-  // Removed redundant useEffect that was calling preloadRewards()
-
   const handleAddNewReward = () => {
     if (contentRef.current.handleAddNewReward) {
       contentRef.current.handleAddNewReward();

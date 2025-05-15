@@ -10,49 +10,15 @@ import { syncCardById } from '@/data/sync/useSyncManager';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { usePreloadTasks } from "@/data/preload/usePreloadTasks";
 
-// Moved preload call inside component to ensure it runs in the React Query context
-const Tasks: React.FC = () => {
-  const contentRef = useRef<{ handleAddNewTask?: () => void }>({});
-  
-  const handleAddNewItem = () => {
-    console.log('AppLayout onAddNewItem called for Tasks');
-    const content = document.querySelector('.TasksContent');
-    if (content) {
-      console.log('Dispatching add-new-task event');
-      const event = new CustomEvent('add-new-task');
-      content.dispatchEvent(event);
-    }
-  };
-
-  return (
-    <AppLayout onAddNewItem={handleAddNewItem}>
-      <RewardsProvider>
-        <TasksProvider>
-          <TasksWithContext />
-        </TasksProvider>
-      </RewardsProvider>
-    </AppLayout>
-  );
-};
+// Preload tasks data from IndexedDB before component renders
+usePreloadTasks()();
 
 // Separate component that uses useTasks hook inside TasksProvider
 const TasksWithContext: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [isPreloaded, setIsPreloaded] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion, refetchTasks } = useTasks();
   const { refreshPointsFromDatabase } = useRewards();
-  
-  // Preload tasks data from IndexedDB before component renders
-  useEffect(() => {
-    const preloadData = async () => {
-      const preloadTasks = usePreloadTasks();
-      await preloadTasks();
-      setIsPreloaded(true);
-    };
-    
-    preloadData();
-  }, []);
   
   // Use the sync manager to keep data in sync
   const { syncNow } = useSyncManager({ 
@@ -62,10 +28,8 @@ const TasksWithContext: React.FC = () => {
   
   // Initial sync when component mounts
   useEffect(() => {
-    if (isPreloaded) {
-      syncNow(); // Force a sync when the Tasks page is loaded
-    }
-  }, [isPreloaded]);
+    syncNow(); // Force a sync when the Tasks page is loaded
+  }, []);
 
   const handleAddTask = () => {
     console.log('handleAddTask called in TasksWithContext');
@@ -133,10 +97,8 @@ const TasksWithContext: React.FC = () => {
 
   useEffect(() => {
     // Refresh points when component mounts
-    if (isPreloaded) {
-      refreshPointsFromDatabase();
-    }
-  }, [isPreloaded, refreshPointsFromDatabase]);
+    refreshPointsFromDatabase();
+  }, [refreshPointsFromDatabase]);
 
   return (
     <div className="p-4 pt-6 TasksContent">
@@ -160,6 +122,31 @@ const TasksWithContext: React.FC = () => {
         onDelete={handleDeleteTask}
       />
     </div>
+  );
+};
+
+// Main Tasks component that sets up the providers
+const Tasks: React.FC = () => {
+  const contentRef = useRef<{ handleAddNewTask?: () => void }>({});
+  
+  const handleAddNewItem = () => {
+    console.log('AppLayout onAddNewItem called for Tasks');
+    const content = document.querySelector('.TasksContent');
+    if (content) {
+      console.log('Dispatching add-new-task event');
+      const event = new CustomEvent('add-new-task');
+      content.dispatchEvent(event);
+    }
+  };
+
+  return (
+    <AppLayout onAddNewItem={handleAddNewItem}>
+      <RewardsProvider>
+        <TasksProvider>
+          <TasksWithContext />
+        </TasksProvider>
+      </RewardsProvider>
+    </AppLayout>
   );
 };
 

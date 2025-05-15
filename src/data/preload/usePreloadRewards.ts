@@ -1,38 +1,28 @@
 
-import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { fetchRewards } from '@/data/rewards/queries';
-import type { Reward } from '@/lib/rewardUtils'; // Updated import path
+import { currentWeekKey, resetTaskCompletions } from "@/lib/taskUtils";
+import { queryClient } from "../queryClient";
+import { loadRewardsFromDB, saveRewardsToDB } from "../indexedDB/useIndexedDB";
 
-export const usePreloadRewards = () => {
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const queryKey = ['rewards'];
-    const prefetchRewards = async () => {
-      const existingData = queryClient.getQueryData<Reward[]>(queryKey);
+export function usePreloadRewards() {
+  return async () => {
+    if (localStorage.getItem("lastWeek") !== currentWeekKey()) {
+      await resetTaskCompletions("weekly");
+      localStorage.setItem("lastWeek", currentWeekKey());
+    }
+    const data = await loadRewardsFromDB();
+    if (data && Array.isArray(data) && data.length > 0) {
+      // Migrate the rewards data to ensure is_dom_reward flag exists on every row
+      const migrated = data.map((r: any) => ({
+        ...r,
+        is_dom_reward: r.is_dominant ?? false
+      }));
       
-      if (existingData && Array.isArray(existingData) && existingData.length > 0) {
-        console.log(`Rewards data (count: ${existingData.length}) already in cache, skipping prefetch.`);
-        return;
-      }
-      try {
-        console.log('Prefetching rewards...');
-        await queryClient.prefetchQuery({
-          queryKey,
-          queryFn: fetchRewards,
-        });
-        const dataAfterPrefetch = queryClient.getQueryData<Reward[]>(queryKey);
-        if (dataAfterPrefetch && Array.isArray(dataAfterPrefetch)) {
-            console.log(`Rewards preloaded successfully. Count: ${dataAfterPrefetch.length}`);
-        } else {
-            console.log('Rewards preloaded, but no data returned or data is not an array.');
-        }
-      } catch (error) {
-        console.error('Error prefetching rewards:', error);
-      }
-    };
-    prefetchRewards();
-  }, [queryClient]);
-};
-
+      // Update the cache with migrated data
+      queryClient.setQueryData(["rewards"], migrated);
+      
+      // Persist the migrated data back to IndexedDB for future boots
+      await saveRewardsToDB(migrated);
+    }
+    return null;
+  };
+}
