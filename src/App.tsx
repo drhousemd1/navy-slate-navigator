@@ -1,13 +1,17 @@
-import React from 'react';
+
+import React, { lazy, Suspense } from 'react';
 import './App.css';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './data/queryClient';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
 
 // Lazy load pages
 const Index = lazy(() => import('./pages/Index'));
 // Correcting lazy import for default export if LoginSignupView is default exported
-const AuthPage = lazy(() => import('./pages/auth').then(module => ({ default: module.default })));
+const AuthPage = lazy(() => import('./pages/auth').then(module => ({ default: module.default }))); // Assuming LoginSignupView is default export from ./pages/auth/index.tsx
 const ForgotPasswordView = lazy(() => import('./pages/auth/ForgotPasswordView').then(module => ({ default: module.ForgotPasswordView })));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const Tasks = lazy(() => import('./pages/Tasks'));

@@ -1,26 +1,37 @@
 
-import { queryClient } from '../queryClient';
-import { loadPunishmentsFromDB } from '../indexedDB/useIndexedDB';
-import { PunishmentData } from '@/contexts/punishments/types';
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { fetchPunishments } from '@/data/punishments/queries/fetchPunishments';
+import type { PunishmentData } from '@/contexts/punishments/types';
 
 export const usePreloadPunishments = () => {
-  return async () => {
-    try {
-      // Check if data already exists in cache
-      const existingData = queryClient.getQueryData(['punishments']);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const queryKey = ['punishments'];
+    const prefetchPunishments = async () => {
+      const existingData = queryClient.getQueryData<PunishmentData[]>(queryKey);
       
-      if (!existingData) {
-        // Try to load from IndexedDB
-        const localData = await loadPunishmentsFromDB();
-        
-        if (localData && localData.length > 0) {
-          // Set the data in the query cache
-          queryClient.setQueryData(['punishments'], localData);
-          console.log('[Preload] Loaded punishments from IndexedDB:', localData.length);
-        }
+      if (existingData && Array.isArray(existingData) && existingData.length > 0) {
+        console.log(`Punishments data (count: ${existingData.length}) already in cache, skipping prefetch.`);
+        return;
       }
-    } catch (error) {
-      console.error('[Preload] Error preloading punishments:', error);
-    }
-  };
+      try {
+        console.log('Prefetching punishments...');
+        await queryClient.prefetchQuery({
+          queryKey,
+          queryFn: fetchPunishments,
+        });
+        const dataAfterPrefetch = queryClient.getQueryData<PunishmentData[]>(queryKey);
+        if (dataAfterPrefetch && Array.isArray(dataAfterPrefetch)) {
+            console.log(`Punishments preloaded successfully. Count: ${dataAfterPrefetch.length}`);
+        } else {
+            console.log('Punishments preloaded, but no data returned or data is not an array.');
+        }
+      } catch (error) {
+        console.error('Error prefetching punishments:', error);
+      }
+    };
+    prefetchPunishments();
+  }, [queryClient]);
 };

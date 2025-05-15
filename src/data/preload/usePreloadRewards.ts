@@ -1,26 +1,37 @@
 
-import { queryClient } from '../queryClient';
-import { loadRewardsFromDB } from '../indexedDB/useIndexedDB';
-import { Reward } from '@/lib/rewardUtils';
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { fetchRewards } from '@/data/rewards/queries';
+import type { Reward } from '@/contexts/rewards/rewardTypes'; // Assuming Reward is the type exported
 
 export const usePreloadRewards = () => {
-  return async () => {
-    try {
-      // Check if data already exists in cache
-      const existingData = queryClient.getQueryData(['rewards']);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const queryKey = ['rewards'];
+    const prefetchRewards = async () => {
+      const existingData = queryClient.getQueryData<Reward[]>(queryKey);
       
-      if (!existingData) {
-        // Try to load from IndexedDB
-        const localData = await loadRewardsFromDB();
-        
-        if (localData && localData.length > 0) {
-          // Set the data in the query cache
-          queryClient.setQueryData(['rewards'], localData);
-          console.log('[Preload] Loaded rewards from IndexedDB:', localData.length);
-        }
+      if (existingData && Array.isArray(existingData) && existingData.length > 0) {
+        console.log(`Rewards data (count: ${existingData.length}) already in cache, skipping prefetch.`);
+        return;
       }
-    } catch (error) {
-      console.error('[Preload] Error preloading rewards:', error);
-    }
-  };
+      try {
+        console.log('Prefetching rewards...');
+        await queryClient.prefetchQuery({
+          queryKey,
+          queryFn: fetchRewards,
+        });
+        const dataAfterPrefetch = queryClient.getQueryData<Reward[]>(queryKey);
+        if (dataAfterPrefetch && Array.isArray(dataAfterPrefetch)) {
+            console.log(`Rewards preloaded successfully. Count: ${dataAfterPrefetch.length}`);
+        } else {
+            console.log('Rewards preloaded, but no data returned or data is not an array.');
+        }
+      } catch (error) {
+        console.error('Error prefetching rewards:', error);
+      }
+    };
+    prefetchRewards();
+  }, [queryClient]);
 };
