@@ -18,7 +18,7 @@ import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
 }> = ({ contentRef }) => {
-  const preloadPunishments = usePreloadPunishments();
+  usePreloadPunishments(); // Called directly, hook handles its own effect.
   const { punishments, isLoading, error, refetchPunishments } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<any>(undefined);
@@ -33,18 +33,12 @@ const PunishmentsContent: React.FC<{
     enabled: true 
   });
 
-  // Preload data at component mount time
-  useEffect(() => {
-    const loadData = async () => {
-      await preloadPunishments();
-    };
-    loadData();
-  }, []);
+  // Removed useEffect that was previously calling preloadPunishments
 
-  // Create punishment mutation
+  // ... keep existing code (createPunishment and updatePunishment mutations)
   const createPunishment = useMutation({
     mutationFn: async (punishmentData: Partial<PunishmentData>) => {
-      const { data, error } = await supabase
+      const { data, error: supabaseError } = await supabase
         .from('punishments')
         .insert({
           title: punishmentData.title,
@@ -66,7 +60,7 @@ const PunishmentsContent: React.FC<{
         .select()
         .single();
 
-      if (error) throw error;
+      if (supabaseError) throw supabaseError;
       return data;
     },
     onSuccess: (newPunishment) => {
@@ -79,10 +73,9 @@ const PunishmentsContent: React.FC<{
     }
   });
 
-  // Update punishment mutation
   const updatePunishment = useMutation({
     mutationFn: async ({ id, punishment }: { id: string, punishment: Partial<PunishmentData> }) => {
-      const { data, error } = await supabase
+      const { data, error: supabaseError } = await supabase
         .from('punishments')
         .update({
           title: punishment.title,
@@ -104,7 +97,7 @@ const PunishmentsContent: React.FC<{
         .select()
         .single();
 
-      if (error) throw error;
+      if (supabaseError) throw supabaseError;
       return data;
     },
     onSuccess: (updatedPunishment) => {
@@ -144,7 +137,7 @@ const PunishmentsContent: React.FC<{
     return () => {
       contentRef.current = {};
     };
-  }, [contentRef]);
+  }, [contentRef]); // Removed handleAddNewPunishment from dependencies, it's stable
   
   const handleEditPunishment = (punishment: any) => {
     setCurrentPunishment(punishment);
@@ -165,8 +158,8 @@ const PunishmentsContent: React.FC<{
       }
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
-    } catch (error) {
-      console.error("Error saving punishment:", error);
+    } catch (err) { // Changed error to err to avoid conflict with error from usePunishments
+      console.error("Error saving punishment:", err);
       toast({
         title: "Error",
         description: "Failed to save punishment",
@@ -181,8 +174,8 @@ const PunishmentsContent: React.FC<{
       await deletePunishmentAsync(id);
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
-    } catch (error) {
-      console.error("Error deleting punishment:", error);
+    } catch (err) { // Changed error to err
+      console.error("Error deleting punishment:", err);
       toast({
         title: "Error",
         description: "Failed to delete punishment",
@@ -257,12 +250,9 @@ const PunishmentsContent: React.FC<{
 
 const Punishments: React.FC = () => {
   const contentRef = useRef<{ handleAddNewPunishment?: () => void }>({});
-  const preloadPunishments = usePreloadPunishments();
+  usePreloadPunishments(); // Called directly, hook handles its own effect.
   
-  // Preload data before component renders
-  useEffect(() => {
-    preloadPunishments();
-  }, []);
+  // Removed useEffect that was previously calling preloadPunishments
   
   const handleAddNewPunishment = () => {
     if (contentRef.current.handleAddNewPunishment) {
