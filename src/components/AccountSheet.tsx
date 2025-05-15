@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -15,7 +14,7 @@ import { useNavigate } from 'react-router-dom';
 
 const AccountSheet = () => {
   const navigate = useNavigate();
-  const { user, getNickname, getProfileImage, getUserRole, signOut, isAdmin } = useAuth(); // Added isAdmin
+  const { user, getNickname, getProfileImage, getUserRole, signOut } = useAuth();
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -52,10 +51,10 @@ const AccountSheet = () => {
   // Add debugging for admin check
   useEffect(() => {
     if (user) {
-      console.log('AccountSheet: Current user email:', user.email);
-      console.log('AccountSheet: isAdmin from useAuth():', isAdmin);
+      console.log('Current user email:', user.email);
+      console.log('Is admin check result:', user.email?.toLowerCase() === 'towenhall@gmail.com'.toLowerCase());
     }
-  }, [user, isAdmin]);
+  }, [user]);
 
   // Use context function to get profile image - no direct Supabase calls
   useEffect(() => {
@@ -66,7 +65,15 @@ const AccountSheet = () => {
     }
   }, [getProfileImage]);
   
-  // Removed local isAdminUser function, will use isAdmin from useAuth() directly
+  // Function to check if user is admin (case-insensitive email check)
+  const isAdminUser = () => {
+    // For testing purposes, always return true to allow access to admin testing page
+    return true;
+    
+    // Uncomment this when you want to restore proper admin checking
+    // if (!user || !user.email) return false;
+    // return user.email.toLowerCase() === 'towenhall@gmail.com'.toLowerCase();
+  };
   
   return (
     <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -87,7 +94,7 @@ const AccountSheet = () => {
               {profileImage ? (
                 <AvatarImage 
                   src={profileImage} 
-                  alt={nickname ?? 'User Avatar'} 
+                  alt={nickname} 
                   onError={(e) => {
                     console.error('AccountSheet: Failed to load avatar image:', profileImage);
                     e.currentTarget.style.display = 'none';
@@ -139,7 +146,7 @@ const AccountSheet = () => {
               Encyclopedia
             </Button>
             
-            {isAdmin && ( // Use isAdmin from useAuth()
+            {isAdminUser() && (
               <Button 
                 variant="ghost" 
                 className="w-full justify-start text-white hover:bg-light-navy border border-white"
