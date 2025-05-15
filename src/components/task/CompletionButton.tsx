@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Button } from '../ui/button';
+import { toast } from '@/hooks/use-toast';
 
 interface CompletionButtonProps {
   completed: boolean;
@@ -17,12 +18,27 @@ const CompletionButton: React.FC<CompletionButtonProps> = ({
 }) => {
   const hasReachedMax = currentCompletions >= maxCompletions;
   
+  const handleToggle = async () => {
+    if (hasReachedMax) return;
+    
+    try {
+      onToggleCompletion(!completed);
+    } catch (error) {
+      console.error("Error toggling completion:", error);
+      toast({
+        title: "Connection Error",
+        description: "Your action was saved locally. It will sync when connection is restored.",
+        variant: "destructive",
+      });
+    }
+  };
+  
   return (
     <Button
       variant="default"
       size="sm"
       className={`${hasReachedMax ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500'} text-white px-3 py-0 h-7`}
-      onClick={() => !hasReachedMax && onToggleCompletion(!completed)}
+      onClick={handleToggle}
       disabled={hasReachedMax}
     >
       <span className="text-xs">
