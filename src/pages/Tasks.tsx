@@ -9,7 +9,6 @@ import { Task } from '@/lib/taskUtils';
 import { syncCardById } from '@/data/sync/useSyncManager';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { usePreloadTasks } from "@/data/preload/usePreloadTasks";
-import { toast } from "@/hooks/use-toast";
 
 // Preload tasks data from IndexedDB before component renders
 usePreloadTasks()();
@@ -22,21 +21,15 @@ const TasksWithContext: React.FC = () => {
   const { refreshPointsFromDatabase } = useRewards();
   
   // Use the sync manager to keep data in sync
-  const { syncNow, isOnline } = useSyncManager({ 
+  const { syncNow } = useSyncManager({ 
     intervalMs: 30000,
-    enabled: true,
-    maxRetries: 3
+    enabled: true 
   });
   
   // Initial sync when component mounts
   useEffect(() => {
-    try {
-      syncNow(); // Force a sync when the Tasks page is loaded
-    } catch (error) {
-      console.error("Failed to sync data:", error);
-      // Continue with local data if sync fails
-    }
-  }, [syncNow]);
+    syncNow(); // Force a sync when the Tasks page is loaded
+  }, []);
 
   const handleAddTask = () => {
     console.log('handleAddTask called in TasksWithContext');
@@ -71,20 +64,10 @@ const TasksWithContext: React.FC = () => {
       setIsEditorOpen(false);
       setCurrentTask(null);
       
-      // Synchronize data after task save, but don't fail if sync fails
-      try {
-        setTimeout(() => syncCardById(taskData.id, 'tasks'), 500);
-      } catch (syncError) {
-        console.error('Error syncing task:', syncError);
-        // Continue with local operation even if sync fails
-      }
+      // Synchronize data after task save
+      setTimeout(() => syncCardById(taskData.id, 'tasks'), 500);
     } catch (err) {
       console.error('Error saving task:', err);
-      toast({
-        title: "Saving Failed",
-        description: "Task saved locally. Will sync when connection is restored.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -95,11 +78,6 @@ const TasksWithContext: React.FC = () => {
       setIsEditorOpen(false);
     } catch (err) {
       console.error('Error deleting task:', err);
-      toast({
-        title: "Operation Failed",
-        description: "Could not delete task. Please try again later.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -109,54 +87,21 @@ const TasksWithContext: React.FC = () => {
       // Always refresh points after task completion
       if (completed) {
         setTimeout(() => {
-          try {
-            refreshPointsFromDatabase();
-          } catch (pointsErr) {
-            console.error('Error refreshing points:', pointsErr);
-            // Continue if points refresh fails
-          }
+          refreshPointsFromDatabase();
         }, 300);
       }
     } catch (err) {
       console.error('Error toggling task completion:', err);
-      toast({
-        title: "Connection Issue",
-        description: "Task completion saved locally. Points will update when connection is restored.",
-        variant: "destructive",
-      });
     }
   };
 
   useEffect(() => {
     // Refresh points when component mounts
-    try {
-      refreshPointsFromDatabase();
-    } catch (error) {
-      console.error("Failed to refresh points:", error);
-      // Continue without failing if points refresh fails
-    }
+    refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
-
-  // Show offline indicator if needed
-  useEffect(() => {
-    if (!isOnline) {
-      toast({
-        title: "You're Offline",
-        description: "Working with local data. Changes will sync when connection is restored.",
-        duration: 5000,
-      });
-    }
-  }, [isOnline]);
 
   return (
     <div className="p-4 pt-6 TasksContent">
-      {!isOnline && (
-        <div className="bg-amber-100 text-amber-800 px-4 py-2 rounded-md mb-4 text-sm flex items-center">
-          <span className="w-2 h-2 bg-amber-500 rounded-full mr-2"></span>
-          Offline Mode - Using locally saved data
-        </div>
-      )}
-
       <TasksHeader />
 
       <TasksList
