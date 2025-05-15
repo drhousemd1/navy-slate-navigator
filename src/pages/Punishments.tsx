@@ -35,7 +35,6 @@ const PunishmentsContent: React.FC<{
 
   // Removed useEffect that was previously calling preloadPunishments
 
-  // ... keep existing code (createPunishment and updatePunishment mutations)
   const createPunishment = useMutation({
     mutationFn: async (punishmentData: Partial<PunishmentData>) => {
       const { data, error: supabaseError } = await supabase
