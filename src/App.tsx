@@ -1,5 +1,6 @@
+
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -36,11 +37,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
-// App content component
+// App content component - This will now render child routes
 const AppContent: React.FC = () => {
   return (
     <>
-      <Index />
+      <Outlet />
     </>
   );
 };
