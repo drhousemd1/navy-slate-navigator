@@ -25,7 +25,7 @@ interface TaskCardProps {
   onToggleCompletion?: (completed: boolean) => void;
   onDelete?: () => void;
   frequency?: 'daily' | 'weekly';
-  frequency_count?: number; // Will be at least 1 due to TasksDataHandler processing
+  frequency_count?: number;
   usage_data?: number[];
   icon_url?: string;
   icon_name?: string;
@@ -49,7 +49,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onEdit,
   onToggleCompletion,
   frequency,
-  frequency_count = 1, // Default here, but TasksDataHandler ensures it's >= 1
+  frequency_count = 1,
   usage_data = Array(7).fill(0),
   icon_url,
   icon_name,
@@ -62,8 +62,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const currentDayOfWeek = getCurrentDayOfWeek();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
-  // Ensure maxCompletions is robustly at least 1, though TasksDataHandler should guarantee frequency_count >= 1
-  const maxCompletions = (frequency_count && frequency_count > 0) ? frequency_count : 1;
+  const maxCompletions = frequency_count || 1;
   const isFullyCompleted = currentCompletions >= maxCompletions;
 
   return (
@@ -92,7 +91,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 maxCompletions={maxCompletions}
               />
               <CompletionButton 
-                completed={completed} // This 'completed' reflects the overall status based on max completions
+                completed={completed} 
                 onToggleCompletion={onToggleCompletion}
                 currentCompletions={currentCompletions}
                 maxCompletions={maxCompletions}
@@ -162,4 +161,3 @@ const TaskCard: React.FC<TaskCardProps> = ({
 };
 
 export default TaskCard;
-
