@@ -1,3 +1,4 @@
+
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
@@ -7,8 +8,8 @@ import './App.css';
 
 // Lazy load pages
 const Index = lazy(() => import('./pages/Index'));
-const LoginSignupView = lazy(() => import('./pages/auth/LoginSignupView'));
-const ForgotPasswordView = lazy(() => import('./pages/auth/ForgotPasswordView'));
+const LoginSignupView = lazy(() => import('./pages/auth'));
+const ForgotPasswordView = lazy(() => import('./pages/auth/ForgotPasswordView').then(module => ({ default: module.ForgotPasswordView })));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const Tasks = lazy(() => import('./pages/Tasks'));
 const Rules = lazy(() => import('./pages/Rules'));
@@ -22,9 +23,9 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
-  if (isLoading) {
+  if (loading) {
     return <div className="flex items-center justify-center h-screen bg-background text-foreground">Loading...</div>;
   }
 
