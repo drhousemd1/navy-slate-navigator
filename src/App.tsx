@@ -1,122 +1,84 @@
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import './App.css';
 
-import React, { useEffect } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "./data/queryClient";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Auth from "./pages/auth"; 
-import { AuthProvider, useAuth } from "./contexts/auth";
-import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
-import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
-
-// Create empty placeholder pages for our navigation
-import Rules from "./pages/Rules";
-import Tasks from "./pages/Tasks";
-import Rewards from "./pages/Rewards";
-import Punishments from "./pages/Punishments";
-import ThroneRoom from "./pages/ThroneRoom";
-import Encyclopedia from "./pages/Encyclopedia";
-import Profile from "./pages/Profile";
-import Messages from "./pages/Messages";
-import AdminTesting from "./pages/AdminTesting";
+// Lazy load pages
+const Index = lazy(() => import('./pages/Index'));
+const LoginSignupView = lazy(() => import('./pages/auth/LoginSignupView'));
+const ForgotPasswordView = lazy(() => import('./pages/auth/ForgotPasswordView'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const Rules = lazy(() => import('./pages/Rules'));
+const Rewards = lazy(() => import('./pages/Rewards'));
+const Punishments = lazy(() => import('./pages/Punishments'));
+const ThroneRoom = lazy(() => import('./pages/ThroneRoom'));
+const Encyclopedia = lazy(() => import('./pages/Encyclopedia'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Messages = lazy(() => import('./pages/Messages'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen bg-navy">
-      <p className="text-white">Loading...</p>
-    </div>;
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen bg-background text-foreground">Loading...</div>;
   }
-  
+
   if (!isAuthenticated) {
-    return <Navigate to="/auth" />;
+    return <Navigate to="/auth" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
-// Admin-only route component
-const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
-  
-  console.log('AdminRoute check - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin, 'loading:', loading);
-  
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen bg-navy">
-      <p className="text-white">Loading...</p>
-    </div>;
-  }
-  
-  if (!isAuthenticated) {
-    console.log('AdminRoute - User not authenticated, redirecting to /auth');
-    return <Navigate to="/auth" />;
-  }
-  
-  console.log('AdminRoute - Allowing access to admin page for testing purposes');
-  return <>{children}</>;
-};
-
-// Configure routes with proper nesting to ensure context is available
-const AppRoutes = () => {
-  useEffect(() => {
-    console.log('AppRoutes component initialized. Routes ready to be matched.');
-    console.log('Cache status:', queryClient.getQueryCache().getAll().length > 0 ? 'Cache populated' : 'Empty cache');
-  }, []);
-
+// App content component
+const AppContent: React.FC = () => {
   return (
-    <Routes>
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/reset-password-view" element={<ResetPasswordView />} />
-      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-      <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
-      <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-      <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
-      <Route path="/punishments" element={<ProtectedRoute><Punishments /></ProtectedRoute>} />
-      <Route path="/throne-room" element={<ProtectedRoute><ThroneRoom /></ProtectedRoute>} />
-      <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-      <Route path="/admin-testing" element={<AdminRoute><AdminTesting /></AdminRoute>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <>
+      <Index />
+    </>
   );
 };
 
-// Main App component
-const App = () => {
-  useEffect(() => {
-    console.log('App component initialized. React Router ready.');
-    
-    // Add additional error handling for network issues
-    window.addEventListener('online', () => {
-      console.log('App is back online. Resuming normal operation.');
-      queryClient.resumePausedMutations();
-    });
-    
-    window.addEventListener('offline', () => {
-      console.log('App is offline. Pausing mutations.');
-    });
-    
-    return () => {
-      window.removeEventListener('online', () => {});
-      window.removeEventListener('offline', () => {});
-    };
-  }, []);
-
+const App: React.FC = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
+    <Router>
+      <AuthProvider>
+        <TooltipProvider>
+          <Suspense fallback={<div className="flex items-center justify-center h-screen bg-background text-foreground">Loading...</div>}>
+            <Routes>
+              <Route path="/auth" element={<LoginSignupView />} />
+              <Route path="/forgot-password" element={<ForgotPasswordView />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <AppContent />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Index />} />
+                <Route path="tasks" element={<Tasks />} />
+                <Route path="rules" element={<Rules />} />
+                <Route path="rewards" element={<Rewards />} />
+                <Route path="punishments" element={<Punishments />} />
+                <Route path="throne-room" element={<ThroneRoom />} />
+                <Route path="encyclopedia" element={<Encyclopedia />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="messages" element={<Messages />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
           <Toaster />
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+        </TooltipProvider>
+      </AuthProvider>
+    </Router>
   );
 };
 
