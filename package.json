@@ -46,6 +46,8 @@
     "@tanstack/react-query-persist-client": "^5.74.4",
     "@tiptap/extension-history": "^2.1.16",
     "@tiptap/extension-table": "^2.1.16",
+    "@tiptap/extension-table-header": "^2.12.0",
+    "@tiptap/extension-table-row": "^2.12.0",
     "@tiptap/react": "^2.1.16",
     "@tiptap/starter-kit": "^2.1.16",
     "@types/uuid": "^10.0.0",
