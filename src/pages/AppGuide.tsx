@@ -3,7 +3,7 @@ import React from 'react';
 
 const AppGuidePage: React.FC = () => {
   return (
-    <div className="p-4 md:p-8 bg-background text-foreground min-h-screen">
+    <div className="p-4 md:p-8 bg-background text-foreground"> {/* Removed min-h-screen */}
       <header className="mb-8">
         <h1 className="text-4xl font-bold text-white border-b border-gray-700 pb-2">App Guide</h1>
       </header>
@@ -78,3 +78,4 @@ const AppGuidePage: React.FC = () => {
 };
 
 export default AppGuidePage;
+
