@@ -1,54 +1,33 @@
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import AppLayout from '../components/AppLayout';
-import EditableGuide from '@/components/app-guide/EditableGuide';
+import RichTextEditor from '@/components/app-guide/RichTextEditor';
+import EditorToolbar from '@/components/app-guide/EditorToolbar';
+import { Editor } from '@tiptap/react'; // Import Editor type
 
 const AppGuidePage: React.FC = () => {
-  const initialGuideContent = `
-<h1>App Guide</h1>
-<p>Welcome to the App Guide! This is your space to document how your app works.</p>
+  const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
 
-<h2>Getting Started</h2>
-<p>This editor allows you to:</p>
-<ul>
-  <li>Format text using the toolbar above</li>
-  <li>Create lists (ordered and unordered)</li>
-  <li>Insert tables for structured information</li>
-  <li>Manage tables by adding/removing rows and columns</li>
-</ul>
-
-<h2>Example Table</h2>
-<p>Here's an example of what you can create:</p>
-
-<table>
-  <tr>
-    <th>Feature</th>
-    <th>Description</th>
-    <th>Location</th>
-  </tr>
-  <tr>
-    <td>Tasks</td>
-    <td>Create and manage tasks</td>
-    <td>Tasks page</td>
-  </tr>
-  <tr>
-    <td>Rewards</td>
-    <td>Set up and track rewards</td>
-    <td>Rewards page</td>
-  </tr>
-</table>
-
-<p>Start documenting your app by editing this content!</p>
-`;
+  // useCallback to memoize the handler function
+  const handleEditorChange = useCallback((editor: Editor | null) => {
+    setEditorInstance(editor);
+  }, []);
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-8 max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">App Guide</h1>
-        <p className="text-gray-600 mb-4">
-          Document your application workflow and features here
-        </p>
-        <EditableGuide initialContent={initialGuideContent} />
+      <div className="p-4 md:p-8 max-w-full mx-auto flex flex-col h-[calc(100vh-var(--header-height,64px))]"> {/* Adjust header height as needed */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">App Guide</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Craft and document your application's features and workflows with this powerful editor.
+          </p>
+        </div>
+        
+        {/* Editor UI */}
+        <div className="flex flex-col flex-grow bg-gray-50 dark:bg-gray-950 rounded-lg shadow-lg overflow-hidden">
+          <EditorToolbar editor={editorInstance} />
+          <RichTextEditor onEditorChange={handleEditorChange} />
+        </div>
       </div>
     </AppLayout>
   );
