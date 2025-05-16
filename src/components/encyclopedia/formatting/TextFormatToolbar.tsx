@@ -8,7 +8,7 @@ import {
   AlignCenter, 
   AlignRight, 
   ListOrdered, 
-  List, // Changed from ListUnordered
+  List,
   Table
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -123,7 +123,6 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                   value="left" 
                   aria-label="Align left"
                   className="hover:bg-gray-100 text-black"
-                  // onClick={() => onAlignText('left')} // Handled by onValueChange
                 >
                   <AlignLeft className="h-4 w-4" />
                 </ToggleGroupItem>
@@ -139,7 +138,6 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                   value="center" 
                   aria-label="Align center"
                   className="hover:bg-gray-100 text-black"
-                  // onClick={() => onAlignText('center')} // Handled by onValueChange
                 >
                   <AlignCenter className="h-4 w-4" />
                 </ToggleGroupItem>
@@ -155,7 +153,6 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                   value="right" 
                   aria-label="Align right"
                   className="hover:bg-gray-100 text-black"
-                  // onClick={() => onAlignText('right')} // Handled by onValueChange
                 >
                   <AlignRight className="h-4 w-4" />
                 </ToggleGroupItem>
@@ -197,7 +194,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                   className="hover:bg-gray-100 text-black"
                   onClick={() => onListFormat('unordered')}
                 >
-                  <List className="h-4 w-4" /> {/* Changed icon here */}
+                  <List className="h-4 w-4" />
                 </ToggleGroupItem>
               </TooltipTrigger>
               <TooltipContent>
@@ -212,21 +209,23 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
         <>
           <Separator orientation="vertical" className="h-6" />
           <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <ToggleGroupItem 
-                  value="table" 
-                  aria-label="Insert table"
-                  className="hover:bg-gray-100 text-black"
-                  onClick={onInsertTable}
-                >
-                  <Table className="h-4 w-4" />
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Insert table</p>
-              </TooltipContent>
-            </Tooltip>
+            <ToggleGroup type="single" className="justify-start"> {/* Added ToggleGroup wrapper */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem 
+                    value="table" 
+                    aria-label="Insert table"
+                    className="hover:bg-gray-100 text-black"
+                    onClick={onInsertTable}
+                  >
+                    <Table className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Insert table</p>
+                </TooltipContent>
+              </Tooltip>
+            </ToggleGroup>
           </TooltipProvider>
         </>
       )}
@@ -259,3 +258,4 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
 };
 
 export default TextFormatToolbar;
+
