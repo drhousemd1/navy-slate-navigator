@@ -1,219 +1,246 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Textarea } from "../ui/textarea";
-import TextFormatToolbar from '../encyclopedia/formatting/TextFormatToolbar';
+import React from 'react';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Table from '@tiptap/extension-table';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
+import TableRow from '@tiptap/extension-table-row';
+import History from '@tiptap/extension-history';
+import { 
+  Bold, 
+  Italic, 
+  Table as TableIcon, 
+  Undo, 
+  Redo,
+  Columns3,
+  Columns2,
+  Rows3,
+  Rows2
+} from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { 
+  Tooltip, 
+  TooltipProvider, 
+  TooltipTrigger, 
+  TooltipContent 
+} from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 
 interface EditableGuideProps {
-  initialContent: string;
+  initialContent?: string;
 }
 
-const EditableGuide: React.FC<EditableGuideProps> = ({ initialContent }) => {
-  const [content, setContent] = useState(initialContent);
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [forceUpdateKey, setForceUpdateKey] = useState(0);
-  const [currentFormatting, setCurrentFormatting] = useState({
-    isBold: false,
-    isUnderlined: false,
-    isItalic: false,
-    fontSize: '1rem',
-    alignment: 'left' as 'left' | 'center' | 'right'
+const EditableGuide: React.FC<EditableGuideProps> = ({ 
+  initialContent = '<h1>App Guide</h1><p>Start writing your guide here...</p>'
+}) => {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      History,
+      Table.configure({ 
+        resizable: true,
+        HTMLAttributes: {
+          class: 'border-collapse table-auto w-full border border-gray-300',
+        },
+      }),
+      TableRow.configure({
+        HTMLAttributes: {
+          class: 'border-b border-gray-300',
+        },
+      }),
+      TableHeader.configure({
+        HTMLAttributes: {
+          class: 'bg-gray-100 font-semibold text-left p-2 border-b border-gray-300',
+        },
+      }),
+      TableCell.configure({
+        HTMLAttributes: {
+          class: 'border border-gray-300 p-2',
+        },
+      }),
+    ],
+    content: initialContent,
+    autofocus: 'end',
   });
-  const [selectedTextRange, setSelectedTextRange] = useState<{ start: number; end: number } | null>(null);
 
-  // Listen for selection changes in the editor
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) return;
-      
-      const range = selection.getRangeAt(0);
-      if (!editorRef.current?.contains(range.commonAncestorContainer)) {
-        return;
-      }
-      
-      if (!selection.isCollapsed) {
-        setSelectedTextRange({
-          start: range.startOffset,
-          end: range.endOffset
-        });
-        
-        // Update formatting state based on current selection
-        setCurrentFormatting({
-          isBold: document.queryCommandState('bold'),
-          isUnderlined: document.queryCommandState('underline'),
-          isItalic: document.queryCommandState('italic'),
-          fontSize: getFontSize(),
-          alignment: getTextAlignment()
-        });
-      } else {
-        setSelectedTextRange(null);
-      }
-    };
-    
-    document.addEventListener('selectionchange', handleSelectionChange);
-    return () => {
-      document.removeEventListener('selectionchange', handleSelectionChange);
-    };
-  }, []);
+  const isTableActive = editor?.isActive('table');
 
-  const getFontSize = () => {
-    // Get font size of current selection - this is a simplified version
-    // In a real implementation, we would need more sophisticated detection
-    return currentFormatting.fontSize;
-  };
-
-  const getTextAlignment = () => {
-    // Get alignment of current selection - this is a simplified version
-    // In a real implementation, we would need more sophisticated detection
-    if (document.queryCommandState('justifyCenter')) return 'center';
-    if (document.queryCommandState('justifyRight')) return 'right';
-    return 'left';
-  };
-
-  const applyFormat = (command: string, value?: string) => {
-    document.execCommand('styleWithCSS', false, "true");
-    if (value) {
-      document.execCommand(command, false, value);
-    } else {
-      document.execCommand(command, false);
-    }
-    
-    if (editorRef.current) {
-      setContent(editorRef.current.innerHTML);
-    }
-    setForceUpdateKey(prev => prev + 1);
-  };
-  
-  const applyFontSize = (size: string) => {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-
-    const range = selection.getRangeAt(0);
-    if (!range.commonAncestorContainer.parentElement?.closest('[contenteditable="true"]')) {
-      return;
-    }
-    
-    document.execCommand('styleWithCSS', false, "true");
-    
-    try {
-      document.execCommand("fontSize", false, "1");
-      const fontElements = editorRef.current?.querySelectorAll("font[size='1']");
-      fontElements?.forEach(el => {
-        const parent = el.parentNode;
-        const spanStyled = document.createElement('span');
-        spanStyled.style.fontSize = size;
-        spanStyled.innerHTML = el.innerHTML;
-        parent?.replaceChild(spanStyled, el);
-      });
-
-      setCurrentFormatting(prev => ({ ...prev, fontSize: size }));
-    } catch (e) {
-      console.error("Error applying font size:", e);
-    }
-
-    if (editorRef.current) {
-      setContent(editorRef.current.innerHTML);
-    }
-    setForceUpdateKey(prev => prev + 1);
-  };
-
-  const handleToggleBold = () => {
-    applyFormat('bold');
-    setCurrentFormatting(prev => ({ ...prev, isBold: !prev.isBold }));
-  };
-  
-  const handleToggleUnderline = () => {
-    applyFormat('underline');
-    setCurrentFormatting(prev => ({ ...prev, isUnderlined: !prev.isUnderlined }));
-  };
-  
-  const handleToggleItalic = () => {
-    applyFormat('italic');
-    setCurrentFormatting(prev => ({ ...prev, isItalic: !prev.isItalic }));
-  };
-  
-  const handleFontSizeChange = (value: string) => {
-    applyFontSize(value);
-  };
-  
-  const handleAlignText = (alignment: 'left' | 'center' | 'right') => {
-    switch(alignment) {
-      case 'left':
-        applyFormat('justifyLeft');
-        break;
-      case 'center':
-        applyFormat('justifyCenter');
-        break;
-      case 'right':
-        applyFormat('justifyRight');
-        break;
-    }
-    setCurrentFormatting(prev => ({ ...prev, alignment }));
-  };
-  
-  const handleListFormat = (listType: 'ordered' | 'unordered') => {
-    if (listType === 'ordered') {
-      applyFormat('insertOrderedList');
-    } else {
-      applyFormat('insertUnorderedList');
-    }
-  };
-  
-  const handleInsertTable = () => {
-    // Simple 3x3 table insertion
-    const tableHTML = `
-      <table style="width:100%; border-collapse: collapse;">
-        <tr>
-          <td style="border: 1px solid #ccc; padding: 8px;">Cell 1</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">Cell 2</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">Cell 3</td>
-        </tr>
-        <tr>
-          <td style="border: 1px solid #ccc; padding: 8px;">Cell 4</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">Cell 5</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">Cell 6</td>
-        </tr>
-        <tr>
-          <td style="border: 1px solid #ccc; padding: 8px;">Cell 7</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">Cell 8</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">Cell 9</td>
-        </tr>
-      </table><br>
-    `;
-    
-    document.execCommand('insertHTML', false, tableHTML);
-    
-    if (editorRef.current) {
-      setContent(editorRef.current.innerHTML);
-    }
-    setForceUpdateKey(prev => prev + 1);
-  };
-
-  const handleContentChange = (htmlContent: string) => {
-    setContent(htmlContent);
-  };
+  // Toolbar actions
+  const addTable = () => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+  const addColumnBefore = () => editor?.chain().focus().addColumnBefore().run();
+  const addColumnAfter = () => editor?.chain().focus().addColumnAfter().run();
+  const deleteColumn = () => editor?.chain().focus().deleteColumn().run();
+  const addRowBefore = () => editor?.chain().focus().addRowBefore().run();
+  const addRowAfter = () => editor?.chain().focus().addRowAfter().run();
+  const deleteRow = () => editor?.chain().focus().deleteRow().run();
 
   return (
-    <div className="mt-6">
-      <TextFormatToolbar
-        onToggleBold={handleToggleBold}
-        onToggleUnderline={handleToggleUnderline}
-        onToggleItalic={handleToggleItalic}
-        onFontSizeChange={handleFontSizeChange}
-        onAlignText={handleAlignText}
-        onListFormat={handleListFormat}
-        onInsertTable={handleInsertTable}
-        selectedTextRange={selectedTextRange}
-        currentFormatting={currentFormatting}
-      />
-      <Textarea
-        key={forceUpdateKey}
-        value={content}
-        onChange={(e) => handleContentChange((e.target as any).value)}
-        formattedPreview={true}
-        className="min-h-[500px] bg-white border-gray-300 text-black"
-        editorRef={editorRef}
-      />
+    <div className="mt-6 flex flex-col border border-gray-300 rounded-md overflow-hidden">
+      <TooltipProvider>
+        <div className="toolbar flex flex-wrap items-center gap-1 p-2 bg-white border-b border-gray-300">
+          <div className="flex gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => editor?.chain().focus().toggleBold().run()} 
+                  className={`${editor?.isActive('bold') ? 'bg-gray-200' : ''}`}
+                >
+                  <Bold className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Bold</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => editor?.chain().focus().toggleItalic().run()} 
+                  className={`${editor?.isActive('italic') ? 'bg-gray-200' : ''}`}
+                >
+                  <Italic className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Italic</TooltipContent>
+            </Tooltip>
+          </div>
+          
+          <Separator orientation="vertical" className="h-6 mx-2" />
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={addTable} 
+              >
+                <TableIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Insert Table</TooltipContent>
+          </Tooltip>
+          
+          {isTableActive && (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={addColumnBefore} 
+                  >
+                    <Columns2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add Column Before</TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={addColumnAfter} 
+                  >
+                    <Columns3 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add Column After</TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={deleteColumn} 
+                  >
+                    <Columns2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete Column</TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={addRowBefore} 
+                  >
+                    <Rows2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add Row Above</TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={addRowAfter} 
+                  >
+                    <Rows3 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add Row Below</TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={deleteRow} 
+                  >
+                    <Rows2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete Row</TooltipContent>
+              </Tooltip>
+            </>
+          )}
+          
+          <Separator orientation="vertical" className="h-6 mx-2" />
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => editor?.chain().focus().undo().run()} 
+                disabled={!editor?.can().undo()}
+              >
+                <Undo className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Undo</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => editor?.chain().focus().redo().run()} 
+                disabled={!editor?.can().redo()}
+              >
+                <Redo className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Redo</TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
+      
+      <div className="editor bg-white p-4 min-h-[500px] overflow-auto">
+        <EditorContent editor={editor} className="prose max-w-none focus:outline-none" />
+      </div>
     </div>
   );
 };
