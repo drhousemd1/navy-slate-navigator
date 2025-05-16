@@ -1,4 +1,5 @@
-import React, { useCallback } from 'react';
+
+import React, { useCallback, useMemo } from 'react'; // Added useMemo
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -17,24 +18,26 @@ import TableCell from '@tiptap/extension-table-cell';
 import History from '@tiptap/extension-history';
 
 export default function EditableGuide() {
+  const extensions = useMemo(() => [ // Memoize the extensions array
+    StarterKit,
+    History,
+    Underline,
+    Strike,
+    TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    TextStyle,
+    Color.configure({ types: ['textStyle'] }),
+    Highlight.configure({ multicolor: true }),
+    FontFamily,
+    Link.configure({ autolink: true, openOnClick: false }),
+    Image,
+    Table.configure({ resizable: true }),
+    TableRow,
+    TableHeader,
+    TableCell,
+  ], []); // Empty dependency array ensures it's created only once
+
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      History,
-      Underline,
-      Strike,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      TextStyle,
-      Color.configure({ types: ['textStyle'] }),
-      Highlight.configure({ multicolor: true }),
-      FontFamily,
-      Link.configure({ autolink: true, openOnClick: false }),
-      Image,
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
-    ],
+    extensions, // Use the memoized extensions
     content: '<p>Your guide starts here…</p>',
     autofocus: true,
     editorProps: {
