@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -6,7 +5,6 @@ import Table from '@tiptap/extension-table';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import TableRow from '@tiptap/extension-table-row';
-import History from '@tiptap/extension-history';
 import { 
   Bold, 
   Italic, 
@@ -36,8 +34,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
 }) => {
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      History,
+      StarterKit, // StarterKit includes History, Dropcursor, Gapcursor, etc.
       Table.configure({ 
         resizable: true,
         HTMLAttributes: {
