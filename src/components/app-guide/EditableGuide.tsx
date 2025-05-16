@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -91,9 +92,6 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
     autofocus: 'end',
     onUpdate: ({ editor: currentEditor }) => {
       // Editor updates trigger re-renders via useEditor hook.
-      // Force a re-render if needed to update toolbar states like currentColor
-      // This can be done by managing a piece of state that changes, or if useEditor handles it.
-      // For now, relying on useEditor's re-render triggering.
     }
   });
 
@@ -109,40 +107,20 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
   const deleteRow = () => editor?.chain().focus().deleteRow().run();
 
   const currentFontSize = editor?.getAttributes('textStyle').fontSize || '1rem';
-  // Ensure currentColor reflects the actual current color for the input's value
-  // Default to black or white based on theme if no color is set on the text
   const editorColor = editor?.getAttributes('textStyle').color;
-  const defaultDarkThemeColor = '#FFFFFF'; // White for dark theme
-  const defaultLightThemeColor = '#000000'; // Black for light theme
+  const defaultDarkThemeColor = '#FFFFFF'; 
+  const defaultLightThemeColor = '#000000'; 
   
-  // This needs to be reactive to theme changes if documentElement.classList can change dynamically
-  // For simplicity, assuming it's checked on render.
   const currentColor = editorColor || (typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? defaultDarkThemeColor : defaultLightThemeColor);
 
   if (!editor) {
     return null; 
   }
 
-  const handleEditorWrapperClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (editor) {
-      // If the click is directly on the wrapper (i.e., the padding area), focus the editor at the end.
-      if (e.target === e.currentTarget) {
-        editor.chain().focus('end').run();
-      }
-      // If the click is on a child (EditorContent or its elements) and the editor isn't focused,
-      // Tiptap's EditorContent internal handlers should take over once it receives focus.
-      // We can also explicitly focus it if it's not.
-      else if (!editor.isFocused) {
-         editor.chain().focus().run();
-      }
-      // If it's already focused and click is on content, Tiptap handles it.
-    }
-  };
-
   return (
-    <div className="mt-6 flex flex-col border border-gray-300 rounded-md overflow-hidden">
+    <div className="editor-container flex flex-col h-full min-h-[500px] mt-6 rounded-md">
       <TooltipProvider>
-        <div className="toolbar flex flex-wrap items-center gap-1 p-2 bg-white border-b border-gray-300 dark:bg-gray-800 dark:border-gray-700">
+        <div className="toolbar flex flex-wrap items-center gap-2 p-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700">
           {/* Basic Formatting */}
           <div className="flex gap-1">
             <Tooltip>
@@ -176,17 +154,16 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
 
           <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
 
-          {/* Font Styling - REVERTED COLOR PICKER */}
+          {/* Font Styling */}
           <div className="flex gap-1 items-center">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  asChild // Render the child (label) directly, inheriting button styles
+                  asChild 
                   variant="outline" 
                   size="icon"
                   className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
                 >
-                  {/* Label triggers the input. Styled to fill button and center icon. */}
                   <label htmlFor="tiptapColorInput" className="cursor-pointer flex items-center justify-center w-full h-full"> 
                     <Palette className="h-4 w-4" />
                   </label>
@@ -195,16 +172,15 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
               <TooltipContent>Text Color</TooltipContent>
             </Tooltip>
             
-            {/* Hidden color input, linked by ID to the label */}
             <input
               id="tiptapColorInput"
               type="color"
-              value={currentColor} // This value should correctly reflect the editor's current color or default
-              onInput={(e) => { // Using onInput for immediate feedback as user drags color picker
+              value={currentColor} 
+              onInput={(e) => { 
                 const newValue = (e.target as HTMLInputElement).value;
                 editor.chain().focus().setColor(newValue).run();
               }}
-              className="sr-only" // Visually hidden, but accessible for interaction via label
+              className="sr-only" 
             />
 
             <Select
@@ -373,14 +349,12 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
       </TooltipProvider>
       
       <div 
-        className="editor bg-white p-4 min-h-[500px] overflow-auto dark:bg-gray-900 dark:text-gray-200"
-        onClick={handleEditorWrapperClick} // Use the refined wrapper click handler
+        className="editor flex-1 overflow-auto border border-gray-300 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200"
+        onClick={() => editor?.commands.focus()}
       >
         <EditorContent 
           editor={editor} 
-          className="prose dark:prose-invert max-w-none focus:outline-none min-h-[480px]"
-          // No explicit onClick here; Tiptap's internal click handling within its rendered content area should work.
-          // Clicks on the padding are handled by `handleEditorWrapperClick`.
+          className="h-full prose prose-sm dark:prose-invert max-w-none focus:outline-none"
         />
       </div>
     </div>
@@ -388,3 +362,4 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
 };
 
 export default EditableGuide;
+
