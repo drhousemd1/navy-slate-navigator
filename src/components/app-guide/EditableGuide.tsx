@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useRef } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Table from '@tiptap/extension-table';
@@ -54,6 +53,8 @@ const fontSizes = [
 const EditableGuide: React.FC<EditableGuideProps> = ({ 
   initialContent = '<h1>App Guide</h1><p>Start writing your guide here...</p>'
 }) => {
+  const colorInputRef = useRef<HTMLInputElement>(null);
+
   const editor = useEditor({
     extensions: [
       StarterKit, // Includes History, Dropcursor, Gapcursor, common text formatting, etc.
@@ -91,13 +92,8 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
     content: initialContent,
     autofocus: 'end',
     onUpdate: ({ editor: currentEditor }) => {
-      // Force re-render to update active states for custom controls
-      // This is a common pattern when editor state drives external UI
-      // Forcing a re-render can be done by updating a dummy state variable if needed,
-      // but often, the parent component re-renders due to prop changes or context updates.
-      // For simple cases like this, just checking editor.isActive or getAttributes in render is fine.
-      // For more complex scenarios, you might need to trigger a re-render.
-      // Here, we'll rely on React's reconciliation from editor updates.
+      // Editor updates should trigger re-renders via useEditor hook,
+      // so currentFontSize and currentColor will be re-evaluated.
     }
   });
 
@@ -126,6 +122,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
         <div className="toolbar flex flex-wrap items-center gap-1 p-2 bg-white border-b border-gray-300 dark:bg-gray-800 dark:border-gray-700">
           {/* Basic Formatting */}
           <div className="flex gap-1">
+            {/* ... keep existing code (Bold and Italic buttons) */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
@@ -166,11 +163,12 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     variant="outline"
                     size="icon"
                     className="w-full h-full dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
-                    onClick={() => document.getElementById('colorPickerInput')?.click()}
+                    onClick={() => colorInputRef.current?.click()}
                   >
                     <Palette className="h-4 w-4" />
                   </Button>
                   <input
+                    ref={colorInputRef}
                     id="colorPickerInput"
                     type="color"
                     value={currentColor}
@@ -210,6 +208,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
           <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
           
           {/* Table Controls */}
+          {/* ... keep existing code (Table controls: Insert, Add/Delete Column/Row) */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
@@ -234,7 +233,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     onClick={addColumnBefore} 
                     className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
                   >
-                    <Columns2 className="h-4 w-4 transform rotate-180" /> {/* Adjusted icon for clarity */}
+                    <Columns2 className="h-4 w-4 transform rotate-180" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Add Column Before</TooltipContent>
@@ -262,7 +261,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     onClick={deleteColumn} 
                     className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
                   >
-                    <Columns2 className="h-4 w-4 text-red-500" /> {/* Adjusted icon for clarity */}
+                    <Columns2 className="h-4 w-4 text-red-500" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Delete Column</TooltipContent>
@@ -276,7 +275,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     onClick={addRowBefore} 
                     className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
                   >
-                    <Rows2 className="h-4 w-4 transform rotate-180" /> {/* Adjusted icon for clarity */}
+                    <Rows2 className="h-4 w-4 transform rotate-180" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Add Row Above</TooltipContent>
@@ -304,7 +303,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     onClick={deleteRow} 
                     className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
                   >
-                    <Rows2 className="h-4 w-4 text-red-500" /> {/* Adjusted icon for clarity */}
+                    <Rows2 className="h-4 w-4 text-red-500" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Delete Row</TooltipContent>
@@ -315,6 +314,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
           <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
           
           {/* History Controls */}
+          {/* ... keep existing code (Undo and Redo buttons) */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
@@ -355,4 +355,3 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
 };
 
 export default EditableGuide;
-
