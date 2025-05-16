@@ -2,7 +2,7 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Plus, MessageSquare } from 'lucide-react';
+import { Plus, MessageSquare, BookOpen } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import AccountSheet from './AccountSheet';
@@ -68,10 +68,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               {profileImage ? (
                 <AvatarImage 
                   src={profileImage} 
-                  alt={nickname}
+                  alt={nickname ?? "User Avatar"}
                   onError={(e) => {
                     console.error('Failed to load avatar image:', profileImage);
-                    e.currentTarget.style.display = 'none';
+                    (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               ) : null}
@@ -91,6 +91,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />
             
+            {/* App Guide icon */}
+            <BookOpen 
+              className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors"
+              onClick={() => navigate('/app-guide')}
+              title="App Guide"
+            />
+
             {/* Messaging icon */}
             <MessageSquare 
               className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" 

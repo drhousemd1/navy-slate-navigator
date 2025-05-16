@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -7,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/auth"; 
-import { AuthProvider, useAuth } from "./contexts/auth";
+import { AuthProvider, useAuth } from "./contexts/AuthContext"; // Corrected import path
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 
@@ -21,6 +20,7 @@ import Encyclopedia from "./pages/Encyclopedia";
 import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
 import AdminTesting from "./pages/AdminTesting";
+import AppGuidePage from "./pages/AppGuide"; // Added import for AppGuidePage
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -82,6 +82,7 @@ const AppRoutes = () => {
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
       <Route path="/admin-testing" element={<AdminRoute><AdminTesting /></AdminRoute>} />
+      <Route path="/app-guide" element={<ProtectedRoute><AppGuidePage /></ProtectedRoute>} /> {/* Added route for AppGuidePage */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
