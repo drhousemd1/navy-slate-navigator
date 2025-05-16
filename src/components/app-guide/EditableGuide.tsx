@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -5,6 +6,10 @@ import Table from '@tiptap/extension-table';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import TableRow from '@tiptap/extension-table-row';
+import TextStyle from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import Image from '@tiptap/extension-image';
+
 import { 
   Bold, 
   Italic, 
@@ -14,7 +19,9 @@ import {
   Columns3,
   Columns2,
   Rows3,
-  Rows2
+  Rows2,
+  Palette, // Icon for color
+  Baseline // Icon for font size (as a stand-in)
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -24,17 +31,32 @@ import {
   TooltipContent 
 } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 interface EditableGuideProps {
   initialContent?: string;
 }
+
+const fontSizes = [
+  { label: 'Smallest', value: '0.75rem' }, // 12px
+  { label: 'Small', value: '0.875rem' },  // 14px
+  { label: 'Normal', value: '1rem' },     // 16px
+  { label: 'Large', value: '1.25rem' },   // 20px
+  { label: 'X-Large', value: '1.5rem' },  // 24px
+];
 
 const EditableGuide: React.FC<EditableGuideProps> = ({ 
   initialContent = '<h1>App Guide</h1><p>Start writing your guide here...</p>'
 }) => {
   const editor = useEditor({
     extensions: [
-      StarterKit, // StarterKit includes History, Dropcursor, Gapcursor, etc.
+      StarterKit, // Includes History, Dropcursor, Gapcursor, common text formatting, etc.
       Table.configure({ 
         resizable: true,
         HTMLAttributes: {
@@ -56,9 +78,27 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
           class: 'border border-gray-300 p-2',
         },
       }),
+      TextStyle, // Enables inline style attributes like font-size
+      Color,     // Leverages TextStyle to apply color
+      Image.configure({ // Handles images, including pasted ones
+        inline: false, // Adjust as needed; false makes images block-level
+        allowBase64: true, // Crucial for pasting images
+        HTMLAttributes: {
+          class: 'max-w-full h-auto rounded-md my-2', // Basic styling for images
+        },
+      }),
     ],
     content: initialContent,
     autofocus: 'end',
+    onUpdate: ({ editor: currentEditor }) => {
+      // Force re-render to update active states for custom controls
+      // This is a common pattern when editor state drives external UI
+      // Forcing a re-render can be done by updating a dummy state variable if needed,
+      // but often, the parent component re-renders due to prop changes or context updates.
+      // For simple cases like this, just checking editor.isActive or getAttributes in render is fine.
+      // For more complex scenarios, you might need to trigger a re-render.
+      // Here, we'll rely on React's reconciliation from editor updates.
+    }
   });
 
   const isTableActive = editor?.isActive('table');
@@ -72,18 +112,27 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
   const addRowAfter = () => editor?.chain().focus().addRowAfter().run();
   const deleteRow = () => editor?.chain().focus().deleteRow().run();
 
+  const currentFontSize = editor?.getAttributes('textStyle').fontSize || '1rem';
+  const currentColor = editor?.getAttributes('textStyle').color || (document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#000000');
+
+
+  if (!editor) {
+    return null; // Or a loading indicator
+  }
+
   return (
     <div className="mt-6 flex flex-col border border-gray-300 rounded-md overflow-hidden">
       <TooltipProvider>
-        <div className="toolbar flex flex-wrap items-center gap-1 p-2 bg-white border-b border-gray-300">
+        <div className="toolbar flex flex-wrap items-center gap-1 p-2 bg-white border-b border-gray-300 dark:bg-gray-800 dark:border-gray-700">
+          {/* Basic Formatting */}
           <div className="flex gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
                   variant="outline" 
                   size="icon"
-                  onClick={() => editor?.chain().focus().toggleBold().run()} 
-                  className={`${editor?.isActive('bold') ? 'bg-gray-200' : ''}`}
+                  onClick={() => editor.chain().focus().toggleBold().run()} 
+                  className={`${editor.isActive('bold') ? 'bg-gray-200 dark:bg-gray-600' : ''} dark:text-white dark:border-gray-600 hover:dark:bg-gray-700`}
                 >
                   <Bold className="h-4 w-4" />
                 </Button>
@@ -96,8 +145,8 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                 <Button 
                   variant="outline" 
                   size="icon"
-                  onClick={() => editor?.chain().focus().toggleItalic().run()} 
-                  className={`${editor?.isActive('italic') ? 'bg-gray-200' : ''}`}
+                  onClick={() => editor.chain().focus().toggleItalic().run()} 
+                  className={`${editor.isActive('italic') ? 'bg-gray-200 dark:bg-gray-600' : ''} dark:text-white dark:border-gray-600 hover:dark:bg-gray-700`}
                 >
                   <Italic className="h-4 w-4" />
                 </Button>
@@ -105,15 +154,69 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
               <TooltipContent>Italic</TooltipContent>
             </Tooltip>
           </div>
+
+          <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
+
+          {/* Font Styling */}
+          <div className="flex gap-1 items-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="relative w-[40px] h-[40px]">
+                   <Button
+                    variant="outline"
+                    size="icon"
+                    className="w-full h-full dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
+                    onClick={() => document.getElementById('colorPickerInput')?.click()}
+                  >
+                    <Palette className="h-4 w-4" />
+                  </Button>
+                  <input
+                    id="colorPickerInput"
+                    type="color"
+                    value={currentColor}
+                    onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()}
+                    className="absolute opacity-0 w-0 h-0" // Hide the input, trigger via button
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>Text Color</TooltipContent>
+            </Tooltip>
+
+            <Select
+              value={currentFontSize}
+              onValueChange={(value) => {
+                editor.chain().focus().setMark('textStyle', { fontSize: value }).run();
+              }}
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SelectTrigger className="w-[120px] h-10 dark:bg-gray-800 dark:text-white dark:border-gray-600 hover:dark:bg-gray-700">
+                    <Baseline className="h-4 w-4 mr-1" />
+                    <SelectValue placeholder="Font Size" />
+                  </SelectTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Font Size</TooltipContent>
+              </Tooltip>
+              <SelectContent className="dark:bg-gray-800 dark:text-white">
+                {fontSizes.map(fs => (
+                  <SelectItem key={fs.value} value={fs.value} className="hover:dark:bg-gray-700">
+                    {fs.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           
-          <Separator orientation="vertical" className="h-6 mx-2" />
+          <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
           
+          {/* Table Controls */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
                 size="icon"
                 onClick={addTable} 
+                className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
               >
                 <TableIcon className="h-4 w-4" />
               </Button>
@@ -129,8 +232,9 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     variant="outline" 
                     size="icon"
                     onClick={addColumnBefore} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
                   >
-                    <Columns2 className="h-4 w-4" />
+                    <Columns2 className="h-4 w-4 transform rotate-180" /> {/* Adjusted icon for clarity */}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Add Column Before</TooltipContent>
@@ -142,6 +246,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     variant="outline" 
                     size="icon"
                     onClick={addColumnAfter} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
                   >
                     <Columns3 className="h-4 w-4" />
                   </Button>
@@ -155,8 +260,9 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     variant="outline" 
                     size="icon"
                     onClick={deleteColumn} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
                   >
-                    <Columns2 className="h-4 w-4 text-red-500" />
+                    <Columns2 className="h-4 w-4 text-red-500" /> {/* Adjusted icon for clarity */}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Delete Column</TooltipContent>
@@ -168,8 +274,9 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     variant="outline" 
                     size="icon"
                     onClick={addRowBefore} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
                   >
-                    <Rows2 className="h-4 w-4" />
+                    <Rows2 className="h-4 w-4 transform rotate-180" /> {/* Adjusted icon for clarity */}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Add Row Above</TooltipContent>
@@ -181,6 +288,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     variant="outline" 
                     size="icon"
                     onClick={addRowAfter} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
                   >
                     <Rows3 className="h-4 w-4" />
                   </Button>
@@ -194,8 +302,9 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     variant="outline" 
                     size="icon"
                     onClick={deleteRow} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
                   >
-                    <Rows2 className="h-4 w-4 text-red-500" />
+                    <Rows2 className="h-4 w-4 text-red-500" /> {/* Adjusted icon for clarity */}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Delete Row</TooltipContent>
@@ -203,15 +312,17 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
             </>
           )}
           
-          <Separator orientation="vertical" className="h-6 mx-2" />
+          <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
           
+          {/* History Controls */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
                 size="icon"
-                onClick={() => editor?.chain().focus().undo().run()} 
-                disabled={!editor?.can().undo()}
+                onClick={() => editor.chain().focus().undo().run()} 
+                disabled={!editor.can().undo()}
+                className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700 disabled:dark:opacity-50"
               >
                 <Undo className="h-4 w-4" />
               </Button>
@@ -224,8 +335,9 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
               <Button 
                 variant="outline" 
                 size="icon"
-                onClick={() => editor?.chain().focus().redo().run()} 
-                disabled={!editor?.can().redo()}
+                onClick={() => editor.chain().focus().redo().run()} 
+                disabled={!editor.can().redo()}
+                className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700 disabled:dark:opacity-50"
               >
                 <Redo className="h-4 w-4" />
               </Button>
@@ -235,11 +347,12 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
         </div>
       </TooltipProvider>
       
-      <div className="editor bg-white p-4 min-h-[500px] overflow-auto">
-        <EditorContent editor={editor} className="prose max-w-none focus:outline-none" />
+      <div className="editor bg-white p-4 min-h-[500px] overflow-auto dark:bg-gray-900 dark:text-gray-200">
+        <EditorContent editor={editor} className="prose dark:prose-invert max-w-none focus:outline-none" />
       </div>
     </div>
   );
 };
 
 export default EditableGuide;
+
