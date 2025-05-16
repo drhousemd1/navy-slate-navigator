@@ -95,7 +95,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             <BookOpen 
               className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors"
               onClick={() => navigate('/app-guide')}
-              title="App Guide"
             />
 
             {/* Messaging icon */}
