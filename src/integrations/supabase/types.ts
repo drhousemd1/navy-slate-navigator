@@ -84,6 +84,24 @@ export type Database = {
         }
         Relationships: []
       }
+      app_guide_content: {
+        Row: {
+          content: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       archived_messages: {
         Row: {
           content: string | null
