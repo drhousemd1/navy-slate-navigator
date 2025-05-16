@@ -1,9 +1,7 @@
-
-import React, { useCallback, useMemo } from 'react'; // Added useMemo
+import React, { useCallback, useMemo } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
-import Strike from '@tiptap/extension-strike';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color } from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
@@ -15,14 +13,11 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableHeader from '@tiptap/extension-table-header';
 import TableCell from '@tiptap/extension-table-cell';
-import History from '@tiptap/extension-history';
 
 export default function EditableGuide() {
-  const extensions = useMemo(() => [ // Memoize the extensions array
-    StarterKit,
-    History,
+  const extensions = useMemo(() => [
+    StarterKit, // Includes History and Strike by default
     Underline,
-    Strike,
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
     TextStyle,
     Color.configure({ types: ['textStyle'] }),
@@ -34,10 +29,10 @@ export default function EditableGuide() {
     TableRow,
     TableHeader,
     TableCell,
-  ], []); // Empty dependency array ensures it's created only once
+  ], []);
 
   const editor = useEditor({
-    extensions, // Use the memoized extensions
+    extensions,
     content: '<p>Your guide starts here…</p>',
     autofocus: true,
     editorProps: {
