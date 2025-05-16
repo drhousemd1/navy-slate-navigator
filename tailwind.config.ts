@@ -78,6 +78,48 @@ export default {
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
 			},
+			typography: {
+				DEFAULT: {
+					css: {
+						color: '#e2e8f0',
+						a: {
+							color: '#00B8D9',
+							'&:hover': {
+								color: '#00e6ff',
+							},
+						},
+						h1: {
+							color: '#ffffff',
+						},
+						h2: {
+							color: '#00B8D9',
+						},
+						h3: {
+							color: '#ffffff',
+						},
+						h4: {
+							color: '#ffffff',
+						},
+						blockquote: {
+							color: '#94a3b8',
+							borderLeftColor: '#233554',
+						},
+						'thead': {
+							color: '#ffffff',
+							borderBottomColor: '#233554',
+						},
+						'tbody tr': {
+							borderBottomColor: '#233554',
+						},
+						code: {
+							color: '#00B8D9',
+							backgroundColor: '#112240',
+							padding: '0.25rem',
+							borderRadius: '0.25rem',
+						},
+					},
+				},
+			},
 			keyframes: {
 				'accordion-down': {
 					from: {
@@ -112,5 +154,8 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [
+		require("tailwindcss-animate"),
+		require('@tailwindcss/typography'),
+	],
 } satisfies Config;
