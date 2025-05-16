@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react'; // Removed useRef as colorInputRef is no longer needed
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Table from '@tiptap/extension-table';
@@ -53,7 +53,7 @@ const fontSizes = [
 const EditableGuide: React.FC<EditableGuideProps> = ({ 
   initialContent = '<h1>App Guide</h1><p>Start writing your guide here...</p>'
 }) => {
-  const colorInputRef = useRef<HTMLInputElement>(null);
+  // colorInputRef is no longer needed
 
   const editor = useEditor({
     extensions: [
@@ -109,7 +109,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
 
   const currentFontSize = editor?.getAttributes('textStyle').fontSize || '1rem';
   const currentColor = editor?.getAttributes('textStyle').color || (document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#000000');
-  console.log('Current color for input value:', currentColor);
+  // console.log('Current color for input value:', currentColor); // Kept for debugging if needed
 
   if (!editor) {
     return null; 
@@ -156,34 +156,30 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
           <div className="flex gap-1 items-center">
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="relative w-[40px] h-[40px]">
-                   <Button
-                    variant="outline"
-                    size="icon"
-                    className="w-full h-full dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
-                    onClick={() => {
-                      console.log('Color picker button clicked. Ref current:', colorInputRef.current);
-                      colorInputRef.current?.click();
-                    }}
-                  >
+                <Button
+                  asChild // Render the child (label) directly, inheriting button styles
+                  variant="outline"
+                  size="icon"
+                  className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
+                >
+                  <label htmlFor="tiptapColorInput" className="cursor-pointer"> {/* Label triggers the input */}
                     <Palette className="h-4 w-4" />
-                  </Button>
-                  <input
-                    ref={colorInputRef}
-                    id="colorPickerInput"
-                    type="color"
-                    value={currentColor} // This must be a valid 7-char hex string, e.g. #RRGGBB
-                    onInput={(e) => {
-                      const newValue = (e.target as HTMLInputElement).value;
-                      console.log('Color input changed:', newValue, 'Applying to editor.');
-                      editor.chain().focus().setColor(newValue).run();
-                    }}
-                    className="sr-only" // Use Tailwind's screen-reader only class for robust hiding
-                  />
-                </div>
+                  </label>
+                </Button>
               </TooltipTrigger>
               <TooltipContent>Text Color</TooltipContent>
             </Tooltip>
+            {/* Hidden color input, linked by ID to the label */}
+            <input
+              id="tiptapColorInput"
+              type="color"
+              value={currentColor}
+              onInput={(e) => {
+                const newValue = (e.target as HTMLInputElement).value;
+                editor.chain().focus().setColor(newValue).run();
+              }}
+              className="sr-only" // Visually hidden, but accessible
+            />
 
             <Select
               value={currentFontSize}
@@ -318,7 +314,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
           <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
           
           {/* History Controls */}
-          <Tooltip>
+           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
@@ -350,7 +346,17 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
         </div>
       </TooltipProvider>
       
-      <div className="editor bg-white p-4 min-h-[500px] overflow-auto dark:bg-gray-900 dark:text-gray-200">
+      <div 
+        className="editor bg-white p-4 min-h-[500px] overflow-auto dark:bg-gray-900 dark:text-gray-200"
+        onClick={(e) => {
+          // If the click is directly on this div (the editor's padded area)
+          // and not on a child element (like a paragraph or heading within the editor content)
+          // then focus the editor at the end.
+          if (editor && e.target === e.currentTarget) {
+            editor.chain().focus('end').run();
+          }
+        }}
+      >
         <EditorContent editor={editor} className="prose dark:prose-invert max-w-none focus:outline-none" />
       </div>
     </div>
