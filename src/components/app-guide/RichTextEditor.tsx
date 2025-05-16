@@ -18,6 +18,7 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Typography from '@tiptap/extension-typography';
 import Underline from '@tiptap/extension-underline';
+// History is part of StarterKit by default, no need to import separately unless highly customized
 
 const LOCAL_STORAGE_KEY = 'app-guide-content';
 
@@ -48,14 +49,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onEditorChange, initial
       heading: {
         levels: [1, 2, 3],
       },
-      // Avoid duplicate history extension if StarterKit includes it
-      history: true, 
+      // history: true, // StarterKit includes history by default. Set to false or {} for custom options.
+      // Let StarterKit handle its default history to avoid conflicts.
+      // Strike is also part of StarterKit by default.
     }),
     TextStyle, // Allows applying custom styles, essential for FontFamily, FontSize, Color
     FontFamily,
     Color,
     Highlight.configure({ multicolor: true }),
-    TextAlign.configure({ types: ['heading', 'paragraph', 'listItem'] }),
+    TextAlign.configure({ types: ['heading', 'paragraph', 'listItem', 'taskItem'] }), // Added taskItem
     Image.configure({
       inline: false,
       allowBase64: true, // Allows pasting images from clipboard
@@ -64,7 +66,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onEditorChange, initial
       },
     }),
     Link.configure({
-      openOnClick: true, // Standard behavior
+      openOnClick: true, 
       autolink: true,
       HTMLAttributes: {
         target: '_blank',
@@ -82,7 +84,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onEditorChange, initial
       placeholder: 'Start writing your app guide... Click here to type.',
     }),
     TaskList,
-    TaskItem.configure({ nested: true }),
+    TaskItem.configure({ 
+      nested: true,
+      HTMLAttributes: { class: 'flex items-start my-1' }, // Basic styling for task items
+    }),
     Typography, // For smart quotes, arrows, etc.
     Underline,
   ], []);
@@ -132,3 +137,4 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onEditorChange, initial
 };
 
 export default RichTextEditor;
+
