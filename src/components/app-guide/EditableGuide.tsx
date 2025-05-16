@@ -1,155 +1,365 @@
-import React, { useCallback } from 'react';
+
+import React from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import Strike from '@tiptap/extension-strike';
-import TextAlign from '@tiptap/extension-text-align';
-import { Color } from '@tiptap/extension-color'; // Kept Color import as it's in the new code
-import Highlight from '@tiptap/extension-highlight';
-import FontFamily from '@tiptap/extension-font-family';
-import FontSize from '@tiptap/extension-font-size'; // Corrected to FontSize as per user code
-import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
 import Table from '@tiptap/extension-table';
-import TableRow from '@tiptap/extension-table-row';
-import TableHeader from '@tiptap/extension-table-header';
 import TableCell from '@tiptap/extension-table-cell';
-import History from '@tiptap/extension-history'; // Added History import as per user code
+import TableHeader from '@tiptap/extension-table-header';
+import TableRow from '@tiptap/extension-table-row';
+import TextStyle from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import Image from '@tiptap/extension-image';
 
-export default function EditableGuide() {
+import { 
+  Bold, 
+  Italic, 
+  Table as TableIcon, 
+  Undo, 
+  Redo,
+  Columns3,
+  Columns2,
+  Rows3,
+  Rows2,
+  Palette, 
+  Baseline 
+} from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { 
+  Tooltip, 
+  TooltipProvider, 
+  TooltipTrigger, 
+  TooltipContent 
+} from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+
+interface EditableGuideProps {
+  initialContent?: string;
+}
+
+const fontSizes = [
+  { label: 'Smallest', value: '0.75rem' }, // 12px
+  { label: 'Small', value: '0.875rem' },  // 14px
+  { label: 'Normal', value: '1rem' },     // 16px
+  { label: 'Large', value: '1.25rem' },   // 20px
+  { label: 'X-Large', value: '1.5rem' },  // 24px
+];
+
+const EditableGuide: React.FC<EditableGuideProps> = ({ 
+  initialContent = '<h1>App Guide</h1><p>Start writing your guide here...</p>'
+}) => {
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      History,
-      Underline,
-      Strike,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Color.configure({ types: ['textStyle'] }), // Corrected import name for Color extension
-      Highlight.configure({ multicolor: true }),
-      FontFamily,
-      FontSize, // Corrected extension name
-      Link.configure({ autolink: true, openOnClick: false }),
-      Image,
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
+      StarterKit, 
+      Table.configure({ 
+        resizable: true,
+        HTMLAttributes: {
+          class: 'border-collapse table-auto w-full border border-gray-300',
+        },
+      }),
+      TableRow.configure({
+        HTMLAttributes: {
+          class: 'border-b border-gray-300',
+        },
+      }),
+      TableHeader.configure({
+        HTMLAttributes: {
+          class: 'bg-gray-100 font-semibold text-left p-2 border-b border-gray-300',
+        },
+      }),
+      TableCell.configure({
+        HTMLAttributes: {
+          class: 'border border-gray-300 p-2',
+        },
+      }),
+      TextStyle, 
+      Color,     
+      Image.configure({ 
+        inline: false, 
+        allowBase64: true, 
+        HTMLAttributes: {
+          class: 'max-w-full h-auto rounded-md my-2', 
+        },
+      }),
     ],
-    content: '<p>Your guide starts here…</p>',
-    autofocus: true,
-    editorProps: {
-      handlePaste(view, event) {
-        const clipboard = event.clipboardData;
-        if (!clipboard) return false;
-        for (const item of Array.from(clipboard.items)) {
-          if (item.type.startsWith('image/')) {
-            const file = item.getAsFile();
-            if (!file) continue;
-            const reader = new FileReader();
-            reader.onload = () => {
-              const src = reader.result as string;
-              view.dispatch(
-                view.state.tr.replaceSelectionWith(
-                  // @ts-ignore - User provided this ignore, keeping it
-                  view.state.schema.nodes.image.create({ src })
-                )
-              );
-            };
-            reader.readAsDataURL(file);
-            return true;
-          }
-        }
-        return false;
-      }
+    content: initialContent,
+    autofocus: 'end',
+    onUpdate: ({ editor: currentEditor }) => {
+      // Editor updates trigger re-renders via useEditor hook.
     }
   });
 
-  const run = useCallback((command: () => void) => {
-    if (editor) {
-      command();
-    }
-  }, [editor]);
+  const isTableActive = editor?.isActive('table');
+
+  // Toolbar actions
+  const addTable = () => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+  const addColumnBefore = () => editor?.chain().focus().addColumnBefore().run();
+  const addColumnAfter = () => editor?.chain().focus().addColumnAfter().run();
+  const deleteColumn = () => editor?.chain().focus().deleteColumn().run();
+  const addRowBefore = () => editor?.chain().focus().addRowBefore().run();
+  const addRowAfter = () => editor?.chain().focus().addRowAfter().run();
+  const deleteRow = () => editor?.chain().focus().deleteRow().run();
+
+  const currentFontSize = editor?.getAttributes('textStyle').fontSize || '1rem';
+  const editorColor = editor?.getAttributes('textStyle').color;
+  const defaultDarkThemeColor = '#FFFFFF'; 
+  const defaultLightThemeColor = '#000000'; 
+  
+  const currentColor = editorColor || (typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? defaultDarkThemeColor : defaultLightThemeColor);
 
   if (!editor) {
-    return null; // Or some loading state
+    return null; 
   }
 
   return (
-    <div className="editor-container flex flex-col h-full min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <div className="toolbar flex flex-wrap gap-2 p-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700">
-        {/* Text formatting */}
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().toggleBold().run())}>B</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().toggleItalic().run())}>I</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().toggleUnderline().run())}>U</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().toggleStrike().run())}>S</button>
-        <select className="p-1 border rounded bg-white dark:bg-gray-700 dark:text-white" onChange={e => run(() => editor.chain().focus().setFontFamily(e.target.value).run())} defaultValue="sans-serif">
-          <option value="sans-serif">Sans</option>
-          <option value="serif">Serif</option>
-          <option value="monospace">Mono</option>
-        </select>
-        <select className="p-1 border rounded bg-white dark:bg-gray-700 dark:text-white" onChange={e => {
-            const value = e.target.value;
-            if (value) { // Ensure value is not empty
-                 run(() => editor.chain().focus().setFontSize(value).run());
-            } else { // Optionally unset font size or set to default
-                 run(() => editor.chain().focus().unsetFontSize().run());
-            }
-        }} defaultValue="16px">
-          <option value="">Default</option>
-          <option value="12px">12</option>
-          <option value="14px">14</option>
-          <option value="16px">16</option>
-          <option value="18px">18</option>
-          <option value="24px">24</option>
-          <option value="32px">32</option>
-          <option value="48px">48</option>
-        </select>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().setTextAlign('left').run())}>Left</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().setTextAlign('center').run())}>Center</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().setTextAlign('right').run())}>Right</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().toggleHighlight().run())}>Highlight</button>
-        <input className="p-1 border rounded h-8 w-8" type="color" onChange={e => run(() => editor.chain().focus().setColor(e.target.value).run())} defaultValue={editor.getAttributes('textStyle').color || '#000000'} />
+    <div className="editor-container flex flex-col h-full min-h-[500px] mt-6 rounded-md">
+      <TooltipProvider>
+        <div className="toolbar flex flex-wrap items-center gap-2 p-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700">
+          {/* Basic Formatting */}
+          <div className="flex gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => editor.chain().focus().toggleBold().run()} 
+                  className={`${editor.isActive('bold') ? 'bg-gray-200 dark:bg-gray-600' : ''} dark:text-white dark:border-gray-600 hover:dark:bg-gray-700`}
+                >
+                  <Bold className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Bold</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => editor.chain().focus().toggleItalic().run()} 
+                  className={`${editor.isActive('italic') ? 'bg-gray-200 dark:bg-gray-600' : ''} dark:text-white dark:border-gray-600 hover:dark:bg-gray-700`}
+                >
+                  <Italic className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Italic</TooltipContent>
+            </Tooltip>
+          </div>
 
-        {/* Lists & blocks */}
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().toggleBulletList().run())}>• List</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().toggleOrderedList().run())}>1. List</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().toggleBlockquote().run())}>&quot;</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().toggleCodeBlock().run())}>&lt;&gt;</button>
+          <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
 
-        {/* Links & images */}
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => {
-          const url = prompt('Enter URL');
-          if (url) {
-            run(() => editor.chain().focus().setLink({ href: url }).run());
-          }
-        }}>Link</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => {
-          const src = prompt('Enter image URL');
-          if (src) {
-            run(() => editor.chain().focus().setImage({ src }).run());
-          }
-        }}>Image</button>
+          {/* Font Styling */}
+          <div className="flex gap-1 items-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  asChild 
+                  variant="outline" 
+                  size="icon"
+                  className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
+                >
+                  <label htmlFor="tiptapColorInput" className="cursor-pointer flex items-center justify-center w-full h-full"> 
+                    <Palette className="h-4 w-4" />
+                  </label>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Text Color</TooltipContent>
+            </Tooltip>
+            
+            <input
+              id="tiptapColorInput"
+              type="color"
+              value={currentColor} 
+              onInput={(e) => { 
+                const newValue = (e.target as HTMLInputElement).value;
+                editor.chain().focus().setColor(newValue).run();
+              }}
+              className="sr-only" 
+            />
 
-        {/* Table controls */}
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run())}>Table</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().addColumnBefore().run())} disabled={!editor.can().addColumnBefore()}>‹ Col</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().addColumnAfter().run())} disabled={!editor.can().addColumnAfter()}>Col ›</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().deleteColumn().run())} disabled={!editor.can().deleteColumn()}>Del Col</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().addRowBefore().run())} disabled={!editor.can().addRowBefore()}>Row ↑</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().addRowAfter().run())} disabled={!editor.can().addRowAfter()}>Row ↓</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().deleteRow().run())} disabled={!editor.can().deleteRow()}>Del Row</button>
-
-        {/* Undo/Redo */}
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().undo().run())} disabled={!editor.can().undo()}>↺</button>
-        <button className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => run(() => editor.chain().focus().redo().run())} disabled={!editor.can().redo()}>↻</button>
-      </div>
-
-      <div
-        className="editor-content-area flex-1 overflow-auto p-4 border border-gray-300 dark:border-gray-700 focus-within:ring-2 focus-within:ring-blue-500"
-        onClick={() => editor.chain().focus().run()} // Ensure focus on click
+            <Select
+              value={currentFontSize}
+              onValueChange={(value) => {
+                editor.chain().focus().setMark('textStyle', { fontSize: value }).run();
+              }}
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SelectTrigger className="w-[120px] h-10 dark:bg-gray-800 dark:text-white dark:border-gray-600 hover:dark:bg-gray-700">
+                    <Baseline className="h-4 w-4 mr-1" />
+                    <SelectValue placeholder="Font Size" />
+                  </SelectTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Font Size</TooltipContent>
+              </Tooltip>
+              <SelectContent className="dark:bg-gray-800 dark:text-white">
+                {fontSizes.map(fs => (
+                  <SelectItem key={fs.value} value={fs.value} className="hover:dark:bg-gray-700">
+                    {fs.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
+          
+          {/* Table Controls */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={addTable} 
+                className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
+              >
+                <TableIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Insert Table</TooltipContent>
+          </Tooltip>
+          
+          {isTableActive && (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={addColumnBefore} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
+                  >
+                    <Columns2 className="h-4 w-4 transform rotate-180" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add Column Before</TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={addColumnAfter} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
+                  >
+                    <Columns3 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add Column After</TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={deleteColumn} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
+                  >
+                    <Columns2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete Column</TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={addRowBefore} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
+                  >
+                    <Rows2 className="h-4 w-4 transform rotate-180" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add Row Above</TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={addRowAfter} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
+                  >
+                    <Rows3 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add Row Below</TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={deleteRow} 
+                    className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
+                  >
+                    <Rows2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete Row</TooltipContent>
+              </Tooltip>
+            </>
+          )}
+          
+          <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
+          
+          {/* History Controls */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => editor.chain().focus().undo().run()} 
+                disabled={!editor.can().undo()}
+                className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700 disabled:dark:opacity-50"
+              >
+                <Undo className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Undo</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => editor.chain().focus().redo().run()} 
+                disabled={!editor.can().redo()}
+                className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700 disabled:dark:opacity-50"
+              >
+                <Redo className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Redo</TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
+      
+      <div 
+        className="editor flex-1 overflow-auto border border-gray-300 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200"
+        onClick={() => editor?.commands.focus()}
       >
-        <EditorContent editor={editor} className="min-h-full prose dark:prose-invert max-w-none focus:outline-none" />
+        <EditorContent 
+          editor={editor} 
+          className="h-full prose prose-sm dark:prose-invert max-w-none focus:outline-none"
+        />
       </div>
     </div>
   );
-}
+};
+
+export default EditableGuide;
+
