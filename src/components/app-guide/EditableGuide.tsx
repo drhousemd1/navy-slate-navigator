@@ -1,14 +1,13 @@
-
 import React, { useCallback } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Strike from '@tiptap/extension-strike';
 import TextAlign from '@tiptap/extension-text-align';
-import Color from '@tiptap/extension-color';
+import { Color } from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
 import FontFamily from '@tiptap/extension-font-family';
-import FontSize from '@tiptap/extension-font-size';
+import TextStyle from '@tiptap/extension-text-style';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import Table from '@tiptap/extension-table';
@@ -25,10 +24,10 @@ export default function EditableGuide() {
       Underline,
       Strike,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      TextStyle,
       Color.configure({ types: ['textStyle'] }),
       Highlight.configure({ multicolor: true }),
       FontFamily,
-      FontSize,
       Link.configure({ autolink: true, openOnClick: false }),
       Image,
       Table.configure({ resizable: true }),
@@ -65,22 +64,40 @@ export default function EditableGuide() {
     }
   });
 
-  const run = useCallback((command: () => void) => command(), []);
+  const run = useCallback((command: () => void) => {
+    if (editor) {
+      command();
+    }
+  }, [editor]);
+
+  if (!editor) {
+    return null; // Or some loading state
+  }
 
   return (
     <div className="editor-container flex flex-col h-full min-h-screen">
       <div className="toolbar flex flex-wrap gap-2 p-2 bg-gray-100 border-b">
         {/* Text formatting */}
-        <button onClick={() => run(() => editor?.chain().focus().toggleBold().run())}>B</button>
-        <button onClick={() => run(() => editor?.chain().focus().toggleItalic().run())}>I</button>
-        <button onClick={() => run(() => editor?.chain().focus().toggleUnderline().run())}>U</button>
-        <button onClick={() => run(() => editor?.chain().focus().toggleStrike().run())}>S</button>
-        <select onChange={e => run(() => editor?.chain().focus().setFontFamily(e.target.value).run())} defaultValue="sans-serif">
+        <button onClick={() => run(() => editor.chain().focus().toggleBold().run())}>B</button>
+        <button onClick={() => run(() => editor.chain().focus().toggleItalic().run())}>I</button>
+        <button onClick={() => run(() => editor.chain().focus().toggleUnderline().run())}>U</button>
+        <button onClick={() => run(() => editor.chain().focus().toggleStrike().run())}>S</button>
+        <select onChange={e => run(() => editor.chain().focus().setFontFamily(e.target.value).run())} defaultValue="sans-serif">
           <option value="sans-serif">Sans</option>
           <option value="serif">Serif</option>
           <option value="monospace">Mono</option>
         </select>
-        <select onChange={e => run(() => editor?.chain().focus().setFontSize(e.target.value).run())} defaultValue="16px">
+        <select 
+          onChange={e => {
+            const fontSizeValue = e.target.value;
+            if (fontSizeValue) {
+              run(() => editor.chain().focus().setMark('textStyle', { fontSize: fontSizeValue }).run());
+            } else {
+              run(() => editor.chain().focus().unsetMark('textStyle').run());
+            }
+          }} 
+          defaultValue="16px"
+        >
           <option value="12px">12</option>
           <option value="14px">14</option>
           <option value="16px">16</option>
@@ -89,45 +106,49 @@ export default function EditableGuide() {
           <option value="32px">32</option>
           <option value="48px">48</option>
         </select>
-        <button onClick={() => run(() => editor?.chain().focus().setTextAlign('left').run())}>Left</button>
-        <button onClick={() => run(() => editor?.chain().focus().setTextAlign('center').run())}>Center</button>
-        <button onClick={() => run(() => editor?.chain().focus().setTextAlign('right').run())}>Right</button>
-        <button onClick={() => run(() => editor?.chain().focus().toggleHighlight().run())}>Highlight</button>
-        <input type="color" onChange={e => run(() => editor?.chain().focus().setColor(e.target.value).run())} />
+        <button onClick={() => run(() => editor.chain().focus().setTextAlign('left').run())}>Left</button>
+        <button onClick={() => run(() => editor.chain().focus().setTextAlign('center').run())}>Center</button>
+        <button onClick={() => run(() => editor.chain().focus().setTextAlign('right').run())}>Right</button>
+        <button onClick={() => run(() => editor.chain().focus().toggleHighlight().run())}>Highlight</button>
+        <input type="color" onChange={e => run(() => editor.chain().focus().setColor(e.target.value).run())} />
 
         {/* Lists & blocks */}
-        <button onClick={() => run(() => editor?.chain().focus().toggleBulletList().run())}>• List</button>
-        <button onClick={() => run(() => editor?.chain().focus().toggleOrderedList().run())}>1. List</button>
-        <button onClick={() => run(() => editor?.chain().focus().toggleBlockquote().run())}>&quot;</button>
-        <button onClick={() => run(() => editor?.chain().focus().toggleCodeBlock().run())}>&lt;&gt;</button>
+        <button onClick={() => run(() => editor.chain().focus().toggleBulletList().run())}>• List</button>
+        <button onClick={() => run(() => editor.chain().focus().toggleOrderedList().run())}>1. List</button>
+        <button onClick={() => run(() => editor.chain().focus().toggleBlockquote().run())}>&quot;</button>
+        <button onClick={() => run(() => editor.chain().focus().toggleCodeBlock().run())}>&lt;&gt;</button>
 
         {/* Links & images */}
         <button onClick={() => {
           const url = prompt('Enter URL');
-          run(() => editor?.chain().focus().setLink({ href: url }).run());
+          if (url) {
+            run(() => editor.chain().focus().setLink({ href: url }).run());
+          }
         }}>Link</button>
         <button onClick={() => {
           const src = prompt('Enter image URL');
-          run(() => editor?.chain().focus().setImage({ src }).run());
+          if (src) {
+            run(() => editor.chain().focus().setImage({ src }).run());
+          }
         }}>Image</button>
 
         {/* Table controls */}
-        <button onClick={() => run(() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run())}>Table</button>
-        <button onClick={() => run(() => editor?.chain().focus().addColumnBefore().run())}>‹ Col</button>
-        <button onClick={() => run(() => editor?.chain().focus().addColumnAfter().run())}>Col ›</button>
-        <button onClick={() => run(() => editor?.chain().focus().deleteColumn().run())}>Del Col</button>
-        <button onClick={() => run(() => editor?.chain().focus().addRowBefore().run())}>Row ↑</button>
-        <button onClick={() => run(() => editor?.chain().focus().addRowAfter().run())}>Row ↓</button>
-        <button onClick={() => run(() => editor?.chain().focus().deleteRow().run())}>Del Row</button>
+        <button onClick={() => run(() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run())}>Table</button>
+        <button onClick={() => run(() => editor.chain().focus().addColumnBefore().run())}>‹ Col</button>
+        <button onClick={() => run(() => editor.chain().focus().addColumnAfter().run())}>Col ›</button>
+        <button onClick={() => run(() => editor.chain().focus().deleteColumn().run())}>Del Col</button>
+        <button onClick={() => run(() => editor.chain().focus().addRowBefore().run())}>Row ↑</button>
+        <button onClick={() => run(() => editor.chain().focus().addRowAfter().run())}>Row ↓</button>
+        <button onClick={() => run(() => editor.chain().focus().deleteRow().run())}>Del Row</button>
 
         {/* Undo/Redo */}
-        <button onClick={() => run(() => editor?.chain().focus().undo().run())}>↺</button>
-        <button onClick={() => run(() => editor?.chain().focus().redo().run())}>↻</button>
+        <button onClick={() => run(() => editor.chain().focus().undo().run())}>↺</button>
+        <button onClick={() => run(() => editor.chain().focus().redo().run())}>↻</button>
       </div>
 
       <div
         className="editor flex-1 overflow-auto p-4 h-full"
-        onClick={() => editor?.chain().focus().run()}
+        onClick={() => editor.chain().focus().run()}
       >
         <EditorContent editor={editor} className="min-h-full" />
       </div>

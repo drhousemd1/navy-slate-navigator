@@ -1,6 +1,6 @@
 
 import React from 'react';
-import AppLayout from '../components/layout/AppLayout';
+import AppLayout from '../components/AppLayout'; // Corrected path
 import EditableGuide from '../components/app-guide/EditableGuide';
 
 const AppGuidePage: React.FC = () => (
