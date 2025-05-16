@@ -1,3 +1,4 @@
+
 import React from 'react'; // Removed useRef as colorInputRef is no longer needed
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -115,6 +116,14 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
     return null; 
   }
 
+  // Helper function to determine if a click is directly on the editor container
+  const handleEditorContainerClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    // If the click target is the editor container itself, not a child element
+    if (e.target === e.currentTarget) {
+      editor.commands.focus('end');
+    }
+  };
+
   return (
     <div className="mt-6 flex flex-col border border-gray-300 rounded-md overflow-hidden">
       <TooltipProvider>
@@ -157,28 +166,37 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  asChild // Render the child (label) directly, inheriting button styles
-                  variant="outline"
+                  variant="outline" 
                   size="icon"
                   className="dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
+                  onClick={() => {
+                    // Direct click to open color picker
+                    document.getElementById('tiptapColorInput')?.click();
+                  }}
                 >
-                  <label htmlFor="tiptapColorInput" className="cursor-pointer"> {/* Label triggers the input */}
-                    <Palette className="h-4 w-4" />
-                  </label>
+                  <Palette className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Text Color</TooltipContent>
             </Tooltip>
-            {/* Hidden color input, linked by ID to the label */}
+            
+            {/* Hidden color input */}
             <input
               id="tiptapColorInput"
               type="color"
               value={currentColor}
-              onInput={(e) => {
-                const newValue = (e.target as HTMLInputElement).value;
+              onChange={(e) => {
+                const newValue = e.target.value;
                 editor.chain().focus().setColor(newValue).run();
               }}
-              className="sr-only" // Visually hidden, but accessible
+              style={{ 
+                position: 'absolute', 
+                opacity: 0,
+                pointerEvents: 'none', // Only becomes interactive when triggered by the button
+                height: '1px',
+                width: '1px',
+                clip: 'rect(0 0 0 0)',
+              }}
             />
 
             <Select
@@ -348,16 +366,19 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
       
       <div 
         className="editor bg-white p-4 min-h-[500px] overflow-auto dark:bg-gray-900 dark:text-gray-200"
-        onClick={(e) => {
-          // If the click is directly on this div (the editor's padded area)
-          // and not on a child element (like a paragraph or heading within the editor content)
-          // then focus the editor at the end.
-          if (editor && e.target === e.currentTarget) {
-            editor.chain().focus('end').run();
-          }
-        }}
+        onClick={handleEditorContainerClick}
       >
-        <EditorContent editor={editor} className="prose dark:prose-invert max-w-none focus:outline-none" />
+        <EditorContent 
+          editor={editor} 
+          className="prose dark:prose-invert max-w-none focus:outline-none min-h-[480px]"
+          onClick={(e) => {
+            // This ensures clicks anywhere in the editor content area will set focus
+            if (!editor.isFocused) {
+              editor.commands.focus();
+              e.stopPropagation();
+            }
+          }}
+        />
       </div>
     </div>
   );
