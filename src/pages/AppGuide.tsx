@@ -5,14 +5,40 @@ import EditableGuide from '@/components/app-guide/EditableGuide';
 
 const AppGuidePage: React.FC = () => {
   const initialGuideContent = `
-<h1 style="font-size: 1.875rem; font-weight: bold; color: white; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #233554;">App Guide</h1>
-<p style="color: #cbd5e1; margin-bottom: 1rem;">Welcome to the App Guide! You can edit this content directly.</p>
-<h2 style="font-size: 1.5rem; font-weight: bold; color: #00B8D9; margin-bottom: 0.75rem;">Editing Instructions</h2>
-<p style="color: #cbd5e1; margin-bottom: 0.5rem;">- Use the toolbar above to format your text.</p>
-<p style="color: #cbd5e1; margin-bottom: 0.5rem;">- Select text to apply bold, underline, or change font size.</p>
-<p style="color: #cbd5e1; margin-bottom: 1rem;">- Click anywhere and start typing!</p>
-<h2 style="font-size: 1.5rem; font-weight: bold; color: #00B8D9; margin-bottom: 0.75rem;">Example Section</h2>
-<p style="color: #cbd5e1;">This is an <strong>example</strong> of <u>formatted text</u> with a <span style="font-size:1.25rem;">larger font size</span>.</p>
+<h1 style="font-size: 2rem; font-weight: bold; color: #333; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0;">App Guide</h1>
+<p style="color: #333; margin-bottom: 1rem;">Welcome to the App Guide! This is your space to document how your app works.</p>
+
+<h2 style="font-size: 1.5rem; font-weight: bold; color: #3182ce; margin-bottom: 0.75rem; margin-top: 1.5rem;">Getting Started</h2>
+<p style="color: #333; margin-bottom: 0.5rem;">This editor allows you to:</p>
+<ul style="margin-left: 2rem; margin-bottom: 1rem;">
+  <li style="color: #333; margin-bottom: 0.25rem;">Format text using the toolbar above</li>
+  <li style="color: #333; margin-bottom: 0.25rem;">Create lists (ordered and unordered)</li>
+  <li style="color: #333; margin-bottom: 0.25rem;">Insert tables for structured information</li>
+  <li style="color: #333; margin-bottom: 0.25rem;">Align text as needed</li>
+</ul>
+
+<h2 style="font-size: 1.5rem; font-weight: bold; color: #3182ce; margin-bottom: 0.75rem; margin-top: 1.5rem;">Example Table</h2>
+<p style="color: #333; margin-bottom: 0.5rem;">Here's an example of what you can create:</p>
+
+<table style="width:100%; border-collapse: collapse; margin-bottom: 1rem;">
+  <tr style="background-color: #f2f2f2;">
+    <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Feature</th>
+    <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Description</th>
+    <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Location</th>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Tasks</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Create and manage tasks</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Tasks page</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Rewards</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Set up and track rewards</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Rewards page</td>
+  </tr>
+</table>
+
+<p style="color: #333; margin-bottom: 1rem;">Start documenting your app by replacing this content with your own guide!</p>
 `;
 
   return (
