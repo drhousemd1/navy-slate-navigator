@@ -8,7 +8,7 @@ import {
   AlignCenter, 
   AlignRight, 
   ListOrdered, 
-  ListUnordered,
+  List, // Changed from ListUnordered
   Table
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -25,7 +25,6 @@ interface TextFormatToolbarProps {
   onListFormat?: (listType: 'ordered' | 'unordered') => void;
   onInsertTable?: () => void;
   
-  // Props for styling indicators
   selectedTextRange: { start: number; end: number } | null; 
   currentFormatting: {
     isBold?: boolean;
@@ -60,6 +59,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                 aria-label="Toggle bold"
                 className={`${currentFormatting.isBold ? "bg-gray-200" : "hover:bg-gray-100"} text-black`}
                 onClick={onToggleBold}
+                data-active={currentFormatting.isBold}
               >
                 <Bold className="h-4 w-4" />
               </ToggleGroupItem>
@@ -76,6 +76,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                 aria-label="Toggle underline"
                 className={`${currentFormatting.isUnderlined ? "bg-gray-200" : "hover:bg-gray-100"} text-black`}
                 onClick={onToggleUnderline}
+                data-active={currentFormatting.isUnderlined}
               >
                 <Underline className="h-4 w-4" />
               </ToggleGroupItem>
@@ -93,6 +94,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                   aria-label="Toggle italic"
                   className={`${currentFormatting.isItalic ? "bg-gray-200" : "hover:bg-gray-100"} text-black`}
                   onClick={onToggleItalic}
+                  data-active={currentFormatting.isItalic}
                 >
                   <Italic className="h-4 w-4" />
                 </ToggleGroupItem>
@@ -109,14 +111,19 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
       
       {onAlignText && (
         <TooltipProvider>
-          <ToggleGroup type="single" value={currentFormatting.alignment || 'left'} className="justify-start">
+          <ToggleGroup 
+            type="single" 
+            value={currentFormatting.alignment || 'left'} 
+            className="justify-start"
+            onValueChange={(value) => { if (value) onAlignText(value as 'left' | 'center' | 'right')}}
+          >
             <Tooltip>
               <TooltipTrigger asChild>
                 <ToggleGroupItem 
                   value="left" 
                   aria-label="Align left"
                   className="hover:bg-gray-100 text-black"
-                  onClick={() => onAlignText('left')}
+                  // onClick={() => onAlignText('left')} // Handled by onValueChange
                 >
                   <AlignLeft className="h-4 w-4" />
                 </ToggleGroupItem>
@@ -132,7 +139,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                   value="center" 
                   aria-label="Align center"
                   className="hover:bg-gray-100 text-black"
-                  onClick={() => onAlignText('center')}
+                  // onClick={() => onAlignText('center')} // Handled by onValueChange
                 >
                   <AlignCenter className="h-4 w-4" />
                 </ToggleGroupItem>
@@ -148,7 +155,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                   value="right" 
                   aria-label="Align right"
                   className="hover:bg-gray-100 text-black"
-                  onClick={() => onAlignText('right')}
+                  // onClick={() => onAlignText('right')} // Handled by onValueChange
                 >
                   <AlignRight className="h-4 w-4" />
                 </ToggleGroupItem>
@@ -190,7 +197,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
                   className="hover:bg-gray-100 text-black"
                   onClick={() => onListFormat('unordered')}
                 >
-                  <ListUnordered className="h-4 w-4" />
+                  <List className="h-4 w-4" /> {/* Changed icon here */}
                 </ToggleGroupItem>
               </TooltipTrigger>
               <TooltipContent>

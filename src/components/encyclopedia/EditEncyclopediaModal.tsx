@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -45,6 +44,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   const [position, setPosition] = useState({ x: entry?.focal_point_x || 50, y: entry?.focal_point_y || 50 });
   const [isDragging, setIsDragging] = useState(false);
   const [selectedTextRange, setSelectedTextRange] = useState<{ start: number; end: number } | null>(null);
+  const editorRef = React.useRef<HTMLDivElement>(null); // Added editorRef for Textarea
   const [formattedSections, setFormattedSections] = useState<Array<{
     start: number;
     end: number;
@@ -162,43 +162,64 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
     }
   };
 
-  const handleToggleBold = () => {
-    if (selectedTextRange) {
-      console.log("Applying bold formatting to selection:", selectedTextRange);
-      applyFormattingToSelectedText({ isBold: true });
-    } else {
-      const currentFormatting = form.getValues('popup_text_formatting') || {};
-      form.setValue('popup_text_formatting', {
-        ...currentFormatting,
-        isBold: !currentFormatting.isBold
-      });
+  // Helper function to apply formatting using document.execCommand
+  const applyFormatCommand = (command: string, value?: string) => {
+    if (editorRef.current) {
+        // Ensure focus on the editor before executing command
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            if (!editorRef.current.contains(range.commonAncestorContainer)) {
+                 // If selection is outside the editor, try to focus the editor
+                 // This might reset selection, consider more robust focusing if needed
+                editorRef.current.focus();
+            }
+        } else {
+            editorRef.current.focus();
+        }
     }
+    document.execCommand('styleWithCSS', false, "true"); // Use CSS styles
+    document.execCommand(command, false, value);
+    if (editorRef.current) {
+      form.setValue('popup_text', editorRef.current.innerHTML);
+    }
+  };
+
+  const handleToggleBold = () => {
+    applyFormatCommand('bold');
+    const currentFormatting = form.getValues('popup_text_formatting') || {};
+    form.setValue('popup_text_formatting', {
+        ...currentFormatting,
+        isBold: document.queryCommandState('bold') 
+    });
   };
 
   const handleToggleUnderline = () => {
-    if (selectedTextRange) {
-      console.log("Applying underline formatting to selection:", selectedTextRange);
-      applyFormattingToSelectedText({ isUnderlined: true });
-    } else {
-      const currentFormatting = form.getValues('popup_text_formatting') || {};
-      form.setValue('popup_text_formatting', {
+    applyFormatCommand('underline');
+    const currentFormatting = form.getValues('popup_text_formatting') || {};
+    form.setValue('popup_text_formatting', {
         ...currentFormatting,
-        isUnderlined: !currentFormatting.isUnderlined
-      });
-    }
+        isUnderlined: document.queryCommandState('underline')
+    });
   };
 
-  const handleFontSizeChange = (value: string) => {
-    if (selectedTextRange) {
-      console.log("Applying font size formatting to selection:", selectedTextRange, value);
-      applyFormattingToSelectedText({ fontSize: value });
-    } else {
-      const currentFormatting = form.getValues('popup_text_formatting') || {};
-      form.setValue('popup_text_formatting', {
-        ...currentFormatting,
-        fontSize: value
-      });
+  const handleFontSizeChange = (size: string) => {
+    document.execCommand("fontSize", false, "1"); // Set to a known small size
+    const fontElements = editorRef.current?.querySelectorAll("font[size='1']");
+    fontElements?.forEach(el => {
+      const spanStyled = document.createElement('span');
+      spanStyled.style.fontSize = size;
+      spanStyled.innerHTML = el.innerHTML;
+      el.parentNode?.replaceChild(spanStyled, el);
+    });
+    if (editorRef.current) {
+      form.setValue('popup_text', editorRef.current.innerHTML);
     }
+    const currentFormatting = form.getValues('popup_text_formatting') || {};
+    form.setValue('popup_text_formatting', {
+        ...currentFormatting,
+        fontSize: size
+    });
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -227,13 +248,16 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   };
 
   const handleTextSelection = (selection: { start: number; end: number }) => {
-    console.log("Text selected:", selection);
+    console.log("Text selected (manual tracking):", selection);
     setSelectedTextRange(selection);
     if (onFormatSelection) {
       onFormatSelection(selection);
     }
   };
 
+  // applyFormattingToSelectedText is not directly needed if using execCommand,
+  // but formattedSections might be used for other purposes or a different rich text approach.
+  // For now, let's assume formattedSections is for data persistence and not direct Textarea control.
   const applyFormattingToSelectedText = (
     formatting: { isBold?: boolean; isUnderlined?: boolean; fontSize?: string }
   ) => {
@@ -247,12 +271,12 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       formatting: { ...formatting }
     };
     
-    console.log("Applying formatting:", newFormattedSection);
+    console.log("Applying formatting (manual tracking):", newFormattedSection);
     
     const updatedSections = [...formattedSections, newFormattedSection];
-    setFormattedSections(updatedSections);
+    setFormattedSections(updatedSections); // Update local state
     
-    form.setValue('formatted_sections', updatedSections);
+    form.setValue('formatted_sections', updatedSections); // Update form state
     
     setSelectedTextRange(null);
   };
@@ -284,8 +308,41 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
     };
   }, [isDragging]);
   
-  const currentTextFormatting = form.watch('popup_text_formatting') || {};
-  
+  // Watch the general formatting state for the toolbar indicators
+  const currentTextFormatting = form.watch('popup_text_formatting') || {
+    isBold: false,
+    isUnderlined: false,
+    fontSize: '1rem'
+  };
+
+  // Update toolbar based on actual selection
+  useEffect(() => {
+    const updateToolbarStatus = () => {
+      if (editorRef.current && editorRef.current.contains(document.activeElement)) {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+            // Simplified: check command state for bold/underline
+            // For font size/alignment, it's more complex to get accurately from selection.
+            // This part might need a more robust solution for fully accurate toolbar state.
+            form.setValue('popup_text_formatting.isBold', document.queryCommandState('bold'));
+            form.setValue('popup_text_formatting.isUnderlined', document.queryCommandState('underline'));
+            // Font size and alignment detection from selection is tricky.
+            // The TextFormatToolbar will primarily reflect the *intended* next style or the overall style.
+        }
+      }
+    };
+    document.addEventListener('selectionchange', updateToolbarStatus);
+    editorRef.current?.addEventListener('focus', updateToolbarStatus);
+    editorRef.current?.addEventListener('input', updateToolbarStatus); // Update on input as well
+
+    return () => {
+      document.removeEventListener('selectionchange', updateToolbarStatus);
+      editorRef.current?.removeEventListener('focus', updateToolbarStatus);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      editorRef.current?.removeEventListener('input', updateToolbarStatus);
+    };
+  }, [form]);
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -336,11 +393,12 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                 <FormLabel className="text-white">Pop-up Text</FormLabel>
                 
                 <TextFormatToolbar 
-                  selectedTextRange={selectedTextRange}
+                  selectedTextRange={selectedTextRange} // This prop might be less relevant now with execCommand
                   currentFormatting={currentTextFormatting}
                   onToggleBold={handleToggleBold}
                   onToggleUnderline={handleToggleUnderline}
                   onFontSizeChange={handleFontSizeChange}
+                  // Add other formatting handlers if TextFormatToolbar has them
                 />
                 
                 <FormField
@@ -351,12 +409,15 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
                       <FormControl>
                         <Textarea 
                           placeholder="Enter text to show in full-screen pop-up" 
-                          className="bg-dark-navy border-light-navy text-white"
+                          className="bg-dark-navy border-light-navy text-white min-h-[200px]" // Added min-h
                           formattedPreview={true}
-                          textFormatting={currentTextFormatting}
-                          onFormatSelection={handleTextSelection}
-                          formattedSections={formattedSections}
-                          {...field} 
+                          editorRef={editorRef} // Pass the ref here
+                          // Remove unsupported props: textFormatting, onFormatSelection, formattedSections
+                          value={field.value}
+                          onChange={(e) => field.onChange(e.target.value)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          // ref={field.ref} // The main ref is handled by editorRef for contentEditable
                         />
                       </FormControl>
                     </FormItem>
