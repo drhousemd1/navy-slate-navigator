@@ -19,8 +19,8 @@ import {
   Columns2,
   Rows3,
   Rows2,
-  Palette, // Icon for color
-  Baseline // Icon for font size (as a stand-in)
+  Palette, 
+  Baseline 
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -57,7 +57,7 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
 
   const editor = useEditor({
     extensions: [
-      StarterKit, // Includes History, Dropcursor, Gapcursor, common text formatting, etc.
+      StarterKit, 
       Table.configure({ 
         resizable: true,
         HTMLAttributes: {
@@ -79,21 +79,20 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
           class: 'border border-gray-300 p-2',
         },
       }),
-      TextStyle, // Enables inline style attributes like font-size
-      Color,     // Leverages TextStyle to apply color
-      Image.configure({ // Handles images, including pasted ones
-        inline: false, // Adjust as needed; false makes images block-level
-        allowBase64: true, // Crucial for pasting images
+      TextStyle, 
+      Color,     
+      Image.configure({ 
+        inline: false, 
+        allowBase64: true, 
         HTMLAttributes: {
-          class: 'max-w-full h-auto rounded-md my-2', // Basic styling for images
+          class: 'max-w-full h-auto rounded-md my-2', 
         },
       }),
     ],
     content: initialContent,
     autofocus: 'end',
     onUpdate: ({ editor: currentEditor }) => {
-      // Editor updates should trigger re-renders via useEditor hook,
-      // so currentFontSize and currentColor will be re-evaluated.
+      // Editor updates trigger re-renders via useEditor hook.
     }
   });
 
@@ -110,10 +109,10 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
 
   const currentFontSize = editor?.getAttributes('textStyle').fontSize || '1rem';
   const currentColor = editor?.getAttributes('textStyle').color || (document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#000000');
-
+  console.log('Current color for input value:', currentColor);
 
   if (!editor) {
-    return null; // Or a loading indicator
+    return null; 
   }
 
   return (
@@ -122,7 +121,6 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
         <div className="toolbar flex flex-wrap items-center gap-1 p-2 bg-white border-b border-gray-300 dark:bg-gray-800 dark:border-gray-700">
           {/* Basic Formatting */}
           <div className="flex gap-1">
-            {/* ... keep existing code (Bold and Italic buttons) */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
@@ -163,7 +161,10 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     variant="outline"
                     size="icon"
                     className="w-full h-full dark:text-white dark:border-gray-600 hover:dark:bg-gray-700"
-                    onClick={() => colorInputRef.current?.click()}
+                    onClick={() => {
+                      console.log('Color picker button clicked. Ref current:', colorInputRef.current);
+                      colorInputRef.current?.click();
+                    }}
                   >
                     <Palette className="h-4 w-4" />
                   </Button>
@@ -171,9 +172,13 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
                     ref={colorInputRef}
                     id="colorPickerInput"
                     type="color"
-                    value={currentColor}
-                    onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()}
-                    className="absolute opacity-0 w-0 h-0" // Hide the input, trigger via button
+                    value={currentColor} // This must be a valid 7-char hex string, e.g. #RRGGBB
+                    onInput={(e) => {
+                      const newValue = (e.target as HTMLInputElement).value;
+                      console.log('Color input changed:', newValue, 'Applying to editor.');
+                      editor.chain().focus().setColor(newValue).run();
+                    }}
+                    className="sr-only" // Use Tailwind's screen-reader only class for robust hiding
                   />
                 </div>
               </TooltipTrigger>
@@ -208,7 +213,6 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
           <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
           
           {/* Table Controls */}
-          {/* ... keep existing code (Table controls: Insert, Add/Delete Column/Row) */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
@@ -314,7 +318,6 @@ const EditableGuide: React.FC<EditableGuideProps> = ({
           <Separator orientation="vertical" className="h-6 mx-2 dark:bg-gray-600" />
           
           {/* History Controls */}
-          {/* ... keep existing code (Undo and Redo buttons) */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
