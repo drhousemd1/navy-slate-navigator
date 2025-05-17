@@ -1,10 +1,11 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, clearAuthState } from '@/integrations/supabase/client';
 import { useAuthOperations } from './useAuthOperations';
 import { useUserProfile } from './useUserProfile';
+import { queryClient } from '@/data/queryClient';
+import { purgeQueryCache } from '@/lib/react-query-config';
 
 // Define the types for the context
 interface AuthContextType {
@@ -100,11 +101,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      console.log("AuthContext: signOut successful, clearing context state");
+      console.log("AuthContext: signOut successful, clearing context state and purging query cache");
       setUser(null);
       setSession(null);
       setIsAuthenticated(false);
       setIsAdmin(false);
+      
+      // Purge React Query cache
+      await purgeQueryCache(queryClient);
+      console.log("AuthContext: React Query cache purged.");
       
       // Force navigation to auth page
       navigate('/auth');
