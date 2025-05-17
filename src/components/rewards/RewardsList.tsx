@@ -2,29 +2,52 @@
 import React from 'react';
 import { useRewards } from '../../contexts/RewardsContext';
 import RewardCard from '../RewardCard';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
 }
 
+const RewardCardSkeleton: React.FC = () => (
+  <div className="p-4 rounded-lg shadow-md bg-slate-800 border border-slate-700 space-y-3">
+    <div className="flex justify-between items-start">
+      <Skeleton className="h-6 w-3/4" /> {/* Title */}
+      <Skeleton className="h-5 w-16" /> {/* Cost */}
+    </div>
+    <Skeleton className="h-4 w-full" /> {/* Description line 1 */}
+    <Skeleton className="h-4 w-5/6" /> {/* Description line 2 */}
+    <div className="flex justify-between items-center pt-2">
+      <Skeleton className="h-8 w-20" /> {/* Buy/Use Button */}
+      <Skeleton className="h-8 w-20" /> {/* Edit Button */}
+    </div>
+  </div>
+);
+
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   const { rewards, handleBuyReward, handleUseReward, isLoading } = useRewards();
   
-  if (isLoading) {
+  if (isLoading && (!rewards || rewards.length === 0)) { // Show skeletons if loading and no rewards yet
     return (
-      <div className="text-center p-10">
-        <p className="text-light-navy">Loading rewards...</p>
+      <div className="space-y-4">
+        <RewardCardSkeleton />
+        <RewardCardSkeleton />
+        <RewardCardSkeleton />
       </div>
     );
   }
   
-  if (!rewards || rewards.length === 0) {
+  if (!isLoading && (!rewards || rewards.length === 0)) {
     return (
       <div className="text-center p-10">
         <p className="text-light-navy mb-4">You don't have any rewards yet.</p>
         <p className="text-light-navy">Click the + button to create your first reward!</p>
       </div>
     );
+  }
+
+  // Ensure rewards is not null before mapping
+  if (!rewards) {
+    return null; // Or some other fallback if rewards can be null after loading
   }
 
   // Enhanced debugging logs showing index and ID to track position stability

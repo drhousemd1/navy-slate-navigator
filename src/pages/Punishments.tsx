@@ -1,27 +1,40 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
-import { Skull, Loader2 } from 'lucide-react';
+import { Skull } from 'lucide-react';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { useSyncManager } from '@/data/sync/useSyncManager';
 import { usePunishments } from '@/data/queries/usePunishments';
 import { PunishmentData } from '@/contexts/punishments/types';
-import { queryClient } from '@/data/queryClient';
-import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
 import { usePreloadPunishments } from "@/data/preload/usePreloadPunishments";
 import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
 import { useCreatePunishmentOptimistic } from '@/data/mutations/useCreatePunishmentOptimistic';
 import { useUpdatePunishmentOptimistic } from '@/data/mutations/useUpdatePunishmentOptimistic';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Preload punishments data from IndexedDB before component renders
 usePreloadPunishments()();
 
+const PunishmentCardSkeleton: React.FC = () => (
+  <div className="p-4 rounded-lg shadow-md bg-slate-800 border border-slate-700 space-y-3">
+    <div className="flex justify-between items-start">
+      <Skeleton className="h-6 w-3/4" />
+      <Skeleton className="h-5 w-16" />
+    </div>
+    <Skeleton className="h-4 w-full" />
+    <Skeleton className="h-4 w-5/6" />
+    <div className="flex justify-end items-center pt-2">
+      <Skeleton className="h-8 w-20" />
+    </div>
+  </div>
+);
+
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
 }> = ({ contentRef }) => {
-  const { punishments, isLoading, error } = usePunishments(); // Removed refetchPunishments as it's part of usePunishments
+  const { punishments, isLoading, error } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -109,9 +122,13 @@ const PunishmentsContent: React.FC<{
   // Show loading state when appropriate
   if (showLoader) {
     return (
-      <div className="p-4 pt-6 flex flex-col items-center justify-center h-[80vh]">
-        <Loader2 className="h-8 w-8 text-white animate-spin" />
-        <p className="mt-4 text-white">Loading punishments...</p>
+      <div className="p-4 pt-6">
+        <PunishmentsHeader />
+        <div className="space-y-4 mt-4">
+          <PunishmentCardSkeleton />
+          <PunishmentCardSkeleton />
+          <PunishmentCardSkeleton />
+        </div>
       </div>
     );
   }
@@ -149,7 +166,7 @@ const PunishmentsContent: React.FC<{
     <div className="p-4 pt-6">
       <PunishmentsHeader />
       
-      <div className="flex flex-col space-y-4">
+      <div className="flex flex-col space-y-4 mt-4">
         {punishments.map((punishment) => (
           <PunishmentCard
             key={punishment.id}
@@ -164,7 +181,7 @@ const PunishmentsContent: React.FC<{
         onClose={() => setIsEditorOpen(false)}
         punishmentData={currentPunishment}
         onSave={handleSavePunishment}
-        onDelete={handleDeletePunishment} // This still uses deletePunishmentAsync
+        onDelete={handleDeletePunishment}
       />
     </div>
   );
