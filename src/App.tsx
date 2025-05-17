@@ -1,142 +1,65 @@
-import React, { useEffect } from "react";
+
+import { BrowserRouter as Router } from 'react-router-dom';
+import { AuthProvider } from './contexts/auth/AuthContext';
+import AppRoutes from './AppRoutes';
 import { Toaster } from "@/components/ui/toaster";
-import { queryClient } from "./data/queryClient";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Auth from "./pages/auth"; 
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
-import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+import { NetworkStatusProvider } from './contexts/NetworkStatusContext';
+import OfflineBanner from './components/OfflineBanner';
+import ErrorBoundary from './components/ErrorBoundary';
 
-// Placeholder pages
-import Rules from "./pages/Rules";
-import Tasks from "./pages/Tasks";
-import Rewards from "./pages/Rewards";
-import Punishments from "./pages/Punishments";
-import ThroneRoom from "./pages/ThroneRoom";
-import Encyclopedia from "./pages/Encyclopedia";
-import Profile from "./pages/Profile";
-import Messages from "./pages/Messages";
-import AppGuidePage from "./pages/AppGuide";
-
-// New imports for persistence
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import localforage from 'localforage';
-import { APP_CACHE_VERSION } from '@/lib/react-query-config';
+import { queryClient } from '../data/queryClient';
+import { APP_CACHE_VERSION } from '../lib/react-query-config';
 
-// New imports for Network Status
-import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
-import OfflineBanner from '@/components/OfflineBanner';
-
-// Import ErrorBoundary
-import ErrorBoundary from '@/components/ErrorBoundary';
-
-// Configure localforage instance if not already globally configured elsewhere
+// Configure localforage if not already done elsewhere, though useIndexedDB already does.
+// This ensures consistency if localforage is used in multiple places.
 localforage.config({
-  name: 'kingdom-app-cache', // A distinct name for this app's localforage store
-  storeName: 'react_query_cache', // Store name for react-query data
-  description: 'Persistent cache for Kingdom app React Query state',
+  name: 'kingdom-app', // Should match the name in useIndexedDB.ts
+  storeName: 'app_data_react_query', // Use a distinct store for RQ persister
+  version: 1.0,
+  description: 'React Query offline cache'
 });
 
-// Use createAsyncStoragePersister with localforage
-const localforagePersister = createAsyncStoragePersister({
-  storage: localforage, // localforage is compatible with AsyncStorage interface
-  key: 'REACT_QUERY_OFFLINE_CACHE', // Default key, can be customized
-  throttleTime: 1000, // How often to persist, default is 1000ms
+const asyncStoragePersister = createAsyncStoragePersister({
+  storage: localforage,
+  key: 'REACT_QUERY_OFFLINE_CACHE', // Default or custom key
+  // serialize and deserialize are handled by default (JSON.stringify/parse)
 });
 
-// Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen bg-navy">
-      <p className="text-white">Loading authentication...</p>
-    </div>;
-  }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" />;
-  }
-  
-  return <>{children}</>;
-};
-
-
-// AppRoutes component
-const AppRoutes = () => {
-  useEffect(() => {
-    console.log('AppRoutes component initialized. Routes ready to be matched.');
-    console.log('Cache status (on AppRoutes mount):', queryClient.getQueryCache().getAll().length > 0 ? 'Cache populated' : 'Empty cache');
-  }, []);
-
+function App() {
   return (
-    <Routes>
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/reset-password-view" element={<ResetPasswordView />} />
-      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-      <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
-      <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-      <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
-      <Route path="/punishments" element={<ProtectedRoute><Punishments /></ProtectedRoute>} />
-      <Route path="/throne-room" element={<ProtectedRoute><ThroneRoom /></ProtectedRoute>} />
-      <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-      <Route path="/app-guide" element={<ProtectedRoute><AppGuidePage /></ProtectedRoute>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
-};
-
-// Main App component
-const App = () => {
-  useEffect(() => {
-    console.log('App component initialized. React Router and PersistQueryClientProvider setup.');
-    
-    // Network status listeners have been moved to NetworkStatusProvider
-    // const handleOnline = () => { ... };
-    // const handleOffline = () => { ... };
-    // window.removeEventListener('online', handleOnline);
-    // window.removeEventListener('offline', handleOffline);
-    
-  }, []);
-
-  return (
-    <ErrorBoundary fallbackMessage="The application encountered a critical error.">
+    <Router>
       <PersistQueryClientProvider
         client={queryClient}
         persistOptions={{
-          persister: localforagePersister,
+          persister: asyncStoragePersister,
           buster: APP_CACHE_VERSION,
-          maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+          maxAge: 1000 * 60 * 60 * 24 * 7, // Cache data for 1 week
         }}
         onSuccess={() => {
-          console.log('React Query cache hydration successful.');
-          // Attempt to resume mutations, but fail gracefully if offline or errors occur.
+          // Resume paused mutations after the cache is restored
           queryClient.resumePausedMutations().then(() => {
-            console.log('Paused mutations resumed successfully after hydration.');
-          }).catch(error => {
-            // It's common for this to fail if offline, so log as warning.
-            console.warn('Could not resume paused mutations after hydration (may be offline):', error);
+            // Optionally, you might want to invalidate some queries
+            // if new data should be fetched after resuming.
+            // For now, we'll rely on the existing sync mechanisms.
+            console.log("Persisted cache restored, mutations resumed.");
           });
         }}
       >
-        <BrowserRouter>
+        <AuthProvider>
           <NetworkStatusProvider>
-            <AuthProvider>
-              <Toaster />
+            <ErrorBoundary fallbackMessage="An unexpected error occurred in the application.">
               <AppRoutes />
-              <OfflineBanner />
-            </AuthProvider>
+            </ErrorBoundary>
+            <OfflineBanner />
+            <Toaster />
           </NetworkStatusProvider>
-        </BrowserRouter>
+        </AuthProvider>
       </PersistQueryClientProvider>
-    </ErrorBoundary>
+    </Router>
   );
-};
+}
 
 export default App;
