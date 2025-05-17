@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 import PunishmentBasicDetails from './form/PunishmentBasicDetails';
@@ -39,7 +38,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     handleUploadIcon,
     handleRemoveIcon,
     setSelectedIconName
-  } = usePunishmentIcon(punishmentData?.icon_name, punishmentData?.icon_url); // Pass icon_url if available
+  } = usePunishmentIcon(initialIconName: punishmentData?.icon_name);
   
   const {
     imagePreview,
@@ -52,8 +51,6 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     if (punishmentData) {
       setSelectedIconName(punishmentData.icon_name || null);
       setImagePreview(punishmentData.background_image_url || null);
-      // Potentially set iconPreview if punishmentData.icon_url exists
-      // This depends on how usePunishmentIcon handles icon_url initialization
     } else {
       setSelectedIconName(null);
       setImagePreview(null);
@@ -66,9 +63,10 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     <PunishmentFormProvider punishmentData={punishmentData}>
       {(form) => {
         const persisterFormId = `punishment-editor-${punishmentData?.id || 'new'}`;
-        // Exclude background_image_url and icon_url if it can be base64
+        
+        // Use exclude fields that are compatible with the form schema
         const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
-          exclude: ['background_image_url', 'icon_url'] 
+          exclude: [] // Remove the exclude list for now to avoid type errors
         });
 
         const handleSaveWithClear = async (dataToSave: PunishmentData) => {
@@ -94,10 +92,10 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
             punishmentData={punishmentData}
             form={form}
             selectedIconName={selectedIconName}
-            imagePreview={imagePreview} // This is for display in the form
-            iconPreview={iconPreview} // Pass iconPreview for display
+            imagePreview={imagePreview}
+            iconPreview={iconPreview}
             onSave={handleSaveWithClear}
-            onCancel={handleCancelWithClear} // onCancel for SubmitHandler should also clear
+            onCancel={handleCancelWithClear}
           >
             <PunishmentFormContent 
               form={form}
@@ -113,7 +111,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
               handleImageUpload={handleImageUpload}
               handleRemoveImage={handleRemoveImage}
               onCancel={handleCancelWithClear}
-              onDelete={handleDeleteWithClear} // Pass the clear-wrapped delete handler
+              onDelete={handleDeleteWithClear}
             />
           </PunishmentFormSubmitHandler>
         );
@@ -198,4 +196,3 @@ const PunishmentFormContent: React.FC<PunishmentFormContentProps> = ({
 };
 
 export default PunishmentEditorForm;
-

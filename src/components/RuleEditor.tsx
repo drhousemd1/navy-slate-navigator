@@ -4,33 +4,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import RuleEditorForm from './rule-editor/RuleEditorForm';
 import { useIsMobile } from '@/hooks/use-mobile';
-
-interface Rule {
-  id?: string;
-  title: string;
-  description: string | null;
-  priority: 'low' | 'medium' | 'high';
-  background_image_url?: string | null;
-  background_opacity: number;
-  icon_url?: string | null;
-  icon_name?: string | null;
-  title_color: string;
-  subtext_color: string;
-  calendar_color: string;
-  icon_color: string;
-  highlight_effect: boolean;
-  focal_point_x: number;
-  focal_point_y: number;
-  frequency: 'daily' | 'weekly';
-  frequency_count: number;
-  usage_data?: number[];
-}
+import { Rule } from '@/data/interfaces/Rule';
 
 interface RuleEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  ruleData?: Partial<Rule>;
-  onSave: (ruleData: any) => void;
+  ruleData?: Rule | Partial<Rule>;  // Allow both full Rule and partial Rule
+  onSave: (ruleData: Partial<Rule>) => void;
   onDelete?: (ruleId: string) => void;
 }
 
@@ -43,7 +23,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
 }) => {
   const isMobile = useIsMobile();
   
-  const handleSave = async (formData: any) => {
+  const handleSave = async (formData: Partial<Rule>) => {
     await onSave(formData);
     onClose();
   };
@@ -70,7 +50,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
             </SheetHeader>
             
             <RuleEditorForm
-              ruleData={ruleData}
+              ruleData={ruleData as Rule}
               onSave={handleSave}
               onDelete={handleDelete}
               onCancel={onClose}
@@ -94,7 +74,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
         </DialogHeader>
         
         <RuleEditorForm
-          ruleData={ruleData}
+          ruleData={ruleData as Rule}
           onSave={handleSave}
           onDelete={handleDelete}
           onCancel={onClose}

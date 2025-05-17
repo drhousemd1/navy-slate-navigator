@@ -9,6 +9,7 @@ interface PunishmentFormSubmitHandlerProps {
   form: any;
   selectedIconName: string | null;
   imagePreview: string | null;
+  iconPreview: string | null; // Add iconPreview prop
   onSave: (data: PunishmentData) => Promise<void>;
   onCancel: () => void;
   children: React.ReactNode;
@@ -19,6 +20,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   form,
   selectedIconName,
   imagePreview,
+  iconPreview, // Make sure to destructure it
   onSave,
   onCancel,
   children
@@ -41,6 +43,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     // Make sure we're using exact primitive values, not references
     const icon_name = selectedIconName || null;
     const background_image_url = imagePreview || null;
+    const icon_url = iconPreview || null; // Use iconPreview for icon_url
     
     // Force explicit assignment of dom_points with Number() constructor to ensure number type
     const points = Number(values.points);
@@ -56,6 +59,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       dom_points: dom_points,
       icon_name: icon_name,
       background_image_url: background_image_url,
+      icon_url: icon_url, // Include icon_url in dataToSave
       icon_color: values.icon_color || '#ea384c'
     };
     

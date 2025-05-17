@@ -42,6 +42,7 @@ export const usePunishmentIcon = (initialIconName?: string | null) => {
     handleSelectIcon,
     handleUploadIcon,
     handleRemoveIcon,
-    setSelectedIconName
+    setSelectedIconName,
+    setIconPreview // Add this to allow setting the icon preview directly
   };
 };

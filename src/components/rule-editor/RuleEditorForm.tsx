@@ -8,23 +8,23 @@ import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule';
-import NumberField from '../task-editor/NumberField'; // Assuming similar component structure
+import NumberField from '../task-editor/NumberField';
 import ColorPickerField from '../task-editor/ColorPickerField';
 import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
-import { useFormStatePersister } from '@/hooks/useFormStatePersister'; // Added import
+import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 
 interface RuleFormValues {
-  name: string;
+  title: string;
   description: string;
   points_deducted: number;
   dom_points_deducted: number;
   background_image_url?: string;
   background_opacity: number;
-  icon_url?: string; // Was string | null
-  icon_name?: string; // Was string | null
+  icon_url?: string;
+  icon_name?: string;
   title_color: string;
   subtext_color: string;
   calendar_color: string;
@@ -55,7 +55,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
 
   const form = useForm<RuleFormValues>({
     defaultValues: {
-      name: '',
+      title: '',
       description: '',
       points_deducted: 5,
       dom_points_deducted: 0,
@@ -66,7 +66,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       title_color: '#FFFFFF',
       subtext_color: '#8E9196',
       calendar_color: '#7E69AB',
-      icon_color: '#FF6B6B', // Default rule icon color
+      icon_color: '#FF6B6B',
       highlight_effect: false,
       focal_point_x: 50,
       focal_point_y: 50,
@@ -83,7 +83,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   useEffect(() => {
     if (ruleData) {
       reset({
-        name: ruleData.name || '',
+        title: ruleData.title || '',
         description: ruleData.description || '',
         points_deducted: ruleData.points_deducted || 5,
         dom_points_deducted: ruleData.dom_points_deducted || 0,
@@ -103,8 +103,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       setIconPreview(ruleData.icon_url || null);
       setSelectedIconName(ruleData.icon_name || null);
     } else {
-      reset({ // Reset to default for new rule
-        name: '', description: '', points_deducted: 5, dom_points_deducted: 0,
+      reset({
+        title: '', description: '', points_deducted: 5, dom_points_deducted: 0,
         background_image_url: undefined, background_opacity: 100,
         icon_url: undefined, icon_name: undefined,
         title_color: '#FFFFFF', subtext_color: '#8E9196', calendar_color: '#7E69AB',
@@ -197,10 +197,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         ...values,
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
-        icon_url: iconPreview || undefined, // Ensure icon_url is also saved if it's a custom uploaded one
+        icon_url: iconPreview || undefined,
       };
       await onSave(ruleToSave);
-      await clearPersistedState(); // Clear state on successful save
+      await clearPersistedState();
     } catch (error) {
       console.error('Error saving rule:', error);
       toast({
@@ -214,14 +214,14 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   };
   
   const handleCancelWrapped = () => {
-    clearPersistedState(); // Clear state on cancel
+    clearPersistedState();
     onCancel();
   };
 
   const handleDeleteConfirmWrapped = () => {
     if (onDelete && ruleData?.id) {
       onDelete(ruleData.id);
-      clearPersistedState(); // Clear state on delete
+      clearPersistedState();
     }
     setIsDeleteDialogOpen(false);
   };
@@ -253,13 +253,13 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       <form onSubmit={handleSubmit(onSubmitWrapped)} className="space-y-6">
         <FormField
           control={control}
-          name="name"
+          name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Rule Name</FormLabel>
+              <FormLabel className="text-white">Rule Title</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="Rule name (e.g., No swearing)"
+                  placeholder="Rule title (e.g., No swearing)"
                   className="bg-dark-navy border-light-navy text-white"
                   {...field}
                 />
@@ -368,14 +368,14 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
             <DeleteRuleDialog
               isOpen={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
-              onDelete={handleDeleteConfirmWrapped} // Use the wrapped version
-              ruleName={ruleData?.name || 'this rule'}
+              onDelete={handleDeleteConfirmWrapped}
+              ruleName={ruleData?.title || 'this rule'}
             />
           )}
           <Button
             type="button"
             variant="destructive"
-            onClick={handleCancelWrapped} // Use the wrapped version
+            onClick={handleCancelWrapped}
             className="bg-red-700 border-light-navy text-white hover:bg-red-600"
           >
             Cancel
