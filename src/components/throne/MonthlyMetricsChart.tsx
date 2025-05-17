@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import MonthlyMetricsChartSkeleton from './MonthlyMetricsChartSkeleton'; // Import the skeleton
+import { Skeleton } from '@/components/ui/skeleton'; // Added import for Skeleton
 
 interface MonthlyDataItem {
   date: string;
