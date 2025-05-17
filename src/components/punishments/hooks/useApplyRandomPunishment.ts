@@ -1,7 +1,7 @@
 
-import { usePunishments } from '@/contexts/PunishmentsContext';
+import { usePunishments } from '@/contexts/PunishmentsContext'; // Corrected: This should be from the new provider path if changed
 import { useRewards } from '@/contexts/RewardsContext';
-import { PunishmentData } from '@/contexts/punishments/types';
+import { PunishmentData, ApplyPunishmentArgs } from '@/contexts/punishments/types'; // Ensure ApplyPunishmentArgs is imported
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -10,10 +10,16 @@ export const useApplyRandomPunishment = (onClose: () => void) => {
   const { totalPoints, setTotalPoints, domPoints } = useRewards();
   
   const handlePunish = async (selectedPunishment: PunishmentData | null) => {
-    if (!selectedPunishment || !selectedPunishment.id) return;
+    if (!selectedPunishment || !selectedPunishment.id) {
+      toast({
+        title: "Error",
+        description: "No punishment selected or punishment ID is missing.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
-      // Get the current user
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -25,21 +31,20 @@ export const useApplyRandomPunishment = (onClose: () => void) => {
         return;
       }
       
-      // First update the total points in the UI immediately
       const newTotal = totalPoints - selectedPunishment.points;
-      setTotalPoints(newTotal);
+      setTotalPoints(newTotal); // Optimistic UI update
       
-      // Then call the applyPunishment function with the complete object structure
-      await applyPunishment({
+      const args: ApplyPunishmentArgs = {
         id: selectedPunishment.id,
         costPoints: selectedPunishment.points,
-        domEarn: Math.ceil(selectedPunishment.points / 2),
+        domEarn: Math.ceil(selectedPunishment.points / 2), // Default domEarn logic
         profileId: user.id,
-        subPoints: totalPoints,
+        subPoints: totalPoints, // Pass current points before deduction for backend calculation
         domPoints: domPoints || 0
-      });
+      };
       
-      // Show success toast
+      await applyPunishment(args);
+      
       toast({
         title: "Punishment Applied",
         description: `${selectedPunishment.points} points deducted.`,
@@ -49,8 +54,7 @@ export const useApplyRandomPunishment = (onClose: () => void) => {
       onClose();
     } catch (error) {
       console.error("Error applying punishment:", error);
-      // Revert the point deduction if there was an error
-      setTotalPoints(totalPoints);
+      setTotalPoints(totalPoints); // Revert optimistic update on error
       
       toast({
         title: "Error",

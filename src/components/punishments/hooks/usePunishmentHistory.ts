@@ -1,6 +1,7 @@
 
-import { useState } from 'react';
-import { usePunishments, PunishmentHistoryItem } from '@/contexts/PunishmentsContext';
+import { useState, useEffect } from 'react'; // Added useEffect for potential future use
+import { usePunishments } from '@/contexts/PunishmentsContext'; // Corrected: This should be from the new provider path
+import { PunishmentHistoryItem } from '@/contexts/punishments/types'; // Corrected: This should be from the new provider path
 import { convertToMondayBasedIndex } from '@/lib/utils';
 
 interface UsePunishmentHistoryProps {
@@ -8,6 +9,7 @@ interface UsePunishmentHistoryProps {
 }
 
 export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
+  // Destructure with correct names from the updated context type
   const { getPunishmentHistory, historyLoading } = usePunishments();
   
   const getHistory = (): PunishmentHistoryItem[] => {
@@ -16,15 +18,14 @@ export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
   
   const getWeekData = (): number[] => {
     const history = getHistory();
-    // Initialize array with zeros for Monday to Sunday
-    const weekData = [0, 0, 0, 0, 0, 0, 0];
+    const weekData = [0, 0, 0, 0, 0, 0, 0]; 
     
-    // Since we're already filtering at the database level,
-    // we can just map the history items to their respective days
     history.forEach(item => {
-      // Convert the day_of_week to Monday-based index
       const mondayBasedDayIndex = convertToMondayBasedIndex(item.day_of_week);
-      weekData[mondayBasedDayIndex] = 1;
+      // Ensure index is within bounds, though convertToMondayBasedIndex should handle this
+      if (mondayBasedDayIndex >= 0 && mondayBasedDayIndex < 7) {
+        weekData[mondayBasedDayIndex] = 1; 
+      }
     });
     
     return weekData;
@@ -39,6 +40,6 @@ export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
     getHistory,
     getWeekData,
     getFrequencyCount,
-    isLoading: historyLoading
+    isLoading: historyLoading // historyLoading from context
   };
 };

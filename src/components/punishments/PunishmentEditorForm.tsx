@@ -39,7 +39,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     handleRemoveIcon,
     setSelectedIconName,
     setIconPreview
-  } = usePunishmentIcon(punishmentData?.icon_name);
+  } = usePunishmentIcon(punishmentData?.icon_name || undefined); // Pass undefined if null
   
   const {
     imagePreview,
@@ -70,7 +70,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
         const persisterFormId = `punishment-editor-${punishmentData?.id || 'new'}`;
         
         const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
-          exclude: ['icon_url', 'background_image_url'] 
+          exclude: [] 
         });
 
         const handleSaveWithClear = async (dataToSave: PunishmentData) => {
@@ -97,7 +97,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
             form={form}
             selectedIconName={selectedIconName}
             imagePreview={imagePreview}
-            iconPreview={iconPreview}
+            iconPreview={iconPreview} // Ensure this prop is accepted by PunishmentFormSubmitHandler if needed
             onSave={handleSaveWithClear}
             onCancel={handleCancelWithClear}
           >

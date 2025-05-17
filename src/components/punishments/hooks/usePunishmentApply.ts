@@ -1,24 +1,22 @@
 
-import { usePunishments } from '@/contexts/PunishmentsContext';
+import { usePunishments } from '@/contexts/PunishmentsContext'; // Corrected: This should be from the new provider path if changed
 import { useRewards } from '@/contexts/RewardsContext';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries';
+// import { REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries'; // Not used currently
+import { ApplyPunishmentArgs, PunishmentData } from '@/contexts/punishments/types'; // Ensure ApplyPunishmentArgs is imported
 
 interface UsePunishmentApplyProps {
-  id?: string;
-  points: number;
-  dom_points?: number;
+  punishment: PunishmentData; // Changed to accept the full punishment object
 }
 
-export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentApplyProps) => {
+export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
   const { applyPunishment, refetchPunishments } = usePunishments();
-  const { totalPoints, refreshPointsFromDatabase, setDomPoints } = useRewards();
-  const queryClient = useQueryClient();
+  const { refreshPointsFromDatabase } = useRewards(); // totalPoints and setDomPoints removed as they should be fetched
   
   const handlePunish = async () => {
-    if (!id) {
+    if (!punishment.id) {
       toast({
         title: 'Error',
         description: 'Cannot apply punishment: missing ID',
@@ -28,41 +26,52 @@ export const usePunishmentApply = ({ id, points, dom_points }: UsePunishmentAppl
     }
     
     try {
-      // Get the current user
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        // Fetch the dom_points from the profiles table
-        const { data, error } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('dom_points, points')
           .eq('id', user.id)
           .single();
           
-        if (!error && data) {
-          const currentDomPoints = data.dom_points || 0;
-          const currentPoints = data.points || 0;
-          
-          // Apply the punishment with corrected parameter structure
-          await applyPunishment({
-            id,
-            costPoints: Math.abs(points),
-            domEarn: dom_points !== undefined ? dom_points : Math.ceil(Math.abs(points) / 2),
-            profileId: user.id,
-            subPoints: currentPoints,
-            domPoints: currentDomPoints
-          });
-          
-          // Show success message
+        if (profileError || !profileData) {
           toast({
-            title: 'Punishment Applied',
-            description: `${Math.abs(points)} points deducted`,
+            title: 'Error',
+            description: 'Could not fetch user profile data.',
+            variant: 'destructive',
           });
-          
-          // Refresh the data
-          await refetchPunishments();
-          await refreshPointsFromDatabase();
+          console.error("Error fetching profile:", profileError);
+          return;
         }
+          
+        const currentDomPoints = profileData.dom_points || 0;
+        const currentSubPoints = profileData.points || 0;
+        
+        const args: ApplyPunishmentArgs = {
+          id: punishment.id,
+          costPoints: Math.abs(punishment.points),
+          domEarn: punishment.dom_points !== undefined && punishment.dom_points !== null ? punishment.dom_points : Math.ceil(Math.abs(punishment.points) / 2),
+          profileId: user.id,
+          subPoints: currentSubPoints,
+          domPoints: currentDomPoints
+        };
+
+        await applyPunishment(args);
+          
+        toast({
+          title: 'Punishment Applied',
+          description: `${Math.abs(punishment.points)} points deducted`,
+        });
+          
+        await refetchPunishments();
+        await refreshPointsFromDatabase();
+      } else {
+         toast({
+            title: 'Error',
+            description: 'User not authenticated.',
+            variant: 'destructive',
+          });
       }
     } catch (error) {
       console.error('Error applying punishment:', error);

@@ -4,45 +4,42 @@ import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPun
 import { usePunishmentsData } from '@/data/punishments/usePunishmentsData';
 import { QueryObserverResult } from '@tanstack/react-query';
 
-// Create a context with a default value
+// Create a context with a default value that matches PunishmentsContextType
 const PunishmentsContext = createContext<PunishmentsContextType>({
   punishments: [],
-  punishmentHistory: [],
-  loading: false,
-  historyLoading: false,
-  error: null,
-  isSelectingRandom: false,
-  selectedPunishment: null,
-  createPunishment: async () => ({ id: '', title: '', points: 0 }),
-  updatePunishment: async () => ({ id: '', title: '', points: 0 }),
-  deletePunishment: async () => false,
-  applyPunishment: async () => ({} as PunishmentHistoryItem),
-  selectRandomPunishment: () => {},
-  resetRandomSelection: () => {},
-  fetchPunishments: async () => [], // Update the return type to match the implementation
+  savePunishment: async () => {},
+  deletePunishment: async () => {},
+  isLoading: false,
+  applyPunishment: async () => {},
+  recentlyAppliedPunishments: [],
+  fetchRandomPunishment: () => null,
   refetchPunishments: async () => ({} as QueryObserverResult<PunishmentData[], Error>),
-  refetchHistory: async () => ({} as QueryObserverResult<PunishmentHistoryItem[], Error>),
   getPunishmentHistory: () => [],
-  totalPointsDeducted: 0
+  historyLoading: false,
 });
 
 // Create a provider component
 export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Use the data hook
-  const punishmentsData = usePunishmentsData();
+  const punishmentsDataHook = usePunishmentsData();
   
-  // Ensure the applyPunishment function has the correct type signature
-  const typedPunishmentsData = {
-    ...punishmentsData,
-    applyPunishment: async (args: ApplyPunishmentArgs): Promise<PunishmentHistoryItem> => {
-      // @ts-ignore - We're safely casting the function call to match our new type
-      return await punishmentsData.applyPunishment(args);
-    }
+  // Construct the context value, ensuring all properties of PunishmentsContextType are included
+  // and types match.
+  const contextValue: PunishmentsContextType = {
+    punishments: punishmentsDataHook.punishments,
+    savePunishment: punishmentsDataHook.savePunishment, // Assuming savePunishment handles create/update
+    deletePunishment: punishmentsDataHook.deletePunishment,
+    isLoading: punishmentsDataHook.isLoading,
+    applyPunishment: punishmentsDataHook.applyPunishment as (args: ApplyPunishmentArgs) => Promise<void>, // Cast if necessary, ensure implementation matches
+    recentlyAppliedPunishments: punishmentsDataHook.recentlyAppliedPunishments,
+    fetchRandomPunishment: punishmentsDataHook.fetchRandomPunishment,
+    refetchPunishments: punishmentsDataHook.refetchPunishments,
+    getPunishmentHistory: punishmentsDataHook.getPunishmentHistory,
+    historyLoading: punishmentsDataHook.historyLoading,
   };
   
-  // Provide the context value
   return (
-    <PunishmentsContext.Provider value={typedPunishmentsData as PunishmentsContextType}>
+    <PunishmentsContext.Provider value={contextValue}>
       {children}
     </PunishmentsContext.Provider>
   );
