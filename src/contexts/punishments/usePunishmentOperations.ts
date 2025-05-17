@@ -1,72 +1,55 @@
 
-import { useState } from 'react';
+import { useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from './types';
 import { useCreatePunishment } from "@/data/mutations/useCreatePunishment";
-import { useRedeemPunishment } from "@/data/mutations/useRedeemPunishment";
+import { useRedeemPunishment } from "@/data/mutations/useRedeemPunishment"; // Kept if used by redeemPunishment, though not directly visible here
 import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
 import { supabase } from '@/integrations/supabase/client';
+import { fetchPunishments as fetchPunishmentsData } from '@/data/punishments/queries/fetchPunishments';
+import { fetchAllPunishmentHistory } from '@/data/punishments/queries/fetchAllPunishmentHistory';
 
 export const usePunishmentOperations = () => {
-  const [punishments, setPunishments] = useState<PunishmentData[]>([]);
-  const [punishmentHistory, setPunishmentHistory] = useState<PunishmentHistoryItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [totalPointsDeducted, setTotalPointsDeducted] = useState<number>(0);
+  const queryClient = useQueryClient();
   
-  // Get mutation hooks directly
-  const { mutateAsync: createPunishment } = useCreatePunishment();
-  const { mutateAsync: redeemPunishment } = useRedeemPunishment();
-  const { mutateAsync: deletePunishment } = useDeletePunishment();
+  const { mutateAsync: createPunishmentMutation } = useCreatePunishment();
+  // const { mutateAsync: redeemPunishmentMutation } = useRedeemPunishment(); // Assuming redeem is handled elsewhere or to be added
+  const { mutateAsync: deletePunishmentMutation } = useDeletePunishment();
 
-  const fetchPunishments = async () => {
-    try {
-      setLoading(true);
-      
-      const { data: punishmentsData, error: punishmentsError } = await supabase
-        .from('punishments')
-        .select('*')
-        .order('created_at', { ascending: true });
-      
-      if (punishmentsError) throw punishmentsError;
-      
-      const { data: historyData, error: historyError } = await supabase
-        .from('punishment_history')
-        .select('*')
-        .order('applied_date', { ascending: false });
-      
-      if (historyError) throw historyError;
-      
-      setPunishments(punishmentsData || []);
-      setPunishmentHistory(historyData || []);
-      
-      const totalDeducted = (historyData || []).reduce((sum, item) => sum + item.points_deducted, 0);
-      setTotalPointsDeducted(totalDeducted);
-      
-    } catch (error) {
-      console.error('Error fetching punishments:', error);
-      setError(error instanceof Error ? error : new Error('Failed to fetch punishments'));
-      toast({
-        title: "Error",
-        description: "Failed to load punishments. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { 
+    data: punishments = [], 
+    isLoading: isLoadingPunishments, 
+    error: errorPunishments,
+    refetch: refetchPunishments
+  } = useQuery<PunishmentData[], Error>({
+    queryKey: ['punishments'],
+    queryFn: fetchPunishmentsData,
+  });
+
+  const { 
+    data: punishmentHistory = [], 
+    isLoading: isLoadingHistory, 
+    error: errorHistory,
+    refetch: refetchHistory
+  } = useQuery<PunishmentHistoryItem[], Error>({
+    queryKey: ['allPunishmentHistory'],
+    queryFn: fetchAllPunishmentHistory,
+  });
+
+  const totalPointsDeducted = useMemo(() => {
+    return punishmentHistory.reduce((sum, item) => sum + item.points_deducted, 0);
+  }, [punishmentHistory]);
 
   const createPunishmentOperation = async (punishmentData: PunishmentData): Promise<string> => {
     try {
-      // Directly use the createPunishment mutation
-      await createPunishment({ ...punishmentData, profile_id: punishmentData.id || '' });
-      
+      await createPunishmentMutation({ ...punishmentData, profile_id: punishmentData.id || '' }); // profile_id might need re-evaluation based on actual needs
       toast({
         title: "Success",
         description: "Punishment created successfully",
       });
-      
-      return punishmentData.id || '';
+      queryClient.invalidateQueries({ queryKey: ['punishments'] });
+      return punishmentData.id || ''; // Assuming ID is client-generated or part of input for now
     } catch (error) {
       console.error('Error creating punishment:', error);
       toast({
@@ -78,13 +61,11 @@ export const usePunishmentOperations = () => {
     }
   };
 
-  const updatePunishment = async (id: string, punishmentData: PunishmentData): Promise<void> => {
+  const updatePunishment = async (id: string, punishmentData: Partial<PunishmentData>): Promise<void> => {
     try {
       console.log("Updating punishment with ID:", id);
       console.log("Data to update:", punishmentData);
       
-      // For update, we'd need a separate function but for now we'll use the Supabase call directly
-      // as this wasn't explicitly migrated
       const { error } = await supabase
         .from('punishments')
         .update(punishmentData)
@@ -92,16 +73,12 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
-      setPunishments(prev => 
-        prev.map(punishment => 
-          punishment.id === id ? { ...punishment, ...punishmentData } : punishment
-        )
-      );
-      
       toast({
         title: "Success",
         description: "Punishment updated successfully",
       });
+      queryClient.invalidateQueries({ queryKey: ['punishments'] });
+      queryClient.invalidateQueries({ queryKey: ['punishments', id] }); // If individual item query exists
     } catch (error) {
       console.error('Error updating punishment:', error);
       toast({
@@ -115,16 +92,13 @@ export const usePunishmentOperations = () => {
 
   const deletePunishmentOperation = async (id: string): Promise<void> => {
     try {
-      // Directly use the deletePunishment mutation
-      await deletePunishment(id);
-      
-      setPunishments(prev => prev.filter(punishment => punishment.id !== id));
-      setPunishmentHistory(prev => prev.filter(item => item.punishment_id !== id));
-      
+      await deletePunishmentMutation(id);
       toast({
         title: "Success",
         description: "Punishment deleted successfully",
       });
+      queryClient.invalidateQueries({ queryKey: ['punishments'] });
+      queryClient.invalidateQueries({ queryKey: ['allPunishmentHistory'] }); // History might be affected
     } catch (error) {
       console.error('Error deleting punishment:', error);
       toast({
@@ -139,12 +113,13 @@ export const usePunishmentOperations = () => {
   const applyPunishment = async (punishmentId: string, points: number): Promise<void> => {
     try {
       const today = new Date();
-      const dayOfWeek = today.getDay();
+      const dayOfWeek = today.getDay(); // Sunday - Saturday : 0 - 6
       
       const historyEntry = {
         punishment_id: punishmentId,
         day_of_week: dayOfWeek,
-        points_deducted: points
+        points_deducted: points,
+        applied_date: today.toISOString(), // Ensure applied_date is set
       };
       
       const { data, error } = await supabase
@@ -155,16 +130,14 @@ export const usePunishmentOperations = () => {
       
       if (error) throw error;
       
-      setPunishmentHistory(prev => [data, ...prev]);
-      
-      // Points are now handled by the hook's updateProfilePoints, 
-      // so we don't need to manually update the local state
-      
       toast({
         title: "Punishment Applied",
         description: `${points} points deducted.`,
         variant: "destructive",
       });
+      queryClient.invalidateQueries({ queryKey: ['allPunishmentHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['profile_points']}); // Invalidate points if managed by react query
+      
     } catch (error) {
       console.error('Error applying punishment:', error);
       toast({
@@ -183,10 +156,13 @@ export const usePunishmentOperations = () => {
   return {
     punishments,
     punishmentHistory,
-    loading,
-    error,
+    loading: isLoadingPunishments || isLoadingHistory,
+    error: errorPunishments || errorHistory,
     totalPointsDeducted,
-    fetchPunishments,
+    fetchPunishments: async () => { // Combined refetch for convenience
+        await refetchPunishments();
+        await refetchHistory();
+    },
     createPunishment: createPunishmentOperation,
     updatePunishment,
     deletePunishment: deletePunishmentOperation,

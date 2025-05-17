@@ -1,7 +1,7 @@
 
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth/AuthContext';
-import AppRoutes from './AppRoutes';
+import AppRoutes from './AppRoutes'; // Assuming this path is correct and resolved by the build system
 import { Toaster } from "@/components/ui/toaster";
 import { NetworkStatusProvider } from './contexts/NetworkStatusContext';
 import OfflineBanner from './components/OfflineBanner';
@@ -10,8 +10,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import localforage from 'localforage';
-import { queryClient } from '../data/queryClient';
-import { APP_CACHE_VERSION } from '../lib/react-query-config';
+import { queryClient } from '@/data/queryClient'; // Corrected path
+import { APP_CACHE_VERSION } from '@/lib/react-query-config'; // Corrected path
 
 // Configure localforage if not already done elsewhere, though useIndexedDB already does.
 // This ensures consistency if localforage is used in multiple places.

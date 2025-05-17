@@ -1,5 +1,5 @@
 
-import { QueryClient, QueryKey, Query, Mutation } from '@tanstack/react-query';
+import { QueryClient, QueryKey, Query, Mutation, QueryCache, MutationCache } from '@tanstack/react-query';
 import localforage from "localforage";
 
 // Version identifier for cache invalidation with the persister
@@ -8,6 +8,25 @@ export const APP_CACHE_VERSION = '1.0.1'; // Incremented version
 // Create a centralized QueryClient with optimized settings for persistence
 export const createQueryClient = () => {
   const queryClient = new QueryClient({
+    queryCache: new QueryCache({
+      onError: (error: Error, query: Query<unknown, Error, unknown, QueryKey>) => {
+        console.error(
+          `[Query Cache Error] Query Key: ${JSON.stringify(query.queryKey)} \nError:`,
+          error
+        );
+        // Here, you could add more sophisticated error telemetry if needed in the future,
+        // e.g., sending to an external logging service.
+      },
+    }),
+    mutationCache: new MutationCache({
+      onError: (error: Error, variables: unknown, context: unknown, mutation: Mutation<unknown, Error, unknown, unknown>) => {
+        console.error(
+          `[Mutation Cache Error] Mutation Key: ${JSON.stringify(mutation.options.mutationKey || 'N/A')} \nVariables: ${JSON.stringify(variables)} \nError:`,
+          error,
+          "\nContext:", context
+        );
+      },
+    }),
     defaultOptions: {
       queries: {
         staleTime: Infinity,    // Data is fresh indefinitely, relies on manual invalidation or buster
@@ -18,26 +37,11 @@ export const createQueryClient = () => {
         retry: 3, // Increased retry attempts for better recovery
         retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
         networkMode: 'online', // Default to online, persister handles offline for queries if configured
-        // Add a default onError handler for improved diagnostic logging
-        onError: (error: Error, query: Query<unknown, Error, unknown, QueryKey>) => {
-          console.error(
-            `[Query Error] Query Key: ${JSON.stringify(query.queryKey)} \nError:`,
-            error
-          );
-          // Here, you could add more sophisticated error telemetry if needed in the future,
-          // e.g., sending to an external logging service.
-        },
       },
       mutations: {
         networkMode: 'offlineFirst', // Queue mutations when offline
         retry: 3, // Increased retry attempts for mutations as well
-        onError: (error: Error, variables: unknown, context: unknown, mutation: Mutation<unknown, Error, unknown, unknown>) => {
-          console.error(
-            `[Mutation Error] Mutation Key: ${JSON.stringify(mutation.mutationKey || 'N/A')} \nVariables: ${JSON.stringify(variables)} \nError:`,
-            error,
-            "\nContext:", context
-          );
-        }
+        // Global onError for mutations is now handled by mutationCache
       },
     },
   });
