@@ -49,7 +49,7 @@ export function useDeleteTask() {
         toast({
           title: 'Local Cache Error',
           description: 'Task deleted from server, but failed to update local cache.',
-          variant: 'warning',
+          variant: 'default', // Changed 'warning' to 'default'
         });
       }
 
@@ -81,3 +81,4 @@ export function useDeleteTask() {
     },
   });
 }
+
