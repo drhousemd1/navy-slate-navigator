@@ -307,7 +307,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             name="frequency_count"
             label="Times per period"
             onIncrement={incrementFrequencyCount}
-            onDecrement={decrementDecrementFrequencyCount}
+            onDecrement={decrementFrequencyCount}
             minValue={1}
           />
         </div>
