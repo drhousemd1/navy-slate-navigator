@@ -6,6 +6,7 @@ import { Plus, MessageSquare, BookOpen } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import AccountSheet from './AccountSheet';
+import CacheMonitorPanel from './dev/CacheMonitorPanel';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -130,6 +131,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       )}
       
       <MobileNavbar />
+      {/* Conditionally render CacheMonitorPanel in development mode */}
+      {import.meta.env.DEV && <CacheMonitorPanel />}
     </div>
   );
 };
