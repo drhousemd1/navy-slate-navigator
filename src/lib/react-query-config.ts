@@ -1,25 +1,26 @@
 import { QueryClient } from '@tanstack/react-query';
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
-import { persistQueryClient } from '@tanstack/react-query-persist-client';
 import localforage from "localforage";
 
-// Create a centralized QueryClient with optimized settings for moderate caching
+// Version identifier for cache invalidation with the persister
+export const APP_CACHE_VERSION = '1.0.1'; // Incremented version
+
+// Create a centralized QueryClient with optimized settings for persistence
 export const createQueryClient = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60000,    // Cache considered fresh for 1 minute (instead of Infinity)
-        gcTime: 300000,      // Garbage collect after 5 minutes (instead of Infinity)
+        staleTime: Infinity,    // Data is fresh indefinitely, relies on manual invalidation or buster
+        gcTime: 1000 * 60 * 60, // Garbage collect after 1 hour of inactivity
         refetchOnWindowFocus: false,
-        refetchOnMount: false,
+        refetchOnMount: false, // Components will use cached data first
         refetchOnReconnect: false,
-        retry: 3,            // Increase retry attempts for network issues
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-        networkMode: 'online',
+        retry: 1, // Default retry attempts
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+        networkMode: 'online', // Default to online, persister handles offline
       },
       mutations: {
         networkMode: 'online',
-        retry: 2,            // Allow mutation retries
+        retry: 1,
       },
     },
   });
@@ -27,118 +28,24 @@ export const createQueryClient = () => {
   return queryClient;
 };
 
-// Version identifier for cache invalidation
-export const APP_CACHE_VERSION = '1.0.0';
-const CACHE_VERSION_KEY = 'kingdom-app-cache-version';
-const CACHE_TIMESTAMP_KEY = 'kingdom-app-cache-timestamp';
-const CACHE_STORAGE_KEY = 'kingdom-app-cache';
-const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-// Create a persisted query client that preserves the cache between page refreshes
-export const createPersistedQueryClient = () => {
-  const queryClient = createQueryClient();
-  
-  // Only setup persistence in browser environments
-  if (typeof window !== 'undefined') {
-    try {
-      // Check if we need to invalidate the cache based on version or age
-      const savedVersion = localStorage.getItem(CACHE_VERSION_KEY);
-      const savedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-      const currentTime = Date.now();
-      
-      // Clear cache if version mismatch or cache is too old
-      if (
-        savedVersion !== APP_CACHE_VERSION || 
-        !savedTimestamp || 
-        currentTime - parseInt(savedTimestamp, 10) > CACHE_MAX_AGE_MS
-      ) {
-        console.log('Cache version changed or expired, clearing cache');
-        localStorage.removeItem(CACHE_STORAGE_KEY);
-        localStorage.setItem(CACHE_VERSION_KEY, APP_CACHE_VERSION);
-        localStorage.setItem(CACHE_TIMESTAMP_KEY, currentTime.toString());
-      }
-      
-      // Add event listener to save cache before page unload
-      window.addEventListener('beforeunload', () => {
-        try {
-          // Only cache essential queries (tasks, rewards, punishments)
-          const state = queryClient.getQueryCache().getAll()
-            .filter(query => {
-              const key = Array.isArray(query.queryKey) ? query.queryKey[0] : query.queryKey;
-              return ['tasks', 'rewards', 'punishments', 'rules'].includes(String(key));
-            })
-            .map(query => ({
-              queryKey: query.queryKey,
-              data: query.state.data,
-            }));
-          
-          if (state.length > 0) {
-            localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(state));
-            localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-            console.log(`Saved ${state.length} essential queries to localStorage`);
-          }
-        } catch (e) {
-          console.error("Error saving query cache:", e);
-        }
-      });
-      
-      // Try to restore cache on initialization
-      try {
-        const savedCache = localStorage.getItem(CACHE_STORAGE_KEY);
-        if (savedCache) {
-          const queries = JSON.parse(savedCache);
-          queries.forEach(item => {
-            if (item.queryKey && item.data !== undefined) {
-              queryClient.setQueryData(item.queryKey, item.data);
-            }
-          });
-          console.log(`Restored ${queries.length} queries from localStorage`);
-        }
-      } catch (e) {
-        console.error("Error restoring query cache:", e);
-      }
-      
-      console.log("Query persistence configured with version control");
-    } catch (e) {
-      console.error("Error setting up query persistence:", e);
-      // Fallback to non-persistent client if setup fails
-    }
-  }
-  
-  // Add query cache subscription to persist evicted queries
-  queryClient.getQueryCache().subscribe(event => {
-    if (event?.type === "removed" && event.query?.queryKey) {
-      const key = JSON.stringify(event.query.queryKey);
-      const data = event.query.state.data;
-      if (data !== undefined) {
-        localforage.setItem(key, data);
-        try {
-          localStorage.setItem(key, JSON.stringify(data));
-        } catch (e) {
-          console.error("Error saving to localStorage:", e);
-        }
-      }
-    }
-  });
-  
-  return queryClient;
-};
-
-// Standardized query config that should be used across ALL pages in the app
+// Standardized query config that can be used across pages if specific overrides are needed
+// Note: The defaults in createQueryClient are now very similar to this.
 export const STANDARD_QUERY_CONFIG = {
-  staleTime: Infinity,    // Cache considered fresh forever
-  gcTime: 3600000,        // Garbage collect after 1 hour
+  staleTime: Infinity,
+  gcTime: 1000 * 60 * 60, // 1 hour
   refetchOnWindowFocus: false,
   refetchOnMount: false,
   refetchOnReconnect: false,
 };
 
-// Helper function to purge the cache manually
-export const purgeQueryCache = (queryClient: QueryClient) => {
-  queryClient.clear();
-  localStorage.removeItem(CACHE_STORAGE_KEY);
-  localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-  console.log('Query cache purged manually');
+// Helper function to purge the cache manually (useful for development or user actions)
+export const purgeQueryCache = async (queryClient: QueryClient) => {
+  queryClient.clear(); // Clears in-memory cache
+  // The persister handles clearing persisted storage based on buster or manual clear of localforage
+  await localforage.removeItem('REACT_QUERY_OFFLINE_CACHE'); // Default key for react-query-persist-client
+  // Or, if a custom persister key is used, clear that.
+  // For a full clear if unsure about the key: await localforage.clear();
+  console.log('Query cache (in-memory and persisted via localforage) purged manually');
 };
 
 // Centralized helper for performance logging
@@ -155,14 +62,13 @@ export const logQueryPerformance = (
     (dataLength !== undefined ? `, returned ${dataLength} items` : '')
   );
   
-  // Log warnings for slow operations
   if (duration > 300) {
     console.warn(`[${operationName}] Operation was slow: ${duration.toFixed(2)}ms`);
   }
 };
 
-// Helper functions for direct cache updates
-export const updateCacheItem = <T extends { id: string }>(
+// Helper functions for direct cache updates (optimistic updates)
+export const updateCacheItem = <T extends { id: string | number }>( // Adjusted for number IDs too
   queryClient: QueryClient,
   queryKey: unknown[],
   updatedItem: T
@@ -178,37 +84,23 @@ export const addCacheItem = <T>(
   newItem: T
 ) => {
   queryClient.setQueryData<T[]>(queryKey, (oldData = []) => {
-    return [newItem, ...oldData];
+    // Ensure newItem is not undefined or null before adding
+    return newItem ? [newItem, ...oldData] : oldData;
   });
 };
 
-export const removeCacheItem = <T extends { id: string }>(
+export const removeCacheItem = <T extends { id: string | number }>( // Adjusted for number IDs
   queryClient: QueryClient,
   queryKey: unknown[],
-  itemId: string
+  itemId: string | number
 ) => {
   queryClient.setQueryData<T[]>(queryKey, (oldData = []) => {
     return oldData.filter(item => item.id !== itemId);
   });
 };
 
-// Add a function to display cached data when available but also update in background
-export const useCachedQuery = (queryClient: QueryClient, queryKey: unknown[], queryFn: () => Promise<any>) => {
-  // Check if we have cached data
-  const cachedData = queryClient.getQueryData(queryKey);
-  
-  // If we have cached data, return it immediately but also refresh in background
-  if (cachedData) {
-    // Trigger a background refresh
-    queryClient.prefetchQuery({
-      queryKey,
-      queryFn,
-      staleTime: 60000, // Consider it fresh for 1 minute
-    });
-    
-    return cachedData;
-  }
-  
-  // If no cached data, fetch normally
-  return null; // This will show loading state
-};
+// The useCachedQuery helper is less relevant when global staleTime is Infinity
+// and persistence is handled by PersistQueryClientProvider.
+// It can be removed or adapted if specific prefetch-and-return-cached logic is still needed.
+// For now, removing it to simplify and rely on PersistQueryClientProvider.
+// // ... keep existing code (useCachedQuery function)

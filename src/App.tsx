@@ -1,17 +1,17 @@
-
 import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "./data/queryClient";
+// Remove QueryClientProvider, it will be replaced by PersistQueryClientProvider
+// import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./data/queryClient"; // Our base queryClient instance
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/auth"; 
-import { AuthProvider, useAuth } from "./contexts/AuthContext"; // Corrected import path
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ResetPasswordView } from "./pages/auth/ResetPasswordView";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 
-// Create empty placeholder pages for our navigation
+// Placeholder pages
 import Rules from "./pages/Rules";
 import Tasks from "./pages/Tasks";
 import Rewards from "./pages/Rewards";
@@ -20,8 +20,26 @@ import ThroneRoom from "./pages/ThroneRoom";
 import Encyclopedia from "./pages/Encyclopedia";
 import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
-// Removed import for AdminTesting
-import AppGuidePage from "./pages/AppGuide"; // Added import for AppGuidePage
+import AppGuidePage from "./pages/AppGuide";
+
+// New imports for persistence
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import localforage from 'localforage';
+import { APP_CACHE_VERSION } from '@/lib/react-query-config';
+
+// Configure localforage instance if not already globally configured elsewhere
+localforage.config({
+  name: 'kingdom-app-cache', // A distinct name for this app's localforage store
+  storeName: 'react_query_cache', // Store name for react-query data
+  description: 'Persistent cache for Kingdom app React Query state',
+});
+
+const localforagePersister = createSyncStoragePersister({
+  storage: localforage,
+  key: 'REACT_QUERY_OFFLINE_CACHE', // Default key, can be customized
+  throttleTime: 1000, // How often to persist, default is 1000ms
+});
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -29,7 +47,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (loading) {
     return <div className="flex items-center justify-center h-screen bg-navy">
-      <p className="text-white">Loading...</p>
+      <p className="text-white">Loading authentication...</p> {/* Slightly more descriptive loading */}
     </div>;
   }
   
@@ -40,35 +58,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Admin-only route component - This component is no longer used and can be removed.
-// However, since the instruction is to only remove AdminTesting related code,
-// I will leave this here for now. If you want it removed, please let me know.
-// const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-//   const { isAuthenticated, isAdmin, loading } = useAuth();
-  
-//   console.log('AdminRoute check - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin, 'loading:', loading);
-  
-//   if (loading) {
-//     return <div className="flex items-center justify-center h-screen bg-navy">
-//       <p className="text-white">Loading...</p>
-//     </div>;
-//   }
-  
-//   if (!isAuthenticated) {
-//     console.log('AdminRoute - User not authenticated, redirecting to /auth');
-//     return <Navigate to="/auth" />;
-//   }
-  
-//   console.log('AdminRoute - Allowing access to admin page for testing purposes');
-//   return <>{children}</>;
-// };
-// The AdminRoute component definition has been removed as it's no longer needed.
 
-// Configure routes with proper nesting to ensure context is available
+// AppRoutes component
 const AppRoutes = () => {
   useEffect(() => {
     console.log('AppRoutes component initialized. Routes ready to be matched.');
-    console.log('Cache status:', queryClient.getQueryCache().getAll().length > 0 ? 'Cache populated' : 'Empty cache');
+    // Cache status log might be less relevant here now with persister,
+    // but can be kept for debugging initial render.
+    console.log('Cache status (on AppRoutes mount):', queryClient.getQueryCache().getAll().length > 0 ? 'Cache populated' : 'Empty cache');
   }, []);
 
   return (
@@ -85,8 +82,7 @@ const AppRoutes = () => {
       <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-      {/* Removed route for AdminTesting */}
-      <Route path="/app-guide" element={<ProtectedRoute><AppGuidePage /></ProtectedRoute>} /> {/* Added route for AppGuidePage */}
+      <Route path="/app-guide" element={<ProtectedRoute><AppGuidePage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -95,33 +91,51 @@ const AppRoutes = () => {
 // Main App component
 const App = () => {
   useEffect(() => {
-    console.log('App component initialized. React Router ready.');
+    console.log('App component initialized. React Router and PersistQueryClientProvider setup.');
     
-    // Add additional error handling for network issues
-    window.addEventListener('online', () => {
+    // Network status listeners (will be expanded in Phase 1, Step 2)
+    const handleOnline = () => {
       console.log('App is back online. Resuming normal operation.');
-      queryClient.resumePausedMutations();
-    });
+      queryClient.resumePausedMutations(); // React Query handles this
+    };
+    const handleOffline = () => {
+      console.log('App is offline. Mutations will be paused by React Query if configured.');
+    };
     
-    window.addEventListener('offline', () => {
-      console.log('App is offline. Pausing mutations.');
-    });
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     
     return () => {
-      window.removeEventListener('online', () => {});
-      window.removeEventListener('offline', () => {});
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: localforagePersister,
+        buster: APP_CACHE_VERSION, // Invalidates cache if this string changes
+        maxAge: 1000 * 60 * 60 * 24 * 7, // Persist data for 7 days max (gcTime in client also applies)
+      }}
+      onSuccess={() => {
+        // Can resume mutations or other logic after hydration
+        console.log('React Query cache hydration successful.');
+        queryClient.resumePausedMutations().then(() => {
+          console.log('Paused mutations resumed after hydration.');
+        }).catch(error => {
+          console.error('Error resuming paused mutations:', error);
+        });
+      }}
+    >
       <BrowserRouter>
         <AuthProvider>
           <Toaster />
           <AppRoutes />
         </AuthProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 };
 
