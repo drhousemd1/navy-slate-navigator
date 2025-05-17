@@ -80,7 +80,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
       {(form) => {
         const persisterFormId = `punishment-editor-${punishmentData?.id || 'new'}`;
         const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
-          exclude: ['background_image_url']
+          exclude: [] 
         });
 
         const handleSaveWithClear = async (dataToSave: PunishmentData) => {
