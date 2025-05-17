@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import BackgroundImageSelector from './BackgroundImageSelector';
 import IconSelector from './IconSelector';
 import PredefinedIconsGrid from './PredefinedIconsGrid';
 import DeleteTaskDialog from './DeleteTaskDialog';
+import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 
 interface TaskFormValues {
   title: string;
@@ -39,7 +40,7 @@ interface TaskFormValues {
 
 interface TaskEditorFormProps {
   taskData?: Partial<Task>;
-  onSave: (taskData: any) => void;
+  onSave: (taskData: any) => Promise<void>;
   onDelete?: (taskId: string) => void;
   onCancel: () => void;
 }
@@ -58,30 +59,71 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   
   const form = useForm<TaskFormValues>({
     defaultValues: {
-      title: taskData?.title || '',
-      description: taskData?.description || '',
-      points: taskData?.points || 5,
-      frequency: (taskData?.frequency as 'daily' | 'weekly') || 'daily',
-      frequency_count: taskData?.frequency_count || 1,
-      background_image_url: taskData?.background_image_url,
-      background_opacity: taskData?.background_opacity || 100,
-      title_color: taskData?.title_color || '#FFFFFF',
-      subtext_color: taskData?.subtext_color || '#8E9196',
-      calendar_color: taskData?.calendar_color || '#7E69AB',
-      icon_color: taskData?.icon_color || '#9b87f5',
-      highlight_effect: taskData?.highlight_effect || false,
-      focal_point_x: taskData?.focal_point_x || 50,
-      focal_point_y: taskData?.focal_point_y || 50,
-      priority: taskData?.priority || 'medium',
-      icon_name: taskData?.icon_name,
+      title: '',
+      description: '',
+      points: 5,
+      frequency: 'daily',
+      frequency_count: 1,
+      background_image_url: undefined,
+      background_opacity: 100,
+      icon_url: undefined,
+      icon_name: undefined,
+      title_color: '#FFFFFF',
+      subtext_color: '#8E9196',
+      calendar_color: '#7E69AB',
+      icon_color: '#9b87f5',
+      highlight_effect: false,
+      focal_point_x: 50,
+      focal_point_y: 50,
+      priority: 'medium',
     },
   });
 
-  React.useEffect(() => {
-    setImagePreview(taskData?.background_image_url || null);
-    setIconPreview(taskData?.icon_url || null);
-    setSelectedIconName(taskData?.icon_name || null);
-  }, [taskData]);
+  const { reset, watch, setValue, control } = form;
+
+  const persisterFormId = `task-editor-${taskData?.id || 'new'}`;
+  const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
+    exclude: ['background_image_url', 'icon_url']
+  });
+
+  useEffect(() => {
+    if (taskData) {
+      reset({
+        title: taskData.title || '',
+        description: taskData.description || '',
+        points: taskData.points || 5,
+        frequency: (taskData.frequency as 'daily' | 'weekly') || 'daily',
+        frequency_count: taskData.frequency_count || 1,
+        background_image_url: taskData.background_image_url || undefined,
+        background_opacity: taskData.background_opacity || 100,
+        icon_url: taskData.icon_url || undefined,
+        icon_name: taskData.icon_name || undefined,
+        title_color: taskData.title_color || '#FFFFFF',
+        subtext_color: taskData.subtext_color || '#8E9196',
+        calendar_color: taskData.calendar_color || '#7E69AB',
+        icon_color: taskData.icon_color || '#9b87f5',
+        highlight_effect: taskData.highlight_effect || false,
+        focal_point_x: taskData.focal_point_x || 50,
+        focal_point_y: taskData.focal_point_y || 50,
+        priority: taskData.priority || 'medium',
+      });
+      setImagePreview(taskData.background_image_url || null);
+      setIconPreview(taskData.icon_url || null);
+      setSelectedIconName(taskData.icon_name || null);
+    } else {
+      reset({
+        title: '', description: '', points: 5, frequency: 'daily', frequency_count: 1,
+        background_image_url: undefined, background_opacity: 100,
+        icon_url: undefined, icon_name: undefined,
+        title_color: '#FFFFFF', subtext_color: '#8E9196', calendar_color: '#7E69AB',
+        icon_color: '#9b87f5', highlight_effect: false,
+        focal_point_x: 50, focal_point_y: 50, priority: 'medium',
+      });
+      setImagePreview(null);
+      setIconPreview(null);
+      setSelectedIconName(null);
+    }
+  }, [taskData, reset]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -144,17 +186,29 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     }
   };
 
-  const handleSubmit = async (values: TaskFormValues) => {
+  const handleRemoveIcon = () => {
+    setIconPreview(null);
+    setSelectedIconName(null);
+    setValue('icon_url', undefined);
+    setValue('icon_name', undefined);
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setValue('background_image_url', undefined);
+  };
+
+  const onSubmitWrapped = async (values: TaskFormValues) => {
     setLoading(true);
-    
     try {
       const taskToSave: Partial<Task> = {
         ...values,
         id: taskData?.id,
         icon_name: selectedIconName || undefined,
+        icon_url: iconPreview || undefined, 
       };
-      
       await onSave(taskToSave);
+      await clearPersistedState();
     } catch (error) {
       console.error('Error saving task:', error);
       toast({
@@ -189,16 +243,22 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     }
   };
 
-  const handleDelete = () => {
+  const handleDeleteWrapped = () => {
     if (taskData?.id && onDelete) {
       onDelete(taskData.id);
-      setIsDeleteDialogOpen(false);
+      clearPersistedState();
     }
+    setIsDeleteDialogOpen(false);
+  };
+
+  const handleCancelWrapped = () => {
+    clearPersistedState();
+    onCancel();
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmitWrapped)} className="space-y-6">
         <FormField
           control={form.control}
           name="title"
@@ -262,18 +322,15 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Background Image</FormLabel>
           <BackgroundImageSelector
-            control={form.control}
+            control={control}
             imagePreview={imagePreview}
             initialPosition={{ 
-              x: taskData?.focal_point_x || 50, 
-              y: taskData?.focal_point_y || 50 
+              x: watch('focal_point_x') || 50, 
+              y: watch('focal_point_y') || 50 
             }}
-            onRemoveImage={() => {
-              setImagePreview(null);
-              form.setValue('background_image_url', undefined);
-            }}
+            onRemoveImage={handleRemoveImage}
             onImageUpload={handleImageUpload}
-            setValue={form.setValue}
+            setValue={setValue}
           />
         </div>
         
@@ -284,21 +341,16 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               <IconSelector
                 selectedIconName={selectedIconName}
                 iconPreview={iconPreview}
-                iconColor={form.watch('icon_color')}
+                iconColor={watch('icon_color')}
                 onSelectIcon={handleIconSelect}
                 onUploadIcon={handleIconUpload}
-                onRemoveIcon={() => {
-                  setIconPreview(null);
-                  setSelectedIconName(null);
-                  form.setValue('icon_url', undefined);
-                  form.setValue('icon_name', undefined);
-                }}
+                onRemoveIcon={handleRemoveIcon}
               />
             </div>
             
             <PredefinedIconsGrid
               selectedIconName={selectedIconName}
-              iconColor={form.watch('icon_color')}
+              iconColor={watch('icon_color')}
               onSelectIcon={handleIconSelect}
             />
           </div>
@@ -306,25 +358,25 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <ColorPickerField 
-            control={form.control} 
+            control={control} 
             name="title_color" 
             label="Title Color" 
           />
           
           <ColorPickerField 
-            control={form.control} 
+            control={control} 
             name="subtext_color" 
             label="Subtext Color" 
           />
           
           <ColorPickerField 
-            control={form.control} 
+            control={control} 
             name="calendar_color" 
             label="Calendar Color" 
           />
           
           <ColorPickerField 
-            control={form.control} 
+            control={control} 
             name="icon_color" 
             label="Icon Color" 
           />
@@ -354,13 +406,13 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             <DeleteTaskDialog
               isOpen={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
-              onDelete={handleDelete}
+              onDelete={handleDeleteWrapped}
             />
           )}
           <Button 
             type="button" 
             variant="destructive" 
-            onClick={onCancel}
+            onClick={handleCancelWrapped}
             className="bg-red-700 border-light-navy text-white hover:bg-red-600"
           >
             Cancel
