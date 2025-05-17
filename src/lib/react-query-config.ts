@@ -1,3 +1,4 @@
+
 import { QueryClient } from '@tanstack/react-query';
 import localforage from "localforage";
 
@@ -16,10 +17,10 @@ export const createQueryClient = () => {
         refetchOnReconnect: false,
         retry: 1, // Default retry attempts
         retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-        networkMode: 'online', // Default to online, persister handles offline
+        networkMode: 'online', // Default to online, persister handles offline for queries if configured
       },
       mutations: {
-        networkMode: 'online',
+        networkMode: 'offlineFirst', // Queue mutations when offline
         retry: 1,
       },
     },

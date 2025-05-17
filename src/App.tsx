@@ -1,8 +1,6 @@
-
 import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
-// import { QueryClientProvider } from "@tanstack/react-query"; // No longer needed
-import { queryClient } from "./data/queryClient"; // Our base queryClient instance
+import { queryClient } from "./data/queryClient";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -24,10 +22,13 @@ import AppGuidePage from "./pages/AppGuide";
 
 // New imports for persistence
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-// Import createAsyncStoragePersister instead of createSyncStoragePersister
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import localforage from 'localforage';
 import { APP_CACHE_VERSION } from '@/lib/react-query-config';
+
+// New imports for Network Status
+import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
+import OfflineBanner from '@/components/OfflineBanner';
 
 // Configure localforage instance if not already globally configured elsewhere
 localforage.config({
@@ -49,7 +50,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (loading) {
     return <div className="flex items-center justify-center h-screen bg-navy">
-      <p className="text-white">Loading authentication...</p> {/* Slightly more descriptive loading */}
+      <p className="text-white">Loading authentication...</p>
     </div>;
   }
   
@@ -65,8 +66,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => {
   useEffect(() => {
     console.log('AppRoutes component initialized. Routes ready to be matched.');
-    // Cache status log might be less relevant here now with persister,
-    // but can be kept for debugging initial render.
     console.log('Cache status (on AppRoutes mount):', queryClient.getQueryCache().getAll().length > 0 ? 'Cache populated' : 'Empty cache');
   }, []);
 
@@ -95,22 +94,12 @@ const App = () => {
   useEffect(() => {
     console.log('App component initialized. React Router and PersistQueryClientProvider setup.');
     
-    // Network status listeners (will be expanded in Phase 1, Step 2)
-    const handleOnline = () => {
-      console.log('App is back online. Resuming normal operation.');
-      queryClient.resumePausedMutations(); // React Query handles this
-    };
-    const handleOffline = () => {
-      console.log('App is offline. Mutations will be paused by React Query if configured.');
-    };
+    // Network status listeners have been moved to NetworkStatusProvider
+    // const handleOnline = () => { ... };
+    // const handleOffline = () => { ... };
+    // window.removeEventListener('online', handleOnline);
+    // window.removeEventListener('offline', handleOffline);
     
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
   }, []);
 
   return (
@@ -118,11 +107,10 @@ const App = () => {
       client={queryClient}
       persistOptions={{
         persister: localforagePersister,
-        buster: APP_CACHE_VERSION, // Invalidates cache if this string changes
-        maxAge: 1000 * 60 * 60 * 24 * 7, // Persist data for 7 days max (gcTime in client also applies)
+        buster: APP_CACHE_VERSION,
+        maxAge: 1000 * 60 * 60 * 24 * 7,
       }}
       onSuccess={() => {
-        // Can resume mutations or other logic after hydration
         console.log('React Query cache hydration successful.');
         queryClient.resumePausedMutations().then(() => {
           console.log('Paused mutations resumed after hydration.');
@@ -132,14 +120,16 @@ const App = () => {
       }}
     >
       <BrowserRouter>
-        <AuthProvider>
-          <Toaster />
-          <AppRoutes />
-        </AuthProvider>
+        <NetworkStatusProvider> {/* Wrap with NetworkStatusProvider */}
+          <AuthProvider>
+            <Toaster />
+            <AppRoutes />
+            <OfflineBanner /> {/* Add OfflineBanner here */}
+          </AuthProvider>
+        </NetworkStatusProvider>
       </BrowserRouter>
     </PersistQueryClientProvider>
   );
 };
 
 export default App;
-
