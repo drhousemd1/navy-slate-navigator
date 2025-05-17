@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import BackgroundImageSelector from './task-editor/BackgroundImageSelector';
 import IconSelector from './task-editor/IconSelector';
 import PredefinedIconsGrid from './task-editor/PredefinedIconsGrid';
 import DeleteTaskDialog from './task-editor/DeleteTaskDialog';
+import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 
 interface TaskFormValues {
   title: string;
@@ -39,7 +40,7 @@ interface TaskFormValues {
 
 interface TaskEditorFormProps {
   taskData?: Partial<Task>;
-  onSave: (taskData: any) => void;
+  onSave: (taskData: any) => Promise<void>; // Changed from (taskData: any) => void to Promise<void> for async operations
   onDelete?: (taskId: string) => void;
   onCancel: () => void;
 }
@@ -58,30 +59,70 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   
   const form = useForm<TaskFormValues>({
     defaultValues: {
-      title: taskData?.title || '',
-      description: taskData?.description || '',
-      points: taskData?.points || 5,
-      frequency: (taskData?.frequency as 'daily' | 'weekly') || 'daily',
-      frequency_count: taskData?.frequency_count || 1,
-      background_image_url: taskData?.background_image_url,
-      background_opacity: taskData?.background_opacity || 100,
-      title_color: taskData?.title_color || '#FFFFFF',
-      subtext_color: taskData?.subtext_color || '#8E9196',
-      calendar_color: taskData?.calendar_color || '#7E69AB',
-      icon_color: taskData?.icon_color || '#9b87f5',
-      highlight_effect: taskData?.highlight_effect || false,
-      focal_point_x: taskData?.focal_point_x || 50,
-      focal_point_y: taskData?.focal_point_y || 50,
-      priority: taskData?.priority || 'medium',
-      icon_name: taskData?.icon_name,
+      title: '',
+      description: '',
+      points: 5,
+      frequency: 'daily',
+      frequency_count: 1,
+      background_image_url: undefined,
+      background_opacity: 100,
+      icon_url: undefined,
+      icon_name: undefined,
+      title_color: '#FFFFFF',
+      subtext_color: '#8E9196',
+      calendar_color: '#7E69AB',
+      icon_color: '#9b87f5',
+      highlight_effect: false,
+      focal_point_x: 50,
+      focal_point_y: 50,
+      priority: 'medium',
     },
   });
 
-  React.useEffect(() => {
-    setImagePreview(taskData?.background_image_url || null);
-    setIconPreview(taskData?.icon_url || null);
-    setSelectedIconName(taskData?.icon_name || null);
-  }, [taskData]);
+  const { reset, watch, setValue, control, handleSubmit: formHandleSubmit } = form;
+
+  const persisterFormId = `task-editor-${taskData?.id || 'new'}`;
+  const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
+    exclude: ['background_image_url', 'icon_url'] 
+  });
+
+  useEffect(() => {
+    if (taskData) {
+      reset({
+        title: taskData.title || '',
+        description: taskData.description || '',
+        points: taskData.points || 5,
+        frequency: (taskData.frequency as 'daily' | 'weekly') || 'daily',
+        frequency_count: taskData.frequency_count || 1,
+        background_image_url: taskData.background_image_url || undefined,
+        background_opacity: taskData.background_opacity || 100,
+        icon_url: taskData.icon_url || undefined,
+        icon_name: taskData.icon_name || undefined,
+        title_color: taskData.title_color || '#FFFFFF',
+        subtext_color: taskData.subtext_color || '#8E9196',
+        calendar_color: taskData.calendar_color || '#7E69AB',
+        icon_color: taskData.icon_color || '#9b87f5',
+        highlight_effect: taskData.highlight_effect || false,
+        focal_point_x: taskData.focal_point_x || 50,
+        focal_point_y: taskData.focal_point_y || 50,
+        priority: taskData.priority || 'medium',
+      });
+      setImagePreview(taskData.background_image_url || null);
+      setIconPreview(taskData.icon_url || null);
+      setSelectedIconName(taskData.icon_name || null);
+    } else {
+      // For new tasks, form persister will load if data exists, otherwise defaultValues are used.
+      // Explicit reset might override persisted new form state if not careful.
+      // Let persister handle initial load for 'new' form.
+      // If taskData is undefined, useFormStatePersister handles loading or defaults.
+      // However, imagePreview, iconPreview, selectedIconName are not part of form state directly managed by RHF.
+      // We need to ensure they are reset or loaded correctly based on persisted form values if applicable.
+      // For now, new form means fresh previews.
+      setImagePreview(null);
+      setIconPreview(null);
+      setSelectedIconName(null);
+    }
+  }, [taskData, reset]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -90,7 +131,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       reader.onloadend = () => {
         const base64String = reader.result as string;
         setImagePreview(base64String);
-        form.setValue('background_image_url', base64String);
+        // setValue('background_image_url', base64String); // This will be persisted if not excluded
       };
       reader.readAsDataURL(file);
     }
@@ -109,8 +150,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             const base64String = reader.result as string;
             setIconPreview(base64String);
             setSelectedIconName(null);
-            form.setValue('icon_url', base64String);
-            form.setValue('icon_name', undefined);
+            // setValue('icon_url', base64String); // This will be persisted if not excluded
+            // setValue('icon_name', undefined);
           };
           reader.readAsDataURL(file);
         }
@@ -124,8 +165,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       const iconUrl = iconName.substring(7);
       setIconPreview(iconUrl);
       setSelectedIconName(null);
-      form.setValue('icon_url', iconUrl);
-      form.setValue('icon_name', undefined);
+      setValue('icon_url', iconUrl);
+      setValue('icon_name', undefined);
       
       toast({
         title: "Custom icon selected",
@@ -134,8 +175,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     } else {
       setSelectedIconName(iconName);
       setIconPreview(null);
-      form.setValue('icon_name', iconName);
-      form.setValue('icon_url', undefined);
+      setValue('icon_name', iconName);
+      setValue('icon_url', undefined); // Ensure icon_url is cleared if a named icon is selected
       
       toast({
         title: "Icon selected",
@@ -144,17 +185,22 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     }
   };
 
-  const handleSubmit = async (values: TaskFormValues) => {
+  const onSubmitWrapped = async (values: TaskFormValues) => {
     setLoading(true);
-    
     try {
       const taskToSave: Partial<Task> = {
         ...values,
         id: taskData?.id,
         icon_name: selectedIconName || undefined,
+        // If icon_url and background_image_url are excluded from persistence,
+        // they should be explicitly read from their previews if needed here
+        icon_url: iconPreview || values.icon_url, // Prioritize live preview, fallback to form value
+        background_image_url: imagePreview || values.background_image_url, // Prioritize live preview
       };
       
       await onSave(taskToSave);
+      await clearPersistedState(); // Clear persisted state on successful save
+      // onSave should handle closing the editor, so onCancel isn't called here.
     } catch (error) {
       console.error('Error saving task:', error);
       toast({
@@ -165,6 +211,19 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancelWrapped = () => {
+    clearPersistedState();
+    onCancel();
+  };
+
+  const handleDeleteWrapped = () => {
+    if (taskData?.id && onDelete) {
+      onDelete(taskData.id);
+      clearPersistedState(); // Clear persisted state on delete
+    }
+    setIsDeleteDialogOpen(false); // Close dialog regardless of onDelete outcome
   };
 
   const incrementPoints = () => {
@@ -189,18 +248,12 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     }
   };
 
-  const handleDelete = () => {
-    if (taskData?.id && onDelete) {
-      onDelete(taskData.id);
-      setIsDeleteDialogOpen(false);
-    }
-  };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form onSubmit={formHandleSubmit(onSubmitWrapped)} className="space-y-6">
         <FormField
-          control={form.control}
+          control={control}
           name="title"
           render={({ field }) => (
             <FormItem>
@@ -217,7 +270,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         />
         
         <FormField
-          control={form.control}
+          control={control}
           name="description"
           render={({ field }) => (
             <FormItem>
@@ -234,10 +287,10 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <PrioritySelector control={form.control} />
+          <PrioritySelector control={control} />
           
           <NumberField
-            control={form.control}
+            control={control}
             name="points"
             label="Points"
             onIncrement={incrementPoints}
@@ -247,14 +300,14 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FrequencySelector control={form.control} />
+          <FrequencySelector control={control} />
           
           <NumberField
-            control={form.control}
+            control={control}
             name="frequency_count"
             label="Times per period"
             onIncrement={incrementFrequencyCount}
-            onDecrement={decrementFrequencyCount}
+            onDecrement={decrementDecrementFrequencyCount}
             minValue={1}
           />
         </div>
@@ -262,18 +315,18 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Background Image</FormLabel>
           <BackgroundImageSelector
-            control={form.control}
-            imagePreview={imagePreview}
+            control={control}
+            imagePreview={imagePreview} // This is the state variable
             initialPosition={{ 
-              x: taskData?.focal_point_x || 50, 
-              y: taskData?.focal_point_y || 50 
+              x: watch('focal_point_x') || 50, 
+              y: watch('focal_point_y') || 50 
             }}
             onRemoveImage={() => {
               setImagePreview(null);
-              form.setValue('background_image_url', undefined);
+              // setValue('background_image_url', undefined); // This will be persisted if not excluded
             }}
             onImageUpload={handleImageUpload}
-            setValue={form.setValue}
+            setValue={setValue} // For focal_point_x, focal_point_y, background_opacity
           />
         </div>
         
@@ -282,23 +335,23 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
               <IconSelector
-                selectedIconName={selectedIconName}
-                iconPreview={iconPreview}
-                iconColor={form.watch('icon_color')}
+                selectedIconName={selectedIconName} // This is the state variable
+                iconPreview={iconPreview} // This is the state variable
+                iconColor={watch('icon_color')}
                 onSelectIcon={handleIconSelect}
                 onUploadIcon={handleIconUpload}
                 onRemoveIcon={() => {
                   setIconPreview(null);
                   setSelectedIconName(null);
-                  form.setValue('icon_url', undefined);
-                  form.setValue('icon_name', undefined);
+                  // setValue('icon_url', undefined); // This will be persisted if not excluded
+                  // setValue('icon_name', undefined); // This will be persisted
                 }}
               />
             </div>
             
             <PredefinedIconsGrid
               selectedIconName={selectedIconName}
-              iconColor={form.watch('icon_color')}
+              iconColor={watch('icon_color')}
               onSelectIcon={handleIconSelect}
             />
           </div>
@@ -306,32 +359,32 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <ColorPickerField 
-            control={form.control} 
+            control={control} 
             name="title_color" 
             label="Title Color" 
           />
           
           <ColorPickerField 
-            control={form.control} 
+            control={control} 
             name="subtext_color" 
             label="Subtext Color" 
           />
           
           <ColorPickerField 
-            control={form.control} 
+            control={control} 
             name="calendar_color" 
             label="Calendar Color" 
           />
           
           <ColorPickerField 
-            control={form.control} 
+            control={control} 
             name="icon_color" 
             label="Icon Color" 
           />
         </div>
         
         <FormField
-          control={form.control}
+          control={control}
           name="highlight_effect"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between">
@@ -354,7 +407,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             <DeleteTaskDialog
               isOpen={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
-              onDelete={handleDelete}
+              onDelete={handleDeleteWrapped}
             />
           )}
           <Button 
