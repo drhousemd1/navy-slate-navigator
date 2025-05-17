@@ -17,12 +17,14 @@ interface DeleteRuleDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onDelete: () => void;
+  ruleName?: string; // Added ruleName prop
 }
 
 const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
   isOpen,
   onOpenChange,
   onDelete,
+  ruleName, // Destructure ruleName
 }) => {
   return (
     <>
@@ -39,7 +41,7 @@ const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Delete Rule</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this rule? This action cannot be undone.
+              Are you sure you want to delete {ruleName ? `the rule "${ruleName}"` : 'this rule'}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

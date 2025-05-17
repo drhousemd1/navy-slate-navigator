@@ -41,8 +41,6 @@ interface RuleFormValues {
   description: string;
   background_image_url?: string;
   background_opacity: number;
-  icon_url?: string;
-  icon_name?: string;
   title_color: string;
   subtext_color: string;
   calendar_color: string;
