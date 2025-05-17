@@ -1,7 +1,8 @@
 
 import { useState } from 'react';
-import { usePunishments } from '@/contexts/PunishmentsContext'; // Corrected: This should be from the new provider path
-import { PunishmentData } from '@/contexts/punishments/types'; // Corrected: This should be from the new provider path
+import { usePunishments } from '@/contexts/PunishmentsContext';
+import { PunishmentData } from '@/contexts/punishments/types';
+import { toast } from '@/hooks/use-toast'; // Added missing import
 
 interface UsePunishmentEditorProps {
   id?: string; // This ID is of the punishment being edited
@@ -27,6 +28,7 @@ export const usePunishmentEditor = ({ id }: UsePunishmentEditorProps) => {
       // Ensure the ID is part of the data being saved
       await savePunishment({ ...updatedData, id });
       setIsEditorOpen(false); // Close editor on successful save
+      toast({ title: "Success", description: "Punishment updated." }); // Added toast
       return Promise.resolve();
     } catch (error) {
       console.error("Error updating punishment:", error);
@@ -44,6 +46,7 @@ export const usePunishmentEditor = ({ id }: UsePunishmentEditorProps) => {
     try {
       await deletePunishmentFromContext(id);
       setIsEditorOpen(false); // Close editor and potentially navigate or refresh list
+      toast({ title: "Success", description: "Punishment deleted." }); // Added toast
     } catch (error) {
       console.error("Error deleting punishment:", error);
       toast({ title: "Error", description: "Failed to delete punishment.", variant: "destructive" });

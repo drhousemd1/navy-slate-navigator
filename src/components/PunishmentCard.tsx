@@ -2,68 +2,69 @@
 import React from 'react';
 import { Card } from './ui/card';
 import PunishmentEditor from './PunishmentEditor';
-import { cn } from '@/lib/utils';
+// import { cn } from '@/lib/utils'; // Not used
 import PunishmentCardHeader from './punishments/PunishmentCardHeader';
 import PunishmentCardContent from './punishments/PunishmentCardContent';
 import PunishmentCardFooter from './punishments/PunishmentCardFooter';
 import PunishmentBackground from './punishments/PunishmentBackground';
 import { usePunishmentCard } from './punishments/hooks/usePunishmentCard';
+import { PunishmentData } from '@/contexts/punishments/types'; // Import PunishmentData
 
-interface PunishmentCardProps {
-  title: string;
-  description?: string;
-  points: number;
-  dom_points?: number;
-  icon?: React.ReactNode;
-  id?: string;
-  icon_name?: string;
-  icon_color?: string;
-  title_color?: string;
-  subtext_color?: string;
-  calendar_color?: string;
-  highlight_effect?: boolean;
-  background_image_url?: string;
-  background_opacity?: number;
-  focal_point_x?: number;
-  focal_point_y?: number;
-  onEdit?: () => void;
+interface PunishmentCardProps extends PunishmentData { // Extend PunishmentData to get all its props
+  // id is now optional from PunishmentData
+  // title, points, etc. are from PunishmentData
+  // No need to redeclare props that are in PunishmentData
+  onEdit?: (punishment: PunishmentData) => void; // Changed to pass the full punishment
 }
 
-const PunishmentCard: React.FC<PunishmentCardProps> = ({
-  title,
-  description = "", // Provide default empty string for description
-  points,
-  dom_points,
-  id,
-  icon_name,
-  icon_color = '#ea384c',
-  title_color = '#FFFFFF',
-  subtext_color = '#8E9196',
-  calendar_color = '#ea384c',
-  highlight_effect = false,
-  background_image_url,
-  background_opacity = 50,
-  focal_point_x = 50,
-  focal_point_y = 50,
-  onEdit // Optional prop that will be used if provided
-}) => {
+const PunishmentCard: React.FC<PunishmentCardProps> = (props) => {
+  // Destructure all props, which includes all fields from PunishmentData
+  const { 
+    id, title, description = "", points, dom_points, icon_name, 
+    icon_color = '#ea384c', title_color = '#FFFFFF', subtext_color = '#8E9196', 
+    calendar_color = '#ea384c', highlight_effect = false, background_image_url, 
+    background_opacity = 50, focal_point_x = 50, focal_point_y = 50, 
+    onEdit, ...restOfPunishmentData // Capture rest for passing to hooks/components
+  } = props;
+
+  // Create the punishment object from props
+  const currentPunishment: PunishmentData = {
+    id, title, description, points, dom_points, icon_name, icon_color,
+    title_color, subtext_color, calendar_color, highlight_effect,
+    background_image_url, background_opacity, focal_point_x, focal_point_y,
+    // Add other properties from PunishmentData if they are part of `props`
+    // For example, if usage_data and frequency_count are passed:
+    usage_data: props.usage_data,
+    frequency_count: props.frequency_count,
+    // Ensure all required fields of PunishmentData are included.
+    // icon_url might be needed if used by usePunishmentCard or sub-components
+    icon_url: props.icon_url,
+    created_at: props.created_at,
+    updated_at: props.updated_at,
+  };
+  
   const {
     isEditorOpen,
     setIsEditorOpen,
     weekData,
     frequencyCount,
-    punishment, // Now getting the full punishment object from context
+    // punishment: contextPunishment, // punishment object is now constructed from props
     handlePunish,
-    handleEdit,
+    // handleEdit: hookHandleEdit, // Renamed to avoid conflict
     handleSavePunishment,
     handleDeletePunishment
-  } = usePunishmentCard({ id, points, dom_points });
+  } = usePunishmentCard({ punishment: currentPunishment }); // Pass the full punishment object
 
-  // Use dom_points from the punishment context data if available, otherwise fall back to props
-  const displayDomPoints = punishment?.dom_points !== undefined ? punishment.dom_points : dom_points;
+  // Use dom_points from the currentPunishment if available, otherwise fall back to props
+  const displayDomPoints = currentPunishment?.dom_points !== undefined ? currentPunishment.dom_points : dom_points;
 
-  // Use the provided onEdit prop if available, otherwise use the hook's handleEdit
-  const handleEditAction = onEdit || handleEdit;
+  const handleEditAction = () => {
+    if (onEdit) {
+      onEdit(currentPunishment); // Pass the full punishment object
+    } else {
+      setIsEditorOpen(true); // Fallback to internal editor toggle
+    }
+  };
 
   return (
     <>
@@ -104,23 +105,7 @@ const PunishmentCard: React.FC<PunishmentCardProps> = ({
       <PunishmentEditor 
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
-        punishmentData={{
-          id,
-          title,
-          description,
-          points,
-          dom_points: displayDomPoints, // Use the value from context if available
-          icon_name,
-          icon_color,
-          title_color,
-          subtext_color,
-          calendar_color,
-          highlight_effect,
-          background_image_url,
-          background_opacity,
-          focal_point_x,
-          focal_point_y
-        }}
+        punishmentData={currentPunishment} // Pass the constructed punishment object
         onSave={handleSavePunishment}
         onDelete={handleDeletePunishment}
       />
