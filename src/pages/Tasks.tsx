@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -29,7 +30,7 @@ const TasksWithContext: React.FC = () => {
   // Initial sync when component mounts
   useEffect(() => {
     syncNow(); // Force a sync when the Tasks page is loaded
-  }, []);
+  }, [syncNow]); // Added syncNow to dependency array
 
   const handleAddTask = () => {
     console.log('handleAddTask called in TasksWithContext');
@@ -65,7 +66,10 @@ const TasksWithContext: React.FC = () => {
       setCurrentTask(null);
       
       // Synchronize data after task save
-      setTimeout(() => syncCardById(taskData.id, 'tasks'), 500);
+      // Added a check for taskData.id before calling syncCardById
+      if (taskData.id) {
+        setTimeout(() => syncCardById(taskData.id, 'tasks'), 500);
+      }
     } catch (err) {
       console.error('Error saving task:', err);
     }
@@ -83,7 +87,12 @@ const TasksWithContext: React.FC = () => {
 
   const handleToggleCompletion = async (taskId: string, completed: boolean) => {
     try {
-      await toggleTaskCompletion(taskId, completed);
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) {
+        console.error(`Task with id ${taskId} not found.`);
+        return;
+      }
+      await toggleTaskCompletion(taskId, completed, task.points);
       // Always refresh points after task completion
       if (completed) {
         setTimeout(() => {
@@ -151,3 +160,4 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
+
