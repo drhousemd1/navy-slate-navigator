@@ -37,8 +37,9 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     handleSelectIcon,
     handleUploadIcon,
     handleRemoveIcon,
-    setSelectedIconName
-  } = usePunishmentIcon(initialIconName: punishmentData?.icon_name);
+    setSelectedIconName,
+    setIconPreview
+  } = usePunishmentIcon(punishmentData?.icon_name);
   
   const {
     imagePreview,
@@ -50,23 +51,26 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
   useEffect(() => {
     if (punishmentData) {
       setSelectedIconName(punishmentData.icon_name || null);
+      if (punishmentData.icon_url) {
+        setIconPreview(punishmentData.icon_url);
+      } else {
+        setIconPreview(null); // Reset if no icon_url
+      }
       setImagePreview(punishmentData.background_image_url || null);
     } else {
       setSelectedIconName(null);
+      setIconPreview(null);
       setImagePreview(null);
     }
-  }, [punishmentData, setSelectedIconName, setImagePreview]);
-
-  // Removed wrapped handlers as clearPersistedState is now handled within PunishmentFormProvider's scope
+  }, [punishmentData, setSelectedIconName, setImagePreview, setIconPreview]);
 
   return (
     <PunishmentFormProvider punishmentData={punishmentData}>
       {(form) => {
         const persisterFormId = `punishment-editor-${punishmentData?.id || 'new'}`;
         
-        // Use exclude fields that are compatible with the form schema
         const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
-          exclude: [] // Remove the exclude list for now to avoid type errors
+          exclude: ['icon_url', 'background_image_url'] 
         });
 
         const handleSaveWithClear = async (dataToSave: PunishmentData) => {
