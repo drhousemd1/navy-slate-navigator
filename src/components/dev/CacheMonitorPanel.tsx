@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { queryClient as appQueryClient } from '@/data/queryClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ReloadIcon, TrashIcon } from 'lucide-react';
+import { LoaderIcon, TrashIcon } from 'lucide-react';
 import {
   getInMemoryCacheStatus,
   getPersistedReactQueryCacheInfo,
@@ -52,15 +51,19 @@ const CacheMonitorPanel: React.FC = () => {
 
   const handleClearAllCache = async () => {
     if (window.confirm('Are you sure you want to clear ALL cache (in-memory and persisted)?')) {
+      setIsLoading(true);
       await clearAllAppCache();
-      fetchStats(); // Refresh stats after clearing
+      await fetchStats(); // Refresh stats after clearing
+      setIsLoading(false);
     }
   };
 
-  const handleClearInMemoryCache = () => {
+  const handleClearInMemoryCache = async () => {
     if (window.confirm('Are you sure you want to clear the IN-MEMORY cache?')) {
+      setIsLoading(true);
       clearInMemoryCache(appQueryClient);
-      fetchStats(); // Refresh stats
+      await fetchStats(); // Refresh stats
+      setIsLoading(false);
     }
   };
   
@@ -110,7 +113,7 @@ const CacheMonitorPanel: React.FC = () => {
             <details className="mt-1 text-xs">
               <summary className="cursor-pointer text-slate-400 hover:text-slate-200">Show Keys ({stats.localForageKeys.length})</summary>
               <ul className="max-h-20 overflow-y-auto bg-slate-800 p-1 rounded mt-1">
-                {stats.localForageKeys.map(key => <li key={key}>{key}</li>)}
+                {stats.localForageKeys.map(key => <li key={key} className="truncate" title={key}>{key}</li>)}
               </ul>
             </details>
           )}
@@ -118,11 +121,17 @@ const CacheMonitorPanel: React.FC = () => {
       </CardContent>
       <CardFooter className="flex justify-between gap-2 pt-4">
         <Button variant="outline" size="sm" onClick={fetchStats} disabled={isLoading} className="border-slate-600 hover:bg-slate-700">
-          <ReloadIcon className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <LoaderIcon className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
         <div className="flex gap-2">
-          <Button variant="destructive_outline" size="sm" onClick={handleClearInMemoryCache} disabled={isLoading} className="text-amber-400 border-amber-500 hover:bg-amber-500/20">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleClearInMemoryCache} 
+            disabled={isLoading} 
+            className="text-amber-400 border-amber-500 hover:border-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+          >
             <TrashIcon className="mr-2 h-4 w-4" />
             Clear Memory
           </Button>
@@ -137,4 +146,3 @@ const CacheMonitorPanel: React.FC = () => {
 };
 
 export default CacheMonitorPanel;
-
