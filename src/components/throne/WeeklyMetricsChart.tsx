@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -9,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { generateMondayBasedWeekDates } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
+import WeeklyMetricsChartSkeleton from './WeeklyMetricsChartSkeleton'; // Import the skeleton
 
 interface WeeklyDataItem {
   date: string;
@@ -205,16 +205,16 @@ const WeeklyMetricsChart: React.FC = () => {
     d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0
   );
 
+  if (isLoading) {
+    return <WeeklyMetricsChartSkeleton />;
+  }
+
   return (
     <Card className="bg-navy border border-light-navy rounded-lg">
       <div className="p-4">
         <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
         <div className="h-60">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="w-full h-full bg-light-navy/30 animate-pulse rounded"></div>
-            </div>
-          ) : !hasData ? (
+          {!hasData && !isLoading ? ( // Ensure isLoading is false before showing "No activity data"
             <div className="flex items-center justify-center h-full text-white">
               No activity data to display for this week
             </div>

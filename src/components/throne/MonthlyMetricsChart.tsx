@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -10,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import MonthlyMetricsChartSkeleton from './MonthlyMetricsChartSkeleton'; // Import the skeleton
 
 interface MonthlyDataItem {
   date: string;
@@ -344,7 +344,24 @@ const MonthlyMetricsChart: React.FC = () => {
         </div>
       </ChartContainer>
     );
-  }, [data.dataArray, isDragging, getYAxisDomain, chartWidth]);
+  }, [data.dataArray, isDragging, getYAxisDomain, chartWidth, chartConfig, monthDates, BAR_GAP, GROUP_PADDING, CHART_PADDING, BAR_WIDTH, onMouseDown, onMouseMove, endDrag, handleBarClick]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <MonthlyMetricsChartSkeleton />
+        {/* Keep summary tiles loading state or simple text if not complex */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="p-4 bg-light-navy border-light-navy">
+              <Skeleton className="h-5 w-3/4 mb-2 bg-navy/50" />
+              <Skeleton className="h-8 w-1/2 bg-navy/50" />
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -354,21 +371,15 @@ const MonthlyMetricsChart: React.FC = () => {
           <div ref={chartContainerRef} className="overflow-hidden relative h-64">
             <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
             <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="w-full h-full bg-light-navy/30 animate-pulse rounded"></div>
-              </div>
-            ) : (
-              <div className="h-full">
-                {!hasContent ? (
-                  <div className="flex items-center justify-center h-full text-white text-sm">
-                    No activity data to display for this month.
-                  </div>
-                ) : (
-                  monthlyChart
-                )}
-              </div>
-            )}
+            <div className="h-full">
+              {!hasContent ? (
+                <div className="flex items-center justify-center h-full text-white text-sm">
+                  No activity data to display for this month.
+                </div>
+              ) : (
+                monthlyChart
+              )}
+            </div>
           </div>
           <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
             <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
