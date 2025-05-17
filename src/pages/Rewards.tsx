@@ -11,8 +11,9 @@ import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import { useSyncManager } from '@/data/sync/useSyncManager';
 import { usePreloadRewards } from "@/data/preload/usePreloadRewards";
-import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton'; // Added import
-import { Award } from 'lucide-react'; // For "No rewards" message
+import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton';
+import { Award } from 'lucide-react';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Preload rewards data from IndexedDB before component renders
 usePreloadRewards()();
@@ -136,7 +137,9 @@ const Rewards: React.FC = () => {
   return (
     <AppLayout onAddNewItem={handleAddNewReward}>
       <RewardsProvider>
-        <RewardsContent contentRef={contentRef} />
+        <ErrorBoundary fallbackMessage="Could not load rewards. Please try reloading.">
+          <RewardsContent contentRef={contentRef} />
+        </ErrorBoundary>
       </RewardsProvider>
     </AppLayout>
   );

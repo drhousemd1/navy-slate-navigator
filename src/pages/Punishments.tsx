@@ -13,6 +13,7 @@ import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
 import { useCreatePunishmentOptimistic } from '@/data/mutations/useCreatePunishmentOptimistic';
 import { useUpdatePunishmentOptimistic } from '@/data/mutations/useUpdatePunishmentOptimistic';
 import { Skeleton } from '@/components/ui/skeleton';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Preload punishments data from IndexedDB before component renders
 usePreloadPunishments()();
@@ -43,22 +44,18 @@ const PunishmentsContent: React.FC<{
   const { mutateAsync: createPunishmentAsync } = useCreatePunishmentOptimistic();
   const { mutateAsync: updatePunishmentAsync } = useUpdatePunishmentOptimistic();
   
-  // Use the sync manager with minimal refreshing
   const { syncNow } = useSyncManager({ 
-    intervalMs: 60000, // Longer interval to avoid excessive refreshing
+    intervalMs: 60000,
     enabled: true 
   });
 
-  // Track initial mount and set loading state appropriately
   useEffect(() => {
-    // Consider initial load complete after a short delay
     const timer = setTimeout(() => {
       setIsInitialLoad(false);
     }, 200);
     return () => clearTimeout(timer);
   }, []);
   
-  // Only show loader on initial load when no cached data
   const showLoader = isInitialLoad && isLoading && punishments.length === 0;
   
   const handleAddNewPunishment = () => {
@@ -74,7 +71,7 @@ const PunishmentsContent: React.FC<{
     return () => {
       contentRef.current = {};
     };
-  }, [contentRef]);
+  }, [contentRef, handleAddNewPunishment]);
   
   const handleEditPunishment = (punishment: PunishmentData) => {
     setCurrentPunishment(punishment);
@@ -84,26 +81,20 @@ const PunishmentsContent: React.FC<{
   const handleSavePunishment = async (punishmentData: Partial<PunishmentData>) => {
     try {
       if (punishmentData.id) {
-        // Update existing punishment
         await updatePunishmentAsync({
           id: punishmentData.id,
           punishment: punishmentData
         });
       } else {
-        // Create new punishment
         await createPunishmentAsync(punishmentData);
       }
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
     } catch (error) {
-      // Error handling is now primarily within the mutation hooks
-      // Additional specific error handling for UI can be added here if needed
       console.error("Error saving punishment (from component):", error);
-      // Toasting is handled by the hooks, but can be overridden or supplemented here
     }
   };
   
-  // Handler for deleting a punishment
   const handleDeletePunishment = async (id: string) => {
     try {
       await deletePunishmentAsync(id);
@@ -119,7 +110,6 @@ const PunishmentsContent: React.FC<{
     }
   };
   
-  // Show loading state when appropriate
   if (showLoader) {
     return (
       <div className="p-4 pt-6">
@@ -133,7 +123,6 @@ const PunishmentsContent: React.FC<{
     );
   }
   
-  // Show empty state
   if (!isLoading && punishments.length === 0) {
     return (
       <div className="p-4 pt-6">
@@ -161,7 +150,6 @@ const PunishmentsContent: React.FC<{
     );
   }
   
-  // Normal render with data
   return (
     <div className="p-4 pt-6">
       <PunishmentsHeader />
@@ -198,7 +186,9 @@ const Punishments: React.FC = () => {
   
   return (
     <AppLayout onAddNewItem={handleAddNewPunishment}>
-      <PunishmentsContent contentRef={contentRef} />
+      <ErrorBoundary fallbackMessage="Could not load punishments. Please try reloading.">
+        <PunishmentsContent contentRef={contentRef} />
+      </ErrorBoundary>
     </AppLayout>
   );
 };

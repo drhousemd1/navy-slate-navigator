@@ -9,6 +9,7 @@ import { RulesProvider, useRules } from '@/contexts/RulesContext';
 import { Rule } from '@/data/interfaces/Rule';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { usePreloadRules } from "@/data/preload/usePreloadRules";
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Preload rules data from IndexedDB before component renders
 usePreloadRules()();
@@ -93,19 +94,18 @@ const RulesWithContext: React.FC = () => {
     }
   };
 
-  // Even if there's an error, if we have cached rules, just show them without the warning
-  if (error && rules.length > 0) {
+  // This specific error handling for rules can remain, ErrorBoundary will catch other errors
+  if (error && rules.length === 0) { // Show error message if there's an error and no cached rules
     return (
       <div className="container mx-auto px-4 py-6 RulesContent">
         <RulesHeader />
-        <RulesList
-          rules={rules}
-          isLoading={false}
-          onEditRule={handleEditRule}
-          onRuleBroken={handleRuleBroken}
-        />
-
-        <RuleEditor
+        <div className="flex flex-col items-center justify-center mt-8">
+          <div className="text-red-500 p-4 border border-red-400 rounded-md bg-red-900/20">
+            <h3 className="font-bold mb-2">Error Loading Rules</h3>
+            <p>{error.message || "Couldn't connect to the server. Please try again."}</p>
+          </div>
+        </div>
+         <RuleEditor
           isOpen={isEditorOpen}
           onClose={() => {
             setIsEditorOpen(false);
@@ -118,29 +118,14 @@ const RulesWithContext: React.FC = () => {
       </div>
     );
   }
-
-  // Show error message if there's an error and no cached rules
-  if (error && rules == null) {
-    return (
-      <div className="container mx-auto px-4 py-6 RulesContent">
-        <RulesHeader />
-        <div className="flex flex-col items-center justify-center mt-8">
-          <div className="text-red-500 p-4 border border-red-400 rounded-md bg-red-900/20">
-            <h3 className="font-bold mb-2">Error Loading Rules</h3>
-            <p>{error.message || "Couldn't connect to the server. Please try again."}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  
   return (
     <div className="container mx-auto px-4 py-6 RulesContent">
       <RulesHeader />
 
       <RulesList
-        rules={rules}
-        isLoading={false}
+        rules={rules} // Pass rules, even if empty and error is present but handled (showing stale data)
+        isLoading={isLoading && rules.length === 0} // isLoading true only if no data yet
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
       />
@@ -173,7 +158,9 @@ const Rules: React.FC = () => {
     }}>
       <RewardsProvider>
         <RulesProvider>
-          <RulesWithContext />
+          <ErrorBoundary fallbackMessage="Could not load rules. Please try reloading.">
+            <RulesWithContext />
+          </ErrorBoundary>
         </RulesProvider>
       </RewardsProvider>
     </AppLayout>

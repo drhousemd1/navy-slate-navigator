@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -10,6 +9,7 @@ import { Task } from '@/lib/taskUtils';
 import { syncCardById } from '@/data/sync/useSyncManager';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { usePreloadTasks } from "@/data/preload/usePreloadTasks";
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Preload tasks data from IndexedDB before component renders
 usePreloadTasks()();
@@ -21,16 +21,14 @@ const TasksWithContext: React.FC = () => {
   const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion, refetchTasks } = useTasks();
   const { refreshPointsFromDatabase } = useRewards();
   
-  // Use the sync manager to keep data in sync
   const { syncNow } = useSyncManager({ 
     intervalMs: 30000,
     enabled: true 
   });
   
-  // Initial sync when component mounts
   useEffect(() => {
-    syncNow(); // Force a sync when the Tasks page is loaded
-  }, [syncNow]); // Added syncNow to dependency array
+    syncNow(); 
+  }, [syncNow]); 
 
   const handleAddTask = () => {
     console.log('handleAddTask called in TasksWithContext');
@@ -38,7 +36,6 @@ const TasksWithContext: React.FC = () => {
     setIsEditorOpen(true);
   };
 
-  // Expose the handleAddTask function to be called from outside
   React.useEffect(() => {
     console.log('Setting up event listener for add-new-task');
     const element = document.querySelector('.TasksContent');
@@ -65,8 +62,6 @@ const TasksWithContext: React.FC = () => {
       setIsEditorOpen(false);
       setCurrentTask(null);
       
-      // Synchronize data after task save
-      // Added a check for taskData.id before calling syncCardById
       if (taskData.id) {
         setTimeout(() => syncCardById(taskData.id, 'tasks'), 500);
       }
@@ -93,7 +88,6 @@ const TasksWithContext: React.FC = () => {
         return;
       }
       await toggleTaskCompletion(taskId, completed, task.points);
-      // Always refresh points after task completion
       if (completed) {
         setTimeout(() => {
           refreshPointsFromDatabase();
@@ -105,7 +99,6 @@ const TasksWithContext: React.FC = () => {
   };
 
   useEffect(() => {
-    // Refresh points when component mounts
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
 
@@ -152,7 +145,9 @@ const Tasks: React.FC = () => {
     <AppLayout onAddNewItem={handleAddNewItem}>
       <RewardsProvider>
         <TasksProvider>
-          <TasksWithContext />
+          <ErrorBoundary fallbackMessage="Could not load tasks. Please try reloading.">
+            <TasksWithContext />
+          </ErrorBoundary>
         </TasksProvider>
       </RewardsProvider>
     </AppLayout>
@@ -160,4 +155,3 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
-
