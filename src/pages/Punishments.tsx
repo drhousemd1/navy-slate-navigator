@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
 import { Skull } from 'lucide-react';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
-import { useSyncManager } from '@/data/sync/useSyncManager';
+// Removed: import { useSyncManager } from '@/data/sync/useSyncManager'; // Not used in this file directly
 import { usePunishments } from '@/data/queries/usePunishments';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
@@ -12,25 +13,13 @@ import { usePreloadPunishments } from "@/data/preload/usePreloadPunishments";
 import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
 import { useCreatePunishmentOptimistic } from '@/data/mutations/useCreatePunishmentOptimistic';
 import { useUpdatePunishmentOptimistic } from '@/data/mutations/useUpdatePunishmentOptimistic';
-import { Skeleton } from '@/components/ui/skeleton';
+import PunishmentCardSkeleton from '@/components/punishments/PunishmentCardSkeleton'; // Import the new skeleton
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Preload punishments data from IndexedDB before component renders
 usePreloadPunishments()();
 
-const PunishmentCardSkeleton: React.FC = () => (
-  <div className="p-4 rounded-lg shadow-md bg-slate-800 border border-slate-700 space-y-3">
-    <div className="flex justify-between items-start">
-      <Skeleton className="h-6 w-3/4" />
-      <Skeleton className="h-5 w-16" />
-    </div>
-    <Skeleton className="h-4 w-full" />
-    <Skeleton className="h-4 w-5/6" />
-    <div className="flex justify-end items-center pt-2">
-      <Skeleton className="h-8 w-20" />
-    </div>
-  </div>
-);
+// Removed old PunishmentCardSkeleton definition from here
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -44,10 +33,7 @@ const PunishmentsContent: React.FC<{
   const { mutateAsync: createPunishmentAsync } = useCreatePunishmentOptimistic();
   const { mutateAsync: updatePunishmentAsync } = useUpdatePunishmentOptimistic();
   
-  const { syncNow } = useSyncManager({ 
-    intervalMs: 60000,
-    enabled: true 
-  });
+  // Removed: const { syncNow } = useSyncManager({ intervalMs: 60000, enabled: true }); // Not used directly here
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -92,6 +78,7 @@ const PunishmentsContent: React.FC<{
       setCurrentPunishment(undefined);
     } catch (error) {
       console.error("Error saving punishment (from component):", error);
+      // Removed toast from here, should be handled in mutation hooks
     }
   };
   
@@ -102,7 +89,7 @@ const PunishmentsContent: React.FC<{
       setCurrentPunishment(undefined);
     } catch (error) {
       console.error("Error deleting punishment:", error);
-      toast({
+      toast({ // This toast can remain if it's specific to the page's UI flow
         title: "Error",
         description: "Failed to delete punishment",
         variant: "destructive"
@@ -119,6 +106,15 @@ const PunishmentsContent: React.FC<{
           <PunishmentCardSkeleton />
           <PunishmentCardSkeleton />
         </div>
+      </div>
+    );
+  }
+  
+  if (!isLoading && error) { // Handle error state
+    return (
+      <div className="p-4 pt-6 text-center text-red-500">
+        <PunishmentsHeader />
+        <p className="mt-4">Error loading punishments: {error.message}</p>
       </div>
     );
   }
