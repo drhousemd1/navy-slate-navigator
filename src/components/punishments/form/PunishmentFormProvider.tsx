@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form } from '@/components/ui/form';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
+import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 
 export const punishmentFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -25,12 +26,19 @@ export type PunishmentFormValues = z.infer<typeof punishmentFormSchema>;
 
 interface PunishmentFormProviderProps {
   punishmentData?: PunishmentData;
-  children: (form: ReturnType<typeof useForm<PunishmentFormValues>>) => React.ReactNode;
+  children: (
+    form: UseFormReturn<PunishmentFormValues>,
+    clearPersistedState: () => Promise<void>
+  ) => React.ReactNode;
+  formBaseId: string; // e.g., "punishment-editor"
+  persisterExclude?: (keyof PunishmentFormValues)[];
 }
 
 const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
   punishmentData,
-  children
+  children,
+  formBaseId,
+  persisterExclude
 }) => {
   const form = useForm<PunishmentFormValues>({
     resolver: zodResolver(punishmentFormSchema),
@@ -50,9 +58,18 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
     }
   });
 
+  const persisterFormId = `${formBaseId}-${punishmentData?.id || 'new'}`;
+  const { clearPersistedState } = useFormStatePersister<PunishmentFormValues>(
+    persisterFormId,
+    form,
+    {
+      exclude: persisterExclude ?? []
+    }
+  );
+
   return (
     <Form {...form}>
-      {children(form)}
+      {children(form, clearPersistedState)}
     </Form>
   );
 };
