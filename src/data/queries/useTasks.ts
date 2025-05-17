@@ -5,49 +5,19 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { usePersistentQuery as useQuery } from "./usePersistentQuery";
+import { useQuery } from "@tanstack/react-query"; // Changed from usePersistentQuery
 import { supabase } from '@/integrations/supabase/client';
-import {
-  loadTasksFromDB,
-  saveTasksToDB,
-  getLastSyncTimeForTasks,
-  setLastSyncTimeForTasks
-} from "../indexedDB/useIndexedDB";
+import { Task } from '@/lib/taskUtils'; // Assuming Task interface is correctly defined here
+import { fetchTasks } from "./tasks/fetchTasks"; // Import the actual fetch function
 
 export function useTasks() {
-  return useQuery({
+  return useQuery<Task[], Error>({ // Ensure Task[] is the correct return type of fetchTasks
     queryKey: ["tasks"],
-    queryFn: async () => {
-      const localData = await loadTasksFromDB();
-      const lastSync = await getLastSyncTimeForTasks();
-      let shouldFetch = true;
-
-      if (lastSync) {
-        const timeDiff = Date.now() - new Date(lastSync as string).getTime();
-        if (timeDiff < 1000 * 60 * 30) {
-          shouldFetch = false;
-        }
-      }
-
-      if (!shouldFetch && localData) {
-        return localData;
-      }
-
-      const { data, error } = await supabase.from("tasks").select("*");
-      if (error) throw error;
-
-      if (data) {
-        await saveTasksToDB(data);
-        await setLastSyncTimeForTasks(new Date().toISOString());
-        return data;
-      }
-
-      return localData;
-    },
-    // Fix: Remove the async function and use undefined instead
-    initialData: undefined,
+    queryFn: fetchTasks, // Use the refactored fetchTasks
+    // initialData: undefined, // Removed: Persister handles initial data hydration
     staleTime: Infinity,
-    gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
+    gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnWindowFocus: false
   });
 }
+

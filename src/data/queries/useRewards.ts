@@ -5,7 +5,7 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { usePersistentQuery as useQuery } from "./usePersistentQuery";
+import { useQuery } from "@tanstack/react-query"; // Changed from usePersistentQuery
 import { supabase } from '@/integrations/supabase/client';
 import {
   loadRewardsFromDB,
@@ -19,21 +19,22 @@ export function useRewards() {
   return useQuery<Reward[]>({
     queryKey: ["rewards"],
     queryFn: async () => {
-      const localData = await loadRewardsFromDB();
+      const localData = await loadRewardsFromDB() as Reward[] | null;
       const lastSync = await getLastSyncTimeForRewards();
       let shouldFetch = true;
 
       if (lastSync) {
         const timeDiff = Date.now() - new Date(lastSync as string).getTime();
-        if (timeDiff < 1000 * 60 * 30) {
+        if (timeDiff < 1000 * 60 * 30) { // 30 minutes
           shouldFetch = false;
         }
       }
 
       if (!shouldFetch && localData) {
-        return (localData as any[]).map(row => ({
+        // Ensure transformation is applied if it was in usePersistentQuery
+        return localData.map(row => ({
           ...row,
-          is_dom_reward: row.is_dominant // Add this property
+          is_dom_reward: (row as any).is_dominant // Retain existing transformation logic
         }));
       }
 
@@ -41,24 +42,24 @@ export function useRewards() {
       if (error) throw error;
 
       if (data) {
-        const processedData = (data as any[]).map(row => ({
+        const processedData = data.map(row => ({
           ...row,
-          is_dom_reward: row.is_dominant // Add this property
-        }));
+          is_dom_reward: (row as any).is_dominant // Retain existing transformation logic
+        } as Reward));
         await saveRewardsToDB(processedData);
         await setLastSyncTimeForRewards(new Date().toISOString());
         return processedData;
       }
 
-      return localData ? (localData as any[]).map(row => ({
+      return localData ? localData.map(row => ({
         ...row,
-        is_dom_reward: row.is_dominant // Add this property
+        is_dom_reward: (row as any).is_dominant // Retain existing transformation logic
       })) : [];
     },
-    // Fix: Remove the async function and use undefined instead
-    initialData: undefined,
+    // initialData: undefined, // Removed: Persister handles initial data hydration
     staleTime: Infinity,
-    gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
+    gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnWindowFocus: false
   });
 }
+

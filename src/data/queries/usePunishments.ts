@@ -5,7 +5,7 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { usePersistentQuery as useQuery } from "./usePersistentQuery";
+import { useQuery } from "@tanstack/react-query"; // Changed from usePersistentQuery
 import { supabase } from '@/integrations/supabase/client';
 import {
   loadPunishmentsFromDB,
@@ -16,38 +16,37 @@ import {
 import { PunishmentData } from "@/contexts/punishments/types";
 
 export function usePunishments() {
-  const query = useQuery<PunishmentData[]>({
+  const queryResult = useQuery<PunishmentData[], Error>({ // Explicitly type queryResult
     queryKey: ["punishments"],
     queryFn: async () => {
-      const localData = await loadPunishmentsFromDB();
+      const localData = await loadPunishmentsFromDB() as PunishmentData[] | null;
       const lastSync = await getLastSyncTimeForPunishments();
       let shouldFetch = true;
 
       if (lastSync) {
         const timeDiff = Date.now() - new Date(lastSync as string).getTime();
-        if (timeDiff < 1000 * 60 * 30) {
+        if (timeDiff < 1000 * 60 * 30) { // 30 minutes
           shouldFetch = false;
         }
       }
 
       if (!shouldFetch && localData) {
-        return localData as PunishmentData[];
+        return localData;
       }
 
       const { data, error } = await supabase.from("punishments").select("*");
       if (error) throw error;
 
       if (data) {
-        await savePunishmentsToDB(data);
+        const punishmentsData = data as PunishmentData[];
+        await savePunishmentsToDB(punishmentsData);
         await setLastSyncTimeForPunishments(new Date().toISOString());
-        return data as PunishmentData[];
+        return punishmentsData;
       }
 
-      return (localData || []) as PunishmentData[];
+      return localData || []; // Fallback to localData or empty array
     },
-    // Fix: Remove the async function and use undefined instead
-    // TanStack Query will handle fetching the initial data in the queryFn
-    initialData: undefined,
+    // initialData: undefined, // Removed: Persister handles initial data hydration
     staleTime: Infinity,
     gcTime: 3600000, // 1 hour
     refetchOnWindowFocus: false,
@@ -55,11 +54,12 @@ export function usePunishments() {
     refetchOnMount: false
   });
 
-  // Add custom properties to the query object to be compatible with the expected interface
-  // in the Punishments component
   return {
-    ...query,
-    punishments: query.data || [],
-    refetchPunishments: query.refetch
+    ...queryResult,
+    punishments: queryResult.data || [],
+    isLoading: queryResult.isLoading, // ensure isLoading is passed through
+    error: queryResult.error, // ensure error is passed through
+    refetchPunishments: queryResult.refetch
   };
 }
+
