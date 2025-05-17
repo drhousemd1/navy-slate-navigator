@@ -1,246 +1,147 @@
 
-/**
- * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
- * No query, mutation, or sync logic is allowed in components or page files.
- * All logic must use these shared, optimized hooks and utilities only.
- */
-
-import { useQuery, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, getLocalDateString, wasCompletedToday } from '@/lib/taskUtils';
+import { Task, isTaskRecurringToday, processTasksWithRecurringLogic } from '@/lib/taskUtils';
+import {
+  loadTasksFromDB,
+  saveTasksToDB,
+  getLastSyncTimeForTasks,
+  setLastSyncTimeForTasks,
+} from './indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
-import { getMondayBasedDay } from '@/lib/utils';
-import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
-import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
-import { useCreateTask } from "@/data/mutations/useCreateTask";
-import { useCompleteTask } from "@/data/mutations/useCompleteTask";
-import { saveTasksToDB } from "@/data/indexedDB/useIndexedDB";
-import { syncCardById } from "@/data/sync/useSyncManager";
+import { fetchTasks } from './queries/tasks/fetchTasks';
+import { useCreateTask } from './mutations/useCreateTask';
+import { useCompleteTask } from './mutations/useCompleteTask'; // This hook can be used for general updates
+import { useDeleteTask } from './mutations/tasks/useDeleteTask';
 
-const TASKS_QUERY_KEY = ['tasks'];
-const TASK_COMPLETIONS_QUERY_KEY = ['task-completions'];
-const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
+export interface TasksDataHook {
+  tasks: Task[];
+  isLoading: boolean;
+  error: Error | null;
+  saveTask: (taskData: Partial<Task>) => Promise<Task | null>;
+  deleteTask: (taskId: string) => Promise<boolean>;
+  toggleTaskCompletion: (taskId: string, completed: boolean, points: number) => Promise<boolean>;
+  refetchTasks: () => Promise<QueryObserverResult<Task[], Error>>;
+}
 
-const fetchTasks = async (): Promise<Task[]> => {
-  const startTime = performance.now();
-  console.log('[TasksDataHandler] Fetching tasks from the server');
-  
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .order('created_at', { ascending: false });
+export const useTasksData = (): TasksDataHook => {
+  const queryClient = useQueryClient();
 
-  if (error) {
-    console.error('Error fetching tasks:', error);
-    throw error;
-  }
-
-  const tasks: Task[] = data.map(task => ({
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    points: task.points,
-    // Fix: Ensure priority is strictly typed as one of the allowed values
-    priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
-    completed: task.completed,
-    background_image_url: task.background_image_url,
-    background_opacity: task.background_opacity,
-    focal_point_x: task.focal_point_x,
-    focal_point_y: task.focal_point_y,
-    frequency: task.frequency as 'daily' | 'weekly',
-    frequency_count: task.frequency_count,
-    usage_data: Array.isArray(task.usage_data) 
-      ? task.usage_data.map(val => typeof val === 'number' ? val : Number(val)) 
-      : [0, 0, 0, 0, 0, 0, 0],
-    icon_name: task.icon_name,
-    icon_url: task.icon_url,
-    icon_color: task.icon_color,
-    highlight_effect: task.highlight_effect,
-    title_color: task.title_color,
-    subtext_color: task.subtext_color,
-    calendar_color: task.calendar_color,
-    last_completed_date: task.last_completed_date,
-    created_at: task.created_at,
-    updated_at: task.updated_at
-  }));
-
-  const today = getLocalDateString();
-  const tasksToReset = tasks.filter(task => 
-    task.completed && 
-    task.frequency === 'daily' && 
-    task.last_completed_date !== today
-  );
-
-  if (tasksToReset.length > 0) {
-    console.log(`[TasksDataHandler] Resetting ${tasksToReset.length} daily tasks that are not completed today`);
-    
-    const updates = tasksToReset.map(task => ({
-      id: task.id,
-      completed: false
-    }));
-
-    for (const update of updates) {
-      await supabase
-        .from('tasks')
-        .update({ completed: false })
-        .eq('id', update.id);
-    }
-
-    // Update tasks in memory rather than refetching
-    const updatedTasks = tasks.map(task => {
-      if (tasksToReset.some(resetTask => resetTask.id === task.id)) {
-        return { ...task, completed: false };
-      }
-      return task;
-    });
-    
-    const endTime = performance.now();
-    console.log(`[TasksDataHandler] Fetched and processed ${tasks.length} tasks in ${(endTime - startTime).toFixed(2)}ms`);
-    
-    return updatedTasks;
-  }
-  
-  const endTime = performance.now();
-  console.log(`[TasksDataHandler] Fetched ${tasks.length} tasks in ${(endTime - startTime).toFixed(2)}ms`);
-
-  return tasks;
-};
-
-export const useTasksData = () => {
   const {
     data: tasks = [],
     isLoading,
     error,
-    refetch
-  } = useQuery({
-    queryKey: TASKS_QUERY_KEY,
-    queryFn: fetchTasks,
-    ...STANDARD_QUERY_CONFIG, // Use our standardized configuration from react-query-config.ts
+    refetch: refetchTasks,
+  } = useQuery<Task[], Error>({
+    queryKey: ['tasks'],
+    queryFn: fetchTasks, // Use the new fetchTasks function
+    // Default staleTime, gcTime etc., are now handled by PersistQueryClientProvider defaults
   });
 
-  // Use our new mutation hooks
-  const { mutateAsync: createTaskMutation } = useCreateTask();
-  const { mutateAsync: completeTaskMutation } = useCompleteTask();
+  const createTaskMutation = useCreateTask();
+  const updateTaskMutation = useCompleteTask(); // Re-using for general updates
+  const deleteTaskMutation = useDeleteTask();
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
-      // Fix the task priority and frequency types to ensure they're one of the allowed values
-      // Also ensure usage_data is properly formatted as number[] array
-      const processedTaskData = {
-        ...taskData,
-        // Ensure priority is one of the allowed types
-        priority: (taskData.priority || 'medium') as 'low' | 'medium' | 'high',
-        // Ensure frequency is one of the allowed types
-        frequency: (taskData.frequency || 'daily') as 'daily' | 'weekly',
-        // Ensure usage_data is a properly formatted number[] array
-        usage_data: Array.isArray(taskData.usage_data) 
-          ? taskData.usage_data.map(val => typeof val === 'number' ? val : Number(val))
-          : Array(7).fill(0)
-      };
-      
-      const savedTask = await createTaskMutation(processedTaskData);
-      
-      // Fix: Ensure the returned task has the correct types
-      return {
-        ...savedTask,
-        priority: (savedTask.priority as 'low' | 'medium' | 'high') || 'medium',
-        frequency: (savedTask.frequency as 'daily' | 'weekly') || 'daily',
-        // Ensure usage_data is returned as a proper number array
-        usage_data: Array.isArray(savedTask.usage_data) 
-          ? savedTask.usage_data.map(val => typeof val === 'number' ? val : Number(val))
-          : Array(7).fill(0),
-      };
-    } catch (err: any) {
-      console.error('Error saving task:', err);
-      toast({
-        title: 'Error saving task',
-        description: err.message || 'Could not save task',
-        variant: 'destructive',
-      });
+      let savedTask: Task | undefined | null = null;
+      if (taskData.id) { // Existing task: Update
+        // Ensure only valid fields are passed to update
+        const { id, ...updates } = taskData;
+        await updateTaskMutation.mutateAsync({ taskId: id, updates });
+        // The onSuccess in useCompleteTask handles cache update via syncCardById
+        // We might want to fetch the full task here if syncCardById isn't sufficient
+        // For now, assume syncCardById correctly updates the cache with the full task
+        const currentTasks = queryClient.getQueryData<Task[]>(['tasks']) || [];
+        savedTask = currentTasks.find(t => t.id === id);
+
+      } else { // New task: Create
+        const newTask = await createTaskMutation.mutateAsync(taskData);
+        savedTask = newTask as Task;
+        // onSuccess in useCreateTask handles cache update via syncCardById
+      }
+      toast({ title: 'Task Saved', description: 'Your task has been successfully saved.' });
+      return savedTask || null;
+    } catch (e: any) {
+      console.error('Error saving task:', e);
+      toast({ title: 'Error Saving Task', description: e.message, variant: 'destructive' });
       return null;
     }
   };
 
   const deleteTask = async (taskId: string): Promise<boolean> => {
     try {
-      // Delete from Supabase
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', taskId);
-
-      if (error) throw error;
-      
-      // Update local cache
-      const previousTasks = tasks || [];
-      const updatedTasks = previousTasks.filter(t => t.id !== taskId);
-      
-      // We keep this direct cache update since deletion isn't part of our mutation hooks
-      await saveTasksToDB(updatedTasks);
-      
+      await deleteTaskMutation.mutateAsync(taskId);
+      // onSuccess in useDeleteTask handles cache and IndexedDB updates
       return true;
-    } catch (err: any) {
-      console.error('Error deleting task:', err);
-      toast({
-        title: 'Error deleting task',
-        description: err.message || 'Could not delete task',
-        variant: 'destructive',
-      });
+    } catch (e: any) {
+      console.error('Error deleting task:', e);
+      // Toasting is handled within useDeleteTask
       return false;
     }
   };
 
-  const toggleTaskCompletion = async (taskId: string, completed: boolean): Promise<boolean> => {
+  const toggleTaskCompletion = async (taskId: string, completed: boolean, pointsValue: number): Promise<boolean> => {
     try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const updates: Partial<Task> = {
+        completed,
+        last_completed_date: completed ? todayStr : null,
+      };
+      
+      // If task is completed, record completion for points and weekly metrics
       if (completed) {
-        // Fix: pass an object with taskId and updates properties as required by the completeTaskMutation
-        await completeTaskMutation({
-          taskId,
-          updates: {
-            completed: true,
-            last_completed_date: getLocalDateString(),
-            updated_at: new Date().toISOString()
-          }
-        });
-      } else {
-        // For unmarking as complete, we can use a simple update
-        await supabase
-          .from('tasks')
-          .update({ 
-            completed: false,
-            updated_at: new Date().toISOString() 
-          })
-          .eq('id', taskId);
-        
-        // Need to sync this card manually since we're not using the mutation
-        await syncCardById(taskId, 'tasks');
+        // Add task_id and user_id to task_completion_history
+        // This should ideally be part of the mutation or a backend function for atomicity
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+            await supabase.from('task_completion_history').insert({ task_id: taskId, user_id: userData.user.id });
+        } else {
+            console.warn("User not found for task completion history");
+        }
       }
+
+      await updateTaskMutation.mutateAsync({ taskId, updates });
+       // onSuccess in useCompleteTask handles cache update via syncCardById
+
+      // Update points locally (this should be a mutation itself or part of a larger transaction)
+      if (completed) {
+        const { data: profileData, error: profileError } = await supabase.auth.getUser();
+        if (profileError || !profileData.user) {
+          throw new Error("User not authenticated");
+        }
+        const userId = profileData.user.id;
+        const { data: currentProfile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('points')
+          .eq('id', userId)
+          .single();
+
+        if (fetchError) throw fetchError;
+        
+        const newPoints = (currentProfile?.points || 0) + pointsValue;
+        await supabase.from('profiles').update({ points: newPoints }).eq('id', userId);
+        queryClient.invalidateQueries({ queryKey: ['profile_points'] }); // Invalidate profile points to refetch
+        queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] }); // Also invalidate weekly metrics
+
+      }
+
+      toast({ title: 'Task Updated', description: `Task marked as ${completed ? 'complete' : 'incomplete'}.` });
       return true;
-    } catch (err: any) {
-      console.error('Error updating task completion:', err);
-      toast({
-        title: 'Error updating task',
-        description: err.message || 'Could not update task completion status',
-        variant: 'destructive',
-      });
+    } catch (e: any) {
+      console.error('Error toggling task completion:', e);
+      toast({ title: 'Error Updating Task', description: e.message, variant: 'destructive' });
       return false;
     }
-  };
-
-  const refetchTasks = async (
-    options?: RefetchOptions
-  ): Promise<QueryObserverResult<Task[], Error>> => {
-    console.log('[TasksDataHandler] Manually refetching tasks');
-    return refetch(options);
   };
 
   return {
-    tasks,
+    tasks: processTasksWithRecurringLogic(tasks), // Ensure tasks are processed
     isLoading,
     error,
     saveTask,
     deleteTask,
     toggleTaskCompletion,
-    refetchTasks
+    refetchTasks,
   };
 };
