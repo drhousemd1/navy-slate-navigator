@@ -6,8 +6,17 @@ import TasksList from '../components/task/TasksList';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TasksProvider, useTasks } from '../contexts/TasksContext';
 import { Task } from '@/lib/taskUtils';
-import { syncCardById } from '@/data/sync/useSyncManager';
-import { useSyncManager } from '@/hooks/useSyncManager';
+// Assuming syncCardById might be part of useSyncManager or a separate utility.
+// For now, if it's only used in the timeout, removing the timeout removes its call here.
+// import { syncCardById } from '@/data/sync/useSyncManager'; // This import might not be needed anymore if not used elsewhere
+import { useSyncManager } from '@/hooks/useSyncManager'; // This path is read-only.
+                                                        // The file Tasks.tsx provided in context uses useSyncManager from @/hooks/useSyncManager
+                                                        // This is problematic as that file is read-only.
+                                                        // However, the syncCardById import was from '@/data/sync/useSyncManager'.
+                                                        // This suggests a mix-up or multiple sync managers.
+                                                        // Let's proceed by removing the line that calls syncCardById.
+                                                        // The useSyncManager from @/hooks/useSyncManager in Tasks.tsx is for the general syncNow.
+
 import { usePreloadTasks } from "@/data/preload/usePreloadTasks";
 import ErrorBoundary from '@/components/ErrorBoundary';
 
@@ -62,9 +71,12 @@ const TasksWithContext: React.FC = () => {
       setIsEditorOpen(false);
       setCurrentTask(null);
       
-      if (taskData.id) {
-        setTimeout(() => syncCardById(taskData.id, 'tasks'), 500);
-      }
+      // Removed:
+      // if (taskData.id) {
+      //   setTimeout(() => syncCardById(taskData.id, 'tasks'), 500);
+      // }
+      // Optimistic update from saveTask should handle UI.
+      // Periodic sync for eventual consistency.
     } catch (err) {
       console.error('Error saving task:', err);
     }

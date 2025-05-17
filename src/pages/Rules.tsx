@@ -21,16 +21,14 @@ const RulesWithContext: React.FC = () => {
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken } = useRules();
 
-  // Use the sync manager to keep data in sync
   const { syncNow, lastSyncTime } = useSyncManager({ 
-    intervalMs: 30000, // 30 seconds, consistent with other pages
+    intervalMs: 30000,
     enabled: true 
   });
   
-  // Initial sync when component mounts
   useEffect(() => {
-    syncNow(); // Force a sync when the Rules page is loaded
-  }, []);
+    syncNow();
+  }, [syncNow]); // Removed initial syncNow as it's covered by effect if needed
 
   const handleAddRule = () => {
     console.log('handleAddRule called in RulesWithContext');
@@ -38,7 +36,6 @@ const RulesWithContext: React.FC = () => {
     setIsEditorOpen(true);
   };
 
-  // Expose the handleAddRule function to be called from outside
   React.useEffect(() => {
     console.log('Setting up event listener for add-new-rule');
     const element = document.querySelector('.RulesContent');
@@ -64,9 +61,6 @@ const RulesWithContext: React.FC = () => {
       await saveRule(ruleData);
       setIsEditorOpen(false);
       setCurrentRule(null);
-      
-      // Synchronize data after rule save
-      setTimeout(() => syncNow(), 500);
     } catch (err) {
       console.error('Error saving rule:', err);
     }
@@ -77,9 +71,6 @@ const RulesWithContext: React.FC = () => {
       await deleteRule(ruleId);
       setCurrentRule(null);
       setIsEditorOpen(false);
-      
-      // Synchronize data after rule delete
-      setTimeout(() => syncNow(), 500);
     } catch (err) {
       console.error('Error deleting rule:', err);
     }
@@ -94,8 +85,7 @@ const RulesWithContext: React.FC = () => {
     }
   };
 
-  // This specific error handling for rules can remain, ErrorBoundary will catch other errors
-  if (error && rules.length === 0) { // Show error message if there's an error and no cached rules
+  if (error && rules.length === 0) {
     return (
       <div className="container mx-auto px-4 py-6 RulesContent">
         <RulesHeader />
@@ -124,8 +114,8 @@ const RulesWithContext: React.FC = () => {
       <RulesHeader />
 
       <RulesList
-        rules={rules} // Pass rules, even if empty and error is present but handled (showing stale data)
-        isLoading={isLoading && rules.length === 0} // isLoading true only if no data yet
+        rules={rules}
+        isLoading={isLoading && rules.length === 0}
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
       />

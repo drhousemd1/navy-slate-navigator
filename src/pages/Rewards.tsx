@@ -115,7 +115,6 @@ const RewardsContent: React.FC<{
               await handleDeleteReward(index);
             }
             setIsEditorOpen(false);
-            setTimeout(syncNow, 500);
           } catch (error) {
             console.error("Error deleting reward:", error);
           }
