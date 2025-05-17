@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -12,7 +11,7 @@ interface TasksContextType {
   error: Error | null;
   saveTask: (taskData: Partial<Task>) => Promise<Task | null>;
   deleteTask: (taskId: string) => Promise<boolean>;
-  toggleTaskCompletion: (taskId: string, completed: boolean) => Promise<boolean>;
+  toggleTaskCompletion: (taskId: string, completed: boolean, points: number) => Promise<boolean>;
   refetchTasks: () => Promise<QueryObserverResult<Task[], Error>>;
 }
 

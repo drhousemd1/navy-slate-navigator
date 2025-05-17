@@ -16,8 +16,8 @@ export interface Task {
   focal_point_x?: number;
   focal_point_y?: number;
   frequency: 'daily' | 'weekly';
-  frequency_count: number;
-  usage_data: number[];
+  frequency_count: number; // Max completions per period
+  usage_data: number[]; // Completions per day of week (Mon-Sun)
   icon_url?: string;
   icon_name?: string;
   icon_color?: string;
@@ -25,14 +25,18 @@ export interface Task {
   title_color?: string;
   subtext_color?: string;
   calendar_color?: string;
-  last_completed_date?: string;
+  last_completed_date?: string; // YYYY-MM-DD
   created_at?: string;
   updated_at?: string;
 }
 
 export const getLocalDateString = (): string => {
   const today = new Date();
-  return today.toLocaleDateString('en-CA');
+  // Format as YYYY-MM-DD
+  const year = today.getFullYear();
+  const month = (today.getMonth() + 1).toString().padStart(2, '0');
+  const day = today.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 export const todayKey = (): string =>
@@ -162,10 +166,10 @@ const processTaskFromDb = (task: any): Task => {
     focal_point_x: task.focal_point_x,
     focal_point_y: task.focal_point_y,
     frequency: (task.frequency as string || 'daily') as 'daily' | 'weekly',
-    frequency_count: task.frequency_count,
-    usage_data: Array.isArray(task.usage_data) ? 
-      task.usage_data.map((val: any) => Number(val)) : 
-      [0, 0, 0, 0, 0, 0, 0],
+    frequency_count: task.frequency_count || 1, // Ensure default frequency count is at least 1
+    usage_data: Array.isArray(task.usage_data) && task.usage_data.length === 7 ? 
+      task.usage_data.map((val: any) => Number(val) || 0) : 
+      Array(7).fill(0), // Ensure it's a 7-element array of numbers
     icon_url: task.icon_url,
     icon_name: task.icon_name,
     icon_color: task.icon_color,
@@ -426,4 +430,22 @@ export const deleteTask = async (id: string): Promise<boolean> => {
     });
     return false;
   }
+};
+
+export const processTasksWithRecurringLogic = (rawTasks: any[]): Task[] => {
+  if (!rawTasks) return [];
+  const todayStr = getLocalDateString();
+  return rawTasks.map(rawTask => {
+    // Step 1: Ensure the task conforms to the Task interface using processTaskFromDb
+    const task = processTaskFromDb(rawTask);
+
+    // Step 2: Apply daily task reset logic for the client-side view
+    // If a daily task was marked completed, but its last_completed_date is not today,
+    // it should appear as not completed for the current day.
+    if (task.frequency === 'daily' && task.completed && task.last_completed_date !== todayStr) {
+      // Return a new object with completed set to false for the UI
+      return { ...task, completed: false };
+    }
+    return task; // Return the processed (and potentially modified) task
+  });
 };

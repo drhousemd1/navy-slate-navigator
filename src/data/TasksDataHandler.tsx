@@ -1,7 +1,8 @@
 
 import { useQuery, useMutation, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, isTaskRecurringToday, processTasksWithRecurringLogic } from '@/lib/taskUtils';
+// Removed isTaskRecurringToday, kept processTasksWithRecurringLogic
+import { Task, processTasksWithRecurringLogic } from '@/lib/taskUtils'; 
 import {
   loadTasksFromDB,
   saveTasksToDB,
@@ -20,6 +21,7 @@ export interface TasksDataHook {
   error: Error | null;
   saveTask: (taskData: Partial<Task>) => Promise<Task | null>;
   deleteTask: (taskId: string) => Promise<boolean>;
+  // Signature matches the one in TasksContext.tsx
   toggleTaskCompletion: (taskId: string, completed: boolean, points: number) => Promise<boolean>;
   refetchTasks: () => Promise<QueryObserverResult<Task[], Error>>;
 }
@@ -50,8 +52,6 @@ export const useTasksData = (): TasksDataHook => {
         const { id, ...updates } = taskData;
         await updateTaskMutation.mutateAsync({ taskId: id, updates });
         // The onSuccess in useCompleteTask handles cache update via syncCardById
-        // We might want to fetch the full task here if syncCardById isn't sufficient
-        // For now, assume syncCardById correctly updates the cache with the full task
         const currentTasks = queryClient.getQueryData<Task[]>(['tasks']) || [];
         savedTask = currentTasks.find(t => t.id === id);
 
@@ -61,6 +61,8 @@ export const useTasksData = (): TasksDataHook => {
         // onSuccess in useCreateTask handles cache update via syncCardById
       }
       toast({ title: 'Task Saved', description: 'Your task has been successfully saved.' });
+      // Invalidate tasks query to reflect changes from server/cache updates by mutations
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       return savedTask || null;
     } catch (e: any) {
       console.error('Error saving task:', e);
@@ -73,6 +75,7 @@ export const useTasksData = (): TasksDataHook => {
     try {
       await deleteTaskMutation.mutateAsync(taskId);
       // onSuccess in useDeleteTask handles cache and IndexedDB updates
+      // It also invalidates query ['tasks']
       return true;
     } catch (e: any) {
       console.error('Error deleting task:', e);
@@ -81,6 +84,7 @@ export const useTasksData = (): TasksDataHook => {
     }
   };
 
+  // The pointsValue parameter was added here to match the context
   const toggleTaskCompletion = async (taskId: string, completed: boolean, pointsValue: number): Promise<boolean> => {
     try {
       const todayStr = new Date().toISOString().split('T')[0];
@@ -91,8 +95,6 @@ export const useTasksData = (): TasksDataHook => {
       
       // If task is completed, record completion for points and weekly metrics
       if (completed) {
-        // Add task_id and user_id to task_completion_history
-        // This should ideally be part of the mutation or a backend function for atomicity
         const { data: userData } = await supabase.auth.getUser();
         if (userData.user) {
             await supabase.from('task_completion_history').insert({ task_id: taskId, user_id: userData.user.id });
@@ -108,24 +110,34 @@ export const useTasksData = (): TasksDataHook => {
       if (completed) {
         const { data: profileData, error: profileError } = await supabase.auth.getUser();
         if (profileError || !profileData.user) {
-          throw new Error("User not authenticated");
+          // This should ideally not happen if the user is logged in.
+          // Consider if throwing an error is better or just logging.
+          console.error("User not authenticated for points update");
+          // Do not throw error here to allow task completion to proceed if points update fails
+        } else {
+            const userId = profileData.user.id;
+            const { data: currentProfile, error: fetchError } = await supabase
+              .from('profiles')
+              .select('points')
+              .eq('id', userId)
+              .single();
+
+            if (fetchError) {
+                console.error('Error fetching profile for points update:', fetchError);
+            } else {
+                const newPoints = (currentProfile?.points || 0) + pointsValue;
+                const { error: updatePointsError } = await supabase.from('profiles').update({ points: newPoints }).eq('id', userId);
+                if (updatePointsError) {
+                    console.error('Error updating profile points:', updatePointsError);
+                } else {
+                    queryClient.invalidateQueries({ queryKey: ['profile_points'] });
+                    queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+                }
+            }
         }
-        const userId = profileData.user.id;
-        const { data: currentProfile, error: fetchError } = await supabase
-          .from('profiles')
-          .select('points')
-          .eq('id', userId)
-          .single();
-
-        if (fetchError) throw fetchError;
-        
-        const newPoints = (currentProfile?.points || 0) + pointsValue;
-        await supabase.from('profiles').update({ points: newPoints }).eq('id', userId);
-        queryClient.invalidateQueries({ queryKey: ['profile_points'] }); // Invalidate profile points to refetch
-        queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] }); // Also invalidate weekly metrics
-
       }
-
+      // Invalidate tasks query to reflect changes from server/cache updates by mutations
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast({ title: 'Task Updated', description: `Task marked as ${completed ? 'complete' : 'incomplete'}.` });
       return true;
     } catch (e: any) {
@@ -136,7 +148,7 @@ export const useTasksData = (): TasksDataHook => {
   };
 
   return {
-    tasks: processTasksWithRecurringLogic(tasks), // Ensure tasks are processed
+    tasks: processTasksWithRecurringLogic(tasks || []), // Ensure tasks are processed, handle tasks potentially being undefined initially
     isLoading,
     error,
     saveTask,
