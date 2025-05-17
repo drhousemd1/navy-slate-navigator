@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { Task } from '@/lib/taskUtils';
-import TaskEditorForm from './task-editor/TaskEditorForm';
+import TaskEditorForm from './TaskEditorForm';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TaskEditorProps {
@@ -25,13 +24,13 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
   
   const handleSave = async (formData: any) => {
     await onSave(formData);
-    onClose();
+    onClose(); 
   };
 
   const handleDelete = (taskId: string) => {
     if (onDelete) {
       onDelete(taskId);
-      onClose();
+      onClose(); // Close editor after delete action
     }
   };
 
