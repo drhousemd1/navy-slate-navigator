@@ -1,7 +1,7 @@
+
 import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
-// Remove QueryClientProvider, it will be replaced by PersistQueryClientProvider
-// import { QueryClientProvider } from "@tanstack/react-query";
+// import { QueryClientProvider } from "@tanstack/react-query"; // No longer needed
 import { queryClient } from "./data/queryClient"; // Our base queryClient instance
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
@@ -24,7 +24,8 @@ import AppGuidePage from "./pages/AppGuide";
 
 // New imports for persistence
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+// Import createAsyncStoragePersister instead of createSyncStoragePersister
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import localforage from 'localforage';
 import { APP_CACHE_VERSION } from '@/lib/react-query-config';
 
@@ -35,8 +36,9 @@ localforage.config({
   description: 'Persistent cache for Kingdom app React Query state',
 });
 
-const localforagePersister = createSyncStoragePersister({
-  storage: localforage,
+// Use createAsyncStoragePersister with localforage
+const localforagePersister = createAsyncStoragePersister({
+  storage: localforage, // localforage is compatible with AsyncStorage interface
   key: 'REACT_QUERY_OFFLINE_CACHE', // Default key, can be customized
   throttleTime: 1000, // How often to persist, default is 1000ms
 });
@@ -140,3 +142,4 @@ const App = () => {
 };
 
 export default App;
+
