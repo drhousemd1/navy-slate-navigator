@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
+import { Session, User, AuthChangeEvent, Subscription } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { queryClient } from '@/data/queryClient';
@@ -47,10 +47,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const authOperations = useAuthOperations();
   const wrappedSetUserForProfile = (updatedUser: User | null) => {
-    setAuthState(prev => ({ ...prev, user: updatedUser }));
-    if (prev.user !== updatedUser) {
-      setAuthState(prev => ({ ...prev, userExists: !!updatedUser }));
-    }
+    setAuthState(currentAuthState => ({
+      ...currentAuthState,
+      user: updatedUser,
+      userExists: !!updatedUser,
+    }));
   };
   const userProfileUtils = useUserProfile(authState.user, wrappedSetUserForProfile);
 
@@ -132,14 +133,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           sessionExists: !!session,
         });
 
-        if (_event === 'SIGNED_IN') {
-          console.log("Auth state: User session detected");
-        } else if (_event === 'SIGNED_OUT') {
-          console.log("Auth state: User signed out");
-          await clearAllCaches();
-        } else if (_event === 'USER_DELETED') {
-          console.log("Auth state: User deleted");
-          await clearAllCaches();
+        switch (_event) {
+          case 'SIGNED_IN':
+            console.log("Auth state: User session detected");
+            break;
+          case 'SIGNED_OUT':
+            console.log("Auth state: User signed out");
+            await clearAllCaches();
+            break;
+          case 'USER_DELETED':
+            console.log("Auth state: User deleted");
+            await clearAllCaches();
+            break;
+          default:
+            console.log(`Auth state change: ${_event}, no specific action taken in switch.`);
         }
       }
     );
