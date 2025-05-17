@@ -7,7 +7,7 @@ export const fetchRules = async (): Promise<Rule[]> => {
   console.log("[fetchRules] Starting rules fetch");
   const startTime = performance.now();
   
-  const CACHE_KEY = 'kingdom-app-rules';
+  // const CACHE_KEY = 'kingdom-app-rules'; // No longer using localStorage for this
   
   try {
     const { data, error } = await supabase
@@ -16,8 +16,8 @@ export const fetchRules = async (): Promise<Rule[]> => {
       .order('created_at', { ascending: false });
       
     if (error) {
-      console.error('[fetchRules] Error:', error);
-      throw error;
+      console.error('[fetchRules] Error fetching from Supabase:', error);
+      throw error; // Let React Query handle this error (e.g., serve stale data from cache)
     }
     
     logQueryPerformance('fetchRules', startTime, data?.length);
@@ -66,30 +66,24 @@ export const fetchRules = async (): Promise<Rule[]> => {
       };
     });
     
-    // Save to localStorage as a backup cache
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(validatedRules));
-      console.log(`[fetchRules] Saved ${validatedRules.length} rules to localStorage cache`);
-    } catch (e) {
-      console.warn('[fetchRules] Could not save rules to localStorage:', e);
-    }
+    // localStorage.setItem(CACHE_KEY, JSON.stringify(validatedRules)); // Removed localStorage save
+    // console.log(`[fetchRules] Saved ${validatedRules.length} rules to localStorage cache`); // Removed
     
     return validatedRules;
   } catch (error) {
-    console.error('[fetchRules] Fetch failed:', error);
+    console.error('[fetchRules] Fetch process failed:', error);
+    // localStorage related fallback removed. React Query will handle error states and cache.
+    // const cachedData = localStorage.getItem(CACHE_KEY);
+    // if (cachedData) {
+    //   console.log('[fetchRules] Using cached rules data from localStorage');
+    //   try {
+    //     const parsedData = JSON.parse(cachedData);
+    //     return parsedData;
+    //   } catch (parseError) {
+    //     console.error('[fetchRules] Error parsing cached data from localStorage:', parseError);
+    //   }
+    // }
     
-    // In case of failure, check browser storage for cached data
-    const cachedData = localStorage.getItem(CACHE_KEY);
-    if (cachedData) {
-      console.log('[fetchRules] Using cached rules data');
-      try {
-        const parsedData = JSON.parse(cachedData);
-        return parsedData;
-      } catch (parseError) {
-        console.error('[fetchRules] Error parsing cached data:', parseError);
-      }
-    }
-    
-    throw error;
+    throw error; // Re-throw the error to be handled by React Query
   }
 };
