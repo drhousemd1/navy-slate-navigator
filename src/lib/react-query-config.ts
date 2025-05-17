@@ -1,5 +1,5 @@
 
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryKey } from '@tanstack/react-query';
 import localforage from "localforage";
 
 // Version identifier for cache invalidation with the persister
@@ -18,10 +18,26 @@ export const createQueryClient = () => {
         retry: 3, // Increased retry attempts for better recovery
         retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
         networkMode: 'online', // Default to online, persister handles offline for queries if configured
+        // Add a default onError handler for improved diagnostic logging
+        onError: (error: unknown, query: { queryKey: QueryKey }) => {
+          console.error(
+            `[Query Error] Query Key: ${JSON.stringify(query.queryKey)} \nError:`,
+            error
+          );
+          // Here, you could add more sophisticated error telemetry if needed in the future,
+          // e.g., sending to an external logging service.
+        },
       },
       mutations: {
         networkMode: 'offlineFirst', // Queue mutations when offline
         retry: 3, // Increased retry attempts for mutations as well
+        onError: (error: unknown, variables: unknown, context: unknown, mutation: { mutationKey?: QueryKey }) => {
+          console.error(
+            `[Mutation Error] Mutation Key: ${JSON.stringify(mutation.mutationKey || 'N/A')} \nVariables: ${JSON.stringify(variables)} \nError:`,
+            error,
+            "\nContext:", context
+          );
+        }
       },
     },
   });
