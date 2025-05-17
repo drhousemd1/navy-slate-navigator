@@ -6,7 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter as Router } from 'react-router-dom';
 import AppRoutes from './AppRoutes';
 import { AuthProvider } from './contexts/auth/AuthContext';
-import { ThemeProvider } from './contexts/theme/ThemeContext';
+import { ThemeProvider } from 'next-themes'; // Corrected import
 import { NetworkStatusProvider } from './contexts/NetworkStatusContext';
 import OfflineBanner from './components/OfflineBanner';
 import { queryClient } from './data/queryClient';
