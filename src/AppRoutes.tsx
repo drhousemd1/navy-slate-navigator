@@ -11,11 +11,10 @@ import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Encyclopedia from './pages/Encyclopedia';
 import AppGuide from './pages/AppGuide';
-import { LoginSignupView } from './pages/auth/LoginSignupView'; // Corrected import
-import { ForgotPasswordView } from './pages/auth/ForgotPasswordView'; // Corrected import
+import Auth from './pages/auth'; // Import the main Auth component
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotFound from './pages/NotFound';
-import ErrorBoundary from '@/components/ErrorBoundary'; // Import ErrorBoundary
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const AppRoutes = () => {
   return (
@@ -30,8 +29,11 @@ const AppRoutes = () => {
       <Route path="/messages" element={<ErrorBoundary><Messages /></ErrorBoundary>} />
       <Route path="/encyclopedia" element={<ErrorBoundary><Encyclopedia /></ErrorBoundary>} />
       <Route path="/app-guide" element={<ErrorBoundary><AppGuide /></ErrorBoundary>} />
-      <Route path="/auth" element={<ErrorBoundary><LoginSignupView /></ErrorBoundary>} />
-      <Route path="/forgot-password" element={<ErrorBoundary><ForgotPasswordView /></ErrorBoundary>} />
+      
+      {/* Auth routes now use the main Auth component */}
+      <Route path="/auth" element={<ErrorBoundary><Auth /></ErrorBoundary>} />
+      <Route path="/forgot-password" element={<ErrorBoundary><Auth /></ErrorBoundary>} /> 
+      
       <Route path="/reset-password" element={<ErrorBoundary><ResetPasswordPage /></ErrorBoundary>} />
       <Route path="*" element={<ErrorBoundary><NotFound /></ErrorBoundary>} />
     </Routes>
@@ -39,3 +41,4 @@ const AppRoutes = () => {
 };
 
 export default AppRoutes;
+

@@ -11,20 +11,35 @@ const Auth: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
-  // Check if there's a view state passed via navigation
   React.useEffect(() => {
+    // Priority: location.state, then specific path, then default
     if (location.state && location.state.view) {
       setAuthView(location.state.view as AuthView);
+    } else if (location.pathname === '/forgot-password') {
+      setAuthView('forgot-password');
+    } else {
+      // Default to 'login' for any other case (e.g., path is '/auth')
+      setAuthView('login');
     }
-  }, [location]);
+  }, [location.pathname, location.state]); // Depend on pathname and state
 
-  // Only redirect if we're sure about authentication status
-  if (isAuthenticated && !loading) {
-    console.log('Auth page: User is authenticated, redirecting to home');
-    return <Navigate to="/" />;
+  if (loading) {
+    // Optional: Show a loading indicator while auth state is being determined
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
+        <p className="text-white">Loading...</p>
+      </div>
+    );
   }
 
-  // Only render auth UI if we're sure user is not authenticated or we're still loading
+  if (isAuthenticated) {
+    console.log('Auth page: User is authenticated, redirecting to home');
+    // If navigating from a specific page, try to go back, otherwise to home
+    const from = location.state?.from?.pathname || "/";
+    return <Navigate to={from} replace />;
+  }
+
+  // Render specific view based on authView state
   if (authView === "forgot-password") {
     return <ForgotPasswordView onBackClick={() => setAuthView("login")} />;
   }
@@ -34,3 +49,4 @@ const Auth: React.FC = () => {
 };
 
 export default Auth;
+
