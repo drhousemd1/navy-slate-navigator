@@ -30,6 +30,9 @@ import { APP_CACHE_VERSION } from '@/lib/react-query-config';
 import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
 import OfflineBanner from '@/components/OfflineBanner';
 
+// Import ErrorBoundary
+import ErrorBoundary from '@/components/ErrorBoundary';
+
 // Configure localforage instance if not already globally configured elsewhere
 localforage.config({
   name: 'kingdom-app-cache', // A distinct name for this app's localforage store
@@ -103,32 +106,36 @@ const App = () => {
   }, []);
 
   return (
-    <PersistQueryClientProvider
-      client={queryClient}
-      persistOptions={{
-        persister: localforagePersister,
-        buster: APP_CACHE_VERSION,
-        maxAge: 1000 * 60 * 60 * 24 * 7,
-      }}
-      onSuccess={() => {
-        console.log('React Query cache hydration successful.');
-        queryClient.resumePausedMutations().then(() => {
-          console.log('Paused mutations resumed after hydration.');
-        }).catch(error => {
-          console.error('Error resuming paused mutations:', error);
-        });
-      }}
-    >
-      <BrowserRouter>
-        <NetworkStatusProvider> {/* Wrap with NetworkStatusProvider */}
-          <AuthProvider>
-            <Toaster />
-            <AppRoutes />
-            <OfflineBanner /> {/* Add OfflineBanner here */}
-          </AuthProvider>
-        </NetworkStatusProvider>
-      </BrowserRouter>
-    </PersistQueryClientProvider>
+    <ErrorBoundary fallbackMessage="The application encountered a critical error.">
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister: localforagePersister,
+          buster: APP_CACHE_VERSION,
+          maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        }}
+        onSuccess={() => {
+          console.log('React Query cache hydration successful.');
+          // Attempt to resume mutations, but fail gracefully if offline or errors occur.
+          queryClient.resumePausedMutations().then(() => {
+            console.log('Paused mutations resumed successfully after hydration.');
+          }).catch(error => {
+            // It's common for this to fail if offline, so log as warning.
+            console.warn('Could not resume paused mutations after hydration (may be offline):', error);
+          });
+        }}
+      >
+        <BrowserRouter>
+          <NetworkStatusProvider>
+            <AuthProvider>
+              <Toaster />
+              <AppRoutes />
+              <OfflineBanner />
+            </AuthProvider>
+          </NetworkStatusProvider>
+        </BrowserRouter>
+      </PersistQueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

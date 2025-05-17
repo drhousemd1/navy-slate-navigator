@@ -15,13 +15,13 @@ export const createQueryClient = () => {
         refetchOnWindowFocus: false,
         refetchOnMount: false, // Components will use cached data first
         refetchOnReconnect: false,
-        retry: 1, // Default retry attempts
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+        retry: 3, // Increased retry attempts for better recovery
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
         networkMode: 'online', // Default to online, persister handles offline for queries if configured
       },
       mutations: {
         networkMode: 'offlineFirst', // Queue mutations when offline
-        retry: 1,
+        retry: 3, // Increased retry attempts for mutations as well
       },
     },
   });
