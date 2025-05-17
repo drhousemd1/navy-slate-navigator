@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 import PunishmentBasicDetails from './form/PunishmentBasicDetails';
@@ -8,16 +7,17 @@ import PunishmentColorSettings from './PunishmentColorSettings';
 import PunishmentFormActions from './form/PunishmentFormActions';
 import PunishmentFormProvider from './form/PunishmentFormProvider';
 import PunishmentFormSubmitHandler from './form/PunishmentFormSubmitHandler';
-import PunishmentFormLayout from './form/PunishmentFormLayout';
 import { usePunishmentIcon } from './hooks/usePunishmentIcon';
 import { usePunishmentBackground } from './hooks/usePunishmentBackground';
 import { useDeleteDialog } from './hooks/useDeleteDialog';
+import { useFormStatePersister } from '@/hooks/useFormStatePersister';
+import { UseFormReturn } from 'react-hook-form';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
   onSave: (data: PunishmentData) => Promise<void>;
   onCancel: () => void;
-  onDelete?: (index: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
@@ -49,47 +49,86 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
 
   useEffect(() => {
     if (punishmentData) {
-      console.log("Setting form data from punishmentData:", punishmentData);
-      
-      if (punishmentData.icon_name) {
-        setSelectedIconName(punishmentData.icon_name);
-      }
-      
-      if (punishmentData.background_image_url) {
-        setImagePreview(punishmentData.background_image_url);
-      }
+      setSelectedIconName(punishmentData.icon_name || null);
+      setImagePreview(punishmentData.background_image_url || null);
+    } else {
+      setSelectedIconName(null);
+      setImagePreview(null);
     }
   }, [punishmentData, setSelectedIconName, setImagePreview]);
 
+  const handleSaveWrapped = async (form: UseFormReturn<any>, data: PunishmentData) => {
+    const persisterFormId = `punishment-editor-${punishmentData?.id || 'new'}`;
+    await onSave(data);
+  };
+
+  const handleCancelWrapped = (clearFormStateCallback?: () => void) => {
+    if (clearFormStateCallback) clearFormStateCallback();
+    onCancel();
+  };
+
+  const handleDeleteWrapped = (clearFormStateCallback?: () => void) => {
+    if (onDelete && punishmentData?.id) {
+      onDelete(punishmentData.id);
+    }
+    if (clearFormStateCallback) clearFormStateCallback();
+    setIsDeleteDialogOpen(false);
+  };
+
   return (
     <PunishmentFormProvider punishmentData={punishmentData}>
-      {(form) => (
-        <PunishmentFormSubmitHandler
-          punishmentData={punishmentData}
-          form={form}
-          selectedIconName={selectedIconName}
-          imagePreview={imagePreview}
-          onSave={onSave}
-          onCancel={onCancel}
-        >
-          <PunishmentFormContent 
+      {(form) => {
+        const persisterFormId = `punishment-editor-${punishmentData?.id || 'new'}`;
+        const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
+          exclude: ['background_image_url', 'icon_url']
+        });
+
+        const handleSaveWithClear = async (dataToSave: PunishmentData) => {
+          await onSave(dataToSave);
+          await clearPersistedState();
+        };
+
+        const handleCancelWithClear = () => {
+          clearPersistedState();
+          onCancel();
+        };
+
+        const handleDeleteWithClear = () => {
+          if (onDelete && punishmentData?.id) {
+            onDelete(punishmentData.id);
+          }
+          clearPersistedState();
+          setIsDeleteDialogOpen(false);
+        };
+
+        return (
+          <PunishmentFormSubmitHandler
+            punishmentData={punishmentData}
             form={form}
             selectedIconName={selectedIconName}
-            iconPreview={iconPreview}
             imagePreview={imagePreview}
-            isDeleteDialogOpen={isDeleteDialogOpen}
-            setIsDeleteDialogOpen={setIsDeleteDialogOpen}
-            punishmentData={punishmentData}
-            handleSelectIcon={handleSelectIcon}
-            handleUploadIcon={handleUploadIcon}
-            handleRemoveIcon={handleRemoveIcon}
-            handleImageUpload={handleImageUpload} 
-            handleRemoveImage={handleRemoveImage}
-            onCancel={onCancel}
-            onDelete={onDelete}
-          />
-        </PunishmentFormSubmitHandler>
-      )}
+            onSave={handleSaveWithClear}
+            onCancel={handleCancelWithClear}
+          >
+            <PunishmentFormContent 
+              form={form}
+              selectedIconName={selectedIconName}
+              iconPreview={iconPreview}
+              imagePreview={imagePreview}
+              isDeleteDialogOpen={isDeleteDialogOpen}
+              setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+              punishmentData={punishmentData}
+              handleSelectIcon={handleSelectIcon}
+              handleUploadIcon={handleUploadIcon}
+              handleRemoveIcon={handleRemoveIcon}
+              handleImageUpload={handleImageUpload}
+              handleRemoveImage={handleRemoveImage}
+              onCancel={handleCancelWithClear}
+              onDelete={handleDeleteWithClear}
+            />
+          </PunishmentFormSubmitHandler>
+        );
+      }}
     </PunishmentFormProvider>
   );
 };
@@ -108,7 +147,7 @@ interface PunishmentFormContentProps {
   handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleRemoveImage: () => void;
   onCancel: () => void;
-  onDelete?: (index: string) => void;
+  onDelete?: () => void;
   isSaving?: boolean;
 }
 

@@ -1,19 +1,36 @@
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Form } from "@/components/ui/form"; // Import the Form component
+import { Form } from "@/components/ui/form";
 import RewardBasicDetails from './RewardBasicDetails';
 import RewardIconSection from './RewardIconSection';
 import RewardBackgroundSection from './RewardBackgroundSection';
 import RewardColorSettings from './RewardColorSettings';
 import RewardFormActions from './RewardFormActions';
 import DeleteRewardDialog from './DeleteRewardDialog';
+import { useFormStatePersister } from '@/hooks/useFormStatePersister';
+
+interface RewardFormValues {
+  title: string;
+  description: string;
+  cost: number;
+  is_dom_reward: boolean;
+  icon_name: string | null;
+  icon_color: string;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  highlight_effect: boolean;
+  background_image_url: string | null;
+  background_opacity: number;
+  focal_point_x: number;
+  focal_point_y: number;
+}
 
 interface RewardEditorFormProps {
   rewardData?: any;
   onSave: (formData: any) => Promise<void>;
   onCancel: () => void;
-  onDelete?: (id: number) => void;
+  onDelete?: (id: string) => void;
   isSaving?: boolean;
 }
 
@@ -25,25 +42,20 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   isSaving = false
 }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
-  const [iconPreview, setIconPreview] = React.useState<string | null>(null);
 
-  console.log("RewardEditorForm initialized with data:", rewardData);
-  console.log("RewardEditorForm - initial is_dom_reward value:", rewardData?.is_dom_reward);
-
-  // Form handling with react-hook-form
-  const form = useForm({
+  const form = useForm<RewardFormValues>({
     defaultValues: {
       title: '',
       description: '',
       cost: 10,
       is_dom_reward: false,
-      icon_name: null as string | null,
+      icon_name: null,
       icon_color: '#9b87f5',
       title_color: '#FFFFFF',
       subtext_color: '#8E9196',
       calendar_color: '#7E69AB',
       highlight_effect: false,
-      background_image_url: null as string | null,
+      background_image_url: null,
       background_opacity: 100,
       focal_point_x: 50,
       focal_point_y: 50,
@@ -52,23 +64,16 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   const { control, handleSubmit, setValue, watch, reset } = form;
 
-  // Watch form values
-  const iconName = watch('icon_name');
-  const iconColor = watch('icon_color');
-  const imagePreview = watch('background_image_url');
-  const isDomReward = watch('is_dom_reward');
+  const persisterFormId = `reward-editor-${rewardData?.id || 'new'}`;
+  const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
+    exclude: ['background_image_url']
+  });
 
-  console.log("RewardEditorForm - isDomReward watched value:", isDomReward);
-
-  // Load existing reward data if available
   useEffect(() => {
     if (rewardData) {
-      console.log("Setting form data from rewardData:", rewardData);
-      console.log("is_dom_reward value from rewardData:", rewardData.is_dom_reward);
-      
-      // Explicitly ensure is_dom_reward is a proper boolean, not a string or other type
-      const isDomRewardValue = Boolean(rewardData.is_dom_reward);
-      console.log("Converted is_dom_reward value to boolean:", isDomRewardValue);
+      const isDomRewardValue = typeof rewardData.is_dom_reward === 'string' 
+        ? rewardData.is_dom_reward.toLowerCase() === 'true' 
+        : Boolean(rewardData.is_dom_reward);
       
       reset({
         title: rewardData.title || '',
@@ -86,8 +91,13 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         focal_point_x: rewardData.focal_point_x || 50,
         focal_point_y: rewardData.focal_point_y || 50,
       });
-      
-      console.log("Form reset with is_dom_reward:", isDomRewardValue);
+    } else {
+      reset({
+        title: '', description: '', cost: 10, is_dom_reward: false, icon_name: null,
+        icon_color: '#9b87f5', title_color: '#FFFFFF', subtext_color: '#8E9196',
+        calendar_color: '#7E69AB', highlight_effect: false, background_image_url: null,
+        background_opacity: 100, focal_point_x: 50, focal_point_y: 50,
+      });
     }
   }, [rewardData, reset]);
 
@@ -109,8 +119,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   };
 
   const handleUploadIcon = () => {
-    // Placeholder for custom icon upload functionality
-    console.log('Custom icon upload not implemented');
+    console.log('Custom icon upload not implemented for rewards yet');
   };
 
   const handleRemoveIcon = () => {
@@ -128,22 +137,31 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
     }
   };
 
-  const handleDeleteConfirm = () => {
-    if (onDelete && rewardData?.index !== undefined) {
-      onDelete(rewardData.index);
+  const handleDeleteConfirmWrapped = () => {
+    if (onDelete && rewardData?.id) {
+      onDelete(rewardData.id);
+      clearPersistedState();
     }
     setIsDeleteDialogOpen(false);
   };
 
-  const onSubmit = async (data: any) => {
-    console.log("Submitting form with data:", data);
-    console.log("is_dom_reward in submitted data:", data.is_dom_reward);
-    await onSave(data);
+  const onSubmitWrapped = async (data: RewardFormValues) => {
+    try {
+      await onSave(data);
+      await clearPersistedState();
+    } catch (error) {
+      console.error("Error during onSave callback:", error);
+    }
+  };
+
+  const handleCancelWrapped = () => {
+    clearPersistedState();
+    onCancel();
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmitWrapped)} className="space-y-6">
         <RewardBasicDetails 
           control={control}
           incrementCost={incrementCost}
@@ -152,9 +170,9 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         
         <RewardIconSection 
           control={control}
-          selectedIconName={iconName}
-          iconPreview={iconPreview}
-          iconColor={iconColor}
+          selectedIconName={watch('icon_name')}
+          iconPreview={null}
+          iconColor={watch('icon_color')}
           onSelectIcon={handleSelectIcon}
           onUploadIcon={handleUploadIcon}
           onRemoveIcon={handleRemoveIcon}
@@ -162,7 +180,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         
         <RewardBackgroundSection 
           control={control}
-          imagePreview={imagePreview}
+          imagePreview={watch('background_image_url')}
           initialPosition={{ x: watch('focal_point_x'), y: watch('focal_point_y') }}
           onRemoveImage={handleRemoveImage}
           onImageUpload={(e) => {
@@ -181,7 +199,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           rewardData={rewardData}
           isDeleteDialogOpen={isDeleteDialogOpen}
           setIsDeleteDialogOpen={setIsDeleteDialogOpen}
-          onCancel={onCancel}
+          onCancel={handleCancelWrapped}
           onDelete={rewardData && onDelete ? () => setIsDeleteDialogOpen(true) : undefined}
           isSaving={isSaving}
         />
@@ -189,7 +207,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         <DeleteRewardDialog 
           isOpen={isDeleteDialogOpen}
           onOpenChange={setIsDeleteDialogOpen}
-          onConfirm={handleDeleteConfirm}
+          onConfirm={handleDeleteConfirmWrapped}
           rewardName={rewardData?.title || 'this reward'}
         />
       </form>

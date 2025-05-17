@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -14,6 +13,7 @@ import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
+import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 
 interface Rule {
   id?: string;
@@ -51,6 +51,8 @@ interface RuleFormValues {
   focal_point_x: number;
   focal_point_y: number;
   priority: 'low' | 'medium' | 'high';
+  icon_name?: string;
+  icon_url?: string;
   frequency: 'daily' | 'weekly';
   frequency_count: number;
 }
@@ -78,7 +80,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     defaultValues: {
       title: ruleData?.title || '',
       description: ruleData?.description || '',
-      background_image_url: ruleData?.background_image_url,
+      background_image_url: ruleData?.background_image_url || undefined,
       background_opacity: ruleData?.background_opacity || 100,
       title_color: ruleData?.title_color || '#FFFFFF',
       subtext_color: ruleData?.subtext_color || '#FFFFFF',
@@ -88,17 +90,41 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       focal_point_x: ruleData?.focal_point_x || 50,
       focal_point_y: ruleData?.focal_point_y || 50,
       priority: ruleData?.priority || 'medium',
-      icon_name: ruleData?.icon_name,
+      icon_name: ruleData?.icon_name || undefined,
+      icon_url: ruleData?.icon_url || undefined,
       frequency: ruleData?.frequency || 'daily',
-      frequency_count: ruleData?.frequency_count || 3,
+      frequency_count: ruleData?.frequency_count || (ruleData?.frequency === 'daily' ? 1 : 3),
     },
   });
 
+  const persisterFormId = `rule-editor-${ruleData?.id || 'new'}`;
+  const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
+    exclude: ['background_image_url', 'icon_url']
+  });
+
   useEffect(() => {
+    form.reset({
+      title: ruleData?.title || '',
+      description: ruleData?.description || '',
+      background_image_url: ruleData?.background_image_url || undefined,
+      background_opacity: ruleData?.background_opacity || 100,
+      title_color: ruleData?.title_color || '#FFFFFF',
+      subtext_color: ruleData?.subtext_color || '#FFFFFF',
+      calendar_color: ruleData?.calendar_color || '#9c7abb',
+      icon_color: ruleData?.icon_color || '#FFFFFF',
+      highlight_effect: ruleData?.highlight_effect || false,
+      focal_point_x: ruleData?.focal_point_x || 50,
+      focal_point_y: ruleData?.focal_point_y || 50,
+      priority: ruleData?.priority || 'medium',
+      icon_name: ruleData?.icon_name || undefined,
+      icon_url: ruleData?.icon_url || undefined,
+      frequency: ruleData?.frequency || 'daily',
+      frequency_count: ruleData?.frequency_count || (ruleData?.frequency === 'daily' ? 1 : 3),
+    });
     setImagePreview(ruleData?.background_image_url || null);
     setIconPreview(ruleData?.icon_url || null);
     setSelectedIconName(ruleData?.icon_name || null);
-  }, [ruleData]);
+  }, [ruleData, form.reset]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -161,18 +187,20 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   };
 
-  const handleSubmit = async (values: RuleFormValues) => {
+  const handleSubmitWrapped = async (values: RuleFormValues) => {
     setLoading(true);
-    
     try {
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
-        highlight_effect: values.highlight_effect || false, // Ensure highlight_effect is properly set
+        highlight_effect: values.highlight_effect || false,
+        background_image_url: imagePreview,
+        icon_url: iconPreview && !selectedIconName ? iconPreview : undefined,
       };
       
       await onSave(ruleToSave);
+      await clearPersistedState();
     } catch (error) {
       console.error('Error saving rule:', error);
       toast({
@@ -185,16 +213,22 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   };
 
-  const handleDelete = () => {
+  const handleDeleteWrapped = () => {
     if (ruleData?.id && onDelete) {
       onDelete(ruleData.id);
+      clearPersistedState();
       setIsDeleteDialogOpen(false);
     }
   };
 
+  const handleCancelWrapped = () => {
+    clearPersistedState();
+    onCancel();
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmitWrapped)} className="space-y-6">
         <FormField
           control={form.control}
           name="title"
@@ -231,6 +265,33 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <PrioritySelector control={form.control} />
+          <FormField
+            control={form.control}
+            name="frequency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Frequency</FormLabel>
+                <FormControl>
+                  <select {...field} className="bg-dark-navy border-light-navy text-white p-2 rounded w-full">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="frequency_count"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Frequency Count</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value,10))} className="bg-dark-navy border-light-navy text-white" />
+                </FormControl>
+              </FormItem>
+            )}
+          />
         </div>
         
         <div className="space-y-4">
@@ -239,8 +300,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
             control={form.control}
             imagePreview={imagePreview}
             initialPosition={{ 
-              x: ruleData?.focal_point_x || 50, 
-              y: ruleData?.focal_point_y || 50 
+              x: form.watch('focal_point_x'), 
+              y: form.watch('focal_point_y')
             }}
             onRemoveImage={() => {
               setImagePreview(null);
@@ -253,7 +314,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Rule Icon</FormLabel>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
               <IconSelector
                 selectedIconName={selectedIconName}
@@ -278,7 +339,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <ColorPickerField 
             control={form.control} 
             name="title_color" 
@@ -308,10 +369,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           control={form.control}
           name="highlight_effect"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between">
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-dark-navy border-light-navy">
               <div className="space-y-0.5">
-                <FormLabel className="text-white">Highlight Effect</FormLabel>
-                <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
+                <FormLabel className="text-base text-white">Highlight Effect</FormLabel>
+                <p className="text-sm text-gray-400">Apply a yellow highlight behind title and description.</p>
               </div>
               <FormControl>
                 <Switch
@@ -328,14 +389,15 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
             <DeleteRuleDialog
               isOpen={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
-              onDelete={handleDelete}
+              onDelete={handleDeleteWrapped}
+              ruleName={form.getValues('title') || 'this rule'}
             />
           )}
           <Button 
             type="button" 
-            variant="destructive" 
-            onClick={onCancel}
-            className="bg-red-700 border-light-navy text-white hover:bg-red-600"
+            variant="outline"
+            onClick={handleCancelWrapped}
+            className="text-white border-light-navy hover:bg-light-navy/20"
           >
             Cancel
           </Button>
@@ -347,7 +409,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
             {loading ? 'Saving...' : (
               <>
                 <Save className="h-4 w-4" />
-                Save Changes
+                Save Rule
               </>
             )}
           </Button>
