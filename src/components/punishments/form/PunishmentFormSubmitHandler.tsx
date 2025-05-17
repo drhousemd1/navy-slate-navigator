@@ -1,15 +1,16 @@
 
 import React, { useState } from 'react';
 import { Form } from '@/components/ui/form';
-import { PunishmentData } from '@/contexts/PunishmentsContext';
+import { PunishmentData } from '@/contexts/PunishmentsContext'; // Assuming this path is correct, or adjust to types
 import { toast } from '@/hooks/use-toast';
+// import { PunishmentFormValues } from './PunishmentFormProvider'; // If specific form values type is needed
 
 interface PunishmentFormSubmitHandlerProps {
   punishmentData?: PunishmentData;
-  form: any;
+  form: any; // Consider using UseFormReturn<PunishmentFormValues> for stronger typing
   selectedIconName: string | null;
   imagePreview: string | null;
-  iconPreview: string | null; // Add iconPreview prop
+  iconPreview: string | null;
   onSave: (data: PunishmentData) => Promise<void>;
   onCancel: () => void;
   children: React.ReactNode;
@@ -20,7 +21,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   form,
   selectedIconName,
   imagePreview,
-  iconPreview, // Make sure to destructure it
+  iconPreview,
   onSave,
   onCancel,
   children
@@ -28,11 +29,9 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   const [isSaving, setIsSaving] = useState(false);
   const [hasShownErrorToast, setHasShownErrorToast] = useState(false);
 
-  const onSubmit = async (values: any) => {
-    // Reset toast tracking on new submission attempt
+  const onSubmit = async (values: any) => { // Consider typing `values` with PunishmentFormValues
     setHasShownErrorToast(false);
     
-    // Prevent multiple submissions
     if (isSaving) {
       console.log("Form submission prevented - already saving");
       return;
@@ -40,12 +39,10 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
 
     console.log("Form submitted with values:", values);
     
-    // Make sure we're using exact primitive values, not references
     const icon_name = selectedIconName || null;
     const background_image_url = imagePreview || null;
-    const icon_url = iconPreview || null; // Use iconPreview for icon_url
+    const icon_url = iconPreview || null;
     
-    // Force explicit assignment of dom_points with Number() constructor to ensure number type
     const points = Number(values.points);
     const dom_points = values.dom_points !== undefined 
       ? Number(values.dom_points)
@@ -53,13 +50,13 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     
     console.log("Calculated dom_points:", dom_points, "from points:", points);
     
-    const dataToSave: PunishmentData = {
+    const dataToSave: Partial<PunishmentData> = { // Use Partial if ID might be missing for creation
       ...values,
       points: points,
       dom_points: dom_points,
       icon_name: icon_name,
       background_image_url: background_image_url,
-      icon_url: icon_url, // Include icon_url in dataToSave
+      icon_url: icon_url,
       icon_color: values.icon_color || '#ea384c'
     };
     
@@ -71,11 +68,13 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     
     try {
       setIsSaving(true);
-      await onSave(dataToSave);
-      // Only reset the form and close after successful save
-      form.reset();
-      onCancel();
-      // Show success toast
+      await onSave(dataToSave as PunishmentData); // Cast to PunishmentData assuming onSave expects full
+      
+      // Removed form.reset() here.
+      // onCancel will handle closing the editor and clearing the persisted draft state
+      // for this specific form instance via clearPersistedState.
+      onCancel(); 
+
       toast({
         title: "Success",
         description: "Punishment saved successfully.",
@@ -83,7 +82,6 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     } catch (error) {
       console.error("Error saving punishment:", error);
       
-      // Show save error toast only once per submission attempt
       if (!hasShownErrorToast) {
         toast({
           title: "Save Failed",
@@ -97,11 +95,8 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     }
   };
 
-  // Clone children to pass isSaving prop
   const childrenWithProps = React.Children.map(children, child => {
-    // Only clone if it's a valid element
     if (React.isValidElement(child)) {
-      // Pass isSaving prop to the child
       return React.cloneElement(child as React.ReactElement<any>, { isSaving });
     }
     return child;
@@ -117,3 +112,4 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
 };
 
 export default PunishmentFormSubmitHandler;
+

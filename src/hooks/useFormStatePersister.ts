@@ -3,7 +3,7 @@ import localforage from 'localforage';
 import debounce from 'lodash/debounce';
 import { UseFormReturn, FieldValues } from 'react-hook-form';
 
-const FORM_STATE_PREFIX = 'formStatePersister_';
+export const FORM_STATE_PREFIX = 'formStatePersister_'; // Exported
 
 interface UseFormStatePersisterOptions<TFieldValues extends FieldValues> {
   debounceTime?: number;
