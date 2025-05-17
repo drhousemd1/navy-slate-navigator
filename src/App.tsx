@@ -1,64 +1,62 @@
 
+import React from 'react';
+import { Toaster } from 'sonner';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter as Router } from 'react-router-dom';
+import AppRoutes from './AppRoutes';
 import { AuthProvider } from './contexts/auth/AuthContext';
-import AppRoutes from './AppRoutes'; // Assuming this path is correct and resolved by the build system
-import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from './contexts/theme/ThemeContext';
 import { NetworkStatusProvider } from './contexts/NetworkStatusContext';
 import OfflineBanner from './components/OfflineBanner';
-import ErrorBoundary from './components/ErrorBoundary';
-
+import { queryClient } from './data/queryClient';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import localforage from 'localforage';
-import { queryClient } from '@/data/queryClient'; // Corrected path
-import { APP_CACHE_VERSION } from '@/lib/react-query-config'; // Corrected path
+import { APP_CACHE_VERSION } from './lib/react-query-config'; // Import the cache version
 
-// Configure localforage if not already done elsewhere, though useIndexedDB already does.
-// This ensures consistency if localforage is used in multiple places.
+// Configure localforage if not already configured elsewhere for this purpose
 localforage.config({
-  name: 'kingdom-app', // Should match the name in useIndexedDB.ts
-  storeName: 'app_data_react_query', // Use a distinct store for RQ persister
-  version: 1.0,
-  description: 'React Query offline cache'
+  name: 'kingdom-app-react-query', // Specific name for RQ cache
+  storeName: 'query_cache',
+  description: 'React Query cache for Kingdom App',
 });
 
 const asyncStoragePersister = createAsyncStoragePersister({
   storage: localforage,
-  key: 'REACT_QUERY_OFFLINE_CACHE', // Default or custom key
-  // serialize and deserialize are handled by default (JSON.stringify/parse)
+  // You can add a throttle time here if needed, e.g., throttleTime: 1000
 });
 
 function App() {
   return (
-    <Router>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{
-          persister: asyncStoragePersister,
-          buster: APP_CACHE_VERSION,
-          maxAge: 1000 * 60 * 60 * 24 * 7, // Cache data for 1 week
-        }}
-        onSuccess={() => {
-          // Resume paused mutations after the cache is restored
-          queryClient.resumePausedMutations().then(() => {
-            // Optionally, you might want to invalidate some queries
-            // if new data should be fetched after resuming.
-            // For now, we'll rely on the existing sync mechanisms.
-            console.log("Persisted cache restored, mutations resumed.");
-          });
-        }}
-      >
-        <AuthProvider>
-          <NetworkStatusProvider>
-            <ErrorBoundary fallbackMessage="An unexpected error occurred in the application.">
-              <AppRoutes />
-            </ErrorBoundary>
-            <OfflineBanner />
-            <Toaster />
-          </NetworkStatusProvider>
-        </AuthProvider>
-      </PersistQueryClientProvider>
-    </Router>
+    <React.StrictMode>
+      <Router>
+        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+          <AuthProvider>
+            <NetworkStatusProvider>
+              <PersistQueryClientProvider
+                client={queryClient}
+                persistOptions={{
+                  persister: asyncStoragePersister,
+                  buster: APP_CACHE_VERSION, // Use app version for cache busting
+                  maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+                }}
+                onSuccess={() => {
+                  // Resume paused mutations after hydration
+                  queryClient.resumePausedMutations();
+                  console.log('React Query cache restored and mutations resumed.');
+                }}
+              >
+                <AppRoutes />
+                <Toaster />
+                <OfflineBanner />
+                <ReactQueryDevtools initialIsOpen={false} />
+              </PersistQueryClientProvider>
+            </NetworkStatusProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </Router>
+    </React.StrictMode>
   );
 }
 
