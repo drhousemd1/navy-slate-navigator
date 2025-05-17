@@ -11,6 +11,8 @@ import { RewardsProvider, useRewards } from '../contexts/RewardsContext';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import { useSyncManager } from '@/data/sync/useSyncManager';
 import { usePreloadRewards } from "@/data/preload/usePreloadRewards";
+import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton'; // Added import
+import { Award } from 'lucide-react'; // For "No rewards" message
 
 // Preload rewards data from IndexedDB before component renders
 usePreloadRewards()();
@@ -21,23 +23,12 @@ const RewardsContent: React.FC<{
   const { rewards, isLoading, handleSaveReward, handleDeleteReward } = useRewards();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<any>(undefined);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
-  // Use the sync manager to keep data in sync - add enabled parameter
   const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
   
-  // Sync on initial render only
   useEffect(() => {
-    // Force a sync on initial load completion - only once
     syncNow();
-  }, []);
-  
-  // Set isInitialLoad to false once rewards have loaded
-  useEffect(() => {
-    if (!isLoading && rewards) {
-      setIsInitialLoad(false);
-    }
-  }, [isLoading, rewards]);
+  }, [syncNow]);
   
   const handleAddNewReward = () => {
     setRewardBeingEdited(undefined);
@@ -60,17 +51,49 @@ const RewardsContent: React.FC<{
     return () => {
       contentRef.current = {};
     };
-  }, [contentRef]);
+  }, [contentRef, handleAddNewReward]);
   
+  const renderContent = () => {
+    if (isLoading && rewards.length === 0) {
+      return (
+        <div className="space-y-4 mt-4">
+          <RewardCardSkeleton />
+          <RewardCardSkeleton />
+          <RewardCardSkeleton />
+        </div>
+      );
+    }
+
+    if (!isLoading && rewards.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+          <Award className="h-16 w-16 text-gray-500 mb-4" />
+          <h3 className="text-xl font-semibold text-white mb-2">No Rewards Available</h3>
+          <p className="text-gray-400 mb-4">Create your first reward to motivate and acknowledge achievements!</p>
+          <button
+            onClick={handleAddNewReward}
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/80 transition-colors"
+          >
+            Create Reward
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <RewardsList
+        onEdit={handleEditReward}
+      />
+    );
+  };
+
   return (
     <div className="p-4 pt-6">
       <RewardsHeader />
       
-      {!isInitialLoad && (
-        <RewardsList
-          onEdit={handleEditReward}
-        />
-      )}
+      <div className="mt-4"> {/* Added margin-top for consistency */}
+        {renderContent()}
+      </div>
       
       <RewardEditor
         isOpen={isEditorOpen}
@@ -78,10 +101,7 @@ const RewardsContent: React.FC<{
         rewardData={rewardBeingEdited}
         onSave={async (data) => {
           try {
-            // Get the index from the rewardBeingEdited if it exists
             const index = rewardBeingEdited?.index !== undefined ? rewardBeingEdited.index : null;
-            
-            // Save reward without forcing immediate sync
             await handleSaveReward(data, index);
           } catch (error) {
             console.error("Error saving reward:", error);
@@ -89,14 +109,11 @@ const RewardsContent: React.FC<{
         }}
         onDelete={async (id) => {
           try {
-            // Fix: Convert both sides to string for comparison to ensure type consistency
             const index = rewards.findIndex(r => String(r.id) === String(id));
             if (index !== -1) {
               await handleDeleteReward(index);
             }
             setIsEditorOpen(false);
-            
-            // Sync is still useful after delete, but delay it slightly
             setTimeout(syncNow, 500);
           } catch (error) {
             console.error("Error deleting reward:", error);
