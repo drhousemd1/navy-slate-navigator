@@ -11,28 +11,29 @@ import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Encyclopedia from './pages/Encyclopedia';
 import AppGuide from './pages/AppGuide';
-import LoginSignupView from './pages/auth/LoginSignupView';
-import ForgotPasswordView from './pages/auth/ForgotPasswordView';
+import { LoginSignupView } from './pages/auth/LoginSignupView'; // Corrected import
+import { ForgotPasswordView } from './pages/auth/ForgotPasswordView'; // Corrected import
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotFound from './pages/NotFound';
+import ErrorBoundary from '@/components/ErrorBoundary'; // Import ErrorBoundary
 
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/rewards" element={<Rewards />} />
-      <Route path="/tasks" element={<Tasks />} />
-      <Route path="/rules" element={<Rules />} />
-      <Route path="/punishments" element={<Punishments />} />
-      <Route path="/throne-room" element={<ThroneRoom />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/messages" element={<Messages />} />
-      <Route path="/encyclopedia" element={<Encyclopedia />} />
-      <Route path="/app-guide" element={<AppGuide />} />
-      <Route path="/auth" element={<LoginSignupView />} />
-      <Route path="/forgot-password" element={<ForgotPasswordView />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="*" element={<NotFound />} />
+      <Route path="/" element={<ErrorBoundary><Index /></ErrorBoundary>} />
+      <Route path="/rewards" element={<ErrorBoundary><Rewards /></ErrorBoundary>} />
+      <Route path="/tasks" element={<ErrorBoundary><Tasks /></ErrorBoundary>} />
+      <Route path="/rules" element={<ErrorBoundary><Rules /></ErrorBoundary>} />
+      <Route path="/punishments" element={<ErrorBoundary><Punishments /></ErrorBoundary>} />
+      <Route path="/throne-room" element={<ErrorBoundary><ThroneRoom /></ErrorBoundary>} />
+      <Route path="/profile" element={<ErrorBoundary><Profile /></ErrorBoundary>} />
+      <Route path="/messages" element={<ErrorBoundary><Messages /></ErrorBoundary>} />
+      <Route path="/encyclopedia" element={<ErrorBoundary><Encyclopedia /></ErrorBoundary>} />
+      <Route path="/app-guide" element={<ErrorBoundary><AppGuide /></ErrorBoundary>} />
+      <Route path="/auth" element={<ErrorBoundary><LoginSignupView /></ErrorBoundary>} />
+      <Route path="/forgot-password" element={<ErrorBoundary><ForgotPasswordView /></ErrorBoundary>} />
+      <Route path="/reset-password" element={<ErrorBoundary><ResetPasswordPage /></ErrorBoundary>} />
+      <Route path="*" element={<ErrorBoundary><NotFound /></ErrorBoundary>} />
     </Routes>
   );
 };
