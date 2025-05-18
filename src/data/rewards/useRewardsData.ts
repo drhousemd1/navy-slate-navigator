@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward } from '@/data/rewards/types';
@@ -120,11 +121,10 @@ export const useRewardsData = () => {
         cost: rewardData.cost,
         supply: rewardData.supply,
         is_dom_reward: rewardData.is_dom_reward,
-        // Provide defaults for other fields based on Reward type structure
-        description: rewardData.description || null,
+        description: rewardData.description || '', // Changed from || null
         background_image_url: rewardData.background_image_url || null,
         background_opacity: rewardData.background_opacity ?? 100,
-        icon_name: rewardData.icon_name || 'Award', // Or null if 'Award' isn't a sensible default for all cases
+        icon_name: rewardData.icon_name || 'Award',
         icon_url: rewardData.icon_url || null,
         icon_color: rewardData.icon_color || '#9b87f5',
         title_color: rewardData.title_color || '#FFFFFF',
@@ -203,3 +203,4 @@ export const useRewardsData = () => {
     refreshPointsFromDatabase, 
   };
 };
+
