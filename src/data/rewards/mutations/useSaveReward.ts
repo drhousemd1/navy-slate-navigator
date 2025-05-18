@@ -16,6 +16,7 @@ export type UpdateRewardVariables = ActualUpdateRewardVariables;
 // Export the optimistic hook, potentially renaming for backward compatibility if needed,
 // but using the new names directly is cleaner if possible.
 // For simplicity, we'll assume direct usage of useCreateReward and useUpdateReward is preferred.
+
 // If old names `useCreateRewardMutation` and `useUpdateRewardMutation` must be kept:
 export const useCreateRewardMutation = useCreateReward;
 export const useUpdateRewardMutation = useUpdateReward;

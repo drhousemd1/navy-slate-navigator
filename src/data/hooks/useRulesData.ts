@@ -1,194 +1,132 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
+import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
-import { fetchRules } from '@/data/rules/fetchRules';
-import { saveRuleToDb } from '@/data/rules/saveRule';
-import { deleteRuleFromDb } from '@/data/rules/deleteRule';
-import { recordRuleViolationInDb } from '@/data/rules/recordViolation';
-import { getMondayBasedDay } from '@/lib/utils';
-import { v4 as uuidv4 } from 'uuid';
-import { STANDARD_QUERY_CONFIG, logQueryPerformance } from '@/lib/react-query-config';
+import { fetchRules } from '../queries/rules/fetchRules';
+import { useCreateRule, useUpdateRule, useDeleteRule } from '../rules/mutations';
+import { CreateRuleVariables, UpdateRuleVariables } from '../rules/mutations';
+import { useCreateRuleViolation } from '../rules/mutations/useCreateRuleViolation'; // Import new hook
+import { toast } from '@/hooks/use-toast';
+import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
-// Keys for queries
-const RULES_QUERY_KEY = ['rules'];
 
-export const useRulesData = () => {
+export interface RulesDataHook {
+  rules: Rule[];
+  isLoading: boolean;
+  error: Error | null;
+  saveRule: (ruleData: Partial<Rule>) => Promise<Rule>;
+  deleteRule: (ruleId: string) => Promise<boolean>; // Changed to Promise<boolean> for consistency
+  markRuleBroken: (rule: Rule) => Promise<void>;
+  refetchRules: () => Promise<QueryObserverResult<Rule[], Error>>;
+}
+
+export const useRulesData = (): RulesDataHook => {
   const queryClient = useQueryClient();
-
-  // Query for fetching all rules - NOW USING STANDARD_QUERY_CONFIG
   const {
     data: rules = [],
     isLoading,
     error,
-    refetch: refetchRules
-  } = useQuery({
-    queryKey: RULES_QUERY_KEY,
+    refetch: refetchRules,
+  } = useQuery<Rule[], Error>({
+    queryKey: CRITICAL_QUERY_KEYS.RULES, // Using critical query key
     queryFn: fetchRules,
-    ...STANDARD_QUERY_CONFIG
   });
 
-  // Mutation for saving a rule (create or update)
-  const saveRuleMutation = useMutation({
-    mutationFn: saveRuleToDb,
-    onMutate: async (newRule) => {
-      await queryClient.cancelQueries({ queryKey: RULES_QUERY_KEY });
-      const previousRules = queryClient.getQueryData<Rule[]>(RULES_QUERY_KEY) || [];
+  const { mutateAsync: createRuleMutation } = useCreateRule();
+  const { mutateAsync: updateRuleMutation } = useUpdateRule();
+  const { mutateAsync: deleteRuleMutation } = useDeleteRule();
+  const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation(); // Use the new hook
 
-      if (newRule.id) {
-        queryClient.setQueryData<Rule[]>(
-          RULES_QUERY_KEY,
-          previousRules.map(r =>
-            r.id === newRule.id
-              ? { ...r, ...newRule, updated_at: new Date().toISOString() }
-              : r
-          )
-        );
-      } else {
-        // Generate a proper UUID for optimistic updates instead of temp-timestamp
-        const tempId = uuidv4();
-        const optimisticRule: Rule = {
-          id: tempId,
-          title: newRule.title || 'New Rule',
-          description: newRule.description || '',
-          priority: newRule.priority || 'medium',
-          background_image_url: newRule.background_image_url,
-          background_opacity: newRule.background_opacity || 100,
-          icon_url: newRule.icon_url,
-          icon_name: newRule.icon_name,
-          title_color: newRule.title_color || '#FFFFFF',
-          subtext_color: newRule.subtext_color || '#FFFFFF',
-          calendar_color: newRule.calendar_color || '#9c7abb',
-          icon_color: newRule.icon_color || '#FFFFFF',
-          highlight_effect: newRule.highlight_effect || false,
-          focal_point_x: newRule.focal_point_x || 50,
-          focal_point_y: newRule.focal_point_y || 50,
-          frequency: newRule.frequency || 'daily',
-          frequency_count: newRule.frequency_count || 3,
-          usage_data: [0, 0, 0, 0, 0, 0, 0],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
+  const saveRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
+    if (ruleData.id) {
+      // It's an update
+      const { id, ...updates } = ruleData;
+      return updateRuleMutation({ id, ...updates } as UpdateRuleVariables);
+    } else {
+      // It's a creation
+      // Ensure required fields for CreateRuleVariables are met.
+      // 'title' is mandatory for CreateRuleVariables. Others have defaults or are optional.
+      const createVariables: CreateRuleVariables = {
+        title: ruleData.title || 'Untitled Rule', // Provide a default if not present
+        description: ruleData.description,
+        priority: ruleData.priority || 'medium',
+        frequency: ruleData.frequency || 'daily',
+        frequency_count: ruleData.frequency_count || 1,
+        // Add any other fields from Rule that are part of CreateRuleVariables
+        // and not automatically handled by createOptimisticItem defaults in useCreateRule
+        icon_name: ruleData.icon_name,
+        icon_url: ruleData.icon_url,
+        icon_color: ruleData.icon_color,
+        title_color: ruleData.title_color,
+        subtext_color: ruleData.subtext_color,
+        calendar_color: ruleData.calendar_color,
+        background_image_url: ruleData.background_image_url,
+        background_opacity: ruleData.background_opacity,
+        highlight_effect: ruleData.highlight_effect,
+        focal_point_x: ruleData.focal_point_x,
+        focal_point_y: ruleData.focal_point_y,
+        background_images: ruleData.background_images,
+        // user_id might be part of ruleData if applicable
+      };
+      return createRuleMutation(createVariables);
+    }
+  };
 
-        queryClient.setQueryData<Rule[]>(
-          RULES_QUERY_KEY,
-          [optimisticRule, ...previousRules]
-        );
-      }
+  const deleteRule = async (ruleId: string): Promise<boolean> => {
+    try {
+      await deleteRuleMutation(ruleId);
+      // No explicit toast here as useDeleteOptimisticMutation handles it
+      return true;
+    } catch (e) {
+      // Error toast handled by useDeleteOptimisticMutation
+      console.error('Error deleting rule (from useRulesData):', e);
+      return false;
+    }
+  };
 
-      return { previousRules };
-    },
-    onError: (err, newRule, context) => {
-      console.error('Error saving rule:', err);
+  const markRuleBroken = async (rule: Rule): Promise<void> => {
+    try {
+      // 1. Create a rule violation record
+      await createRuleViolationMutation({ rule_id: rule.id });
+      // Toast for success/error of violation creation is handled by useCreateRuleViolation
+
+      // 2. Update the rule's usage_data
+      const newUsageDataEntry = Date.now(); // Using timestamp as number
+      const currentUsageData = Array.isArray(rule.usage_data) ? rule.usage_data : [];
+      // Ensure usage_data is treated as number[] as per previous analysis
+      const newUsageData = [...currentUsageData, newUsageDataEntry] as number[] & {toJSON?: () => any};
+
+
+      await updateRuleMutation({
+        id: rule.id,
+        usage_data: newUsageData,
+      });
+      // Toast for success/error of rule update is handled by useUpdateRule
+
+      toast({
+        title: "Rule Marked Broken",
+        description: `${rule.title} marked as broken. Violation recorded and usage updated.`,
+      });
+
+    } catch (e: any) {
+      console.error('Error marking rule broken:', e);
       toast({
         title: 'Error',
-        description: 'Failed to save rule. Please try again.',
+        description: `Failed to mark rule "${rule.title}" as broken: ${e.message}`,
         variant: 'destructive',
       });
-
-      if (context) {
-        queryClient.setQueryData(RULES_QUERY_KEY, context.previousRules);
-      }
-    },
-    onSuccess: (savedRule) => {
-      toast({
-        title: 'Success',
-        description: `Rule ${savedRule.id ? 'updated' : 'created'} successfully!`,
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
+      // Re-throw if the caller needs to act on the error
+      throw e;
     }
-  });
-
-  // Mutation for deleting a rule
-  const deleteRuleMutation = useMutation({
-    mutationFn: deleteRuleFromDb,
-    onMutate: async (ruleId) => {
-      await queryClient.cancelQueries({ queryKey: RULES_QUERY_KEY });
-      const previousRules = queryClient.getQueryData<Rule[]>(RULES_QUERY_KEY) || [];
-
-      queryClient.setQueryData<Rule[]>(
-        RULES_QUERY_KEY,
-        previousRules.filter(r => r.id !== ruleId)
-      );
-
-      return { previousRules };
-    },
-    onError: (err, ruleId, context) => {
-      console.error('Error deleting rule:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete rule. Please try again.',
-        variant: 'destructive',
-      });
-
-      if (context) {
-        queryClient.setQueryData(RULES_QUERY_KEY, context.previousRules);
-      }
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Rule deleted successfully!',
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
-    }
-  });
-
-  // Mutation for marking a rule as broken
-  const markRuleBrokenMutation = useMutation({
-    mutationFn: recordRuleViolationInDb,
-    onMutate: async (rule) => {
-      await queryClient.cancelQueries({ queryKey: RULES_QUERY_KEY });
-      const previousRules = queryClient.getQueryData<Rule[]>(RULES_QUERY_KEY) || [];
-      const currentDay = getMondayBasedDay();
-
-      const updatedRules = previousRules.map(r => {
-        if (r.id === rule.id) {
-          const updatedUsageData = [...(r.usage_data || Array(7).fill(0))];
-          updatedUsageData[currentDay] = 1;
-          return { ...r, usage_data: updatedUsageData };
-        }
-        return r;
-      });
-
-      queryClient.setQueryData(RULES_QUERY_KEY, updatedRules);
-
-      return { previousRules };
-    },
-    onError: (err, rule, context) => {
-      console.error('Error marking rule as broken:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to record rule violation. Please try again.',
-        variant: 'destructive',
-      });
-
-      if (context) {
-        queryClient.setQueryData(RULES_QUERY_KEY, context.previousRules);
-      }
-    },
-    onSuccess: () => {
-      toast({ 
-        title: 'Rule Broken', 
-        description: 'This violation has been recorded.' 
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
-    }
-  });
+  };
 
   return {
     rules,
     isLoading,
     error,
-    saveRule: (ruleData: Partial<Rule>) => saveRuleMutation.mutateAsync(ruleData),
-    deleteRule: (ruleId: string) => deleteRuleMutation.mutateAsync(ruleId),
-    markRuleBroken: (rule: Rule) => markRuleBrokenMutation.mutateAsync(rule),
-    refetchRules
+    saveRule,
+    deleteRule,
+    markRuleBroken,
+    refetchRules,
   };
 };
