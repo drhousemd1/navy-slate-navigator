@@ -3,18 +3,43 @@ import React from 'react';
 import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { RewardsProvider } from '@/contexts/RewardsContext';
-import { QueryClientProvider } from '@tanstack/react-query';
+// import { QueryClientProvider } from '@tanstack/react-query'; // Will be replaced
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from '@/components/ui/toaster';
 import { queryClient } from '@/data/queryClient';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import localforage from 'localforage';
+import { APP_CACHE_VERSION } from '@/lib/react-query-config';
 
 interface AppProvidersProps {
   children: React.ReactNode;
 }
 
+const persister = createSyncStoragePersister({
+  storage: localforage,
+  key: 'APP_QUERY_CACHE', // Optional: custom key for storage
+  // serialize and deserialize can be added here if using complex types like Date, Map, Set with superjson for example
+});
+
 export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        buster: APP_CACHE_VERSION,
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week, persisted data older than this will be discarded
+      }}
+      onSuccess={() => {
+        // resumeMutations must be called after hydration to resume paused mutations
+        queryClient.resumePausedMutations().then(() => {
+          console.log('Persisted queries hydrated and paused mutations resumed.');
+        }).catch(error => {
+          console.error('Error resuming paused mutations after hydration:', error);
+        });
+      }}
+    >
       <NetworkStatusProvider>
         <RewardsProvider>
           {children}
@@ -23,6 +48,7 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
           {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
         </RewardsProvider>
       </NetworkStatusProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 };
+
