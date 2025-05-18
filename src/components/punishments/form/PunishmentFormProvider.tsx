@@ -29,7 +29,7 @@ interface PunishmentFormProviderProps {
   punishmentData?: PunishmentData;
   children: (
     form: UseFormReturn<PunishmentFormValues>,
-    clearPersistedState: () => Promise<void>
+    clearPersistedState: () => Promise<void> // Ensure this expects Promise<void>
   ) => React.ReactNode;
   formBaseId: string; // e.g., "punishment-editor"
   persisterExclude?: (keyof PunishmentFormValues)[];
@@ -61,7 +61,7 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
   });
 
   const persisterFormId = `${formBaseId}-${punishmentData?.id || 'new'}`;
-  const { clearPersistedState } = useFormStatePersister<PunishmentFormValues>(
+  const { clearPersistedState: originalClearPersistedState } = useFormStatePersister<PunishmentFormValues>(
     persisterFormId,
     form,
     {
@@ -69,12 +69,15 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
     }
   );
 
+  const clearPersistedStateForChild = async (): Promise<void> => {
+    await originalClearPersistedState();
+  };
+
   return (
     <Form {...form}>
-      {children(form, clearPersistedState)}
+      {children(form, clearPersistedStateForChild)}
     </Form>
   );
 };
 
 export default PunishmentFormProvider;
-

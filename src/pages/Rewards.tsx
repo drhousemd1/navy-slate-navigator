@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -10,11 +9,11 @@ import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton';
 import { Award as AwardIcon } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-import { useRewards } from '@/data/queries/useRewards';
+import { useRewards as useRewardsQuery } from '@/data/queries/useRewards'; // Renamed to avoid conflict with context hook
 // Import specific mutation hooks from the new location
-import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations';
-import { useDeleteRewardMutation } from '@/data/rewards/mutations';
-import { Reward, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/types';
+import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward'; // Corrected import path
+import { useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward'; // Corrected import path
+import { Reward, UpdateRewardVariables } from '@/data/rewards/types'; // Removed CreateRewardVariables from here as it's too lenient
 import { toast } from '@/hooks/use-toast';
 
 usePreloadRewards()();
@@ -22,8 +21,8 @@ usePreloadRewards()();
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
-  const { data: rewardsData, isLoading, error, refetch: refetchRewardsQuery } = useRewards(); // Renamed to rewardsData to avoid conflict if needed
-  const rewards = Array.isArray(rewardsData) ? rewardsData : []; // Ensure rewards is always an array
+  const { data: rewardsData, isLoading, error, refetch: refetchRewardsQuery } = useRewardsQuery();
+  const rewards = Array.isArray(rewardsData) ? rewardsData : [];
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<Reward | undefined>(undefined);
@@ -44,7 +43,7 @@ const RewardsContent: React.FC<{
   };
   
   const handleEditReward = (index: number) => { 
-    if (Array.isArray(rewards)) { // Use the processed 'rewards' array
+    if (Array.isArray(rewards)) {
         const rewardToEdit = rewards[index];
         if (rewardToEdit) {
         setRewardBeingEdited(rewardToEdit);
@@ -53,7 +52,6 @@ const RewardsContent: React.FC<{
         toast({ title: "Error", description: "Could not find reward to edit.", variant: "destructive" });
         }
     } else {
-        // This else block might be redundant now since rewards is guaranteed to be an array
         toast({ title: "Error", description: "Rewards data is not available.", variant: "destructive" });
     }
   };
@@ -68,7 +66,7 @@ const RewardsContent: React.FC<{
       if (rewardBeingEdited?.id) {
         const updateVariables: UpdateRewardVariables = {
           id: rewardBeingEdited.id,
-          ...formData,
+          ...formData, // Assuming formData is Partial<Omit<Reward, 'id' | 'created_at' | 'updated_at'>>
         };
         await updateRewardMutation.mutateAsync(updateVariables);
       } else {
@@ -76,7 +74,9 @@ const RewardsContent: React.FC<{
           toast({ title: "Missing required fields", description: "Title, cost, supply, and DOM status are required.", variant: "destructive" });
           return;
         }
-        const createVariables: CreateRewardVariables = {
+        // Constructing createVariables to match the stricter type from useSaveReward.ts
+        // No explicit type annotation for createVariables, let it be inferred
+        const createVariables = {
           title: formData.title,
           cost: formData.cost,
           supply: formData.supply,
@@ -100,6 +100,7 @@ const RewardsContent: React.FC<{
       setRewardBeingEdited(undefined);
     } catch (e) {
       console.error("Error saving reward from page:", e);
+      // Toast for error is handled by the mutation hook itself
     }
   };
 
@@ -119,7 +120,7 @@ const RewardsContent: React.FC<{
   };
   
   const renderContent = () => {
-    if (isLoading && rewards.length === 0) { // Use processed 'rewards' array
+    if (isLoading && rewards.length === 0) {
       return (
         <div className="space-y-4 mt-4">
           <RewardCardSkeleton />
@@ -133,7 +134,7 @@ const RewardsContent: React.FC<{
         return <div className="text-red-500 p-4">Error loading rewards: {error.message}</div>;
     }
 
-    if (!isLoading && rewards.length === 0) { // Use processed 'rewards' array
+    if (!isLoading && rewards.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-[60vh] text-center">
           <AwardIcon className="h-16 w-16 text-gray-500 mb-4" />

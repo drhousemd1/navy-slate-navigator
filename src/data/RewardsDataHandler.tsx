@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Reward, CreateRewardVariables, UpdateRewardVariables } from './rewards/types';
+import { Reward, UpdateRewardVariables } from './rewards/types';
 
 // Import specific mutation hooks directly
-import { useCreateRewardMutation, useUpdateRewardMutation } from './rewards/mutations/useSaveReward';
+import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables } from './rewards/mutations/useSaveReward';
 import { useDeleteRewardMutation } from './rewards/mutations/useDeleteReward';
 
 import { fetchRewards, fetchUserPoints, fetchUserDomPoints, fetchTotalRewardsSupply } from './rewards/queries';
@@ -93,23 +93,24 @@ export const useRewardsData = () => {
           return null;
         }
         
-        const createVariables: CreateRewardVariables = {
+        // Constructing createVariables to match the stricter type from useSaveReward.ts
+        const createVariables = {
           title: rewardData.title,
           cost: rewardData.cost,
           supply: rewardData.supply,
           is_dom_reward: rewardData.is_dom_reward,
           description: rewardData.description || null,
           background_image_url: rewardData.background_image_url || null,
-          background_opacity: rewardData.background_opacity,
-          icon_name: rewardData.icon_name || 'Award',
+          background_opacity: rewardData.background_opacity ?? 100, // Provide default
+          icon_name: rewardData.icon_name || 'Award', // Provide default
           icon_url: rewardData.icon_url || null,
-          icon_color: rewardData.icon_color || '#9b87f5',
-          title_color: rewardData.title_color || '#FFFFFF',
-          subtext_color: rewardData.subtext_color || '#8E9196',
-          calendar_color: rewardData.calendar_color || '#7E69AB',
-          highlight_effect: rewardData.highlight_effect || false,
-          focal_point_x: rewardData.focal_point_x || 50,
-          focal_point_y: rewardData.focal_point_y || 50,
+          icon_color: rewardData.icon_color || '#9b87f5', // Provide default
+          title_color: rewardData.title_color || '#FFFFFF', // Provide default
+          subtext_color: rewardData.subtext_color || '#8E9196', // Provide default
+          calendar_color: rewardData.calendar_color || '#7E69AB', // Provide default
+          highlight_effect: rewardData.highlight_effect ?? false, // Provide default
+          focal_point_x: rewardData.focal_point_x ?? 50, // Provide default
+          focal_point_y: rewardData.focal_point_y ?? 50, // Provide default
         };
         
         return await createRewardMutation.mutateAsync(createVariables);
@@ -161,7 +162,7 @@ export const useRewardsData = () => {
       // Update reward supply
       const { error: supplyError } = await supabase
         .from('rewards')
-        .update({ supply: reward.supply + 1 })
+        .update({ supply: reward.supply + 1 }) // This logic seems off for buying, usually supply decreases or is checked
         .eq('id', rewardId);
         
       if (supplyError) {
@@ -197,7 +198,7 @@ export const useRewardsData = () => {
       // Update rewards cache
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => {
         const updatedRewards = oldRewards.map(r => 
-          r.id === rewardId ? { ...r, supply: r.supply + 1 } : r
+          r.id === rewardId ? { ...r, supply: r.supply + 1 } : r // Also seems off for buying
         );
         saveRewardsToDB(updatedRewards);
         return updatedRewards;
@@ -220,10 +221,10 @@ export const useRewardsData = () => {
         return false;
       }
       
-      if (reward.supply <= 0) {
+      if (reward.supply <= 0 && reward.supply !== -1) { // consider -1 for infinite supply
         toast({
           title: "Cannot Use Reward",
-          description: "You don't have any of this reward to use.",
+          description: "You don't have any of this reward to use or it's out of stock.",
           variant: "destructive",
         });
         return false;
@@ -236,9 +237,10 @@ export const useRewardsData = () => {
       }
       
       // Update reward supply
+      const newSupply = reward.supply === -1 ? -1 : Math.max(0, reward.supply - 1);
       const { error: supplyError } = await supabase
         .from('rewards')
-        .update({ supply: Math.max(0, reward.supply - 1) })
+        .update({ supply: newSupply })
         .eq('id', rewardId);
         
       if (supplyError) {
@@ -249,7 +251,7 @@ export const useRewardsData = () => {
       // Update rewards cache
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => {
         const updatedRewards = oldRewards.map(r => 
-          r.id === rewardId ? { ...r, supply: Math.max(0, r.supply - 1) } : r
+          r.id === rewardId ? { ...r, supply: newSupply } : r
         );
         saveRewardsToDB(updatedRewards);
         return updatedRewards;
@@ -333,7 +335,10 @@ export const useRewardsData = () => {
         .eq('id', userData.user.id)
         .single();
         
-      if (error || !data) return;
+      if (error || !data) {
+          if(error) console.error("Error fetching profile for points refresh:", error);
+          return;
+      }
       
       queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, data.points || 0);
       queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, data.dom_points || 0);

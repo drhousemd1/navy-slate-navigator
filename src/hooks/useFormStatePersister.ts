@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, FieldPathValue, Path } from 'react-hook-form'; // Import Path for FieldPath
 import { debounce } from 'lodash';
 
 type FormValues = Record<string, any>;
@@ -32,12 +32,13 @@ export function useFormStatePersister<T extends FormValues>(
     try {
       const persistedState = localStorage.getItem(storageKey);
       if (persistedState) {
-        const values = JSON.parse(persistedState);
+        const values = JSON.parse(persistedState) as Partial<T>; // Type assertion for parsed values
         
         // Only set values that are not excluded and not undefined
         Object.entries(values).forEach(([key, value]) => {
           if (!exclude.includes(key) && value !== undefined) {
-            form.setValue(key as any, value);
+            // Ensure key is a valid path and value matches expected type for that path
+            form.setValue(key as Path<T>, value as FieldPathValue<T, Path<T>>);
           }
         });
         
@@ -73,12 +74,12 @@ export function useFormStatePersister<T extends FormValues>(
     
     return () => {
       subscription.unsubscribe();
-      saveState.cancel();
+      saveState.cancel(); // Ensure debounce is cancelled on unmount
     };
-  }, [form, exclude, formId, debounceMs, storageKey]);
+  }, [form, exclude, formId, debounceMs, storageKey]); // Added storageKey to dependencies
   
   // Clear persisted state
-  const clearPersistedState = async () => {
+  const clearPersistedState = async (): Promise<boolean> => { // Return boolean as per original design
     try {
       localStorage.removeItem(storageKey);
       console.log(`[FormStatePersister] Cleared state for form: ${formId}`);
