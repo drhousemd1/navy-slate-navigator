@@ -64,14 +64,6 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   });
   const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
-  const [carouselTimer, setCarouselTimer] = useState<number>(() => {
-    const stored = localStorage.getItem(`${localStorageKey}_carouselTimer`);
-    return stored ? parseInt(stored, 10) : 5;
-  });
-  
-  useEffect(() => {
-    localStorage.setItem(`${localStorageKey}_carouselTimer`, String(carouselTimer));
-  }, [carouselTimer, localStorageKey]);
   
   const form = useForm<ThroneRoomCardData>({
     defaultValues: {
@@ -461,39 +453,6 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                         )}
                       </div>
                     ))}
-                  </div>
-
-                  <div className="flex flex-col items-start space-y-1">
-                    <span className="text-sm text-white font-medium leading-tight">
-                      Carousel Timer
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      (Settings will be applied to all cards)
-                    </span>
-
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => setCarouselTimer((prev) => Math.max(1, prev - 1))}
-                        className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
-                      >
-                        –
-                      </Button>
-
-                      <div className="w-10 text-center text-white">{carouselTimer}</div>
-
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => setCarouselTimer((prev) => prev + 1)}
-                        className="px-3 py-1 bg-light-navy text-white hover:bg-navy border border-light-navy"
-                      >
-                        +
-                      </Button>
-
-                      <span className="text-sm text-slate-400">(s)</span>
-                    </div>
                   </div>
                 </div>
                 <BackgroundImageSelector
