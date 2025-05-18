@@ -1,13 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useBuySubReward } from "@/data/rewards/mutations/useBuySubReward";
-import { useBuyDomReward } from "@/data/rewards/mutations/useBuyDomReward";
-import { useRedeemSubReward } from "@/data/rewards/mutations/useRedeemSubReward";
-import { useRedeemDomReward } from "@/data/rewards/mutations/useRedeemDomReward";
-import { useCreateReward } from "@/data/rewards/mutations/useCreateReward";
-import { useUpdateReward } from "@/data/rewards/mutations/useUpdateReward";
-import { useDeleteReward } from "@/data/rewards/mutations/useDeleteReward";
+import { useBuySubReward } from "./rewards/mutations/useBuySubReward";
+import { useBuyDomReward } from "./rewards/mutations/useBuyDomReward";
+import { useRedeemSubReward } from "./rewards/mutations/useRedeemSubReward";
+import { useRedeemDomReward } from "./rewards/mutations/useRedeemDomReward";
+import { useCreateReward } from "./rewards/mutations/useCreateReward";
+import { useUpdateReward } from "./rewards/mutations/useUpdateReward";
+import { useDeleteReward } from "./rewards/mutations/useDeleteReward";
 
 // Keys for our queries
 const REWARDS_QUERY_KEY = ['rewards'];
@@ -146,15 +146,13 @@ export const useRewardsData = () => {
       
       if (rewardData.id) {
         // Update existing reward
-        // Ensure updates match UpdateRewardVariables: { rewardId: string } & Partial<Omit<Reward, 'id'>>
         const { id, ...updates } = rewardData;
-        const variables = { rewardId: id, ...updates };
+        const variables = { rewardId: id, ...updates }; // Use rewardId to match UpdateRewardVariables
         return await updateReward(variables);
       } else {
         // Create new reward
-        // Ensure newReward matches CreateRewardVariables: Omit<Reward, 'id' | 'created_at' | 'updated_at'>
         const { id, created_at, updated_at, ...creatableData } = rewardData;
-        // Add required fields if missing, e.g., title, cost, supply
+        // Add required fields if missing
         const variables = {
           title: creatableData.title || 'New Reward',
           cost: creatableData.cost || 0,
@@ -181,7 +179,7 @@ export const useRewardsData = () => {
         description: 'Failed to save reward. Please try again.',
         variant: 'destructive',
       });
-      throw error; // Re-throw to be caught by caller if necessary
+      throw error;
     }
   };
 
@@ -235,11 +233,11 @@ export const useRewardsData = () => {
       
       const profileId = userData.user.id;
       // Fetch current points from cache or state, as totalPoints might be stale
-      const currentPointsQueryData = queryClient.getQueryData<{ points?: number, dom_points?: number }>(['profile_points']);
-      const currentPoints = currentPointsQueryData?.points ?? totalPoints; // Fallback to hook's state
-      const currentDomPoints = currentPointsQueryData?.dom_points ?? 0; // Assuming dom_points is part of profile_points query
+      const currentPointsQueryData = queryClient.getQueryData<{ points?: number, dom_points?: number }>(POINTS_QUERY_KEY);
+      const currentPoints = currentPointsQueryData?.points ?? totalPoints;
+      const currentDomPoints = currentPointsQueryData?.dom_points ?? 0;
 
-      if (reward.is_dom_reward) { // Ensure is_dom_reward is part of Reward type
+      if (reward.is_dom_reward) {
         return buyDom({
           rewardId,
           cost,

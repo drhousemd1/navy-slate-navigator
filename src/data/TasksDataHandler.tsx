@@ -2,10 +2,9 @@ import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-q
 import { supabase } from '@/integrations/supabase/client';
 import { Task, processTasksWithRecurringLogic } from '@/lib/taskUtils'; 
 import { toast } from '@/hooks/use-toast';
-import { fetchTasks } from './queries/tasks/fetchTasks'; // Corrected path
-// Updated import paths for mutations
+import { fetchTasks } from './queries/tasks/fetchTasks';
 import { useCreateTask } from './tasks/mutations/useCreateTask';
-import { useUpdateTask } from './tasks/mutations/useUpdateTask'; // Assuming useCompleteTask maps to useUpdateTask
+import { useUpdateTask, UpdateTaskVariables } from './tasks/mutations/useUpdateTask';
 import { useDeleteTask } from './tasks/mutations/useDeleteTask';
 
 export interface TasksDataHook {
@@ -32,7 +31,7 @@ export const useTasksData = (): TasksDataHook => {
   });
 
   const { mutateAsync: createTaskMutation } = useCreateTask();
-  const { mutateAsync: updateTaskMutation } = useUpdateTask(); // Changed from useCompleteTask
+  const { mutateAsync: updateTaskMutation } = useUpdateTask();
   const { mutateAsync: deleteTaskMutation } = useDeleteTask();
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
@@ -40,24 +39,24 @@ export const useTasksData = (): TasksDataHook => {
       let savedTask: Task | undefined | null = null;
       if (taskData.id) {
         const { id, ...updates } = taskData;
-        // Ensure updates match UpdateTaskVariables: { taskId: string; updates: Partial<Omit<Task, 'id'>> }
-        savedTask = await updateTaskMutation({ taskId: id, updates });
+        // Use id property from UpdateTaskVariables
+        savedTask = await updateTaskMutation({ 
+          id, 
+          ...updates 
+        } as UpdateTaskVariables);
       } else {
-        // Ensure taskData matches CreateTaskVariables: Partial<Omit<Task, 'id' | 'created_at' | 'updated_at' | 'completed' | 'last_completed_date'>> & { title: string; points: number; }
+        // Ensure taskData matches CreateTaskVariables
         const { id, created_at, updated_at, completed, last_completed_date, ...creatableData } = taskData;
         const variables = {
           title: creatableData.title || "Default Task Title",
           points: creatableData.points || 0,
           ...creatableData
         };
-        savedTask = await createTaskMutation(variables as any); // Cast if necessary
+        savedTask = await createTaskMutation(variables as any);
       }
-      // Toasts are handled by optimistic mutation hooks
-      // queryClient.invalidateQueries({ queryKey: ['tasks'] }); // Handled by optimistic mutation hooks
       return savedTask || null;
     } catch (e: any) {
       console.error('Error saving task:', e);
-      // Toast is handled by optimistic mutation hooks, but can add context here
       toast({ title: 'Error Saving Task on Page', description: e.message, variant: 'destructive' });
       return null;
     }
@@ -66,11 +65,9 @@ export const useTasksData = (): TasksDataHook => {
   const deleteTask = async (taskId: string): Promise<boolean> => {
     try {
       await deleteTaskMutation(taskId);
-      // Toast and cache invalidation are handled by useDeleteTask
       return true;
     } catch (e: any) {
       console.error('Error deleting task:', e);
-      // Toast is handled by useDeleteTask
       return false;
     }
   };
@@ -83,11 +80,12 @@ export const useTasksData = (): TasksDataHook => {
         last_completed_date: completed ? todayStr : null,
       };
       
-      await updateTaskMutation({ taskId, updates });
-      // Toast and cache invalidation handled by useUpdateTask
+      await updateTaskMutation({ 
+        id: taskId, 
+        ...updates 
+      } as UpdateTaskVariables);
 
       if (completed) {
-        // ... (keep existing points update logic, this should ideally be its own mutation)
         const { data: userData } = await supabase.auth.getUser();
         if (userData.user) {
             await supabase.from('task_completion_history').insert({ task_id: taskId, user_id: userData.user.id });
@@ -119,7 +117,7 @@ export const useTasksData = (): TasksDataHook => {
             }
         }
       }
-      toast({ title: 'Task Updated', description: `Task marked as ${completed ? 'complete' : 'incomplete'}.` }); // This can be specific feedback
+      toast({ title: 'Task Updated', description: `Task marked as ${completed ? 'complete' : 'incomplete'}.` });
       return true;
     } catch (e: any) {
       console.error('Error toggling task completion:', e);
