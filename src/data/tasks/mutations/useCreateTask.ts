@@ -31,8 +31,8 @@ export const useCreateTask = () => {
         highlight_effect: variables.highlight_effect || false,
         focal_point_x: variables.focal_point_x || 50,
         focal_point_y: variables.focal_point_y || 50,
-        week_identifier: variables.week_identifier, // Added based on previous fix
-        background_images: variables.background_images, // Added based on previous fix
+        week_identifier: variables.week_identifier, 
+        background_images: variables.background_images,
         icon_url: variables.icon_url,
         // `completed` and `last_completed_date` will use DB defaults or be set by `toggleTaskCompletion`
         // `created_at` and `updated_at` are handled by DB
