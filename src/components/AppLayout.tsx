@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -6,7 +7,7 @@ import { Plus, MessageSquare, BookOpen } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/contexts/auth';
 import AccountSheet from './AccountSheet';
-import CacheMonitorPanel from './dev/CacheMonitorPanel';
+// import CacheMonitorPanel from './dev/CacheMonitorPanel'; // Removed import
 import SyncStatusIndicator from './common/SyncStatusIndicator';
 
 interface AppLayoutProps {
@@ -132,8 +133,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       )}
       
       <MobileNavbar />
-      {/* Conditionally render CacheMonitorPanel in development mode */}
-      {import.meta.env.DEV && <CacheMonitorPanel />}
+      {/* Conditionally render CacheMonitorPanel in development mode - REMOVED */}
+      {/* {import.meta.env.DEV && <CacheMonitorPanel />} */}
       <SyncStatusIndicator />
     </div>
   );
