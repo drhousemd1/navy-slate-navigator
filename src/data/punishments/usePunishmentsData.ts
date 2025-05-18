@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,13 +52,16 @@ export const usePunishmentsData = () => {
       const localData = await loadPunishmentsFromDB() as PunishmentData[] | null;
       if (localData && localData.length > 0) {
         console.log('[usePunishmentsData] Loaded punishments from IndexedDB');
-        return localData;
+        // Ensure dom_supply is present, default if not (for older local data)
+        return localData.map(p => ({ ...p, dom_supply: p.dom_supply ?? 0 }));
       }
       console.log('[usePunishmentsData] Fetching punishments from Supabase');
       const { data, error } = await supabase.from('punishments').select('*');
       if (error) throw error;
-      await savePunishmentsToDB(data || []);
-      return data || [];
+      // Data from Supabase should now include dom_supply due to migration
+      const fetchedData = (data || []).map(p => ({ ...p, dom_supply: p.dom_supply ?? 0 })) as PunishmentData[];
+      await savePunishmentsToDB(fetchedData);
+      return fetchedData;
     },
     staleTime: Infinity,
   });
@@ -105,12 +107,19 @@ export const usePunishmentsData = () => {
         dataToSave.created_at = new Date().toISOString();
         // Ensure all required fields have defaults if not provided
         const defaults: Partial<PunishmentData> = {
-            title: '', points: 0, background_opacity: 50, title_color: '#FFFFFF',
+            title: '', points: 0, dom_supply: 0, // Added dom_supply default
+            background_opacity: 50, title_color: '#FFFFFF',
             subtext_color: '#8E9196', calendar_color: '#ea384c', highlight_effect: false,
             icon_color: '#ea384c', focal_point_x: 50, focal_point_y: 50,
         };
         Object.assign(dataToSave, { ...defaults, ...dataToSave });
 
+      } else {
+        // For updates, ensure dom_supply is included if provided, otherwise it remains unchanged by Supabase
+        if (punishmentData.dom_supply === undefined && dataToSave.id) {
+            const existingPunishment = punishments.find(p => p.id === dataToSave.id);
+            dataToSave.dom_supply = existingPunishment?.dom_supply ?? 0;
+        }
       }
       
       const { data, error } = await supabase.from('punishments').upsert(dataToSave as PunishmentData).select().single();
@@ -124,7 +133,7 @@ export const usePunishmentsData = () => {
 
       if (punishmentData.id) { // Update
         queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) =>
-          old.map(p => p.id === punishmentData.id ? { ...p, ...punishmentData, updated_at: new Date().toISOString() } as PunishmentData : p)
+          old.map(p => p.id === punishmentData.id ? { ...p, ...punishmentData, dom_supply: punishmentData.dom_supply ?? p.dom_supply ?? 0, updated_at: new Date().toISOString() } as PunishmentData : p)
         );
       } else { // Create
         optimisticPunishmentId = uuidv4();
@@ -132,6 +141,7 @@ export const usePunishmentsData = () => {
           id: optimisticPunishmentId,
           title: '', // Default or from punishmentData
           points: 0, // Default or from punishmentData
+          dom_supply: 0, // Added dom_supply default for optimistic create
           // Add all required fields with defaults
           background_opacity: 50, title_color: '#FFFFFF', subtext_color: '#8E9196', 
           calendar_color: '#ea384c', highlight_effect: false, icon_color: '#ea384c', 
@@ -155,12 +165,12 @@ export const usePunishmentsData = () => {
       queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) => {
         const newPunishments = old.map(p => 
           (context?.optimisticPunishmentId && p.id === context.optimisticPunishmentId) || p.id === data.id 
-          ? data 
+          ? { ...data, dom_supply: data.dom_supply ?? 0 } // Ensure dom_supply is set from DB response
           : p
         );
         // If create and it wasn't in the list by optimisticId (e.g. if optimisticId wasn't set)
         if (!context?.optimisticPunishmentId && !old.find(p => p.id === data.id)) {
-          newPunishments.unshift(data);
+          newPunishments.unshift({ ...data, dom_supply: data.dom_supply ?? 0 });
         }
         savePunishmentsToDB(newPunishments);
         return newPunishments;
@@ -378,4 +388,3 @@ export const usePunishmentsData = () => {
     recentlyAppliedPunishments,
   };
 };
-

@@ -64,11 +64,14 @@ const PunishmentsContent: React.FC<{
         const { id, ...updates } = punishmentData;
         await updatePunishmentAsync({ id, ...updates });
       } else {
-        // Ensure punishmentData matches CreatePunishmentVariables: Partial<Omit<PunishmentData, 'id' | 'created_at' | 'updated_at'>> & { title: string; points: number; }
+        // Ensure punishmentData matches CreatePunishmentVariables
         const { id, created_at, updated_at, ...creatableData } = punishmentData;
+        // Ensure all required fields for CreatePunishmentVariables are present
+        // dom_supply is now optional in CreatePunishmentVariables and will default in the hook
         const variables: CreatePunishmentVariables = {
-          title: creatableData.title || 'Default Title', // Required
-          points: creatableData.points || 0, // Required
+          title: creatableData.title || 'Default Title', 
+          points: creatableData.points || 0, 
+          dom_supply: creatableData.dom_supply ?? 0, // Provide dom_supply, or let it default in the hook
           ...creatableData,
         };
         await createPunishmentAsync(variables);

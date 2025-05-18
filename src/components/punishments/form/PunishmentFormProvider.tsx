@@ -12,6 +12,7 @@ export const punishmentFormSchema = z.object({
   description: z.string().optional(),
   points: z.number().min(0, "Points must be 0 or greater"),
   dom_points: z.number().min(0, "Dom Points must be 0 or greater").default(0),
+  dom_supply: z.number().min(0, "Supply must be 0 or greater").default(0), // Added dom_supply
   icon_color: z.string().optional(),
   title_color: z.string().default('#FFFFFF'),
   subtext_color: z.string().default('#8E9196'),
@@ -47,6 +48,7 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
       description: punishmentData?.description || '',
       points: punishmentData?.points || 5,
       dom_points: punishmentData?.dom_points || Math.ceil((punishmentData?.points || 5) / 2) || 2,
+      dom_supply: punishmentData?.dom_supply ?? 0, // Added dom_supply default
       icon_color: punishmentData?.icon_color || '#ea384c',
       title_color: punishmentData?.title_color || '#FFFFFF',
       subtext_color: punishmentData?.subtext_color || '#8E9196',
@@ -75,3 +77,4 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
 };
 
 export default PunishmentFormProvider;
+

@@ -296,6 +296,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           dom_points: number | null
+          dom_supply: number
           focal_point_x: number | null
           focal_point_y: number | null
           highlight_effect: boolean | null
@@ -317,6 +318,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           dom_points?: number | null
+          dom_supply?: number
           focal_point_x?: number | null
           focal_point_y?: number | null
           highlight_effect?: boolean | null
@@ -338,6 +340,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           dom_points?: number | null
+          dom_supply?: number
           focal_point_x?: number | null
           focal_point_y?: number | null
           highlight_effect?: boolean | null
