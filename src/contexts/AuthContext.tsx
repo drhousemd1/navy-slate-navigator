@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkInitialSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event: AuthChangeEvent, session) => {
+      async (_event: AuthChangeEvent | 'USER_DELETED', session) => {
         console.log("Auth state change event:", _event, "Session:", session);
         const user = session?.user ?? null;
         let isAdmin = false;
@@ -164,7 +164,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.log("Auth state: MFA challenge verified (MFA_CHALLENGE_VERIFIED)");
             break;
           default:
-            console.log(`Auth state change: unhandled event: ${_event}`);
+            const unhandledEvent: string = _event as string;
+            console.log(`Auth state change: Unhandled event type: ${unhandledEvent}`);
             break;
         }
       }
