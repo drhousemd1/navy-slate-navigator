@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward } from '@/data/rewards/types';
@@ -12,17 +13,16 @@ import {
   fetchTotalRewardsSupply
 } from './queries'; 
 
-// Corrected imports for mutation hooks
-import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables } from '@/data/rewards/mutations/useSaveReward';
+// Import types from the central types file
+import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
 import { useBuySubReward } from '@/data/rewards/mutations/useBuySubReward';
 import { useBuyDomReward } from '@/data/rewards/mutations/useBuyDomReward';
 import { useRedeemSubReward } from '@/data/rewards/mutations/useRedeemSubReward';
 import { useRedeemDomReward } from '@/data/rewards/mutations/useRedeemDomReward';
 
-
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
-import { usePointsManager } from '@/data/points/usePointsManager'; // Changed import
+import { usePointsManager } from '@/data/points/usePointsManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 

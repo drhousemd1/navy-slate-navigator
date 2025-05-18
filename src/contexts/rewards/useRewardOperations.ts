@@ -83,14 +83,16 @@ export default function useRewardOperations() {
           toast({ title: "Missing required fields", description: "Title, cost, supply, and DOM status are required for new rewards.", variant: "destructive" });
           throw new Error("Missing required fields for creation");
         }
-        const createPayload: CreateRewardVariables = {
+        
+        // Ensure all required fields are present, especially background_opacity which needs to be required
+        const createPayload = {
           title: rewardData.title,
           cost: rewardData.cost,
           supply: rewardData.supply,
           is_dom_reward: rewardData.is_dom_reward,
           description: rewardData.description || '',
           background_image_url: rewardData.background_image_url || null,
-          background_opacity: rewardData.background_opacity ?? 100,
+          background_opacity: rewardData.background_opacity ?? 100, // Provide default if undefined
           icon_name: rewardData.icon_name || 'Award',
           icon_url: rewardData.icon_url || null,
           icon_color: rewardData.icon_color || '#9b87f5',
@@ -101,6 +103,8 @@ export default function useRewardOperations() {
           focal_point_x: rewardData.focal_point_x ?? 50,
           focal_point_y: rewardData.focal_point_y ?? 50,
         };
+        
+        // Use the imported useCreateRewardMutation type-safe method
         savedRewardData = await createRewardMutation.mutateAsync(createPayload);
       }
       

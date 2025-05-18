@@ -1,16 +1,12 @@
 
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/hooks/use-toast';
-import { Reward } from '@/data/rewards/types';
+import { Reward, CreateRewardVariables as TypesCreateRewardVariables } from '@/data/rewards/types';
 
-// Define types for mutation variables
-export type CreateRewardVariables = Omit<Reward, 'id' | 'created_at' | 'updated_at'> & {
-  title: string;
-  cost: number;
-  supply: number;
-  is_dom_reward: boolean;
-};
+// Define types for mutation variables - importing from the central types file
+export type CreateRewardVariables = TypesCreateRewardVariables;
 
 export type UpdateRewardVariables = { id: string } & Partial<Omit<Reward, 'id' | 'created_at' | 'updated_at'>>;
 
@@ -83,3 +79,4 @@ export const useUpdateRewardMutation = () => {
     },
   });
 };
+
