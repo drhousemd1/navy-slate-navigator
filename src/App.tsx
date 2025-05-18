@@ -1,12 +1,11 @@
-
 import React from 'react';
 import { Toaster } from 'sonner';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter as Router } from 'react-router-dom';
 import AppRoutes from './AppRoutes';
-import { AuthProvider } from './contexts/auth/AuthContext';
-import { ThemeProvider } from 'next-themes'; // Corrected import
+import { AuthProvider } from '@/contexts/auth'; // Changed import path
+import { ThemeProvider } from 'next-themes';
 import { NetworkStatusProvider } from './contexts/NetworkStatusContext';
 import OfflineBanner from './components/OfflineBanner';
 import { queryClient } from './data/queryClient';

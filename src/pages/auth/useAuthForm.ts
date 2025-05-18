@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth/AuthContext'; 
+import { useAuth } from '@/contexts/auth'; 
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
 import { clearAuthState } from '@/integrations/supabase/client';

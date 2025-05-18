@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { Session, User, AuthChangeEvent, Subscription } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -70,14 +69,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         let isAdmin = false;
         if (user) {
           try {
-            // It's good practice to ensure the rpc function exists and handles errors.
             const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
               requested_user_id: user.id,
               requested_role: 'admin'
             });
             if (roleError) {
               console.error("Error checking admin role via RPC:", roleError);
-              // Potentially handle this more gracefully, e.g., by not setting isAdmin or setting to false
             } else {
               isAdmin = !!hasAdminRole;
             }
@@ -156,27 +153,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             break;
           case 'PASSWORD_RECOVERY':
             console.log("Auth state: Password recovery initiated (PASSWORD_RECOVERY)");
-            // Typically, UI will navigate to a password reset page.
-            // No specific cache clearing needed here unless app design dictates.
             break;
           case 'TOKEN_REFRESHED':
             console.log("Auth state: Token refreshed (TOKEN_REFRESHED)");
-            // Session and user state already updated by setAuthState above.
             break;
           case 'USER_UPDATED':
             console.log("Auth state: User updated (USER_UPDATED)");
-            // User object in authState is updated. Profile data might need refresh.
-            // wrappedSetUserForProfile might be called elsewhere if user metadata changes.
             break;
           case 'MFA_CHALLENGE_VERIFIED':
             console.log("Auth state: MFA challenge verified (MFA_CHALLENGE_VERIFIED)");
-            // This is part of MFA flow, usually leading to SIGNED_IN.
             break;
           default:
-            // This should capture any new or unexpected events.
-            // Using a helper to assert exhaustiveness for known types might be useful in dev.
-            const exhaustiveCheck: never = _event; 
-            console.log(`Auth state change: unhandled event ${_event}`, exhaustiveCheck);
+            console.log(`Auth state change: unhandled event: ${_event}`);
+            break;
         }
       }
     );
@@ -191,8 +180,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       queryClient.clear();
       console.log('[CacheClear] React Query in-memory cache cleared.');
 
-      // Clear RQ persisted cache if using one (example with localforage)
-      // This key 'RQ_CACHE' depends on how react-query-persist-client is configured
       await localforage.removeItem('RQ_CACHE'); 
       console.log('[CacheClear] Persisted React Query cache (RQ_CACHE) cleared.');
 
@@ -217,24 +204,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (error) {
       console.error('Error signing out:', error);
       toast({ title: "Sign Out Error", description: error.message, variant: "destructive" });
-      // Important: set loading to false even on error
       setAuthState(prev => ({ ...prev, loading: false }));
     } else {
-      // state will be updated by onAuthStateChange to SIGNED_OUT, which then calls clearAllCaches.
-      // No need to call clearAllCaches here directly if onAuthStateChange handles it.
-      // However, explicitly calling it ensures caches are cleared before navigation or UI update.
       await clearAllCaches(); 
-      // The onAuthStateChange listener will set loading to false.
-      // If we want immediate feedback:
-      // setAuthState({
-      //   user: null,
-      //   session: null,
-      //   loading: false,
-      //   isAuthenticated: false,
-      //   isAdmin: false,
-      //   userExists: false,
-      //   sessionExists: false,
-      // });
     }
   };
 
@@ -267,4 +239,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
