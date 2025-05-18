@@ -1,100 +1,95 @@
-import { useEffect, useCallback } from 'react';
-import localforage from 'localforage';
-import debounce from 'lodash/debounce';
-import { UseFormReturn, FieldValues } from 'react-hook-form';
 
-export const FORM_STATE_PREFIX = 'formStatePersister_'; // Exported
+import { useEffect } from 'react';
+import { UseFormReturn } from 'react-hook-form';
+import { debounce } from 'lodash';
 
-interface UseFormStatePersisterOptions<TFieldValues extends FieldValues> {
-  debounceTime?: number;
-  exclude?: (keyof TFieldValues)[];
+type FormValues = Record<string, any>;
+
+interface PersisterOptions {
+  exclude?: string[];  // Fields to exclude from persistence
+  debounceMs?: number; // Debounce time in ms
 }
 
-export function useFormStatePersister<TFieldValues extends FieldValues>(
-  formId: string | null, // Pass null to disable persistence for this instance
-  form: UseFormReturn<TFieldValues>,
-  options?: UseFormStatePersisterOptions<TFieldValues>
+const STORAGE_PREFIX = 'kingdom-app-form-';
+
+/**
+ * Hook to persist form state in localStorage
+ * @param formId - Unique identifier for the form
+ * @param form - React Hook Form instance
+ * @param options - Options for persistence
+ * @returns Methods to manage persisted form state
+ */
+export function useFormStatePersister<T extends FormValues>(
+  formId: string,
+  form: UseFormReturn<T>,
+  options: PersisterOptions = {}
 ) {
-  const { watch, reset } = form;
-  const debounceTime = options?.debounceTime ?? 500;
-  const fieldsToExclude = options?.exclude ?? [];
-
-  const uniqueStorageKey = formId ? `${FORM_STATE_PREFIX}${formId}` : null;
-
-  // Load persisted state on mount or when formId changes
+  const { exclude = [], debounceMs = 500 } = options;
+  const storageKey = `${STORAGE_PREFIX}${formId}`;
+  
+  // Load persisted state on mount
   useEffect(() => {
-    if (!uniqueStorageKey) return;
-
-    let isMounted = true;
-    localforage.getItem(uniqueStorageKey)
-      .then(persistedState => {
-        if (isMounted && persistedState && typeof persistedState === 'object') {
-          const stateToLoad = { ...persistedState };
-          fieldsToExclude.forEach(key => {
-            delete (stateToLoad as any)[key];
-          });
-
-          if (Object.keys(stateToLoad).length > 0) {
-            // Reset with persisted data, try to keep existing default values for fields not in persistedState
-            reset(stateToLoad as TFieldValues, { keepDefaultValues: true });
-            console.log(`[FormPersister] Loaded state for ${uniqueStorageKey}:`, stateToLoad);
+    try {
+      const persistedState = localStorage.getItem(storageKey);
+      if (persistedState) {
+        const values = JSON.parse(persistedState);
+        
+        // Only set values that are not excluded and not undefined
+        Object.entries(values).forEach(([key, value]) => {
+          if (!exclude.includes(key) && value !== undefined) {
+            form.setValue(key as any, value);
           }
-        }
-      })
-      .catch(error => {
-        console.error(`[FormPersister] Error loading state for ${uniqueStorageKey}:`, error);
-      });
-
-    return () => { isMounted = false; };
-  }, [uniqueStorageKey, reset, fieldsToExclude]);
-
-
-  // Save form state on changes
-  const saveState = useCallback(debounce((data: TFieldValues) => {
-    if (!uniqueStorageKey) return;
-
-    const dataToSave = { ...data };
-    fieldsToExclude.forEach(key => {
-      delete (dataToSave as any)[key];
+        });
+        
+        console.log(`[FormStatePersister] Loaded state for form: ${formId}`);
+      }
+    } catch (error) {
+      console.error(`[FormStatePersister] Failed to load state for form: ${formId}`, error);
+    }
+  }, [formId, form, exclude, storageKey]);
+  
+  // Save form state on change
+  useEffect(() => {
+    const saveState = debounce((values: T) => {
+      try {
+        // Filter out excluded fields
+        const filteredValues = Object.entries(values).reduce((acc, [key, value]) => {
+          if (!exclude.includes(key)) {
+            acc[key] = value;
+          }
+          return acc;
+        }, {} as Record<string, any>);
+        
+        localStorage.setItem(storageKey, JSON.stringify(filteredValues));
+        console.log(`[FormStatePersister] Saved state for form: ${formId}`);
+      } catch (error) {
+        console.error(`[FormStatePersister] Failed to save state for form: ${formId}`, error);
+      }
+    }, debounceMs);
+    
+    const subscription = form.watch((values) => {
+      saveState(values as T);
     });
     
-    // Avoid saving if there's nothing to save after exclusion
-    if (Object.keys(dataToSave).length === 0 && Object.keys(data).length > 0 && fieldsToExclude.length > 0) {
-        // If all fields were excluded, but there was data, we might want to clear or do nothing.
-        // For now, if effectively empty after exclusion, don't save.
-        // Or, if you want to ensure it's empty in storage:
-        // localforage.removeItem(uniqueStorageKey);
-        return;
-    }
-
-
-    localforage.setItem(uniqueStorageKey, dataToSave)
-      .then(() => {
-        // console.log(`[FormPersister] Saved state for ${uniqueStorageKey}:`, dataToSave);
-      })
-      .catch(error => {
-        console.error(`[FormPersister] Error saving state for ${uniqueStorageKey}:`, error);
-      });
-  }, debounceTime), [uniqueStorageKey, debounceTime, fieldsToExclude]);
-
-  useEffect(() => {
-    if (!uniqueStorageKey) return;
-
-    const subscription = watch((value) => {
-      saveState(value as TFieldValues);
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, saveState, uniqueStorageKey]);
-
-  const clearPersistedState = useCallback(async () => {
-    if (!uniqueStorageKey) return;
+    return () => {
+      subscription.unsubscribe();
+      saveState.cancel();
+    };
+  }, [form, exclude, formId, debounceMs, storageKey]);
+  
+  // Clear persisted state
+  const clearPersistedState = async () => {
     try {
-      await localforage.removeItem(uniqueStorageKey);
-      console.log(`[FormPersister] Cleared state for ${uniqueStorageKey}`);
+      localStorage.removeItem(storageKey);
+      console.log(`[FormStatePersister] Cleared state for form: ${formId}`);
+      return true;
     } catch (error) {
-      console.error(`[FormPersister] Error clearing state for ${uniqueStorageKey}:`, error);
+      console.error(`[FormStatePersister] Failed to clear state for form: ${formId}`, error);
+      return false;
     }
-  }, [uniqueStorageKey]);
-
-  return { clearPersistedState };
+  };
+  
+  return {
+    clearPersistedState
+  };
 }

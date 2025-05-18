@@ -11,9 +11,9 @@ import { Award as AwardIcon } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 import { useRewards } from '@/data/queries/useRewards';
-// Import specific mutation hooks
-import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
-import { useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
+// Import specific mutation hooks from the new location
+import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations';
+import { useDeleteRewardMutation } from '@/data/rewards/mutations';
 import { Reward, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -150,9 +150,8 @@ const RewardsContent: React.FC<{
     }
     
     return (
-      <RewardsList
-        // rewards prop removed as RewardsList gets data from context
-        onEdit={handleEditReward} 
+      <RewardsList 
+        onEdit={handleEditReward}
       />
     );
   };
@@ -196,4 +195,3 @@ const Rewards: React.FC = () => {
 };
 
 export default Rewards;
-

@@ -1,8 +1,7 @@
 
-export * from './useCreateReward';
-export * from './useUpdateReward';
+// Export all mutation hooks from this index file
+export * from './useSaveReward';
 export * from './useDeleteReward';
 export * from './useBuySubReward';
 export * from './useBuyDomReward';
-export * from './useRedeemSubReward';
-export * from './useRedeemDomReward';
+export * from './useRedeemRewards';

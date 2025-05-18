@@ -1,33 +1,34 @@
 
 import React from 'react';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { WifiOff, LoaderCircle } from 'lucide-react';
-import { useIsMutating } from '@tanstack/react-query';
+import { Wifi, WifiOff } from 'lucide-react';
 
-const OfflineBanner: React.FC = () => {
+export const OfflineBanner = () => {
   const { isOnline } = useNetworkStatus();
-  const pendingMutations = useIsMutating(); // Get count of all pending mutations
-
-  if (isOnline) {
-    return null;
-  }
-
-  let message = "You are currently offline. Some features may be limited.";
-  if (pendingMutations > 0) {
-    message = `You are currently offline. ${pendingMutations} operation${pendingMutations > 1 ? 's are' : ' is'} pending.`;
-  }
-
+  
+  if (isOnline) return null;
+  
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-yellow-500 text-black p-3 text-center z-50 flex items-center justify-center animate-pulse">
-      {pendingMutations > 0 ? (
-        <LoaderCircle className="w-5 h-5 mr-2 animate-spin" />
-      ) : (
-        <WifiOff className="w-5 h-5 mr-2" />
-      )}
-      {message}
+    <div className="fixed bottom-0 left-0 right-0 bg-yellow-600 text-white px-4 py-2 shadow-lg flex items-center justify-center z-50 animate-fade-in">
+      <WifiOff className="w-4 h-4 mr-2" />
+      <p className="text-sm font-medium">You're currently offline. Some features may be limited.</p>
     </div>
   );
 };
 
-export default OfflineBanner;
-
+export const NetworkStatusIndicator = () => {
+  const { isOnline } = useNetworkStatus();
+  
+  return (
+    <div className="flex items-center">
+      {isOnline ? (
+        <Wifi className="w-4 h-4 text-green-500" />
+      ) : (
+        <WifiOff className="w-4 h-4 text-yellow-500" />
+      )}
+      <span className="ml-2 text-xs font-medium">
+        {isOnline ? 'Online' : 'Offline'}
+      </span>
+    </div>
+  );
+};
