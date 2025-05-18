@@ -57,30 +57,30 @@ const PunishmentsContent: React.FC<{
     setIsEditorOpen(true);
   };
   
-  const handleSavePunishment = async (punishmentData: Partial<PunishmentData>) => {
+  const handleSavePunishment = async (punishmentData: Partial<PunishmentData>): Promise<PunishmentData> => {
     try {
       if (punishmentData.id) {
-        // Ensure punishmentData matches UpdatePunishmentVariables: { id: string } & Partial<Omit<PunishmentData, 'id'>>
         const { id, ...updates } = punishmentData;
-        await updatePunishmentAsync({ id, ...updates });
+        const updatedPunishment = await updatePunishmentAsync({ id, ...updates });
+        setIsEditorOpen(false);
+        setCurrentPunishment(undefined);
+        return updatedPunishment as PunishmentData;
       } else {
-        // Ensure punishmentData matches CreatePunishmentVariables
         const { id, created_at, updated_at, ...creatableData } = punishmentData;
-        // Ensure all required fields for CreatePunishmentVariables are present
-        // dom_supply is now optional in CreatePunishmentVariables and will default in the hook
         const variables: CreatePunishmentVariables = {
           title: creatableData.title || 'Default Title', 
           points: creatableData.points || 0, 
-          dom_supply: creatableData.dom_supply ?? 0, // Provide dom_supply, or let it default in the hook
+          dom_supply: creatableData.dom_supply ?? 0, 
           ...creatableData,
         };
-        await createPunishmentAsync(variables);
+        const createdPunishment = await createPunishmentAsync(variables);
+        setIsEditorOpen(false);
+        setCurrentPunishment(undefined);
+        return createdPunishment as PunishmentData;
       }
-      setIsEditorOpen(false);
-      setCurrentPunishment(undefined);
     } catch (error) {
-      console.error("Error saving punishment (from component):", error);
-      // Toasts are handled by optimistic mutation hooks
+      console.error("Error saving punishment (from page component):", error);
+      throw error;
     }
   };
   
@@ -89,14 +89,13 @@ const PunishmentsContent: React.FC<{
       await deletePunishmentAsync(id);
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
-      // Toast is handled by useDeletePunishment
-    } catch (error) {
-      console.error("Error deleting punishment:", error);
       toast({
         title: "Error on Page",
         description: "Failed to delete punishment from page.",
         variant: "destructive"
       });
+    } catch (error) {
+      console.error("Error deleting punishment:", error);
     }
   };
   

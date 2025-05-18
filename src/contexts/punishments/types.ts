@@ -43,7 +43,7 @@ export interface ApplyPunishmentArgs {
 
 export interface PunishmentsContextType {
   punishments: PunishmentData[];
-  savePunishment: (data: Partial<PunishmentData>) => Promise<void>;
+  savePunishment: (data: Partial<PunishmentData>) => Promise<PunishmentData>; // Changed from Promise<void>
   deletePunishment: (id: string) => Promise<void>; // Return Promise<void>
   isLoading: boolean; // Should match the hook's loading state name
   applyPunishment: (args: ApplyPunishmentArgs) => Promise<void>;

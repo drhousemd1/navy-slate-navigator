@@ -18,24 +18,30 @@ export const usePunishmentEditor = ({ id, onSaveSuccess }: UsePunishmentEditorPr
   };
 
   const handleSavePunishment = async (updatedData: Partial<PunishmentData>): Promise<PunishmentData> => {
-    if (!id) {
+    // id from props is for an existing punishment being edited by this hook instance.
+    // updatedData.id might be present if the form is for creation and ID is generated client-side (unlikely here)
+    // or if the form directly manipulates an ID field (also unlikely for this hook's purpose).
+    // The hook is initialized with an optional `id`, implying it's for editing an existing entity.
+    const currentId = updatedData.id || id; 
+    
+    if (!currentId) {
         toast({ title: "Error", description: "No punishment ID specified for update.", variant: "destructive" });
         throw new Error("No ID specified for update.");
     }
     
     try {
-      const punishmentToSave = { ...updatedData, id };
-      // savePunishment from context is typed to return Promise<PunishmentData>
-      const savedPunishment = await savePunishment(punishmentToSave); 
+      // Ensure the ID is part of the data sent to savePunishment
+      const punishmentToSave = { ...updatedData, id: currentId };
+      const savedPunishment = await savePunishment(punishmentToSave); // Now returns PunishmentData
       
       // Editor remains open as per previous requirement
       toast({ title: "Success", description: "Punishment updated." });
       
-      if (onSaveSuccess) { // savedPunishment is of type PunishmentData, so it's truthy if successful
-        onSaveSuccess(savedPunishment);
+      if (onSaveSuccess) { 
+        onSaveSuccess(savedPunishment); // savedPunishment is now PunishmentData
       }
       
-      return savedPunishment; // Return the saved punishment
+      return savedPunishment; // Return the saved punishment (which is PunishmentData)
     } catch (error) {
       console.error("Error updating punishment:", error);
       toast({ title: "Error", description: "Failed to update punishment.", variant: "destructive" });

@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 import PunishmentBasicDetails from './form/PunishmentBasicDetails';
@@ -11,12 +10,11 @@ import PunishmentFormSubmitHandler from './form/PunishmentFormSubmitHandler';
 import { usePunishmentIcon } from './hooks/usePunishmentIcon';
 import { usePunishmentBackground } from './hooks/usePunishmentBackground';
 import { useDeleteDialog } from './hooks/useDeleteDialog';
-// Removed: import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { UseFormReturn } from 'react-hook-form';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
-  onSave: (data: PunishmentData) => Promise<void>;
+  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData>; // Changed: takes Partial, returns PunishmentData
   onCancel: () => void;
   onDelete?: (id: string) => void;
 }
@@ -69,22 +67,27 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     <PunishmentFormProvider
       punishmentData={punishmentData}
       formBaseId="punishment-editor"
-      persisterExclude={[]} // Explicitly pass empty array or configure as needed
+      persisterExclude={[]} 
     >
       {(form, clearPersistedState) => {
-        // useFormStatePersister call for this form is now handled by PunishmentFormProvider
-        // const persisterFormId = `punishment-editor-${punishmentData?.id || 'new'}`;
-        // const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
-        //   exclude: [] 
-        // });
-
-        const handleSaveWithClear = async (dataToSave: PunishmentData) => {
-          await onSave(dataToSave);
-          await clearPersistedState();
+        // This function is passed to PunishmentFormSubmitHandler's onSave prop,
+        // which expects: (data: Partial<PunishmentData>) => Promise<PunishmentData | null>
+        const handleSaveWithClear = async (dataFromFormSubmitHandler: Partial<PunishmentData>): Promise<PunishmentData | null> => {
+          try {
+            // The `onSave` prop of PunishmentEditorForm now takes Partial<PunishmentData> and returns Promise<PunishmentData>
+            const savedData = await onSave(dataFromFormSubmitHandler);
+            await clearPersistedState();
+            return savedData; // This makes the function return Promise<PunishmentData>
+          } catch (error) {
+            console.error("Error saving punishment within handleSaveWithClear:", error);
+            // To match the expected Promise<PunishmentData | null>, return null on error.
+            // The form submit handler will see null and might not reset the form with new data.
+            return null; 
+          }
         };
 
         const handleCancelWithClear = () => {
-          clearPersistedState(); // Call the clear function from provider
+          clearPersistedState(); 
           onCancel();
         };
 
@@ -92,7 +95,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
           if (onDelete && punishmentData?.id) {
             onDelete(punishmentData.id);
           }
-          clearPersistedState(); // Call the clear function from provider
+          clearPersistedState(); 
           setIsDeleteDialogOpen(false);
         };
 
@@ -103,8 +106,8 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
             selectedIconName={selectedIconName}
             imagePreview={imagePreview}
             iconPreview={iconPreview}
-            onSave={handleSaveWithClear}
-            onCancel={handleCancelWithClear} // This onCancel is now the one from PunishmentEditorForm
+            onSave={handleSaveWithClear} // handleSaveWithClear now matches expected type
+            onCancel={handleCancelWithClear} 
           >
             <PunishmentFormContent 
               form={form}
@@ -119,8 +122,8 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
               handleRemoveIcon={handleRemoveIcon}
               handleImageUpload={handleImageUpload}
               handleRemoveImage={handleRemoveImage}
-              onCancel={handleCancelWithClear} // Pass the clear-wrapped cancel
-              onDelete={handleDeleteWithClear} // Pass the clear-wrapped delete
+              onCancel={handleCancelWithClear} 
+              onDelete={handleDeleteWithClear} 
             />
           </PunishmentFormSubmitHandler>
         );
@@ -203,4 +206,3 @@ const PunishmentFormContent: React.FC<PunishmentFormContentProps> = ({
 };
 
 export default PunishmentEditorForm;
-

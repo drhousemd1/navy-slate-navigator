@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, ReactNode } from 'react';
 import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
 import { usePunishmentsData } from '@/data/punishments/usePunishmentsData'; // Assuming this is the correct hook
@@ -6,7 +7,7 @@ import { QueryObserverResult } from '@tanstack/react-query';
 // Create a context with a default value that matches PunishmentsContextType
 const PunishmentsContext = createContext<PunishmentsContextType>({
   punishments: [],
-  savePunishment: async () => {},
+  savePunishment: async () => ({} as PunishmentData), // Updated default to match new return type
   deletePunishment: async () => {},
   isLoading: false,
   applyPunishment: async () => {},
@@ -27,8 +28,8 @@ export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const contextValue: PunishmentsContextType = {
     punishments: punishmentsDataHook.punishments || [],
     savePunishment: async (data: Partial<PunishmentData>) => {
-      await punishmentsDataHook.savePunishment(data);
-      // Intentionally not returning the result of savePunishment to match Promise<void>
+      // Assuming punishmentsDataHook.savePunishment returns the saved PunishmentData
+      return punishmentsDataHook.savePunishment(data); 
     },
     deletePunishment: punishmentsDataHook.deletePunishment, // Ensure this returns Promise<void>
     isLoading: punishmentsDataHook.isLoadingPunishments, // Adjusted to match potential naming from usePunishmentsData
