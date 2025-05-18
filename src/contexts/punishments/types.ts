@@ -4,8 +4,9 @@ export interface PunishmentData {
   id?: string; // Made optional to reflect that new punishments won't have an ID until saved
   title: string;
   description?: string | null;
-  points: number;
-  dom_points?: number | null;
+  points: number; // Cost for the submissive in sub_points
+  dom_points?: number | null; // Points the Dominant earns when punishment is applied
+  dom_supply: number; // Available stock of the punishment
   background_image_url?: string | null;
   background_opacity: number; // Still required, default will be handled in form/data layer
   title_color: string;
