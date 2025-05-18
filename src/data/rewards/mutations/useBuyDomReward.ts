@@ -12,8 +12,15 @@ export interface BuyDomRewardVariables {
   currentDomPoints: number;
 }
 
+interface BuyDomRewardOptimisticContext {
+  previousRewards?: Reward[];
+  previousPoints?: any;
+}
+
 export const useBuyDomReward = () => {
   const queryClient = useQueryClient();
+  const REWARDS_QUERY_KEY = ['rewards'];
+  const PROFILE_POINTS_QUERY_KEY = ['profile_points'];
 
   return {
     mutateAsync: async ({
@@ -23,7 +30,7 @@ export const useBuyDomReward = () => {
       profileId,
       currentDomPoints
     }: BuyDomRewardVariables) => {
-      // Check if user has enough dom points
+      // Validation checks
       if (currentDomPoints < cost) {
         toast({
           title: "Not enough dom points",
@@ -33,7 +40,6 @@ export const useBuyDomReward = () => {
         throw new Error("Not enough dom points");
       }
 
-      // Check if reward has enough supply
       if (currentSupply <= 0) {
         toast({
           title: "Out of stock",
@@ -42,48 +48,59 @@ export const useBuyDomReward = () => {
         });
         throw new Error("Reward out of stock");
       }
-
-      // Optimistically update the cache
-      queryClient.setQueryData(['profile_points'], (old: any) => ({
-        ...old,
-        dom_points: old?.dom_points ? old.dom_points - cost : currentDomPoints - cost,
-      }));
-
-      queryClient.setQueryData(['rewards'], (old: Reward[] | undefined) => {
-        if (!old) return undefined;
-        return old.map(reward => {
-          if (reward.id === rewardId) {
-            return { ...reward, supply: reward.supply - 1 };
-          }
-          return reward;
-        });
-      });
-
+      
+      // Cancel any in-flight queries
+      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey: PROFILE_POINTS_QUERY_KEY });
+      
+      // Save previous state for rollback
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
+      const previousPoints = queryClient.getQueryData(PROFILE_POINTS_QUERY_KEY);
+      
       try {
+        // Optimistic updates to the cache
+        queryClient.setQueryData(PROFILE_POINTS_QUERY_KEY, (old: any) => ({
+          ...old,
+          dom_points: old?.dom_points ? old.dom_points - cost : currentDomPoints - cost,
+        }));
+
+        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => {
+          return old.map(reward => {
+            if (reward.id === rewardId) {
+              return { ...reward, supply: reward.supply - 1 };
+            }
+            return reward;
+          });
+        });
+
         // Update dom points in the database
         const { error: pointsError } = await supabase
           .from('profiles')
-          .update({ dom_points: currentDomPoints - cost })
+          .update({ dom_points: currentDomPoints - cost, updated_at: new Date().toISOString() })
           .eq('id', profileId);
 
         if (pointsError) throw pointsError;
 
         // Update reward supply in the database
-        const { error: rewardError } = await supabase
+        const { data: rewardData, error: rewardError } = await supabase
           .from('rewards')
-          .update({ supply: currentSupply - 1 })
-          .eq('id', rewardId);
+          .update({ supply: currentSupply - 1, updated_at: new Date().toISOString() })
+          .eq('id', rewardId)
+          .select()
+          .single();
 
         if (rewardError) throw rewardError;
 
         // Record reward usage
-        const weekNumber = new Date().toISOString().slice(0, 10); // current date as week identifier
-        const dayOfWeek = new Date().getDay();
+        const today = new Date();
+        const weekNumber = today.toISOString().slice(0, 10); // current date as week identifier
+        const dayOfWeek = today.getDay();
 
         const { error: usageError } = await supabase
           .from('reward_usage')
           .insert({
             reward_id: rewardId,
+            profile_id: profileId,
             week_number: weekNumber,
             day_of_week: dayOfWeek,
             used: true
@@ -99,24 +116,19 @@ export const useBuyDomReward = () => {
         return {
           success: true,
           newDomPoints: currentDomPoints - cost,
-          newSupply: currentSupply - 1
+          newSupply: currentSupply - 1,
+          updatedReward: rewardData as Reward,
+          rewardTitle: rewardData?.title || "Dom Reward"
         };
       } catch (error) {
         // Revert optimistic updates on error
-        queryClient.setQueryData(['profile_points'], (old: any) => ({
-          ...old,
-          dom_points: currentDomPoints,
-        }));
-
-        queryClient.setQueryData(['rewards'], (old: Reward[] | undefined) => {
-          if (!old) return undefined;
-          return old.map(reward => {
-            if (reward.id === rewardId) {
-              return { ...reward, supply: currentSupply };
-            }
-            return reward;
-          });
-        });
+        if (previousRewards) {
+          queryClient.setQueryData(REWARDS_QUERY_KEY, previousRewards);
+        }
+        
+        if (previousPoints) {
+          queryClient.setQueryData(PROFILE_POINTS_QUERY_KEY, previousPoints);
+        }
 
         console.error('Error buying dom reward:', error);
         toast({
@@ -125,6 +137,11 @@ export const useBuyDomReward = () => {
           variant: "destructive",
         });
         throw error;
+      } finally {
+        // Always invalidate queries to ensure data consistency
+        queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: PROFILE_POINTS_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: ['rewards', rewardId] });
       }
     }
   };

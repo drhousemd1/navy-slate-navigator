@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -185,7 +186,7 @@ export const useRewardsData = () => {
   };
 
   // Wrapper function for deleting a reward
-  const deleteRewardOperation = async (rewardId: string): Promise<void> => { // Changed return to void as delete mutation returns void
+  const deleteRewardOperation = async (rewardId: string): Promise<void> => {
     try {
       await deleteRewardMutation(rewardId);
       // Toasting is handled by the useDeleteReward hook
@@ -211,6 +212,76 @@ export const useRewardsData = () => {
       console.error('Error refreshing points from database:', error);
     }
   };
+  
+  // Buy a reward (either sub or dom based on reward type)
+  const buyReward = async ({ rewardId, cost }: { rewardId: string; cost: number }) => {
+    try {
+      const reward = rewards.find(r => r.id === rewardId);
+      if (!reward) throw new Error("Reward not found");
+      
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id) throw new Error("User not authenticated");
+      
+      const profileId = userData.user.id;
+      // Get current points from cache
+      const pointsData = queryClient.getQueryData<any>(POINTS_QUERY_KEY) || {};
+      const currentPoints = pointsData.points ?? totalPoints;
+      const currentDomPoints = pointsData.dom_points ?? 0;
+
+      if (reward.is_dom_reward) {
+        return await buyDom({
+          rewardId,
+          cost,
+          currentSupply: reward.supply,
+          profileId,
+          currentDomPoints
+        });
+      } else {
+        return await buySub({
+          rewardId,
+          cost,
+          currentSupply: reward.supply,
+          profileId,
+          currentPoints
+        });
+      }
+    } catch (error) {
+      console.error('Error buying reward:', error);
+      // Toast is handled by the individual buy mutations
+      throw error;
+    }
+  };
+  
+  // Redeem a reward (either sub or dom based on reward type)
+  const redeemReward = async ({ rewardId }: { rewardId: string }) => {
+    try {
+      const reward = rewards.find(r => r.id === rewardId);
+      if (!reward) throw new Error("Reward not found");
+      
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id) throw new Error("User not authenticated");
+      
+      const profileId = userData.user.id;
+      
+      if (reward.is_dom_reward) {
+        return await redeemDom({
+          rewardId,
+          currentSupply: reward.supply,
+          profileId
+        });
+      } else {
+        return await redeemSub({
+          rewardId,
+          currentSupply: reward.supply,
+          profileId
+        });
+      }
+    } catch (error) {
+      console.error('Error redeeming reward:', error);
+      // Toast is handled by the individual redeem mutations
+      throw error;
+    }
+  };
 
   return {
     // Data
@@ -225,37 +296,8 @@ export const useRewardsData = () => {
     // Rewards CRUD operations
     saveReward: saveRewardOperation,
     deleteReward: deleteRewardOperation,
-    buyReward: async ({ rewardId, cost }: { rewardId: string, cost: number }) => {
-      const reward = rewards.find(r => r.id === rewardId);
-      if (!reward) throw new Error("Reward not found");
-      
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user?.id) throw new Error("User not authenticated");
-      
-      const profileId = userData.user.id;
-      // Fetch current points from cache or state, as totalPoints might be stale
-      const currentPointsQueryData = queryClient.getQueryData<{ points?: number, dom_points?: number }>(POINTS_QUERY_KEY);
-      const currentPoints = currentPointsQueryData?.points ?? totalPoints;
-      const currentDomPoints = currentPointsQueryData?.dom_points ?? 0;
-
-      if (reward.is_dom_reward) {
-        return buyDom({
-          rewardId,
-          cost,
-          currentSupply: reward.supply,
-          profileId,
-          currentDomPoints
-        });
-      } else {
-        return buySub({
-          rewardId,
-          cost,
-          currentSupply: reward.supply,
-          profileId,
-          currentPoints
-        });
-      }
-    },
+    buyReward,
+    redeemReward,
     
     // Refetch functions
     refetchRewards,
