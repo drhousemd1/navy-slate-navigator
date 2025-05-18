@@ -1,20 +1,39 @@
-
 import React, { useState } from 'react';
 import { Form } from '@/components/ui/form';
-import { PunishmentData } from '@/contexts/PunishmentsContext'; // Assuming this path is correct, or adjust to types
+import { PunishmentData } from '@/contexts/PunishmentsContext';
 import { toast } from '@/hooks/use-toast';
-// import { PunishmentFormValues } from './PunishmentFormProvider'; // If specific form values type is needed
+import { PunishmentFormValues, punishmentFormSchema } from './PunishmentFormProvider';
 
 interface PunishmentFormSubmitHandlerProps {
   punishmentData?: PunishmentData;
-  form: any; // Consider using UseFormReturn<PunishmentFormValues> for stronger typing
+  form: any;
   selectedIconName: string | null;
   imagePreview: string | null;
   iconPreview: string | null;
-  onSave: (data: PunishmentData) => Promise<void>;
+  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData | null>;
   onCancel: () => void;
   children: React.ReactNode;
 }
+
+const mapPunishmentDataToFormValues = (punishment: PunishmentData): PunishmentFormValues => {
+  return {
+    title: punishment.title,
+    description: punishment.description || '',
+    points: punishment.points,
+    dom_points: punishment.dom_points !== undefined && punishment.dom_points !== null 
+                ? punishment.dom_points 
+                : Math.ceil(punishment.points / 2),
+    dom_supply: punishment.dom_supply ?? 0,
+    icon_color: punishment.icon_color || '#ea384c',
+    title_color: punishment.title_color || '#FFFFFF',
+    subtext_color: punishment.subtext_color || '#8E9196',
+    calendar_color: punishment.calendar_color || '#ea384c',
+    highlight_effect: punishment.highlight_effect || false,
+    background_opacity: punishment.background_opacity || 50,
+    focal_point_x: punishment.focal_point_x || 50,
+    focal_point_y: punishment.focal_point_y || 50,
+  };
+};
 
 const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = ({
   punishmentData,
@@ -27,69 +46,54 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   children
 }) => {
   const [isSaving, setIsSaving] = useState(false);
-  const [hasShownErrorToast, setHasShownErrorToast] = useState(false);
 
-  const onSubmit = async (values: any) => { // Consider typing `values` with PunishmentFormValues
-    setHasShownErrorToast(false);
-    
+  const onSubmit = async (values: PunishmentFormValues) => {
     if (isSaving) {
       console.log("Form submission prevented - already saving");
       return;
     }
-
     console.log("Form submitted with values:", values);
-    
-    const icon_name = selectedIconName || null;
-    const background_image_url = imagePreview || null;
-    const icon_url = iconPreview || null;
     
     const points = Number(values.points);
     const dom_points = values.dom_points !== undefined 
       ? Number(values.dom_points)
       : Math.ceil(points / 2);
     
-    console.log("Calculated dom_points:", dom_points, "from points:", points);
-    
-    const dataToSave: Partial<PunishmentData> = { // Use Partial if ID might be missing for creation
+    const dataToSave: Partial<PunishmentData> = {
       ...values,
       points: points,
       dom_points: dom_points,
-      icon_name: icon_name,
-      background_image_url: background_image_url,
-      icon_url: icon_url,
-      icon_color: values.icon_color || '#ea384c'
+      icon_name: selectedIconName,
+      background_image_url: imagePreview,
+      icon_url: iconPreview,
+      icon_color: values.icon_color || '#ea384c',
     };
     
     if (punishmentData?.id) {
       dataToSave.id = punishmentData.id;
     }
     
-    console.log("Saving punishment data:", dataToSave);
+    console.log("Attempting to save punishment data:", dataToSave);
     
     try {
       setIsSaving(true);
-      await onSave(dataToSave as PunishmentData); // Cast to PunishmentData assuming onSave expects full
+      const savedPunishment = await onSave(dataToSave);
       
-      // Removed form.reset() here.
-      // onCancel will handle closing the editor and clearing the persisted draft state
-      // for this specific form instance via clearPersistedState.
-      onCancel(); 
-
-      toast({
-        title: "Success",
-        description: "Punishment saved successfully.",
-      });
-    } catch (error) {
-      console.error("Error saving punishment:", error);
-      
-      if (!hasShownErrorToast) {
+      if (savedPunishment) {
+        form.reset(mapPunishmentDataToFormValues(savedPunishment));
         toast({
-          title: "Save Failed",
-          description: "Failed to save punishment. Please try again.",
-          variant: "destructive",
+          title: "Punishment Processed",
+          description: punishmentData?.id ? "Punishment updated." : "Punishment created.",
         });
-        setHasShownErrorToast(true);
+      } else {
+        toast({
+          title: "Save Incomplete",
+          description: "Punishment data might not have fully saved. Please check.",
+          variant: "default",
+        });
       }
+    } catch (error) {
+      console.error("Error saving punishment in form handler:", error);
     } finally {
       setIsSaving(false);
     }
@@ -112,4 +116,3 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
 };
 
 export default PunishmentFormSubmitHandler;
-

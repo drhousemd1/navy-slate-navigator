@@ -1,14 +1,16 @@
-
 import { useState } from 'react';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import { PunishmentData } from '@/contexts/punishments/types';
-import { toast } from '@/hooks/use-toast'; // Added missing import
+import { toast } from '@/hooks/use-toast';
 
 interface UsePunishmentEditorProps {
   id?: string; // This ID is of the punishment being edited
+  // Add a callback for when save is successful and form data is available,
+  // so the parent can clear persisted state.
+  onSaveSuccess?: (savedData: PunishmentData) => void;
 }
 
-export const usePunishmentEditor = ({ id }: UsePunishmentEditorProps) => {
+export const usePunishmentEditor = ({ id, onSaveSuccess }: UsePunishmentEditorProps) => {
   // savePunishment handles both create and update. deletePunishment is specific.
   const { savePunishment, deletePunishment: deletePunishmentFromContext } = usePunishments();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -18,22 +20,29 @@ export const usePunishmentEditor = ({ id }: UsePunishmentEditorProps) => {
   };
 
   // This function is for saving changes to an *existing* punishment
-  const handleSavePunishment = async (updatedData: Partial<PunishmentData>) => {
+  const handleSavePunishment = async (updatedData: Partial<PunishmentData>): Promise<PunishmentData> => {
     if (!id) {
         toast({ title: "Error", description: "No punishment ID specified for update.", variant: "destructive" });
-        return Promise.reject(new Error("No ID specified for update."));
+        throw new Error("No ID specified for update.");
     }
     
     try {
-      // Ensure the ID is part of the data being saved
-      await savePunishment({ ...updatedData, id });
-      setIsEditorOpen(false); // Close editor on successful save
-      toast({ title: "Success", description: "Punishment updated." }); // Added toast
-      return Promise.resolve();
+      const punishmentToSave = { ...updatedData, id };
+      // savePunishment from context should ideally return the saved PunishmentData
+      const savedPunishment = await savePunishment(punishmentToSave); 
+      
+      // setIsEditorOpen(false); // Editor remains open
+      toast({ title: "Success", description: "Punishment updated." });
+      
+      if (onSaveSuccess && savedPunishment) {
+        onSaveSuccess(savedPunishment);
+      }
+      
+      return savedPunishment; // Return the saved punishment
     } catch (error) {
       console.error("Error updating punishment:", error);
       toast({ title: "Error", description: "Failed to update punishment.", variant: "destructive" });
-      return Promise.reject(error);
+      throw error; // Re-throw so the form handler knows it failed
     }
   };
 

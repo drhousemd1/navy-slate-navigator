@@ -1,37 +1,33 @@
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from '@/hooks/use-toast';
+import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
+import { Reward } from '@/data/rewards/types'; // Ensure Reward type has an 'id' field
 
-export const useDeleteRewardMutation = () => {
+// This TItem is for the items in the cache
+type RewardWithId = Reward & { id: string };
+
+export const useDeleteReward = () => { // Renamed from useDeleteRewardMutation for consistency
   const queryClient = useQueryClient();
   
-  return useMutation({
-    mutationFn: async (id: string) => {
+  return useDeleteOptimisticMutation<RewardWithId, Error, string>({
+    queryClient,
+    queryKey: ['rewards'],
+    mutationFn: async (rewardId: string) => {
       const { error } = await supabase
         .from('rewards')
         .delete()
-        .eq('id', id);
+        .eq('id', rewardId);
 
       if (error) {
         console.error("Error deleting reward:", error);
+        // The optimistic hook will show a toast on error
         throw new Error(error.message);
       }
-      return null;
+      // Deletion returns no data
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      toast({
-        title: "Success",
-        description: "Reward deleted successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: `Failed to delete reward: ${error.message}`,
-        variant: "destructive",
-      });
-    },
+    entityName: 'Reward',
+    idField: 'id',
+    // onSuccessCallback can be added if specific post-delete client logic is needed beyond cache update
   });
 };
