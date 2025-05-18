@@ -4,7 +4,7 @@ import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 import { toast } from '@/hooks/use-toast';
 import { Reward } from '@/data/rewards/types';
 import { supabase } from '@/integrations/supabase/client';
-import { usePointsManagement } from './usePointsManagement';
+import { usePointsManager } from '@/data/points/usePointsManager';
 import { fetchRewards, saveReward, deleteReward as deleteRewardUtil } from '@/lib/rewardUtils';
 import { useBuySubReward } from "@/data/rewards/mutations/useBuySubReward";
 import { useBuyDomReward } from "@/data/rewards/mutations/useBuyDomReward";
@@ -17,15 +17,14 @@ export default function useRewardOperations() {
   const [totalDomRewardsSupply, setTotalDomRewardsSupply] = useState(0);
   const queryClient = useQueryClient();
 
+  // Use the new usePointsManager hook
   const { 
-    totalPoints, 
-    domPoints, 
-    setTotalPoints, 
-    setDomPoints, 
-    updatePointsInDatabase, 
-    updateDomPointsInDatabase, 
-    refreshPointsFromDatabase 
-  } = usePointsManagement();
+    points: totalPoints,             // Alias 'points' to 'totalPoints'
+    domPoints,
+    setTotalPoints: updatePointsInDatabase, // Alias 'setTotalPoints' to 'updatePointsInDatabase'
+    setDomPoints: updateDomPointsInDatabase,   // Alias 'setDomPoints' to 'updateDomPointsInDatabase'
+    refreshPoints: refreshPointsFromDatabase // Alias 'refreshPoints' to 'refreshPointsFromDatabase'
+  } = usePointsManager();
   
   const { mutateAsync: buySub } = useBuySubReward();
   const { mutateAsync: buyDom } = useBuyDomReward();
@@ -222,18 +221,18 @@ export default function useRewardOperations() {
 
   return {
     rewards: fetchedRewards, // Use fetchedRewards which is from useQuery
-    totalPoints,
+    totalPoints, // Now from usePointsManager
     totalRewardsSupply,
     totalDomRewardsSupply,
-    domPoints,
-    setTotalPoints: updatePointsInDatabase, // Map to the correct function from usePointsManagement
-    setDomPoints: updateDomPointsInDatabase, // Map to the correct function from usePointsManagement
+    domPoints, // Now from usePointsManager
+    setTotalPoints: updatePointsInDatabase, // Mapped to the function from usePointsManager
+    setDomPoints: updateDomPointsInDatabase, // Mapped to the function from usePointsManager
     isLoading,
     refetchRewards,
     handleSaveReward,
     handleDeleteReward,
     handleBuyReward,
     handleUseReward,
-    refreshPointsFromDatabase
+    refreshPointsFromDatabase // Now from usePointsManager
   };
 }

@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward } from '@/data/rewards/types';
@@ -23,14 +22,21 @@ import { useRedeemDomReward } from '@/data/rewards/mutations/useRedeemDomReward'
 
 
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
-import { usePointsManagement } from '@/contexts/rewards/usePointsManagement'; 
+import { usePointsManager } from '@/data/points/usePointsManager'; // Changed import
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
-  const { totalPoints, domPoints, updatePointsInDatabase, updateDomPointsInDatabase, refreshPointsFromDatabase } = usePointsManagement();
+  // Use the new usePointsManager hook
+  const { 
+    points: totalPointsFromManager,      // Alias to avoid conflict if this file fetches points separately
+    domPoints: domPointsFromManager,        // Alias
+    setTotalPoints: updatePointsInDatabase, // Alias for consistency with its previous usage
+    setDomPoints: updateDomPointsInDatabase,   // Alias
+    refreshPoints: refreshPointsFromDatabase // Alias
+  } = usePointsManager();
 
   const {
     data: rewards = [],
@@ -157,11 +163,11 @@ export const useRewardsData = () => {
         
     if (reward.is_dom_reward) {
       // Ensure currentDomPoints is fetched or available
-      const currentDomPoints = queryClient.getQueryData<number>(REWARDS_DOM_POINTS_QUERY_KEY) ?? domPoints; // Use nullish coalescing
+      const currentDomPoints = queryClient.getQueryData<number>(REWARDS_DOM_POINTS_QUERY_KEY) ?? domPointsFromManager; // Use nullish coalescing
       return buyDom({ rewardId, cost, currentSupply: reward.supply, profileId, currentDomPoints });
     } else {
       // Ensure currentPoints is fetched or available
-      const currentPoints = queryClient.getQueryData<number>(REWARDS_POINTS_QUERY_KEY) ?? totalPoints; // Use nullish coalescing
+      const currentPoints = queryClient.getQueryData<number>(REWARDS_POINTS_QUERY_KEY) ?? totalPointsFromManager; // Use nullish coalescing
       return buySub({ rewardId, cost, currentSupply: reward.supply, profileId, currentPoints });
     }
   };
@@ -187,20 +193,19 @@ export const useRewardsData = () => {
 
   return {
     rewards,
-    totalPoints, 
+    totalPoints: totalPointsFromManager, // Use points from usePointsManager
     totalRewardsSupply,
     totalDomRewardsSupply,
-    domPoints, 
-    isLoading: rewardsLoading,
+    domPoints: domPointsFromManager, // Use domPoints from usePointsManager
+    isLoading: rewardsLoading, // This isLoading is specific to rewards query
     error: rewardsError,
     saveReward,
     deleteReward,
     buyReward,
     useReward, 
-    updatePoints: updatePointsInDatabase, 
-    updateDomPoints: updateDomPointsInDatabase, 
+    updatePoints: updatePointsInDatabase, // Exporting the function from usePointsManager
+    updateDomPoints: updateDomPointsInDatabase, // Exporting the function from usePointsManager
     refetchRewards: refetchRewardsTyped,
-    refreshPointsFromDatabase, 
+    refreshPointsFromDatabase, // Exporting the function from usePointsManager
   };
 };
-
