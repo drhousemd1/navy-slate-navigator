@@ -12,6 +12,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import localforage from 'localforage';
 import { APP_CACHE_VERSION } from '@/lib/react-query-config';
+import { AuthProvider } from '../../contexts/AuthContext'; // Added AuthProvider import
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -42,12 +43,15 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
       }}
     >
       <NetworkStatusProvider>
-        <RewardsProvider>
-          {children}
-          {/* Toaster and OfflineBanner are rendered in App.tsx to be inside Hydrate context */}
-          {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
-        </RewardsProvider>
+        <AuthProvider> {/* AuthProvider wraps RewardsProvider and children */}
+          <RewardsProvider>
+            {children}
+            {/* Toaster and OfflineBanner are rendered in App.tsx to be inside Hydrate context */}
+            {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
+          </RewardsProvider>
+        </AuthProvider>
       </NetworkStatusProvider>
     </PersistQueryClientProvider>
   );
 };
+
