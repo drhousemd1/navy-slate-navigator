@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode } from 'react';
 import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
 import { usePunishmentsData } from '@/data/punishments/usePunishmentsData'; // Assuming this is the correct hook
@@ -27,7 +26,10 @@ export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ childre
   // and types match.
   const contextValue: PunishmentsContextType = {
     punishments: punishmentsDataHook.punishments || [],
-    savePunishment: punishmentsDataHook.savePunishment,
+    savePunishment: async (data: Partial<PunishmentData>) => {
+      await punishmentsDataHook.savePunishment(data);
+      // Intentionally not returning the result of savePunishment to match Promise<void>
+    },
     deletePunishment: punishmentsDataHook.deletePunishment, // Ensure this returns Promise<void>
     isLoading: punishmentsDataHook.isLoadingPunishments, // Adjusted to match potential naming from usePunishmentsData
     applyPunishment: punishmentsDataHook.applyPunishment, // Ensure signature matches
