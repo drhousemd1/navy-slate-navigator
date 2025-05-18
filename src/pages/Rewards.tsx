@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -10,7 +9,7 @@ import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton';
 import { Award as AwardIcon } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-import { useRewardsQuery } from '@/data/queries/useRewards'; // Corrected import
+import { useRewards } from '@/data/queries/useRewards'; // Corrected import name
 // Import specific mutation hooks
 import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
@@ -22,7 +21,7 @@ usePreloadRewards()();
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
-  const { data: rewards = [], isLoading, error, refetch: refetchRewardsQuery } = useRewardsQuery();
+  const { data: rewards = [], isLoading, error, refetch: refetchRewardsQuery } = useRewards(); // Corrected usage
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<Reward | undefined>(undefined);
   
@@ -42,19 +41,24 @@ const RewardsContent: React.FC<{
   };
   
   const handleEditReward = (index: number) => { 
-    const rewardToEdit = rewards[index];
-    if (rewardToEdit) {
-      setRewardBeingEdited(rewardToEdit);
-      setIsEditorOpen(true);
+    // Ensure rewards is an array before accessing by index
+    if (Array.isArray(rewards)) {
+        const rewardToEdit = rewards[index];
+        if (rewardToEdit) {
+        setRewardBeingEdited(rewardToEdit);
+        setIsEditorOpen(true);
+        } else {
+        toast({ title: "Error", description: "Could not find reward to edit.", variant: "destructive" });
+        }
     } else {
-      toast({ title: "Error", description: "Could not find reward to edit.", variant: "destructive" });
+        toast({ title: "Error", description: "Rewards data is not available.", variant: "destructive" });
     }
   };
   
   useEffect(() => {
     contentRef.current = { handleAddNewReward };
     return () => { contentRef.current = {}; };
-  }, [contentRef, handleAddNewReward]); // handleAddNewReward is stable due to its definition
+  }, [contentRef, handleAddNewReward]);
 
   const handleSaveRewardEditor = async (formData: Partial<Reward>) => {
     try {
@@ -112,7 +116,7 @@ const RewardsContent: React.FC<{
   };
   
   const renderContent = () => {
-    if (isLoading && rewards.length === 0) {
+    if (isLoading && (!rewards || rewards.length === 0)) { // Check if rewards is also empty or undefined
       return (
         <div className="space-y-4 mt-4">
           <RewardCardSkeleton />
@@ -126,7 +130,7 @@ const RewardsContent: React.FC<{
         return <div className="text-red-500 p-4">Error loading rewards: {error.message}</div>;
     }
 
-    if (!isLoading && rewards.length === 0) {
+    if (!isLoading && (!rewards || rewards.length === 0)) { // Check if rewards is also empty or undefined
       return (
         <div className="flex flex-col items-center justify-center h-[60vh] text-center">
           <AwardIcon className="h-16 w-16 text-gray-500 mb-4" />
@@ -141,10 +145,12 @@ const RewardsContent: React.FC<{
         </div>
       );
     }
-
+    
+    // Ensure rewards is an array before passing to RewardsList
+    const rewardsDataToPass = Array.isArray(rewards) ? rewards : [];
     return (
       <RewardsList
-        rewards={rewards} // Assuming RewardsListProps correctly defines 'rewards'
+        rewards={rewardsDataToPass} 
         onEdit={handleEditReward} 
       />
     );

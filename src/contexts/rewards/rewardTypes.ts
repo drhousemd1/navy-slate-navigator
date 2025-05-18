@@ -19,12 +19,12 @@ export interface RewardsContextType {
   totalRewardsSupply: number;
   totalDomRewardsSupply: number;
   domPoints: number;
-  setTotalPoints: (points: number) => Promise<void>; // Changed from Promise<boolean> to Promise<void> to match common patterns
-  setDomPoints: (points: number) => Promise<void>; // Changed from Promise<boolean> to Promise<void>
+  setTotalPoints: (points: number) => Promise<void>;
+  setDomPoints: (points: number) => Promise<void>;
   isLoading: boolean;
   refetchRewards: () => Promise<QueryObserverResult<Reward[], Error>>;
   handleSaveReward: (rewardData: Partial<Reward>, index: number | null) => Promise<string | null>;
-  handleDeleteReward: (index: number) => Promise<boolean>; // index or id? RewardsDataHandler uses id. Let's assume index is for local array, then maps to id.
+  handleDeleteReward: (index: number) => Promise<boolean>;
   handleBuyReward: (id: string, cost: number, isDomReward?: boolean) => Promise<void>;
   handleUseReward: (id: string) => Promise<void>;
   refreshPointsFromDatabase: () => Promise<void>;

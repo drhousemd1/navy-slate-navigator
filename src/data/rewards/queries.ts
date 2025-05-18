@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Reward } from '@/lib/rewardUtils';
+import { Reward } from '@/data/rewards/types';
+import { loadRewardsFromDB, getLastSyncTimeForRewards } from '../indexedDB/useIndexedDB';
 import { logQueryPerformance } from '@/lib/react-query-config';
 
 export const REWARDS_QUERY_KEY = ['rewards'];

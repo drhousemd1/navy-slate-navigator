@@ -1,5 +1,4 @@
 
-```typescript
 import { useQuery } from "@tanstack/react-query";
 import {
   loadRewardsFromDB,
@@ -7,19 +6,19 @@ import {
   getLastSyncTimeForRewards,
   setLastSyncTimeForRewards
 } from "../indexedDB/useIndexedDB";
-import { Reward } from '@/data/rewards/types'; // Updated import
+import { Reward } from '@/data/rewards/types'; // Corrected import
 import { fetchRewards as fetchRewardsFromServer } from '@/lib/rewardUtils';
 
-export function useRewards() {
-  return useQuery<Reward[]>({ // Ensure Reward[] is used here
+export function useRewards() { // This function is named useRewards
+  return useQuery<Reward[]>({
     queryKey: ["rewards"],
     queryFn: async () => {
-      const localData = await loadRewardsFromDB(); // No cast needed if loadRewardsFromDB returns Reward[] | null
+      const localData = await loadRewardsFromDB();
       const lastSync = await getLastSyncTimeForRewards();
       let shouldFetch = true;
 
       if (lastSync) {
-        const timeDiff = Date.now() - new Date(lastSync).getTime(); // No cast needed
+        const timeDiff = Date.now() - new Date(lastSync).getTime();
         if (timeDiff < 1000 * 60 * 30) { // 30 minutes
           shouldFetch = false;
         }
@@ -43,4 +42,3 @@ export function useRewards() {
     refetchOnWindowFocus: false
   });
 }
-```

@@ -1,13 +1,14 @@
-
 import localforage from 'localforage';
 import { Reward } from '@/data/rewards/types';
+import { PunishmentData as ContextPunishmentData, PunishmentHistoryItem as ContextPunishmentHistoryItem } from '@/contexts/punishments/types';
+
 // Define types for other entities or import them if they exist elsewhere
-// For now, using 'any' as placeholders if specific types aren't immediately available.
-// Ideally, these would be imported from their respective type definition files.
 export interface Task { id: string; [key: string]: any; }
 export interface Rule { id: string; [key: string]: any; }
-export interface PunishmentData { id: string; [key: string]: any; }
-export interface PunishmentHistory { id: string; [key: string]: any; }
+
+// Use imported types for consistency
+export type PunishmentData = ContextPunishmentData;
+export type PunishmentHistory = ContextPunishmentHistoryItem;
 
 
 const DB_NAME = 'appData';
@@ -145,7 +146,9 @@ export const setLastSyncTimeForRules = async (time: string): Promise<void> => {
 // Punishments specific functions
 export const loadPunishmentsFromDB = async (): Promise<PunishmentData[] | null> => {
   try {
-    return await punishmentsStore.getItem<PunishmentData[]>('allPunishments');
+    // Ensure the loaded data conforms to PunishmentData (which is ContextPunishmentData)
+    const punishments = await punishmentsStore.getItem<PunishmentData[]>('allPunishments');
+    return punishments;
   } catch (error) {
     console.error('Error loading punishments from IndexedDB:', error);
     return null;
@@ -154,7 +157,9 @@ export const loadPunishmentsFromDB = async (): Promise<PunishmentData[] | null> 
 
 export const savePunishmentsToDB = async (punishments: PunishmentData[]): Promise<void> => {
   try {
-    await punishmentsStore.setItem('allPunishments', punishments);
+    // punishments should be ContextPunishmentData[] here, which has id?: string
+    // Ensure items actually stored have IDs, or handle appropriately if needed
+    await punishmentsStore.setItem('allPunishments', punishments.filter(p => p.id));
   } catch (error) {
     console.error('Error saving punishments to IndexedDB:', error);
   }
@@ -180,7 +185,9 @@ export const setLastSyncTimeForPunishments = async (time: string): Promise<void>
 // Punishment History specific functions
 export const loadPunishmentHistoryFromDB = async (): Promise<PunishmentHistory[] | null> => {
   try {
-    return await punishmentHistoryStore.getItem<PunishmentHistory[]>('allPunishmentHistory');
+    // Ensure the loaded data conforms to PunishmentHistory (which is ContextPunishmentHistoryItem)
+    const history = await punishmentHistoryStore.getItem<PunishmentHistory[]>('allPunishmentHistory');
+    return history;
   } catch (error) {
     console.error('Error loading punishment history from IndexedDB:', error);
     return null;
