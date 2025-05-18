@@ -14,6 +14,7 @@ import { toast } from '@/hooks/use-toast';
 
 import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePointsManager } from '@/data/points/usePointsManager';
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
@@ -32,7 +33,8 @@ const RewardsContent: React.FC<{
   
   const buySubRewardMutation = useBuySubReward();
   const redeemSubRewardMutation = useRedeemSubReward();
-  const { profile } = useAuth();
+  const { user } = useAuth();
+  const { points: currentUserPoints } = usePointsManager();
 
   useEffect(() => {
     syncNow();
@@ -58,14 +60,13 @@ const RewardsContent: React.FC<{
       toast({ title: "Error", description: "Reward not found.", variant: "destructive" });
       return;
     }
-    if (!profile || !profile.id) {
-      toast({ title: "Error", description: "User profile not available.", variant: "destructive" });
+    if (!user || !user.id) {
+      toast({ title: "Error", description: "User profile not available. Please log in.", variant: "destructive" });
       return;
     }
     // Assuming non-DOM reward for this specific hook
     if (rewardToBuy.is_dom_reward) {
         toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward purchase not implemented on this button yet.", variant: "destructive" });
-        // Here you would call buyDomRewardMutation if you imported and initialized it
         return;
     }
 
@@ -74,8 +75,8 @@ const RewardsContent: React.FC<{
         rewardId, 
         cost,
         currentSupply: rewardToBuy.supply,
-        profileId: profile.id,
-        currentPoints: profile.points ?? 0 // Use profile.points
+        profileId: user.id,
+        currentPoints: currentUserPoints
       });
     } catch (e) {
       console.error("Error buying reward from page:", e);
@@ -89,14 +90,13 @@ const RewardsContent: React.FC<{
       toast({ title: "Error", description: "Reward not found.", variant: "destructive" });
       return;
     }
-     if (!profile || !profile.id) {
-      toast({ title: "Error", description: "User profile not available.", variant: "destructive" });
+     if (!user || !user.id) {
+      toast({ title: "Error", description: "User profile not available. Please log in.", variant: "destructive" });
       return;
     }
     // Assuming non-DOM reward for this specific hook
      if (rewardToUse.is_dom_reward) {
         toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward usage not implemented on this button yet.", variant: "destructive" });
-        // Here you would call redeemDomRewardMutation if you imported and initialized it
         return;
     }
 
@@ -104,7 +104,7 @@ const RewardsContent: React.FC<{
       await redeemSubRewardMutation.mutateAsync({
         rewardId,
         currentSupply: rewardToUse.supply,
-        profileId: profile.id // profileId is part of RedeemSubRewardVariables
+        profileId: user.id
       });
     } catch (e) {
       console.error("Error using reward from page:", e);
@@ -205,7 +205,7 @@ const RewardsContent: React.FC<{
 
   return (
     <div className="p-4 pt-6">
-      <RewardsHeader /> 
+      <RewardsHeader onAddNewReward={handleAddNewReward} /> 
       <div className="mt-4">
         {renderContent()}
       </div>
