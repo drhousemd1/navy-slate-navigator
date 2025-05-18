@@ -1,11 +1,10 @@
-
 import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
-import { fetchRules } from '../queries/rules/fetchRules';
+import { fetchRules } from '../rules/fetchRules';
 import { useCreateRule, useUpdateRule, useDeleteRule } from '../rules/mutations';
 import { CreateRuleVariables, UpdateRuleVariables } from '../rules/mutations';
-import { useCreateRuleViolation } from '../rules/mutations/useCreateRuleViolation'; // Import new hook
+import { useCreateRuleViolation } from '../rules/mutations/useCreateRuleViolation';
 import { toast } from '@/hooks/use-toast';
 import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
@@ -15,7 +14,7 @@ export interface RulesDataHook {
   isLoading: boolean;
   error: Error | null;
   saveRule: (ruleData: Partial<Rule>) => Promise<Rule>;
-  deleteRule: (ruleId: string) => Promise<boolean>; // Changed to Promise<boolean> for consistency
+  deleteRule: (ruleId: string) => Promise<boolean>;
   markRuleBroken: (rule: Rule) => Promise<void>;
   refetchRules: () => Promise<QueryObserverResult<Rule[], Error>>;
 }
@@ -28,14 +27,14 @@ export const useRulesData = (): RulesDataHook => {
     error,
     refetch: refetchRules,
   } = useQuery<Rule[], Error>({
-    queryKey: CRITICAL_QUERY_KEYS.RULES, // Using critical query key
+    queryKey: CRITICAL_QUERY_KEYS.RULES,
     queryFn: fetchRules,
   });
 
   const { mutateAsync: createRuleMutation } = useCreateRule();
   const { mutateAsync: updateRuleMutation } = useUpdateRule();
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
-  const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation(); // Use the new hook
+  const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation();
 
   const saveRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
     if (ruleData.id) {
@@ -44,16 +43,12 @@ export const useRulesData = (): RulesDataHook => {
       return updateRuleMutation({ id, ...updates } as UpdateRuleVariables);
     } else {
       // It's a creation
-      // Ensure required fields for CreateRuleVariables are met.
-      // 'title' is mandatory for CreateRuleVariables. Others have defaults or are optional.
       const createVariables: CreateRuleVariables = {
-        title: ruleData.title || 'Untitled Rule', // Provide a default if not present
+        title: ruleData.title || 'Untitled Rule',
         description: ruleData.description,
         priority: ruleData.priority || 'medium',
         frequency: ruleData.frequency || 'daily',
         frequency_count: ruleData.frequency_count || 1,
-        // Add any other fields from Rule that are part of CreateRuleVariables
-        // and not automatically handled by createOptimisticItem defaults in useCreateRule
         icon_name: ruleData.icon_name,
         icon_url: ruleData.icon_url,
         icon_color: ruleData.icon_color,
@@ -65,7 +60,6 @@ export const useRulesData = (): RulesDataHook => {
         highlight_effect: ruleData.highlight_effect,
         focal_point_x: ruleData.focal_point_x,
         focal_point_y: ruleData.focal_point_y,
-        background_images: ruleData.background_images,
         // user_id might be part of ruleData if applicable
       };
       return createRuleMutation(createVariables);

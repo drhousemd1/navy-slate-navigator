@@ -10,7 +10,7 @@ export const useUpdateReward = () => {
 
   return useUpdateOptimisticMutation<Reward, Error, UpdateRewardVariables>({
     queryClient,
-    queryKey: CRITICAL_QUERY_KEYS.REWARDS,
+    queryKey: [...CRITICAL_QUERY_KEYS.REWARDS], // Corrected: spread to create mutable array
     mutationFn: async (variables: UpdateRewardVariables) => {
       const { id, ...updates } = variables;
       const { data, error } = await supabase
@@ -24,6 +24,6 @@ export const useUpdateReward = () => {
       return data as Reward;
     },
     entityName: 'Reward',
-    idField: 'id', // Explicitly stating, though it's the default
+    idField: 'id',
   });
 };
