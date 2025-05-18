@@ -1,35 +1,11 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-
-export interface Reward {
-  id: string;
-  title: string;
-  description: string | null;
-  cost: number;
-  supply: number;
-  background_image_url?: string | null;
-  background_opacity: number;
-  icon_name?: string | null;
-  icon_url?: string | null;
-  icon_color: string;
-  title_color: string;
-  subtext_color: string;
-  calendar_color: string;
-  highlight_effect: boolean;
-  focal_point_x: number;
-  focal_point_y: number;
-  is_dom_reward: boolean; // Make sure this is included in the interface
-  created_at?: string;
-  updated_at?: string;
-}
+import { Reward } from "@/data/rewards/types"; // Updated import
 
 export const fetchRewards = async (): Promise<Reward[]> => {
   try {
     console.log("[fetchRewards] Fetching rewards");
     
-    // CRITICAL: Using explicit id-based sorting for consistent order
-    // Using created_at DESC as primary sort to ensure newest rewards appear first
     const { data, error } = await supabase
       .from('rewards')
       .select('*')
@@ -46,24 +22,11 @@ export const fetchRewards = async (): Promise<Reward[]> => {
       return [];
     }
 
-    console.log('[fetchRewards] Raw data from Supabase:', 
-      data?.map((r, i) => ({
-        position: i,
-        id: r.id, 
-        title: r.title,
-        is_dom_reward: r.is_dom_reward ?? false, // Default to false if not present
-        created_at: r.created_at,
-        updated_at: r.updated_at
-      }))
-    );
-    
-    // Ensure is_dom_reward is always defined in the returned data
     const rewardsWithDomProperty = data?.map(reward => ({
       ...reward,
-      is_dom_reward: reward.is_dom_reward ?? false // Default to false if not present
+      is_dom_reward: reward.is_dom_reward ?? false 
     })) as Reward[];
     
-    // Return data sorted with newest first
     return rewardsWithDomProperty || [];
   } catch (err) {
     console.error('[fetchRewards] Unexpected error fetching rewards:', err);
@@ -76,99 +39,67 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   }
 };
 
-export const saveReward = async (reward: Partial<Reward> & { title: string }, existingId?: string): Promise<Reward | null> => {
+// saveReward now expects `is_dom_reward` to be explicitly passed for new rewards.
+// For updates, it's part of the partial Reward data.
+export const saveReward = async (reward: Partial<Reward> & { title: string, cost?: number, supply?: number, is_dom_reward?: boolean }, existingId?: string): Promise<Reward | null> => {
   try {
-    console.log("[saveReward] Starting with data:", { ...reward, existingId });
-    console.log("is_dom_reward value in saveReward:", reward.is_dom_reward);
-    
     const startTime = performance.now();
     
     if (existingId) {
-      // CRITICAL FIX: When updating an existing reward:
-      // 1. Never update the created_at timestamp
-      // 2. Don't include updated_at field at all (let Supabase handle it)
-      // 3. Remove any timestamps from the data we're sending
-      
-      // Create a clean copy of the reward data without any timestamp fields
-      const { created_at, updated_at, ...cleanRewardData } = reward;
-      
-      // Ensure is_dom_reward is properly included and is a boolean
-      cleanRewardData.is_dom_reward = Boolean(cleanRewardData.is_dom_reward);
-      
-      console.log('[saveReward] Updating reward with clean data (no timestamps):', 
-        { id: existingId, ...cleanRewardData });
-      
-      // Make sure is_dom_reward is properly included
-      console.log("is_dom_reward value before update:", cleanRewardData.is_dom_reward);
+      const { created_at, updated_at, id, ...cleanRewardData } = reward; // id is part of reward but not needed in cleanRewardData for update
+      // Ensure is_dom_reward is boolean if provided, otherwise it won't be updated.
+      const updatePayload: Partial<Reward> = { ...cleanRewardData };
+      if (typeof cleanRewardData.is_dom_reward === 'boolean') {
+        updatePayload.is_dom_reward = cleanRewardData.is_dom_reward;
+      }
       
       const { data, error } = await supabase
         .from('rewards')
-        .update(cleanRewardData)
+        .update(updatePayload)
         .eq('id', existingId)
-        .select();
+        .select()
+        .single(); // Expecting a single reward
       
       const endTime = performance.now();
       console.log(`[saveReward] Update operation took ${endTime - startTime}ms`);
       
-      if (error) {
-        console.error("Supabase update error:", error);
-        throw error;
-      }
+      if (error) throw error;
       
-      if (!data || data.length === 0) {
-        throw new Error("No data returned from update operation");
-      }
-      
-      // Ensure is_dom_reward is defined in the result
-      const result = {
-        ...data[0],
-        is_dom_reward: data[0]?.is_dom_reward ?? false
-      } as Reward;
-      
-      console.log('[saveReward] Reward updated successfully, returned data:', result);
-      console.log('Updated reward is_dom_reward:', result?.is_dom_reward);
-      
-      return result;
+      return { ...data, is_dom_reward: data?.is_dom_reward ?? false } as Reward;
+
     } else {
-      // Create new reward
-      console.log('[saveReward] Creating new reward:', reward);
-      
-      // Make sure is_dom_reward is included when creating a new reward
-      console.log("is_dom_reward value for new reward:", reward.is_dom_reward);
-      
-      // Ensure is_dom_reward is a boolean
-      const dataToSave = {
-        ...reward,
-        is_dom_reward: Boolean(reward.is_dom_reward ?? false)
+      // For new rewards, ensure required fields like cost, supply, and is_dom_reward have defaults or are asserted
+      const dataToSave: Omit<Reward, 'id' | 'created_at' | 'updated_at'> & { title: string; cost: number; supply: number; is_dom_reward: boolean } = {
+        title: reward.title,
+        description: reward.description || null,
+        cost: reward.cost ?? 0, // Default cost if not provided
+        supply: reward.supply ?? 0, // Default supply if not provided
+        background_image_url: reward.background_image_url || null,
+        background_opacity: reward.background_opacity || 100,
+        icon_name: reward.icon_name || null,
+        icon_url: reward.icon_url || null,
+        icon_color: reward.icon_color || '#9b87f5',
+        title_color: reward.title_color || '#FFFFFF',
+        subtext_color: reward.subtext_color || '#8E9196',
+        calendar_color: reward.calendar_color || '#7E69AB',
+        highlight_effect: reward.highlight_effect || false,
+        focal_point_x: reward.focal_point_x || 50,
+        focal_point_y: reward.focal_point_y || 50,
+        is_dom_reward: reward.is_dom_reward ?? false, // Default is_dom_reward
       };
       
       const { data, error } = await supabase
         .from('rewards')
         .insert(dataToSave)
-        .select();
+        .select()
+        .single(); // Expecting a single reward
       
       const endTime = performance.now();
       console.log(`[saveReward] Insert operation took ${endTime - startTime}ms`);
       
-      if (error) {
-        console.error("Supabase insert error:", error);
-        throw error;
-      }
+      if (error) throw error;
       
-      if (!data || data.length === 0) {
-        throw new Error("No data returned from insert operation");
-      }
-      
-      // Ensure is_dom_reward is defined in the result
-      const result = {
-        ...data[0],
-        is_dom_reward: data[0]?.is_dom_reward ?? false
-      } as Reward;
-      
-      console.log('[saveReward] New reward created:', result);
-      console.log('New reward is_dom_reward:', result?.is_dom_reward);
-      
-      return result;
+      return { ...data, is_dom_reward: data?.is_dom_reward ?? false } as Reward;
     }
   } catch (err: any) {
     console.error('[saveReward] Error saving reward:', err);

@@ -1,19 +1,13 @@
 
-/**
- * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
- * No query, mutation, or sync logic is allowed in components or page files.
- * All logic must use these shared, optimized hooks and utilities only.
- */
-
-import { useQuery } from "@tanstack/react-query"; // Changed from usePersistentQuery
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from "@tanstack/react-query";
 import {
   loadRewardsFromDB,
   saveRewardsToDB,
   getLastSyncTimeForRewards,
   setLastSyncTimeForRewards
 } from "../indexedDB/useIndexedDB";
-import { Reward } from '@/lib/rewardUtils';
+import { Reward } from '@/data/rewards/types'; // Updated import
+import { fetchRewards as fetchRewardsFromServer } from '@/lib/rewardUtils'; // Renamed to avoid conflict
 
 export function useRewards() {
   return useQuery<Reward[]>({
@@ -31,35 +25,27 @@ export function useRewards() {
       }
 
       if (!shouldFetch && localData) {
-        // Ensure transformation is applied if it was in usePersistentQuery
-        return localData.map(row => ({
-          ...row,
-          is_dom_reward: (row as any).is_dominant // Retain existing transformation logic
-        }));
+        // Ensure transformation for is_dom_reward is consistent if needed, though fetchRewardsFromServer should handle it.
+        // The fetchRewardsFromServer already ensures is_dom_reward is boolean.
+        return localData;
       }
 
-      const { data, error } = await supabase.from("rewards").select("*");
-      if (error) throw error;
+      // Use the centralized fetchRewardsFromServer function
+      const serverData = await fetchRewardsFromServer();
 
-      if (data) {
-        const processedData = data.map(row => ({
-          ...row,
-          is_dom_reward: (row as any).is_dominant // Retain existing transformation logic
-        } as Reward));
-        await saveRewardsToDB(processedData);
+      if (serverData) {
+        // serverData is already processed by fetchRewardsFromServer to include is_dom_reward
+        await saveRewardsToDB(serverData);
         await setLastSyncTimeForRewards(new Date().toISOString());
-        return processedData;
+        return serverData;
       }
 
-      return localData ? localData.map(row => ({
-        ...row,
-        is_dom_reward: (row as any).is_dominant // Retain existing transformation logic
-      })) : [];
+      // Fallback if server fetch somehow fails but doesn't throw, or returns empty
+      // localData here would also have is_dom_reward correctly from previous saves
+      return localData || [];
     },
-    // initialData: undefined, // Removed: Persister handles initial data hydration
     staleTime: Infinity,
     gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnWindowFocus: false
   });
 }
-

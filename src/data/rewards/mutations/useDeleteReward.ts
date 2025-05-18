@@ -1,24 +1,18 @@
 
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Reward } from '@/data/RewardsDataHandler';
 import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
+import { deleteReward as deleteRewardFromServer } from '@/lib/rewardUtils';
+import { RewardWithId } from '@/data/rewards/types';
 
-export const useDeleteReward = () => {
+export const useDeleteRewardMutation = () => {
   const queryClient = useQueryClient();
-
-  return useDeleteOptimisticMutation<Reward, Error, string>({
+  return useDeleteOptimisticMutation<RewardWithId, Error, string>({
     queryClient,
     queryKey: ['rewards'],
-    mutationFn: async (rewardId: string) => {
-      const { error } = await supabase
-        .from('rewards')
-        .delete()
-        .eq('id', rewardId);
-        
-      if (error) throw error;
+    mutationFn: async (id: string) => {
+      const success = await deleteRewardFromServer(id);
+      if (!success) throw new Error('Failed to delete reward');
     },
     entityName: 'Reward',
-    idField: 'id',
   });
 };
