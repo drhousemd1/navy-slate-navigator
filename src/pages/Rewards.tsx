@@ -4,21 +4,21 @@ import RewardsList from '../components/rewards/RewardsList';
 import RewardEditor from '../components/RewardEditor';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import { useSyncManager } from '@/hooks/useSyncManager';
-import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton';
-import { Award as AwardIcon } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 import { useRewards as useRewardsQuery } from '@/data/queries/useRewards';
 import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
-import { Reward, UpdateRewardVariables, CreateRewardVariables } from '@/data/rewards/types';
+import { Reward, UpdateRewardVariables } from '@/data/rewards/types';
 import { toast } from '@/hooks/use-toast';
-import { useBuyReward, useRedeemReward } from '@/data/rewards/mutations/useRedeemRewards';
+
+import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
+import { useAuth } from '@/contexts/AuthContext';
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
-  const { data: rewardsData, isLoading, error, refetch: refetchRewardsQuery } = useRewardsQuery();
+  const { data: rewardsData, isLoading, error: queryError } = useRewardsQuery();
   const rewards = Array.isArray(rewardsData) ? rewardsData : [];
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -29,8 +29,10 @@ const RewardsContent: React.FC<{
   const createRewardMutation = useCreateRewardMutation();
   const updateRewardMutation = useUpdateRewardMutation();
   const deleteRewardMutation = useDeleteRewardMutation();
-  const buyRewardMutation = useBuyReward();
-  const redeemRewardMutation = useRedeemReward();
+  
+  const buySubRewardMutation = useBuySubReward();
+  const redeemSubRewardMutation = useRedeemSubReward();
+  const { profile } = useAuth();
 
   useEffect(() => {
     syncNow();
@@ -51,22 +53,61 @@ const RewardsContent: React.FC<{
   };
 
   const handleBuyRewardWrapper = async (rewardId: string, cost: number) => {
+    const rewardToBuy = rewards.find(r => r.id === rewardId);
+    if (!rewardToBuy) {
+      toast({ title: "Error", description: "Reward not found.", variant: "destructive" });
+      return;
+    }
+    if (!profile || !profile.id) {
+      toast({ title: "Error", description: "User profile not available.", variant: "destructive" });
+      return;
+    }
+    // Assuming non-DOM reward for this specific hook
+    if (rewardToBuy.is_dom_reward) {
+        toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward purchase not implemented on this button yet.", variant: "destructive" });
+        // Here you would call buyDomRewardMutation if you imported and initialized it
+        return;
+    }
+
     try {
-      await buyRewardMutation.mutateAsync({ rewardId, cost });
-      // Toast for success/error is handled by useBuyReward mutation hook
+      await buySubRewardMutation.mutateAsync({ 
+        rewardId, 
+        cost,
+        currentSupply: rewardToBuy.supply,
+        profileId: profile.id,
+        currentPoints: profile.points ?? 0 // Use profile.points
+      });
     } catch (e) {
       console.error("Error buying reward from page:", e);
-      // Error toast should also be handled by the mutation hook's onError
+      // Error toast should be handled by the mutation hook's onError
     }
   };
 
   const handleUseRewardWrapper = async (rewardId: string) => {
+    const rewardToUse = rewards.find(r => r.id === rewardId);
+    if (!rewardToUse) {
+      toast({ title: "Error", description: "Reward not found.", variant: "destructive" });
+      return;
+    }
+     if (!profile || !profile.id) {
+      toast({ title: "Error", description: "User profile not available.", variant: "destructive" });
+      return;
+    }
+    // Assuming non-DOM reward for this specific hook
+     if (rewardToUse.is_dom_reward) {
+        toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward usage not implemented on this button yet.", variant: "destructive" });
+        // Here you would call redeemDomRewardMutation if you imported and initialized it
+        return;
+    }
+
     try {
-      await redeemRewardMutation.mutateAsync(rewardId);
-      // Toast for success/error is handled by useRedeemReward mutation hook
+      await redeemSubRewardMutation.mutateAsync({
+        rewardId,
+        currentSupply: rewardToUse.supply,
+        profileId: profile.id // profileId is part of RedeemSubRewardVariables
+      });
     } catch (e) {
       console.error("Error using reward from page:", e);
-      // Error toast should also be handled by the mutation hook's onError
     }
   };
   
@@ -134,15 +175,20 @@ const RewardsContent: React.FC<{
     if (isLoading && rewards.length === 0) {
       return (
         <div className="space-y-4 mt-4">
-          <RewardCardSkeleton />
-          <RewardCardSkeleton />
-          <RewardCardSkeleton />
+          <RewardsList 
+            rewards={[]}
+            isLoading={true}
+            onEdit={handleEditReward}
+            onCreateRewardClick={handleAddNewReward}
+            handleBuyReward={handleBuyRewardWrapper}
+            handleUseReward={handleUseRewardWrapper}
+          />
         </div>
       );
     }
     
-    if (error) {
-        return <div className="text-red-500 p-4">Error loading rewards: {error.message}</div>;
+    if (queryError) {
+        return <div className="text-red-500 p-4">Error loading rewards: {queryError.message}</div>;
     }
 
     return (

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -14,6 +15,9 @@ import PunishmentCardSkeleton from '@/components/punishments/PunishmentCardSkele
 import ErrorBoundary from '@/components/ErrorBoundary';
 import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
+// import { usePreloadPunishments } from '@/data/preload/usePreloadPunishments'; // Removed
+
+// usePreloadPunishments(); // Removed
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -88,13 +92,15 @@ const PunishmentsContent: React.FC<{
       await deletePunishmentAsync(id);
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
-      toast({
-        title: "Error on Page",
-        description: "Failed to delete punishment from page.",
-        variant: "destructive"
-      });
+      // Toast for delete is handled by the mutation hook
     } catch (error) {
       console.error("Error deleting punishment:", error);
+      // Additional toast if needed, but mutation hook should handle primary feedback
+      toast({
+        title: "Error on Page",
+        description: "Failed to delete punishment from page.", // This seems redundant if hook handles it
+        variant: "destructive"
+      });
     }
   };
   
@@ -114,7 +120,7 @@ const PunishmentsContent: React.FC<{
   if (!isLoading && error && punishments.length === 0) {
     return (
       <div className="p-4 pt-6 text-center">
-        <PunishmentsHeader onAddNewPunishment={handleAddNewPunishment} />
+        <PunishmentsHeader /> {/* Removed onAddNewPunishment */}
         <EmptyState
           icon={Skull}
           title="Error Loading Punishments"
@@ -132,7 +138,7 @@ const PunishmentsContent: React.FC<{
   if (!isLoading && punishments.length === 0 && !isEditorOpen) {
     return (
       <div className="p-4 pt-6">
-        <PunishmentsHeader onAddNewPunishment={handleAddNewPunishment} />
+        <PunishmentsHeader /> {/* Removed onAddNewPunishment */}
         <EmptyState
           icon={Skull}
           title="No Punishments Yet"
@@ -160,12 +166,12 @@ const PunishmentsContent: React.FC<{
   
   return (
     <div className="p-4 pt-6">
-      <PunishmentsHeader onAddNewPunishment={handleAddNewPunishment} />
+      <PunishmentsHeader /> {/* Removed onAddNewPunishment */}
       
       <div className="flex flex-col space-y-4 mt-4">
         {punishments.map((punishment) => (
           <PunishmentCard
-            key={punishment.id} // id should be guaranteed if data is loaded
+            key={punishment.id} 
             {...punishment}
             onEdit={() => handleEditPunishment(punishment)}
           />
@@ -186,14 +192,14 @@ const PunishmentsContent: React.FC<{
 const Punishments: React.FC = () => {
   const contentRef = useRef<{ handleAddNewPunishment?: () => void }>({});
   
-  const handleAddNewPunishment = () => {
+  const handleAddNewPunishmentLayout = () => {
     if (contentRef.current.handleAddNewPunishment) {
       contentRef.current.handleAddNewPunishment();
     }
   };
   
   return (
-    <AppLayout onAddNewItem={handleAddNewPunishment}>
+    <AppLayout onAddNewItem={handleAddNewPunishmentLayout}>
       <ErrorBoundary fallbackMessage="Could not load punishments. Please try reloading.">
         <PunishmentsContent contentRef={contentRef} />
       </ErrorBoundary>
@@ -202,3 +208,4 @@ const Punishments: React.FC = () => {
 };
 
 export default Punishments;
+
