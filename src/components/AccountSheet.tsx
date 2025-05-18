@@ -11,6 +11,8 @@ import { UserCircle2, User, LogOut, BookOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { purgeQueryCache } from '@/lib/react-query-config';
 
 const AccountSheet = () => {
   const navigate = useNavigate();
@@ -18,7 +20,8 @@ const AccountSheet = () => {
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  
+  const queryClient = useQueryClient();
+
   const toggleProfileOptions = () => {
     setShowProfileOptions(!showProfileOptions);
   };
@@ -30,6 +33,8 @@ const AccountSheet = () => {
 
   const handleLogout = async () => {
     await signOut();
+    await purgeQueryCache(queryClient);
+    console.log('User signed out and query cache purged.');
     navigate('/auth');
     setSheetOpen(false);
   };
@@ -42,7 +47,6 @@ const AccountSheet = () => {
   const nickname = getNickname();
   const userRole = getUserRole();
   
-  // Add debugging for admin check
   useEffect(() => {
     if (user) {
       console.log('Current user email:', user.email);
@@ -50,7 +54,6 @@ const AccountSheet = () => {
     }
   }, [user]);
 
-  // Use context function to get profile image - no direct Supabase calls
   useEffect(() => {
     const contextImage = getProfileImage();
     if (contextImage) {
@@ -59,14 +62,8 @@ const AccountSheet = () => {
     }
   }, [getProfileImage]);
   
-  // Function to check if user is admin (case-insensitive email check)
   const isAdminUser = () => {
-    // For testing purposes, always return true to allow access to admin testing page
     return true;
-    
-    // Uncomment this when you want to restore proper admin checking
-    // if (!user || !user.email) return false;
-    // return user.email.toLowerCase() === 'towenhall@gmail.com'.toLowerCase();
   };
   
   return (
@@ -88,10 +85,10 @@ const AccountSheet = () => {
               {profileImage ? (
                 <AvatarImage 
                   src={profileImage} 
-                  alt={nickname} 
+                  alt={nickname || 'User'} 
                   onError={(e) => {
                     console.error('AccountSheet: Failed to load avatar image:', profileImage);
-                    e.currentTarget.style.display = 'none';
+                    (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               ) : null}
