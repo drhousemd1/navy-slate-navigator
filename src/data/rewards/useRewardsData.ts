@@ -14,7 +14,7 @@ import {
 
 // Import types from the central types file
 import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
-import { useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
+import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward'; // Corrected import and aliased
 import { useBuySubReward } from '@/data/rewards/mutations/useBuySubReward';
 import { useBuyDomReward } from '@/data/rewards/mutations/useBuyDomReward';
 import { useRedeemSubReward } from '@/data/rewards/mutations/useRedeemSubReward';
@@ -106,7 +106,7 @@ export const useRewardsData = () => {
 
   const createRewardMutation = useCreateRewardMutation();
   const updateRewardMutation = useUpdateRewardMutation();
-  const deleteRewardMut = useDeleteRewardMutation();
+  const deleteRewardMut = useDeleteRewardMutation(); // Usage remains the same due to alias
 
   const saveReward = async (saveParams: { rewardData: Partial<Reward> & { id?: string } } ) => {
     const { rewardData } = saveParams;
@@ -144,7 +144,7 @@ export const useRewardsData = () => {
   };
 
   const deleteReward = async (rewardId: string) => {
-    return deleteRewardMut.mutateAsync(rewardId);
+    return deleteRewardMut.mutateAsync(rewardId); // Usage remains the same
   };
 
   const { mutateAsync: buySub } = useBuySubReward();

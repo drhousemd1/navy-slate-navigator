@@ -6,7 +6,7 @@ import { Reward, CreateRewardVariables, UpdateRewardVariables } from '@/data/rew
 import { supabase } from '@/integrations/supabase/client';
 import { usePointsManager } from '@/data/points/usePointsManager';
 import { useCreateRewardMutation, useUpdateRewardMutation } from "@/data/rewards/mutations/useSaveReward";
-import { useDeleteRewardMutation } from "@/data/rewards/mutations/useDeleteReward";
+import { useDeleteReward as useDeleteRewardMutation } from "@/data/rewards/mutations/useDeleteReward";
 import { useBuySubReward } from "@/data/rewards/mutations/useBuySubReward";
 import { useBuyDomReward } from "@/data/rewards/mutations/useBuyDomReward";
 import { useRedeemSubReward } from "@/data/rewards/mutations/useRedeemSubReward";
@@ -84,7 +84,6 @@ export default function useRewardOperations() {
           throw new Error("Missing required fields for creation");
         }
         
-        // Ensure all required fields are present, especially background_opacity which needs to be required
         const createPayload = {
           title: rewardData.title,
           cost: rewardData.cost,
@@ -92,7 +91,7 @@ export default function useRewardOperations() {
           is_dom_reward: rewardData.is_dom_reward,
           description: rewardData.description || '',
           background_image_url: rewardData.background_image_url || null,
-          background_opacity: rewardData.background_opacity ?? 100, // Provide default if undefined
+          background_opacity: rewardData.background_opacity ?? 100, 
           icon_name: rewardData.icon_name || 'Award',
           icon_url: rewardData.icon_url || null,
           icon_color: rewardData.icon_color || '#9b87f5',
@@ -104,7 +103,6 @@ export default function useRewardOperations() {
           focal_point_y: rewardData.focal_point_y ?? 50,
         };
         
-        // Use the imported useCreateRewardMutation type-safe method
         savedRewardData = await createRewardMutation.mutateAsync(createPayload);
       }
       
@@ -133,21 +131,15 @@ export default function useRewardOperations() {
     }
     
     const rewardId = rewards[index].id;
-    const originalRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
-    
+        
     try {
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldData = []) => 
-        oldData.filter(r => r.id !== rewardId)
-      );
-      
       await deleteRewardMutation.mutateAsync(rewardId);
       return true;
     } catch (error) {
-      queryClient.setQueryData(REWARDS_QUERY_KEY, originalRewards); 
       console.error('Error deleting reward in useRewardOperations:', error);
       return false;
     }
-  }, [rewards, queryClient, deleteRewardMutation]);
+  }, [rewards, deleteRewardMutation]);
 
   const handleBuyReward = useCallback(async (id: string, cost: number, isDomRewardParam = false) => {
     const rewardToBuy = (queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || []).find(r => r.id === id);

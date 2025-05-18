@@ -12,8 +12,8 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { useRewards as useRewardsQuery } from '@/data/queries/useRewards'; // Renamed to avoid conflict with context hook
 // Import specific mutation hooks from the new location
 import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward'; // Corrected import path
-import { useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward'; // Corrected import path
-import { Reward, UpdateRewardVariables } from '@/data/rewards/types'; // Removed CreateRewardVariables from here as it's too lenient
+import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward'; // Corrected import and aliased
+import { Reward, UpdateRewardVariables } from '@/data/rewards/types'; 
 import { toast } from '@/hooks/use-toast';
 
 usePreloadRewards()();
@@ -31,7 +31,7 @@ const RewardsContent: React.FC<{
   
   const createRewardMutation = useCreateRewardMutation();
   const updateRewardMutation = useUpdateRewardMutation();
-  const deleteRewardMutation = useDeleteRewardMutation();
+  const deleteRewardMutation = useDeleteRewardMutation(); // Usage remains the same due to alias
 
   useEffect(() => {
     syncNow();
@@ -66,7 +66,7 @@ const RewardsContent: React.FC<{
       if (rewardBeingEdited?.id) {
         const updateVariables: UpdateRewardVariables = {
           id: rewardBeingEdited.id,
-          ...formData, // Assuming formData is Partial<Omit<Reward, 'id' | 'created_at' | 'updated_at'>>
+          ...formData, 
         };
         await updateRewardMutation.mutateAsync(updateVariables);
       } else {
@@ -74,8 +74,6 @@ const RewardsContent: React.FC<{
           toast({ title: "Missing required fields", description: "Title, cost, supply, and DOM status are required.", variant: "destructive" });
           return;
         }
-        // Constructing createVariables to match the stricter type from useSaveReward.ts
-        // No explicit type annotation for createVariables, let it be inferred
         const createVariables = {
           title: formData.title,
           cost: formData.cost,
@@ -100,7 +98,6 @@ const RewardsContent: React.FC<{
       setRewardBeingEdited(undefined);
     } catch (e) {
       console.error("Error saving reward from page:", e);
-      // Toast for error is handled by the mutation hook itself
     }
   };
 
