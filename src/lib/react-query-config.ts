@@ -210,14 +210,14 @@ export function useCreateOptimisticMutation<
 export function useUpdateOptimisticMutation<
   TItem extends Record<string, any> & { id: string | number },
   TError extends Error,
-  TVariables extends { id: string | number } & Partial<Omit<TItem, 'id'>>,
+  TVariables extends { id: string | number } & Partial<Omit<TItem, 'id'>>, // TVariables must have an 'id' property with the ID value
   TContext extends OptimisticMutationContext<TItem> = OptimisticMutationContext<TItem>
 >(options: {
   queryClient: QueryClient;
   queryKey: unknown[];
   mutationFn: (variables: TVariables) => Promise<TItem>;
   entityName: string;
-  idField?: keyof TItem;
+  idField?: keyof TItem; // This is the name of the ID field in TItem objects (e.g., in cache)
   onSuccessCallback?: (data: TItem, variables: TVariables) => void;
   mutationOptions?: Omit<UseMutationOptions<TItem, TError, TVariables, TContext>, 'mutationFn' | 'onMutate' | 'onError' | 'onSuccess' | 'onSettled'>;
 }) {
@@ -233,13 +233,14 @@ export function useUpdateOptimisticMutation<
 
   return useMutation<TItem, TError, TVariables, TContext>({
     mutationFn,
-    onMutate: async (variables: TVariables) => {
+    onMutate: async (variables: TVariables) => { // variables.id is the ID of the item to update
       await queryClient.cancelQueries({ queryKey });
       const previousData = queryClient.getQueryData<TItem[]>(queryKey);
 
       queryClient.setQueryData<TItem[]>(queryKey, (old = []) =>
         old.map(item =>
-          item[idField] === variables[idField]
+          // Compare the item's ID (using idField) with variables.id (the ID passed for update)
+          item[idField] === variables.id 
             ? { ...item, ...variables, updated_at: new Date().toISOString() } as TItem // Assumes updated_at field
             : item
         )
@@ -254,7 +255,11 @@ export function useUpdateOptimisticMutation<
     },
     onSuccess: (data, variables, _context) => { // data is the actual item from server
       queryClient.setQueryData<TItem[]>(queryKey, (old = []) =>
-        old.map(item => (item[idField] === data[idField] ? data : item))
+        // Use data[idField] to ensure we're matching based on the TItem's structure after server confirmation
+        // Assuming 'data' (the server response) also uses 'idField' for its primary key.
+        // If server response 'data' always uses 'id', then data.id might be more consistent here.
+        // For now, assuming data structure mirrors TItem regarding idField.
+        old.map(item => (item[idField] === data[idField as keyof TItem] ? data : item))
       );
       toast({ title: `${entityName} updated successfully!` });
       if (onSuccessCallback) {
