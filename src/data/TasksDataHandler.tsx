@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, processTasksWithRecurringLogic } from '@/lib/taskUtils'; 
@@ -67,7 +66,6 @@ export const useTasksData = (): TasksDataHook => {
           week_identifier: creatableData.week_identifier,
           icon_url: creatableData.icon_url,
           background_images: creatableData.background_images,
-          // Ensure any other fields expected by CreateTaskVariables are included
         };
         savedTask = await createTaskMutation(variables);
       }

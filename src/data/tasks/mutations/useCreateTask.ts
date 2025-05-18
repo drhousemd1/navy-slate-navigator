@@ -1,3 +1,4 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
@@ -32,6 +33,7 @@ export const useCreateTask = () => {
         focal_point_y: variables.focal_point_y || 50,
         week_identifier: variables.week_identifier, // Added based on previous fix
         background_images: variables.background_images, // Added based on previous fix
+        icon_url: variables.icon_url,
         // `completed` and `last_completed_date` will use DB defaults or be set by `toggleTaskCompletion`
         // `created_at` and `updated_at` are handled by DB
       };
@@ -73,10 +75,9 @@ export const useCreateTask = () => {
         focal_point_x: variables.focal_point_x || 50,
         focal_point_y: variables.focal_point_y || 50,
         week_identifier: variables.week_identifier || null,
-        icon_url: variables.icon_url || null, // Assuming Task interface has these
+        icon_url: variables.icon_url || null,
         usage_data: variables.usage_data || [],
         background_images: variables.background_images || null,
-        // carousel_timer removed
         ...variables, // Spread remaining variables
       } as TaskWithId;
     },
