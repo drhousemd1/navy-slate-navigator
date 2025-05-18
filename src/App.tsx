@@ -40,9 +40,6 @@ function App() {
                   persister: asyncStoragePersister,
                   buster: APP_CACHE_VERSION, // Use app version for cache busting
                   maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-                  onError: (error) => { // Also adding hydration error logging here for safety, though AppProviders is primary
-                    console.error('Error during React Query cache hydration in App.tsx:', error);
-                  }
                 }}
                 onSuccess={() => {
                   // Resume paused mutations after hydration
