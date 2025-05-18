@@ -63,11 +63,12 @@ function App() {
                     { queryKey: REWARDS_QUERY_KEY, queryFn: fetchRewards, name: 'Rewards' },
                     { queryKey: ['rules'], queryFn: fetchRules, name: 'Rules' },
                     { queryKey: ['punishments'], queryFn: fetchPunishments, name: 'Punishments' },
-                  ];
+                  ] as const; // Added 'as const' here
 
                   criticalQueriesToPrefetch.forEach(async ({ queryKey, queryFn, name }) => {
                     // Only prefetch if not already fetching or fresh
-                    if (!queryClient.getQueryState(queryKey) || queryClient.getQueryState(queryKey)?.status === 'pending') {
+                    const queryState = queryClient.getQueryState(queryKey);
+                    if (!queryState || queryState.status === 'pending') {
                        try {
                          console.log(`[App] Attempting to prefetch ${name}`);
                          await queryClient.prefetchQuery({ queryKey, queryFn });
@@ -97,4 +98,3 @@ function App() {
 }
 
 export default App;
-
