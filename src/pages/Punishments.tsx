@@ -1,25 +1,20 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
 import { Skull } from 'lucide-react';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
-// Removed: import { useSyncManager } from '@/data/sync/useSyncManager'; // Not used in this file directly
 import { usePunishments } from '@/data/queries/usePunishments';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
 import { usePreloadPunishments } from "@/data/preload/usePreloadPunishments";
-import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
-import { useCreatePunishmentOptimistic } from '@/data/mutations/useCreatePunishmentOptimistic';
-import { useUpdatePunishmentOptimistic } from '@/data/mutations/useUpdatePunishmentOptimistic';
-import PunishmentCardSkeleton from '@/components/punishments/PunishmentCardSkeleton'; // Import the new skeleton
+import { useDeletePunishment } from "@/data/punishments/mutations/useDeletePunishment";
+import { useCreatePunishment, CreatePunishmentVariables } from '@/data/punishments/mutations/useCreatePunishment';
+import { useUpdatePunishment, UpdatePunishmentVariables } from '@/data/punishments/mutations/useUpdatePunishment';
+import PunishmentCardSkeleton from '@/components/punishments/PunishmentCardSkeleton';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-// Preload punishments data from IndexedDB before component renders
 usePreloadPunishments()();
-
-// Removed old PunishmentCardSkeleton definition from here
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -30,11 +25,9 @@ const PunishmentsContent: React.FC<{
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   const { mutateAsync: deletePunishmentAsync } = useDeletePunishment();
-  const { mutateAsync: createPunishmentAsync } = useCreatePunishmentOptimistic();
-  const { mutateAsync: updatePunishmentAsync } = useUpdatePunishmentOptimistic();
+  const { mutateAsync: createPunishmentAsync } = useCreatePunishment();
+  const { mutateAsync: updatePunishmentAsync } = useUpdatePunishment();
   
-  // Removed: const { syncNow } = useSyncManager({ intervalMs: 60000, enabled: true }); // Not used directly here
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialLoad(false);
@@ -67,18 +60,24 @@ const PunishmentsContent: React.FC<{
   const handleSavePunishment = async (punishmentData: Partial<PunishmentData>) => {
     try {
       if (punishmentData.id) {
-        await updatePunishmentAsync({
-          id: punishmentData.id,
-          punishment: punishmentData
-        });
+        // Ensure punishmentData matches UpdatePunishmentVariables: { id: string } & Partial<Omit<PunishmentData, 'id'>>
+        const { id, ...updates } = punishmentData;
+        await updatePunishmentAsync({ id, ...updates });
       } else {
-        await createPunishmentAsync(punishmentData);
+        // Ensure punishmentData matches CreatePunishmentVariables: Partial<Omit<PunishmentData, 'id' | 'created_at' | 'updated_at'>> & { title: string; points: number; }
+        const { id, created_at, updated_at, ...creatableData } = punishmentData;
+        const variables: CreatePunishmentVariables = {
+          title: creatableData.title || 'Default Title', // Required
+          points: creatableData.points || 0, // Required
+          ...creatableData,
+        };
+        await createPunishmentAsync(variables);
       }
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
     } catch (error) {
       console.error("Error saving punishment (from component):", error);
-      // Removed toast from here, should be handled in mutation hooks
+      // Toasts are handled by optimistic mutation hooks
     }
   };
   
@@ -87,11 +86,12 @@ const PunishmentsContent: React.FC<{
       await deletePunishmentAsync(id);
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
+      // Toast is handled by useDeletePunishment
     } catch (error) {
       console.error("Error deleting punishment:", error);
-      toast({ // This toast can remain if it's specific to the page's UI flow
-        title: "Error",
-        description: "Failed to delete punishment",
+      toast({
+        title: "Error on Page",
+        description: "Failed to delete punishment from page.",
         variant: "destructive"
       });
     }
@@ -119,7 +119,7 @@ const PunishmentsContent: React.FC<{
     );
   }
   
-  if (!isLoading && punishments.length === 0) {
+  if (!isLoading && punishments.length === 0 && !isEditorOpen) { // Added !isEditorOpen to prevent flash of empty state
     return (
       <div className="p-4 pt-6">
         <PunishmentsHeader />
@@ -153,7 +153,7 @@ const PunishmentsContent: React.FC<{
       <div className="flex flex-col space-y-4 mt-4">
         {punishments.map((punishment) => (
           <PunishmentCard
-            key={punishment.id}
+            key={punishment.id} // id should be guaranteed if data is loaded
             {...punishment}
             onEdit={() => handleEditPunishment(punishment)}
           />

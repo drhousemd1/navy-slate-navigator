@@ -4,32 +4,36 @@ import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 
+// Local type to ensure 'id' is present for the generic hook's TItem constraint
+type PunishmentWithId = PunishmentData & { id: string };
+
 export type CreatePunishmentVariables = Partial<Omit<PunishmentData, 'id' | 'created_at' | 'updated_at'>> & {
   title: string;
   points: number;
+  // profile_id?: string; // Add if it's part of the variables for creation
 };
 
 export const useCreatePunishment = () => {
   const queryClient = useQueryClient();
 
-  return useCreateOptimisticMutation<PunishmentData, Error, CreatePunishmentVariables>({
+  return useCreateOptimisticMutation<PunishmentWithId, Error, CreatePunishmentVariables>({
     queryClient,
     queryKey: ['punishments'],
     mutationFn: async (variables: CreatePunishmentVariables) => {
       const { data, error } = await supabase
         .from('punishments')
-        .insert({ ...variables }) // Ensure all necessary fields are passed
+        .insert({ ...variables }) 
         .select()
         .single();
       if (error) throw error;
       if (!data) throw new Error('Punishment creation failed.');
-      return data as PunishmentData;
+      return data as PunishmentWithId; // Cast to ensure 'id' is seen as non-optional
     },
     entityName: 'Punishment',
     createOptimisticItem: (variables, optimisticId) => {
       const now = new Date().toISOString();
       return {
-        id: optimisticId,
+        id: optimisticId, // Now satisfies PunishmentWithId
         created_at: now,
         updated_at: now,
         icon_name: variables.icon_name || 'ShieldAlert',
@@ -42,8 +46,8 @@ export const useCreatePunishment = () => {
         highlight_effect: variables.highlight_effect || false,
         focal_point_x: variables.focal_point_x || 50,
         focal_point_y: variables.focal_point_y || 50,
-        ...variables,
-      } as PunishmentData;
+        ...variables, // title and points are required by CreatePunishmentVariables
+      } as PunishmentWithId; // Cast to ensure 'id' is seen as non-optional
     },
   });
 };

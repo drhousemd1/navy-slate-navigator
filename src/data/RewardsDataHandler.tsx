@@ -1,17 +1,17 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useBuySubReward } from "@/data/mutations/useBuySubReward";
-import { useBuyDomReward } from "@/data/mutations/useBuyDomReward";
-import { useRedeemSubReward } from "@/data/mutations/useRedeemSubReward";
-import { useRedeemDomReward } from "@/data/mutations/useRedeemDomReward";
-import { useCreateReward } from "@/data/mutations/useCreateReward";
-import { useUpdateReward } from "@/data/mutations/useUpdateReward";
-import { useDeleteReward } from "@/data/mutations/useDeleteReward";
+import { useBuySubReward } from "@/data/rewards/mutations/useBuySubReward";
+import { useBuyDomReward } from "@/data/rewards/mutations/useBuyDomReward";
+import { useRedeemSubReward } from "@/data/rewards/mutations/useRedeemSubReward";
+import { useRedeemDomReward } from "@/data/rewards/mutations/useRedeemDomReward";
+import { useCreateReward } from "@/data/rewards/mutations/useCreateReward";
+import { useUpdateReward } from "@/data/rewards/mutations/useUpdateReward";
+import { useDeleteReward } from "@/data/rewards/mutations/useDeleteReward";
 
 // Keys for our queries
 const REWARDS_QUERY_KEY = ['rewards'];
-const POINTS_QUERY_KEY = ['rewards', 'points'];
+const POINTS_QUERY_KEY = ['profile_points'];
 const REWARDS_SUPPLY_QUERY_KEY = ['rewards', 'supply'];
 
 // Define the Reward type
@@ -33,6 +33,7 @@ export interface Reward {
   focal_point_y: number;
   created_at?: string;
   updated_at?: string;
+  is_dom_reward?: boolean;
 }
 
 // Fetch rewards from the database
@@ -47,7 +48,7 @@ const fetchRewards = async (): Promise<Reward[]> => {
     throw error;
   }
   
-  return data;
+  return data.map(reward => ({ ...reward, is_dom_reward: !!reward.is_dom_reward })) as Reward[];
 };
 
 // Fetch user points from the database
@@ -67,8 +68,9 @@ const fetchUserPoints = async (): Promise<number> => {
     .single();
   
   if (error) {
-    console.error('Error fetching user points:', error);
-    throw error;
+    // If profile doesn't exist or other error, return 0 or handle as appropriate
+    console.warn('Error fetching user points, possibly profile not found:', error.message);
+    return 0;
   }
   
   return data?.points || 0;
@@ -88,90 +90,6 @@ const fetchTotalRewardsSupply = async (): Promise<number> => {
   return data.reduce((total, reward) => total + reward.supply, 0);
 };
 
-// Save a reward to the database
-const saveRewardToDb = async (rewardData: Partial<Reward>, currentIndex?: number | null): Promise<Reward> => {
-  if (rewardData.id) {
-    // Update existing reward
-    const { data, error } = await supabase
-      .from('rewards')
-      .update({
-        title: rewardData.title,
-        description: rewardData.description,
-        cost: rewardData.cost,
-        supply: rewardData.supply,
-        background_image_url: rewardData.background_image_url,
-        background_opacity: rewardData.background_opacity,
-        icon_name: rewardData.icon_name,
-        icon_color: rewardData.icon_color,
-        title_color: rewardData.title_color,
-        subtext_color: rewardData.subtext_color,
-        calendar_color: rewardData.calendar_color,
-        highlight_effect: rewardData.highlight_effect,
-        focal_point_x: rewardData.focal_point_x,
-        focal_point_y: rewardData.focal_point_y,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', rewardData.id)
-      .select()
-      .single();
-      
-    if (error) {
-      console.error('Error updating reward:', error);
-      throw error;
-    }
-    
-    return data;
-  } else {
-    // Create new reward
-    const newReward = {
-      title: rewardData.title || 'New Reward',
-      description: rewardData.description || '',
-      cost: rewardData.cost || 10,
-      supply: rewardData.supply || 0,
-      background_image_url: rewardData.background_image_url,
-      background_opacity: rewardData.background_opacity || 100,
-      icon_name: rewardData.icon_name,
-      icon_color: rewardData.icon_color || '#9b87f5',
-      title_color: rewardData.title_color || '#FFFFFF',
-      subtext_color: rewardData.subtext_color || '#8E9196',
-      calendar_color: rewardData.calendar_color || '#7E69AB',
-      highlight_effect: rewardData.highlight_effect || false,
-      focal_point_x: rewardData.focal_point_x || 50,
-      focal_point_y: rewardData.focal_point_y || 50,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    
-    const { data, error } = await supabase
-      .from('rewards')
-      .insert(newReward)
-      .select()
-      .single();
-      
-    if (error) {
-      console.error('Error creating reward:', error);
-      throw error;
-    }
-    
-    return data;
-  }
-};
-
-// Delete a reward from the database
-const deleteRewardFromDb = async (rewardId: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('rewards')
-    .delete()
-    .eq('id', rewardId);
-  
-  if (error) {
-    console.error('Error deleting reward:', error);
-    throw error;
-  }
-  
-  return true;
-};
-
 // The main hook to expose all reward-related operations
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
@@ -181,7 +99,7 @@ export const useRewardsData = () => {
   const { mutateAsync: redeemDom } = useRedeemDomReward();
   const { mutateAsync: createReward } = useCreateReward();
   const { mutateAsync: updateReward } = useUpdateReward();
-  const { mutateAsync: deleteReward } = useDeleteReward();
+  const { mutateAsync: deleteRewardMutation } = useDeleteReward();
 
   // Query for fetching all rewards
   const {
@@ -189,7 +107,7 @@ export const useRewardsData = () => {
     isLoading,
     error,
     refetch: refetchRewards
-  } = useQuery({
+  } = useQuery<Reward[], Error>({
     queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
     staleTime: 1000 * 60 * 20, // 20 minutes
@@ -201,7 +119,7 @@ export const useRewardsData = () => {
   const {
     data: totalPoints = 0,
     refetch: refetchPoints
-  } = useQuery({
+  } = useQuery<number, Error>({
     queryKey: POINTS_QUERY_KEY,
     queryFn: fetchUserPoints,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -213,7 +131,7 @@ export const useRewardsData = () => {
   const {
     data: totalRewardsSupply = 0,
     refetch: refetchSupply
-  } = useQuery({
+  } = useQuery<number, Error>({
     queryKey: REWARDS_SUPPLY_QUERY_KEY,
     queryFn: fetchTotalRewardsSupply,
     staleTime: 1000 * 60 * 20, // 20 minutes
@@ -222,57 +140,39 @@ export const useRewardsData = () => {
   });
 
   // Wrapper function for saving a reward (create or update)
-  const saveReward = async ({ rewardData, currentIndex }: { rewardData: Partial<Reward>, currentIndex?: number | null }) => {
+  const saveRewardOperation = async ({ rewardData }: { rewardData: Partial<Reward>}) => {
     try {
       console.log("Save reward called with data:", rewardData);
       
       if (rewardData.id) {
         // Update existing reward
-        const updates = {
-          title: rewardData.title,
-          description: rewardData.description,
-          cost: rewardData.cost,
-          supply: rewardData.supply,
-          background_image_url: rewardData.background_image_url,
-          background_opacity: rewardData.background_opacity,
-          icon_name: rewardData.icon_name,
-          icon_color: rewardData.icon_color,
-          title_color: rewardData.title_color,
-          subtext_color: rewardData.subtext_color,
-          calendar_color: rewardData.calendar_color,
-          highlight_effect: rewardData.highlight_effect,
-          focal_point_x: rewardData.focal_point_x,
-          focal_point_y: rewardData.focal_point_y,
-          updated_at: new Date().toISOString(),
-          is_dom_reward: Boolean((rewardData as any).is_dom_reward)
-        };
-        
-        await updateReward({ rewardId: rewardData.id, updates });
-        return await queryClient.fetchQuery({ queryKey: ["rewards", rewardData.id] });
+        // Ensure updates match UpdateRewardVariables: { rewardId: string } & Partial<Omit<Reward, 'id'>>
+        const { id, ...updates } = rewardData;
+        const variables = { rewardId: id, ...updates };
+        return await updateReward(variables);
       } else {
         // Create new reward
-        const newReward = {
-          title: rewardData.title || 'New Reward',
-          description: rewardData.description || '',
-          cost: rewardData.cost || 10,
-          supply: rewardData.supply || 0,
-          background_image_url: rewardData.background_image_url,
-          background_opacity: rewardData.background_opacity || 100,
-          icon_name: rewardData.icon_name,
-          icon_color: rewardData.icon_color || '#9b87f5',
-          title_color: rewardData.title_color || '#FFFFFF',
-          subtext_color: rewardData.subtext_color || '#8E9196',
-          calendar_color: rewardData.calendar_color || '#7E69AB',
-          highlight_effect: rewardData.highlight_effect || false,
-          focal_point_x: rewardData.focal_point_x || 50,
-          focal_point_y: rewardData.focal_point_y || 50,
-          is_dom_reward: Boolean((rewardData as any).is_dom_reward),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+        // Ensure newReward matches CreateRewardVariables: Omit<Reward, 'id' | 'created_at' | 'updated_at'>
+        const { id, created_at, updated_at, ...creatableData } = rewardData;
+        // Add required fields if missing, e.g., title, cost, supply
+        const variables = {
+          title: creatableData.title || 'New Reward',
+          cost: creatableData.cost || 0,
+          supply: creatableData.supply || 0,
+          description: creatableData.description || null,
+          background_image_url: creatableData.background_image_url || null,
+          background_opacity: creatableData.background_opacity || 100,
+          icon_name: creatableData.icon_name || null,
+          icon_color: creatableData.icon_color || '#9b87f5',
+          title_color: creatableData.title_color || '#FFFFFF',
+          subtext_color: creatableData.subtext_color || '#8E9196',
+          calendar_color: creatableData.calendar_color || '#7E69AB',
+          highlight_effect: creatableData.highlight_effect || false,
+          focal_point_x: creatableData.focal_point_x || 50,
+          focal_point_y: creatableData.focal_point_y || 50,
+          is_dom_reward: creatableData.is_dom_reward || false,
         };
-        
-        const created = await createReward(newReward);
-        return created;
+        return await createReward(variables);
       }
     } catch (error) {
       console.error('Error saving reward:', error);
@@ -281,23 +181,24 @@ export const useRewardsData = () => {
         description: 'Failed to save reward. Please try again.',
         variant: 'destructive',
       });
-      throw error;
+      throw error; // Re-throw to be caught by caller if necessary
     }
   };
 
   // Wrapper function for deleting a reward
-  const deleteRewardFromDb = async (rewardId: string): Promise<boolean> => {
+  const deleteRewardOperation = async (rewardId: string): Promise<void> => { // Changed return to void as delete mutation returns void
     try {
-      await deleteReward(rewardId);
-      return true;
+      await deleteRewardMutation(rewardId);
+      // Toasting is handled by the useDeleteReward hook
     } catch (error) {
       console.error('Error deleting reward:', error);
+      // Toasting is handled by the useDeleteReward hook, but can add specific page context error here if needed
       toast({
-        title: 'Error',
-        description: 'Failed to delete reward. Please try again.',
+        title: 'Error on Page',
+        description: 'Failed to delete reward. Please try again from the rewards page.',
         variant: 'destructive',
       });
-      throw error;
+      throw error; // Re-throw
     }
   };
 
@@ -305,7 +206,8 @@ export const useRewardsData = () => {
   const refreshPointsFromDatabase = async () => {
     try {
       await refetchPoints();
-      await refetchSupply();
+      await refetchSupply(); // Supply might change if rewards are deleted/added by others
+      await refetchRewards(); // Also refetch rewards themselves
     } catch (error) {
       console.error('Error refreshing points from database:', error);
     }
@@ -322,33 +224,36 @@ export const useRewardsData = () => {
     error,
     
     // Rewards CRUD operations
-    saveReward,
-    deleteReward: deleteRewardFromDb,
+    saveReward: saveRewardOperation,
+    deleteReward: deleteRewardOperation,
     buyReward: async ({ rewardId, cost }: { rewardId: string, cost: number }) => {
-      // Get the reward to get its supply
       const reward = rewards.find(r => r.id === rewardId);
       if (!reward) throw new Error("Reward not found");
       
-      // Get the user
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) throw new Error("User not authenticated");
       
-      // Check if it's a dom reward
-      if ((reward as any).is_dom_reward) {
+      const profileId = userData.user.id;
+      // Fetch current points from cache or state, as totalPoints might be stale
+      const currentPointsQueryData = queryClient.getQueryData<{ points?: number, dom_points?: number }>(['profile_points']);
+      const currentPoints = currentPointsQueryData?.points ?? totalPoints; // Fallback to hook's state
+      const currentDomPoints = currentPointsQueryData?.dom_points ?? 0; // Assuming dom_points is part of profile_points query
+
+      if (reward.is_dom_reward) { // Ensure is_dom_reward is part of Reward type
         return buyDom({
           rewardId,
           cost,
           currentSupply: reward.supply,
-          profileId: userData.user.id,
-          currentDomPoints: queryClient.getQueryData<any>(["profile_points"])?.dom_points || 0
+          profileId,
+          currentDomPoints
         });
       } else {
         return buySub({
           rewardId,
           cost,
           currentSupply: reward.supply,
-          profileId: userData.user.id,
-          currentPoints: queryClient.getQueryData<any>(["profile_points"])?.points || 0
+          profileId,
+          currentPoints
         });
       }
     },

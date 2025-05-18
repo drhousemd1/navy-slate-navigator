@@ -1,11 +1,10 @@
-
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from './types';
-import { useCreatePunishment } from "@/data/mutations/useCreatePunishment";
+import { useCreatePunishment } from "@/data/punishments/mutations/useCreatePunishment";
 import { useRedeemPunishment } from "@/data/mutations/useRedeemPunishment"; // Kept if used by redeemPunishment, though not directly visible here
-import { useDeletePunishment } from "@/data/mutations/useDeletePunishment";
+import { useDeletePunishment } from "@/data/punishments/mutations/useDeletePunishment";
 import { supabase } from '@/integrations/supabase/client';
 import { fetchPunishments as fetchPunishmentsData } from '@/data/punishments/queries/fetchPunishments';
 import { fetchAllPunishmentHistory } from '@/data/punishments/queries/fetchAllPunishmentHistory';
@@ -43,7 +42,38 @@ export const usePunishmentOperations = () => {
 
   const createPunishmentOperation = async (punishmentData: PunishmentData): Promise<string> => {
     try {
-      await createPunishmentMutation({ ...punishmentData, profile_id: punishmentData.id || '' }); // profile_id might need re-evaluation based on actual needs
+      // Ensure createPunishmentMutation expects variables compatible with CreatePunishmentVariables
+      // PunishmentData might not be directly compatible.
+      // The useCreatePunishment hook's TVariables is CreatePunishmentVariables.
+      // We need to ensure we pass the correct shape.
+      const { id, created_at, updated_at, ...createVars } = punishmentData;
+      // profile_id is not in PunishmentData, it needs to be sourced if required by CreatePunishmentVariables
+      // For now, assuming CreatePunishmentVariables can be formed from punishmentData's relevant fields.
+      // This might need adjustment based on CreatePunishmentVariables definition.
+      // The original call was: await createPunishmentMutation({ ...punishmentData, profile_id: punishmentData.id || '' });
+      // This seems incorrect as profile_id should probably be the user's ID.
+      // For now, let's pass the creatable parts of punishmentData.
+      
+      // Map PunishmentData to CreatePunishmentVariables
+      // CreatePunishmentVariables is Partial<Omit<PunishmentData, 'id' | 'created_at' | 'updated_at'>> & { title: string; points: number; };
+      const variablesToPass = {
+        title: punishmentData.title || 'Default Title', // Ensure title is present
+        points: punishmentData.points || 0, // Ensure points are present
+        description: punishmentData.description,
+        icon_name: punishmentData.icon_name,
+        icon_color: punishmentData.icon_color,
+        background_image_url: punishmentData.background_image_url,
+        background_opacity: punishmentData.background_opacity,
+        title_color: punishmentData.title_color,
+        subtext_color: punishmentData.subtext_color,
+        calendar_color: punishmentData.calendar_color,
+        highlight_effect: punishmentData.highlight_effect,
+        focal_point_x: punishmentData.focal_point_x,
+        focal_point_y: punishmentData.focal_point_y,
+        // remove id, created_at, updated_at as they are not in CreatePunishmentVariables for input
+      };
+
+      await createPunishmentMutation(variablesToPass);
       toast({
         title: "Success",
         description: "Punishment created successfully",

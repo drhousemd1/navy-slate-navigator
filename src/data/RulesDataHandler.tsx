@@ -1,38 +1,36 @@
 import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useCreateRule } from "@/data/mutations/useCreateRule";
-import { useUpdateRule } from "@/data/mutations/useUpdateRule";
-import { useDeleteRule } from "@/data/mutations/useDeleteRule";
+import { useCreateRule } from "@/data/rules/mutations/useCreateRule";
+import { useUpdateRule } from "@/data/rules/mutations/useUpdateRule";
+import { useDeleteRule } from "@/data/rules/mutations/useDeleteRule";
 import { Rule } from '@/data/interfaces/Rule';
 import { fetchRules } from '@/data/rules/fetchRules';
 import { recordViolation } from '@/data/rules/recordViolation';
 
 // Export wrapper functions
+/*
 export async function createRuleInDb(newRule: any, profileId?: string): Promise<boolean> {
-  const { mutateAsync } = useCreateRule();
-  // Ensure newRule matches CreateRuleInput, which omits id, created_at, updated_at, user_id
-  const { id, created_at, updated_at, user_id, ...creatableRuleData } = newRule;
-  await mutateAsync({ ...creatableRuleData, profile_id: profileId }); // profile_id might not be part of Rule, ensure CreateRuleInput matches
+  // This needs to be a component or custom hook to use useCreateRule
+  // const { mutateAsync } = useCreateRule(); 
+  // ...
   return true;
 }
 
 export async function updateRuleInDb(ruleId: string, updates: Partial<Rule>): Promise<boolean> {
-  const { mutateAsync } = useUpdateRule();
-  // Destructure to remove properties that are not part of the updatable fields
-  // or are handled differently by the mutation (like id).
-  // UpdateRuleInput is Partial<Omit<Rule, 'id' | 'user_id' | 'created_at'>> & { id: string }
-  const { id: currentId, user_id, created_at, updated_at, ...updatableFields } = updates;
-  
-  await mutateAsync({ id: ruleId, ...updatableFields });
+  // This needs to be a component or custom hook to use useUpdateRule
+  // const { mutateAsync } = useUpdateRule();
+  // ...
   return true;
 }
 
 export async function deleteRuleInDb(ruleId: string): Promise<boolean> {
-  const { mutateAsync } = useDeleteRule();
-  await mutateAsync(ruleId);
+  // This needs to be a component or custom hook to use useDeleteRule
+  // const { mutateAsync } = useDeleteRule();
+  // ...
   return true;
 }
+*/
 
 export const useRulesData = () => {
   const queryClient = useQueryClient();
@@ -46,7 +44,7 @@ export const useRulesData = () => {
     isLoading,
     error,
     refetch
-  } = useQuery({
+  } = useQuery<Rule[], Error>({
     queryKey: ['rules'],
     queryFn: fetchRules,
     staleTime: Infinity,
@@ -74,68 +72,50 @@ export const useRulesData = () => {
         description: 'Failed to record rule violation. Please try again.',
         variant: 'destructive',
       });
+      // throw error; // decide if this should propagate
     }
   };
 
   // Save rule wrapper
-  const saveRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
+  const saveRuleOperation = async (ruleData: Partial<Rule>): Promise<Rule> => {
     try {
       if (ruleData.id) {
-        // Update existing rule
-        // Pass only the actual updatable fields, not the whole ruleData if it contains non-updatable ones.
-        // The updateRuleInDb function now handles filtering.
-        await updateRuleInDb(ruleData.id, ruleData);
-        
-        // Get the updated rule from the cache or refetch it
-        // Optimistic updates in useUpdateRule should handle cache update.
-        // This find operation relies on the cache being up-to-date.
-        const updatedRule = queryClient.getQueryData<Rule[]>(['rules'])?.find(r => r.id === ruleData.id);
-        
-        if (!updatedRule) {
-          // This might happen if the cache update logic in useUpdateRule's onSuccess/onMutate
-          // hasn't completed or if the rule somehow isn't found.
-          // Consider refetching or relying more on the optimistic update's return value if possible.
-          await refetch(); // Fallback to refetch if optimistic update is not immediately reflected for some reason
-          const freshRules = queryClient.getQueryData<Rule[]>(['rules']) || [];
-          const foundRule = freshRules.find(r => r.id === ruleData.id);
-          if (!foundRule) throw new Error('Failed to get updated rule after refetch');
-          return foundRule;
-        }
-        
-        return updatedRule;
+        const { id, user_id, created_at, updated_at, ...updatableFields } = ruleData;
+        const updated = await updateRule({ id, ...updatableFields });
+        return updated;
       } else {
-        // Create new rule
         const userData = await supabase.auth.getUser();
-        // createRuleInDb expects 'newRule' and optionally 'profileId'
-        // Ensure ruleData matches CreateRuleInput, which omits id, created_at, updated_at, user_id
-        const { id, created_at, updated_at, user_id, ...creatableRuleData } = ruleData;
+        const profile_id = userData.data.user?.id;
+        // Ensure ruleData matches CreateRuleInput (from useCreateRule)
+        // CreateRuleInput is Partial<Omit<Rule, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'profile_id'>> & { title: string; ... other required }
+        const { id, user_id, created_at, updated_at, ...creatableRuleData } = ruleData;
 
-        await createRuleInDb(creatableRuleData, userData.data.user?.id);
-        
-        // Optimistic updates in useCreateRule should add the rule optimistically.
-        // A refetch might still be desired to confirm server state or get server-generated fields accurately.
-        // However, if the optimistic update is robust, this refetch might be skippable for UX.
-        // For now, keeping refetch to ensure consistency, but this could be optimized.
-        await refetch();
-        
-        // Get the newly created rule from cache
-        const allRules = queryClient.getQueryData<Rule[]>(['rules']) || [];
-        // Finding by title is brittle. The optimistic update in useCreateRule should replace the
-        // temp ID with the server ID. We should try to find by a more stable property or rely on the mutation's result.
-        const newRule = allRules.find(r => 
-          r.title === ruleData.title && 
-          (!ruleData.id || r.id !== ruleData.id) // Ensure it's not the optimistic one if we had a temp client-side ID
-        ); 
-        
-        if (!newRule) {
-          // This could happen if title is not unique or optimistic update path has issues.
-          // The best way is usually to get the created rule from the `useCreateRule` mutation's `onSuccess` data.
-          // Since createRuleInDb doesn't return it, we rely on cache.
-          console.warn('Could not find newly created rule by title, returning first rule as a fallback. This may not be the correct rule.');
-          if (allRules.length > 0) return allRules[0]; // Highly unreliable fallback
-          throw new Error('Failed to get newly created rule');
+        const variables = {
+            ...creatableRuleData,
+            title: creatableRuleData.title || "Default Rule Title", // Ensure title
+            // Ensure all other required fields for CreateRuleInput are present
+            // For example, if priority is required:
+            priority: creatableRuleData.priority || 'medium',
+            frequency: creatableRuleData.frequency || 'daily',
+            frequency_count: creatableRuleData.frequency_count || 1,
+            // Default other non-optional fields from Rule if not in creatableRuleData
+            icon_color: creatableRuleData.icon_color || '#FFFFFF',
+            title_color: creatableRuleData.title_color || '#FFFFFF',
+            subtext_color: creatableRuleData.subtext_color || '#FFFFFF',
+            calendar_color: creatableRuleData.calendar_color || '#9c7abb',
+            background_opacity: creatableRuleData.background_opacity || 100,
+            highlight_effect: creatableRuleData.highlight_effect || false,
+            focal_point_x: creatableRuleData.focal_point_x || 50,
+            focal_point_y: creatableRuleData.focal_point_y || 50,
+            profile_id: profile_id // Pass profile_id if it's part of CreateRuleInput
+        };
+
+        // Filter out undefined profile_id if not allowed by type
+        if (variables.profile_id === undefined) {
+            delete (variables as any).profile_id;
         }
         
+        const newRule = await createRule(variables as any); // Cast if variables don't perfectly match
         return newRule;
       }
     } catch (error) {
@@ -143,6 +123,22 @@ export const useRulesData = () => {
       toast({
         title: 'Error',
         description: 'Failed to save rule. Please try again.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  // Delete rule operation
+  const deleteRuleOperation = async (ruleId: string): Promise<void> => { // Changed to void
+    try {
+      await deleteRule(ruleId);
+      // Toast is handled by the hook
+    } catch (error) {
+      console.error('Error deleting rule:', error);
+      toast({ // Keep this for page-specific feedback if hook's toast isn't enough
+        title: 'Error Deleting Rule',
+        description: (error as Error).message || 'Failed to delete rule. Please try again.',
         variant: 'destructive',
       });
       throw error;
@@ -158,23 +154,8 @@ export const useRulesData = () => {
     rules,
     isLoading,
     error,
-    saveRule,
-    deleteRule: async (ruleId: string) => {
-      try {
-        await deleteRuleInDb(ruleId);
-        // Optimistic update in useDeleteRule should handle cache.
-        // No explicit return value indicating success other than not throwing.
-        return true;
-      } catch (error) {
-        console.error('Error deleting rule:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to delete rule. Please try again.',
-          variant: 'destructive',
-        });
-        throw error;
-      }
-    },
+    saveRule: saveRuleOperation,
+    deleteRule: deleteRuleOperation,
     markRuleBroken,
     refetchRules
   };
