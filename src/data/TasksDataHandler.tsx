@@ -6,6 +6,7 @@ import { fetchTasks } from './queries/tasks/fetchTasks';
 import { useCreateTask } from './tasks/mutations/useCreateTask';
 import { useUpdateTask, UpdateTaskVariables } from './tasks/mutations/useUpdateTask';
 import { useDeleteTask } from './tasks/mutations/useDeleteTask';
+import { CreateTaskVariables } from './tasks/types';
 
 export interface TasksDataHook {
   tasks: Task[];
@@ -39,20 +40,34 @@ export const useTasksData = (): TasksDataHook => {
       let savedTask: Task | undefined | null = null;
       if (taskData.id) {
         const { id, ...updates } = taskData;
-        // Use id property from UpdateTaskVariables
         savedTask = await updateTaskMutation({ 
           id, 
           ...updates 
         } as UpdateTaskVariables);
       } else {
-        // Ensure taskData matches CreateTaskVariables
         const { id, created_at, updated_at, completed, last_completed_date, ...creatableData } = taskData;
-        const variables = {
+        const variables: CreateTaskVariables = {
           title: creatableData.title || "Default Task Title",
           points: creatableData.points || 0,
-          ...creatableData
+          description: creatableData.description,
+          frequency: creatableData.frequency,
+          frequency_count: creatableData.frequency_count,
+          priority: creatableData.priority,
+          icon_name: creatableData.icon_name,
+          icon_color: creatableData.icon_color,
+          title_color: creatableData.title_color,
+          subtext_color: creatableData.subtext_color,
+          calendar_color: creatableData.calendar_color,
+          background_image_url: creatableData.background_image_url,
+          background_opacity: creatableData.background_opacity,
+          highlight_effect: creatableData.highlight_effect,
+          focal_point_x: creatableData.focal_point_x,
+          focal_point_y: creatableData.focal_point_y,
+          week_identifier: creatableData.week_identifier,
+          icon_url: creatableData.icon_url,
+          // Ensure any other fields expected by CreateTaskVariables are included
         };
-        savedTask = await createTaskMutation(variables as any);
+        savedTask = await createTaskMutation(variables);
       }
       return savedTask || null;
     } catch (e: any) {
@@ -111,17 +126,16 @@ export const useTasksData = (): TasksDataHook => {
                 if (updatePointsError) {
                     console.error('Error updating profile points:', updatePointsError);
                 } else {
-                    queryClient.invalidateQueries({ queryKey: ['profile_points'] });
-                    queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] }); // Consider if this is still needed
+                    queryClient.invalidateQueries({ queryKey: ['profile'] });
+                    queryClient.invalidateQueries({ queryKey: ['rewards', 'points'] });
+                    queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
                 }
             }
         }
       }
-      toast({ title: 'Task Updated', description: `Task marked as ${completed ? 'complete' : 'incomplete'}.` });
       return true;
     } catch (e: any) {
       console.error('Error toggling task completion:', e);
-      toast({ title: 'Error Updating Task', description: e.message, variant: 'destructive' });
       return false;
     }
   };
