@@ -1,6 +1,6 @@
 
 import React, { ReactNode } from 'react';
-import { useIsRestoring } from '@tanstack/react-query-persist-client';
+import { useIsRestoring } from '@tanstack/react-query'; // Changed import source
 import HydrationErrorBoundary from './HydrationErrorBoundary';
 import { LoaderCircle } from 'lucide-react';
 
