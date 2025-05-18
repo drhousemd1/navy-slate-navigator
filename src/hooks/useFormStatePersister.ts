@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { UseFormReturn, FieldPathValue, Path } from 'react-hook-form'; // Import Path for FieldPath
+import { UseFormReturn, FieldPathValue, Path, PathValue } from 'react-hook-form'; // Import PathValue
 import { debounce } from 'lodash';
 
 type FormValues = Record<string, any>;
@@ -10,7 +10,7 @@ interface PersisterOptions {
   debounceMs?: number; // Debounce time in ms
 }
 
-const STORAGE_PREFIX = 'kingdom-app-form-';
+export const STORAGE_PREFIX = 'kingdom-app-form-'; // Export this
 
 /**
  * Hook to persist form state in localStorage
@@ -38,7 +38,8 @@ export function useFormStatePersister<T extends FormValues>(
         Object.entries(values).forEach(([key, value]) => {
           if (!exclude.includes(key) && value !== undefined) {
             // Ensure key is a valid path and value matches expected type for that path
-            form.setValue(key as Path<T>, value as FieldPathValue<T, Path<T>>);
+            // Explicitly cast value to PathValue<T, Path<T>> which is equivalent to FieldPathValue
+            form.setValue(key as Path<T>, value as PathValue<T, Path<T>>);
           }
         });
         
@@ -76,10 +77,10 @@ export function useFormStatePersister<T extends FormValues>(
       subscription.unsubscribe();
       saveState.cancel(); // Ensure debounce is cancelled on unmount
     };
-  }, [form, exclude, formId, debounceMs, storageKey]); // Added storageKey to dependencies
+  }, [form, exclude, formId, debounceMs, storageKey]);
   
   // Clear persisted state
-  const clearPersistedState = async (): Promise<boolean> => { // Return boolean as per original design
+  const clearPersistedState = async (): Promise<boolean> => {
     try {
       localStorage.removeItem(storageKey);
       console.log(`[FormStatePersister] Cleared state for form: ${formId}`);

@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { queryClient } from '@/data/queryClient';
 import { toast } from '@/hooks/use-toast';
@@ -32,7 +31,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
     const unsubscribe = mutationCache.subscribe(() => {
       const mutations = mutationCache.getAll();
       const pending = mutations.filter(mutation => 
-        mutation.state.status === 'pending' || mutation.state.status === 'loading'
+        mutation.state.status === 'pending'
       ).length;
       
       setPendingMutationsCount(pending);

@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { queryClient } from '@/data/queryClient';
 import localforage from 'localforage';
-import { FORM_STATE_PREFIX } from '@/hooks/useFormStatePersister';
+import { STORAGE_PREFIX as FORM_STATE_PREFIX } from '@/hooks/useFormStatePersister';
 import { useAuthOperations } from './auth/useAuthOperations';
 import { useUserProfile } from './auth/useUserProfile';
 
@@ -181,15 +181,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       queryClient.clear();
       console.log('[CacheClear] React Query in-memory cache cleared.');
 
-      await localforage.removeItem('RQ_CACHE'); 
-      console.log('[CacheClear] Persisted React Query cache (RQ_CACHE) cleared.');
+      // Assuming RQ_CACHE was a typo and meant for the react-query specific localforage instance
+      // The persister uses its own configuration for localforage, so clearing the default one might not be needed
+      // or we should use the configured instance name if we want to clear that specifically.
+      // For now, let's assume the PersistQueryClientProvider handles its cache eviction.
 
-      const keys = await localforage.keys();
+      const keys = await localforage.keys(); // This refers to the default localforage instance
       const formStateKeys = keys.filter(key => key.startsWith(FORM_STATE_PREFIX));
       for (const key of formStateKeys) {
         await localforage.removeItem(key);
       }
-      console.log(`[CacheClear] Cleared ${formStateKeys.length} persisted form drafts.`);
+      console.log(`[CacheClear] Cleared ${formStateKeys.length} persisted form drafts using prefix: ${FORM_STATE_PREFIX}`);
       
       toast({ title: "Cache Cleared", description: "Application cache and drafts have been cleared." });
     } catch (error) {

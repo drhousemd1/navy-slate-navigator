@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward } from '@/data/rewards/types';
@@ -14,7 +13,7 @@ import {
 } from './queries'; 
 
 // Corrected imports for mutation hooks
-import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
+import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
 import { useBuySubReward } from '@/data/rewards/mutations/useBuySubReward';
 import { useBuyDomReward } from '@/data/rewards/mutations/useBuyDomReward';
@@ -97,7 +96,7 @@ export const useRewardsData = () => {
         supabase.removeChannel(pointsChannel);
       };
     });
-  }, [queryClient]); // Removed refreshPointsFromDatabase from deps to avoid potential loops
+  }, [queryClient]);
 
   const createRewardMutation = useCreateRewardMutation();
   const updateRewardMutation = useUpdateRewardMutation();
@@ -105,18 +104,36 @@ export const useRewardsData = () => {
 
   const saveReward = async (saveParams: { rewardData: Partial<Reward> & { id?: string } } ) => {
     const { rewardData } = saveParams;
-    // This logic should align with RewardsDataHandler's saveReward
-    // It needs to differentiate create vs update and use correct variables
     if (rewardData.id) { 
-      const updateVariables = { id: rewardData.id, ...rewardData };
+      const { id, ...updateData } = rewardData;
+      const updateVariables = { id, ...updateData }; // Ensure this matches UpdateRewardVariables
       return updateRewardMutation.mutateAsync(updateVariables);
     } else { 
-      const { title, cost, supply, is_dom_reward, ...restData } = rewardData;
-      if (title === undefined || cost === undefined || supply === undefined || is_dom_reward === undefined) {
-        toast({ title: "Missing required fields for creation", variant: "destructive" });
+      // Ensure all required fields for CreateRewardVariables are present
+      if (rewardData.title === undefined || rewardData.cost === undefined || rewardData.supply === undefined || rewardData.is_dom_reward === undefined) {
+        toast({ title: "Missing required fields for creation", description: "Title, cost, supply, and DOM status are required.", variant: "destructive" });
         throw new Error("Missing required fields for creation");
       }
-      const createVariables = { title, cost, supply, is_dom_reward, ...restData };
+
+      const createVariables: CreateRewardVariables = {
+        title: rewardData.title,
+        cost: rewardData.cost,
+        supply: rewardData.supply,
+        is_dom_reward: rewardData.is_dom_reward,
+        // Provide defaults for other fields based on Reward type structure
+        description: rewardData.description || null,
+        background_image_url: rewardData.background_image_url || null,
+        background_opacity: rewardData.background_opacity ?? 100,
+        icon_name: rewardData.icon_name || 'Award', // Or null if 'Award' isn't a sensible default for all cases
+        icon_url: rewardData.icon_url || null,
+        icon_color: rewardData.icon_color || '#9b87f5',
+        title_color: rewardData.title_color || '#FFFFFF',
+        subtext_color: rewardData.subtext_color || '#8E9196',
+        calendar_color: rewardData.calendar_color || '#7E69AB',
+        highlight_effect: rewardData.highlight_effect ?? false,
+        focal_point_x: rewardData.focal_point_x ?? 50,
+        focal_point_y: rewardData.focal_point_y ?? 50,
+      };
       return createRewardMutation.mutateAsync(createVariables);
     }
   };
@@ -140,11 +157,11 @@ export const useRewardsData = () => {
         
     if (reward.is_dom_reward) {
       // Ensure currentDomPoints is fetched or available
-      const currentDomPoints = queryClient.getQueryData<number>(REWARDS_DOM_POINTS_QUERY_KEY) || domPoints;
+      const currentDomPoints = queryClient.getQueryData<number>(REWARDS_DOM_POINTS_QUERY_KEY) ?? domPoints; // Use nullish coalescing
       return buyDom({ rewardId, cost, currentSupply: reward.supply, profileId, currentDomPoints });
     } else {
       // Ensure currentPoints is fetched or available
-      const currentPoints = queryClient.getQueryData<number>(REWARDS_POINTS_QUERY_KEY) || totalPoints;
+      const currentPoints = queryClient.getQueryData<number>(REWARDS_POINTS_QUERY_KEY) ?? totalPoints; // Use nullish coalescing
       return buySub({ rewardId, cost, currentSupply: reward.supply, profileId, currentPoints });
     }
   };
