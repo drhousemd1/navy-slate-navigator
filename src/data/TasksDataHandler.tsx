@@ -7,6 +7,7 @@ import { useCreateTask } from './tasks/mutations/useCreateTask';
 import { useUpdateTask, UpdateTaskVariables } from './tasks/mutations/useUpdateTask';
 import { useDeleteTask } from './tasks/mutations/useDeleteTask';
 import { CreateTaskVariables } from './tasks/types';
+import { useToggleCompletionWorkflowMutation } from './tasks/mutations/useToggleCompletionWorkflowMutation';
 
 export interface TasksDataHook {
   tasks: Task[];
@@ -34,6 +35,7 @@ export const useTasksData = (): TasksDataHook => {
   const { mutateAsync: createTaskMutation } = useCreateTask();
   const { mutateAsync: updateTaskMutation } = useUpdateTask();
   const { mutateAsync: deleteTaskMutation } = useDeleteTask();
+  const { mutateAsync: toggleCompletionWorkflowMutateAsync } = useToggleCompletionWorkflowMutation();
 
   const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
@@ -92,53 +94,10 @@ export const useTasksData = (): TasksDataHook => {
 
   const toggleTaskCompletion = async (taskId: string, completed: boolean, pointsValue: number): Promise<boolean> => {
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const updates: Partial<Task> = {
-        completed,
-        last_completed_date: completed ? todayStr : null,
-      };
-      
-      await updateTaskMutation({ 
-        id: taskId, 
-        ...updates 
-      } as UpdateTaskVariables);
-
-      if (completed) {
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData.user) {
-            await supabase.from('task_completion_history').insert({ task_id: taskId, user_id: userData.user.id });
-        } else {
-            console.warn("User not found for task completion history");
-        }
-        const { data: profileData, error: profileError } = await supabase.auth.getUser();
-        if (profileError || !profileData.user) {
-          console.error("User not authenticated for points update");
-        } else {
-            const userId = profileData.user.id;
-            const { data: currentProfile, error: fetchError } = await supabase
-              .from('profiles')
-              .select('points')
-              .eq('id', userId)
-              .single();
-
-            if (fetchError) {
-                console.error('Error fetching profile for points update:', fetchError);
-            } else {
-                const newPoints = (currentProfile?.points || 0) + pointsValue;
-                const { error: updatePointsError } = await supabase.from('profiles').update({ points: newPoints }).eq('id', userId);
-                if (updatePointsError) {
-                    console.error('Error updating profile points:', updatePointsError);
-                } else {
-                    queryClient.invalidateQueries({ queryKey: ['profile'] });
-                    queryClient.invalidateQueries({ queryKey: ['rewards', 'points'] });
-                    queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
-                }
-            }
-        }
-      }
+      await toggleCompletionWorkflowMutateAsync({ taskId, completed, pointsValue });
       return true;
     } catch (e: any) {
-      console.error('Error toggling task completion:', e);
+      console.error('Error during toggleTaskCompletion workflow (TasksDataHandler):', e.message);
       return false;
     }
   };
