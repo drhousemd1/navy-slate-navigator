@@ -91,6 +91,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
           </div>
           
           <div className="flex items-center gap-3">
+            {/* Sync Status Indicator Icon */}
+            <SyncStatusIndicator />
+
             {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />
             
@@ -135,7 +138,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       <MobileNavbar />
       {/* Conditionally render CacheMonitorPanel in development mode - REMOVED */}
       {/* {import.meta.env.DEV && <CacheMonitorPanel />} */}
-      <SyncStatusIndicator />
+      {/* SyncStatusIndicator was moved to the header */}
     </div>
   );
 };

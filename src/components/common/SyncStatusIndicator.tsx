@@ -3,53 +3,74 @@ import React from 'react';
 import { useIsMutating, useIsFetching } from '@tanstack/react-query';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { WifiOff } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { WifiOff, Sync, Wifi, AlertTriangle } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const SyncStatusIndicator: React.FC = () => {
   const { isSyncing: backgroundSyncIsSyncing } = useSyncManager();
-  const { isOnline, isSyncing: manualSyncIsSyncing, pendingMutationsCount: contextPendingMutations } = useNetworkStatus();
+  const { 
+    isOnline, 
+    isSyncing: manualSyncIsSyncing, 
+    pendingMutationsCount: contextPendingMutations 
+  } = useNetworkStatus();
   
   const activeMutations = useIsMutating(); 
   const activeFetches = useIsFetching();
 
-  let message: string | null = null;
-  let icon: React.ReactNode = <Skeleton className="h-5 w-5 mr-2 rounded-full animate-pulse bg-slate-500" />; // Default to skeleton pulse
+  let message: string = "Online"; // Default message
+  let icon: React.ReactNode = <Wifi className="h-5 w-5 text-green-500" />; // Default to online icon
+  let iconColorClass = "text-green-500";
 
   if (!isOnline) {
     if (contextPendingMutations > 0) {
       message = `Offline: ${contextPendingMutations} change${contextPendingMutations > 1 ? 's' : ''} queued`;
+      icon = <AlertTriangle className="h-5 w-5 text-orange-400" />;
+      iconColorClass = "text-orange-400";
     } else {
       message = "Offline";
+      icon = <WifiOff className="h-5 w-5 text-yellow-400" />;
+      iconColorClass = "text-yellow-400";
     }
-    icon = <WifiOff className="h-5 w-5 mr-2 text-yellow-400" />;
   } else {
     // Online states, prioritized
     if (manualSyncIsSyncing) {
       message = "Manual sync in progress...";
-      // icon will be the default skeleton pulse
+      icon = <Sync className="h-5 w-5 animate-spin text-blue-400" />;
+      iconColorClass = "text-blue-400";
     } else if (backgroundSyncIsSyncing) {
       message = "Auto-sync in progress...";
-      // icon will be the default skeleton pulse
+      icon = <Sync className="h-5 w-5 animate-spin text-blue-400" />;
+      iconColorClass = "text-blue-400";
     } else if (activeMutations > 0) {
       message = `Saving ${activeMutations} change${activeMutations > 1 ? 's' : ''}...`;
-      // icon will be the default skeleton pulse
+      icon = <Sync className="h-5 w-5 animate-spin text-blue-400" />;
+      iconColorClass = "text-blue-400";
     } else if (activeFetches > 0) {
       message = "Refreshing data...";
-      // icon will be the default skeleton pulse
+      icon = <Sync className="h-5 w-5 animate-spin text-cyan-400" />;
+      iconColorClass = "text-cyan-400";
     }
-    // If none of the above, message remains null (no indicator when idle and online)
-  }
-
-  if (!message) {
-    return null;
+    // If none of the above, message is "Online" and icon is Wifi (green)
   }
 
   return (
-    <div className="fixed bottom-4 right-4 bg-slate-700 text-white p-3 rounded-lg shadow-xl flex items-center text-sm z-50">
-      {icon}
-      {message}
-    </div>
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className={`cursor-pointer p-1 rounded-md hover:bg-gray-700/50 transition-colors ${iconColorClass}`}>
+            {icon}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="bg-slate-800 text-white border-slate-700">
+          <p>{message}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
