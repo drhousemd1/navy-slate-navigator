@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -9,7 +10,7 @@ import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton';
 import { Award as AwardIcon } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-import { useRewards } from '@/data/queries/useRewards'; // Corrected import name
+import { useRewards } from '@/data/queries/useRewards';
 // Import specific mutation hooks
 import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
@@ -21,7 +22,9 @@ usePreloadRewards()();
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
-  const { data: rewards = [], isLoading, error, refetch: refetchRewardsQuery } = useRewards(); // Corrected usage
+  const { data: rewardsData, isLoading, error, refetch: refetchRewardsQuery } = useRewards(); // Renamed to rewardsData to avoid conflict if needed
+  const rewards = Array.isArray(rewardsData) ? rewardsData : []; // Ensure rewards is always an array
+
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<Reward | undefined>(undefined);
   
@@ -41,8 +44,7 @@ const RewardsContent: React.FC<{
   };
   
   const handleEditReward = (index: number) => { 
-    // Ensure rewards is an array before accessing by index
-    if (Array.isArray(rewards)) {
+    if (Array.isArray(rewards)) { // Use the processed 'rewards' array
         const rewardToEdit = rewards[index];
         if (rewardToEdit) {
         setRewardBeingEdited(rewardToEdit);
@@ -51,6 +53,7 @@ const RewardsContent: React.FC<{
         toast({ title: "Error", description: "Could not find reward to edit.", variant: "destructive" });
         }
     } else {
+        // This else block might be redundant now since rewards is guaranteed to be an array
         toast({ title: "Error", description: "Rewards data is not available.", variant: "destructive" });
     }
   };
@@ -116,7 +119,7 @@ const RewardsContent: React.FC<{
   };
   
   const renderContent = () => {
-    if (isLoading && (!rewards || rewards.length === 0)) { // Check if rewards is also empty or undefined
+    if (isLoading && rewards.length === 0) { // Use processed 'rewards' array
       return (
         <div className="space-y-4 mt-4">
           <RewardCardSkeleton />
@@ -130,7 +133,7 @@ const RewardsContent: React.FC<{
         return <div className="text-red-500 p-4">Error loading rewards: {error.message}</div>;
     }
 
-    if (!isLoading && (!rewards || rewards.length === 0)) { // Check if rewards is also empty or undefined
+    if (!isLoading && rewards.length === 0) { // Use processed 'rewards' array
       return (
         <div className="flex flex-col items-center justify-center h-[60vh] text-center">
           <AwardIcon className="h-16 w-16 text-gray-500 mb-4" />
@@ -146,11 +149,9 @@ const RewardsContent: React.FC<{
       );
     }
     
-    // Ensure rewards is an array before passing to RewardsList
-    const rewardsDataToPass = Array.isArray(rewards) ? rewards : [];
     return (
       <RewardsList
-        rewards={rewardsDataToPass} 
+        // rewards prop removed as RewardsList gets data from context
         onEdit={handleEditReward} 
       />
     );
@@ -195,3 +196,4 @@ const Rewards: React.FC = () => {
 };
 
 export default Rewards;
+
