@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { FileOptions } from '@supabase/supabase-js';
+import { FileOptions } from '@supabase/storage-js';
 
 /**
  * Uploads a file to the specified Supabase Storage bucket.
