@@ -1,19 +1,30 @@
-
 import React from 'react';
-import { useRewards } from '../../contexts/RewardsContext';
-import RewardCard from '../RewardCard'; // Assuming RewardCard is in the parent directory of 'rewards'
-import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton'; // Import the dedicated skeleton component
+import { useRewards as useRewardsQuery } from '@/data/queries/useRewards';
+import RewardCard from '../RewardCard';
+import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton';
+import EmptyState from '@/components/common/EmptyState';
+import { Award } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Reward } from '@/data/rewards/types';
 
 interface RewardsListProps {
-  onEdit: (index: number) => void;
+  onEdit: (reward: Reward) => void;
+  onCreateRewardClick?: () => void;
+  rewards: Reward[];
+  isLoading: boolean;
+  handleBuyReward: (rewardId: string, cost: number) => void;
+  handleUseReward: (rewardId: string) => void;
 }
 
-// Removed inline RewardCardSkeleton definition
-
-const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
-  const { rewards, handleBuyReward, handleUseReward, isLoading } = useRewards();
-  
-  if (isLoading && (!rewards || rewards.length === 0)) { // Show skeletons if loading and no rewards yet
+const RewardsList: React.FC<RewardsListProps> = ({
+  onEdit,
+  onCreateRewardClick,
+  rewards,
+  isLoading,
+  handleBuyReward,
+  handleUseReward
+}) => {
+  if (isLoading && (!rewards || rewards.length === 0)) {
     return (
       <div className="space-y-4">
         <RewardCardSkeleton />
@@ -25,19 +36,26 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   
   if (!isLoading && (!rewards || rewards.length === 0)) {
     return (
-      <div className="text-center p-10">
-        <p className="text-light-navy mb-4">You don't have any rewards yet.</p>
-        <p className="text-light-navy">Click the + button to create your first reward!</p>
-      </div>
+      <EmptyState
+        icon={Award}
+        title="No Rewards Yet"
+        description="You don't have any rewards yet. Click the button to create your first one!"
+        action={onCreateRewardClick && (
+          <Button 
+            onClick={onCreateRewardClick} 
+            className="mt-4"
+          >
+            Create First Reward
+          </Button>
+        )}
+      />
     );
   }
 
-  // Ensure rewards is not null before mapping
   if (!rewards) {
-    return null; // Or some other fallback if rewards can be null after loading
+    return null;
   }
 
-  // Enhanced debugging logs showing index and ID to track position stability
   console.log("[RewardsList] Rendering rewards list with stable order:", 
     rewards.map((r, i) => ({ 
       index: i, 
@@ -51,7 +69,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      {rewards.map((reward, index) => (
+      {rewards.map((reward) => (
         <RewardCard
           key={reward.id}
           title={reward.title}
@@ -63,7 +81,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
           iconColor={reward.icon_color}
           onBuy={() => handleBuyReward(reward.id, reward.cost)}
           onUse={() => handleUseReward(reward.id)}
-          onEdit={() => onEdit(index)}
+          onEdit={() => onEdit(reward)}
           backgroundImage={reward.background_image_url}
           backgroundOpacity={reward.background_opacity}
           focalPointX={reward.focal_point_x}

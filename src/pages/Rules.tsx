@@ -1,18 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useNavigate } from 'react-router-dom';
 import RuleEditor from '../components/RuleEditor';
 import RulesHeader from '../components/rule/RulesHeader';
 import RulesList from '../components/rule/RulesList';
-import { RewardsProvider } from '@/contexts/RewardsContext';
+import { RewardsProvider } from '@/contexts/RewardsContext'; // This might not be needed here if RewardsContext is app-wide
 import { RulesProvider, useRules } from '@/contexts/RulesContext';
 import { Rule } from '@/data/interfaces/Rule';
 import { useSyncManager } from '@/hooks/useSyncManager';
-import { usePreloadRules } from "@/data/preload/usePreloadRules";
+// import { usePreloadRules } from "@/data/preload/usePreloadRules"; // Remove this
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-// Preload rules data from IndexedDB before component renders
-usePreloadRules()();
+// Preload rules data - REMOVE THIS LINE
+// usePreloadRules()();
 
 // Separate component to use the useRules hook inside RulesProvider
 const RulesWithContext: React.FC = () => {
@@ -21,7 +22,7 @@ const RulesWithContext: React.FC = () => {
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken } = useRules();
 
-  const { syncNow, lastSyncTime } = useSyncManager({ 
+  const { syncNow } = useSyncManager({ 
     intervalMs: 30000,
     enabled: true 
   });
@@ -111,13 +112,14 @@ const RulesWithContext: React.FC = () => {
   
   return (
     <div className="container mx-auto px-4 py-6 RulesContent">
-      <RulesHeader />
+      <RulesHeader onAddNewRule={handleAddRule} /> {/* Ensure header can trigger add */}
 
       <RulesList
         rules={rules}
         isLoading={isLoading && rules.length === 0}
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
+        onCreateRuleClick={handleAddRule} // Pass handler for EmptyState button
       />
 
       <RuleEditor

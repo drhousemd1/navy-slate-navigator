@@ -7,20 +7,18 @@ import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TasksProvider, useTasks } from '../contexts/TasksContext';
 import { Task } from '@/lib/taskUtils';
 import { useSyncManager } from '@/hooks/useSyncManager';
-import { usePreloadTasks } from "@/data/preload/usePreloadTasks";
-import { usePreloadAppCoreData } from "@/data/preload/usePreloadAppCoreData"; // Import new hook
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-// Preload tasks data (existing)
-usePreloadTasks()();
+// Preload tasks data (existing) - REMOVE THIS LINE
+// usePreloadTasks()();
 
 // Separate component that uses useTasks hook inside TasksProvider
 const TasksWithContext: React.FC = () => {
-  usePreloadAppCoreData(); // Call new preloading hook
+  // usePreloadAppCoreData(); // Remove this - called in App.tsx
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion, refetchTasks } = useTasks();
+  const { tasks, isLoading, error, saveTask, deleteTask, toggleTaskCompletion, refetchTasks } = useTasks();
   const { refreshPointsFromDatabase } = useRewards();
   
   const { syncNow } = useSyncManager({ 
@@ -114,15 +112,40 @@ const TasksWithContext: React.FC = () => {
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
 
+  if (error && tasks.length === 0) { // Added error handling for initial load
+    return (
+      <div className="container mx-auto px-4 py-6 TasksContent">
+        <TasksHeader />
+        <div className="flex flex-col items-center justify-center mt-8">
+          <div className="text-red-500 p-4 border border-red-400 rounded-md bg-red-900/20">
+            <h3 className="font-bold mb-2">Error Loading Tasks</h3>
+            <p>{error.message || "Couldn't connect to the server. Please try again."}</p>
+          </div>
+        </div>
+         <TaskEditor
+          isOpen={isEditorOpen}
+          onClose={() => {
+            setIsEditorOpen(false);
+            setCurrentTask(null);
+          }}
+          taskData={currentTask || undefined}
+          onSave={handleSaveTask}
+          onDelete={handleDeleteTask}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 pt-6 TasksContent">
       <TasksHeader />
 
       <TasksList
         tasks={tasks}
-        isLoading={isLoading}
+        isLoading={isLoading && tasks.length === 0} // Pass correct loading state for empty list
         onEditTask={handleEditTask}
         onToggleCompletion={handleToggleCompletion}
+        onCreateTaskClick={handleAddTask} // Pass the handler
       />
 
       <TaskEditor

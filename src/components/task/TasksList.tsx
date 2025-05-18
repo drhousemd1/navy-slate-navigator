@@ -1,23 +1,25 @@
-
 import React from 'react';
-import TaskCard from '../TaskCard'; // Assuming TaskCard is in the parent directory of 'task'
+import TaskCard from '../TaskCard';
 import { Task } from '@/lib/taskUtils';
-import TaskCardSkeleton from '@/components/task/TaskCardSkeleton'; // Import the dedicated skeleton component
+import TaskCardSkeleton from '@/components/task/TaskCardSkeleton';
+import EmptyState from '@/components/common/EmptyState';
+import { ClipboardList } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface TasksListProps {
   tasks: Task[];
   isLoading: boolean;
   onEditTask: (task: Task) => void;
   onToggleCompletion: (taskId: string, completed: boolean) => void;
+  onCreateTaskClick?: () => void;
 }
-
-// Removed inline TaskCardSkeleton definition
 
 const TasksList: React.FC<TasksListProps> = ({ 
   tasks, 
   isLoading,
   onEditTask,
-  onToggleCompletion 
+  onToggleCompletion,
+  onCreateTaskClick 
 }) => {
   if (isLoading && tasks.length === 0) {
     return (
@@ -29,12 +31,21 @@ const TasksList: React.FC<TasksListProps> = ({
     );
   }
 
-  if (!isLoading && tasks.length === 0) { // Added !isLoading check for clarity
+  if (!isLoading && tasks.length === 0) {
     return (
-      <div className="text-center py-10">
-        <p className="text-white mb-4">No tasks found. Create your first task!</p>
-        {/* Optionally, add a button or suggestion to create a task here */}
-      </div>
+      <EmptyState
+        icon={ClipboardList}
+        title="No Tasks Yet"
+        description="It looks like there are no tasks defined. Get started by creating your first one!"
+        action={onCreateTaskClick && (
+          <Button 
+            onClick={onCreateTaskClick} 
+            className="mt-4"
+          >
+            Create First Task
+          </Button>
+        )}
+      />
     );
   }
 

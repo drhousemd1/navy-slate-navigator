@@ -6,7 +6,8 @@ import { OfflineBanner } from './components/OfflineBanner';
 import SyncStatusIndicator from './components/common/SyncStatusIndicator';
 import { queryClient } from './data/queryClient';
 import Hydrate from './components/Hydrate';
-import { purgeQueryCache } from './lib/react-query-config'; // Import purgeQueryCache
+import { purgeQueryCache } from './lib/react-query-config';
+import { usePreloadAppCoreData } from '@/data/preload/usePreloadAppCoreData';
 
 // APP_CACHE_VERSION is used by AppProviders now
 // import { APP_CACHE_VERSION } from './lib/react-query-config';
@@ -17,6 +18,8 @@ import { purgeQueryCache } from './lib/react-query-config'; // Import purgeQuery
 // import localforage from 'localforage';
 
 function App() {
+  usePreloadAppCoreData();
+
   useEffect(() => {
     const { data: { subscription: authStateUnsub } } = supabase.auth.onAuthStateChange(async (event, session) => { // Make async
       console.log('Auth state change event:', event, "Session:", session);

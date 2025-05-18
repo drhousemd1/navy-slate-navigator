@@ -4,19 +4,16 @@ import RewardsList from '../components/rewards/RewardsList';
 import RewardEditor from '../components/RewardEditor';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import { useSyncManager } from '@/hooks/useSyncManager';
-import { usePreloadRewards } from "@/data/preload/usePreloadRewards";
 import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton';
 import { Award as AwardIcon } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-import { useRewards as useRewardsQuery } from '@/data/queries/useRewards'; // Renamed to avoid conflict with context hook
-// Import specific mutation hooks from the new location
-import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward'; // Corrected import path
-import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward'; // Corrected import and aliased
-import { Reward, UpdateRewardVariables } from '@/data/rewards/types'; 
+import { useRewards as useRewardsQuery } from '@/data/queries/useRewards';
+import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
+import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
+import { Reward, UpdateRewardVariables, CreateRewardVariables } from '@/data/rewards/types';
 import { toast } from '@/hooks/use-toast';
-
-usePreloadRewards()();
+import { useBuyReward, useRedeemReward } from '@/data/rewards/mutations/useRedeemRewards';
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
@@ -31,7 +28,9 @@ const RewardsContent: React.FC<{
   
   const createRewardMutation = useCreateRewardMutation();
   const updateRewardMutation = useUpdateRewardMutation();
-  const deleteRewardMutation = useDeleteRewardMutation(); // Usage remains the same due to alias
+  const deleteRewardMutation = useDeleteRewardMutation();
+  const buyRewardMutation = useBuyReward();
+  const redeemRewardMutation = useRedeemReward();
 
   useEffect(() => {
     syncNow();
@@ -42,17 +41,32 @@ const RewardsContent: React.FC<{
     setIsEditorOpen(true);
   };
   
-  const handleEditReward = (index: number) => { 
-    if (Array.isArray(rewards)) {
-        const rewardToEdit = rewards[index];
-        if (rewardToEdit) {
-        setRewardBeingEdited(rewardToEdit);
-        setIsEditorOpen(true);
-        } else {
-        toast({ title: "Error", description: "Could not find reward to edit.", variant: "destructive" });
-        }
+  const handleEditReward = (rewardToEdit: Reward) => {
+    if (rewardToEdit) {
+      setRewardBeingEdited(rewardToEdit);
+      setIsEditorOpen(true);
     } else {
-        toast({ title: "Error", description: "Rewards data is not available.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not find reward to edit.", variant: "destructive" });
+    }
+  };
+
+  const handleBuyRewardWrapper = async (rewardId: string, cost: number) => {
+    try {
+      await buyRewardMutation.mutateAsync({ rewardId, cost });
+      // Toast for success/error is handled by useBuyReward mutation hook
+    } catch (e) {
+      console.error("Error buying reward from page:", e);
+      // Error toast should also be handled by the mutation hook's onError
+    }
+  };
+
+  const handleUseRewardWrapper = async (rewardId: string) => {
+    try {
+      await redeemRewardMutation.mutateAsync(rewardId);
+      // Toast for success/error is handled by useRedeemReward mutation hook
+    } catch (e) {
+      console.error("Error using reward from page:", e);
+      // Error toast should also be handled by the mutation hook's onError
     }
   };
   
@@ -131,25 +145,14 @@ const RewardsContent: React.FC<{
         return <div className="text-red-500 p-4">Error loading rewards: {error.message}</div>;
     }
 
-    if (!isLoading && rewards.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-          <AwardIcon className="h-16 w-16 text-gray-500 mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">No Rewards Available</h3>
-          <p className="text-gray-400 mb-4">Create your first reward to motivate and acknowledge achievements!</p>
-          <button
-            onClick={handleAddNewReward}
-            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/80 transition-colors"
-          >
-            Create Reward
-          </button>
-        </div>
-      );
-    }
-    
     return (
       <RewardsList 
+        rewards={rewards}
+        isLoading={isLoading && rewards.length === 0}
         onEdit={handleEditReward}
+        onCreateRewardClick={handleAddNewReward}
+        handleBuyReward={handleBuyRewardWrapper}
+        handleUseReward={handleUseRewardWrapper}
       />
     );
   };

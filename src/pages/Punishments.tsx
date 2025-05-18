@@ -4,22 +4,21 @@ import PunishmentCard from '../components/PunishmentCard';
 import { Skull } from 'lucide-react';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
-import { usePunishments } from '@/data/queries/usePunishments';
+import { usePunishments as usePunishmentsQuery } from '@/data/queries/usePunishments';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
-import { usePreloadPunishments } from "@/data/preload/usePreloadPunishments";
 import { useDeletePunishment } from "@/data/punishments/mutations/useDeletePunishment";
 import { useCreatePunishment, CreatePunishmentVariables } from '@/data/punishments/mutations/useCreatePunishment';
 import { useUpdatePunishment, UpdatePunishmentVariables } from '@/data/punishments/mutations/useUpdatePunishment';
 import PunishmentCardSkeleton from '@/components/punishments/PunishmentCardSkeleton';
 import ErrorBoundary from '@/components/ErrorBoundary';
-
-usePreloadPunishments()();
+import EmptyState from '@/components/common/EmptyState';
+import { Button } from '@/components/ui/button';
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
 }> = ({ contentRef }) => {
-  const { punishments, isLoading, error } = usePunishments();
+  const { punishments, isLoading, error, refetchPunishments } = usePunishmentsQuery();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -112,30 +111,41 @@ const PunishmentsContent: React.FC<{
     );
   }
   
-  if (!isLoading && error) { // Handle error state
+  if (!isLoading && error && punishments.length === 0) {
     return (
-      <div className="p-4 pt-6 text-center text-red-500">
-        <PunishmentsHeader />
-        <p className="mt-4">Error loading punishments: {error.message}</p>
+      <div className="p-4 pt-6 text-center">
+        <PunishmentsHeader onAddNewPunishment={handleAddNewPunishment} />
+        <EmptyState
+          icon={Skull}
+          title="Error Loading Punishments"
+          description={error.message || "Could not load punishments. Please try again later."}
+          action={
+            <Button onClick={() => refetchPunishments()} className="mt-4">
+              Try Again
+            </Button>
+          }
+        />
       </div>
     );
   }
   
-  if (!isLoading && punishments.length === 0 && !isEditorOpen) { // Added !isEditorOpen to prevent flash of empty state
+  if (!isLoading && punishments.length === 0 && !isEditorOpen) {
     return (
       <div className="p-4 pt-6">
-        <PunishmentsHeader />
-        <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-          <Skull className="h-16 w-16 text-gray-500 mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">No Punishments Yet</h3>
-          <p className="text-gray-400 mb-4">Create your first punishment to get started</p>
-          <button
-            onClick={handleAddNewPunishment}
-            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/80 transition-colors"
-          >
-            Create Punishment
-          </button>
-        </div>
+        <PunishmentsHeader onAddNewPunishment={handleAddNewPunishment} />
+        <EmptyState
+          icon={Skull}
+          title="No Punishments Yet"
+          description="Create your first punishment to get started."
+          action={
+            <Button 
+              onClick={handleAddNewPunishment} 
+              className="mt-4"
+            >
+              Create Punishment
+            </Button>
+          }
+        />
         
         <PunishmentEditor
           isOpen={isEditorOpen}
@@ -150,7 +160,7 @@ const PunishmentsContent: React.FC<{
   
   return (
     <div className="p-4 pt-6">
-      <PunishmentsHeader />
+      <PunishmentsHeader onAddNewPunishment={handleAddNewPunishment} />
       
       <div className="flex flex-col space-y-4 mt-4">
         {punishments.map((punishment) => (
