@@ -1,13 +1,10 @@
 
-```typescript
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreateOptimisticMutation, useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { saveReward as saveRewardToServer } from '@/lib/rewardUtils';
 import { Reward, CreateRewardVariables, UpdateRewardVariables, RewardWithId } from '../types'; // Corrected import path
-import { v4 as uuidv4 } from 'uuid';
-import { toast } from '@/hooks/use-toast'; // Added toast import
-// Removed: import { useMutation } from '@tanstack/react-query'; as it's not directly used here, optimistic hooks wrap it.
-
+// import { v4 as uuidv4 } from 'uuid'; // uuidv4 is used by optimistic hooks, not directly here.
+import { toast } from '@/hooks/use-toast';
 
 export const useCreateRewardMutation = () => {
   const queryClient = useQueryClient();
@@ -15,31 +12,22 @@ export const useCreateRewardMutation = () => {
     queryClient,
     queryKey: ['rewards'],
     mutationFn: async (variables) => {
-      // variables is CreateRewardVariables, which already has title as required.
       const result = await saveRewardToServer(variables); 
       if (!result) throw new Error('Reward creation failed');
       return result as RewardWithId;
     },
     entityName: 'Reward',
-    createOptimisticItem: (variables, optimisticId) => { // variables is CreateRewardVariables
+    createOptimisticItem: (variables, optimisticId) => {
       const now = new Date().toISOString();
-      // The returned object must be RewardWithId
-      // `variables` already contains required fields like title, cost, supply, is_dom_reward
       return {
         id: optimisticId,
         created_at: now,
         updated_at: now,
-        // Spread all properties from CreateRewardVariables
         ...variables, 
-        // Ensure all fields of Reward are covered, providing defaults for those not in CreateRewardVariables
-        // if `variables` is a true Partial<Reward> plus required ones.
-        // CreateRewardVariables is Partial<Omit<Reward, 'id' | 'created_at' | 'updated_at'>> & { title: string; ... }
-        // So, non-required fields from Reward might be missing in `variables` if not provided at call site.
-        // The defaults below ensure the returned object satisfies RewardWithId.
-        title: variables.title, // Already required in CreateRewardVariables
-        cost: variables.cost, // Already required
-        supply: variables.supply, // Already required
-        is_dom_reward: variables.is_dom_reward, // Already required
+        title: variables.title,
+        cost: variables.cost,
+        supply: variables.supply,
+        is_dom_reward: variables.is_dom_reward,
         description: variables.description || null,
         icon_name: variables.icon_name || 'Award',
         icon_color: variables.icon_color || '#9b87f5',
@@ -54,7 +42,6 @@ export const useCreateRewardMutation = () => {
         icon_url: variables.icon_url || null,
       };
     },
-    // onSuccess and onError are handled by useCreateOptimisticMutation internally (shows toast)
   });
 };
 
@@ -70,7 +57,5 @@ export const useUpdateRewardMutation = () => {
       return result as RewardWithId;
     },
     entityName: 'Reward',
-    // onSuccess and onError are handled by useUpdateOptimisticMutation internally
   });
 };
-```

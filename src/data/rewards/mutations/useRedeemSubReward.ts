@@ -1,112 +1,80 @@
 
-```typescript
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Reward } from '../types'; // Corrected path
-import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager'; // Assuming this is needed
+import { Reward } from '../types';
+import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
-
-export interface RedeemSubRewardVariables {
+interface RedeemSubRewardVariables {
   rewardId: string;
-  currentSupply: number; // Reward's total supply before redeeming
-  profileId: string;
+  currentSupply: number;
+  profileId: string; // profileId is present but not used in mutationFn
 }
 
-interface RedeemRewardOptimisticContext {
+interface RedeemSubRewardOptimisticContext {
   previousRewards?: Reward[];
-}
-
-function getISOWeekString(date: Date): string {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = d.getUTCDay() || 7; 
-  d.setUTCDate(d.getUTCDate() + 4 - day); 
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNumber = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return `${d.getUTCFullYear()}-W${weekNumber.toString().padStart(2, "0")}`;
 }
 
 export const useRedeemSubReward = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<
-    { success: boolean; rewardId: string; updatedReward: Reward }, // Added updatedReward
-    Error,
-    RedeemSubRewardVariables,
-    RedeemRewardOptimisticContext
-  >({
-    mutationFn: async ({ rewardId, currentSupply, profileId }) => {
+  return useMutation<Reward, Error, RedeemSubRewardVariables, RedeemSubRewardOptimisticContext>({
+    mutationFn: async ({ rewardId, currentSupply }) => {
       if (currentSupply <= 0) {
-        throw new Error("Reward is out of stock or you don't have it to use.");
+        throw new Error("Reward is out of stock, cannot use.");
       }
-      const newSupply = Math.max(0, currentSupply - 1);
+      const newSupply = currentSupply - 1;
 
-      const { data: updatedRewardData, error: supplyError } = await supabase
+      const { error: supplyError } = await supabase
         .from('rewards')
         .update({ supply: newSupply, updated_at: new Date().toISOString() })
-        .eq('id', rewardId)
-        .select()
-        .single();
+        .eq('id', rewardId);
 
       if (supplyError) throw supplyError;
-      if (!updatedRewardData) throw new Error("Failed to update reward supply on redeem.");
 
-      const today = new Date();
-      const dayOfWeek = today.getDay();
-      const weekNumber = getISOWeekString(today);
+      const { data: updatedReward, error: fetchError } = await supabase
+        .from('rewards')
+        .select('*')
+        .eq('id', rewardId)
+        .single();
 
-      const { error: usageError } = await supabase
-        .from('reward_usage')
-        .insert([{
-          reward_id: rewardId,
-          profile_id: profileId,
-          used: true, // Redeeming means it's used
-          day_of_week: dayOfWeek,
-          week_number: weekNumber
-        }]);
-
-      if (usageError) {
-        // Attempt to revert supply
-        await supabase.from('rewards').update({ supply: currentSupply }).eq('id', rewardId);
-        throw usageError;
-      }
-
-      return { success: true, rewardId, updatedReward: updatedRewardData as Reward };
+      if (fetchError) throw fetchError;
+      if (!updatedReward) throw new Error('Failed to fetch updated reward after redeeming.');
+      
+      return updatedReward as Reward;
     },
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
       const previousRewards = queryClient.getQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS);
-      queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (oldRewards = []) =>
-        oldRewards.map(r =>
-          r.id === variables.rewardId ? { ...r, supply: Math.max(0, r.supply - 1) } : r
+
+      queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (old = []) =>
+        old.map(reward =>
+          reward.id === variables.rewardId
+            ? { ...reward, supply: reward.supply - 1 }
+            : reward
         )
       );
       return { previousRewards };
     },
-    onSuccess: (data, variables) => {
-      toast({
-        title: "Reward Redeemed",
-        description: `Your reward "${data.updatedReward.title}" has been successfully redeemed!`,
-      });
-      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
-    },
-    onError: (error, variables, context) => {
+    onError: (err, variables, context) => {
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, context.previousRewards);
       }
-      console.error('Error redeeming sub reward:', error);
-      toast({
-        title: "Redemption Failed",
-        description: error.message || "There was a problem redeeming this reward.",
-        variant: "destructive",
+      toast({ 
+        title: "Failed to Use Reward", 
+        description: err.message, 
+        variant: "destructive" 
       });
     },
-    onSettled: (data, error, variables) => {
-      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
-      if (variables?.rewardId) {
-        queryClient.invalidateQueries({ queryKey: [CRITICAL_QUERY_KEYS.REWARDS, variables.rewardId] });
-      }
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (oldRewards = []) => {
+        return oldRewards.map(r => r.id === data.id ? data : r);
+      });
+      toast({ title: "Reward Used!", description: `You used ${data.title}.` });
+    },
+    onSettled: (_data, _error, variables) => { // Added variables to onSettled
+      queryClient.invalidateQueries({ queryKey: [CRITICAL_QUERY_KEYS.REWARDS, variables.rewardId] }); // Invalidate specific reward
+      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS }); // Invalidate general list
     },
   });
 };
-```

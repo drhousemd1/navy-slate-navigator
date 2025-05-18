@@ -1,8 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getMondayBasedDay } from "./utils";
-import { queryClient } from "@/data/queryClient";
-import { syncCardById } from "@/data/sync/useSyncManager";
+import { queryClient } from "@/data/queryClient"; // queryClient is already imported
 
 export interface Task {
   id: string;
@@ -69,10 +68,6 @@ export const canCompleteTask = (task: Task): boolean => {
   return todayCompletions < (task.frequency_count || 1);
 };
 
-const initializeUsageDataArray = (task: Task): number[] => {
-  return task.usage_data || Array(7).fill(0);
-};
-
 export const fetchTasks = async (): Promise<Task[]> => {
   try {
     const { data, error } = await supabase
@@ -122,6 +117,7 @@ export const fetchTasks = async (): Promise<Task[]> => {
   }
 };
 
+
 export const resetTaskCompletions = async (
   frequency: "daily" | "weekly"
 ): Promise<void> => {
@@ -131,25 +127,43 @@ export const resetTaskCompletions = async (
       .from("tasks")
       .update({ 
         completed: false, 
-        frequency_count: 0,
-        usage_data: [] // Added to clear daily tracker circles
+        // frequency_count should not be reset to 0 for daily tasks here,
+        // as it represents max completions, not current.
+        // usage_data should be reset for the new day.
+        // However, the current logic is to reset tasks not completed *today*.
+        // If we clear usage_data, it will affect weekly view.
+        // Let's stick to the original intent of resetting 'completed' status.
+        // If full reset of daily progress is needed, usage_data handling needs careful consideration.
       })
       .eq("frequency", "daily")
-      .not("last_completed_date", "eq", today)
+      .not("last_completed_date", "eq", today) // Only reset if not completed today
       .select("id");
+
     if (error) throw error;
-    if (data)
-      for (const row of data) await syncCardById(row.id, "tasks");
-  } else {
-    // weekly = clear usage_data and counters
+    if (data) {
+      for (const row of data) {
+        queryClient.invalidateQueries({ queryKey: ['tasks', row.id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['tasks'] }); // Invalidate the general list
+    }
+  } else { // weekly
     const { data, error } = await supabase
       .from("tasks")
-      .update({ frequency_count: 0, usage_data: [] })
+      .update({ 
+        // For weekly, reset usage_data to all zeros.
+        // completed status and frequency_count (max) should persist.
+        usage_data: Array(7).fill(0) 
+      }) 
       .eq("frequency", "weekly")
       .select("id");
+
     if (error) throw error;
-    if (data)
-      for (const row of data) await syncCardById(row.id, "tasks");
+    if (data) {
+      for (const row of data) {
+        queryClient.invalidateQueries({ queryKey: ['tasks', row.id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['tasks'] }); // Invalidate the general list
+    }
   }
 };
 
@@ -232,9 +246,9 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           title: task.title,
           description: task.description,
           points: task.points,
-          completed: task.completed,
-          frequency: task.frequency,
-          frequency_count: task.frequency_count,
+          completed: task.completed ?? false, // Ensure default
+          frequency: task.frequency ?? 'daily', // Ensure default
+          frequency_count: task.frequency_count ?? 1, // Ensure default
           background_image_url: task.background_image_url,
           background_opacity: task.background_opacity,
           icon_url: task.icon_url,
@@ -245,11 +259,12 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           highlight_effect: task.highlight_effect,
           focal_point_x: task.focal_point_x,
           focal_point_y: task.focal_point_y,
-          priority: task.priority,
+          priority: task.priority ?? 'medium', // Ensure default
           icon_color: task.icon_color,
           last_completed_date: null,
           usage_data: usage_data,
           created_at: now,
+          // updated_at will be set by default by db or trigger if configured
         })
         .select()
         .single();
@@ -278,7 +293,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     
     if (taskError) throw taskError;
     
-    const task = taskData as Task;
+    const task = processTaskFromDb(taskData); // Process to ensure type conformity
     
     if (completed && !canCompleteTask(task)) {
       toast({
@@ -289,10 +304,10 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
       return false;
     }
     
-    const usage_data = task.usage_data || Array(7).fill(0);
+    const usage_data = [...task.usage_data]; // Create a mutable copy
     
     if (completed) {
-      const dayOfWeek = getCurrentDayOfWeek();
+      const dayOfWeek = getCurrentDayOfWeek(); // 0 for Monday, 6 for Sunday
       usage_data[dayOfWeek] = (usage_data[dayOfWeek] || 0) + 1;
       
       const { data: authData } = await supabase.auth.getUser();
@@ -302,31 +317,52 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         const { error: historyError } = await supabase.rpc('record_task_completion', {
           task_id_param: id,
           user_id_param: userId
-        }) as unknown as { error: Error | null };
+        }) as unknown as { error: Error | null }; // Casting to handle potential Supabase RPC typing
         
         if (historyError) {
           console.error('Error recording task completion history:', historyError);
+          // Not throwing, as main task update can still proceed
         } else {
           console.log('Task completion recorded in history');
         }
       }
     }
     
+    // Determine if task is fully completed for the day/period based on its own frequency_count
     const dayOfWeek = getCurrentDayOfWeek();
-    const isFullyCompleted = usage_data[dayOfWeek] >= (task.frequency_count || 1);
+    const isFullyCompletedToday = usage_data[dayOfWeek] >= (task.frequency_count || 1);
     
+    const updatePayload: Partial<Task> = {
+      usage_data,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (task.frequency === 'daily') {
+      updatePayload.completed = isFullyCompletedToday;
+      if (completed) { // Only update last_completed_date if actually marking as completed
+         updatePayload.last_completed_date = getLocalDateString();
+      }
+    } else if (task.frequency === 'weekly') {
+      // For weekly tasks, 'completed' might represent if all occurrences for the week are done.
+      // This part can be complex. For now, let's assume 'completed' flag is less critical for weekly
+      // and usage_data is the primary tracker. If 'completed' should reflect full weekly completion:
+      // updatePayload.completed = usage_data.reduce((sum, count) => sum + count, 0) >= (task.frequency_count * 7); // Or similar logic
+      // For simplicity, let's not change 'completed' for weekly based on single completion.
+      // Or, if 'completed' means "at least one done this week":
+      if (completed) {
+         updatePayload.last_completed_date = getLocalDateString(); // Mark when last used
+      }
+    }
+
+
     const { error } = await supabase
       .from('tasks')
-      .update({ 
-        completed: isFullyCompleted,
-        last_completed_date: completed ? getLocalDateString() : task.last_completed_date,
-        usage_data
-      })
+      .update(updatePayload)
       .eq('id', id);
     
     if (error) throw error;
     
-    if (completed) {
+    if (completed) { // Points logic only if a completion happened
       try {
         const taskPoints = task.points || 0;
         const { data: authData } = await supabase.auth.getUser();
@@ -344,16 +380,17 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           .single();
         
         if (profileError) {
-          if (profileError.code === 'PGRST116') {
+          if (profileError.code === 'PGRST116') { // Profile does not exist
             console.log('No profile found, creating one with initial points:', taskPoints);
             
             const { error: createError } = await supabase
               .from('profiles')
-              .insert([{ id: userId, points: taskPoints }]);
+              .insert([{ id: userId, points: taskPoints, dom_points: 0, updated_at: new Date().toISOString() }]); // Ensure dom_points and updated_at
               
             if (createError) {
               console.error('Error creating profile:', createError);
-              return true;
+              // Not returning false, as task completion itself was successful
+              return true; 
             }
             
             toast({
@@ -361,12 +398,13 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
               description: `You earned ${taskPoints} points!`,
               variant: 'default',
             });
-            
+            queryClient.invalidateQueries({ queryKey: ['profile'] });
+            queryClient.invalidateQueries({ queryKey: ['rewards-points'] });
             return true;
           }
           
           console.error('Error fetching profile:', profileError);
-          return true;
+          return true; // Task completion was successful, points issue is secondary
         }
         
         const currentPoints = profileData?.points || 0;
@@ -375,12 +413,12 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         
         const { error: pointsError } = await supabase
           .from('profiles')
-          .update({ points: newPoints })
+          .update({ points: newPoints, updated_at: new Date().toISOString() })
           .eq('id', userId);
           
         if (pointsError) {
           console.error('Error updating points:', pointsError);
-          return true;
+          return true; // Task completion successful
         }
         
         console.log('Points updated successfully:', newPoints);
@@ -389,6 +427,9 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           description: `You earned ${taskPoints} points!`,
           variant: 'default',
         });
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
+        queryClient.invalidateQueries({ queryKey: ['rewards-points'] });
+
       } catch (err) {
         console.error('Error handling points:', err);
         toast({
@@ -420,7 +461,6 @@ export const deleteTask = async (taskId: string): Promise<boolean> => {
 
   if (error) {
     console.error('[taskUtils] Error deleting task:', error);
-    // Consider throwing the error or returning a more detailed error object
     return false; 
   }
   console.log(`[taskUtils] Task ${taskId} deleted successfully.`);
@@ -431,16 +471,11 @@ export const processTasksWithRecurringLogic = (rawTasks: any[]): Task[] => {
   if (!rawTasks) return [];
   const todayStr = getLocalDateString();
   return rawTasks.map(rawTask => {
-    // Step 1: Ensure the task conforms to the Task interface using processTaskFromDb
     const task = processTaskFromDb(rawTask);
 
-    // Step 2: Apply daily task reset logic for the client-side view
-    // If a daily task was marked completed, but its last_completed_date is not today,
-    // it should appear as not completed for the current day.
     if (task.frequency === 'daily' && task.completed && task.last_completed_date !== todayStr) {
-      // Return a new object with completed set to false for the UI
       return { ...task, completed: false };
     }
-    return task; // Return the processed (and potentially modified) task
+    return task;
   });
 };
