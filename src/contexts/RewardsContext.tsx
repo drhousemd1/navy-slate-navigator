@@ -5,10 +5,10 @@ import { Reward } from '@/data/rewards/types';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useBuySubReward } from "@/data/mutations/useBuySubReward";
-import { useBuyDomReward } from "@/data/mutations/useBuyDomReward";
-import { useRedeemSubReward } from "@/data/mutations/useRedeemSubReward";
-import { useRedeemDomReward } from "@/data/mutations/useRedeemDomReward";
+import { useBuySubReward } from "@/data/rewards/mutations/useBuySubReward";
+import { useBuyDomReward } from "@/data/rewards/mutations/useBuyDomReward";
+import { useRedeemSubReward } from "@/data/rewards/mutations/useRedeemSubReward";
+import { useRedeemDomReward } from "@/data/rewards/mutations/useRedeemDomReward";
 
 // Create a complete mock observer result that satisfies the QueryObserverResult type
 const mockQueryResult: QueryObserverResult<Reward[], Error> = {
@@ -76,42 +76,27 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     refetchRewards,
     refreshPointsFromDatabase,
     totalDomRewardsSupply,
-    setRewardsOptimistically,
-    setPointsOptimistically,
-    setDomPointsOptimistically,
   } = useRewardsData();
   
-  const { mutateAsync: buySub } = useBuySubReward();
-  const { mutateAsync: buyDom } = useBuyDomReward();
-  const { mutateAsync: redeemSub } = useRedeemSubReward();
-  const { mutateAsync: redeemDom } = useRedeemDomReward();
-
-  async function handleBuySubReward(args: any) { 
-    await buySub(args); 
-  }
-  
-  async function handleBuyDomReward(args: any) { 
-    await buyDom(args); 
-  }
-  
-  async function handleRedeemSubReward(args: any) { 
-    await redeemSub(args); 
-  }
-  
-  async function handleRedeemDomReward(args: any) { 
-    await redeemDom(args); 
-  }
+  // These are specific mutation hooks.
+  // The handleBuyReward and handleUseReward below might call these or their underlying logic.
+  const { mutateAsync: buySubMutation } = useBuySubReward();
+  const { mutateAsync: buyDomMutation } = useBuyDomReward();
+  const { mutateAsync: redeemSubMutation } = useRedeemSubReward();
+  const { mutateAsync: redeemDomMutation } = useRedeemDomReward();
 
   useEffect(() => {
     console.log("RewardsProvider: Refreshing points from database on mount");
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
 
-  const handleSaveReward = async (rewardData: any, index: number | null): Promise<string | null> => {
-    console.log("RewardsContext - handleSaveReward called with data:", rewardData);
+  const handleSaveReward = async (rewardData: Partial<Reward>, index: number | null): Promise<string | null> => {
+    console.log("RewardsContext - handleSaveReward called with data:", rewardData, "index:", index);
     try {
-      const savedReward = await saveReward({ rewardData });
-      return savedReward?.id || null; 
+      // saveReward from useRewardsData expects { rewardData: Partial<Reward>, index: number | null }
+      // It internally decides whether to create or update.
+      const savedReward = await saveReward({ rewardData, currentIndex: index }); // Pass index as currentIndex
+      return savedReward?.id || null;
     } catch (error) {
       console.error("Error in RewardsContext handleSaveReward:", error);
       return null;
@@ -125,7 +110,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return false;
     }
     try {
-      await deleteReward(rewardToDelete.id);
+      await deleteReward(rewardToDelete.id); // deleteReward from useRewardsData takes id
       return true;
     } catch (error) {
       console.error("Error in RewardsContext handleDeleteReward:", error);
@@ -136,18 +121,13 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const handleBuyReward = async (id: string, cost: number, isDomReward?: boolean) => {
     const reward = rewards.find(r => r.id === id);
     if (!reward) {
-      toast({
-        title: "Error",
-        description: "Reward not found",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Reward not found", variant: "destructive" });
       return;
     }
     
     const isRewardDominant = isDomReward !== undefined ? isDomReward : (reward?.is_dom_reward || false);
-    console.log("Buying reward with id:", id, "cost:", cost, "isDomReward:", isRewardDominant);
-    
     const currentPointsValue = isRewardDominant ? domPoints : totalPoints;
+
     if (currentPointsValue < cost) {
       toast({
         title: "Not Enough Points",
@@ -158,103 +138,123 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     try {
-      toast({
-        title: "Reward Purchased",
-        description: `You purchased ${reward.title}`,
-      });
-      
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
+      if (!userData.user || !userData.user.id) { // Added null check for user.id
         throw new Error("User not authenticated");
       }
-      
-      await buyReward({ rewardId: id, cost });
+      const profileId = userData.user.id;
+
+      if (isRewardDominant) {
+        await buyDomMutation({
+          rewardId: id,
+          cost,
+          currentSupply: reward.supply, // Assuming supply is for buying and increases
+          profileId,
+          currentDomPoints: domPoints,
+        });
+      } else {
+        await buySubMutation({
+          rewardId: id,
+          cost,
+          currentSupply: reward.supply, // Assuming supply is for buying and increases
+          profileId,
+          currentPoints: totalPoints,
+        });
+      }
+      toast({ title: "Reward Purchased", description: `You purchased ${reward.title}` });
+      // Points and reward supply are updated optimistically and via invalidation by the mutation hooks.
+      // Refreshing points explicitly might still be desired or handled by sync manager.
+      await refreshPointsFromDatabase(); 
+      await refetchRewards();
 
     } catch (error) {
       console.error("Error in handleBuyReward:", error);
-      refreshPointsFromDatabase();
-      refetchRewards();
       toast({
         title: "Error",
-        description: "Failed to purchase reward. Please try again.",
+        description: `Failed to purchase reward. ${error instanceof Error ? error.message : "Please try again."}`,
         variant: "destructive",
       });
+      // Consider more robust error recovery or data refetching here.
+      await refreshPointsFromDatabase();
+      await refetchRewards();
     }
   };
 
   const handleUseReward = async (id: string) => {
     const reward = rewards.find(r => r.id === id);
     if (!reward) {
-      toast({
-        title: "Error",
-        description: "Reward not found",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Reward not found", variant: "destructive" });
       return;
     }
     
     if (reward.supply <= 0) {
       toast({
         title: "Cannot Use Reward",
-        description: "You don't have any of this reward to use.",
+        description: "You don't have any of this reward to use.", // This message implies supply is user's stock
         variant: "destructive",
       });
       return;
     }
     
     try {
-      const updatedRewards = rewards.map(r => {
-        if (r.id === id) {
-          return { ...r, supply: Math.max(0, r.supply - 1) };
-        }
-        return r;
-      });
-      setRewardsOptimistically(updatedRewards);
-      
-      toast({
-        title: "Reward Used",
-        description: `You used ${reward.title}`,
-      });
-      
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
+      if (!userData.user || !userData.user.id) { // Added null check for user.id
         throw new Error("User not authenticated");
       }
+      const profileId = userData.user.id;
 
-      await useReward({ rewardId: id });
+      if (reward.is_dom_reward) {
+        await redeemDomMutation({ 
+          rewardId: id, 
+          currentSupply: reward.supply, // Supply is reward's stock to be decremented
+          profileId
+        });
+      } else {
+        await redeemSubMutation({ 
+          rewardId: id, 
+          currentSupply: reward.supply, // Supply is reward's stock to be decremented
+          profileId
+        });
+      }
+      // Optimistic update might be handled by mutation hooks.
+      // If not, update local state here or rely on query invalidation.
+      // The original code had an optimistic update here:
+      // const updatedRewards = rewards.map(r => r.id === id ? { ...r, supply: Math.max(0, r.supply - 1) } : r);
+      // setRewardsOptimistically(updatedRewards); // This function was removed
+
+      toast({ title: "Reward Used", description: `You used ${reward.title}` });
+      await refetchRewards(); // Ensure data consistency
 
     } catch (error) {
       console.error("Error in handleUseReward:", error);
-      refetchRewards();
+      await refetchRewards();
       toast({
         title: "Error",
-        description: "Failed to use reward. Please try again.",
+        description: `Failed to use reward. ${error instanceof Error ? error.message : "Please try again."}`,
         variant: "destructive",
       });
     }
   };
 
   const setTotalPoints = async (points: number) => {
-    setPointsOptimistically(points);
     try {
-      await updatePoints(points);
+      await updatePoints(points); // from useRewardsData
     } catch (error) {
       console.error("Error setting total points:", error);
-      refreshPointsFromDatabase(); 
+      await refreshPointsFromDatabase(); 
     }
   };
 
   const setDomPoints = async (points: number) => {
-    setDomPointsOptimistically(points);
     try {
-      await updateDomPoints(points);
+      await updateDomPoints(points); // from useRewardsData
     } catch (error) {
       console.error("Error setting dom points:", error);
-      refreshPointsFromDatabase();
+      await refreshPointsFromDatabase();
     }
   };
 
-  const value = {
+  const value = useMemo(() => ({
     rewards,
     totalPoints,
     totalRewardsSupply,
@@ -269,7 +269,18 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     handleBuyReward,
     handleUseReward,
     refreshPointsFromDatabase,
-  };
+  }), [
+    rewards, 
+    totalPoints, 
+    totalRewardsSupply, 
+    totalDomRewardsSupply, 
+    domPoints, 
+    isLoading, 
+    refetchRewards, 
+    refreshPointsFromDatabase,
+    // Ensure functions are stable or wrapped in useCallback if they depend on changing state
+    // For now, assuming they are stable enough from useRewardsData or context itself.
+  ]);
 
   return (
     <RewardsContext.Provider value={value}>

@@ -16,20 +16,24 @@ function getISOWeekString(date: Date): string {
 
 interface RedeemSubRewardArgs {
   rewardId: string;
-  currentSupply: number;
-  profileId: string; // profileId might not be needed if not updating profile on redeem
+  currentSupply: number; // Reward's total supply
+  profileId: string; 
+}
+
+interface RedeemSubRewardOptimisticContext {
+  previousRewards?: Reward[];
 }
 
 export const useRedeemSubReward = () => {
   const queryClient = useQueryClient();
   const { syncKeys } = useSyncManager();
 
-  return useMutation<Reward, Error, RedeemSubRewardArgs>({
+  return useMutation<Reward, Error, RedeemSubRewardArgs, RedeemSubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, currentSupply }) => {
       if (currentSupply <= 0) {
         throw new Error("Reward is out of stock, cannot use.");
       }
-      const newSupply = currentSupply - 1;
+      const newSupply = currentSupply - 1; // Reward's total supply decreases
 
       const { error: supplyError } = await supabase
         .from('rewards')
@@ -37,6 +41,9 @@ export const useRedeemSubReward = () => {
         .eq('id', rewardId);
 
       if (supplyError) throw supplyError;
+
+      // TODO: Potentially log usage in reward_usage table if that's part of redeeming.
+      // The other useRedeemSubReward in rewards/mutations does this.
 
       const { data: updatedReward, error: fetchError } = await supabase
         .from('rewards')
@@ -56,7 +63,7 @@ export const useRedeemSubReward = () => {
       queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
-            ? { ...reward, supply: reward.supply - 1 }
+            ? { ...reward, supply: reward.supply - 1 } // Reward's total supply decreases
             : reward
         )
       );
@@ -76,7 +83,6 @@ export const useRedeemSubReward = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
-      // syncKeys([CRITICAL_QUERY_KEYS.REWARDS]);
     },
   });
 };

@@ -1,10 +1,10 @@
 
+```typescript
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Reward } from '@/data/RewardsDataHandler';
+import { Reward, UpdateRewardVariables } from '../types'; // Corrected path
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 
-export type UpdateRewardVariables = { id: string } & Partial<Omit<Reward, 'id'>>;
 
 export const useUpdateReward = () => {
   const queryClient = useQueryClient();
@@ -28,7 +28,7 @@ export const useUpdateReward = () => {
       return data as Reward;
     },
     entityName: 'Reward',
-    idField: 'id', // This ensures the optimistic update uses the 'id' field from the item
-    // getItemId was removed as it's not a valid prop for useUpdateOptimisticMutation
+    idField: 'id', 
   });
 };
+```

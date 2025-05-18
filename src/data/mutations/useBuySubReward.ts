@@ -1,22 +1,29 @@
+
+```typescript
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useSyncManager, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager'; // Corrected import path
-import { Reward } from '@/data/rewards/types';
+import { Reward } from '@/data/rewards/types'; // Corrected import path
 
 interface BuySubRewardArgs {
   rewardId: string;
   cost: number;
-  currentSupply: number;
+  currentSupply: number; // Reward's total supply
   profileId: string;
   currentPoints: number;
+}
+
+interface BuySubRewardOptimisticContext {
+  previousRewards?: Reward[];
+  previousPoints?: number;
 }
 
 export const useBuySubReward = () => {
   const queryClient = useQueryClient();
   const { syncKeys } = useSyncManager();
 
-  return useMutation<Reward, Error, BuySubRewardArgs>({
+  return useMutation<Reward, Error, BuySubRewardArgs, BuySubRewardOptimisticContext>({ // Added context
     mutationFn: async ({ rewardId, cost, currentSupply, profileId, currentPoints }) => {
       if (currentSupply <= 0) {
         throw new Error("Reward is out of stock.");
@@ -25,7 +32,7 @@ export const useBuySubReward = () => {
         throw new Error("Not enough points.");
       }
 
-      const newSupply = currentSupply - 1;
+      const newSupply = currentSupply - 1; // Reward's supply decreases
       const newPoints = currentPoints - cost;
 
       const { error: supplyError } = await supabase
@@ -66,17 +73,17 @@ export const useBuySubReward = () => {
       queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
-            ? { ...reward, supply: reward.supply - 1 }
+            ? { ...reward, supply: reward.supply - 1 } // Reward stock decreases
             : reward
         )
       );
       queryClient.setQueryData<number>(CRITICAL_QUERY_KEYS.REWARDS_POINTS, (oldPoints = 0) =>
-        oldPoints - variables.cost
+        (oldPoints || 0) - variables.cost
       );
 
       return { previousRewards, previousPoints };
     },
-    onError: (err, variables, context) => {
+    onError: (err, variables, context) => { // context is typed
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, context.previousRewards);
       }
@@ -95,7 +102,7 @@ export const useBuySubReward = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
       queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS_POINTS });
-      // syncKeys([CRITICAL_QUERY_KEYS.REWARDS, CRITICAL_QUERY_KEYS.REWARDS_POINTS]);
     },
   });
 };
+```

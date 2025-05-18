@@ -411,25 +411,20 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
   }
 };
 
-export const deleteTask = async (id: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    
-    return true;
-  } catch (err: any) {
-    console.error('Error deleting task:', err);
-    toast({
-      title: 'Error deleting task',
-      description: err.message || 'Could not delete task',
-      variant: 'destructive',
-    });
-    return false;
+export const deleteTask = async (taskId: string): Promise<boolean> => {
+  console.log(`[taskUtils] Deleting task with ID: ${taskId}`);
+  const { error } = await supabase
+    .from('tasks')
+    .delete()
+    .eq('id', taskId);
+
+  if (error) {
+    console.error('[taskUtils] Error deleting task:', error);
+    // Consider throwing the error or returning a more detailed error object
+    return false; 
   }
+  console.log(`[taskUtils] Task ${taskId} deleted successfully.`);
+  return true;
 };
 
 export const processTasksWithRecurringLogic = (rawTasks: any[]): Task[] => {

@@ -1,12 +1,15 @@
 
+```typescript
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Reward } from '../types'; // Corrected path
 import { toast } from '@/hooks/use-toast';
-import { Reward } from '@/data/RewardsDataHandler';
+import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager'; // Assuming this is needed
+
 
 export interface RedeemDomRewardVariables {
   rewardId: string;
-  currentSupply: number;
+  currentSupply: number; // Reward's total supply before redeeming
   profileId: string;
 }
 
@@ -15,11 +18,10 @@ interface RedeemRewardOptimisticContext {
 }
 
 // Helper function to generate ISO week string (YYYY-Wxx format)
-// Kept in this file for now to minimize change scope, consider moving to a util if used elsewhere.
 function getISOWeekString(date: Date): string {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = d.getUTCDay() || 7; // 1–7 (Mon–Sun)
-  d.setUTCDate(d.getUTCDate() + 4 - day); // to nearest Thursday
+  const day = d.getUTCDay() || 7; 
+  d.setUTCDate(d.getUTCDate() + 4 - day); 
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   const weekNumber = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
   return `${d.getUTCFullYear()}-W${weekNumber.toString().padStart(2, "0")}`;
@@ -27,83 +29,86 @@ function getISOWeekString(date: Date): string {
 
 export const useRedeemDomReward = () => {
   const queryClient = useQueryClient();
-  const REWARDS_QUERY_KEY = ['rewards'];
 
   return useMutation<
-    { success: boolean; rewardId: string }, // Type of data returned by mutationFn
-    Error, // Type of error
-    RedeemDomRewardVariables, // Type of variables passed to mutationFn
-    RedeemRewardOptimisticContext // Type of context passed from onMutate to onError/onSettled
+    { success: boolean; rewardId: string; updatedReward: Reward }, // Added updatedReward
+    Error,
+    RedeemDomRewardVariables,
+    RedeemRewardOptimisticContext
   >({
     mutationFn: async ({ rewardId, currentSupply, profileId }) => {
+      if (currentSupply <= 0) {
+        throw new Error("Reward is out of stock or you don't have it to use.");
+      }
+      const newSupply = Math.max(0, currentSupply - 1);
+
+      const { data: updatedRewardData, error: supplyError } = await supabase
+        .from('rewards')
+        .update({ supply: newSupply, updated_at: new Date().toISOString() })
+        .eq('id', rewardId)
+        .select()
+        .single();
+
+      if (supplyError) throw supplyError;
+      if (!updatedRewardData) throw new Error("Failed to update reward supply on redeem.");
+
+
       const today = new Date();
       const dayOfWeek = today.getDay();
       const weekNumber = getISOWeekString(today);
-
-      // Perform the actual API calls
-      const { error: supplyError } = await supabase
-        .from('rewards')
-        .update({ supply: Math.max(0, currentSupply - 1), updated_at: new Date().toISOString() })
-        .eq('id', rewardId);
-
-      if (supplyError) throw supplyError;
 
       const { error: usageError } = await supabase
         .from('reward_usage')
         .insert([{
           reward_id: rewardId,
           profile_id: profileId,
-          used: false, // Assuming 'used: false' means it's redeemed but not yet 'consumed' if there's such a distinction.
+          used: true, // Typically redeeming means it's used
           day_of_week: dayOfWeek,
           week_number: weekNumber
         }]);
 
-      if (usageError) throw usageError;
+      if (usageError) {
+        // Attempt to revert supply
+        await supabase.from('rewards').update({ supply: currentSupply }).eq('id', rewardId);
+        throw usageError;
+      }
 
-      return { success: true, rewardId };
+      return { success: true, rewardId, updatedReward: updatedRewardData as Reward };
     },
     onMutate: async (variables) => {
-      // Cancel any ongoing queries that might interfere
-      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
-
-      // Store previous state for potential rollback
-      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
-
-      // Optimistically update the reward supply in the cache
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) =>
+      await queryClient.cancelQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
+      const previousRewards = queryClient.getQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS);
+      queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (oldRewards = []) =>
         oldRewards.map(r =>
           r.id === variables.rewardId ? { ...r, supply: Math.max(0, r.supply - 1) } : r
         )
       );
-
       return { previousRewards };
     },
     onSuccess: (data, variables) => {
       toast({
         title: "Dom Reward Redeemed",
-        description: "Your dom reward has been successfully redeemed!",
+        description: `Your dom reward "${data.updatedReward.title}" has been successfully redeemed!`,
       });
+       queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
     },
     onError: (error, variables, context) => {
-      // Roll back optimistic update on error
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
+        queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, context.previousRewards);
       }
-
       console.error('Error redeeming dom reward:', error);
       toast({
         title: "Redemption Failed",
-        description: "There was a problem redeeming this dom reward. Please try again.",
+        description: error.message || "There was a problem redeeming this dom reward.",
         variant: "destructive",
       });
     },
     onSettled: (data, error, variables) => {
-      // Always refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      // Invalidate the specific reward query as well
+      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
       if (variables?.rewardId) {
-         queryClient.invalidateQueries({ queryKey: ['rewards', variables.rewardId] });
+         queryClient.invalidateQueries({ queryKey: [CRITICAL_QUERY_KEYS.REWARDS, variables.rewardId] });
       }
     },
   });
 };
+```

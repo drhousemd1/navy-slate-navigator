@@ -1,8 +1,10 @@
-import { Reward } from '@/data/rewards/types';
+
+```typescript
+import { Reward } from '@/data/rewards/types'; // Updated import
 import { QueryObserverResult } from '@tanstack/react-query';
 
 export interface SaveRewardParams {
-  rewardData: any;
+  rewardData: any; // Consider making this Partial<Reward> & { title: string; ... required fields ... }
   currentIndex: number | null;
 }
 
@@ -28,3 +30,4 @@ export interface RewardsContextType {
   handleUseReward: (id: string) => Promise<void>;
   refreshPointsFromDatabase: () => Promise<void>;
 }
+```

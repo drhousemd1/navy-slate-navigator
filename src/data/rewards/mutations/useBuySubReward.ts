@@ -1,17 +1,15 @@
 
+```typescript
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Reward } from '@/data/RewardsDataHandler'; // Ensure Reward type is imported
-
-// Query keys (ensure these are consistent with where they are defined/used)
-const REWARDS_QUERY_KEY = ['rewards'];
-const PROFILE_POINTS_QUERY_KEY = ['profile_points'];
+import { Reward } from '../types'; // Corrected path
+import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager'; // Assuming this is needed
 
 export interface BuySubRewardVariables {
   rewardId: string;
   cost: number;
-  currentSupply: number;
+  currentSupply: number; // Reward's total supply
   profileId: string;
   currentPoints: number;
 }
@@ -19,9 +17,9 @@ export interface BuySubRewardVariables {
 export interface BuySubRewardResult {
   success: boolean;
   message: string;
-  updatedReward: Reward; // The reward with updated supply
-  newPoints: number;     // User's new point total
-  rewardTitle: string;   // Title of the reward for messages
+  updatedReward: Reward;
+  newPoints: number;
+  rewardTitle: string;
 }
 
 interface BuySubRewardOptimisticContext {
@@ -43,27 +41,27 @@ export const useBuySubReward = () => {
         throw new Error('Reward is out of stock.');
       }
 
-      // 1. Decrement reward supply
+      const newPointsResult = currentPoints - cost;
+      const newSupplyResult = currentSupply - 1;
+
       const { data: rewardData, error: rewardError } = await supabase
         .from('rewards')
-        .update({ supply: currentSupply - 1, updated_at: new Date().toISOString() })
+        .update({ supply: newSupplyResult, updated_at: new Date().toISOString() })
         .eq('id', rewardId)
         .select()
         .single();
 
       if (rewardError || !rewardData) {
+         // Attempt to rollback (though points haven't been touched yet if this fails first)
         throw new Error(rewardError?.message || 'Failed to update reward supply.');
       }
-
-      // 2. Deduct points from user
-      const newPoints = currentPoints - cost;
+      
       const { error: pointsError } = await supabase
         .from('profiles')
-        .update({ points: newPoints, updated_at: new Date().toISOString() })
+        .update({ points: newPointsResult, updated_at: new Date().toISOString() })
         .eq('id', profileId);
 
       if (pointsError) {
-        // Attempt to rollback reward supply if points deduction failed
         await supabase
           .from('rewards')
           .update({ supply: currentSupply, updated_at: new Date().toISOString() })
@@ -71,47 +69,40 @@ export const useBuySubReward = () => {
         throw new Error(pointsError.message || 'Failed to deduct points.');
       }
       
-      // 3. Optionally, record the transaction (if a table for that exists)
-      // Example: await supabase.from('reward_transactions').insert({...});
-
       return {
         success: true,
         message: 'Reward purchased successfully.',
         updatedReward: rewardData as Reward,
-        newPoints,
+        newPoints: newPointsResult,
         rewardTitle: rewardData.title,
       };
     },
     onMutate: async (variables: BuySubRewardVariables) => {
-      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
-      await queryClient.cancelQueries({ queryKey: PROFILE_POINTS_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
+      await queryClient.cancelQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS_POINTS });
 
-      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
-      const previousPoints = queryClient.getQueryData<number>(PROFILE_POINTS_QUERY_KEY);
+      const previousRewards = queryClient.getQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS);
+      const previousPoints = queryClient.getQueryData<number>(CRITICAL_QUERY_KEYS.REWARDS_POINTS);
 
-      // Optimistically update reward supply
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) =>
+      queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (oldRewards = []) =>
         oldRewards.map(r =>
           r.id === variables.rewardId ? { ...r, supply: r.supply - 1 } : r
         )
       );
 
-      // Optimistically update user points
-      queryClient.setQueryData<number>(PROFILE_POINTS_QUERY_KEY, (oldPoints = 0) =>
+      queryClient.setQueryData<number>(CRITICAL_QUERY_KEYS.REWARDS_POINTS, (oldPoints = 0) =>
         (oldPoints || 0) - variables.cost
       );
 
       return { previousRewards, previousPoints };
     },
     onError: (error, _variables, context) => {
-      // Rollback optimistic updates
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
+        queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, context.previousRewards);
       }
       if (context?.previousPoints !== undefined) {
-        queryClient.setQueryData<number>(PROFILE_POINTS_QUERY_KEY, context.previousPoints);
+        queryClient.setQueryData<number>(CRITICAL_QUERY_KEYS.REWARDS_POINTS, context.previousPoints);
       }
-
       toast({
         title: 'Purchase Failed',
         description: error.message || 'Could not purchase Sub Reward.',
@@ -119,20 +110,18 @@ export const useBuySubReward = () => {
       });
     },
     onSuccess: (data, variables) => {
-      // Optimistic updates are already applied.
-      // Server has confirmed the changes.
-      // data.updatedReward and data.newPoints can be used if needed, but cache should be primary source.
       toast({
         title: 'Sub Reward Purchased!',
         description: `You bought ${data.rewardTitle} for ${variables.cost} points.`,
       });
+      queryClient.invalidateQueries({queryKey: CRITICAL_QUERY_KEYS.REWARDS });
+      queryClient.invalidateQueries({queryKey: CRITICAL_QUERY_KEYS.REWARDS_POINTS });
     },
     onSettled: (_data, _error, variables) => {
-      // Always refetch/invalidate after the mutation is settled, to ensure consistency
-      queryClient.invalidateQueries({ queryKey: [REWARDS_QUERY_KEY, variables.rewardId] }); // Specific reward
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY }); // All rewards list
-      queryClient.invalidateQueries({ queryKey: PROFILE_POINTS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: ['rewards', 'supply'] }); // Total supply if it exists
+      queryClient.invalidateQueries({ queryKey: [CRITICAL_QUERY_KEYS.REWARDS, variables.rewardId] });
+      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
+      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS_POINTS });
     },
   });
 };
+```

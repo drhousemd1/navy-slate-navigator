@@ -10,9 +10,10 @@ import { Award as AwardIcon } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 import { useRewards as useRewardsQuery } from '@/data/queries/useRewards';
+// Import specific mutation hooks
 import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
-import { Reward, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/types';
+import { Reward, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/types'; // Corrected import
 import { toast } from '@/hooks/use-toast';
 
 usePreloadRewards()();
@@ -20,7 +21,7 @@ usePreloadRewards()();
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
-  const { data: rewards = [], isLoading, error } = useRewardsQuery();
+  const { data: rewards = [], isLoading, error, refetch: refetchRewardsQuery } = useRewardsQuery(); // Added refetch
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<Reward | undefined>(undefined);
   
@@ -59,38 +60,43 @@ const RewardsContent: React.FC<{
       if (rewardBeingEdited?.id) {
         const updateVariables: UpdateRewardVariables = {
           id: rewardBeingEdited.id,
-          ...formData,
+          ...formData, // formData already contains partial updates
         };
         await updateRewardMutation.mutateAsync(updateVariables);
       } else {
+        // Ensure all required fields for CreateRewardVariables are present
         if (!formData.title || typeof formData.cost !== 'number' || typeof formData.supply !== 'number' || typeof formData.is_dom_reward !== 'boolean') {
           toast({ title: "Missing required fields", description: "Title, cost, supply, and DOM status are required.", variant: "destructive" });
           return;
         }
         const createVariables: CreateRewardVariables = {
+          // Explicitly map required fields and provide defaults for others from formData
           title: formData.title,
           cost: formData.cost,
           supply: formData.supply,
           is_dom_reward: formData.is_dom_reward,
           description: formData.description || null,
-          background_image_url: formData.background_image_url,
-          background_opacity: formData.background_opacity,
-          icon_name: formData.icon_name,
-          icon_url: formData.icon_url,
-          icon_color: formData.icon_color,
-          title_color: formData.title_color,
-          subtext_color: formData.subtext_color,
-          calendar_color: formData.calendar_color,
-          highlight_effect: formData.highlight_effect,
-          focal_point_x: formData.focal_point_x,
-          focal_point_y: formData.focal_point_y,
+          background_image_url: formData.background_image_url || null,
+          background_opacity: formData.background_opacity === undefined ? 100 : formData.background_opacity,
+          icon_name: formData.icon_name || 'Award',
+          icon_url: formData.icon_url || null,
+          icon_color: formData.icon_color || '#9b87f5',
+          title_color: formData.title_color || '#FFFFFF',
+          subtext_color: formData.subtext_color || '#8E9196',
+          calendar_color: formData.calendar_color || '#7E69AB',
+          highlight_effect: formData.highlight_effect === undefined ? false : formData.highlight_effect,
+          focal_point_x: formData.focal_point_x === undefined ? 50 : formData.focal_point_x,
+          focal_point_y: formData.focal_point_y === undefined ? 50 : formData.focal_point_y,
         };
         await createRewardMutation.mutateAsync(createVariables);
       }
       setIsEditorOpen(false);
       setRewardBeingEdited(undefined);
+      // refetchRewardsQuery(); // Optimistic updates should handle UI, invalidate if necessary
     } catch (e) {
+      // Errors are typically handled by the mutation hooks (e.g., showing a toast)
       console.error("Error saving reward from page:", e);
+      // Optionally, show a generic error toast here if mutation hooks don't cover all cases
     }
   };
 
@@ -104,6 +110,7 @@ const RewardsContent: React.FC<{
       await deleteRewardMutation.mutateAsync(finalIdToDelete);
       setIsEditorOpen(false);
       setRewardBeingEdited(undefined);
+      // refetchRewardsQuery(); // Optimistic updates should handle UI
     } catch (e) {
       console.error("Error deleting reward from page:", e);
     }
@@ -143,7 +150,7 @@ const RewardsContent: React.FC<{
     return (
       <RewardsList
         rewards={rewards}
-        onEdit={handleEditReward}
+        onEdit={handleEditReward} // This expects (index: number) => void
       />
     );
   };
