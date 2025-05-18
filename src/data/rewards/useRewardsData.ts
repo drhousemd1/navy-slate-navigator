@@ -1,7 +1,6 @@
-
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
-import { Reward } from '@/data/rewards/types';
+import { Reward, CreateRewardVariables } from '@/data/rewards/types';
 import { 
   REWARDS_QUERY_KEY, 
   REWARDS_POINTS_QUERY_KEY,
@@ -127,7 +126,7 @@ export const useRewardsData = () => {
         cost: rewardData.cost,
         supply: rewardData.supply,
         is_dom_reward: rewardData.is_dom_reward,
-        description: rewardData.description || '', // Changed from || null
+        description: rewardData.description || null, // Ensure this matches the type, changed from ''
         background_image_url: rewardData.background_image_url || null,
         background_opacity: rewardData.background_opacity ?? 100,
         icon_name: rewardData.icon_name || 'Award',
