@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Toaster } from 'sonner';
+import { Toaster as SonnerToaster } from 'sonner'; // Renamed to avoid conflict with our Toaster
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter as Router } from 'react-router-dom';
@@ -14,6 +13,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import localforage from 'localforage';
 import { APP_CACHE_VERSION } from './lib/react-query-config'; // Import the cache version
+import ErrorBoundary from '@/components/ErrorBoundary'; // Import ErrorBoundary
 
 // Configure localforage if not already configured elsewhere for this purpose
 localforage.config({
@@ -40,17 +40,25 @@ function App() {
                   persister: asyncStoragePersister,
                   buster: APP_CACHE_VERSION, // Use app version for cache busting
                   maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+                  onError: (error) => { // Also adding hydration error logging here for safety, though AppProviders is primary
+                    console.error('Error during React Query cache hydration in App.tsx:', error);
+                  }
                 }}
                 onSuccess={() => {
                   // Resume paused mutations after hydration
-                  queryClient.resumePausedMutations();
-                  console.log('React Query cache restored and mutations resumed.');
+                  queryClient.resumePausedMutations().then(() => {
+                    console.log('React Query cache restored and mutations resumed from App.tsx Persister.');
+                  }).catch(error => {
+                    console.error('Error resuming paused mutations after hydration from App.tsx Persister:', error);
+                  });
                 }}
               >
-                <AppRoutes />
-                <Toaster />
+                <ErrorBoundary>
+                  <AppRoutes />
+                </ErrorBoundary>
+                <SonnerToaster /> {/* Using the aliased import */}
                 <OfflineBanner />
-                <ReactQueryDevtools initialIsOpen={false} />
+                {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
               </PersistQueryClientProvider>
             </NetworkStatusProvider>
           </AuthProvider>

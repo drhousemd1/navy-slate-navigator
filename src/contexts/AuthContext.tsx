@@ -164,7 +164,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.log("Auth state: MFA challenge verified (MFA_CHALLENGE_VERIFIED)");
             break;
           default:
-            const unhandledEvent: string = _event as string;
+            const unhandledEvent: string = _event as string; // Cast to string to handle any value
             console.log(`Auth state change: Unhandled event type: ${unhandledEvent}`);
             break;
         }
@@ -178,21 +178,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const clearAllCaches = async () => {
     try {
+      // Clear React Query in-memory cache
       queryClient.clear();
       console.log('[CacheClear] React Query in-memory cache cleared.');
 
-      // Assuming RQ_CACHE was a typo and meant for the react-query specific localforage instance
-      // The persister uses its own configuration for localforage, so clearing the default one might not be needed
-      // or we should use the configured instance name if we want to clear that specifically.
-      // For now, let's assume the PersistQueryClientProvider handles its cache eviction.
-
-      const keys = await localforage.keys(); // This refers to the default localforage instance
+      // Remove the persisted React Query cache from localforage
+      // The key 'APP_QUERY_CACHE' should match the one used in AppProviders.tsx
+      await localforage.removeItem('APP_QUERY_CACHE');
+      console.log('[CacheClear] Persisted React Query cache (APP_QUERY_CACHE) removed from localforage.');
+      
+      // Clear persisted form drafts
+      const keys = await localforage.keys();
       const formStateKeys = keys.filter(key => key.startsWith(FORM_STATE_PREFIX));
       for (const key of formStateKeys) {
         await localforage.removeItem(key);
       }
       console.log(`[CacheClear] Cleared ${formStateKeys.length} persisted form drafts using prefix: ${FORM_STATE_PREFIX}`);
       
+      // Optionally, if there's other app-specific data in localforage that needs clearing on logout,
+      // you could call localforage.clear() here, but be cautious as it wipes everything.
+      // For now, targeted removal is safer.
+
       toast({ title: "Cache Cleared", description: "Application cache and drafts have been cleared." });
     } catch (error) {
       console.error("Error clearing caches:", error);
@@ -209,7 +215,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast({ title: "Sign Out Error", description: error.message, variant: "destructive" });
       setAuthState(prev => ({ ...prev, loading: false }));
     } else {
-      await clearAllCaches(); 
+      // clearAllCaches is already called by the onAuthStateChange 'SIGNED_OUT' event handler.
+      // Calling it here again would be redundant but generally harmless.
+      // To avoid double calls, we can rely on the event handler.
+      // If immediate clearing before state update is critical, keep it here and ensure handler is idempotent.
+      // For now, relying on the event handler is cleaner.
+      console.log("Sign out successful, cache clearing handled by onAuthStateChange.");
     }
   };
 

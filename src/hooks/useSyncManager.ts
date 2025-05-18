@@ -1,7 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, QueryKey } from '@tanstack/react-query'; // Added QueryKey for explicit typing
 import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { useRewards } from '@/contexts/RewardsContext';
 import { toast } from '@/hooks/use-toast';
@@ -14,14 +14,14 @@ export const CRITICAL_QUERY_KEYS = {
   REWARDS_DOM_POINTS: REWARDS_DOM_POINTS_QUERY_KEY,
   PUNISHMENTS: ['punishments'],
   RULES: ['rules'],
-  PROFILE: ['profile']
+  PROFILE: ['profile'] // Assuming 'profile' might be a query key for user profile data
 };
 
 interface SyncOptions {
   intervalMs?: number;
   enabled?: boolean;
-  includeKeys?: string[][];
-  excludeKeys?: string[][];
+  includeKeys?: QueryKey[]; // Use QueryKey type
+  excludeKeys?: QueryKey[]; // Use QueryKey type
   showToasts?: boolean;
 }
 
@@ -31,81 +31,100 @@ interface SyncOptions {
  */
 export const useSyncManager = (options: SyncOptions = {}) => {
   const {
-    intervalMs = 60000,
+    intervalMs = 60000, // Default to 1 minute
     enabled = true,
     includeKeys = Object.values(CRITICAL_QUERY_KEYS),
     excludeKeys = [],
-    showToasts = false
+    showToasts = false // Default to false to avoid too many toasts
   } = options;
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
-  const { refreshPointsFromDatabase } = useRewards();
+  const { refreshPointsFromDatabase } = useRewards(); // Assuming this function exists and works
 
   // Helper to check if a key should be synced
-  const shouldSyncKey = (key: unknown[]) => {
+  const shouldSyncKey = (key: QueryKey) => { // Use QueryKey type
     const keyStr = JSON.stringify(key);
     // Check if key is explicitly excluded
     if (excludeKeys.some(excludeKey => JSON.stringify(excludeKey) === keyStr)) {
       return false;
     }
-    // Check if key is included in the includeKeys or if includeKeys is empty
+    // Check if key is included in the includeKeys
     return includeKeys.some(includeKey => {
-      // Match by prefix (e.g., ['tasks'] matches ['tasks', '123'])
       const includeKeyStr = JSON.stringify(includeKey);
-      return keyStr.startsWith(includeKeyStr.substring(0, includeKeyStr.length - 1));
+      // Match by prefix (e.g., ['tasks'] matches ['tasks', '123'])
+      // or exact match if the includeKey isn't just a prefix.
+      return keyStr.startsWith(includeKeyStr.substring(0, includeKeyStr.length - 1)) || keyStr === includeKeyStr;
     });
   };
 
   // Function to sync critical data
-  const syncCriticalData = async (specificKeys?: unknown[][]) => {
-    if (!enabled) return;
+  const syncCriticalData = async (specificKeys?: QueryKey[]) => { // Use QueryKey type
+    if (!enabled || isSyncing) return; // Prevent concurrent syncs
+    
+    setIsSyncing(true);
+    console.log('[SyncManager] Starting background sync of critical data...');
     
     try {
-      console.log('[SyncManager] Starting background sync of critical data');
-      setIsSyncing(true);
-      
-      // Get current user
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user?.id) {
-        console.log('[SyncManager] No user logged in, skipping sync');
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user?.id) {
+        console.warn('[SyncManager] No user logged in or error fetching user, skipping sync.', userError);
+        if (showToasts && userError) {
+            toast({ title: "Sync Manager Error", description: "Could not fetch user for sync.", variant: "default" });
+        }
+        setIsSyncing(false);
         return;
       }
       
-      // Refresh points data from database
-      await refreshPointsFromDatabase();
+      // Attempt to refresh points data from database
+      // Individual query retries are handled by React Query if refreshPointsFromDatabase uses useMutation/useQuery
+      try {
+        await refreshPointsFromDatabase();
+        console.log('[SyncManager] Points refreshed successfully.');
+      } catch (pointsError) {
+        console.error('[SyncManager] Error refreshing points during sync:', pointsError);
+        // For robust telemetry, this error should be sent to an external monitoring service.
+        if (showToasts) {
+            toast({ title: "Points Sync Failed", description: "Could not refresh points data.", variant: "default" });
+        }
+        // Decide if we should continue invalidating other keys or stop. For now, continue.
+      }
       
-      // Invalidate specific query keys that need refreshing
-      const keysToInvalidate = specificKeys || Object.values(CRITICAL_QUERY_KEYS);
+      const keysToInvalidate = specificKeys || includeKeys; // Use includeKeys if no specificKeys provided
       
-      // Filter keys based on inclusion/exclusion rules
       const filteredKeys = keysToInvalidate.filter(shouldSyncKey);
       
-      for (const key of filteredKeys) {
-        queryClient.invalidateQueries({ queryKey: key });
-        console.log(`[SyncManager] Invalidated cache for key: ${JSON.stringify(key)}`);
+      if (filteredKeys.length > 0) {
+        console.log(`[SyncManager] Invalidating ${filteredKeys.length} query key(s):`, filteredKeys.map(k => JSON.stringify(k)));
+        await Promise.all(filteredKeys.map(key => 
+          queryClient.invalidateQueries({ queryKey: key })
+            .then(() => console.log(`[SyncManager] Invalidated cache for key: ${JSON.stringify(key)}`))
+            .catch(err => console.error(`[SyncManager] Error invalidating key ${JSON.stringify(key)}:`, err))
+        ));
+      } else {
+        console.log('[SyncManager] No keys to invalidate based on current filters.');
       }
       
       setLastSyncTime(new Date());
       
       if (showToasts) {
         toast({
-          title: "Data synchronized",
-          description: `Successfully synchronized app data at ${new Date().toLocaleTimeString()}`,
-          variant: "default"
+          title: "Data Synchronized",
+          description: `App data sync completed at ${new Date().toLocaleTimeString()}`,
+          variant: "default" // Using default variant for successful sync
         });
       }
-      
-      console.log('[SyncManager] Background sync completed successfully');
+      console.log('[SyncManager] Background sync completed.');
+
     } catch (error) {
-      console.error('[SyncManager] Error during background sync:', error);
-      
+      console.error('[SyncManager] Critical error during background sync process:', error);
+      // For robust telemetry, this error should be sent to an external monitoring service.
       if (showToasts) {
         toast({
-          title: "Sync failed",
-          description: "Could not synchronize data. Please check your connection.",
+          title: "Sync Failed",
+          description: "An unexpected error occurred during data synchronization.",
           variant: "destructive",
         });
       }
@@ -116,46 +135,87 @@ export const useSyncManager = (options: SyncOptions = {}) => {
   
   // Set up the periodic sync
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      if (timeoutRef.current) clearInterval(timeoutRef.current);
+      return;
+    }
     
-    // Initial sync with a slight delay to avoid initial render performance impact
-    const initialTimer = setTimeout(() => syncCriticalData(), 500);
+    // Initial sync with a slight delay
+    const initialTimer = setTimeout(() => {
+      console.log('[SyncManager] Triggering initial sync.');
+      syncCriticalData();
+    }, 5000); // Increased delay to ensure app is stable
     
     // Set up interval for periodic syncs
-    timeoutRef.current = setInterval(syncCriticalData, intervalMs);
+    if (timeoutRef.current) clearInterval(timeoutRef.current); // Clear existing interval if enabled state changes
+    timeoutRef.current = setInterval(() => {
+      console.log('[SyncManager] Triggering periodic sync.');
+      syncCriticalData();
+    }, intervalMs);
     
     return () => {
       clearTimeout(initialTimer);
       if (timeoutRef.current) {
         clearInterval(timeoutRef.current);
       }
+      console.log('[SyncManager] Cleaned up sync intervals.');
     };
-  }, [intervalMs, enabled]);
+  }, [intervalMs, enabled, queryClient]); // Added queryClient to dependencies
   
-  // Listen to Supabase realtime updates for the profiles table
+  // Listen to Supabase realtime updates for the profiles table for points changes
   useEffect(() => {
     if (!enabled) return;
     
-    const channel = supabase.channel('sync-manager-changes')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles' },
-        (payload) => {
-          console.log('[SyncManager] Profile update detected:', payload);
-          syncCriticalData([CRITICAL_QUERY_KEYS.PROFILE, CRITICAL_QUERY_KEYS.REWARDS_POINTS]);
-        }
-      )
-      .subscribe();
+    const setupPointsSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log('[SyncManager] No user for realtime points subscription.');
+        return null;
+      }
+
+      const channel = supabase.channel(`sync-manager-profiles-changes-${user.id}`) // User-specific channel
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+          (payload) => {
+            console.log('[SyncManager] Profile update detected via Supabase Realtime:', payload);
+            // Specifically invalidate points and profile related queries
+            syncCriticalData([CRITICAL_QUERY_KEYS.PROFILE, CRITICAL_QUERY_KEYS.REWARDS_POINTS, CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS]);
+          }
+        )
+        .subscribe((status, err) => {
+          if (status === 'SUBSCRIBED') {
+            console.log(`[SyncManager] Subscribed to profile changes for user ${user.id}.`);
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.error(`[SyncManager] Error subscribing to profile changes: ${status}`, err);
+          }
+        });
+        
+      return channel;
+    };
+
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    setupPointsSubscription().then(ch => channel = ch);
       
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel)
+          .then(() => console.log('[SyncManager] Unsubscribed from profile changes.'))
+          .catch(err => console.error('[SyncManager] Error unsubscribing from profile changes:', err));
+      }
     };
-  }, [enabled]);
+  }, [enabled, queryClient]); // Added queryClient
   
   return {
     isSyncing,
     lastSyncTime,
-    syncNow: syncCriticalData,
-    syncKeys: (keys: unknown[][]) => syncCriticalData(keys)
+    syncNow: () => {
+      console.log('[SyncManager] Manual sync triggered.');
+      syncCriticalData();
+    },
+    syncKeys: (keys: QueryKey[]) => { // Use QueryKey type
+      console.log(`[SyncManager] Manual sync triggered for specific keys:`, keys.map(k => JSON.stringify(k)));
+      syncCriticalData(keys);
+    }
   };
 };

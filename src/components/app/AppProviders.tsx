@@ -32,6 +32,11 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
         persister,
         buster: APP_CACHE_VERSION,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week, persisted data older than this will be discarded
+        onError: (error) => {
+          console.error('Error during React Query cache hydration:', error);
+          // Optionally, you could add logic here to clear the cache if hydration fails critically
+          // For robust telemetry, this error should be sent to an external monitoring service.
+        },
       }}
       onSuccess={() => {
         // resumeMutations must be called after hydration to resume paused mutations
@@ -53,4 +58,3 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
     </PersistQueryClientProvider>
   );
 };
-
