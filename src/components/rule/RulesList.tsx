@@ -1,20 +1,26 @@
+
 import React from 'react';
 import RuleCard from './RuleCard';
 import { Rule } from '@/data/interfaces/Rule';
-import RuleCardSkeleton from './RuleCardSkeleton'; // Import the new skeleton component
+import RuleCardSkeleton from './RuleCardSkeleton';
+import EmptyState from '@/components/common/EmptyState'; // Import the new EmptyState component
+import { ShieldOff } from 'lucide-react'; // Example icon for no rules
 
 interface RulesListProps {
   rules: Rule[];
   isLoading: boolean;
   onEditRule: (rule: Rule) => void;
   onRuleBroken: (rule: Rule) => void;
+  // Add a prop to allow customizing the action, e.g., a "Create Rule" button
+  onCreateRuleClick?: () => void; 
 }
 
 const RulesList: React.FC<RulesListProps> = ({ 
   rules, 
   isLoading,
   onEditRule,
-  onRuleBroken 
+  onRuleBroken,
+  onCreateRuleClick
 }) => {
   if (isLoading && rules.length === 0) {
     return (
@@ -26,11 +32,21 @@ const RulesList: React.FC<RulesListProps> = ({
     );
   }
 
-  if (!isLoading && rules.length === 0) { // Added !isLoading for clarity
+  if (!isLoading && rules.length === 0) {
     return (
-      <div className="text-center py-10">
-        <p className="text-white mb-4">No rules found. Create your first rule!</p>
-      </div>
+      <EmptyState
+        icon={ShieldOff}
+        title="No Rules Yet"
+        description="It looks like there are no rules defined. Get started by creating your first one!"
+        action={onCreateRuleClick && (
+          <button 
+            onClick={onCreateRuleClick} 
+            className="mt-4 px-4 py-2 bg-primary-purple text-white rounded-md hover:bg-opacity-90 transition-colors"
+          >
+            Create First Rule
+          </button>
+        )}
+      />
     );
   }
 
