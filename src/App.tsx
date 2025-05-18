@@ -1,119 +1,71 @@
-import React from 'react';
-import { Toaster as SonnerToaster } from 'sonner'; // Renamed to avoid conflict with our Toaster
-import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
+import { ThemeProvider } from '@/components/theme-provider';
 import AppRoutes from './AppRoutes';
-import { AuthProvider } from '@/contexts/auth'; // Changed import path
-import { ThemeProvider } from 'next-themes';
+import { Toaster } from '@/components/ui/toaster';
+import { AuthProvider } from './contexts/AuthContext';
+import { supabase } from './integrations/supabase/client';
 import { NetworkStatusProvider } from './contexts/NetworkStatusContext';
-import { OfflineBanner } from './components/OfflineBanner'; // Changed from default import
-import { queryClient } from './data/queryClient';
+import { OfflineBanner } from './components/OfflineBanner';
+import { SyncStatusIndicator } from './components/common/SyncStatusIndicator';
+// import CacheMonitorPanel from './components/dev/CacheMonitorPanel'; // Usually for dev
+import { AppProviders } from './components/app/AppProviders';
+import { queryClient } from './data/queryClient'; // Ensure this is your configured QueryClient
+import { APP_CACHE_VERSION } from './lib/react-query-config';
+
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import localforage from 'localforage';
-import { APP_CACHE_VERSION } from './lib/react-query-config'; // Import the cache version
-import ErrorBoundary from '@/components/ErrorBoundary'; // Import ErrorBoundary
+import Hydrate from './components/Hydrate'; // <-- New import
 
-// Import fetch functions for prefetching
-import { fetchTasks } from '@/data/queries/tasks/fetchTasks';
-import { fetchRewards, REWARDS_QUERY_KEY } from '@/data/rewards/queries';
-import { fetchRules } from '@/data/rules/fetchRules';
-import { fetchPunishments } from '@/data/punishments/queries/fetchPunishments';
-
-// Configure localforage if not already configured elsewhere for this purpose
-localforage.config({
-  name: 'kingdom-app-react-query', // Specific name for RQ cache
-  storeName: 'query_cache',
-  description: 'React Query cache for Kingdom App',
-});
-
-const asyncStoragePersister = createAsyncStoragePersister({
-  storage: localforage,
-  // You can add a throttle time here if needed, e.g., throttleTime: 1000
+// Initialize the persister
+const persister = createSyncStoragePersister({
+  storage: localforage, // You can use localStorage, sessionStorage, or localforage
+  key: 'REACT_QUERY_OFFLINE_CACHE', // Unique key for your app's cache
+  throttleTime: 1000, // Optional: throttle time for writes
+  // serialize: (client) => JSON.stringify(client), // Optional: custom serialization
+  // deserialize: (cachedString) => JSON.parse(cachedString), // Optional: custom deserialization
 });
 
 function App() {
+  useEffect(() => {
+    const { data: { subscription: authStateUnsub } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change event:', event, "Session:", session);
+      // Potentially invalidate queries or update user state here
+      // For example, on SIGNED_OUT, clear query cache or specific user-related data
+      if (event === "SIGNED_OUT") {
+        queryClient.clear(); // Example: Clear cache on sign out
+      }
+    });
+    return () => {
+      authStateUnsub.unsubscribe();
+    };
+  }, []);
+
   return (
-    <React.StrictMode>
-      <Router>
-        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-          <AuthProvider>
-            <NetworkStatusProvider>
-              <PersistQueryClientProvider
-                client={queryClient}
-                persistOptions={{
-                  persister: asyncStoragePersister,
-                  buster: APP_CACHE_VERSION, // Use app version for cache busting
-                  maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-                }}
-                onSuccess={() => {
-                  // Resume paused mutations after hydration
-                  queryClient.resumePausedMutations().then(() => {
-                    console.log('React Query cache restored and mutations resumed from App.tsx Persister.');
-                  }).catch(error => {
-                    console.error('Error resuming paused mutations after hydration from App.tsx Persister:', error);
-                  });
-
-                  // Prefetch critical data after hydration
-                  console.log('[App] Hydration successful, prefetching critical data...');
-                  const criticalQueriesToPrefetch = [
-                    { queryKey: ['tasks'], queryFn: fetchTasks, name: 'Tasks' },
-                    { queryKey: REWARDS_QUERY_KEY, queryFn: fetchRewards, name: 'Rewards' },
-                    { queryKey: ['rules'], queryFn: fetchRules, name: 'Rules' },
-                    { queryKey: ['punishments'], queryFn: fetchPunishments, name: 'Punishments' },
-                  ] as const; // 'as const' is important for precise typing
-
-                  criticalQueriesToPrefetch.forEach(async (item) => {
-                    const queryState = queryClient.getQueryState(item.queryKey);
-                    if (!queryState || queryState.status === 'pending') {
-                       try {
-                         console.log(`[App] Attempting to prefetch ${item.name}`);
-                         
-                         // Use a switch statement to help TypeScript narrow down the type of 'item'
-                         // for each call to prefetchQuery.
-                         switch (item.name) {
-                           case 'Tasks':
-                             await queryClient.prefetchQuery(item);
-                             break;
-                           case 'Rewards':
-                             await queryClient.prefetchQuery(item);
-                             break;
-                           case 'Rules':
-                             await queryClient.prefetchQuery(item);
-                             break;
-                           case 'Punishments':
-                             await queryClient.prefetchQuery(item);
-                             break;
-                           default:
-                             // Exhaustive check to ensure all cases are handled
-                             const _exhaustiveCheck: never = item;
-                             console.error(`[App] Unknown item name for prefetching: ${(_exhaustiveCheck as any).name}`);
-                             throw new Error(`Unknown item name for prefetching: ${(_exhaustiveCheck as any).name}`);
-                         }
-                         
-                         console.log(`[App] Successfully initiated prefetch for ${item.name}`);
-                       } catch (error) {
-                         console.error(`[App] Error prefetching ${item.name}:`, error);
-                       }
-                    } else {
-                        console.log(`[App] Skipping prefetch for ${item.name}, data likely fresh or already fetching.`);
-                    }
-                  });
-                }}
-              >
-                <ErrorBoundary>
-                  <AppRoutes />
-                </ErrorBoundary>
-                <SonnerToaster /> {/* Using the aliased import */}
-                <OfflineBanner />
-                {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
-              </PersistQueryClientProvider>
-            </NetworkStatusProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </Router>
-    </React.StrictMode>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister, buster: APP_CACHE_VERSION }}
+      onSuccess={() => {
+        // resume mutations after initial restore from localStorage was successful
+        queryClient.resumePausedMutations().then(() => {
+          console.log("Persisted queries hydrated and paused mutations resumed.");
+          // Any logic that should run post-hydration can go here.
+          // For example, kick off initial data prefetching for critical routes.
+        });
+      }}
+    >
+      <Hydrate fallbackMessage="Failed to load application data. Please try clearing site data or contact support.">
+        <AppProviders>
+          <Toaster />
+          <AppRoutes />
+          <OfflineBanner />
+          <SyncStatusIndicator />
+          {/* <CacheMonitorPanel /> */}
+        </AppProviders>
+      </Hydrate>
+    </PersistQueryClientProvider>
   );
 }
 
