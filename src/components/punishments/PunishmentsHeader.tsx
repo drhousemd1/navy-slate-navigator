@@ -2,25 +2,35 @@
 import React, { useEffect } from 'react';
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
-import { useRewards } from '@/contexts/RewardsContext';
+import { useRewards } from '@/contexts/RewardsContext'; // Keep for totalRewardsSupply, totalDomRewardsSupply
 import { Box, Coins, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import RandomPunishmentSelections from './RandomPunishmentSelections';
-import { useProfilePoints } from "@/data/queries/useProfilePoints";
+// import { useProfilePoints } from "@/data/queries/useProfilePoints"; // Remove this
+import { usePointsManager } from '@/data/points/usePointsManager'; // Add this
 
 const PunishmentsHeader: React.FC = () => {
-  const { totalRewardsSupply, totalDomRewardsSupply, refreshPointsFromDatabase } = useRewards();
+  const { totalRewardsSupply, totalDomRewardsSupply, refreshPointsFromDatabase: refreshRewardsContextPoints } = useRewards();
   const { punishments } = usePunishments();
-  const { data: profile } = useProfilePoints();
-  const totalPoints = profile?.points ?? 0;
-  const domPoints = profile?.dom_points ?? 0;
+  // const { data: profile } = useProfilePoints(); // Remove this
+  // const totalPoints = profile?.points ?? 0; // Remove this
+  // const domPoints = profile?.dom_points ?? 0; // Remove this
+  
+  const { 
+    points: totalPoints, 
+    domPoints, 
+    isLoadingPoints, 
+    refreshPoints 
+  } = usePointsManager();
+
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
 
   // Refresh points when component mounts
   useEffect(() => {
-    refreshPointsFromDatabase();
-  }, [refreshPointsFromDatabase]);
+    refreshPoints(); // Use this from usePointsManager
+    // refreshRewardsContextPoints(); // See comment in RewardsHeader.tsx
+  }, [refreshPoints]);
 
   // Style for badges - black background with cyan border
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
@@ -37,24 +47,28 @@ const PunishmentsHeader: React.FC = () => {
         <Shuffle className="w-4 h-4" />
         Random
       </Button>
-      <div className="flex items-center gap-2">
-        <Badge 
-          className="text-white font-bold px-3 py-1 flex items-center gap-1"
-          style={badgeStyle}
-        >
-          <Box className="w-3 h-3" />
-          <span>{totalRewardsSupply}</span>
-        </Badge>
-        <Badge 
-          className="text-white font-bold px-3 py-1 flex items-center gap-1"
-          style={badgeStyle}
-        >
-          <Coins className="w-3 h-3" />
-          <span>{totalPoints}</span>
-        </Badge>
-        <DOMBadge icon="box" value={totalDomRewardsSupply} />
-        <DOMBadge icon="crown" value={domPoints} />
-      </div>
+      {isLoadingPoints ? (
+        <span className="text-sm text-gray-400">Loading points...</span>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Badge 
+            className="text-white font-bold px-3 py-1 flex items-center gap-1"
+            style={badgeStyle}
+          >
+            <Box className="w-3 h-3" />
+            <span>{totalRewardsSupply}</span>
+          </Badge>
+          <Badge 
+            className="text-white font-bold px-3 py-1 flex items-center gap-1"
+            style={badgeStyle}
+          >
+            <Coins className="w-3 h-3" />
+            <span>{totalPoints}</span>
+          </Badge>
+          <DOMBadge icon="box" value={totalDomRewardsSupply} />
+          <DOMBadge icon="crown" value={domPoints} />
+        </div>
+      )}
       
       <RandomPunishmentSelections
         isOpen={isRandomSelectorOpen} 
