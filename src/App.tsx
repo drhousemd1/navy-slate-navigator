@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Toaster as SonnerToaster } from 'sonner'; // Renamed to avoid conflict with our Toaster
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -65,15 +64,34 @@ function App() {
                     { queryKey: ['punishments'], queryFn: fetchPunishments, name: 'Punishments' },
                   ] as const; // 'as const' is important for precise typing
 
-                  criticalQueriesToPrefetch.forEach(async (item) => { // Use 'item' here
-                    // Only prefetch if not already fetching or fresh
+                  criticalQueriesToPrefetch.forEach(async (item) => {
                     const queryState = queryClient.getQueryState(item.queryKey);
                     if (!queryState || queryState.status === 'pending') {
                        try {
                          console.log(`[App] Attempting to prefetch ${item.name}`);
-                         // Pass the whole 'item' object. TypeScript can now correctly infer
-                         // generics for prefetchQuery based on the specific item's structure.
-                         await queryClient.prefetchQuery(item);
+                         
+                         // Use a switch statement to help TypeScript narrow down the type of 'item'
+                         // for each call to prefetchQuery.
+                         switch (item.name) {
+                           case 'Tasks':
+                             await queryClient.prefetchQuery(item);
+                             break;
+                           case 'Rewards':
+                             await queryClient.prefetchQuery(item);
+                             break;
+                           case 'Rules':
+                             await queryClient.prefetchQuery(item);
+                             break;
+                           case 'Punishments':
+                             await queryClient.prefetchQuery(item);
+                             break;
+                           default:
+                             // Exhaustive check to ensure all cases are handled
+                             const _exhaustiveCheck: never = item;
+                             console.error(`[App] Unknown item name for prefetching: ${(_exhaustiveCheck as any).name}`);
+                             throw new Error(`Unknown item name for prefetching: ${(_exhaustiveCheck as any).name}`);
+                         }
+                         
                          console.log(`[App] Successfully initiated prefetch for ${item.name}`);
                        } catch (error) {
                          console.error(`[App] Error prefetching ${item.name}:`, error);
@@ -100,4 +118,3 @@ function App() {
 }
 
 export default App;
-
