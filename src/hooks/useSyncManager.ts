@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient, QueryKey } from '@tanstack/react-query'; // Added QueryKey for explicit typing
@@ -28,6 +27,10 @@ interface SyncOptions {
 /**
  * Enhanced custom hook that manages synchronization of critical data
  * with improved React Query integration and more control options.
+ * Note on Conflict Resolution: This sync manager primarily handles cache invalidation
+ * to keep client data fresh, reducing the likelihood of stale data conflicts.
+ * True data merge conflict resolution (e.g., for concurrent edits) is typically
+ * managed by optimistic mutation patterns and server-side logic.
  */
 export const useSyncManager = (options: SyncOptions = {}) => {
   const {
@@ -42,7 +45,7 @@ export const useSyncManager = (options: SyncOptions = {}) => {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
-  const { refreshPointsFromDatabase } = useRewards(); // Assuming this function exists and works
+  const { refreshPointsFromDatabase } = useRewards();
 
   // Helper to check if a key should be synced
   const shouldSyncKey = (key: QueryKey) => { // Use QueryKey type
@@ -78,19 +81,30 @@ export const useSyncManager = (options: SyncOptions = {}) => {
         return;
       }
       
-      // Attempt to refresh points data from database
-      // Individual query retries are handled by React Query if refreshPointsFromDatabase uses useMutation/useQuery
-      try {
-        await refreshPointsFromDatabase();
-        console.log('[SyncManager] Points refreshed successfully.');
-      } catch (pointsError) {
-        console.error('[SyncManager] Error refreshing points during sync:', pointsError);
-        // For robust telemetry, this error should be sent to an external monitoring service.
-        if (showToasts) {
-            toast({ title: "Points Sync Failed", description: "Could not refresh points data.", variant: "default" });
+      // Attempt to refresh points data from database with retry logic
+      let attempts = 0;
+      let pointsRefreshed = false;
+      const maxAttempts = 3;
+      while (attempts < maxAttempts && !pointsRefreshed) {
+        try {
+          await refreshPointsFromDatabase();
+          pointsRefreshed = true;
+          console.log(`[SyncManager] Points refreshed successfully (attempt ${attempts + 1}/${maxAttempts}).`);
+        } catch (pointsErrorAttempt) {
+          attempts++;
+          console.error(`[SyncManager] Error refreshing points (attempt ${attempts}/${maxAttempts}):`, pointsErrorAttempt);
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // 1s, 2s delay
+          } else {
+            // Only show toast on final failure if showToasts is enabled
+            if (showToasts) {
+                toast({ title: "Points Sync Failed", description: "Could not refresh points data after multiple attempts.", variant: "default" });
+            }
+            console.error('[SyncManager] Failed to refresh points after multiple attempts.');
+          }
         }
-        // Decide if we should continue invalidating other keys or stop. For now, continue.
       }
+      // If points refresh ultimately failed, it's logged. Continue with other invalidations.
       
       const keysToInvalidate = specificKeys || includeKeys; // Use includeKeys if no specificKeys provided
       
@@ -160,7 +174,7 @@ export const useSyncManager = (options: SyncOptions = {}) => {
       }
       console.log('[SyncManager] Cleaned up sync intervals.');
     };
-  }, [intervalMs, enabled, queryClient]); // Added queryClient to dependencies
+  }, [intervalMs, enabled, queryClient, refreshPointsFromDatabase]); // Added refreshPointsFromDatabase to dependencies
   
   // Listen to Supabase realtime updates for the profiles table for points changes
   useEffect(() => {

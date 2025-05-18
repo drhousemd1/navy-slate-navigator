@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Toaster as SonnerToaster } from 'sonner'; // Renamed to avoid conflict with our Toaster
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -14,6 +15,12 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import localforage from 'localforage';
 import { APP_CACHE_VERSION } from './lib/react-query-config'; // Import the cache version
 import ErrorBoundary from '@/components/ErrorBoundary'; // Import ErrorBoundary
+
+// Import fetch functions for prefetching
+import { fetchTasks } from '@/data/queries/tasks/fetchTasks';
+import { fetchRewards, REWARDS_QUERY_KEY } from '@/data/rewards/queries';
+import { fetchRules } from '@/data/rules/fetchRules';
+import { fetchPunishments } from '@/data/punishments/queries/fetchPunishments';
 
 // Configure localforage if not already configured elsewhere for this purpose
 localforage.config({
@@ -48,6 +55,30 @@ function App() {
                   }).catch(error => {
                     console.error('Error resuming paused mutations after hydration from App.tsx Persister:', error);
                   });
+
+                  // Prefetch critical data after hydration
+                  console.log('[App] Hydration successful, prefetching critical data...');
+                  const criticalQueriesToPrefetch = [
+                    { queryKey: ['tasks'], queryFn: fetchTasks, name: 'Tasks' },
+                    { queryKey: REWARDS_QUERY_KEY, queryFn: fetchRewards, name: 'Rewards' },
+                    { queryKey: ['rules'], queryFn: fetchRules, name: 'Rules' },
+                    { queryKey: ['punishments'], queryFn: fetchPunishments, name: 'Punishments' },
+                  ];
+
+                  criticalQueriesToPrefetch.forEach(async ({ queryKey, queryFn, name }) => {
+                    // Only prefetch if not already fetching or fresh
+                    if (!queryClient.getQueryState(queryKey) || queryClient.getQueryState(queryKey)?.status === 'pending') {
+                       try {
+                         console.log(`[App] Attempting to prefetch ${name}`);
+                         await queryClient.prefetchQuery({ queryKey, queryFn });
+                         console.log(`[App] Successfully initiated prefetch for ${name}`);
+                       } catch (error) {
+                         console.error(`[App] Error prefetching ${name}:`, error);
+                       }
+                    } else {
+                        console.log(`[App] Skipping prefetch for ${name}, data likely fresh or already fetching.`);
+                    }
+                  });
                 }}
               >
                 <ErrorBoundary>
@@ -66,3 +97,4 @@ function App() {
 }
 
 export default App;
+
