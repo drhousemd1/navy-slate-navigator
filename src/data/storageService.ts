@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { FileOptions } from '@supabase/storage-js';
+import { FileOptions } from '@supabase/supabase-js';
 
 /**
  * Uploads a file to the specified Supabase Storage bucket.
@@ -102,4 +101,3 @@ export const getFilePublicUrl = (
   console.log(`[storageService] Retrieved public URL: ${data.publicUrl}`);
   return data.publicUrl;
 };
-

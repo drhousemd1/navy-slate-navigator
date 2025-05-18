@@ -6,25 +6,18 @@ import TasksList from '../components/task/TasksList';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TasksProvider, useTasks } from '../contexts/TasksContext';
 import { Task } from '@/lib/taskUtils';
-// Assuming syncCardById might be part of useSyncManager or a separate utility.
-// For now, if it's only used in the timeout, removing the timeout removes its call here.
-// import { syncCardById } from '@/data/sync/useSyncManager'; // This import might not be needed anymore if not used elsewhere
-import { useSyncManager } from '@/hooks/useSyncManager'; // This path is read-only.
-                                                        // The file Tasks.tsx provided in context uses useSyncManager from @/hooks/useSyncManager
-                                                        // This is problematic as that file is read-only.
-                                                        // However, the syncCardById import was from '@/data/sync/useSyncManager'.
-                                                        // This suggests a mix-up or multiple sync managers.
-                                                        // Let's proceed by removing the line that calls syncCardById.
-                                                        // The useSyncManager from @/hooks/useSyncManager in Tasks.tsx is for the general syncNow.
-
+import { useSyncManager } from '@/hooks/useSyncManager';
 import { usePreloadTasks } from "@/data/preload/usePreloadTasks";
+import { usePreloadAppCoreData } from "@/data/preload/usePreloadAppCoreData"; // Import new hook
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-// Preload tasks data from IndexedDB before component renders
+// Preload tasks data (existing)
 usePreloadTasks()();
 
 // Separate component that uses useTasks hook inside TasksProvider
 const TasksWithContext: React.FC = () => {
+  usePreloadAppCoreData(); // Call new preloading hook
+
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const { tasks, isLoading, saveTask, deleteTask, toggleTaskCompletion, refetchTasks } = useTasks();
@@ -41,7 +34,7 @@ const TasksWithContext: React.FC = () => {
 
   const handleAddTask = () => {
     console.log('handleAddTask called in TasksWithContext');
-    setCurrentTask(null);
+    setCurrentTask(null); // Keep null for new task
     setIsEditorOpen(true);
   };
 
@@ -67,18 +60,25 @@ const TasksWithContext: React.FC = () => {
 
   const handleSaveTask = async (taskData: Task) => {
     try {
-      await saveTask(taskData);
-      setIsEditorOpen(false);
-      setCurrentTask(null);
+      const savedTask = await saveTask(taskData);
+      // To prevent clearing inputs and closing the editor:
+      // 1. Don't set isEditorOpen to false.
+      // 2. If it's an update, set currentTask to the savedTask to reflect changes.
+      //    If it's a new task creation, you might want to clear for the *next* new task,
+      //    or keep it open for further edits if `savedTask` includes the new ID.
+      // For now, we'll keep the editor open and update currentTask if an ID exists (update scenario)
+      // or if a new task was created and returned with an ID.
+      if (savedTask && savedTask.id) {
+        setCurrentTask(savedTask); // Update form with potentially new/updated data from server
+      }
+      // setIsEditorOpen(false); // Keep editor open
+      // setCurrentTask(null); // Don't clear current task, allow further edits or inspection
       
-      // Removed:
-      // if (taskData.id) {
-      //   setTimeout(() => syncCardById(taskData.id, 'tasks'), 500);
-      // }
-      // Optimistic update from saveTask should handle UI.
+      // The optimistic update from saveTask should handle UI elsewhere.
       // Periodic sync for eventual consistency.
     } catch (err) {
       console.error('Error saving task:', err);
+      // Error handling (e.g., toast) should be in saveTask or the mutation itself
     }
   };
 
@@ -86,7 +86,7 @@ const TasksWithContext: React.FC = () => {
     try {
       await deleteTask(taskId);
       setCurrentTask(null);
-      setIsEditorOpen(false);
+      setIsEditorOpen(false); // Close editor on delete
     } catch (err) {
       console.error('Error deleting task:', err);
     }
@@ -129,7 +129,7 @@ const TasksWithContext: React.FC = () => {
         isOpen={isEditorOpen}
         onClose={() => {
           setIsEditorOpen(false);
-          setCurrentTask(null);
+          setCurrentTask(null); // Clear task when explicitly closing
         }}
         taskData={currentTask || undefined}
         onSave={handleSaveTask}
