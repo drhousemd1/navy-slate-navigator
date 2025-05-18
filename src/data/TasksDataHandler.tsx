@@ -45,27 +45,30 @@ export const useTasksData = (): TasksDataHook => {
           ...updates 
         } as UpdateTaskVariables);
       } else {
-        const { id, created_at, updated_at, completed, last_completed_date, ...creatableData } = taskData;
+        const { id, created_at, updated_at, completed, last_completed_date, ...creatableDataFields } = taskData;
+        
         const variables: CreateTaskVariables = {
-          title: creatableData.title || "Default Task Title",
-          points: creatableData.points || 0,
-          description: creatableData.description,
-          frequency: creatableData.frequency,
-          frequency_count: creatableData.frequency_count,
-          priority: creatableData.priority,
-          icon_name: creatableData.icon_name,
-          icon_color: creatableData.icon_color,
-          title_color: creatableData.title_color,
-          subtext_color: creatableData.subtext_color,
-          calendar_color: creatableData.calendar_color,
-          background_image_url: creatableData.background_image_url,
-          background_opacity: creatableData.background_opacity,
-          highlight_effect: creatableData.highlight_effect,
-          focal_point_x: creatableData.focal_point_x,
-          focal_point_y: creatableData.focal_point_y,
-          week_identifier: creatableData.week_identifier,
-          icon_url: creatableData.icon_url,
-          background_images: creatableData.background_images,
+          title: creatableDataFields.title || "Default Task Title",
+          points: creatableDataFields.points || 0,
+          
+          description: creatableDataFields.description,
+          frequency: creatableDataFields.frequency,
+          frequency_count: creatableDataFields.frequency_count,
+          priority: creatableDataFields.priority,
+          icon_name: creatableDataFields.icon_name,
+          icon_color: creatableDataFields.icon_color,
+          title_color: creatableDataFields.title_color,
+          subtext_color: creatableDataFields.subtext_color,
+          calendar_color: creatableDataFields.calendar_color,
+          background_image_url: creatableDataFields.background_image_url,
+          background_opacity: creatableDataFields.background_opacity,
+          highlight_effect: creatableDataFields.highlight_effect,
+          focal_point_x: creatableDataFields.focal_point_x,
+          focal_point_y: creatableDataFields.focal_point_y,
+          icon_url: creatableDataFields.icon_url,
+          
+          week_identifier: (creatableDataFields as any).week_identifier,
+          background_images: (creatableDataFields as any).background_images,
         };
         savedTask = await createTaskMutation(variables);
       }
