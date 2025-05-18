@@ -1,25 +1,15 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { format, parseISO, startOfWeek, endOfWeek } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { generateMondayBasedWeekDates } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
-import WeeklyMetricsChartSkeleton from './WeeklyMetricsChartSkeleton'; // Import the skeleton
-
-interface WeeklyDataItem {
-  date: string;
-  tasksCompleted: number;
-  rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
-}
+// Removed supabase, toast, generateMondayBasedWeekDates, useQuery as they are now in the hook
+import WeeklyMetricsChartSkeleton from './WeeklyMetricsChartSkeleton';
+import { useWeeklyMetrics, WeeklyDataItem } from '@/data/queries/metrics/useWeeklyMetrics'; // Import the new hook and type
 
 const WeeklyMetricsChart: React.FC = () => {
-  // Configure chart colors
   const chartConfig = {
     tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
     rulesBroken: { color: '#F97316', label: 'Rules Broken' },
@@ -27,180 +17,17 @@ const WeeklyMetricsChart: React.FC = () => {
     punishments: { color: '#ea384c', label: 'Punishments' }
   };
 
-  // Use React Query for data fetching to ensure it refreshes properly
-  const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
-    console.log('Fetching weekly chart data at', new Date().toISOString());
-    try {
-      // Generate all days of the week (Monday to Sunday)
-      const weekDays = generateMondayBasedWeekDates();
-      
-      // Initialize data structure with all days, starting with zero values
-      const metricsMap = new Map<string, WeeklyDataItem>();
-      weekDays.forEach(date => {
-        metricsMap.set(date, {
-          date,
-          tasksCompleted: 0,
-          rulesBroken: 0,
-          rewardsRedeemed: 0,
-          punishments: 0
-        });
-      });
+  const { data = [], isLoading, error } = useWeeklyMetrics();
 
-      // Get current week date range
-      const today = new Date();
-      const start = startOfWeek(today, { weekStartsOn: 1 }); // Start on Monday
-      const end = endOfWeek(today, { weekStartsOn: 1 }); // End on Sunday
-      
-      // Fetch task completions - Count unique tasks per day
-      const { data: taskCompletions, error: taskError } = await supabase
-        .from('task_completion_history')
-        .select('*')
-        .gte('completed_at', start.toISOString())
-        .lte('completed_at', end.toISOString());
-      
-      if (taskError) {
-        console.error('Error fetching task completions:', taskError);
-      } else if (taskCompletions && taskCompletions.length > 0) {
-        console.log('Found task completions:', taskCompletions.length);
-        // Group completions by date
-        const completionsByDate = new Map<string, Set<string>>();
-        
-        taskCompletions.forEach(entry => {
-          const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
-          
-          if (!completionsByDate.has(date)) {
-            completionsByDate.set(date, new Set());
-          }
-          
-          // Add the task_id to the set for this date
-          completionsByDate.get(date)?.add(entry.task_id);
-        });
-        
-        // Count unique completions per day (each task counted only once per day)
-        completionsByDate.forEach((taskIds, date) => {
-          if (metricsMap.has(date)) {
-            metricsMap.get(date)!.tasksCompleted = taskIds.size;
-          }
-        });
-      } else {
-        console.log('No task completions found for the week');
-      }
+  // Removed fetchWeeklyData function and the useEffect that called it / handled visibility changes.
+  // The useWeeklyMetrics hook now handles data fetching and refreshing.
 
-      // Fetch rule violations
-      const { data: ruleViolations, error: ruleError } = await supabase
-        .from('rule_violations')
-        .select('*')
-        .gte('violation_date', start.toISOString())
-        .lte('violation_date', end.toISOString());
-      
-      if (ruleError) {
-        console.error('Error fetching rule violations:', ruleError);
-      } else if (ruleViolations && ruleViolations.length > 0) {
-        console.log('Found rule violations:', ruleViolations.length);
-        ruleViolations.forEach(entry => {
-          const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
-          if (metricsMap.has(date)) {
-            metricsMap.get(date)!.rulesBroken++;
-          }
-        });
-      } else {
-        console.log('No rule violations found for the week');
-      }
-
-      // Fetch reward usages
-      const { data: rewardUsages, error: rewardError } = await supabase
-        .from('reward_usage')
-        .select('*')
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString());
-      
-      if (rewardError) {
-        console.error('Error fetching reward usages:', rewardError);
-      } else if (rewardUsages && rewardUsages.length > 0) {
-        console.log('Found reward usages:', rewardUsages.length);
-        rewardUsages.forEach(entry => {
-          const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
-          if (metricsMap.has(date)) {
-            metricsMap.get(date)!.rewardsRedeemed++;
-          }
-        });
-      } else {
-        console.log('No reward usages found for the week');
-      }
-
-      // Fetch punishments
-      const { data: punishments, error: punishmentError } = await supabase
-        .from('punishment_history')
-        .select('*')
-        .gte('applied_date', start.toISOString())
-        .lte('applied_date', end.toISOString());
-      
-      if (punishmentError) {
-        console.error('Error fetching punishments:', punishmentError);
-      } else if (punishments && punishments.length > 0) {
-        console.log('Found punishments:', punishments.length);
-        punishments.forEach(entry => {
-          const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
-          if (metricsMap.has(date)) {
-            metricsMap.get(date)!.punishments++;
-          }
-        });
-      } else {
-        console.log('No punishments found for the week');
-      }
-
-      // Convert map to sorted array
-      const result = Array.from(metricsMap.values())
-        .sort((a, b) => a.date.localeCompare(b.date));
-      
-      console.log('Weekly chart data prepared:', result);
-      return result;
-    } catch (error) {
-      console.error('Error fetching weekly data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch weekly activity data',
-        variant: 'destructive'
-      });
-      return [];
-    }
-  };
-
-  // Key change: Use React Query with updated settings to ensure proper refresh
-  const { data = [], isLoading, error } = useQuery({
-    queryKey: ['weekly-metrics'],
-    queryFn: fetchWeeklyData,
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000, // Refetch every 5 seconds (more aggressive refresh)
-    staleTime: 0, // Always consider data stale to force refresh
-    gcTime: 0, // Don't cache at all - force refetch every time
-  });
-
-  // Add effect to force refetch on route focus
-  useEffect(() => {
-    // This will force a refetch whenever component is mounted or window focused
-    // Extra insurance for data freshness after reset
-    const fetchData = async () => {
-      await fetchWeeklyData();
-    };
-    
-    fetchData();
-    
-    // Add event listener for page visibility changes
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Page became visible, forcing weekly data refresh');
-        fetchData();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
+  if (error) {
+    // Basic error display, could be enhanced with a dedicated error component
+    // The hook already shows a toast on error.
+    console.error("Error in WeeklyMetricsChart:", error);
+  }
+  
   const hasData = data.some(d => 
     d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0
   );
@@ -214,7 +41,7 @@ const WeeklyMetricsChart: React.FC = () => {
       <div className="p-4">
         <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
         <div className="h-60">
-          {!hasData && !isLoading ? ( // Ensure isLoading is false before showing "No activity data"
+          {!hasData && !isLoading ? (
             <div className="flex items-center justify-center h-full text-white">
               No activity data to display for this week
             </div>

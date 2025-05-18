@@ -2,35 +2,21 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { format, getMonth, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { format, getMonth, parseISO } from 'date-fns'; // Removed getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+// Removed supabase, toast, useQuery, useQueryClient as they are now in the hook or not needed
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import MonthlyMetricsChartSkeleton from './MonthlyMetricsChartSkeleton'; // Import the skeleton
-import { Skeleton } from '@/components/ui/skeleton'; // Added import for Skeleton
+import MonthlyMetricsChartSkeleton from './MonthlyMetricsChartSkeleton';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useMonthlyMetrics, MonthlyMetricsData, MonthlyDataItem, MonthlyMetricsSummary } from '@/data/queries/metrics/useMonthlyMetrics'; // Import the new hook and types
 
-interface MonthlyDataItem {
-  date: string;
-  tasksCompleted: number;
-  rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
-}
-
-export interface MonthlyMetricsSummary {
-  tasksCompleted: number;
-  rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
-}
+// Interface MonthlyMetricsSummary is now imported from the hook
 
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
+  // queryClient removed, not directly used here anymore
 
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -43,201 +29,42 @@ const MonthlyMetricsChart: React.FC = () => {
     punishments: { color: '#ea384c', label: 'Punishments' }
   };
 
-  // Force clear cache on component mount
-  useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-    console.log('MonthlyMetricsChart: Invalidated cached data on mount');
-  }, [queryClient]);
+  // Removed useEffect for cache invalidation on mount. The hook handles its own data lifecycle.
+  // Removed generateMonthDays, formatDate, monthDates. formatDate can stay if needed for XAxis, let's check.
+  // monthDates used for chartWidth calculation. It will need to be derived from data.dataArray.length or a fixed reasonable estimate.
+  // For now, let's derive monthDates from data if available, or use a default for initial width calculation.
 
-  const generateMonthDays = (): string[] => {
-    const today = new Date();
-    const start = startOfMonth(today);
-    const end = endOfMonth(today);
-    return eachDayOfInterval({ start, end }).map(date => format(date, 'yyyy-MM-dd'));
-  };
+  const { 
+    data = { 
+      dataArray: [], 
+      monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } 
+    }, 
+    isLoading, 
+    error, 
+    refetch // Kept refetch in case it's needed for manual refresh scenarios, though primary refresh is via hook config
+  } = useMonthlyMetrics();
+  
+  // The `useEffect` for 'fresh' URL param and periodic refresh is removed.
+  // The hook's `refetchInterval` and `refetchOnWindowFocus` should cover these.
+  // If specific 'fresh' param behavior is critical, it can be re-added by calling `refetch()` from here.
 
-  const formatDate = (dateString: string): string => {
-    try {
-      return format(parseISO(dateString), 'MMM d');
-    } catch {
-      return dateString;
-    }
-  };
-
-  const monthDates = useMemo(() => generateMonthDays(), []);
+  const monthDates = useMemo(() => data.dataArray.map(d => d.date), [data.dataArray]);
   
   const BAR_WIDTH = 6;
   const BAR_COUNT = 4;
   const BAR_GAP = 2;
-  const GROUP_PADDING = 10; // Space between day groups
-  const CHART_PADDING = 20; // Padding at chart edges
+  const GROUP_PADDING = 10;
+  const CHART_PADDING = 20;
   
   const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
-  const chartWidth = Math.max(monthDates.length * dayWidth + CHART_PADDING * 2, 900);
+  // Ensure monthDates.length is valid even if data is not yet loaded
+  const chartWidth = Math.max((monthDates.length > 0 ? monthDates.length : 30) * dayWidth + CHART_PADDING * 2, 900);
 
-  // Fetch monthly metrics data using React Query with updated settings for better resetting
-  const fetchMonthlyData = async (): Promise<{ 
-    dataArray: MonthlyDataItem[], 
-    monthlyTotals: MonthlyMetricsSummary 
-  }> => {
-    console.log('Fetching monthly chart data at', new Date().toISOString());
-    try {
-      const metrics = new Map<string, MonthlyDataItem>();
-      monthDates.forEach(date => metrics.set(date, {
-        date, tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0
-      }));
 
-      const today = new Date();
-      const start = startOfMonth(today).toISOString();
-      const end = endOfMonth(today).toISOString();
-
-      // Fetch task completions with unique daily counts
-      const { data: taskEntries, error: taskError } = await supabase
-        .from('task_completion_history')
-        .select('task_id, completed_at')
-        .gte('completed_at', start)
-        .lte('completed_at', end);
-      
-      if (taskError) {
-        console.error('Error loading task_completion_history', taskError);
-      } else {
-        console.log('Found task completions:', taskEntries?.length || 0);
-        // Group by date and task_id to count uniquely per day
-        const tasksByDate = new Map<string, Set<string>>();
-        
-        taskEntries?.forEach(entry => {
-          const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
-          if (!tasksByDate.has(date)) {
-            tasksByDate.set(date, new Set());
-          }
-          tasksByDate.get(date)!.add(entry.task_id);
-        });
-        
-        // Update counts based on unique task IDs per day
-        tasksByDate.forEach((taskIds, date) => {
-          if (metrics.has(date)) {
-            metrics.get(date)!.tasksCompleted = taskIds.size;
-          }
-        });
-      }
-
-      // Fetch rule violations
-      const { data: ruleEntries, error: ruleError } = await supabase
-        .from('rule_violations')
-        .select('*')
-        .gte('violation_date', start)
-        .lte('violation_date', end);
-      
-      if (ruleError) {
-        console.error('Error loading rule_violations', ruleError);
-      } else {
-        console.log('Found rule violations:', ruleEntries?.length || 0);
-        ruleEntries?.forEach(entry => {
-          const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
-          if (metrics.has(date)) {
-            metrics.get(date)!.rulesBroken++;
-          }
-        });
-      }
-
-      // Fetch reward usages
-      const { data: rewardEntries, error: rewardError } = await supabase
-        .from('reward_usage')
-        .select('*')
-        .gte('created_at', start)
-        .lte('created_at', end);
-      
-      if (rewardError) {
-        console.error('Error loading reward_usage', rewardError);
-      } else {
-        console.log('Found reward usages:', rewardEntries?.length || 0);
-        rewardEntries?.forEach(entry => {
-          const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
-          if (metrics.has(date)) {
-            metrics.get(date)!.rewardsRedeemed++;
-          }
-        });
-      }
-
-      // Fetch punishment history
-      const { data: punishmentEntries, error: punishmentError } = await supabase
-        .from('punishment_history')
-        .select('*')
-        .gte('applied_date', start)
-        .lte('applied_date', end);
-      
-      if (punishmentError) {
-        console.error('Error loading punishment_history', punishmentError);
-      } else {
-        console.log('Found punishments:', punishmentEntries?.length || 0);
-        punishmentEntries?.forEach(entry => {
-          const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
-          if (metrics.has(date)) {
-            metrics.get(date)!.punishments++;
-          }
-        });
-      }
-
-      const dataArray = Array.from(metrics.values());
-      
-      // Calculate monthly totals
-      const monthlyTotals = dataArray.reduce((acc, item) => {
-        return {
-          tasksCompleted: acc.tasksCompleted + item.tasksCompleted,
-          rulesBroken: acc.rulesBroken + item.rulesBroken,
-          rewardsRedeemed: acc.rewardsRedeemed + item.rewardsRedeemed,
-          punishments: acc.punishments + item.punishments
-        };
-      }, {
-        tasksCompleted: 0,
-        rulesBroken: 0,
-        rewardsRedeemed: 0,
-        punishments: 0
-      });
-      
-      console.log('Monthly chart data prepared. Monthly totals:', monthlyTotals);
-      return { dataArray, monthlyTotals };
-    } catch (err) {
-      console.error('Error in fetchMonthlyData:', err);
-      toast({
-        title: 'Error loading chart data',
-        description: 'There was a problem loading the monthly metrics.',
-        variant: 'destructive'
-      });
-      return { 
-        dataArray: [], 
-        monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } 
-      };
-    }
-  };
-
-  // Critical fix: Use React Query with updated settings to ensure proper data refresh after reset
-  const { data = { dataArray: [], monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } }, 
-          isLoading, refetch } = useQuery({
-    queryKey: ['monthly-metrics'],
-    queryFn: fetchMonthlyData,
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000, // More aggressive refresh (every 5 seconds)
-    staleTime: 0, // Consider data always stale to force refresh
-    gcTime: 0, // Don't cache at all
-  });
-
-  // Force refresh on URL parameters that indicate a reset
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('fresh')) {
-      console.log('Fresh page load detected in MonthlyMetricsChart, forcing data refresh');
-      refetch();
-    }
-    
-    // Aggressive refresh strategy - periodically check for fresh data
-    const interval = setInterval(() => {
-      console.log('Periodic refresh check in MonthlyMetricsChart');
-      refetch();
-    }, 10000); // Check every 10 seconds
-    
-    return () => clearInterval(interval);
-  }, [refetch]);
+  if (error) {
+    // The hook already shows a toast on error.
+    console.error("Error in MonthlyMetricsChart:", error);
+  }
 
   const hasContent = data.dataArray.some(d =>
     d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
@@ -268,9 +95,9 @@ const MonthlyMetricsChart: React.FC = () => {
 
   const endDrag = () => setIsDragging(false);
 
-  const handleBarClick = (data: any) => {
+  const handleBarClick = (barData: any) => { // barData type can be more specific if known from Recharts
     if (!chartScrollRef.current) return;
-    const clickedDate = data.date;
+    const clickedDate = barData.date;
     const dateIndex = monthDates.findIndex(date => date === clickedDate);
     if (dateIndex === -1) return;
 
@@ -345,13 +172,12 @@ const MonthlyMetricsChart: React.FC = () => {
         </div>
       </ChartContainer>
     );
-  }, [data.dataArray, isDragging, getYAxisDomain, chartWidth, chartConfig, monthDates, BAR_GAP, GROUP_PADDING, CHART_PADDING, BAR_WIDTH, onMouseDown, onMouseMove, endDrag, handleBarClick]);
+  }, [data.dataArray, isDragging, getYAxisDomain, chartWidth, chartConfig, monthDates, BAR_GAP, GROUP_PADDING, CHART_PADDING, BAR_WIDTH, onMouseDown, onMouseMove, endDrag, handleBarClick]); // Added monthDates to dependency array for monthlyChart
 
   if (isLoading) {
     return (
       <div className="space-y-2">
         <MonthlyMetricsChartSkeleton />
-        {/* Keep summary tiles loading state or simple text if not complex */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i} className="p-4 bg-light-navy border-light-navy">
