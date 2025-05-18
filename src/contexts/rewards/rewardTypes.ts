@@ -1,10 +1,9 @@
 
-```typescript
-import { Reward } from '@/data/rewards/types'; // Updated import
+import { Reward } from '@/data/rewards/types';
 import { QueryObserverResult } from '@tanstack/react-query';
 
 export interface SaveRewardParams {
-  rewardData: any; // Consider making this Partial<Reward> & { title: string; ... required fields ... }
+  rewardData: Partial<Reward> & { id?: string }; // Updated to match usage in RewardsDataHandler
   currentIndex: number | null;
 }
 
@@ -20,14 +19,13 @@ export interface RewardsContextType {
   totalRewardsSupply: number;
   totalDomRewardsSupply: number;
   domPoints: number;
-  setTotalPoints: (points: number) => Promise<void>;
-  setDomPoints: (points: number) => Promise<void>;
+  setTotalPoints: (points: number) => Promise<void>; // Changed from Promise<boolean> to Promise<void> to match common patterns
+  setDomPoints: (points: number) => Promise<void>; // Changed from Promise<boolean> to Promise<void>
   isLoading: boolean;
   refetchRewards: () => Promise<QueryObserverResult<Reward[], Error>>;
   handleSaveReward: (rewardData: Partial<Reward>, index: number | null) => Promise<string | null>;
-  handleDeleteReward: (index: number) => Promise<boolean>;
+  handleDeleteReward: (index: number) => Promise<boolean>; // index or id? RewardsDataHandler uses id. Let's assume index is for local array, then maps to id.
   handleBuyReward: (id: string, cost: number, isDomReward?: boolean) => Promise<void>;
   handleUseReward: (id: string) => Promise<void>;
   refreshPointsFromDatabase: () => Promise<void>;
 }
-```

@@ -2,14 +2,14 @@ import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 import { toast } from '@/hooks/use-toast';
-import { Reward } from '@/lib/rewardUtils';
+import { Reward } from '@/data/rewards/types';
 import { supabase } from '@/integrations/supabase/client';
 import { usePointsManagement } from './usePointsManagement';
 import { fetchRewards, saveReward, deleteReward as deleteRewardUtil } from '@/lib/rewardUtils';
-import { useBuySubReward } from "@/data/mutations/useBuySubReward";
-import { useBuyDomReward } from "@/data/mutations/useBuyDomReward";
-import { useRedeemSubReward } from "@/data/mutations/useRedeemSubReward";
-import { useRedeemDomReward } from "@/data/mutations/useRedeemDomReward";
+import { useBuySubReward } from "@/data/rewards/mutations/useBuySubReward";
+import { useBuyDomReward } from "@/data/rewards/mutations/useBuyDomReward";
+import { useRedeemSubReward } from "@/data/rewards/mutations/useRedeemSubReward";
+import { useRedeemDomReward } from "@/data/rewards/mutations/useRedeemDomReward";
 
 export default function useRewardOperations() {
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -48,56 +48,42 @@ export default function useRewardOperations() {
       setRewards(fetchedRewards);
       
       // Calculate total supply
-      const totalSupply = fetchedRewards.reduce((sum, reward) => sum + reward.supply, 0);
+      const totalSupply = fetchedRewards.reduce((sum, reward) => sum + (reward.supply === -1 ? 0 : reward.supply), 0); // Handle infinite supply
       setTotalRewardsSupply(totalSupply);
       
       // Calculate dom rewards supply
       const domSupply = fetchedRewards
         .filter(reward => reward.is_dom_reward)
-        .reduce((sum, reward) => sum + reward.supply, 0);
+        .reduce((sum, reward) => sum + (reward.supply === -1 ? 0 : reward.supply), 0); // Handle infinite supply
       setTotalDomRewardsSupply(domSupply);
+    } else if (fetchedRewards) { // if fetchedRewards is an empty array
+        setRewards([]);
+        setTotalRewardsSupply(0);
+        setTotalDomRewardsSupply(0);
     }
   }, [fetchedRewards]);
 
   const handleSaveReward = useCallback(async (rewardData: any, index: number | null) => {
     try {
-      // If we have an index, we're updating an existing reward
       const existingId = index !== null && rewards[index] ? rewards[index].id : undefined;
+      const savedRewardData = await saveReward(rewardData, existingId); // saveReward from lib/rewardUtils
       
-      // Save the reward to the database
-      const savedReward = await saveReward(rewardData, existingId);
-      
-      if (savedReward) {
-        // Update the local state
-        const updatedRewards = [...rewards];
-        
-        if (index !== null && index >= 0 && index < rewards.length) {
-          // Update existing reward
-          updatedRewards[index] = savedReward;
-        } else {
-          // Add new reward
-          updatedRewards.unshift(savedReward);
-        }
-        
-        setRewards(updatedRewards);
-        
-        // Recalculate supplies
-        const totalSupply = updatedRewards.reduce((sum, reward) => sum + reward.supply, 0);
-        setTotalRewardsSupply(totalSupply);
-        
-        const domSupply = updatedRewards
-          .filter(reward => reward.is_dom_reward)
-          .reduce((sum, reward) => sum + reward.supply, 0);
-        setTotalDomRewardsSupply(domSupply);
-        
-        // Update the query cache
-        queryClient.setQueryData(REWARDS_QUERY_KEY, updatedRewards);
-        
-        return savedReward.id;
+      if (savedRewardData) {
+        const optimisticId = savedRewardData.id;
+        // This part might be redundant if react-query handles optimistic updates well with invalidateQueries
+        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldData = []) => {
+            if (existingId) { // Update
+                return oldData.map(r => r.id === existingId ? savedRewardData : r);
+            } else { // Create
+                return [{ ...savedRewardData, id: optimisticId }, ...oldData];
+            }
+        });
+        await queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+        return savedRewardData.id;
       }
       return null;
     } catch (error) {
-      console.error('Error saving reward:', error);
+      console.error('Error saving reward in useRewardOperations:', error);
       toast({
         title: 'Error',
         description: 'Failed to save reward. Please try again.',
@@ -116,30 +102,23 @@ export default function useRewardOperations() {
     const rewardId = rewards[index].id;
     
     try {
-      const success = await deleteRewardUtil(rewardId);
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldData = []) => 
+        oldData.filter(r => r.id !== rewardId)
+      );
+      const success = await deleteRewardUtil(rewardId); // deleteRewardUtil from lib/rewardUtils
       
       if (success) {
-        // Update local state
-        const updatedRewards = rewards.filter((_, i) => i !== index);
-        setRewards(updatedRewards);
-        
-        // Recalculate supplies
-        const totalSupply = updatedRewards.reduce((sum, reward) => sum + reward.supply, 0);
-        setTotalRewardsSupply(totalSupply);
-        
-        const domSupply = updatedRewards
-          .filter(reward => reward.is_dom_reward)
-          .reduce((sum, reward) => sum + reward.supply, 0);
-        setTotalDomRewardsSupply(domSupply);
-        
-        // Update the query cache
-        queryClient.setQueryData(REWARDS_QUERY_KEY, updatedRewards);
-        
+        await queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
         return true;
+      } else {
+         // Revert optimistic update
+        queryClient.setQueryData(REWARDS_QUERY_KEY, rewards);
+        return false;
       }
-      return false;
     } catch (error) {
-      console.error('Error deleting reward:', error);
+      // Revert optimistic update
+      queryClient.setQueryData(REWARDS_QUERY_KEY, rewards);
+      console.error('Error deleting reward in useRewardOperations:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete reward. Please try again.',
@@ -149,171 +128,106 @@ export default function useRewardOperations() {
     }
   }, [rewards, queryClient]);
 
-  const handleBuyReward = useCallback(async (id: string, cost: number, isDomReward = false) => {
+  const handleBuyReward = useCallback(async (id: string, cost: number, isDomRewardParam = false) => {
+    const rewardToBuy = (queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || []).find(r => r.id === id);
+    if (!rewardToBuy) {
+        toast({ title: 'Error', description: 'Reward not found.', variant: 'destructive' });
+        return;
+    }
+    const isDom = isDomRewardParam || rewardToBuy.is_dom_reward;
+
     try {
-      // Find the reward in our local state
-      const rewardIndex = rewards.findIndex(r => r.id === id);
-      if (rewardIndex === -1) {
-        throw new Error('Reward not found');
-      }
-      
-      const reward = rewards[rewardIndex];
-      
-      // Check if we have enough points
-      if (isDomReward) {
-        if (domPoints < cost) {
-          toast({
-            title: 'Not enough dom points',
-            description: `You need ${cost} dom points to buy this reward.`,
-            variant: 'destructive',
-          });
-          return;
-        }
-      } else {
-        if (totalPoints < cost) {
-          toast({
-            title: 'Not enough points',
-            description: `You need ${cost} points to buy this reward.`,
-            variant: 'destructive',
-          });
-          return;
-        }
-      }
-      
-      // Get the user
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) {
-        toast({
-          title: 'Error',
-          description: 'You must be logged in to buy rewards.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Error', description: 'You must be logged in.', variant: 'destructive' });
         return;
       }
+      const profileId = userData.user.id;
       
-      // Buy the reward
-      if (isDomReward) {
+      if (isDom) {
+        if (domPoints < cost) throw new Error("Not enough dom points.");
         await buyDom({
           rewardId: id,
           cost,
-          currentSupply: reward.supply,
-          profileId: userData.user.id,
+          currentSupply: rewardToBuy.supply,
+          profileId: profileId,
           currentDomPoints: domPoints
         });
-        
-        // Update local state
-        setDomPoints(domPoints - cost);
+        // Points update is handled by the buyDom mutation's onSuccess/onMutate
       } else {
+        if (totalPoints < cost) throw new Error("Not enough points.");
         await buySub({
           rewardId: id,
           cost,
-          currentSupply: reward.supply,
-          profileId: userData.user.id,
+          currentSupply: rewardToBuy.supply,
+          profileId: profileId,
           currentPoints: totalPoints
         });
-        
-        // Update local state
-        setTotalPoints(totalPoints - cost);
+         // Points update is handled by the buySub mutation's onSuccess/onMutate
       }
-      
-      // Update the reward supply in local state
-      const updatedRewards = [...rewards];
-      updatedRewards[rewardIndex] = {
-        ...reward,
-        supply: reward.supply - 1
-      };
-      setRewards(updatedRewards);
-      
-      // Recalculate supplies
-      const totalSupply = updatedRewards.reduce((sum, reward) => sum + reward.supply, 0);
-      setTotalRewardsSupply(totalSupply);
-      
-      const domSupply = updatedRewards
-        .filter(reward => reward.is_dom_reward)
-        .reduce((sum, reward) => sum + reward.supply, 0);
-      setTotalDomRewardsSupply(domSupply);
-      
-      // Update the query cache
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      
+      // Invalidation should happen in the individual mutation hooks
+      // await queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+      // await queryClient.invalidateQueries({ queryKey: isDom ? REWARDS_DOM_POINTS_QUERY_KEY : REWARDS_POINTS_QUERY_KEY });
+
+      // Toast is handled by individual mutation hooks
+    } catch (error: any) {
+      console.error('Error buying reward in useRewardOperations:', error);
       toast({
-        title: 'Reward purchased!',
-        description: `You bought ${reward.title} for ${cost} ${isDomReward ? 'dom ' : ''}points.`,
-      });
-    } catch (error) {
-      console.error('Error buying reward:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to buy reward. Please try again.',
+        title: 'Purchase Error',
+        description: error.message || 'Failed to buy reward.',
         variant: 'destructive',
       });
     }
-  }, [rewards, totalPoints, domPoints, setTotalPoints, setDomPoints, buyDom, buySub, queryClient]);
+  }, [queryClient, totalPoints, domPoints, buyDom, buySub]); // Removed rewards dependency, use queryClient.getQueryData
 
   const handleUseReward = useCallback(async (id: string) => {
+    const rewardToUse = (queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || []).find(r => r.id === id);
+     if (!rewardToUse) {
+        toast({ title: 'Error', description: 'Reward not found.', variant: 'destructive' });
+        return;
+    }
+
     try {
-      // Find the reward in our local state
-      const rewardIndex = rewards.findIndex(r => r.id === id);
-      if (rewardIndex === -1) {
-        throw new Error('Reward not found');
-      }
-      
-      const reward = rewards[rewardIndex];
-      
-      // Get the user
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) {
-        toast({
-          title: 'Error',
-          description: 'You must be logged in to use rewards.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Error', description: 'You must be logged in.', variant: 'destructive' });
         return;
       }
-      
-      // Use the reward
-      if (reward.is_dom_reward) {
+      const profileId = userData.user.id;
+
+      if (rewardToUse.is_dom_reward) {
         await redeemDom({
           rewardId: id,
-          profileId: userData.user.id,
-          currentSupply: reward.supply
+          profileId: profileId,
+          currentSupply: rewardToUse.supply
         });
       } else {
         await redeemSub({
           rewardId: id,
-          profileId: userData.user.id,
-          currentSupply: reward.supply
+          profileId: profileId,
+          currentSupply: rewardToUse.supply
         });
       }
-      
-      // Update the reward in local state if needed
-      const updatedRewards = [...rewards];
-      // If we need to update any properties after using the reward
-      // updatedRewards[rewardIndex] = { ...updatedRewards[rewardIndex], someProperty: newValue };
-      setRewards(updatedRewards);
-      
+      // Invalidation and toast handled by individual mutation hooks
+      // await queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+    } catch (error: any) {
+      console.error('Error using reward in useRewardOperations:', error);
       toast({
-        title: 'Reward used!',
-        description: `You used ${reward.title}.`,
-      });
-    } catch (error) {
-      console.error('Error using reward:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to use reward. Please try again.',
+        title: 'Usage Error',
+        description: error.message || 'Failed to use reward.',
         variant: 'destructive',
       });
     }
-  }, [rewards, redeemDom, redeemSub]);
+  }, [queryClient, redeemDom, redeemSub]); // Removed rewards dependency
 
   return {
-    rewards,
+    rewards: fetchedRewards, // Use fetchedRewards which is from useQuery
     totalPoints,
     totalRewardsSupply,
     totalDomRewardsSupply,
     domPoints,
-    setTotalPoints,
-    setDomPoints,
+    setTotalPoints: updatePointsInDatabase, // Map to the correct function from usePointsManagement
+    setDomPoints: updateDomPointsInDatabase, // Map to the correct function from usePointsManagement
     isLoading,
     refetchRewards,
     handleSaveReward,

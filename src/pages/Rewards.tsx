@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -9,11 +10,11 @@ import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton';
 import { Award as AwardIcon } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-import { useRewards as useRewardsQuery } from '@/data/queries/useRewards';
+import { useRewardsQuery } from '@/data/queries/useRewards'; // Corrected import
 // Import specific mutation hooks
 import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
-import { Reward, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/types'; // Corrected import
+import { Reward, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/types';
 import { toast } from '@/hooks/use-toast';
 
 usePreloadRewards()();
@@ -21,7 +22,7 @@ usePreloadRewards()();
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
-  const { data: rewards = [], isLoading, error, refetch: refetchRewardsQuery } = useRewardsQuery(); // Added refetch
+  const { data: rewards = [], isLoading, error, refetch: refetchRewardsQuery } = useRewardsQuery();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<Reward | undefined>(undefined);
   
@@ -53,24 +54,22 @@ const RewardsContent: React.FC<{
   useEffect(() => {
     contentRef.current = { handleAddNewReward };
     return () => { contentRef.current = {}; };
-  }, [contentRef, handleAddNewReward]);
+  }, [contentRef, handleAddNewReward]); // handleAddNewReward is stable due to its definition
 
   const handleSaveRewardEditor = async (formData: Partial<Reward>) => {
     try {
       if (rewardBeingEdited?.id) {
         const updateVariables: UpdateRewardVariables = {
           id: rewardBeingEdited.id,
-          ...formData, // formData already contains partial updates
+          ...formData,
         };
         await updateRewardMutation.mutateAsync(updateVariables);
       } else {
-        // Ensure all required fields for CreateRewardVariables are present
         if (!formData.title || typeof formData.cost !== 'number' || typeof formData.supply !== 'number' || typeof formData.is_dom_reward !== 'boolean') {
           toast({ title: "Missing required fields", description: "Title, cost, supply, and DOM status are required.", variant: "destructive" });
           return;
         }
         const createVariables: CreateRewardVariables = {
-          // Explicitly map required fields and provide defaults for others from formData
           title: formData.title,
           cost: formData.cost,
           supply: formData.supply,
@@ -92,11 +91,8 @@ const RewardsContent: React.FC<{
       }
       setIsEditorOpen(false);
       setRewardBeingEdited(undefined);
-      // refetchRewardsQuery(); // Optimistic updates should handle UI, invalidate if necessary
     } catch (e) {
-      // Errors are typically handled by the mutation hooks (e.g., showing a toast)
       console.error("Error saving reward from page:", e);
-      // Optionally, show a generic error toast here if mutation hooks don't cover all cases
     }
   };
 
@@ -110,7 +106,6 @@ const RewardsContent: React.FC<{
       await deleteRewardMutation.mutateAsync(finalIdToDelete);
       setIsEditorOpen(false);
       setRewardBeingEdited(undefined);
-      // refetchRewardsQuery(); // Optimistic updates should handle UI
     } catch (e) {
       console.error("Error deleting reward from page:", e);
     }
@@ -149,8 +144,8 @@ const RewardsContent: React.FC<{
 
     return (
       <RewardsList
-        rewards={rewards}
-        onEdit={handleEditReward} // This expects (index: number) => void
+        rewards={rewards} // Assuming RewardsListProps correctly defines 'rewards'
+        onEdit={handleEditReward} 
       />
     );
   };

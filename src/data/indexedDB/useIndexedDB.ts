@@ -1,5 +1,4 @@
 
-```typescript
 import localforage from 'localforage';
 import { Reward } from '@/data/rewards/types';
 // Define types for other entities or import them if they exist elsewhere
@@ -231,4 +230,3 @@ export const loadDomPointsFromDB = async (): Promise<number | null> => {
     return null;
   }
 };
-```
