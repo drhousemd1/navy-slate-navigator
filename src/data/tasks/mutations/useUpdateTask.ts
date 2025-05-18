@@ -1,11 +1,10 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Task } from '@/lib/taskUtils';
 import { TaskWithId, UpdateTaskVariables } from '@/data/tasks/types';
 
-export { UpdateTaskVariables }; // Re-export for convenience
+export type { UpdateTaskVariables }; // Changed to export type
 
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
@@ -24,7 +23,8 @@ export const useUpdateTask = () => {
 
       if (error) throw error;
       if (!data) throw new Error('Task update failed: No data returned.');
-      return data as TaskWithId;
+      // Ensure the returned data conforms to TaskWithId, which includes an 'id'
+      return data as TaskWithId; 
     },
     entityName: 'Task',
     idField: 'id',
