@@ -147,7 +147,8 @@ export const useRewardsData = () => {
       if (rewardData.id) {
         // Update existing reward
         const { id, ...updates } = rewardData;
-        const variables = { rewardId: id, ...updates }; // Use rewardId to match UpdateRewardVariables
+        // Ensure 'id' is correctly passed as part of the variables for updateReward
+        const variables = { id, ...updates }; 
         return await updateReward(variables);
       } else {
         // Create new reward

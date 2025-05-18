@@ -29,7 +29,6 @@ export const useUpdateReward = () => {
     },
     entityName: 'Reward',
     idField: 'id', // This ensures the optimistic update uses the 'id' field from the item
-    getItemId: (variables) => variables.id, // This function should return the ID of the item being mutated
+    // getItemId was removed as it's not a valid prop for useUpdateOptimisticMutation
   });
 };
-
