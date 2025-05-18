@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
 import { Skull } from 'lucide-react';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
-import { usePunishments as usePunishmentsQuery } from '@/data/queries/usePunishments';
+import { usePunishments } from '@/contexts/punishments/PunishmentsProvider';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
 import { useDeletePunishment } from "@/data/punishments/mutations/useDeletePunishment";
@@ -15,14 +14,18 @@ import PunishmentCardSkeleton from '@/components/punishments/PunishmentCardSkele
 import ErrorBoundary from '@/components/ErrorBoundary';
 import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
-// import { usePreloadPunishments } from '@/data/preload/usePreloadPunishments'; // Removed
-
-// usePreloadPunishments(); // Removed
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
 }> = ({ contentRef }) => {
-  const { punishments, isLoading, error, refetchPunishments } = usePunishmentsQuery();
+  // Use the hook from context provider
+  const { 
+    punishments, // This now comes from the standardized usePunishmentsData via context
+    isLoading: isLoadingPunishments, // Renamed from isLoading to avoid conflict if other loading states are added
+    error: errorPunishments, // Renamed from error
+    refetchPunishments 
+  } = usePunishments();
+  
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -34,11 +37,12 @@ const PunishmentsContent: React.FC<{
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialLoad(false);
-    }, 200);
+    }, 200); // Short delay to allow initial cached data to render if available
     return () => clearTimeout(timer);
   }, []);
   
-  const showLoader = isInitialLoad && isLoading && punishments.length === 0;
+  // Use isLoadingPunishments from the context hook
+  const showLoader = isInitialLoad && isLoadingPunishments && punishments.length === 0;
   
   const handleAddNewPunishment = () => {
     setCurrentPunishment(undefined);
@@ -92,13 +96,11 @@ const PunishmentsContent: React.FC<{
       await deletePunishmentAsync(id);
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
-      // Toast for delete is handled by the mutation hook
     } catch (error) {
       console.error("Error deleting punishment:", error);
-      // Additional toast if needed, but mutation hook should handle primary feedback
       toast({
         title: "Error on Page",
-        description: "Failed to delete punishment from page.", // This seems redundant if hook handles it
+        description: "Failed to delete punishment from page.",
         variant: "destructive"
       });
     }
@@ -117,14 +119,15 @@ const PunishmentsContent: React.FC<{
     );
   }
   
-  if (!isLoading && error && punishments.length === 0) {
+  // Use errorPunishments from the context hook
+  if (!isLoadingPunishments && errorPunishments && punishments.length === 0) {
     return (
       <div className="p-4 pt-6 text-center">
-        <PunishmentsHeader /> {/* Removed onAddNewPunishment */}
+        <PunishmentsHeader />
         <EmptyState
           icon={Skull}
           title="Error Loading Punishments"
-          description={error.message || "Could not load punishments. Please try again later."}
+          description={errorPunishments.message || "Could not load punishments. Please try again later."}
           action={
             <Button onClick={() => refetchPunishments()} className="mt-4">
               Try Again
@@ -135,10 +138,10 @@ const PunishmentsContent: React.FC<{
     );
   }
   
-  if (!isLoading && punishments.length === 0 && !isEditorOpen) {
+  if (!isLoadingPunishments && punishments.length === 0 && !isEditorOpen) {
     return (
       <div className="p-4 pt-6">
-        <PunishmentsHeader /> {/* Removed onAddNewPunishment */}
+        <PunishmentsHeader />
         <EmptyState
           icon={Skull}
           title="No Punishments Yet"
@@ -166,7 +169,7 @@ const PunishmentsContent: React.FC<{
   
   return (
     <div className="p-4 pt-6">
-      <PunishmentsHeader /> {/* Removed onAddNewPunishment */}
+      <PunishmentsHeader />
       
       <div className="flex flex-col space-y-4 mt-4">
         {punishments.map((punishment) => (
@@ -208,4 +211,3 @@ const Punishments: React.FC = () => {
 };
 
 export default Punishments;
-

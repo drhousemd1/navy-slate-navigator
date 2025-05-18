@@ -5,15 +5,16 @@ import { PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from '@/co
 import { toast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  loadPunishmentsFromDB,
   savePunishmentsToDB,
-  loadPunishmentHistoryFromDB,
   savePunishmentHistoryToDB,
 } from '../indexedDB/useIndexedDB';
 import { useRewards } from '@/contexts/RewardsContext'; // For points updates
-import { convertToMondayBasedIndex } from '@/lib/utils'; // Corrected import
+import { convertToMondayBasedIndex } from '@/lib/utils';
+import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager'; // Added for query key
+import { fetchPunishments } from './queries/fetchPunishments'; // Added for queryFn
+import { fetchCurrentWeekPunishmentHistory } from './queries/fetchPunishmentHistory'; // Added for queryFn
 
-const PUNISHMENTS_QUERY_KEY = ['punishments'];
+// PUNISHMENTS_QUERY_KEY is now CRITICAL_QUERY_KEYS.PUNISHMENTS
 const PUNISHMENT_HISTORY_QUERY_KEY = ['punishmentHistory'];
 
 interface SavePunishmentContext {
@@ -47,42 +48,27 @@ export const usePunishmentsData = () => {
     error: errorPunishments,
     refetch: refetchPunishments,
   } = useQuery<PunishmentData[], Error>({
-    queryKey: PUNISHMENTS_QUERY_KEY,
-    queryFn: async () => {
-      const localData = await loadPunishmentsFromDB(); // Returns PunishmentData[] | null (id?: string)
-      if (localData && localData.length > 0) {
-        console.log('[usePunishmentsData] Loaded punishments from IndexedDB');
-        return localData.map(p => ({ ...p, dom_supply: p.dom_supply ?? 0 }));
-      }
-      console.log('[usePunishmentsData] Fetching punishments from Supabase');
-      const { data, error } = await supabase.from('punishments').select('*');
-      if (error) throw error;
-      const fetchedData = (data || []).map(p => ({ ...p, dom_supply: p.dom_supply ?? 0 })) as PunishmentData[];
-      await savePunishmentsToDB(fetchedData.filter(p => p.id != null) as PunishmentData[]); // Ensure ID exists for DB save
-      return fetchedData;
-    },
-    staleTime: Infinity,
+    queryKey: CRITICAL_QUERY_KEYS.PUNISHMENTS, // Use critical query key
+    queryFn: fetchPunishments, // Use standardized fetch function
+    // React Query persister will handle IndexedDB caching.
+    // Manual IndexedDB loading (loadPunishmentsFromDB) removed from here.
+    // The `fetchPunishments` function will be called if data is stale or not in cache.
+    // Preloading populates the cache, so this should hit the cache if preloading worked.
+    staleTime: Infinity, // Keep data fresh indefinitely, rely on preloading/manual invalidation
+    // gcTime, refetchOnWindowFocus, etc., will use queryClient defaults
   });
 
   const {
-    data: punishmentHistory = [], // Default to empty array, type is PunishmentHistoryItem[]
+    data: punishmentHistory = [], 
     isLoading: isLoadingHistory,
     error: errorHistory,
     refetch: refetchHistory,
   } = useQuery<PunishmentHistoryItem[], Error>({
     queryKey: PUNISHMENT_HISTORY_QUERY_KEY,
-    queryFn: async () => {
-      const localData = await loadPunishmentHistoryFromDB(); // Returns PunishmentHistoryItem[] | null
-      if (localData && localData.length > 0) {
-        console.log('[usePunishmentsData] Loaded punishment history from IndexedDB');
-        return localData;
-      }
-      console.log('[usePunishmentsData] Fetching punishment history from Supabase (or returning empty)');
-      // Example: Fetch from Supabase if desired, otherwise rely on local-first for history.
-      // For now, returning empty array if not in IndexedDB
-      return []; 
-    },
-    staleTime: 1000 * 60 * 5, 
+    queryFn: fetchCurrentWeekPunishmentHistory, // Use standardized fetch function for history
+    // React Query persister will handle IndexedDB caching for history too.
+    // Manual IndexedDB loading (loadPunishmentHistoryFromDB) removed.
+    staleTime: 1000 * 60 * 5, // 5 minutes, as it's not preloaded by usePreloadAppCoreData
   });
 
   // --- Mutations ---
@@ -110,7 +96,9 @@ export const usePunishmentsData = () => {
 
       } else {
         if (punishmentData.dom_supply === undefined && dataToSave.id) {
-            const existingPunishment = punishments.find(p => p.id === dataToSave.id);
+            // QueryClient getQueryData is non-blocking if data is available
+            const existingPunishments = queryClient.getQueryData<PunishmentData[]>(CRITICAL_QUERY_KEYS.PUNISHMENTS) || [];
+            const existingPunishment = existingPunishments.find(p => p.id === dataToSave.id);
             dataToSave.dom_supply = existingPunishment?.dom_supply ?? 0;
         }
       }
@@ -122,12 +110,12 @@ export const usePunishmentsData = () => {
       return data as PunishmentData;
     },
     onMutate: async (punishmentData) => {
-      await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      const previousPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
+      await queryClient.cancelQueries({ queryKey: CRITICAL_QUERY_KEYS.PUNISHMENTS });
+      const previousPunishments = queryClient.getQueryData<PunishmentData[]>(CRITICAL_QUERY_KEYS.PUNISHMENTS);
       let optimisticPunishmentId: string | undefined;
 
       if (punishmentData.id) { 
-        queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) =>
+        queryClient.setQueryData<PunishmentData[]>(CRITICAL_QUERY_KEYS.PUNISHMENTS, (old = []) =>
           old.map(p => p.id === punishmentData.id ? { ...p, ...punishmentData, dom_supply: punishmentData.dom_supply ?? p.dom_supply ?? 0, updated_at: new Date().toISOString() } as PunishmentData : p)
         );
       } else { 
@@ -144,18 +132,18 @@ export const usePunishmentsData = () => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) => [optimisticPunishment, ...old]);
+        queryClient.setQueryData<PunishmentData[]>(CRITICAL_QUERY_KEYS.PUNISHMENTS, (old = []) => [optimisticPunishment, ...old]);
       }
       return { previousPunishments, optimisticPunishmentId };
     },
     onError: (error, _variables, context) => {
       if (context?.previousPunishments) {
-        queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, context.previousPunishments);
+        queryClient.setQueryData<PunishmentData[]>(CRITICAL_QUERY_KEYS.PUNISHMENTS, context.previousPunishments);
       }
       toast({ title: 'Error saving punishment', description: error.message, variant: 'destructive' });
     },
     onSuccess: async (data, _variables, context) => {
-      queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) => {
+      queryClient.setQueryData<PunishmentData[]>(CRITICAL_QUERY_KEYS.PUNISHMENTS, (old = []) => {
         const newPunishments = old.map(p => 
           (context?.optimisticPunishmentId && p.id === context.optimisticPunishmentId) || p.id === data.id 
           ? { ...data, dom_supply: data.dom_supply ?? 0 } 
@@ -164,13 +152,16 @@ export const usePunishmentsData = () => {
         if (!context?.optimisticPunishmentId && !old.find(p => p.id === data.id)) {
           newPunishments.unshift({ ...data, dom_supply: data.dom_supply ?? 0 });
         }
+        // Persister handles IndexedDB via queryClient state changes. 
+        // Direct savePunishmentsToDB might be redundant if persister is working.
+        // However, explicit save can ensure it's written, let's keep for now unless issues arise.
         savePunishmentsToDB(newPunishments.filter(p => p.id != null) as PunishmentData[]);
         return newPunishments;
       });
       toast({ title: 'Punishment saved successfully!' });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.PUNISHMENTS });
     }
   });
 
@@ -180,20 +171,20 @@ export const usePunishmentsData = () => {
       if (error) throw error;
     },
     onMutate: async (punishmentId) => {
-      await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey: CRITICAL_QUERY_KEYS.PUNISHMENTS });
       await queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
 
-      const previousPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
+      const previousPunishments = queryClient.getQueryData<PunishmentData[]>(CRITICAL_QUERY_KEYS.PUNISHMENTS);
       const previousHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY);
 
-      queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (old = []) => old.filter(p => p.id !== punishmentId));
+      queryClient.setQueryData<PunishmentData[]>(CRITICAL_QUERY_KEYS.PUNISHMENTS, (old = []) => old.filter(p => p.id !== punishmentId));
       queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => old.filter(h => h.punishment_id !== punishmentId));
       
       return { previousPunishments, previousHistory };
     },
     onError: (error, _punishmentId, context) => {
       if (context?.previousPunishments) {
-        queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, context.previousPunishments);
+        queryClient.setQueryData<PunishmentData[]>(CRITICAL_QUERY_KEYS.PUNISHMENTS, context.previousPunishments);
       }
       if (context?.previousHistory) {
         queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, context.previousHistory);
@@ -201,15 +192,15 @@ export const usePunishmentsData = () => {
       toast({ title: 'Error deleting punishment', description: error.message, variant: 'destructive' });
     },
     onSuccess: async (_data, punishmentId) => {
-      const currentPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY) || [];
-      await savePunishmentsToDB(currentPunishments.filter(p => p.id != null) as PunishmentData[]); // Ensure IDs
+      const currentPunishments = queryClient.getQueryData<PunishmentData[]>(CRITICAL_QUERY_KEYS.PUNISHMENTS) || [];
+      await savePunishmentsToDB(currentPunishments.filter(p => p.id != null) as PunishmentData[]);
       const currentHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY) || [];
       await savePunishmentHistoryToDB(currentHistory);
       
       toast({ title: 'Punishment deleted successfully!' });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.PUNISHMENTS });
       queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
     }
   });
@@ -249,7 +240,7 @@ export const usePunishmentsData = () => {
             punishment_id: punishmentId, 
             applied_date: new Date().toISOString(),
             points_deducted: costPoints,
-            day_of_week: new Date().getDay(), // Use standard getDay()
+            day_of_week: new Date().getDay(), 
         };
         const { error: historyError } = await supabase.from('punishment_history').insert(historyEntry).select().single();
         if (historyError) throw new Error(`Failed to record punishment history: ${historyError.message}`);
@@ -264,7 +255,7 @@ export const usePunishmentsData = () => {
         punishment_id: args.id, 
         applied_date: new Date().toISOString(),
         points_deducted: args.costPoints,
-        day_of_week: new Date().getDay(), // Use standard getDay()
+        day_of_week: new Date().getDay(), 
       };
       queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => 
         [optimisticHistoryEntry, ...old]
@@ -280,17 +271,17 @@ export const usePunishmentsData = () => {
     onSuccess: async (_data, args, context) => {
       queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY }).then(() => {
         const currentHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY) || [];
-        savePunishmentHistoryToDB(currentHistory);
+        savePunishmentHistoryToDB(currentHistory); // Explicit save, similar to punishments
       });
       
-      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }); 
+      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.PUNISHMENTS }); 
       
       await refreshPointsFromDatabase(); 
       toast({ title: 'Punishment applied successfully!' });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.PUNISHMENTS });
     }
   });
 
@@ -319,13 +310,11 @@ export const usePunishmentsData = () => {
   }, [punishmentHistory]);
   
   const punishmentsWithUsage = useMemo(() => {
-    console.log('[usePunishmentsData] Recalculating punishmentsWithUsage. History length:', punishmentHistory.length);
     return punishments.map(punishment => {
       const historyForPunishment = punishmentHistory.filter(h => h.punishment_id === punishment.id);
       const usage_data = [0, 0, 0, 0, 0, 0, 0]; 
       historyForPunishment.forEach(item => {
-        // item.day_of_week is 0 (Sun) - 6 (Sat) from new Date().getDay()
-        const dayIndex = convertToMondayBasedIndex(item.day_of_week); // convertToMondayBasedIndex handles 0-6 input
+        const dayIndex = convertToMondayBasedIndex(item.day_of_week); 
         if (dayIndex >= 0 && dayIndex < 7) {
           usage_data[dayIndex] += 1; 
         }
@@ -336,8 +325,7 @@ export const usePunishmentsData = () => {
         frequency_count: historyForPunishment.length,
       };
     });
-  }, [punishments, punishmentHistory, convertToMondayBasedIndex]);
-
+  }, [punishments, punishmentHistory]);
 
   return {
     punishments: punishmentsWithUsage,
