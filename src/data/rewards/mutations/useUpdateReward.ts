@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/data/RewardsDataHandler';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 
-export type UpdateRewardVariables = { rewardId: string } & Partial<Omit<Reward, 'id'>>;
+export type UpdateRewardVariables = { id: string } & Partial<Omit<Reward, 'id'>>;
 
 export const useUpdateReward = () => {
   const queryClient = useQueryClient();
@@ -13,12 +13,12 @@ export const useUpdateReward = () => {
     queryClient,
     queryKey: ['rewards'],
     mutationFn: async (variables: UpdateRewardVariables) => {
-      const { rewardId, ...updates } = variables;
+      const { id, ...updates } = variables;
       
       const { data, error } = await supabase
         .from('rewards')
         .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', rewardId)
+        .eq('id', id)
         .select()
         .single();
 
@@ -28,7 +28,8 @@ export const useUpdateReward = () => {
       return data as Reward;
     },
     entityName: 'Reward',
-    idField: 'id',
-    getItemId: (variables) => variables.rewardId,
+    idField: 'id', // This ensures the optimistic update uses the 'id' field from the item
+    getItemId: (variables) => variables.id, // This function should return the ID of the item being mutated
   });
 };
+
