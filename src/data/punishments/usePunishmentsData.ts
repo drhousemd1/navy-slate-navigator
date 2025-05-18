@@ -11,7 +11,7 @@ import {
   savePunishmentHistoryToDB,
 } from '../indexedDB/useIndexedDB';
 import { useRewards } from '@/contexts/RewardsContext'; // For points updates
-import { getDayOfWeek, getMondayBasedIndex } from '@/lib/dateUtils'; // Assuming date utils
+import { convertToMondayBasedIndex } from '@/lib/utils'; // Corrected import
 
 const PUNISHMENTS_QUERY_KEY = ['punishments'];
 const PUNISHMENT_HISTORY_QUERY_KEY = ['punishmentHistory'];
@@ -115,7 +115,6 @@ export const usePunishmentsData = () => {
         }
       }
       
-      // Ensure dataToSave has an id before upserting if your DB expects it
       const finalDataToSave = { ...dataToSave, id: dataToSave.id! } as PunishmentData;
 
       const { data, error } = await supabase.from('punishments').upsert(finalDataToSave).select().single();
@@ -165,7 +164,6 @@ export const usePunishmentsData = () => {
         if (!context?.optimisticPunishmentId && !old.find(p => p.id === data.id)) {
           newPunishments.unshift({ ...data, dom_supply: data.dom_supply ?? 0 });
         }
-        // Ensure all items passed to savePunishmentsToDB have an ID
         savePunishmentsToDB(newPunishments.filter(p => p.id != null) as PunishmentData[]);
         return newPunishments;
       });
@@ -248,10 +246,10 @@ export const usePunishmentsData = () => {
         }
 
         const historyEntry: Omit<PunishmentHistoryItem, 'id' | 'applied_date'> & { punishment_id: string; applied_date?: string } = {
-            punishment_id: punishmentId, // Ensure punishment_id is string
+            punishment_id: punishmentId, 
             applied_date: new Date().toISOString(),
             points_deducted: costPoints,
-            day_of_week: getDayOfWeek(new Date()),
+            day_of_week: new Date().getDay(), // Use standard getDay()
         };
         const { error: historyError } = await supabase.from('punishment_history').insert(historyEntry).select().single();
         if (historyError) throw new Error(`Failed to record punishment history: ${historyError.message}`);
@@ -263,10 +261,10 @@ export const usePunishmentsData = () => {
       const optimisticHistoryId = uuidv4();
       const optimisticHistoryEntry: PunishmentHistoryItem = {
         id: optimisticHistoryId,
-        punishment_id: args.id, // args.id is punishmentId
+        punishment_id: args.id, 
         applied_date: new Date().toISOString(),
         points_deducted: args.costPoints,
-        day_of_week: getDayOfWeek(new Date()),
+        day_of_week: new Date().getDay(), // Use standard getDay()
       };
       queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => 
         [optimisticHistoryEntry, ...old]
@@ -313,22 +311,21 @@ export const usePunishmentsData = () => {
     setSelectedPunishment(randomPunishment);
     return randomPunishment;
   }, [punishments]);
-
-  // Calculate recently applied punishments (e.g., last 5)
+  
   const recentlyAppliedPunishments = useMemo(() => {
     return [...punishmentHistory]
       .sort((a, b) => new Date(b.applied_date).getTime() - new Date(a.applied_date).getTime())
       .slice(0, 5);
   }, [punishmentHistory]);
   
-  // Aggregate usage data for each punishment
   const punishmentsWithUsage = useMemo(() => {
     console.log('[usePunishmentsData] Recalculating punishmentsWithUsage. History length:', punishmentHistory.length);
     return punishments.map(punishment => {
       const historyForPunishment = punishmentHistory.filter(h => h.punishment_id === punishment.id);
       const usage_data = [0, 0, 0, 0, 0, 0, 0]; 
       historyForPunishment.forEach(item => {
-        const dayIndex = getMondayBasedIndex(new Date(item.applied_date).getDay());
+        // item.day_of_week is 0 (Sun) - 6 (Sat) from new Date().getDay()
+        const dayIndex = convertToMondayBasedIndex(item.day_of_week); // convertToMondayBasedIndex handles 0-6 input
         if (dayIndex >= 0 && dayIndex < 7) {
           usage_data[dayIndex] += 1; 
         }
@@ -339,7 +336,7 @@ export const usePunishmentsData = () => {
         frequency_count: historyForPunishment.length,
       };
     });
-  }, [punishments, punishmentHistory]);
+  }, [punishments, punishmentHistory, convertToMondayBasedIndex]);
 
 
   return {
@@ -348,7 +345,7 @@ export const usePunishmentsData = () => {
     errorPunishments,
     refetchPunishments: refetchPunishments as () => Promise<QueryObserverResult<PunishmentData[], Error>>,
 
-    punishmentHistory, // This is PunishmentHistoryItem[]
+    punishmentHistory,
     isLoadingHistory,
     errorHistory,
     refetchHistory: refetchHistory as () => Promise<QueryObserverResult<PunishmentHistoryItem[], Error>>,
@@ -358,12 +355,12 @@ export const usePunishmentsData = () => {
     applyPunishment: applyPunishmentMutation.mutateAsync,
 
     getPunishmentById,
-    getPunishmentHistory, // Now uses correctly typed punishmentHistory
+    getPunishmentHistory,
     selectRandomPunishment,
     isSelectingRandom,
     setIsSelectingRandom,
     selectedPunishment,
     setSelectedPunishment,
-    recentlyAppliedPunishments, // Now uses correctly typed punishmentHistory
+    recentlyAppliedPunishments,
   };
 };
