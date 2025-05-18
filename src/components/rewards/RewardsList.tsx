@@ -1,27 +1,14 @@
 
 import React from 'react';
 import { useRewards } from '../../contexts/RewardsContext';
-import RewardCard from '../RewardCard';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import RewardCard from '../RewardCard'; // Assuming RewardCard is in the parent directory of 'rewards'
+import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton'; // Import the dedicated skeleton component
 
 interface RewardsListProps {
   onEdit: (index: number) => void;
 }
 
-const RewardCardSkeleton: React.FC = () => (
-  <div className="p-4 rounded-lg shadow-md bg-slate-800 border border-slate-700 space-y-3">
-    <div className="flex justify-between items-start">
-      <Skeleton className="h-6 w-3/4" /> {/* Title */}
-      <Skeleton className="h-5 w-16" /> {/* Cost */}
-    </div>
-    <Skeleton className="h-4 w-full" /> {/* Description line 1 */}
-    <Skeleton className="h-4 w-5/6" /> {/* Description line 2 */}
-    <div className="flex justify-between items-center pt-2">
-      <Skeleton className="h-8 w-20" /> {/* Buy/Use Button */}
-      <Skeleton className="h-8 w-20" /> {/* Edit Button */}
-    </div>
-  </div>
-);
+// Removed inline RewardCardSkeleton definition
 
 const RewardsList: React.FC<RewardsListProps> = ({ onEdit }) => {
   const { rewards, handleBuyReward, handleUseReward, isLoading } = useRewards();

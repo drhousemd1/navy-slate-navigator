@@ -1,8 +1,8 @@
 
 import React from 'react';
-import TaskCard from '../TaskCard';
+import TaskCard from '../TaskCard'; // Assuming TaskCard is in the parent directory of 'task'
 import { Task } from '@/lib/taskUtils';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import TaskCardSkeleton from '@/components/task/TaskCardSkeleton'; // Import the dedicated skeleton component
 
 interface TasksListProps {
   tasks: Task[];
@@ -11,20 +11,7 @@ interface TasksListProps {
   onToggleCompletion: (taskId: string, completed: boolean) => void;
 }
 
-const TaskCardSkeleton: React.FC = () => (
-  <div className="p-4 rounded-lg shadow-md bg-slate-800 border border-slate-700 space-y-3">
-    <div className="flex justify-between items-start">
-      <Skeleton className="h-6 w-3/4" />
-      <Skeleton className="h-5 w-12" />
-    </div>
-    <Skeleton className="h-4 w-full" />
-    <Skeleton className="h-4 w-5/6" />
-    <div className="flex justify-between items-center pt-2">
-      <Skeleton className="h-8 w-24" />
-      <Skeleton className="h-8 w-8 rounded-full" />
-    </div>
-  </div>
-);
+// Removed inline TaskCardSkeleton definition
 
 const TasksList: React.FC<TasksListProps> = ({ 
   tasks, 
@@ -84,4 +71,3 @@ const TasksList: React.FC<TasksListProps> = ({
 };
 
 export default TasksList;
-
