@@ -63,21 +63,23 @@ function App() {
                     { queryKey: REWARDS_QUERY_KEY, queryFn: fetchRewards, name: 'Rewards' },
                     { queryKey: ['rules'], queryFn: fetchRules, name: 'Rules' },
                     { queryKey: ['punishments'], queryFn: fetchPunishments, name: 'Punishments' },
-                  ] as const; // Added 'as const' here
+                  ] as const; // 'as const' is important for precise typing
 
-                  criticalQueriesToPrefetch.forEach(async ({ queryKey, queryFn, name }) => {
+                  criticalQueriesToPrefetch.forEach(async (item) => { // Use 'item' here
                     // Only prefetch if not already fetching or fresh
-                    const queryState = queryClient.getQueryState(queryKey);
+                    const queryState = queryClient.getQueryState(item.queryKey);
                     if (!queryState || queryState.status === 'pending') {
                        try {
-                         console.log(`[App] Attempting to prefetch ${name}`);
-                         await queryClient.prefetchQuery({ queryKey, queryFn });
-                         console.log(`[App] Successfully initiated prefetch for ${name}`);
+                         console.log(`[App] Attempting to prefetch ${item.name}`);
+                         // Pass the whole 'item' object. TypeScript can now correctly infer
+                         // generics for prefetchQuery based on the specific item's structure.
+                         await queryClient.prefetchQuery(item);
+                         console.log(`[App] Successfully initiated prefetch for ${item.name}`);
                        } catch (error) {
-                         console.error(`[App] Error prefetching ${name}:`, error);
+                         console.error(`[App] Error prefetching ${item.name}:`, error);
                        }
                     } else {
-                        console.log(`[App] Skipping prefetch for ${name}, data likely fresh or already fetching.`);
+                        console.log(`[App] Skipping prefetch for ${item.name}, data likely fresh or already fetching.`);
                     }
                   });
                 }}
@@ -98,3 +100,4 @@ function App() {
 }
 
 export default App;
+
