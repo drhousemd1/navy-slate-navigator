@@ -3,12 +3,12 @@ import React from 'react';
 import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { RewardsProvider } from '@/contexts/RewardsContext';
-// import { QueryClientProvider } from '@tanstack/react-query'; // Will be replaced
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from '@/components/ui/toaster';
 import { queryClient } from '@/data/queryClient';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+// Import createAsyncStoragePersister instead of createSyncStoragePersister
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import localforage from 'localforage';
 import { APP_CACHE_VERSION } from '@/lib/react-query-config';
 
@@ -16,10 +16,12 @@ interface AppProvidersProps {
   children: React.ReactNode;
 }
 
-const persister = createSyncStoragePersister({
+// Use createAsyncStoragePersister
+const persister = createAsyncStoragePersister({
   storage: localforage,
   key: 'APP_QUERY_CACHE', // Optional: custom key for storage
   // serialize and deserialize can be added here if using complex types like Date, Map, Set with superjson for example
+  // throttleTime: 1000, // Optional: Throttle time for writing to storage
 });
 
 export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
