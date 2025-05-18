@@ -43,13 +43,14 @@ export interface ApplyPunishmentArgs {
 
 export interface PunishmentsContextType {
   punishments: PunishmentData[];
-  savePunishment: (data: Partial<PunishmentData>) => Promise<PunishmentData>; // Changed from Promise<void>
-  deletePunishment: (id: string) => Promise<void>; // Return Promise<void>
-  isLoading: boolean; // Should match the hook's loading state name
+  savePunishment: (data: Partial<PunishmentData>) => Promise<PunishmentData>;
+  deletePunishment: (id: string) => Promise<void>;
+  isLoading: boolean;
+  error: Error | null; // Added error property
   applyPunishment: (args: ApplyPunishmentArgs) => Promise<void>;
   recentlyAppliedPunishments: PunishmentHistoryItem[];
-  fetchRandomPunishment: () => PunishmentData | null; // Or selectRandomPunishment
-  refetchPunishments: () => Promise<any>; // Using 'any' for QueryObserverResult for simplicity now, can be refined
+  fetchRandomPunishment: () => PunishmentData | null;
+  refetchPunishments: () => Promise<any>;
   getPunishmentHistory: (id: string) => PunishmentHistoryItem[];
   historyLoading: boolean;
 }

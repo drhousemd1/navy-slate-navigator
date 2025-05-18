@@ -1,15 +1,16 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
-import { usePunishmentsData } from '@/data/punishments/usePunishmentsData'; // Assuming this is the correct hook
+import { usePunishmentsData } from '@/data/punishments/usePunishmentsData';
 import { QueryObserverResult } from '@tanstack/react-query';
 
 // Create a context with a default value that matches PunishmentsContextType
 const PunishmentsContext = createContext<PunishmentsContextType>({
   punishments: [],
-  savePunishment: async () => ({} as PunishmentData), // Updated default to match new return type
+  savePunishment: async () => ({} as PunishmentData),
   deletePunishment: async () => {},
   isLoading: false,
+  error: null, // Added default for error
   applyPunishment: async () => {},
   recentlyAppliedPunishments: [],
   fetchRandomPunishment: () => null,
@@ -20,25 +21,22 @@ const PunishmentsContext = createContext<PunishmentsContextType>({
 
 // Create a provider component
 export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Use the data hook
-  const punishmentsDataHook = usePunishmentsData(); // This hook should provide all necessary functions and state
+  const punishmentsDataHook = usePunishmentsData();
 
-  // Construct the context value, ensuring all properties of PunishmentsContextType are included
-  // and types match.
   const contextValue: PunishmentsContextType = {
     punishments: punishmentsDataHook.punishments || [],
     savePunishment: async (data: Partial<PunishmentData>) => {
-      // Assuming punishmentsDataHook.savePunishment returns the saved PunishmentData
       return punishmentsDataHook.savePunishment(data); 
     },
-    deletePunishment: punishmentsDataHook.deletePunishment, // Ensure this returns Promise<void>
-    isLoading: punishmentsDataHook.isLoadingPunishments, // Adjusted to match potential naming from usePunishmentsData
-    applyPunishment: punishmentsDataHook.applyPunishment, // Ensure signature matches
+    deletePunishment: punishmentsDataHook.deletePunishment,
+    isLoading: punishmentsDataHook.isLoadingPunishments,
+    error: punishmentsDataHook.errorPunishments || null, // Pass error from hook
+    applyPunishment: punishmentsDataHook.applyPunishment,
     recentlyAppliedPunishments: punishmentsDataHook.recentlyAppliedPunishments || [],
-    fetchRandomPunishment: punishmentsDataHook.selectRandomPunishment, // Adjusted to match potential naming
+    fetchRandomPunishment: punishmentsDataHook.selectRandomPunishment,
     refetchPunishments: punishmentsDataHook.refetchPunishments,
     getPunishmentHistory: punishmentsDataHook.getPunishmentHistory,
-    historyLoading: punishmentsDataHook.isLoadingHistory, // Adjusted to match potential naming
+    historyLoading: punishmentsDataHook.isLoadingHistory,
   };
   
   return (
