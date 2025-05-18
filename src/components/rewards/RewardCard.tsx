@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Reward } from '@/lib/rewardUtils';
+import { Reward } from '@/data/rewards/types'; // Changed import path
 import { Badge } from '@/components/ui/badge';
 import { useRewards } from '@/contexts/RewardsContext';
 import { cn } from '@/lib/utils';

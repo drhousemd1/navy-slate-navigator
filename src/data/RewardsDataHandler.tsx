@@ -1,43 +1,25 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useBuySubReward } from "./rewards/mutations/useBuySubReward";
-import { useBuyDomReward } from "./rewards/mutations/useBuyDomReward";
-import { useRedeemSubReward } from "./rewards/mutations/useRedeemSubReward";
-import { useRedeemDomReward } from "./rewards/mutations/useRedeemDomReward";
-import { useCreateReward } from "./rewards/mutations/useCreateReward";
-import { useUpdateReward } from "./rewards/mutations/useUpdateReward";
-import { useDeleteReward } from "./rewards/mutations/useDeleteReward";
+
+// Corrected import for mutation hooks based on their actual location in data/rewards/mutations
+import { useCreateRewardMutation as useCreateReward, useUpdateRewardMutation as useUpdateReward, useDeleteRewardMutation } from "./rewards/mutations"; 
+
+// These are specific item interaction mutations, likely from data/mutations/
+import { useBuySubReward } from "./mutations/useBuySubReward";
+import { useBuyDomReward } from "./mutations/useBuyDomReward";
+import { useRedeemSubReward } from "./mutations/useRedeemSubReward";
+import { useRedeemDomReward } from "./mutations/useRedeemDomReward";
 
 // Keys for our queries
 const REWARDS_QUERY_KEY = ['rewards'];
-const POINTS_QUERY_KEY = ['profile_points'];
+const POINTS_QUERY_KEY = ['profile_points']; // This should align with REWARDS_POINTS_QUERY_KEY from rewards/queries
 const REWARDS_SUPPLY_QUERY_KEY = ['rewards', 'supply'];
 
-// Define the Reward type
-export interface Reward {
-  id: string;
-  title: string;
-  description: string | null;
-  cost: number;
-  supply: number;
-  background_image_url?: string | null;
-  background_opacity: number;
-  icon_name?: string | null;
-  icon_color: string;
-  title_color: string;
-  subtext_color: string;
-  calendar_color: string;
-  highlight_effect: boolean;
-  focal_point_x: number;
-  focal_point_y: number;
-  created_at?: string;
-  updated_at?: string;
-  is_dom_reward?: boolean;
-}
+// Import Reward type from the centralized location
+import { Reward, CreateRewardVariables, UpdateRewardVariables } from "./rewards/types";
 
-// Fetch rewards from the database
+// Fetch rewards from the database (aligns with fetchRewards in rewards/queries.ts)
 const fetchRewards = async (): Promise<Reward[]> => {
   const { data, error } = await supabase
     .from('rewards')
@@ -48,36 +30,31 @@ const fetchRewards = async (): Promise<Reward[]> => {
     console.error('Error fetching rewards:', error);
     throw error;
   }
-  
+  // Ensure is_dom_reward is always a boolean
   return data.map(reward => ({ ...reward, is_dom_reward: !!reward.is_dom_reward })) as Reward[];
 };
 
-// Fetch user points from the database
-const fetchUserPoints = async (): Promise<number> => {
+// Fetch user points (aligns with fetchUserPoints in rewards/queries.ts)
+const fetchUserPoints = async (): Promise<{ points: number, dom_points: number }> => { // Return both points
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData.user?.id;
   
-  if (!userId) {
-    // User is not logged in
-    return 0;
-  }
+  if (!userId) return { points: 0, dom_points: 0 };
   
   const { data, error } = await supabase
     .from('profiles')
-    .select('points')
+    .select('points, dom_points')
     .eq('id', userId)
     .single();
   
   if (error) {
-    // If profile doesn't exist or other error, return 0 or handle as appropriate
     console.warn('Error fetching user points, possibly profile not found:', error.message);
-    return 0;
+    return { points: 0, dom_points: 0 };
   }
   
-  return data?.points || 0;
+  return { points: data?.points || 0, dom_points: data?.dom_points || 0 };
 };
 
-// Fetch the total rewards supply
 const fetchTotalRewardsSupply = async (): Promise<number> => {
   const { data, error } = await supabase
     .from('rewards')
@@ -88,11 +65,10 @@ const fetchTotalRewardsSupply = async (): Promise<number> => {
     throw error;
   }
   
-  return data.reduce((total, reward) => total + reward.supply, 0);
+  return data.reduce((total, reward) => total + (reward.supply || 0), 0);
 };
 
-// The main hook to expose all reward-related operations
-export const useRewardsData = () => {
+export const useRewardsDataHandler = () => { // Renamed hook to avoid conflict if used elsewhere
   const queryClient = useQueryClient();
   const { mutateAsync: buySub } = useBuySubReward();
   const { mutateAsync: buyDom } = useBuyDomReward();
@@ -100,7 +76,8 @@ export const useRewardsData = () => {
   const { mutateAsync: redeemDom } = useRedeemDomReward();
   const { mutateAsync: createReward } = useCreateReward();
   const { mutateAsync: updateReward } = useUpdateReward();
-  const { mutateAsync: deleteRewardMutation } = useDeleteReward();
+  // Corrected: useDeleteRewardMutation is the hook itself
+  const deleteRewardMutationHook = useDeleteRewardMutation();
 
   // Query for fetching all rewards
   const {
@@ -118,15 +95,17 @@ export const useRewardsData = () => {
 
   // Query for fetching user points
   const {
-    data: totalPoints = 0,
+    data: pointsData = { points: 0, dom_points: 0 }, // Ensure pointsData is initialized
     refetch: refetchPoints
-  } = useQuery<number, Error>({
+  } = useQuery<{ points: number, dom_points: number }, Error>({
     queryKey: POINTS_QUERY_KEY,
     queryFn: fetchUserPoints,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnWindowFocus: false
   });
+  const totalPoints = pointsData.points;
+  const domPoints = pointsData.dom_points;
 
   // Query for fetching total rewards supply
   const {
@@ -141,44 +120,45 @@ export const useRewardsData = () => {
   });
 
   // Wrapper function for saving a reward (create or update)
-  const saveRewardOperation = async ({ rewardData }: { rewardData: Partial<Reward>}) => {
+  const saveRewardOperation = async (saveData: { rewardData: Partial<Reward> & { id?: string }}) => {
+    const { rewardData } = saveData;
+    console.log("Save reward called with data:", rewardData);
     try {
-      console.log("Save reward called with data:", rewardData);
-      
       if (rewardData.id) {
-        // Update existing reward
-        const { id, ...updates } = rewardData;
-        // Ensure 'id' is correctly passed as part of the variables for updateReward
-        const variables = { id, ...updates }; 
-        return await updateReward(variables);
+        // Update: Ensure type compatibility with UpdateRewardVariables
+        const updateVariables: UpdateRewardVariables = { id: rewardData.id, ...rewardData };
+        return await updateReward(updateVariables);
       } else {
-        // Create new reward
-        const { id, created_at, updated_at, ...creatableData } = rewardData;
-        // Add required fields if missing
-        const variables = {
-          title: creatableData.title || 'New Reward',
-          cost: creatableData.cost || 0,
-          supply: creatableData.supply || 0,
-          description: creatableData.description || null,
-          background_image_url: creatableData.background_image_url || null,
-          background_opacity: creatableData.background_opacity || 100,
-          icon_name: creatableData.icon_name || null,
-          icon_color: creatableData.icon_color || '#9b87f5',
-          title_color: creatableData.title_color || '#FFFFFF',
-          subtext_color: creatableData.subtext_color || '#8E9196',
-          calendar_color: creatableData.calendar_color || '#7E69AB',
-          highlight_effect: creatableData.highlight_effect || false,
-          focal_point_x: creatableData.focal_point_x || 50,
-          focal_point_y: creatableData.focal_point_y || 50,
-          is_dom_reward: creatableData.is_dom_reward || false,
+        // Create: Ensure type compatibility with CreateRewardVariables
+        // Explicitly check for required fields for creation
+        if (rewardData.title === undefined || rewardData.cost === undefined || rewardData.supply === undefined || rewardData.is_dom_reward === undefined) {
+          throw new Error("Missing required fields (title, cost, supply, is_dom_reward) for creating reward.");
+        }
+        const createVariables: CreateRewardVariables = {
+          title: rewardData.title,
+          cost: rewardData.cost,
+          supply: rewardData.supply,
+          is_dom_reward: rewardData.is_dom_reward,
+          description: rewardData.description || null,
+          background_image_url: rewardData.background_image_url || null,
+          background_opacity: rewardData.background_opacity || 100,
+          icon_name: rewardData.icon_name || null,
+          icon_color: rewardData.icon_color || '#9b87f5',
+          title_color: rewardData.title_color || '#FFFFFF',
+          subtext_color: rewardData.subtext_color || '#8E9196',
+          calendar_color: rewardData.calendar_color || '#7E69AB',
+          highlight_effect: rewardData.highlight_effect || false,
+          focal_point_x: rewardData.focal_point_x || 50,
+          focal_point_y: rewardData.focal_point_y || 50,
+          icon_url: rewardData.icon_url || null, // Added missing icon_url
         };
-        return await createReward(variables);
+        return await createReward(createVariables);
       }
     } catch (error) {
       console.error('Error saving reward:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save reward. Please try again.',
+        description: `Failed to save reward: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
         variant: 'destructive',
       });
       throw error;
@@ -188,17 +168,17 @@ export const useRewardsData = () => {
   // Wrapper function for deleting a reward
   const deleteRewardOperation = async (rewardId: string): Promise<void> => {
     try {
-      await deleteRewardMutation(rewardId);
-      // Toasting is handled by the useDeleteReward hook
+      // use the mutateAsync from the hook
+      await deleteRewardMutationHook.mutateAsync(rewardId);
     } catch (error) {
+      // ... keep existing code (error handling)
       console.error('Error deleting reward:', error);
-      // Toasting is handled by the useDeleteReward hook, but can add specific page context error here if needed
       toast({
         title: 'Error on Page',
         description: 'Failed to delete reward. Please try again from the rewards page.',
         variant: 'destructive',
       });
-      throw error; // Re-throw
+      throw error; 
     }
   };
 
@@ -223,10 +203,9 @@ export const useRewardsData = () => {
       if (!userData?.user?.id) throw new Error("User not authenticated");
       
       const profileId = userData.user.id;
-      // Get current points from cache
-      const pointsData = queryClient.getQueryData<any>(POINTS_QUERY_KEY) || {};
-      const currentPoints = pointsData.points ?? totalPoints;
-      const currentDomPoints = pointsData.dom_points ?? 0;
+      // Use pointsData from the query, not passed-in totalPoints/domPoints
+      const currentPoints = pointsData.points; 
+      const currentDomPoints = pointsData.dom_points;
 
       if (reward.is_dom_reward) {
         return await buyDom({
@@ -247,7 +226,6 @@ export const useRewardsData = () => {
       }
     } catch (error) {
       console.error('Error buying reward:', error);
-      // Toast is handled by the individual buy mutations
       throw error;
     }
   };
@@ -278,7 +256,6 @@ export const useRewardsData = () => {
       }
     } catch (error) {
       console.error('Error redeeming reward:', error);
-      // Toast is handled by the individual redeem mutations
       throw error;
     }
   };
@@ -286,7 +263,8 @@ export const useRewardsData = () => {
   return {
     // Data
     rewards,
-    totalPoints,
+    totalPoints, // derived from pointsData
+    domPoints,   // derived from pointsData
     totalRewardsSupply,
     
     // Loading state
@@ -297,7 +275,7 @@ export const useRewardsData = () => {
     saveReward: saveRewardOperation,
     deleteReward: deleteRewardOperation,
     buyReward,
-    redeemReward,
+    redeemReward, // Renamed from useReward for clarity to match internal calls
     
     // Refetch functions
     refetchRewards,

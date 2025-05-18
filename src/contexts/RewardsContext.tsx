@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
-import { Reward } from '@/lib/rewardUtils';
+import { Reward } from '@/data/rewards/types';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,7 +76,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     refetchRewards,
     refreshPointsFromDatabase,
     totalDomRewardsSupply,
-    // Extract setter functions for optimistic updates
     setRewardsOptimistically,
     setPointsOptimistically,
     setDomPointsOptimistically,
@@ -104,29 +102,38 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await redeemDom(args); 
   }
 
-  // Refresh points when the provider mounts
   useEffect(() => {
     console.log("RewardsProvider: Refreshing points from database on mount");
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
 
-  const handleSaveReward = async (rewardData: any, index: number | null) => {
+  const handleSaveReward = async (rewardData: any, index: number | null): Promise<string | null> => {
     console.log("RewardsContext - handleSaveReward called with data:", rewardData);
-    console.log("is_dom_reward value in handleSaveReward:", rewardData.is_dom_reward);
-    
-    const result = await saveReward({ rewardData, currentIndex: index });
-    return result?.id || null;
+    try {
+      const savedReward = await saveReward({ rewardData });
+      return savedReward?.id || null; 
+    } catch (error) {
+      console.error("Error in RewardsContext handleSaveReward:", error);
+      return null;
+    }
   };
 
-  const handleDeleteReward = async (index: number) => {
+  const handleDeleteReward = async (index: number): Promise<boolean> => {
     const rewardToDelete = rewards[index];
-    if (!rewardToDelete?.id) return false;
-    await deleteReward(rewardToDelete.id);
-    return true;
+    if (!rewardToDelete?.id) {
+      toast({ title: "Error", description: "Reward ID not found for deletion.", variant: "destructive" });
+      return false;
+    }
+    try {
+      await deleteReward(rewardToDelete.id);
+      return true;
+    } catch (error) {
+      console.error("Error in RewardsContext handleDeleteReward:", error);
+      return false;
+    }
   };
 
   const handleBuyReward = async (id: string, cost: number, isDomReward?: boolean) => {
-    // Find the reward to check if it's a dom reward
     const reward = rewards.find(r => r.id === id);
     if (!reward) {
       toast({
@@ -137,12 +144,9 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
     
-    // Override with the explicit parameter if provided
     const isRewardDominant = isDomReward !== undefined ? isDomReward : (reward?.is_dom_reward || false);
-    
     console.log("Buying reward with id:", id, "cost:", cost, "isDomReward:", isRewardDominant);
     
-    // Check if we have enough points
     const currentPointsValue = isRewardDominant ? domPoints : totalPoints;
     if (currentPointsValue < cost) {
       toast({
@@ -154,43 +158,22 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     try {
-      // Show toast for immediate feedback
       toast({
         title: "Reward Purchased",
         description: `You purchased ${reward.title}`,
       });
       
-      // Get current user ID for database operations
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
         throw new Error("User not authenticated");
       }
       
-      // Perform the actual API call with required parameters
-      if (isRewardDominant) {
-        await handleBuyDomReward({
-          rewardId: id,
-          cost,
-          currentSupply: reward.supply,
-          profileId: userData.user.id,
-          currentDomPoints: domPoints
-        });
-      } else {
-        await handleBuySubReward({
-          rewardId: id,
-          cost,
-          currentSupply: reward.supply,
-          profileId: userData.user.id,
-          currentPoints: totalPoints
-        });
-      }
+      await buyReward({ rewardId: id, cost });
+
     } catch (error) {
       console.error("Error in handleBuyReward:", error);
-      
-      // On error, refresh data from the server
       refreshPointsFromDatabase();
       refetchRewards();
-      
       toast({
         title: "Error",
         description: "Failed to purchase reward. Please try again.",
@@ -220,7 +203,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     try {
-      // Optimistic update for immediate UI feedback
       const updatedRewards = rewards.map(r => {
         if (r.id === id) {
           return { ...r, supply: Math.max(0, r.supply - 1) };
@@ -229,38 +211,21 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
       setRewardsOptimistically(updatedRewards);
       
-      // Show toast for immediate feedback
       toast({
         title: "Reward Used",
         description: `You used ${reward.title}`,
       });
       
-      // Get current user ID for database operations
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
         throw new Error("User not authenticated");
       }
-      
-      // Perform the actual API call in the background
-      if (reward.is_dom_reward) {
-        await handleRedeemDomReward({
-          rewardId: id,
-          currentSupply: reward.supply,
-          profileId: userData.user.id
-        });
-      } else {
-        await handleRedeemSubReward({
-          rewardId: id,
-          currentSupply: reward.supply,
-          profileId: userData.user.id
-        });
-      }
+
+      await useReward({ rewardId: id });
+
     } catch (error) {
       console.error("Error in handleUseReward:", error);
-      
-      // Revert optimistic updates on error
       refetchRewards();
-      
       toast({
         title: "Error",
         description: "Failed to use reward. Please try again.",
@@ -270,28 +235,22 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const setTotalPoints = async (points: number) => {
-    // Optimistic update
     setPointsOptimistically(points);
-    
-    // Persist to database
     try {
       await updatePoints(points);
     } catch (error) {
       console.error("Error setting total points:", error);
-      refreshPointsFromDatabase(); // Revert on error
+      refreshPointsFromDatabase(); 
     }
   };
 
   const setDomPoints = async (points: number) => {
-    // Optimistic update
     setDomPointsOptimistically(points);
-    
-    // Persist to database
     try {
       await updateDomPoints(points);
     } catch (error) {
       console.error("Error setting dom points:", error);
-      refreshPointsFromDatabase(); // Revert on error
+      refreshPointsFromDatabase();
     }
   };
 

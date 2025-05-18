@@ -1,5 +1,4 @@
-
-import { Reward } from '@/lib/rewardUtils';
+import { Reward } from '@/data/rewards/types';
 import { QueryObserverResult } from '@tanstack/react-query';
 
 export interface SaveRewardParams {
@@ -23,7 +22,7 @@ export interface RewardsContextType {
   setDomPoints: (points: number) => Promise<void>;
   isLoading: boolean;
   refetchRewards: () => Promise<QueryObserverResult<Reward[], Error>>;
-  handleSaveReward: (rewardData: any, index: number | null) => Promise<string | null>;
+  handleSaveReward: (rewardData: Partial<Reward>, index: number | null) => Promise<string | null>;
   handleDeleteReward: (index: number) => Promise<boolean>;
   handleBuyReward: (id: string, cost: number, isDomReward?: boolean) => Promise<void>;
   handleUseReward: (id: string) => Promise<void>;

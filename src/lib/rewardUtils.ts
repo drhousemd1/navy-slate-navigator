@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Reward } from "@/data/rewards/types"; // Updated import
+import { Reward, CreateRewardVariables, UpdateRewardVariables } from "@/data/rewards/types"; // Ensure CreateRewardVariables and UpdateRewardVariables are imported if used by saveRewardToServer
+
+// Remove any local 'interface Reward' or 'type Reward' if it exists here.
+// The functions below should use the imported 'Reward' type.
 
 export const fetchRewards = async (): Promise<Reward[]> => {
   try {
@@ -39,18 +42,20 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   }
 };
 
-// saveReward now expects `is_dom_reward` to be explicitly passed for new rewards.
-// For updates, it's part of the partial Reward data.
-export const saveReward = async (reward: Partial<Reward> & { title: string, cost?: number, supply?: number, is_dom_reward?: boolean }, existingId?: string): Promise<Reward | null> => {
+// Updated saveReward to use CreateRewardVariables and UpdateRewardVariables for better type safety
+export const saveReward = async (
+  reward: CreateRewardVariables | Omit<UpdateRewardVariables, 'id'>, // Use Omit for updateData
+  existingId?: string
+): Promise<Reward | null> => {
   try {
     const startTime = performance.now();
     
     if (existingId) {
-      const { created_at, updated_at, id, ...cleanRewardData } = reward; // id is part of reward but not needed in cleanRewardData for update
-      // Ensure is_dom_reward is boolean if provided, otherwise it won't be updated.
-      const updatePayload: Partial<Reward> = { ...cleanRewardData };
-      if (typeof cleanRewardData.is_dom_reward === 'boolean') {
-        updatePayload.is_dom_reward = cleanRewardData.is_dom_reward;
+      // For update, reward is Omit<UpdateRewardVariables, 'id'>
+      const updatePayload: Partial<Omit<Reward, 'id' | 'created_at' | 'updated_at'>> = { ...(reward as Omit<UpdateRewardVariables, 'id'>) };
+      // Ensure is_dom_reward is boolean if provided
+      if (typeof (reward as Omit<UpdateRewardVariables, 'id'>).is_dom_reward === 'boolean') {
+        updatePayload.is_dom_reward = (reward as Omit<UpdateRewardVariables, 'id'>).is_dom_reward;
       }
       
       const { data, error } = await supabase
@@ -58,7 +63,7 @@ export const saveReward = async (reward: Partial<Reward> & { title: string, cost
         .update(updatePayload)
         .eq('id', existingId)
         .select()
-        .single(); // Expecting a single reward
+        .single();
       
       const endTime = performance.now();
       console.log(`[saveReward] Update operation took ${endTime - startTime}ms`);
@@ -68,31 +73,32 @@ export const saveReward = async (reward: Partial<Reward> & { title: string, cost
       return { ...data, is_dom_reward: data?.is_dom_reward ?? false } as Reward;
 
     } else {
-      // For new rewards, ensure required fields like cost, supply, and is_dom_reward have defaults or are asserted
-      const dataToSave: Omit<Reward, 'id' | 'created_at' | 'updated_at'> & { title: string; cost: number; supply: number; is_dom_reward: boolean } = {
-        title: reward.title,
-        description: reward.description || null,
-        cost: reward.cost ?? 0, // Default cost if not provided
-        supply: reward.supply ?? 0, // Default supply if not provided
-        background_image_url: reward.background_image_url || null,
-        background_opacity: reward.background_opacity || 100,
-        icon_name: reward.icon_name || null,
-        icon_url: reward.icon_url || null,
-        icon_color: reward.icon_color || '#9b87f5',
-        title_color: reward.title_color || '#FFFFFF',
-        subtext_color: reward.subtext_color || '#8E9196',
-        calendar_color: reward.calendar_color || '#7E69AB',
-        highlight_effect: reward.highlight_effect || false,
-        focal_point_x: reward.focal_point_x || 50,
-        focal_point_y: reward.focal_point_y || 50,
-        is_dom_reward: reward.is_dom_reward ?? false, // Default is_dom_reward
+      // For new rewards, reward is CreateRewardVariables
+      const createPayload = reward as CreateRewardVariables;
+      const dataToSave: Omit<Reward, 'id' | 'created_at' | 'updated_at'> = {
+        title: createPayload.title,
+        description: createPayload.description || null,
+        cost: createPayload.cost, // Already required by CreateRewardVariables
+        supply: createPayload.supply, // Already required by CreateRewardVariables
+        is_dom_reward: createPayload.is_dom_reward, // Already required by CreateRewardVariables
+        background_image_url: createPayload.background_image_url || null,
+        background_opacity: createPayload.background_opacity || 100,
+        icon_name: createPayload.icon_name || null,
+        icon_url: createPayload.icon_url || null,
+        icon_color: createPayload.icon_color || '#9b87f5',
+        title_color: createPayload.title_color || '#FFFFFF',
+        subtext_color: createPayload.subtext_color || '#8E9196',
+        calendar_color: createPayload.calendar_color || '#7E69AB',
+        highlight_effect: createPayload.highlight_effect || false,
+        focal_point_x: createPayload.focal_point_x || 50,
+        focal_point_y: createPayload.focal_point_y || 50,
       };
       
       const { data, error } = await supabase
         .from('rewards')
         .insert(dataToSave)
         .select()
-        .single(); // Expecting a single reward
+        .single();
       
       const endTime = performance.now();
       console.log(`[saveReward] Insert operation took ${endTime - startTime}ms`);

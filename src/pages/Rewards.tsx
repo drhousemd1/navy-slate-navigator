@@ -1,24 +1,20 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
 import RewardEditor from '../components/RewardEditor';
-// RewardsProvider and context-based useRewards are removed
 import RewardsHeader from '../components/rewards/RewardsHeader';
-import { useSyncManager } from '@/hooks/useSyncManager'; // Updated import
+import { useSyncManager } from '@/hooks/useSyncManager';
 import { usePreloadRewards } from "@/data/preload/usePreloadRewards";
 import RewardCardSkeleton from '@/components/rewards/RewardCardSkeleton';
-import { Award as AwardIcon } from 'lucide-react'; // Renamed to avoid conflict with Reward type
+import { Award as AwardIcon } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-import { useRewards as useRewardsQuery } from '@/data/queries/useRewards'; // Renamed import
+import { useRewards as useRewardsQuery } from '@/data/queries/useRewards';
 import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
 import { Reward, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/types';
 import { toast } from '@/hooks/use-toast';
 
-
-// Preload rewards data from IndexedDB before component renders
 usePreloadRewards()();
 
 const RewardsContent: React.FC<{
@@ -43,9 +39,14 @@ const RewardsContent: React.FC<{
     setIsEditorOpen(true);
   };
   
-  const handleEditReward = (rewardToEdit: Reward) => {
-    setRewardBeingEdited(rewardToEdit);
-    setIsEditorOpen(true);
+  const handleEditReward = (index: number) => { 
+    const rewardToEdit = rewards[index];
+    if (rewardToEdit) {
+      setRewardBeingEdited(rewardToEdit);
+      setIsEditorOpen(true);
+    } else {
+      toast({ title: "Error", description: "Could not find reward to edit.", variant: "destructive" });
+    }
   };
   
   useEffect(() => {
@@ -55,14 +56,13 @@ const RewardsContent: React.FC<{
 
   const handleSaveRewardEditor = async (formData: Partial<Reward>) => {
     try {
-      if (rewardBeingEdited?.id) { // Editing existing reward
+      if (rewardBeingEdited?.id) {
         const updateVariables: UpdateRewardVariables = {
           id: rewardBeingEdited.id,
           ...formData,
         };
         await updateRewardMutation.mutateAsync(updateVariables);
-      } else { // Creating new reward
-        // Ensure all required fields for CreateRewardVariables are present
+      } else {
         if (!formData.title || typeof formData.cost !== 'number' || typeof formData.supply !== 'number' || typeof formData.is_dom_reward !== 'boolean') {
           toast({ title: "Missing required fields", description: "Title, cost, supply, and DOM status are required.", variant: "destructive" });
           return;
@@ -90,10 +90,7 @@ const RewardsContent: React.FC<{
       setIsEditorOpen(false);
       setRewardBeingEdited(undefined);
     } catch (e) {
-      // Optimistic mutations handle their own toasts for errors during mutationFn
       console.error("Error saving reward from page:", e);
-      // Optionally, a generic page-level toast if something unexpected outside mutationFn fails
-      // toast({ title: "Save Operation Failed", description: "Could not save the reward.", variant: "destructive" });
     }
   };
 
@@ -108,7 +105,6 @@ const RewardsContent: React.FC<{
       setIsEditorOpen(false);
       setRewardBeingEdited(undefined);
     } catch (e) {
-      // Optimistic mutations handle their own toasts
       console.error("Error deleting reward from page:", e);
     }
   };
@@ -146,7 +142,7 @@ const RewardsContent: React.FC<{
 
     return (
       <RewardsList
-        rewards={rewards} // Pass rewards data to RewardsList
+        rewards={rewards}
         onEdit={handleEditReward}
       />
     );
@@ -154,13 +150,10 @@ const RewardsContent: React.FC<{
 
   return (
     <div className="p-4 pt-6">
-      {/* RewardsHeader might need props if it was using context before for data/actions */}
       <RewardsHeader /> 
-      
       <div className="mt-4">
         {renderContent()}
       </div>
-      
       <RewardEditor
         isOpen={isEditorOpen}
         onClose={() => {
@@ -169,7 +162,7 @@ const RewardsContent: React.FC<{
         }}
         rewardData={rewardBeingEdited}
         onSave={handleSaveRewardEditor}
-        onDelete={handleDeleteRewardEditor} // Pass id directly if editor provides it, or use rewardBeingEdited.id
+        onDelete={handleDeleteRewardEditor}
       />
     </div>
   );
@@ -185,7 +178,6 @@ const Rewards: React.FC = () => {
   };
 
   return (
-    // RewardsProvider is removed, context is no longer used at this level for data ops
     <AppLayout onAddNewItem={handleAddNewRewardFromLayout}>
       <ErrorBoundary fallbackMessage="Could not load rewards. Please try reloading.">
         <RewardsContent contentRef={contentRef} />
