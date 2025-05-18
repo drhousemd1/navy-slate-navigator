@@ -1,10 +1,9 @@
 
-```typescript
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useSyncManager, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager'; // Corrected import path
-import { Reward } from '@/data/rewards/types'; // Corrected import path
+import { useSyncManager, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+import { Reward } from '@/data/rewards/types';
 
 interface BuyDomRewardArgs {
   rewardId: string;
@@ -23,8 +22,7 @@ export const useBuyDomReward = () => {
   const queryClient = useQueryClient();
   const { syncKeys } = useSyncManager();
 
-  return useMutation<Reward, Error, BuyDomRewardArgs, BuyDomRewardOptimisticContext>( // Added context type
-    {
+  return useMutation<Reward, Error, BuyDomRewardArgs, BuyDomRewardOptimisticContext>({
       mutationFn: async ({ rewardId, cost, currentSupply, profileId, currentDomPoints }) => {
         // The original logic implies "buying" decrements the reward's available stock.
         // And "redeeming" or "using" would decrement a user's owned stock (if that's tracked separately).
@@ -95,7 +93,7 @@ export const useBuyDomReward = () => {
         
         return { previousRewards, previousDomPoints };
       },
-      onError: (err, variables, context) => { // context is now typed
+      onError: (err, variables, context) => {
         if (context?.previousRewards) {
           queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, context.previousRewards);
         }
@@ -115,9 +113,7 @@ export const useBuyDomReward = () => {
       onSettled: () => {
         queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
         queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS });
-        // syncKeys([CRITICAL_QUERY_KEYS.REWARDS, CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS]); // syncKeys might be called by useSyncManager itself
       },
     }
   );
 };
-```

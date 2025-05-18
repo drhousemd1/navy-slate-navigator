@@ -1,10 +1,8 @@
 
-```typescript
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Reward, UpdateRewardVariables } from '../types'; // Corrected path
+import { Reward, UpdateRewardVariables } from '../types';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
-
 
 export const useUpdateReward = () => {
   const queryClient = useQueryClient();
@@ -31,4 +29,3 @@ export const useUpdateReward = () => {
     idField: 'id', 
   });
 };
-```

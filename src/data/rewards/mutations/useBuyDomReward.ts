@@ -1,5 +1,4 @@
 
-```typescript
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '../types'; // Corrected: Uses types from the same folder
@@ -29,8 +28,6 @@ interface BuyDomRewardSuccessData {
 
 export const useBuyDomReward = () => {
   const queryClient = useQueryClient();
-  // const REWARDS_QUERY_KEY = ['rewards']; // Use CRITICAL_QUERY_KEYS.REWARDS
-  // const PROFILE_POINTS_QUERY_KEY = ['profile_points']; // Use CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS
 
   return useMutation<
     BuyDomRewardSuccessData,
@@ -75,14 +72,6 @@ export const useBuyDomReward = () => {
       }
       if (!rewardData) throw new Error("Reward data not found after update.");
 
-      // Reward_usage logging can be added here if buying implies immediate usage tracking
-      // For example:
-      // const today = new Date();
-      // const weekIdentifier = today.toISOString().slice(0, 10); 
-      // const dayOfWeek = today.getDay();
-      // await supabase.from('reward_usage').insert({ /* ... */ });
-
-
       return {
         success: true,
         newDomPoints: newDomPointsResult,
@@ -98,7 +87,6 @@ export const useBuyDomReward = () => {
       const previousRewards = queryClient.getQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS);
       // previousPoints for dom_points should be a number
       const previousPoints = queryClient.getQueryData<number>(CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS);
-
 
       queryClient.setQueryData<number>(CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS, (oldPoints = 0) =>
         (oldPoints || 0) - variables.cost
@@ -144,4 +132,3 @@ export const useBuyDomReward = () => {
     },
   });
 };
-```

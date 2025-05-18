@@ -1,16 +1,12 @@
 
-```typescript
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Reward, CreateRewardVariables as ActualCreateRewardVariables } from '../types'; // Using the centralized types
+import { Reward, CreateRewardVariables as ActualCreateRewardVariables } from '../types';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 
 // This type might be slightly different from the one in ../types if it was intended to be simpler.
 // For consistency, we should aim to use ActualCreateRewardVariables from ../types.
-// export type CreateRewardVariables = Omit<Reward, 'id' | 'created_at' | 'updated_at'>;
-// Using the more specific type from ../types
 export type CreateRewardVariables = ActualCreateRewardVariables;
-
 
 export const useCreateReward = () => {
   const queryClient = useQueryClient();
@@ -64,4 +60,3 @@ export const useCreateReward = () => {
     },
   });
 };
-```

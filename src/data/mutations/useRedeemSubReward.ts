@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -41,9 +42,6 @@ export const useRedeemSubReward = () => {
         .eq('id', rewardId);
 
       if (supplyError) throw supplyError;
-
-      // TODO: Potentially log usage in reward_usage table if that's part of redeeming.
-      // The other useRedeemSubReward in rewards/mutations does this.
 
       const { data: updatedReward, error: fetchError } = await supabase
         .from('rewards')

@@ -1,10 +1,9 @@
 
-```typescript
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useSyncManager, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager'; // Corrected import path
-import { Reward } from '@/data/rewards/types'; // Corrected import path
+import { useSyncManager, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+import { Reward } from '@/data/rewards/types';
 
 interface BuySubRewardArgs {
   rewardId: string;
@@ -23,7 +22,7 @@ export const useBuySubReward = () => {
   const queryClient = useQueryClient();
   const { syncKeys } = useSyncManager();
 
-  return useMutation<Reward, Error, BuySubRewardArgs, BuySubRewardOptimisticContext>({ // Added context
+  return useMutation<Reward, Error, BuySubRewardArgs, BuySubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, cost, currentSupply, profileId, currentPoints }) => {
       if (currentSupply <= 0) {
         throw new Error("Reward is out of stock.");
@@ -83,7 +82,7 @@ export const useBuySubReward = () => {
 
       return { previousRewards, previousPoints };
     },
-    onError: (err, variables, context) => { // context is typed
+    onError: (err, variables, context) => {
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, context.previousRewards);
       }
@@ -105,4 +104,3 @@ export const useBuySubReward = () => {
     },
   });
 };
-```
