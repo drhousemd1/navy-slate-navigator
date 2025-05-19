@@ -1,18 +1,19 @@
+
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useQuery, useMutation, useQueryClient, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
-import { Task, saveTask, deleteTask, updateTaskCompletion } from '@/lib/taskUtils';
+import { QueryObserverResult } from '@tanstack/react-query';
+// Removed unused toast import and functions from lib/taskUtils as they come from useTasksData
+import { Task } from '@/data/tasks/types'; // Updated import path for Task
 import { useTasksData } from '@/data/TasksDataHandler';
 
 // Define the context type
 interface TasksContextType {
-  tasks: Task[];
+  tasks: Task[]; // Uses the imported Task type
   isLoading: boolean;
   error: Error | null;
-  saveTask: (taskData: Partial<Task>) => Promise<Task | null>;
+  saveTask: (taskData: Partial<Task>) => Promise<Task | null>; // Uses imported Task
   deleteTask: (taskId: string) => Promise<boolean>;
   toggleTaskCompletion: (taskId: string, completed: boolean, points: number) => Promise<boolean>;
-  refetchTasks: () => Promise<QueryObserverResult<Task[], Error>>;
+  refetchTasks: () => Promise<QueryObserverResult<Task[], Error>>; // Uses imported Task
 }
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
@@ -22,9 +23,9 @@ export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     tasks, 
     isLoading, 
     error, 
-    saveTask: saveTaskToDb, 
-    deleteTask: deleteTaskFromDb, 
-    toggleTaskCompletion: toggleTaskCompletionInDb,
+    saveTask: saveTaskFromHook, // Renamed to avoid conflict if we were importing saveTask directly
+    deleteTask: deleteTaskFromHook, 
+    toggleTaskCompletion: toggleTaskCompletionFromHook,
     refetchTasks 
   } = useTasksData();
 
@@ -32,9 +33,9 @@ export const TasksProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     tasks,
     isLoading,
     error,
-    saveTask: saveTaskToDb,
-    deleteTask: deleteTaskFromDb,
-    toggleTaskCompletion: toggleTaskCompletionInDb,
+    saveTask: saveTaskFromHook,
+    deleteTask: deleteTaskFromHook,
+    toggleTaskCompletion: toggleTaskCompletionFromHook,
     refetchTasks
   };
 

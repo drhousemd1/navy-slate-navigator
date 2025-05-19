@@ -1,15 +1,15 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
-import { Task } from '@/lib/taskUtils';
+import { Task } from '@/data/tasks/types'; // Updated import path for Task
 import TaskEditorForm from './TaskEditorForm';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TaskEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  taskData?: Partial<Task>;
-  onSave: (taskData: any) => void;
+  taskData?: Partial<Task>; // Uses the imported Task type
+  onSave: (taskData: any) => void; // Consider using a more specific type for taskData if possible
   onDelete?: (taskId: string) => void;
 }
 
@@ -28,9 +28,13 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
   };
 
   const handleDelete = (taskId: string) => {
-    if (onDelete) {
-      onDelete(taskId);
+    if (onDelete && taskData?.id) { // ensure taskData and id exist for delete
+      onDelete(taskData.id); // Pass the actual task ID
       onClose(); // Close editor after delete action
+    } else if (onDelete && !taskData?.id) {
+      console.warn("TaskEditor: handleDelete called without a task ID in taskData.");
+      // Optionally, still close or provide feedback
+      onClose();
     }
   };
 
@@ -51,7 +55,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
             <TaskEditorForm
               taskData={taskData}
               onSave={handleSave}
-              onDelete={handleDelete}
+              onDelete={taskData?.id ? handleDelete : undefined} // Pass handleDelete only if taskData.id exists
               onCancel={onClose}
             />
           </div>
@@ -75,7 +79,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
         <TaskEditorForm
           taskData={taskData}
           onSave={handleSave}
-          onDelete={handleDelete}
+          onDelete={taskData?.id ? handleDelete : undefined} // Pass handleDelete only if taskData.id exists
           onCancel={onClose}
         />
       </DialogContent>
