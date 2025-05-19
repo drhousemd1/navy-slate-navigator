@@ -13,16 +13,16 @@ export const useDeletePunishment = () => {
 
   return useDeleteOptimisticMutation<PunishmentWithId, Error, string>({
     queryClient,
-    queryKey: [...PUNISHMENTS_QUERY_KEY], // Changed to mutable array
+    queryKey: [...PUNISHMENTS_QUERY_KEY],
     mutationFn: async (punishmentId: string) => {
       const { error } = await supabase.from('punishments').delete().eq('id', punishmentId);
       if (error) throw error;
     },
     entityName: 'Punishment',
     idField: 'id',
-    relatedQueryKey: [...PUNISHMENT_HISTORY_QUERY_KEY], // Changed to mutable array
-    relatedIdField: 'punishment_id', 
-    onSuccessOptimistic: async () => {
+    relatedQueryKey: [...PUNISHMENT_HISTORY_QUERY_KEY],
+    relatedIdField: 'punishment_id',
+    onSuccessCallback: async (_punishmentId: string) => {
       const currentPunishments = queryClient.getQueryData<PunishmentWithId[]>([...PUNISHMENTS_QUERY_KEY]) || [];
       await savePunishmentsToDB(currentPunishments);
       const currentHistory = queryClient.getQueryData<PunishmentHistoryItem[]>([...PUNISHMENT_HISTORY_QUERY_KEY]) || [];
@@ -30,3 +30,4 @@ export const useDeletePunishment = () => {
     },
   });
 };
+

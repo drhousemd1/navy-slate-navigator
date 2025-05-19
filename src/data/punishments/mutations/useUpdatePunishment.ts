@@ -15,7 +15,7 @@ export const useUpdatePunishment = () => {
 
   return useUpdateOptimisticMutation<PunishmentWithId, Error, UpdatePunishmentVariables>({
     queryClient,
-    queryKey: [...PUNISHMENTS_QUERY_KEY], // Changed to mutable array
+    queryKey: [...PUNISHMENTS_QUERY_KEY],
     mutationFn: async (variables: UpdatePunishmentVariables) => {
       const { id, ...updates } = variables;
       const { data, error } = await supabase
@@ -30,9 +30,10 @@ export const useUpdatePunishment = () => {
     },
     entityName: 'Punishment',
     idField: 'id',
-    onSuccessOptimistic: async () => {
+    onSuccessCallback: async (_data: PunishmentWithId, _variables: UpdatePunishmentVariables) => {
       const currentPunishments = queryClient.getQueryData<PunishmentWithId[]>([...PUNISHMENTS_QUERY_KEY]) || [];
       await savePunishmentsToDB(currentPunishments);
     },
   });
 };
+
