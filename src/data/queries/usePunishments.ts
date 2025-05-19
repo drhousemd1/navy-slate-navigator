@@ -4,12 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { PunishmentData } from "@/contexts/punishments/types";
 import { useAuth } from "@/contexts/auth";
 
-export default function usePunishments() {
+export default function usePunishmentsQuery() { // Renamed to avoid conflict with context hook if used in same file
   const { user } = useAuth();
   
-  return useQuery<PunishmentData[], Error>({
-    queryKey: ["punishments"],
-    queryFn: async (): Promise<PunishmentData[]> => {
+  return useQuery({ // Removed explicit <PunishmentData[], Error>
+    queryKey: ["punishments", user?.id],
+    queryFn: async (): Promise<PunishmentData[]> => { // Explicit Promise return type for queryFn
       if (!user?.id) {
         return [];
       }
@@ -22,9 +22,9 @@ export default function usePunishments() {
         
       if (error) throw error;
       
-      // Use a simple type assertion instead of generic instantiation
       return (data || []) as PunishmentData[];
     },
+    enabled: !!user?.id,
     staleTime: Infinity,
   });
 }
