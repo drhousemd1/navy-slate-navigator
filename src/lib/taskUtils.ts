@@ -1,18 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getMondayBasedDay } from "./utils";
-import { queryClient } from "@/data/queryClient";
-import type { Task, TaskPriority, TaskFrequency } from '@/data/tasks/types'; // UPDATED IMPORT
-
-// Define and export TaskPriority
-export type TaskPriority = 'low' | 'medium' | 'high';
+import { queryClient } from "@/data/queryClient"; // queryClient is already imported
 
 export interface Task {
   id: string;
   title: string;
   description?: string;
   points: number;
-  priority: TaskPriority; // Use the exported type
+  priority: 'low' | 'medium' | 'high';
   completed: boolean;
   background_image_url?: string;
   background_opacity?: number;
@@ -31,8 +27,6 @@ export interface Task {
   last_completed_date?: string; // YYYY-MM-DD
   created_at?: string;
   updated_at?: string;
-  week_identifier?: string; // Added from canonical Task type
-  background_images?: string[]; // Added from canonical Task type
 }
 
 export const getLocalDateString = (): string => {
@@ -137,8 +131,9 @@ export const resetTaskCompletions = async (
         // as it represents max completions, not current.
         // usage_data should be reset for the new day.
         // However, the current logic is to reset tasks not completed *today*.
-        // If full reset of daily progress is needed, usage_data handling needs careful consideration.
+        // If we clear usage_data, it will affect weekly view.
         // Let's stick to the original intent of resetting 'completed' status.
+        // If full reset of daily progress is needed, usage_data handling needs careful consideration.
       })
       .eq("frequency", "daily")
       .not("last_completed_date", "eq", today) // Only reset if not completed today
@@ -172,23 +167,23 @@ export const resetTaskCompletions = async (
   }
 };
 
-const processTaskFromDb = (task: any): Task => { // Return type is now the imported Task
+const processTaskFromDb = (task: any): Task => {
   return {
     id: task.id,
     title: task.title,
     description: task.description,
     points: task.points,
-    priority: (task.priority as string || 'medium') as TaskPriority,
+    priority: (task.priority as string || 'medium') as 'low' | 'medium' | 'high',
     completed: task.completed,
     background_image_url: task.background_image_url,
-    background_opacity: task.background_opacity, // DB is NOT NULL, so this will be a number
+    background_opacity: task.background_opacity,
     focal_point_x: task.focal_point_x,
     focal_point_y: task.focal_point_y,
-    frequency: (task.frequency as string || 'daily') as TaskFrequency,
-    frequency_count: task.frequency_count || 1,
+    frequency: (task.frequency as string || 'daily') as 'daily' | 'weekly',
+    frequency_count: task.frequency_count || 1, // Ensure default frequency count is at least 1
     usage_data: Array.isArray(task.usage_data) && task.usage_data.length === 7 ? 
       task.usage_data.map((val: any) => Number(val) || 0) : 
-      Array(7).fill(0),
+      Array(7).fill(0), // Ensure it's a 7-element array of numbers
     icon_url: task.icon_url,
     icon_name: task.icon_name,
     icon_color: task.icon_color,
@@ -198,9 +193,7 @@ const processTaskFromDb = (task: any): Task => { // Return type is now the impor
     calendar_color: task.calendar_color,
     last_completed_date: task.last_completed_date,
     created_at: task.created_at,
-    updated_at: task.updated_at,
-    week_identifier: task.week_identifier, // Added from canonical Task type
-    background_images: task.background_images, // Added from canonical Task type
+    updated_at: task.updated_at
   };
 };
 
@@ -214,8 +207,6 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     const usage_data = task.usage_data || Array(7).fill(0);
     const now = new Date().toISOString();
     
-    // Ensure all fields being sent match the DB schema and the Task type from data/tasks/types.ts
-    // The Partial<Task> for `task` parameter will now be Partial<CanonicalTask>
     if (task.id) {
       const { data, error } = await supabase
         .from('tasks')
@@ -241,8 +232,6 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           last_completed_date: task.last_completed_date,
           usage_data: usage_data,
           updated_at: now,
-          week_identifier: task.week_identifier, // Added
-          background_images: task.background_images, // Added
         })
         .eq('id', task.id)
         .select()
@@ -257,26 +246,25 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           title: task.title,
           description: task.description,
           points: task.points,
-          completed: task.completed ?? false,
-          frequency: task.frequency ?? 'daily',
-          frequency_count: task.frequency_count ?? 1,
+          completed: task.completed ?? false, // Ensure default
+          frequency: task.frequency ?? 'daily', // Ensure default
+          frequency_count: task.frequency_count ?? 1, // Ensure default
           background_image_url: task.background_image_url,
-          background_opacity: task.background_opacity ?? 100,
+          background_opacity: task.background_opacity,
           icon_url: task.icon_url,
           icon_name: task.icon_name,
-          title_color: task.title_color ?? '#FFFFFF',
-          subtext_color: task.subtext_color ?? '#8E9196',
-          calendar_color: task.calendar_color ?? '#7E69AB',
-          highlight_effect: task.highlight_effect ?? false,
-          focal_point_x: task.focal_point_x ?? 50,
-          focal_point_y: task.focal_point_y ?? 50,
-          priority: task.priority ?? 'medium',
-          icon_color: task.icon_color ?? '#9b87f5',
+          title_color: task.title_color,
+          subtext_color: task.subtext_color,
+          calendar_color: task.calendar_color,
+          highlight_effect: task.highlight_effect,
+          focal_point_x: task.focal_point_x,
+          focal_point_y: task.focal_point_y,
+          priority: task.priority ?? 'medium', // Ensure default
+          icon_color: task.icon_color,
           last_completed_date: null,
           usage_data: usage_data,
           created_at: now,
-          week_identifier: task.week_identifier, // Added
-          background_images: task.background_images, // Added
+          // updated_at will be set by default by db or trigger if configured
         })
         .select()
         .single();
