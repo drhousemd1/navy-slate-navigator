@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import { PunishmentData } from '@/contexts/punishments/types';

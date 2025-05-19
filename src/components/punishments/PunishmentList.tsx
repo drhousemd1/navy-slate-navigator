@@ -44,7 +44,7 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
       <EmptyState
         icon={PlusCircle}
         title="No Punishments Yet"
-        description="You currently have no punishments. Get started by creating one."
+        description="You currently have no punishments. Please create one to continue." // Updated message
         action={onCreatePunishmentClick && (
           <Button 
             onClick={onCreatePunishmentClick} 
