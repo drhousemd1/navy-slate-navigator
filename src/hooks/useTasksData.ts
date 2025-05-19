@@ -1,118 +1,238 @@
-import { useQueryClient, QueryObserverResult } from '@tanstack/react-query';
+
+import { useState, useCallback, useEffect } from 'react';
+import { useTasksQuery, useTaskQuery } from '@/data/tasks/queries';
+import { TaskWithId } from '@/data/tasks/types';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
-import { Task } from '@/lib/taskUtils';
-import { TaskWithId, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types';
-import { useTasksQuery } from '@/data/tasks/queries';
-import { 
-  useCreateTask, 
-  useUpdateTask, 
-  useDeleteTask, 
-  useToggleTaskCompletionMutation 
-} from '@/data/tasks/mutations';
+import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
+import { useDeleteTask } from '@/data/mutations/tasks/useDeleteTask';
 
 export const useTasksData = () => {
-  const queryClient = useQueryClient();
-
   const { 
     data: tasks = [], 
     isLoading, 
     error, 
-    refetch: refetchTasksQuery 
+    refetch,
+    isUsingCachedData
   } = useTasksQuery();
-
-  const createTaskMutation = useCreateTask();
-  const updateTaskMutation = useUpdateTask();
+  
+  const queryClient = useQueryClient();
   const deleteTaskMutation = useDeleteTask();
-  const toggleCompletionMutation = useToggleTaskCompletionMutation();
 
-  const saveTask = async (taskData: Partial<TaskWithId>): Promise<TaskWithId | null> => {
+  const saveTask = async (taskData: TaskWithId) => {
     try {
       if (taskData.id) {
         // Update existing task
-        // Ensure all properties passed are valid for UpdateTaskVariables
-        const updateVariables: UpdateTaskVariables = { 
-          id: taskData.id, 
-          ...taskData // Spread the rest of taskData, TS will check compatibility with Partial<Omit<TaskWithId...>>
-        };
-        const updatedTask = await updateTaskMutation.mutateAsync(updateVariables);
-        return updatedTask;
-      } else {
-        // Create new task
-        if (!taskData.title || typeof taskData.points !== 'number') {
-            toast({
-                title: "Missing required fields",
-                description: "Title and points are required to create a task.",
-                variant: "destructive"
-            });
-            return null;
-        }
-        // Construct CreateTaskVariables, TS will now validate against the updated TaskWithId (via taskData)
-        // and the explicit fields in CreateTaskVariables
-        const createVariables: CreateTaskVariables = {
+        const { error } = await supabase
+          .from("tasks")
+          .update({
             title: taskData.title,
-            points: taskData.points,
             description: taskData.description,
-            frequency: taskData.frequency || 'daily',
-            frequency_count: taskData.frequency_count || 1,
-            priority: taskData.priority || 'medium',
+            points: taskData.points,
+            frequency: taskData.frequency,
+            frequency_count: taskData.frequency_count,
+            background_image_url: taskData.background_image_url,
+            background_opacity: taskData.background_opacity,
+            icon_url: taskData.icon_url,
             icon_name: taskData.icon_name,
-            icon_color: taskData.icon_color,
+            priority: taskData.priority,
             title_color: taskData.title_color,
             subtext_color: taskData.subtext_color,
             calendar_color: taskData.calendar_color,
-            background_image_url: taskData.background_image_url,
-            background_opacity: taskData.background_opacity,
+            icon_color: taskData.icon_color,
             highlight_effect: taskData.highlight_effect,
             focal_point_x: taskData.focal_point_x,
-            focal_point_y: taskData.focal_point_y,
-            week_identifier: taskData.week_identifier, // Now valid due to TaskWithId update
-            background_images: taskData.background_images, // Now valid due to TaskWithId update
-            icon_url: taskData.icon_url,
-            usage_data: taskData.usage_data,
+            focal_point_y: taskData.focal_point_y
+            // Don't include completed status in update to prevent overriding completion state
+          })
+          .eq("id", taskData.id);
+
+        if (error) {
+          console.error("Error updating task:", error);
+          toast({
+            title: 'Error',
+            description: 'Failed to update task: ' + error.message,
+            variant: 'destructive',
+          });
+          throw error;
+        }
+
+        // Update the local cache optimistically
+        queryClient.setQueryData<TaskWithId[]>(["tasks"], oldTasks => {
+          if (!oldTasks) return [taskData];
+          const updatedTasks = oldTasks.map(t => 
+            t.id === taskData.id ? { ...t, ...taskData, completed: t.completed } : t
+          );
+          saveTasksToDB(updatedTasks); // Update IndexedDB
+          return updatedTasks;
+        });
+
+        toast({
+          title: 'Task Updated',
+          description: 'Your task has been updated successfully.',
+        });
+        return taskData;
+      } else {
+        // Create new task
+        const newTaskData = {
+          title: taskData.title,
+          description: taskData.description,
+          points: taskData.points,
+          completed: false,
+          frequency: taskData.frequency,
+          frequency_count: taskData.frequency_count,
+          background_image_url: taskData.background_image_url,
+          background_opacity: taskData.background_opacity,
+          icon_url: taskData.icon_url,
+          icon_name: taskData.icon_name,
+          priority: taskData.priority,
+          title_color: taskData.title_color,
+          subtext_color: taskData.subtext_color,
+          calendar_color: taskData.calendar_color,
+          icon_color: taskData.icon_color,
+          highlight_effect: taskData.highlight_effect,
+          focal_point_x: taskData.focal_point_x,
+          focal_point_y: taskData.focal_point_y,
+          usage_data: Array(7).fill(0) // Initialize with zeros for a week
         };
-        const newTask = await createTaskMutation.mutateAsync(createVariables);
-        return newTask;
+
+        const { data: newTask, error } = await supabase
+          .from("tasks")
+          .insert([newTaskData])
+          .select();
+
+        if (error) {
+          console.error("Error creating task:", error);
+          toast({
+            title: 'Error',
+            description: 'Failed to create task: ' + error.message,
+            variant: 'destructive',
+          });
+          throw error;
+        }
+
+        // Update the cache with the new task from the server
+        if (newTask && newTask[0]) {
+          queryClient.setQueryData<TaskWithId[]>(["tasks"], oldTasks => {
+            const newTasks = oldTasks ? [newTask[0], ...oldTasks] : [newTask[0]];
+            saveTasksToDB(newTasks); // Update IndexedDB
+            return newTasks;
+          });
+
+          toast({
+            title: 'Task Created',
+            description: 'Your new task has been created successfully.',
+          });
+          return newTask[0] as TaskWithId;
+        }
       }
-    } catch (err) {
-      console.error('Error saving task:', err);
-      // Toast is handled by the individual mutation hooks
+      
+      await refetch(); // Refresh data to ensure UI is up to date
       return null;
+    } catch (err) {
+      console.error("Error in saveTask:", err);
+      throw err;
     }
   };
 
-  const deleteTask = async (taskId: string): Promise<boolean> => {
-    try {
-      await deleteTaskMutation.mutateAsync(taskId);
-      return true;
-    } catch (err) {
-      console.error('Error deleting task:', err);
-      return false;
-    }
+  const deleteTask = async (taskId: string) => {
+    return deleteTaskMutation.mutateAsync(taskId);
   };
 
-  const toggleTaskCompletion = async (taskId: string, completed: boolean, pointsValue: number): Promise<boolean> => {
+  const toggleTaskCompletion = async (taskId: string, completed: boolean, points: number = 0) => {
     try {
-      const task = tasks.find(t => t.id === taskId);
-      // Pass the full task object if available and the mutation expects it
-      await toggleCompletionMutation.mutateAsync({ taskId, completed, pointsValue, task });
+      // Update the local cache optimistically first
+      queryClient.setQueryData<TaskWithId[]>(["tasks"], oldTasks => {
+        if (!oldTasks) return [];
+        const updatedTasks = oldTasks.map(t => 
+          t.id === taskId ? { ...t, completed } : t
+        );
+        saveTasksToDB(updatedTasks); // Update IndexedDB
+        return updatedTasks;
+      });
+
+      // Then update the database
+      const { error } = await supabase
+        .from("tasks")
+        .update({ completed })
+        .eq("id", taskId);
+
+      if (error) {
+        console.error("Error updating task completion:", error);
+        
+        // Revert the optimistic update
+        queryClient.setQueryData<TaskWithId[]>(["tasks"], oldTasks => {
+          if (!oldTasks) return [];
+          const revertedTasks = oldTasks.map(t => 
+            t.id === taskId ? { ...t, completed: !completed } : t
+          );
+          saveTasksToDB(revertedTasks);
+          return revertedTasks;
+        });
+        
+        toast({
+          title: 'Error',
+          description: 'Failed to update task completion status: ' + error.message,
+          variant: 'destructive',
+        });
+        throw error;
+      }
+
+      // If the task was marked as completed, trigger the completion history recording and points update
+      if (completed) {
+        // This async operation could happen in the background
+        try {
+          await supabase.rpc('record_task_completion', { 
+            task_id_param: taskId,
+            user_id_param: (await supabase.auth.getUser()).data.user?.id 
+          });
+          
+          // Get the user's current points
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('points')
+            .eq('id', (await supabase.auth.getUser()).data.user?.id)
+            .single();
+            
+          if (profile) {
+            // Update the points
+            await supabase
+              .from('profiles')
+              .update({ points: profile.points + points })
+              .eq('id', (await supabase.auth.getUser()).data.user?.id);
+          }
+          
+          toast({
+            title: 'Task Completed',
+            description: `You earned ${points} points!`,
+          });
+        } catch (err) {
+          console.error("Error recording task completion or updating points:", err);
+          // We don't need to revert the UI state here since the task is still marked complete
+          // Just inform the user about points issue
+          toast({
+            title: 'Points Update Issue',
+            description: 'Task marked complete, but there was an issue updating your points.',
+            variant: 'default',
+          });
+        }
+      }
+
       return true;
     } catch (err) {
-      console.error('Error toggling task completion:', err);
+      console.error("Error in toggleTaskCompletion:", err);
       return false;
     }
-  };
-  
-  const refetchTasks = async (): Promise<QueryObserverResult<TaskWithId[], Error>> => { // Ensure return type matches useTasksQuery data type
-    return refetchTasksQuery();
   };
 
   return {
-    tasks: tasks as TaskWithId[], 
+    tasks,
     isLoading,
     error,
+    isUsingCachedData,
     saveTask,
     deleteTask,
-    toggleTaskCompletion,
-    refetchTasks,
+    toggleTaskCompletion
   };
 };

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import RuleEditor from '../components/RuleEditor';
@@ -13,7 +14,15 @@ const RulesPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   // Using useRulesData directly
-  const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken } = useRulesData();
+  const { 
+    rules, 
+    isLoading, 
+    error, 
+    saveRule, 
+    deleteRule, 
+    markRuleBroken,
+    isUsingCachedData 
+  } = useRulesData();
 
   const handleAddRule = () => {
     console.log('handleAddRule called in RulesPageContent');
@@ -102,6 +111,8 @@ const RulesPageContent: React.FC = () => {
         isLoading={isLoading}
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
+        error={error}
+        isUsingCachedData={isUsingCachedData}
       />
 
       <RuleEditor

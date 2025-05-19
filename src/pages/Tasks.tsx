@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -16,6 +17,7 @@ const TasksPageContent: React.FC = () => {
     tasks, 
     isLoading, 
     error, 
+    isUsingCachedData,
     saveTask, 
     deleteTask, 
     toggleTaskCompletion, 
@@ -129,6 +131,8 @@ const TasksPageContent: React.FC = () => {
         isLoading={isLoading && tasks.length === 0} 
         onEditTask={handleEditTask}
         onToggleCompletion={handleToggleCompletion}
+        error={error}
+        isUsingCachedData={isUsingCachedData}
       />
 
       <TaskEditor

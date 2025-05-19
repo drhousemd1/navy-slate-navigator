@@ -3,17 +3,25 @@ import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
 import { logQueryPerformance } from '@/lib/react-query-config';
 
+// Timeout for database queries to prevent hanging on network issues
+const QUERY_TIMEOUT_MS = 5000;
+
 export const fetchRules = async (): Promise<Rule[]> => {
   console.log("[fetchRules] Starting rules fetch");
   const startTime = performance.now();
   
-  // const CACHE_KEY = 'kingdom-app-rules'; // No longer using localStorage for this
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), QUERY_TIMEOUT_MS);
   
   try {
     const { data, error } = await supabase
       .from('rules')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .abortSignal(controller.signal);
+      
+    // Clear timeout as soon as we get a response
+    clearTimeout(timeoutId);
       
     if (error) {
       console.error('[fetchRules] Error fetching from Supabase:', error);
@@ -66,24 +74,19 @@ export const fetchRules = async (): Promise<Rule[]> => {
       };
     });
     
-    // localStorage.setItem(CACHE_KEY, JSON.stringify(validatedRules)); // Removed localStorage save
-    // console.log(`[fetchRules] Saved ${validatedRules.length} rules to localStorage cache`); // Removed
-    
     return validatedRules;
   } catch (error) {
-    console.error('[fetchRules] Fetch process failed:', error);
-    // localStorage related fallback removed. React Query will handle error states and cache.
-    // const cachedData = localStorage.getItem(CACHE_KEY);
-    // if (cachedData) {
-    //   console.log('[fetchRules] Using cached rules data from localStorage');
-    //   try {
-    //     const parsedData = JSON.parse(cachedData);
-    //     return parsedData;
-    //   } catch (parseError) {
-    //     console.error('[fetchRules] Error parsing cached data from localStorage:', parseError);
-    //   }
-    // }
+    // Make sure to clear timeout if there's an exception
+    clearTimeout(timeoutId);
     
+    // Check if this was an abort error/timeout
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      const timeoutError = new Error(`Database query timed out after ${QUERY_TIMEOUT_MS}ms`);
+      console.error('[fetchRules] Query timeout:', timeoutError);
+      throw timeoutError;
+    }
+    
+    console.error('[fetchRules] Fetch process failed:', error);
     throw error; // Re-throw the error to be handled by React Query
   }
 };
