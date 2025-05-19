@@ -14,7 +14,7 @@ export const useUpdateRule = () => {
 
   return useUpdateOptimisticMutation<Rule, Error, UpdateRuleVariables>({
     queryClient,
-    queryKey: [...RULES_QUERY_KEY],
+    queryKey: [...RULES_QUERY_KEY], // Ensure mutable array
     mutationFn: async (variables: UpdateRuleVariables) => {
       const { id, ...updates } = variables;
       const { data, error } = await supabase
@@ -29,7 +29,7 @@ export const useUpdateRule = () => {
     },
     entityName: 'Rule',
     idField: 'id',
-    onSuccessCallback: async (updatedRuleData) => { // Renamed from onSuccess
+    onSuccessCallback: async (updatedRuleData) => {
       console.log('[useUpdateRule onSuccessCallback] Rule updated on server, updating IndexedDB.', updatedRuleData);
       try {
         const localRules = await loadRulesFromDB() || [];
@@ -38,16 +38,16 @@ export const useUpdateRule = () => {
         await setLastSyncTimeForRules(new Date().toISOString());
         console.log('[useUpdateRule onSuccessCallback] IndexedDB updated with updated rule.');
         // Generic success toast is handled by useUpdateOptimisticMutation
-        // toast({ title: "Rule Updated", description: `Rule "${updatedRuleData.title}" has been successfully updated and saved locally.` });
       } catch (error) {
         console.error('[useUpdateRule onSuccessCallback] Error updating IndexedDB:', error);
         toast({ variant: "destructive", title: "Local Save Error", description: "Rule updated on server, but failed to save changes locally." });
       }
     },
-    onError: (error, variables) => { // This onError is from useMutationOptions
-      console.error('[useUpdateRule onError] Error updating rule:', error, variables);
-      // Generic error toast is handled by useUpdateOptimisticMutation
-      // toast({ variant: "destructive", title: "Rule Update Failed", description: error.message || "Could not update the rule." });
-    },
+    mutationOptions: { // onError moved into mutationOptions
+      onError: (error, variables) => {
+        console.error('[useUpdateRule onError] Error updating rule:', error, variables);
+        // Generic error toast is handled by useUpdateOptimisticMutation
+      },
+    }
   });
 };

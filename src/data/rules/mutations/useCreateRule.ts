@@ -17,7 +17,7 @@ export const useCreateRule = () => {
 
   return useCreateOptimisticMutation<Rule, Error, CreateRuleVariables>({
     queryClient,
-    queryKey: [...RULES_QUERY_KEY],
+    queryKey: [...RULES_QUERY_KEY], // Ensure mutable array
     mutationFn: async (variables: CreateRuleVariables) => {
       const { data, error } = await supabase
         .from('rules')
@@ -51,7 +51,7 @@ export const useCreateRule = () => {
         ...variables,
       } as Rule;
     },
-    onSuccessCallback: async (newRuleData) => { // Renamed from onSuccess
+    onSuccessCallback: async (newRuleData) => {
       console.log('[useCreateRule onSuccessCallback] New rule created on server, updating IndexedDB.', newRuleData);
       try {
         const localRules = await loadRulesFromDB() || [];
@@ -67,10 +67,12 @@ export const useCreateRule = () => {
         toast({ variant: "destructive", title: "Local Save Error", description: "Rule created on server, but failed to save locally." });
       }
     },
-    onError: (error, variables) => { // This onError is from useMutationOptions, not the one inside useCreateOptimisticMutation
-      console.error('[useCreateRule onError] Error creating rule:', error, variables);
-      // Generic error toast is handled by useCreateOptimisticMutation
-      // toast({ variant: "destructive", title: "Rule Creation Failed", description: error.message || "Could not create the rule." });
-    },
+    mutationOptions: { // onError moved into mutationOptions
+      onError: (error, variables) => {
+        console.error('[useCreateRule onError] Error creating rule:', error, variables);
+        // Generic error toast is handled by useCreateOptimisticMutation
+        // toast({ variant: "destructive", title: "Rule Creation Failed", description: error.message || "Could not create the rule." });
+      },
+    }
   });
 };
