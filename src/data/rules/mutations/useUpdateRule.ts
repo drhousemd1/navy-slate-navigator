@@ -17,8 +17,11 @@ export const useUpdateRule = () => {
     queryKey: ['rules', user?.id],
     mutationFn: async (variables: UpdateRuleVariables) => {
       const { id, ...updates } = variables;
-      // user_id should not be updatable by client in this mutation
-      const { user_id, created_at, ...safeUpdates } = updates; 
+      // 'updates' is already of type Partial<Omit<Rule, 'id' | 'created_at' | 'user_id'>>
+      // So, 'user_id' and 'created_at' are not properties of 'updates'.
+      // We can directly use 'updates' as safeUpdates.
+      const safeUpdates = updates; 
+
       const { data, error } = await supabase
         .from('rules')
         .update({ ...safeUpdates, updated_at: new Date().toISOString() })

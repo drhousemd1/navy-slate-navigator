@@ -1,10 +1,12 @@
+
 import localforage from 'localforage';
 import { Reward } from '@/data/rewards/types';
 import { PunishmentData as ContextPunishmentData, PunishmentHistoryItem as ContextPunishmentHistoryItem } from '@/contexts/punishments/types';
+import { Rule as AppRuleInterface } from '@/data/interfaces/Rule'; // Import the detailed Rule interface
 
 // Define types for other entities or import them if they exist elsewhere
 export interface Task { id: string; [key: string]: any; }
-export interface Rule { id: string; [key: string]: any; }
+// export interface Rule { id: string; [key: string]: any; } // Remove generic Rule type
 
 // Use imported types for consistency
 export type PunishmentData = ContextPunishmentData;
@@ -109,16 +111,16 @@ export const setLastSyncTimeForTasks = async (time: string): Promise<void> => {
 };
 
 // Rules specific functions
-export const loadRulesFromDB = async (): Promise<Rule[] | null> => {
+export const loadRulesFromDB = async (): Promise<AppRuleInterface[] | null> => {
   try {
-    return await rulesStore.getItem<Rule[]>('allRules');
+    return await rulesStore.getItem<AppRuleInterface[]>('allRules');
   } catch (error) {
     console.error('Error loading rules from IndexedDB:', error);
     return null;
   }
 };
 
-export const saveRulesToDB = async (rules: Rule[]): Promise<void> => {
+export const saveRulesToDB = async (rules: AppRuleInterface[]): Promise<void> => {
   try {
     await rulesStore.setItem('allRules', rules);
   } catch (error) {

@@ -6,7 +6,7 @@
  */
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { supabase } from '@/integrations/supabase/client';
-import { Rule } from "@/data/interfaces/Rule";
+import { Rule as AppRuleInterface } from "@/data/interfaces/Rule"; // Use the detailed Rule interface
 import {
   loadRulesFromDB,
   saveRulesToDB,
@@ -15,13 +15,13 @@ import {
 } from "../indexedDB/useIndexedDB";
 import { useAuth } from "@/contexts/auth"; // Assuming rules are user-specific
 
-export function useRulesQuery() { // Renamed to useRulesQuery to avoid conflict with context hook
+export function useRulesQuery() {
   const { user } = useAuth();
   const profileId = user?.id;
 
   const queryKey = ["rules", profileId] as const;
 
-  const queryFn = async (): Promise<Rule[]> => {
+  const queryFn = async (): Promise<AppRuleInterface[]> => {
     if (!profileId) return []; // Do not fetch if no profileId
 
     const localData = await loadRulesFromDB();
@@ -37,14 +37,14 @@ export function useRulesQuery() { // Renamed to useRulesQuery to avoid conflict 
 
     if (!shouldFetch && localData) {
       console.log("Serving rules from IndexedDB");
-      return localData;
+      return localData; // This should now be AppRuleInterface[]
     }
 
     console.log("Fetching rules from Supabase for profileId:", profileId);
     const { data, error } = await supabase
       .from("rules")
       .select("*")
-      .eq("user_id", profileId); // Assuming rules have a user_id column
+      .eq("user_id", profileId);
 
     if (error) {
       console.error("Error fetching rules:", error);
@@ -52,16 +52,16 @@ export function useRulesQuery() { // Renamed to useRulesQuery to avoid conflict 
     }
 
     if (data) {
-      const rulesData = data as Rule[];
+      const rulesData = data as AppRuleInterface[]; // Cast to the detailed interface
       await saveRulesToDB(rulesData);
       await setLastSyncTimeForRules(new Date().toISOString());
       return rulesData;
     }
 
-    return localData || []; // Fallback to localData or empty array if fetch fails but local exists
+    return localData || []; // Fallback to localData or empty array
   };
 
-  const queryOptions: UseQueryOptions<Rule[], Error, Rule[], typeof queryKey> = {
+  const queryOptions: UseQueryOptions<AppRuleInterface[], Error, AppRuleInterface[], typeof queryKey> = {
     queryKey: queryKey,
     queryFn: queryFn,
     enabled: !!profileId, // Only run query if profileId exists

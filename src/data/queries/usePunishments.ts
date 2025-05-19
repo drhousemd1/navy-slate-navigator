@@ -1,5 +1,5 @@
 
-import { useQuery, UseQueryOptions } from "@tanstack/react-query"; // Changed from usePersistentQuery
+import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { supabase } from '@/integrations/supabase/client';
 import {
   loadPunishmentsFromDB,
@@ -9,13 +9,18 @@ import {
 } from "../indexedDB/useIndexedDB";
 import { PunishmentData } from "@/contexts/punishments/types";
 import { Database } from "@/integrations/supabase/types"; // Assuming this is where Supabase types are generated
+import { useAuth } from "@/contexts/auth";
 
 type DbPunishment = Database['public']['Tables']['punishments']['Row'];
 
 export function usePunishments() {
-  const queryKey = ["punishments"] as const;
+  const { user } = useAuth();
+  const queryKey = ["punishments", user?.id] as const;
 
   const queryFn = async (): Promise<PunishmentData[]> => {
+    const userId = user?.id;
+    if (!userId) return [];
+
     const localData = await loadPunishmentsFromDB();
     const lastSync = await getLastSyncTimeForPunishments();
     let shouldFetch = true;
@@ -33,18 +38,14 @@ export function usePunishments() {
     }
 
     console.log("Fetching punishments from Supabase");
+    // Assuming 'user_id' is NOT on the 'punishments' table as per schema.
+    // If it should be user-specific, the table schema and this query need an update.
     const { data, error } = await supabase.from("punishments").select("*");
     if (error) throw error;
 
     if (data) {
       const punishmentsData = data.map((p: DbPunishment) => ({
-        ...p,
-        // Ensure all fields from PunishmentData are present, even if null/undefined
-        // Fields that might not be on DbPunishment but are on PunishmentData
-        icon_url: p.icon_url || undefined, // punishments table has icon_url
-        usage_data: (p as any).usage_data || undefined, // punishments table does NOT have usage_data
-        frequency_count: (p as any).frequency_count || undefined, // punishments table does NOT have frequency_count
-        // Ensure all other fields are correctly mapped
+        // Map fields present in DbPunishment
         id: p.id,
         title: p.title,
         description: p.description,
@@ -58,11 +59,15 @@ export function usePunishments() {
         calendar_color: p.calendar_color,
         highlight_effect: p.highlight_effect,
         icon_name: p.icon_name,
-        icon_color: p.icon_color,
+        icon_color: p.icon_color, // This exists on DbPunishment
         focal_point_x: p.focal_point_x,
         focal_point_y: p.focal_point_y,
         created_at: p.created_at,
         updated_at: p.updated_at,
+        // Fields for PunishmentData that are NOT on DbPunishment and should be undefined
+        icon_url: undefined, // punishments table does NOT have icon_url in the provided schema
+        usage_data: undefined, // punishments table does NOT have usage_data
+        frequency_count: undefined, // punishments table does NOT have frequency_count
       })) as PunishmentData[];
       await savePunishmentsToDB(punishmentsData);
       await setLastSyncTimeForPunishments(new Date().toISOString());
@@ -75,6 +80,7 @@ export function usePunishments() {
   const queryOptions: UseQueryOptions<PunishmentData[], Error, PunishmentData[], typeof queryKey> = {
     queryKey: queryKey,
     queryFn: queryFn,
+    enabled: !!user?.id,
     staleTime: Infinity,
     gcTime: 3600000, // 1 hour
     refetchOnWindowFocus: false,
@@ -86,7 +92,7 @@ export function usePunishments() {
 
   return {
     ...queryResult,
-    punishments: queryResult.data || [],
+    punishments: queryResult.data || [], // Ensure this is always an array
     isLoading: queryResult.isLoading,
     error: queryResult.error,
     refetchPunishments: queryResult.refetch
