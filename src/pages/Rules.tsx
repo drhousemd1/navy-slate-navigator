@@ -1,32 +1,20 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
-import { useNavigate } from 'react-router-dom';
 import RuleEditor from '../components/RuleEditor';
 import RulesHeader from '../components/rule/RulesHeader';
 import RulesList from '../components/rule/RulesList';
-import { RewardsProvider } from '@/contexts/RewardsContext'; 
 import { Rule } from '@/data/interfaces/Rule';
-import { useSyncManager } from '@/hooks/useSyncManager';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Hydrate from '@/components/Hydrate';
 import { useRulesData } from '@/data/hooks/useRulesData';
 
 // Renamed component and using useRulesData directly
 const RulesPageContent: React.FC = () => {
-  const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   // Using useRulesData directly
-  const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken, refetchRules } = useRulesData();
-
-  // const { syncNow } = useSyncManager({ // syncNow from useSyncManager not used directly here anymore
-  //   intervalMs: 30000,
-  //   enabled: true 
-  // });
-  
-  // useEffect(() => { // syncNow call removed as preloading handles initial fetch
-  //   // syncNow(); 
-  // }, []);
+  const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken } = useRulesData();
 
   const handleAddRule = () => {
     console.log('handleAddRule called in RulesPageContent');
@@ -59,7 +47,6 @@ const RulesPageContent: React.FC = () => {
       await saveRule(ruleData);
       setIsEditorOpen(false);
       setCurrentRule(null);
-      // refetchRules(); // Consider if refetch is needed or if mutations handle cache updates
     } catch (err) {
       console.error('Error saving rule:', err);
     }
@@ -70,7 +57,6 @@ const RulesPageContent: React.FC = () => {
       await deleteRule(ruleId); 
       setCurrentRule(null);
       setIsEditorOpen(false);
-      // refetchRules(); // Consider if refetch is needed
     } catch (err) {
       console.error('Error deleting rule:', err);
     }
@@ -79,7 +65,6 @@ const RulesPageContent: React.FC = () => {
   const handleRuleBroken = async (rule: Rule) => {
     try {
       await markRuleBroken(rule);
-      // navigate('/punishments'); // Navigation can be handled by the toast or remain, depending on UX preference
     } catch (err) {
       console.error('Error marking rule as broken:', err);
     }
@@ -115,7 +100,7 @@ const RulesPageContent: React.FC = () => {
 
       <RulesList
         rules={rules}
-        isLoading={isLoading && rules.length === 0} // Show loading if loading and no rules yet
+        isLoading={isLoading}
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
         onCreateRuleClick={handleAddRule} 
@@ -147,14 +132,11 @@ const Rules: React.FC = () => {
         content.dispatchEvent(event);
       }
     }}>
-      <RewardsProvider> {/* This might be app-wide, ensure it's needed here specifically */}
-        {/* RulesProvider removed */}
-        <ErrorBoundary fallbackMessage="Could not load rules. Please try reloading.">
-          <Hydrate fallbackMessage="Loading your rules...">
-            <RulesPageContent />
-          </Hydrate>
-        </ErrorBoundary>
-      </RewardsProvider>
+      <ErrorBoundary fallbackMessage="Could not load rules. Please try reloading.">
+        <Hydrate fallbackMessage="Loading your rules...">
+          <RulesPageContent />
+        </Hydrate>
+      </ErrorBoundary>
     </AppLayout>
   );
 };

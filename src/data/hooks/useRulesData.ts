@@ -1,3 +1,4 @@
+
 import { QueryObserverResult } from '@tanstack/react-query';
 import { useRules } from '../rules/queries'; 
 import { Rule } from '@/data/interfaces/Rule';

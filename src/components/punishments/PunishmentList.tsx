@@ -4,15 +4,14 @@ import PunishmentCard from '../PunishmentCard';
 import { PunishmentData } from '@/contexts/punishments/types';
 import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, PlusCircle } from 'lucide-react'; // Using Loader2 for spinner, PlusCircle for create
-import PunishmentCardSkeleton from './PunishmentCardSkeleton'; // Assuming this exists for a better loading state
+import { LoaderCircle, AlertTriangle, PlusCircle } from 'lucide-react';
 
 interface PunishmentListProps {
   punishments: PunishmentData[];
-  isLoading: boolean; // True if loading initial data and punishments array is empty
+  isLoading: boolean;
   onEditPunishment: (punishment: PunishmentData) => void;
-  onCreatePunishmentClick?: () => void; // For the empty state button
-  error?: Error | null; // Optional error prop for list-specific errors
+  onCreatePunishmentClick?: () => void;
+  error?: Error | null;
 }
 
 const PunishmentList: React.FC<PunishmentListProps> = ({ 
@@ -23,22 +22,19 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
   error 
 }) => {
   if (isLoading) {
-    // Show skeletons for a better loading experience, matching other lists
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-        {[...Array(3)].map((_, index) => (
-          <PunishmentCardSkeleton key={index} />
-        ))}
+      <div className="flex flex-col items-center justify-center py-10">
+        <LoaderCircle className="h-10 w-10 text-primary animate-spin mb-2" />
+        <p className="text-muted-foreground">Loading punishments...</p>
       </div>
     );
   }
 
-  if (error) { // If an error specific to fetching the list is passed
+  if (error) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-10 mt-4">
         <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
         <p className="text-slate-400">Error loading punishments: {error.message}</p>
-        {/* Optionally, a retry button could be added here if a refetch function is passed */}
       </div>
     );
   }
@@ -46,13 +42,13 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
   if (punishments.length === 0) {
     return (
       <EmptyState
-        icon={PlusCircle} // Changed icon to something more action-oriented for "create"
+        icon={PlusCircle}
         title="No Punishments Yet"
         description="You currently have no punishments. Get started by creating one."
         action={onCreatePunishmentClick && (
           <Button 
             onClick={onCreatePunishmentClick} 
-            className="mt-6" // Adjusted margin
+            className="mt-6"
           >
             <PlusCircle className="mr-2 h-4 w-4" /> Create Punishment
           </Button>
@@ -62,7 +58,7 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"> {/* Using grid for layout consistency */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
       {punishments.map((punishment) => (
         <PunishmentCard
           key={punishment.id}

@@ -2,9 +2,8 @@
 import React from 'react';
 import RuleCard from './RuleCard';
 import { Rule } from '@/data/interfaces/Rule';
-import RuleCardSkeleton from './RuleCardSkeleton';
-import EmptyState from '@/components/common/EmptyState'; // Import the new EmptyState component
-import { ShieldOff } from 'lucide-react'; // Example icon for no rules
+import EmptyState from '@/components/common/EmptyState'; // Import the EmptyState component
+import { ShieldOff, LoaderCircle } from 'lucide-react'; // Import LoaderCircle for consistent loading
 
 interface RulesListProps {
   rules: Rule[];
@@ -22,12 +21,11 @@ const RulesList: React.FC<RulesListProps> = ({
   onRuleBroken,
   onCreateRuleClick
 }) => {
-  if (isLoading && rules.length === 0) {
+  if (isLoading) {
     return (
-      <div className="space-y-4">
-        <RuleCardSkeleton />
-        <RuleCardSkeleton />
-        <RuleCardSkeleton />
+      <div className="flex flex-col items-center justify-center py-10">
+        <LoaderCircle className="h-10 w-10 text-primary animate-spin mb-2" />
+        <p className="text-muted-foreground">Loading rules...</p>
       </div>
     );
   }
