@@ -2,15 +2,15 @@
 import React, { useEffect } from 'react';
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
-import { Box, Coins, PlusCircle } from 'lucide-react';
+import { Box, Coins } from 'lucide-react'; // Removed PlusCircle
 import { usePointsManager } from '@/data/points/usePointsManager';
-import { Button } from '@/components/ui/button'; // Import Button
+// Removed Button import
 
-interface TasksHeaderProps { // Define props interface
-  onAddTask?: () => void;
+interface TasksHeaderProps {
+  // onAddTask?: () => void; // Removed onAddTask prop
 }
 
-const TasksHeader: React.FC<TasksHeaderProps> = ({ onAddTask }) => { // Destructure onAddTask
+const TasksHeader: React.FC<TasksHeaderProps> = (/* Removed { onAddTask } */) => {
   const { 
     points: totalPoints, 
     domPoints, 
@@ -26,21 +26,12 @@ const TasksHeader: React.FC<TasksHeaderProps> = ({ onAddTask }) => { // Destruct
 
   return (
     <div className="flex items-center mb-6">
-      <h1 className="text-base font-semibold text-white mr-4">My Tasks</h1>
-      {onAddTask && ( // Conditionally render button if onAddTask is provided
-        <Button
-          onClick={onAddTask}
-          size="sm"
-          className="bg-nav-active hover:bg-nav-active/90 text-white mr-auto"
-        >
-          <PlusCircle className="w-4 h-4 mr-2" />
-          Add Task
-        </Button>
-      )}
+      <h1 className="text-base font-semibold text-white mr-auto">My Tasks</h1> {/* Added mr-auto here to push badges to the right */}
+      {/* Removed Add Task Button and onAddTask condition */}
       {isLoadingPoints ? (
         <span className="text-sm text-gray-400 ml-auto">Loading points...</span>
       ) : (
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2 ml-auto"> {/* Ensured ml-auto is still here if mr-auto on h1 is not enough */}
           <Badge 
             className="text-white font-bold px-3 py-1 flex items-center gap-1"
             style={badgeStyle}

@@ -5,10 +5,9 @@ import TasksHeader from '../components/task/TasksHeader';
 import TasksList from '../components/task/TasksList';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TaskWithId } from '@/data/tasks/types';
-import { useSyncManager, SyncOptions, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager'; // Import SyncOptions and CRITICAL_QUERY_KEYS
+import { useSyncManager, SyncOptions, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useTasksData } from '@/hooks/useTasksData';
-// import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager'; // ensure this provides the correct type for queryKey - Already imported above
 
 const TasksPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -23,8 +22,6 @@ const TasksPageContent: React.FC = () => {
   } = useTasksData();
   const { refreshPointsFromDatabase } = useRewards();
   
-  // Corrected useSyncManager call. Since TASKS is a critical key,
-  // it will be synced by default if enabled.
   useSyncManager({ 
     enabled: true 
   });
@@ -83,6 +80,7 @@ const TasksPageContent: React.FC = () => {
         console.error(`Task with id ${taskId} not found.`);
         return;
       }
+      // Assuming toggleTaskCompletion in useTasksData handles points correctly
       await toggleTaskCompletion(taskId, completed, task.points || 0); 
       if (completed) {
         setTimeout(() => {
@@ -100,8 +98,8 @@ const TasksPageContent: React.FC = () => {
 
   if (error && !isLoading && tasks.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-6 TasksContent"> {/* Added TasksContent class here */}
-        <TasksHeader onAddTask={handleAddTask} /> {/* This prop is now valid */}
+      <div className="container mx-auto px-4 py-6 TasksContent">
+        <TasksHeader /> {/* Removed onAddTask prop */}
         <div className="flex flex-col items-center justify-center mt-8">
           <div className="text-red-500 p-4 border border-red-400 rounded-md bg-red-900/20">
             <h3 className="font-bold mb-2">Error Loading Tasks</h3>
@@ -123,8 +121,8 @@ const TasksPageContent: React.FC = () => {
   }
 
   return (
-    <div className="p-4 pt-6 TasksContent"> {/* Added TasksContent class here */}
-      <TasksHeader onAddTask={handleAddTask} /> {/* This prop is now valid */}
+    <div className="p-4 pt-6 TasksContent">
+      <TasksHeader /> {/* Removed onAddTask prop */}
 
       <TasksList
         tasks={tasks}
