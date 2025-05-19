@@ -1,19 +1,19 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
-import PunishmentCard from '../components/PunishmentCard';
+// PunishmentCard is now used within PunishmentList
 import { Skull } from 'lucide-react';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { usePunishments } from '@/contexts/punishments/PunishmentsProvider';
-import { PunishmentData } from '@/contexts/punishments/types'; // Keep this for type consistency
+import { PunishmentData } from '@/contexts/punishments/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
-import PunishmentCardSkeleton from '@/components/punishments/PunishmentCardSkeleton'; // Keep for loading state if desired, though prompt wants immediate render
-import { useSyncManager } from '@/hooks/useSyncManager'; // Import useSyncManager
-import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries'; // Import query key
-
+// PunishmentCardSkeleton is not used based on previous refactoring.
+import { useSyncManager } from '@/hooks/useSyncManager';
+// PUNISHMENTS_QUERY_KEY is not directly used here anymore.
+import PunishmentList from '@/components/punishments/PunishmentList'; // Import new component
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -23,19 +23,14 @@ const PunishmentsContent: React.FC<{
     isLoading: isLoadingPunishments,
     error: errorPunishments,
     refetchPunishments,
-    savePunishment, // from context
-    deletePunishment // from context
+    savePunishment,
+    deletePunishment
   } = usePunishments();
   
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
-  // No need for isInitialLoad if we rely on isLoadingPunishments from the hook for the very first load
   
-  // useSyncManager({ includeKeys: [PUNISHMENTS_QUERY_KEY] }); // Sync only punishments data for this page
-  // Simpler: if PUNISHMENTS_QUERY_KEY is in CRITICAL_QUERY_KEYS, this will sync it by default.
-  // CRITICAL_QUERY_KEYS.PUNISHMENTS is ['punishments']
   useSyncManager({ enabled: true });
-
 
   const handleAddNewPunishment = () => {
     setCurrentPunishment(undefined);
@@ -50,20 +45,18 @@ const PunishmentsContent: React.FC<{
     return () => {
       contentRef.current = {};
     };
-  }, [contentRef]); // Removed handleAddNewPunishment from deps as it's stable due to useCallback in usePunishmentsData
+  }, [contentRef]);
   
   const handleEditPunishment = (punishment: PunishmentData) => {
     setCurrentPunishment(punishment);
     setIsEditorOpen(true);
   };
   
-  // onSave for PunishmentEditor, matches (data: Partial<PunishmentData>) => Promise<PunishmentData>
   const handleSavePunishmentEditor = async (punishmentData: Partial<PunishmentData>): Promise<PunishmentData> => {
-    // The savePunishment from context now aligns with the expected signature after changes in usePunishmentsData and provider
     const saved = await savePunishment(punishmentData);
     setIsEditorOpen(false);
     setCurrentPunishment(undefined);
-    return saved; // savePunishment from context now returns PunishmentData
+    return saved;
   };
   
   const handleDeletePunishmentEditor = async (id: string) => {
@@ -72,7 +65,6 @@ const PunishmentsContent: React.FC<{
     setCurrentPunishment(undefined);
   };
   
-  // Show loader only if truly loading for the first time and punishments array is empty
   const showInitialLoader = isLoadingPunishments && punishments.length === 0;
 
   if (showInitialLoader) {
@@ -80,8 +72,6 @@ const PunishmentsContent: React.FC<{
       <div className="p-4 pt-6">
         <PunishmentsHeader />
         <div className="space-y-4 mt-4">
-          {/* Per instructions, skeletons should be removed if data renders immediately from cache. */}
-          {/* If cache is empty, it should go to EmptyState. If loading from network first time, a simple text indicator is better. */}
           <p className="text-center text-gray-400">Loading punishments...</p>
         </div>
       </div>
@@ -106,7 +96,6 @@ const PunishmentsContent: React.FC<{
     );
   }
   
-  // Immediate render from cache: if not loading, and punishments array is empty
   if (!isLoadingPunishments && punishments.length === 0 && !isEditorOpen) {
     return (
       <div className="p-4 pt-6">
@@ -126,7 +115,7 @@ const PunishmentsContent: React.FC<{
         />
         
         <PunishmentEditor
-          isOpen={isEditorOpen} // This would be false here, so editor won't show based on this block
+          isOpen={isEditorOpen}
           onClose={() => setIsEditorOpen(false)}
           punishmentData={currentPunishment}
           onSave={handleSavePunishmentEditor}
@@ -140,15 +129,10 @@ const PunishmentsContent: React.FC<{
     <div className="p-4 pt-6">
       <PunishmentsHeader />
       
-      <div className="flex flex-col space-y-4 mt-4">
-        {punishments.map((punishment) => (
-          <PunishmentCard
-            key={punishment.id} 
-            {...punishment}
-            onEdit={() => handleEditPunishment(punishment)}
-          />
-        ))}
-      </div>
+      <PunishmentList 
+        punishments={punishments}
+        onEditPunishment={handleEditPunishment}
+      />
       
       <PunishmentEditor
         isOpen={isEditorOpen}
@@ -174,12 +158,8 @@ const Punishments: React.FC = () => {
   };
   
   return (
-    // PunishmentsProvider should be higher up if AppLayout or other siblings need it.
-    // Assuming PunishmentsProvider is already in AppProviders.tsx or similar.
-    // If not, it should wrap PunishmentsContent. For now, let's assume it's provided globally.
     <AppLayout onAddNewItem={handleAddNewPunishmentLayout}>
       <ErrorBoundary fallbackMessage="Could not load punishments. Please try reloading.">
-        {/* PunishmentsProvider is removed from here, assuming it's in AppProviders or similar higher component */}
         <PunishmentsContent contentRef={contentRef} />
       </ErrorBoundary>
     </AppLayout>

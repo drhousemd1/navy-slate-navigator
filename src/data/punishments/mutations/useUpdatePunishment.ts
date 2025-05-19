@@ -3,8 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
-import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries'; // Correct import
-import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; // For IndexedDB
+import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries';
+import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB';
 
 type PunishmentWithId = PunishmentData & { id: string };
 
@@ -15,7 +15,7 @@ export const useUpdatePunishment = () => {
 
   return useUpdateOptimisticMutation<PunishmentWithId, Error, UpdatePunishmentVariables>({
     queryClient,
-    queryKey: PUNISHMENTS_QUERY_KEY,
+    queryKey: [...PUNISHMENTS_QUERY_KEY], // Changed to mutable array
     mutationFn: async (variables: UpdatePunishmentVariables) => {
       const { id, ...updates } = variables;
       const { data, error } = await supabase
@@ -30,8 +30,8 @@ export const useUpdatePunishment = () => {
     },
     entityName: 'Punishment',
     idField: 'id',
-    onSuccessOptimistic: async () => { // Changed from onMutateSuccess
-      const currentPunishments = queryClient.getQueryData<PunishmentWithId[]>(PUNISHMENTS_QUERY_KEY) || [];
+    onSuccessOptimistic: async () => {
+      const currentPunishments = queryClient.getQueryData<PunishmentWithId[]>([...PUNISHMENTS_QUERY_KEY]) || [];
       await savePunishmentsToDB(currentPunishments);
     },
   });
