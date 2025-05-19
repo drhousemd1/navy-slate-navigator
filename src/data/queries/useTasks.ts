@@ -1,5 +1,5 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, QueryKey } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Task, TaskPriority } from "@/lib/taskUtils"; // Assuming TaskPriority is correctly exported
 import { useAuth } from "@/contexts/auth";
@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/auth";
 export default function useTasksQuery() {
   const { user } = useAuth();
 
-  return useQuery<Task[], Error, Task[], readonly ["tasks", string | undefined]>({
+  return useQuery<Task[], Error, Task[], QueryKey>({
     queryKey: ["tasks", user?.id],
     queryFn: async (): Promise<Task[]> => {
       if (!user?.id) {

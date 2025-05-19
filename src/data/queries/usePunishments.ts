@@ -1,5 +1,5 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, QueryKey } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PunishmentData } from "@/contexts/punishments/types";
 import { useAuth } from "@/contexts/auth";
@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/auth";
 export default function usePunishmentsQuery() {
   const { user } = useAuth();
 
-  return useQuery<PunishmentData[], Error, PunishmentData[], readonly ["punishments", string | undefined]>({
+  return useQuery<PunishmentData[], Error, PunishmentData[], QueryKey>({
     queryKey: ["punishments", user?.id],
     queryFn: async (): Promise<PunishmentData[]> => {
       if (!user?.id) {
