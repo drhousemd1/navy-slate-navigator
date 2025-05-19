@@ -1,8 +1,9 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { REWARDS_QUERY_KEY, fetchRewards } from '@/data/rewards/queries';
 import { fetchRules } from '@/data/rules/fetchRules';
-import { fetchTasks } from '@/data/queries/tasks/fetchTasks';
+import { fetchTasks } from '@/data/tasks/queries'; // Corrected import path
 import { fetchPunishments } from '@/data/punishments/queries/fetchPunishments';
 import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
@@ -63,7 +64,7 @@ export const usePreloadAppCoreData = () => {
       // Tasks
       await queryClient.prefetchQuery({
         queryKey: CRITICAL_QUERY_KEYS.TASKS,
-        queryFn: fetchTasks,
+        queryFn: fetchTasks, // Uses corrected import
       });
       console.log('[PreloadAppCoreData] Tasks pre-fetched.');
 

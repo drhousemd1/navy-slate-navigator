@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -5,9 +6,10 @@ import TasksHeader from '../components/task/TasksHeader';
 import TasksList from '../components/task/TasksList';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TaskWithId } from '@/data/tasks/types';
-import { useSyncManager } from '@/hooks/useSyncManager';
+import { useSyncManager, SyncOptions } from '@/hooks/useSyncManager'; // Import SyncOptions if needed, or ensure CRITICAL_QUERY_KEYS is typed
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useTasksData } from '@/hooks/useTasksData';
+import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager'; // ensure this provides the correct type for queryKey
 
 const TasksPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -19,12 +21,12 @@ const TasksPageContent: React.FC = () => {
     saveTask, 
     deleteTask, 
     toggleTaskCompletion, 
-    refetchTasks 
+    // refetchTasks // refetchTasks might not be needed directly by UI if useSyncManager handles it
   } = useTasksData();
   const { refreshPointsFromDatabase } = useRewards();
   
   useSyncManager({ 
-    queryKeyToSync: ['tasks'], 
+    queryKey: CRITICAL_QUERY_KEYS.TASKS, // Corrected: use queryKey and the constant
     enabled: true 
   });
 
@@ -36,10 +38,10 @@ const TasksPageContent: React.FC = () => {
 
   React.useEffect(() => {
     console.log('Setting up event listener for add-new-task');
-    const element = document.querySelector('.TasksContent');
+    const element = document.querySelector('.TasksContent'); // This class should be on a wrapping div in TasksPageContent
     if (element) {
-      const handleAddEvent = () => {
-        console.log('Received add-new-task event');
+      const handleAddEvent = (event: Event) => { // More specific event type if possible
+        console.log('Received add-new-task event', event);
         handleAddTask();
       };
       element.addEventListener('add-new-task', handleAddEvent);
@@ -47,18 +49,18 @@ const TasksPageContent: React.FC = () => {
         element.removeEventListener('add-new-task', handleAddEvent);
       };
     }
-  }, []);
+  }, []); // Empty dependency array means this runs once on mount
 
   const handleEditTask = (task: TaskWithId) => {
     setCurrentTask(task);
     setIsEditorOpen(true);
   };
 
-  const handleSaveTask = async (taskData: TaskWithId) => {
+  const handleSaveTask = async (taskData: TaskWithId) => { // taskData here might be more Partial, TaskEditorForm sends full obj
     try {
       const savedTask = await saveTask(taskData);
       if (savedTask && savedTask.id) {
-        setCurrentTask(savedTask);
+        // setCurrentTask(savedTask); // Usually, editor closes, and list updates
       }
     } catch (err) {
       console.error('Error saving task in UI:', err);
@@ -68,8 +70,8 @@ const TasksPageContent: React.FC = () => {
   const handleDeleteTask = async (taskId: string) => {
     try {
       await deleteTask(taskId);
-      setCurrentTask(null);
-      setIsEditorOpen(false);
+      // setCurrentTask(null); // Editor closes, list updates
+      // setIsEditorOpen(false);
     } catch (err) {
       console.error('Error deleting task in UI:', err);
     }
@@ -82,11 +84,11 @@ const TasksPageContent: React.FC = () => {
         console.error(`Task with id ${taskId} not found.`);
         return;
       }
-      await toggleTaskCompletion(taskId, completed, task.points);
+      await toggleTaskCompletion(taskId, completed, task.points || 0); // Ensure points is defined
       if (completed) {
         setTimeout(() => {
           refreshPointsFromDatabase();
-        }, 500);
+        }, 500); // Delay to allow points to update in DB via mutation
       }
     } catch (err) {
       console.error('Error toggling task completion in UI:', err);
@@ -94,12 +96,15 @@ const TasksPageContent: React.FC = () => {
   };
 
   useEffect(() => {
-    refreshPointsFromDatabase();
-  }, [refreshPointsFromDatabase]);
+    // This effect might be redundant if mutations correctly invalidate points queries
+    // Or if points are part of a global state updated by mutations.
+    refreshPointsFromDatabase(); 
+  }, [refreshPointsFromDatabase]); // Be careful with frequent calls
 
+  // Error display logic: shows if there's an error, not loading, and no tasks (e.g. initial fetch failed)
   if (error && !isLoading && tasks.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-6 TasksContent">
+      <div className="container mx-auto px-4 py-6 TasksContent"> {/* Added TasksContent class here */}
         <TasksHeader onAddTask={handleAddTask} />
         <div className="flex flex-col items-center justify-center mt-8">
           <div className="text-red-500 p-4 border border-red-400 rounded-md bg-red-900/20">
@@ -113,7 +118,7 @@ const TasksPageContent: React.FC = () => {
             setIsEditorOpen(false);
             setCurrentTask(null);
           }}
-          taskData={currentTask || undefined}
+          taskData={currentTask || undefined} // Pass Partial<TaskWithId>
           onSave={handleSaveTask}
           onDelete={handleDeleteTask}
         />
@@ -121,16 +126,17 @@ const TasksPageContent: React.FC = () => {
     );
   }
 
+  // Main content display
   return (
-    <div className="p-4 pt-6 TasksContent">
+    <div className="p-4 pt-6 TasksContent"> {/* Added TasksContent class here */}
       <TasksHeader onAddTask={handleAddTask} />
 
       <TasksList
         tasks={tasks}
-        isLoading={isLoading && tasks.length === 0}
+        isLoading={isLoading && tasks.length === 0} // Show loading only if truly loading initial empty list
         onEditTask={handleEditTask}
         onToggleCompletion={handleToggleCompletion}
-        onCreateTaskClick={handleAddTask}
+        onCreateTaskClick={handleAddTask} // For the empty state button
       />
 
       <TaskEditor
@@ -139,7 +145,7 @@ const TasksPageContent: React.FC = () => {
           setIsEditorOpen(false);
           setCurrentTask(null);
         }}
-        taskData={currentTask || undefined}
+        taskData={currentTask || undefined} // Pass Partial<TaskWithId>
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
       />
@@ -156,13 +162,13 @@ const Tasks: React.FC = () => {
       const event = new CustomEvent('add-new-task');
       content.dispatchEvent(event);
     } else {
-      console.warn('.TasksContent element not found for dispatching event.');
+      console.warn('.TasksContent element not found for dispatching event. Ensure TasksPageContent renders a div with this class.');
     }
   };
 
   return (
     <AppLayout onAddNewItem={handleAddNewItem}>
-      <RewardsProvider>
+      <RewardsProvider> {/* Consider if RewardsProvider is needed here or higher up */}
         <ErrorBoundary fallbackMessage="Could not load tasks. Please try reloading.">
           <TasksPageContent />
         </ErrorBoundary>

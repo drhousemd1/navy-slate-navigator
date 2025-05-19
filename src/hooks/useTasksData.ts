@@ -1,4 +1,3 @@
-
 import { useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Task } from '@/lib/taskUtils';
@@ -10,7 +9,6 @@ import {
   useDeleteTask, 
   useToggleTaskCompletionMutation 
 } from '@/data/tasks/mutations';
-import { supabase } from '@/integrations/supabase/client'; // For user ID if needed for create
 
 export const useTasksData = () => {
   const queryClient = useQueryClient();
@@ -31,15 +29,15 @@ export const useTasksData = () => {
     try {
       if (taskData.id) {
         // Update existing task
+        // Ensure all properties passed are valid for UpdateTaskVariables
         const updateVariables: UpdateTaskVariables = { 
           id: taskData.id, 
-          ...taskData 
+          ...taskData // Spread the rest of taskData, TS will check compatibility with Partial<Omit<TaskWithId...>>
         };
         const updatedTask = await updateTaskMutation.mutateAsync(updateVariables);
         return updatedTask;
       } else {
         // Create new task
-        // Ensure all required fields for CreateTaskVariables are present
         if (!taskData.title || typeof taskData.points !== 'number') {
             toast({
                 title: "Missing required fields",
@@ -48,6 +46,8 @@ export const useTasksData = () => {
             });
             return null;
         }
+        // Construct CreateTaskVariables, TS will now validate against the updated TaskWithId (via taskData)
+        // and the explicit fields in CreateTaskVariables
         const createVariables: CreateTaskVariables = {
             title: taskData.title,
             points: taskData.points,
@@ -65,8 +65,8 @@ export const useTasksData = () => {
             highlight_effect: taskData.highlight_effect,
             focal_point_x: taskData.focal_point_x,
             focal_point_y: taskData.focal_point_y,
-            week_identifier: taskData.week_identifier,
-            background_images: taskData.background_images,
+            week_identifier: taskData.week_identifier, // Now valid due to TaskWithId update
+            background_images: taskData.background_images, // Now valid due to TaskWithId update
             icon_url: taskData.icon_url,
             usage_data: taskData.usage_data,
         };
@@ -93,6 +93,7 @@ export const useTasksData = () => {
   const toggleTaskCompletion = async (taskId: string, completed: boolean, pointsValue: number): Promise<boolean> => {
     try {
       const task = tasks.find(t => t.id === taskId);
+      // Pass the full task object if available and the mutation expects it
       await toggleCompletionMutation.mutateAsync({ taskId, completed, pointsValue, task });
       return true;
     } catch (err) {
@@ -101,12 +102,12 @@ export const useTasksData = () => {
     }
   };
   
-  const refetchTasks = async (): Promise<QueryObserverResult<Task[], Error>> => {
+  const refetchTasks = async (): Promise<QueryObserverResult<TaskWithId[], Error>> => { // Ensure return type matches useTasksQuery data type
     return refetchTasksQuery();
   };
 
   return {
-    tasks: tasks as TaskWithId[], // Cast to TaskWithId as mutations and queries now use it
+    tasks: tasks as TaskWithId[], 
     isLoading,
     error,
     saveTask,
