@@ -3,14 +3,15 @@ import React from 'react';
 import PunishmentCard from '../PunishmentCard';
 import { PunishmentData } from '@/contexts/punishments/types';
 import EmptyState from '@/components/common/EmptyState';
-import { Button } from '@/components/ui/button';
-import { LoaderCircle, AlertTriangle, PlusCircle } from 'lucide-react';
+// Button is no longer needed here if the action is removed from EmptyState
+// import { Button } from '@/components/ui/button';
+import { LoaderCircle, AlertTriangle, ShieldAlert } from 'lucide-react'; // Added ShieldAlert, PlusCircle removed if not used elsewhere in this file
 
 interface PunishmentListProps {
   punishments: PunishmentData[];
   isLoading: boolean;
   onEditPunishment: (punishment: PunishmentData) => void;
-  onCreatePunishmentClick?: () => void;
+  onCreatePunishmentClick?: () => void; // This prop can remain if used elsewhere, but not for this EmptyState
   error?: Error | null;
 }
 
@@ -18,7 +19,7 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
   punishments, 
   isLoading, 
   onEditPunishment,
-  onCreatePunishmentClick,
+  // onCreatePunishmentClick, // No longer directly used for the main empty state button
   error 
 }) => {
   if (isLoading) {
@@ -42,17 +43,10 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
   if (punishments.length === 0) {
     return (
       <EmptyState
-        icon={PlusCircle}
+        icon={ShieldAlert} // Changed icon
         title="No Punishments Yet"
-        description="You currently have no punishments. Please create one to continue." // Updated message
-        action={onCreatePunishmentClick && (
-          <Button 
-            onClick={onCreatePunishmentClick} 
-            className="mt-6"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" /> Create Punishment
-          </Button>
-        )}
+        description="It looks like there are no punishments defined." // Updated description
+        // action prop removed, so no button will be rendered here by EmptyState
       />
     );
   }
