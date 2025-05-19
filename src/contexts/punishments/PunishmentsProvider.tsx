@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
+import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs, CreatePunishmentVariables } from './types';
 import { usePunishmentOperations } from '@/contexts/punishments/usePunishmentOperations';
 import { QueryObserverResult } from '@tanstack/react-query';
 
@@ -29,13 +29,29 @@ export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ childre
         return punishmentOps.updatePunishment(data.id, data);
       } else {
         // It's a create
-        // Ensure required fields are present
         if (!data.title || data.points === undefined) {
           throw new Error('Punishment must have a title and points value');
         }
-        // Pass as Partial<PunishmentData> without id, created_at, updated_at
-        const { id, created_at, updated_at, ...creatableData } = data;
-        return punishmentOps.createPunishment(creatableData);
+        
+        // Construct the object that matches Omit<CreatePunishmentVariables, 'user_id'>
+        // This ensures that only valid fields for creation are passed and required ones are present.
+        const punishmentToCreate: Omit<CreatePunishmentVariables, 'user_id'> = {
+          title: data.title, // Known to be defined due to the check above
+          points: data.points, // Known to be defined
+          description: data.description,
+          dom_supply: data.dom_supply, // This is in CreatePunishmentVariables
+          icon_name: data.icon_name,
+          icon_color: data.icon_color,
+          background_image_url: data.background_image_url,
+          background_opacity: data.background_opacity,
+          title_color: data.title_color,
+          subtext_color: data.subtext_color,
+          calendar_color: data.calendar_color,
+          highlight_effect: data.highlight_effect,
+          focal_point_x: data.focal_point_x,
+          focal_point_y: data.focal_point_y,
+        };
+        return punishmentOps.createPunishment(punishmentToCreate);
       }
     },
     deletePunishment: punishmentOps.deletePunishment,
@@ -48,7 +64,7 @@ export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ childre
         console.error("Invalid arguments for applyPunishment", args);
       }
     },
-    recentlyAppliedPunishments: [],
+    recentlyAppliedPunishments: [], // This seems unused or needs specific implementation if required
     fetchRandomPunishment: () => {
         const P = punishmentOps.punishments;
         if(P.length === 0) return null;
@@ -74,3 +90,4 @@ export const usePunishments = () => {
   }
   return context;
 };
+

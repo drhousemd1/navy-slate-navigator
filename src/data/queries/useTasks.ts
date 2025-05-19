@@ -1,15 +1,15 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Task, TaskPriority } from "@/lib/taskUtils"; // Assuming Task type includes user_id?: string
+import { Task, TaskPriority } from "@/lib/taskUtils"; // Import TaskPriority
 import { useAuth } from "@/contexts/auth";
 
 export default function useTasksQuery() {
   const { user } = useAuth();
 
-  return useQuery({
+  return useQuery<Task[], Error, Task[], readonly ["tasks", string | undefined]>({
     queryKey: ["tasks", user?.id],
-    queryFn: async (): Promise<Task[]> => { // Explicit Promise return type
+    queryFn: async (): Promise<Task[]> => {
       if (!user?.id) {
         return [];
       }
@@ -17,20 +17,40 @@ export default function useTasksQuery() {
       const { data, error } = await supabase
         .from("tasks")
         .select("*")
-        .eq("user_id", user.id) // Assuming tasks are user-specific
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Ensure the data from Supabase aligns with the Task type
-      // Especially for enum types like 'priority'.
-      // Perform a more robust transformation if direct casting is problematic.
       return (data || []).map(dbTask => ({
-        ...dbTask,
-        priority: dbTask.priority as TaskPriority, // Explicit cast for priority
+        id: dbTask.id,
+        title: dbTask.title,
+        description: dbTask.description,
+        points: dbTask.points,
+        priority: dbTask.priority as TaskPriority, // Use imported TaskPriority
+        completed: dbTask.completed,
+        background_image_url: dbTask.background_image_url,
+        background_opacity: dbTask.background_opacity,
+        focal_point_x: dbTask.focal_point_x,
+        focal_point_y: dbTask.focal_point_y,
+        frequency: dbTask.frequency as 'daily' | 'weekly',
+        frequency_count: dbTask.frequency_count,
+        usage_data: dbTask.usage_data || [], // Ensure usage_data is an array
+        icon_url: dbTask.icon_url,
+        icon_name: dbTask.icon_name,
+        icon_color: dbTask.icon_color,
+        highlight_effect: dbTask.highlight_effect,
+        title_color: dbTask.title_color,
+        subtext_color: dbTask.subtext_color,
+        calendar_color: dbTask.calendar_color,
+        last_completed_date: dbTask.last_completed_date,
+        created_at: dbTask.created_at,
+        updated_at: dbTask.updated_at,
+        // Ensure all fields from Task interface are mapped
       })) as Task[];
     },
     enabled: !!user?.id,
     staleTime: Infinity,
   });
 }
+
