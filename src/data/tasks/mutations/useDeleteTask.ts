@@ -2,13 +2,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
-import { Task } from '@/lib/taskUtils';
-import { TaskWithId } from '@/data/tasks/types';
+// import { Task } from '@/lib/taskUtils'; // Ensure correct Task import
+import { Task } from '@/data/tasks/types'; // Use Task from types
 
 export const useDeleteTask = () => {
   const queryClient = useQueryClient();
 
-  return useDeleteOptimisticMutation<TaskWithId, Error, string>({
+  return useDeleteOptimisticMutation<Task, Error, string>({ // Changed TaskWithId to Task
     queryClient,
     queryKey: ['tasks'],
     mutationFn: async (taskId: string) => {
@@ -41,3 +41,4 @@ export const useDeleteTask = () => {
     // For now, we only manage task_completion_history directly in mutationFn.
   });
 };
+

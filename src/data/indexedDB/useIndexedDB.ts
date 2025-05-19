@@ -1,12 +1,11 @@
-
 import localforage from 'localforage';
 import { Reward } from '@/data/rewards/types';
 import { PunishmentData as ContextPunishmentData, PunishmentHistoryItem as ContextPunishmentHistoryItem } from '@/contexts/punishments/types';
 import { Rule as AppRuleInterface } from '@/data/interfaces/Rule'; // Import the detailed Rule interface
+import { Task } from '@/data/tasks/types'; // Import the correct Task type
 
 // Define types for other entities or import them if they exist elsewhere
-export interface Task { id: string; [key: string]: any; }
-// export interface Rule { id: string; [key: string]: any; } // Remove generic Rule type
+// Remove local Task definition: export interface Task { id: string; [key: string]: any; }
 
 // Use imported types for consistency
 export type PunishmentData = ContextPunishmentData;

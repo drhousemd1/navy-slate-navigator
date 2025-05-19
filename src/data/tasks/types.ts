@@ -29,11 +29,13 @@ export interface Task {
   created_at: string; // ISO date string
   updated_at: string; // ISO date string
   // user_id?: string; // If tasks are user-specific and RLS is applied based on this
+  week_identifier?: string | null; // Added
+  background_images?: any | null; // Added, consider a more specific type if known (e.g., { desktop: string, mobile: string })
 }
 
-export type CreateTaskVariables = Omit<Task, "id" | "created_at" | "updated_at" | "completed" | "usage_data" | "last_completed_date"> & {
-  // any specific fields required for creation not covered by Omit can be added here
-};
+// CreateTaskVariables will now correctly include optional week_identifier and background_images
+export type CreateTaskVariables = Omit<Task, "id" | "created_at" | "updated_at" | "completed" | "usage_data" | "last_completed_date">;
 
+// UpdateTaskVariables will also correctly include optional week_identifier and background_images
 export type UpdateTaskVariables = { id: string } & Partial<Omit<Task, "id" | "created_at" | "updated_at">>;
 

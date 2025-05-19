@@ -2,13 +2,14 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
-import { Task } from '@/lib/taskUtils'; // Assuming Task is defined here
-import { TaskWithId, CreateTaskVariables } from '@/data/tasks/types';
+// Task from taskUtils might be different, ensure we use the one from types.ts for data consistency
+// import { Task } from '@/lib/taskUtils'; 
+import { Task, CreateTaskVariables } from '@/data/tasks/types'; // Use Task from types
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
 
-  return useCreateOptimisticMutation<TaskWithId, Error, CreateTaskVariables>({
+  return useCreateOptimisticMutation<Task, Error, CreateTaskVariables>({ // Changed TaskWithId to Task
     queryClient,
     queryKey: ['tasks'],
     mutationFn: async (variables: CreateTaskVariables) => {
@@ -35,6 +36,7 @@ export const useCreateTask = () => {
         background_images: variables.background_images,
         icon_url: variables.icon_url,
         // `completed` and `last_completed_date` will use DB defaults or be set by `toggleTaskCompletion`
+        // `usage_data` will use DB default '[]'::jsonb
         // `created_at` and `updated_at` are handled by DB
       };
 
@@ -46,7 +48,7 @@ export const useCreateTask = () => {
 
       if (error) throw error;
       if (!data) throw new Error('Task creation failed: No data returned.');
-      return data as TaskWithId;
+      return data as Task; // Changed TaskWithId to Task
     },
     entityName: 'Task',
     createOptimisticItem: (variables, optimisticId) => {
@@ -57,6 +59,7 @@ export const useCreateTask = () => {
         updated_at: now,
         completed: false,
         last_completed_date: null,
+        usage_data: [], // Corrected: usage_data is omitted from CreateTaskVariables, initialize as empty array
         // Default values from schema for fields not in variables
         title: variables.title,
         points: variables.points,
@@ -76,10 +79,10 @@ export const useCreateTask = () => {
         focal_point_y: variables.focal_point_y || 50,
         week_identifier: variables.week_identifier || null,
         icon_url: variables.icon_url || null,
-        usage_data: variables.usage_data || [],
         background_images: variables.background_images || null,
-        ...variables, // Spread remaining variables
-      } as TaskWithId;
+        ...variables, // Spread remaining variables from CreateTaskVariables
+      } as Task; // Changed TaskWithId to Task
     },
   });
 };
+
