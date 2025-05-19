@@ -1,8 +1,7 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
-import { Task } from '@/lib/taskUtils';
+import { Task } from '@/data/tasks/types';
 import { toast } from '@/hooks/use-toast';
 
 export function useDeleteTask() {
@@ -81,4 +80,3 @@ export function useDeleteTask() {
     },
   });
 }
-
