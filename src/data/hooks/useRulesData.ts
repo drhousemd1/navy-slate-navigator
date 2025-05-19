@@ -1,12 +1,9 @@
-import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { QueryObserverResult } from '@tanstack/react-query';
+import { useRules } from '../rules/queries'; 
 import { Rule } from '@/data/interfaces/Rule';
-import { fetchRules } from '../rules/fetchRules';
-import { useCreateRule, useUpdateRule, useDeleteRule } from '../rules/mutations';
-import { CreateRuleVariables, UpdateRuleVariables } from '../rules/mutations';
+import { useCreateRule, useUpdateRule, useDeleteRule, CreateRuleVariables, UpdateRuleVariables } from '../rules/mutations';
 import { useCreateRuleViolation } from '../rules/mutations/useCreateRuleViolation';
 import { toast } from '@/hooks/use-toast';
-import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
 
 export interface RulesDataHook {
@@ -20,16 +17,12 @@ export interface RulesDataHook {
 }
 
 export const useRulesData = (): RulesDataHook => {
-  const queryClient = useQueryClient();
   const {
     data: rules = [],
     isLoading,
     error,
     refetch: refetchRules,
-  } = useQuery<Rule[], Error>({
-    queryKey: CRITICAL_QUERY_KEYS.RULES,
-    queryFn: fetchRules,
-  });
+  } = useRules(); 
 
   const { mutateAsync: createRuleMutation } = useCreateRule();
   const { mutateAsync: updateRuleMutation } = useUpdateRule();
@@ -38,11 +31,9 @@ export const useRulesData = (): RulesDataHook => {
 
   const saveRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
     if (ruleData.id) {
-      // It's an update
       const { id, ...updates } = ruleData;
       return updateRuleMutation({ id, ...updates } as UpdateRuleVariables);
     } else {
-      // It's a creation
       const createVariables: CreateRuleVariables = {
         title: ruleData.title || 'Untitled Rule',
         description: ruleData.description,
@@ -51,16 +42,15 @@ export const useRulesData = (): RulesDataHook => {
         frequency_count: ruleData.frequency_count || 1,
         icon_name: ruleData.icon_name,
         icon_url: ruleData.icon_url,
-        icon_color: ruleData.icon_color,
-        title_color: ruleData.title_color,
-        subtext_color: ruleData.subtext_color,
-        calendar_color: ruleData.calendar_color,
+        icon_color: ruleData.icon_color || '#FFFFFF',
+        title_color: ruleData.title_color || '#FFFFFF', 
+        subtext_color: ruleData.subtext_color || '#FFFFFF',
+        calendar_color: ruleData.calendar_color || '#9c7abb',
         background_image_url: ruleData.background_image_url,
-        background_opacity: ruleData.background_opacity,
-        highlight_effect: ruleData.highlight_effect,
-        focal_point_x: ruleData.focal_point_x,
-        focal_point_y: ruleData.focal_point_y,
-        // user_id might be part of ruleData if applicable
+        background_opacity: ruleData.background_opacity === undefined ? 100 : ruleData.background_opacity,
+        highlight_effect: ruleData.highlight_effect === undefined ? false : ruleData.highlight_effect,
+        focal_point_x: ruleData.focal_point_x === undefined ? 50 : ruleData.focal_point_x,
+        focal_point_y: ruleData.focal_point_y === undefined ? 50 : ruleData.focal_point_y,
       };
       return createRuleMutation(createVariables);
     }
@@ -69,10 +59,8 @@ export const useRulesData = (): RulesDataHook => {
   const deleteRule = async (ruleId: string): Promise<boolean> => {
     try {
       await deleteRuleMutation(ruleId);
-      // No explicit toast here as useDeleteOptimisticMutation handles it
       return true;
     } catch (e) {
-      // Error toast handled by useDeleteOptimisticMutation
       console.error('Error deleting rule (from useRulesData):', e);
       return false;
     }
@@ -80,22 +68,16 @@ export const useRulesData = (): RulesDataHook => {
 
   const markRuleBroken = async (rule: Rule): Promise<void> => {
     try {
-      // 1. Create a rule violation record
       await createRuleViolationMutation({ rule_id: rule.id });
-      // Toast for success/error of violation creation is handled by useCreateRuleViolation
 
-      // 2. Update the rule's usage_data
-      const newUsageDataEntry = Date.now(); // Using timestamp as number
+      const newUsageDataEntry = Date.now(); 
       const currentUsageData = Array.isArray(rule.usage_data) ? rule.usage_data : [];
-      // Ensure usage_data is treated as number[] as per previous analysis
       const newUsageData = [...currentUsageData, newUsageDataEntry] as number[] & {toJSON?: () => any};
-
 
       await updateRuleMutation({
         id: rule.id,
         usage_data: newUsageData,
       });
-      // Toast for success/error of rule update is handled by useUpdateRule
 
       toast({
         title: "Rule Marked Broken",
@@ -109,7 +91,6 @@ export const useRulesData = (): RulesDataHook => {
         description: `Failed to mark rule "${rule.title}" as broken: ${e.message}`,
         variant: 'destructive',
       });
-      // Re-throw if the caller needs to act on the error
       throw e;
     }
   };
