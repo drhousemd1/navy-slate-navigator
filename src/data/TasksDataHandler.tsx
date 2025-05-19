@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, processTasksWithRecurringLogic } from '@/lib/taskUtils'; 
@@ -47,11 +48,12 @@ export const useTasksData = (): TasksDataHook => {
           id, 
           ...updates 
         } as UpdateTaskVariables);
-        if (savedTask) {
-          queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
-            oldData.map(task => task.id === savedTask!.id ? savedTask! : task)
-          );
-        }
+        // Cache update should be handled by useUpdateTask mutation's onSuccess
+        // if (savedTask) {
+        //   queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
+        //     oldData.map(task => task.id === savedTask!.id ? savedTask! : task)
+        //   );
+        // }
       } else {
         const { id, created_at, updated_at, completed, last_completed_date, ...creatableDataFields } = taskData;
         
@@ -79,11 +81,12 @@ export const useTasksData = (): TasksDataHook => {
           background_images: (creatableDataFields as any).background_images,
         };
         savedTask = await createTaskMutation(variables);
-        if (savedTask) {
-          queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
-            [savedTask!, ...oldData]
-          );
-        }
+        // Cache update should be handled by useCreateTask mutation's onSuccess
+        // if (savedTask) {
+        //   queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
+        //     [savedTask!, ...oldData]
+        //   );
+        // }
       }
       return savedTask || null;
     } catch (e: any) {
@@ -96,9 +99,10 @@ export const useTasksData = (): TasksDataHook => {
   const deleteTask = async (taskId: string): Promise<boolean> => {
     try {
       await deleteTaskMutation(taskId);
-      queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
-        oldData.filter(task => task.id !== taskId)
-      );
+      // Cache update should be handled by useDeleteTask mutation's onSuccess
+      // queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
+      //   oldData.filter(task => task.id !== taskId)
+      // );
       return true;
     } catch (e: any) {
       console.error('Error deleting task:', e);
@@ -109,19 +113,12 @@ export const useTasksData = (): TasksDataHook => {
 
   const toggleTaskCompletion = async (taskId: string, completedParam: boolean, pointsValue: number): Promise<boolean> => {
     try {
-      const updatedTaskData = await toggleCompletionWorkflowMutateAsync({ taskId, completed: completedParam, pointsValue });
+      // The useToggleCompletionWorkflowMutation hook should handle its own cache updates (optimistic or on success).
+      // No need to get updatedTaskData here if the mutation handles the cache.
+      await toggleCompletionWorkflowMutateAsync({ taskId, completed: completedParam, pointsValue });
       
-      if (updatedTaskData && typeof updatedTaskData === 'object' && 'id' in updatedTaskData) {
-         queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
-           oldData.map(task => task.id === (updatedTaskData as Task).id ? (updatedTaskData as Task) : task)
-         );
-      } else {
-        queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
-          oldData.map(task =>
-            task.id === taskId ? { ...task, completed: completedParam, last_completed_date: completedParam ? new Date().toISOString() : task.last_completed_date } : task
-          )
-        );
-      }
+      // Removed manual queryClient.setQueryData calls.
+      // The mutation hook (useToggleCompletionWorkflowMutation) is now responsible for updating the cache.
 
       return true;
     } catch (e: any) {
@@ -140,3 +137,4 @@ export const useTasksData = (): TasksDataHook => {
     refetchTasks,
   };
 };
+

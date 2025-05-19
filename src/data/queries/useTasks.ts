@@ -7,9 +7,9 @@ import { useAuth } from "@/contexts/auth";
 export default function useTasks() {
   const { user } = useAuth();
 
-  return useQuery<Task[], Error>({ // Explicitly type useQuery
+  return useQuery<Task[], Error>({
     queryKey: ["tasks"],
-    queryFn: async (): Promise<Task[]> => { // Explicitly type queryFn return
+    queryFn: async (): Promise<Task[]> => {
       if (!user?.id) {
         return [];
       }
@@ -21,8 +21,9 @@ export default function useTasks() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data || []) as Task[]; // Keep cast here, but primary typing is on useQuery/queryFn
+      return (data || []) as unknown as Task[]; // Workaround for deep type instantiation
     },
     staleTime: Infinity,
   });
 }
+

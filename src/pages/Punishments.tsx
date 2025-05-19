@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -52,7 +53,7 @@ const PunishmentsContent: React.FC<{
     setIsEditorOpen(true);
   };
   
-  const handleSavePunishmentEditor = async (punishmentData: Partial<PunishmentData>): Promise<PunishmentData | void> => {
+  const handleSavePunishmentEditor = async (punishmentData: Partial<PunishmentData>): Promise<PunishmentData> => {
     try {
       const saved = await savePunishment(punishmentData); // Use context's savePunishment
       setIsEditorOpen(false);
@@ -61,7 +62,7 @@ const PunishmentsContent: React.FC<{
     } catch (error) {
       console.error("Error saving punishment (from page component):", error);
       // Error toast should be handled by the mutation hook's onError or within savePunishment
-      // throw error; // Re-throwing might be desired for specific page error handling
+      throw error; // Re-throw to ensure Promise<PunishmentData> or rejection
     }
   };
   
@@ -182,3 +183,4 @@ const Punishments: React.FC = () => {
 };
 
 export default Punishments;
+

@@ -7,9 +7,9 @@ import { useAuth } from "@/contexts/auth";
 export default function usePunishments() {
   const { user } = useAuth();
   
-  return useQuery<PunishmentData[], Error>({ // Explicitly type useQuery
+  return useQuery<PunishmentData[], Error>({
     queryKey: ["punishments"],
-    queryFn: async (): Promise<PunishmentData[]> => { // Explicitly type queryFn return
+    queryFn: async (): Promise<PunishmentData[]> => {
       if (!user?.id) {
         return [];
       }
@@ -21,8 +21,9 @@ export default function usePunishments() {
         .order("created_at", { ascending: false });
         
       if (error) throw error;
-      return (data || []) as PunishmentData[]; // Keep cast
+      return (data || []) as unknown as PunishmentData[]; // Workaround for deep type instantiation
     },
     staleTime: Infinity,
   });
 }
+

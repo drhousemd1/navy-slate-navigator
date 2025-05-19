@@ -41,6 +41,25 @@ export interface ApplyPunishmentArgs {
   domPoints: number; // Current dominant points of the user
 }
 
+// Define CreatePunishmentVariables based on usage in usePunishmentOperations
+export interface CreatePunishmentVariables {
+  title: string;
+  points: number;
+  description?: string | null;
+  icon_name?: string | null;
+  icon_color?: string;
+  background_image_url?: string | null;
+  background_opacity?: number;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  highlight_effect?: boolean;
+  focal_point_x?: number;
+  focal_point_y?: number;
+  dom_supply?: number;
+  user_id?: string; // For associating with the user
+}
+
 export interface PunishmentsContextType {
   punishments: PunishmentData[];
   savePunishment: (data: Partial<PunishmentData>) => Promise<PunishmentData>;
@@ -50,7 +69,8 @@ export interface PunishmentsContextType {
   applyPunishment: (args: ApplyPunishmentArgs) => Promise<void>;
   recentlyAppliedPunishments: PunishmentHistoryItem[];
   fetchRandomPunishment: () => PunishmentData | null;
-  refetchPunishments: () => Promise<any>;
+  refetchPunishments: () => Promise<import('@tanstack/react-query').QueryObserverResult<PunishmentData[], Error>>; // More specific type
   getPunishmentHistory: (id: string) => PunishmentHistoryItem[];
   historyLoading: boolean;
 }
+

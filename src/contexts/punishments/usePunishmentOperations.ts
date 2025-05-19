@@ -1,7 +1,8 @@
+
 import { useMemo } from 'react';
 import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
-import { PunishmentData, PunishmentHistoryItem, CreatePunishmentVariables } from './types'; // Assuming CreatePunishmentVariables is also in types
+import { PunishmentData, PunishmentHistoryItem, CreatePunishmentVariables } from './types'; // Import CreatePunishmentVariables
 import { useCreatePunishment } from "@/data/punishments/mutations/useCreatePunishment";
 // Assuming useUpdatePunishment exists and is similar to useCreatePunishment
 import { useUpdatePunishment } from "@/data/punishments/mutations/useUpdatePunishment"; 
@@ -61,7 +62,7 @@ export const usePunishmentOperations = () => {
         focal_point_x: punishmentData.focal_point_x,
         focal_point_y: punishmentData.focal_point_y,
         dom_supply: punishmentData.dom_supply ?? 0,
-        user_id: user?.id, // Add user_id
+        user_id: user?.id, // Correctly assign user_id from auth context
       };
       
       const newPunishment = await createPunishmentMutation(variablesToPass);
@@ -180,14 +181,9 @@ export const usePunishmentOperations = () => {
     return punishmentHistory.filter(item => item.punishment_id === punishmentId);
   };
   
-  const refetchPunishments = async () => { // Combined refetch for convenience
-      await refetchPunishmentsFn(); // Use renamed refetch
-      await refetchHistory();
-      // Return type needs to match what PunishmentsProvider expects if it's used.
-      // For now, let's assume it's a void operation or the QueryObserverResult is not strictly needed by caller.
-      // To match the type QueryObserverResult<PunishmentData[], Error> for refetchPunishments:
-      return queryClient.getQueryState<PunishmentData[], Error>(['punishments']) as QueryObserverResult<PunishmentData[], Error>;
-
+  const refetchPunishments = async (): Promise<QueryObserverResult<PunishmentData[], Error>> => {
+      await refetchHistory(); // Ensure history is fresh when punishments are refetched
+      return refetchPunishmentsFn(); // Return the result of refetching punishments
   };
 
   return {
@@ -207,6 +203,6 @@ export const usePunishmentOperations = () => {
     isLoadingHistory,
     errorPunishments, // Expose granular errors
     errorHistory,
-
   };
 };
+

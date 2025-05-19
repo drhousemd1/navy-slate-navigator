@@ -39,19 +39,10 @@ export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ childre
     deletePunishment: punishmentOps.deletePunishment,
     isLoading: punishmentOps.isLoadingPunishments, // Use specific loading state
     error: punishmentOps.errorPunishments || null, // Use specific error state
-    applyPunishment: async (args: ApplyPunishmentArgs) => { // Match ApplyPunishmentArgs
-      // Original applyPunishment in usePunishmentOperations takes (punishmentId: string, points: number)
-      // This needs to be adapted if ApplyPunishmentArgs is different.
-      // For now, assuming ApplyPunishmentArgs provides punishmentId and points.
-      // Let's assume args has punishmentId and points. If structure is different, this needs fixing.
-      if ('punishmentId' in args && 'points' in args) {
-        await punishmentOps.applyPunishment(args.punishmentId, args.points);
-      } else if ('punishment' in args && args.punishment) { // Fallback if full punishment object is passed
-        await punishmentOps.applyPunishment(args.punishment.id, args.punishment.points);
-      } else {
-        console.error("applyPunishment called with incompatible arguments:", args);
-        throw new Error("Invalid arguments for applyPunishment");
-      }
+    applyPunishment: async (args: ApplyPunishmentArgs) => {
+      // Directly use properties from ApplyPunishmentArgs
+      // punishmentOps.applyPunishment expects (punishmentId: string, points: number)
+      await punishmentOps.applyPunishment(args.id, args.costPoints);
     },
     recentlyAppliedPunishments: [], // TODO: This needs a source or removal. For now, empty.
     fetchRandomPunishment: () => { // TODO: This needs implementation or removal.
@@ -79,3 +70,4 @@ export const usePunishments = () => {
   }
   return context;
 };
+
