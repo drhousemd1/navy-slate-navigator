@@ -1,9 +1,9 @@
+
 import { useMemo } from 'react';
 import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
-import { PunishmentData, PunishmentHistoryItem } from './types'; // Removed CreatePunishmentVariables import
-import { useCreatePunishment } from "@/data/punishments/mutations/useCreatePunishment";
-// Assuming useUpdatePunishment exists and is similar to useCreatePunishment
+import { PunishmentData, PunishmentHistoryItem } from './types';
+import { useCreatePunishment, CreatePunishmentVariables } from "@/data/punishments/mutations/useCreatePunishment";
 import { useUpdatePunishment } from "@/data/punishments/mutations/useUpdatePunishment"; 
 import { useDeletePunishment } from "@/data/punishments/mutations/useDeletePunishment";
 import { supabase } from '@/integrations/supabase/client';
@@ -46,12 +46,28 @@ export const usePunishmentOperations = () => {
 
   const createPunishmentOperation = async (punishmentData: Partial<Omit<PunishmentData, 'id' | 'created_at' | 'updated_at'>>): Promise<PunishmentData> => {
     try {
-      // Since we're importing from useCreatePunishment directly now, use its type
-      // We'll create the new punishment object with the user id added
-      const newPunishmentData = {
-        ...punishmentData,
-        // Add the user_id here instead of trying to access it from punishmentData
-        user_id: user?.id
+      if (!punishmentData.title || punishmentData.points === undefined) {
+        throw new Error('Punishment must have a title and points value');
+      }
+
+      // Create a properly typed object for the CreatePunishmentVariables
+      const newPunishmentData: CreatePunishmentVariables = {
+        title: punishmentData.title,
+        points: punishmentData.points,
+        dom_supply: punishmentData.dom_supply,
+        user_id: user?.id,
+        // Add other properties that are in the CreatePunishmentVariables type
+        ...(punishmentData.icon_name !== undefined && { icon_name: punishmentData.icon_name }),
+        ...(punishmentData.icon_color !== undefined && { icon_color: punishmentData.icon_color }),
+        ...(punishmentData.background_image_url !== undefined && { background_image_url: punishmentData.background_image_url }),
+        ...(punishmentData.background_opacity !== undefined && { background_opacity: punishmentData.background_opacity }),
+        ...(punishmentData.title_color !== undefined && { title_color: punishmentData.title_color }),
+        ...(punishmentData.subtext_color !== undefined && { subtext_color: punishmentData.subtext_color }),
+        ...(punishmentData.calendar_color !== undefined && { calendar_color: punishmentData.calendar_color }),
+        ...(punishmentData.highlight_effect !== undefined && { highlight_effect: punishmentData.highlight_effect }),
+        ...(punishmentData.focal_point_x !== undefined && { focal_point_x: punishmentData.focal_point_x }),
+        ...(punishmentData.focal_point_y !== undefined && { focal_point_y: punishmentData.focal_point_y }),
+        ...(punishmentData.description !== undefined && { description: punishmentData.description }),
       };
       
       const newPunishment = await createPunishmentMutation(newPunishmentData);
@@ -79,7 +95,7 @@ export const usePunishmentOperations = () => {
       console.log("Updating punishment with ID:", id);
       console.log("Data to update:", punishmentData);
       
-      // Create a new object without user_id to avoid issues
+      // Remove user_id from the update payload to avoid errors
       const { user_id, ...updatePayload } = punishmentData;
 
       const updatedPunishment = await updatePunishmentMutation({ id, ...updatePayload });
@@ -171,7 +187,7 @@ export const usePunishmentOperations = () => {
   
   const refetchPunishments = async (): Promise<QueryObserverResult<PunishmentData[], Error>> => {
       await refetchHistory(); // Ensure history is fresh when punishments are refetched
-      return await refetchPunishmentsFn(); // Return the result of refetching punishments - added 'await' to fix type issue
+      return await refetchPunishmentsFn(); // Return the result of refetching punishments
   };
 
   return {

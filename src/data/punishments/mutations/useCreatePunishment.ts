@@ -8,11 +8,23 @@ import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 type PunishmentWithId = PunishmentData & { id: string };
 
 // Define the variables directly here without relying on imported type
-export type CreatePunishmentVariables = Partial<Omit<PunishmentData, 'id' | 'created_at' | 'updated_at' | 'dom_supply'>> & {
+export type CreatePunishmentVariables = {
   title: string;
   points: number;
   dom_supply?: number; // Make dom_supply optional here, will default if not provided
   user_id?: string; // Add user_id explicitly as it's needed
+  // Allow other PunishmentData fields as optional
+  description?: string | null;
+  icon_name?: string | null;
+  icon_color?: string;
+  background_image_url?: string | null;
+  background_opacity?: number;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  highlight_effect?: boolean;
+  focal_point_x?: number;
+  focal_point_y?: number;
 };
 
 export const useCreatePunishment = () => {

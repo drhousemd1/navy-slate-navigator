@@ -1,22 +1,21 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
-// Changed import from usePunishmentsData to usePunishmentOperations directly
 import { usePunishmentOperations } from '@/contexts/punishments/usePunishmentOperations';
 import { QueryObserverResult } from '@tanstack/react-query';
 
 const PunishmentsContext = createContext<PunishmentsContextType>({
   punishments: [],
-  savePunishment: async () => ({} as PunishmentData), // This will use create/update from usePunishmentOperations
+  savePunishment: async () => ({} as PunishmentData),
   deletePunishment: async () => {},
-  isLoading: false, // This will be mapped from usePunishmentOperations.isLoadingPunishments
+  isLoading: false,
   error: null,
   applyPunishment: async () => {},
-  recentlyAppliedPunishments: [], // This might need to be derived or removed if not used
-  fetchRandomPunishment: () => null, // This might need to be derived or removed
+  recentlyAppliedPunishments: [],
+  fetchRandomPunishment: () => null,
   refetchPunishments: async () => ({} as QueryObserverResult<PunishmentData[], Error>),
   getPunishmentHistory: () => [],
-  historyLoading: false, // This will be mapped from usePunishmentOperations.isLoadingHistory
+  historyLoading: false,
 });
 
 export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -24,35 +23,40 @@ export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const contextValue: PunishmentsContextType = {
     punishments: punishmentOps.punishments || [],
-    // savePunishment now needs to differentiate between create and update
     savePunishment: async (data: Partial<PunishmentData>): Promise<PunishmentData> => {
       if (data.id) {
         // It's an update
         return punishmentOps.updatePunishment(data.id, data);
       } else {
         // It's a create
-        // Omit id, created_at, updated_at for creation
+        // Ensure required fields are present
+        if (!data.title || data.points === undefined) {
+          throw new Error('Punishment must have a title and points value');
+        }
+        // Pass as Partial<PunishmentData> without id, created_at, updated_at
         const { id, created_at, updated_at, ...creatableData } = data;
         return punishmentOps.createPunishment(creatableData);
       }
     },
     deletePunishment: punishmentOps.deletePunishment,
-    isLoading: punishmentOps.isLoadingPunishments, // Use specific loading state
-    error: punishmentOps.errorPunishments || null, // Use specific error state
+    isLoading: punishmentOps.isLoadingPunishments,
+    error: punishmentOps.errorPunishments || null,
     applyPunishment: async (args: ApplyPunishmentArgs) => {
-      // Directly use properties from ApplyPunishmentArgs
-      // punishmentOps.applyPunishment expects (punishmentId: string, points: number)
-      await punishmentOps.applyPunishment(args.id, args.costPoints);
+      if (args && args.id && args.costPoints !== undefined) {
+        await punishmentOps.applyPunishment(args.id, args.costPoints);
+      } else {
+        console.error("Invalid arguments for applyPunishment", args);
+      }
     },
-    recentlyAppliedPunishments: [], // TODO: This needs a source or removal. For now, empty.
-    fetchRandomPunishment: () => { // TODO: This needs implementation or removal.
+    recentlyAppliedPunishments: [],
+    fetchRandomPunishment: () => {
         const P = punishmentOps.punishments;
         if(P.length === 0) return null;
         return P[Math.floor(Math.random()*P.length)];
     },
     refetchPunishments: punishmentOps.refetchPunishments,
-    getPunishmentHistory: punishmentOps.getPunishmentHistory, // This is (punishmentId: string) => PunishmentHistoryItem[]
-    historyLoading: punishmentOps.isLoadingHistory, // Use specific loading state for history
+    getPunishmentHistory: punishmentOps.getPunishmentHistory,
+    historyLoading: punishmentOps.isLoadingHistory,
   };
   
   return (
@@ -70,4 +74,3 @@ export const usePunishments = () => {
   }
   return context;
 };
-

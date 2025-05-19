@@ -21,8 +21,9 @@ export default function useTasks() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      // Fix for deep type instantiation - use a simple type assertion instead
-      return data || [];
+      
+      // Cast the data to Task[] with a type assertion to handle the priority field
+      return (data || []) as Task[];
     },
     staleTime: Infinity,
   });

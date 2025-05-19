@@ -21,8 +21,9 @@ export default function usePunishments() {
         .order("created_at", { ascending: false });
         
       if (error) throw error;
-      // Fix for deep type instantiation - use a simple type assertion instead
-      return data || [];
+      
+      // Use a simple type assertion instead of generic instantiation
+      return (data || []) as PunishmentData[];
     },
     staleTime: Infinity,
   });
