@@ -6,23 +6,23 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { Rule } from "@/data/interfaces/Rule";
-import { fetchRules as fetchRulesFromServer } from "@/data/rules/fetchRules"; // Renamed import for clarity
+import { Rule } from "@/data/interfaces/Rule"; // Ensure this is the primary Rule interface
+import { fetchRules as fetchRulesFromServer } from "@/data/rules/fetchRules";
 import {
   loadRulesFromDB,
   saveRulesToDB,
   getLastSyncTimeForRules,
   setLastSyncTimeForRules
-} from "../indexedDB/useIndexedDB"; // Adjusted path
+} from "../indexedDB/useIndexedDB";
 import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
 export const RULES_QUERY_KEY = CRITICAL_QUERY_KEYS.RULES;
 
 export function useRules() {
-  return useQuery<Rule[], Error>({
+  return useQuery<Rule[], Error, Rule[]>({ // Explicitly type queryFn return, data, and select data
     queryKey: RULES_QUERY_KEY,
-    queryFn: async () => {
-      const localData = await loadRulesFromDB();
+    queryFn: async (): Promise<Rule[]> => { // Ensure queryFn returns Promise<Rule[]>
+      const localData: Rule[] | null = await loadRulesFromDB();
       const lastSync = await getLastSyncTimeForRules();
       let shouldFetch = true;
 
@@ -39,7 +39,7 @@ export function useRules() {
       }
 
       console.log('[useRules queryFn] Fetching rules from server.');
-      const serverData = await fetchRulesFromServer(); // Use the imported fetchRules
+      const serverData: Rule[] = await fetchRulesFromServer();
 
       if (serverData) {
         await saveRulesToDB(serverData);
