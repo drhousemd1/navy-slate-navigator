@@ -1,85 +1,60 @@
-
 import { useMemo } from 'react';
-import { useQueryClient, QueryObserverResult } from '@tanstack/react-query'; // Removed useQuery from here as it's not directly used for fetching punishments list in this hook anymore
+import { useQueryClient, useQuery, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem } from './types';
 import { useCreatePunishment, CreatePunishmentVariables } from "@/data/punishments/mutations/useCreatePunishment";
-import { useUpdatePunishment } from "@/data/punishments/mutations/useUpdatePunishment"; 
+import { useUpdatePunishment } from "@/data/punishments/mutations/useUpdatePunishment";
 import { useDeletePunishment } from "@/data/punishments/mutations/useDeletePunishment";
 import { supabase } from '@/integrations/supabase/client';
-// fetchPunishmentsData is now fetched by the usePunishmentsQuery hook directly.
-// import { fetchPunishments as fetchPunishmentsData } from '@/data/punishments/queries/fetchPunishments'; 
 import { fetchAllPunishmentHistory } from '@/data/punishments/queries/fetchAllPunishmentHistory';
-import { useAuth } from '@/contexts/auth'; // For user ID
-import usePunishmentsQuery from '@/data/queries/usePunishments'; // Import the dedicated hook
+import { useAuth } from '@/contexts/auth';
+import usePunishmentsQuery from '@/data/queries/usePunishments';
 
 export const usePunishmentOperations = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   const { mutateAsync: createPunishmentMutation } = useCreatePunishment();
   const { mutateAsync: updatePunishmentMutation } = useUpdatePunishment();
   const { mutateAsync: deletePunishmentMutation } = useDeletePunishment();
 
-  // Use the dedicated query hook for punishments
-  const { 
-    data: punishments = [], 
-    isLoading: isLoadingPunishments, 
+  const {
+    data: punishments = [],
+    isLoading: isLoadingPunishments,
     error: errorPunishments,
-    refetch: refetchPunishmentsFn 
-  } = usePunishmentsQuery(); // Using the dedicated hook
+    refetch: refetchPunishmentsFn
+  } = usePunishmentsQuery();
 
-  const { 
-    data: punishmentHistory = [], 
-    isLoading: isLoadingHistory, 
+  // Use useQuery directly for fetching all punishment history
+  const {
+    data: punishmentHistory = [],
+    isLoading: isLoadingHistory,
     error: errorHistory,
     refetch: refetchHistory
-  } = useQueryClient().getQueryState<PunishmentHistoryItem[], Error>(['allPunishmentHistory']) // Adjusted to get state or use useQuery if preferred
-    ? useQueryClient().getQueryState<PunishmentHistoryItem[], Error>(['allPunishmentHistory'])! // Added non-null assertion, ensure query is run elsewhere or initialized
-    : { data: [], isLoading: true, error: null, refetch: async () => queryClient.refetchQueries({ queryKey: ['allPunishmentHistory'] }) }; // Basic fallback
-
-  // If using useQuery directly for history is preferred:
-  // const { 
-  //   data: punishmentHistory = [], 
-  //   isLoading: isLoadingHistory, 
-  //   error: errorHistory,
-  //   refetch: refetchHistory
-  // } = useQuery<PunishmentHistoryItem[], Error>({
-  //   queryKey: ['allPunishmentHistory'],
-  //   queryFn: fetchAllPunishmentHistory,
-  // });
+  } = useQuery<PunishmentHistoryItem[], Error>({
+    queryKey: ['allPunishmentHistory'],
+    queryFn: fetchAllPunishmentHistory,
+    staleTime: Infinity, // Consider appropriate staleTime
+  });
 
 
   const totalPointsDeducted = useMemo(() => {
     return (punishmentHistory || []).reduce((sum, item) => sum + item.points_deducted, 0);
   }, [punishmentHistory]);
 
-  const createPunishmentOperation = async (punishmentData: Partial<Omit<PunishmentData, 'id' | 'created_at' | 'updated_at'>>): Promise<PunishmentData> => {
+  const createPunishmentOperation = async (punishmentData: Omit<CreatePunishmentVariables, 'user_id'>): Promise<PunishmentData> => {
     try {
       if (!punishmentData.title || punishmentData.points === undefined) {
         throw new Error('Punishment must have a title and points value');
       }
 
-      const newPunishmentData: CreatePunishmentVariables = {
-        title: punishmentData.title,
-        points: punishmentData.points,
-        dom_supply: punishmentData.dom_supply ?? 0,
-        user_id: user?.id, // Ensure user_id is correctly passed
-        description: punishmentData.description,
-        icon_name: punishmentData.icon_name,
-        icon_color: punishmentData.icon_color,
-        background_image_url: punishmentData.background_image_url,
-        background_opacity: punishmentData.background_opacity,
-        title_color: punishmentData.title_color,
-        subtext_color: punishmentData.subtext_color,
-        calendar_color: punishmentData.calendar_color,
-        highlight_effect: punishmentData.highlight_effect,
-        focal_point_x: punishmentData.focal_point_x,
-        focal_point_y: punishmentData.focal_point_y,
+      // Construct the payload for createPunishmentMutation, including user_id
+      const newPunishmentPayload: CreatePunishmentVariables = {
+        ...punishmentData, // Spread the incoming data
+        user_id: user?.id, // Add user_id from auth context
       };
-      
-      const newPunishment = await createPunishmentMutation(newPunishmentData);
-      // Optimistic update handled by useCreateOptimisticMutation
+
+      const newPunishment = await createPunishmentMutation(newPunishmentPayload);
       toast({
         title: "Success",
         description: "Punishment created successfully",
@@ -100,21 +75,19 @@ export const usePunishmentOperations = () => {
     try {
       console.log("Updating punishment with ID:", id);
       console.log("Data to update:", rawPunishmentData);
-      
-      // Explicitly destructure to remove properties that shouldn't be in the update payload
-      // or are handled differently (like 'id').
-      const { 
-        user_id,        // Should not be updated
-        created_at,     // Should not be updated
-        id: dataId,     // The 'id' from the data object, not to be confused with the 'id' parameter
-        ...updatePayload // The rest of the properties are valid for update
+
+      const {
+        // user_id, // user_id should not be part of PunishmentData from client typically
+        created_at,
+        id: dataId,
+        // Explicitly exclude fields that shouldn't be updated or are handled by the backend
+        // For example, if PunishmentData included user_id, exclude it here:
+        // user_id: removedUserId, 
+        ...updatePayload
       } = rawPunishmentData;
 
-      // Ensure `updatePayload` doesn't contain undefined keys if they were destructured but not present in rawPunishmentData.
-      // The spread `...updatePayload` handles this correctly.
 
       const updatedPunishment = await updatePunishmentMutation({ id, ...updatePayload });
-      // Optimistic update handled by useUpdateOptimisticMutation
       toast({
         title: "Success",
         description: "Punishment updated successfully",
@@ -160,7 +133,7 @@ export const usePunishmentOperations = () => {
         day_of_week: dayOfWeek,
         points_deducted: points,
         applied_date: today.toISOString(),
-        user_id: user?.id,
+        user_id: user?.id, // Ensure user_id is correctly passed if your DB expects it
       };
       
       const { error } = await supabase
@@ -193,23 +166,22 @@ export const usePunishmentOperations = () => {
   const getPunishmentHistory = (punishmentId: string): PunishmentHistoryItem[] => {
     return (punishmentHistory || []).filter(item => item.punishment_id === punishmentId);
   };
-  
+
   const refetchPunishmentsAndHistory = async (): Promise<QueryObserverResult<PunishmentData[], Error>> => {
-      await queryClient.refetchQueries({ queryKey: ['allPunishmentHistory'] });
-      return await refetchPunishmentsFn(); 
+      // `refetchHistory` is now the refetch function from the useQuery hook for punishmentHistory
+      await refetchHistory();
+      return await refetchPunishmentsFn();
   };
 
   return {
-    punishments: punishments || [], // Ensure punishments is always an array
-    punishmentHistory: punishmentHistory || [], // Ensure history is always an array
-    // loading: isLoadingPunishments || isLoadingHistory, // Consolidated loading state
-    isLoadingPunishments, 
-    isLoadingHistory,
-    // error: errorPunishments || errorHistory, // Consolidated error state
+    punishments: punishments || [],
+    punishmentHistory: punishmentHistory || [],
+    isLoadingPunishments,
+    isLoadingHistory, // Directly from useQuery for punishmentHistory
     errorPunishments,
-    errorHistory,
+    errorHistory, // Directly from useQuery for punishmentHistory
     totalPointsDeducted,
-    refetchPunishments: refetchPunishmentsAndHistory, 
+    refetchPunishments: refetchPunishmentsAndHistory,
     createPunishment: createPunishmentOperation,
     updatePunishment: updatePunishmentOperation,
     deletePunishment: deletePunishmentOperation,

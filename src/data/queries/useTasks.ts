@@ -1,30 +1,34 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Task } from "@/lib/taskUtils"; // Assuming Task type includes user_id?: string
+import { Task, TaskPriority } from "@/lib/taskUtils"; // Assuming Task type includes user_id?: string
 import { useAuth } from "@/contexts/auth";
 
-export default function useTasksQuery() { // Renamed to avoid conflict
+export default function useTasksQuery() {
   const { user } = useAuth();
 
-  return useQuery({ // Removed explicit <Task[], Error>
+  return useQuery({
     queryKey: ["tasks", user?.id],
-    queryFn: async (): Promise<Task[]> => { // Explicit Promise return type for queryFn
+    queryFn: async (): Promise<Task[]> => { // Explicit Promise return type
       if (!user?.id) {
         return [];
       }
 
       const { data, error } = await supabase
         .from("tasks")
-        .select("*") // Ensure this select matches the Task type, including priority as a specific enum
-        .eq("user_id", user.id)
+        .select("*")
+        .eq("user_id", user.id) // Assuming tasks are user-specific
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
-      // Ensure the data from Supabase aligns with the Task type, especially for enum types like 'priority'
-      // If Supabase returns priority as a generic string, it needs to be validated or cast carefully.
-      // For now, we keep the direct cast, assuming the database stores priority compatibly.
-      return (data || []) as Task[]; 
+
+      // Ensure the data from Supabase aligns with the Task type
+      // Especially for enum types like 'priority'.
+      // Perform a more robust transformation if direct casting is problematic.
+      return (data || []).map(dbTask => ({
+        ...dbTask,
+        priority: dbTask.priority as TaskPriority, // Explicit cast for priority
+      })) as Task[];
     },
     enabled: !!user?.id,
     staleTime: Infinity,
