@@ -1,7 +1,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { PunishmentData }S from '@/contexts/punishments/types';
+import { PunishmentData } from '@/contexts/punishments/types'; // Removed the extra 'S'
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries';
 import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB';
