@@ -52,9 +52,11 @@ export async function selectWithTimeout<RowType = any>( // Renamed T to RowType 
 ): Promise<{ data: RowType[] | RowType | null, error: PostgrestError | null }> { // Return type adjusted for single/multiple
   const { columns = '*', eq, order, single = false, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
   
+  type QueryResponseType = single extends true ? PostgrestSingleResponse<RowType> : PostgrestResponse<RowType>;
+
   // The queryFunction returns Promise<PostgrestResponse<RowType>> or Promise<PostgrestSingleResponse<RowType>>
   // So withTimeout is generic over that response type
-  const supabaseResponse = await withTimeout<PostgrestResponse<RowType> | PostgrestSingleResponse<RowType>>(async (signal) => {
+  const supabaseResponse = await withTimeout<QueryResponseType>(async (signal) => {
     let queryBuilder = supabase
       .from(table)
       .select<string, RowType>(columns) // Explicitly type the select output row
@@ -65,15 +67,17 @@ export async function selectWithTimeout<RowType = any>( // Renamed T to RowType 
     }
     
     if (order && !single) { // order doesn't make sense with .single() which implies unique key
-      queryBuilder = queryBuilder.order(order[0], order[1]);
+      queryBuilder = queryBuilder.order(order[0], { ascending: order[1].ascending });
     }
     
     if (single) {
-      return queryBuilder.single();
+      return queryBuilder.single() as PostgrestSingleResponse<RowType>;
     }
-    return queryBuilder; // This is a PostgrestFilterBuilder, await happens in withTimeout
+    return queryBuilder as PostgrestResponse<RowType>;
   }, timeoutMs);
 
-  return { data: supabaseResponse.data, error: supabaseResponse.error };
+  return { 
+    data: supabaseResponse.data,
+    error: supabaseResponse.error 
+  };
 }
-

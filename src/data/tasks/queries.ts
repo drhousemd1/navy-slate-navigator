@@ -1,4 +1,5 @@
-import { useQuery, UseQueryResult } from "@tanstack/react-query";
+
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from '@/integrations/supabase/client';
 import {
   loadTasksFromDB,
@@ -6,7 +7,7 @@ import {
   getLastSyncTimeForTasks,
   setLastSyncTimeForTasks
 } from "@/data/indexedDB/useIndexedDB";
-import { Task } from '@/lib/taskUtils';
+import { Task, TaskPriority } from '@/lib/taskUtils';
 import { processTasksWithRecurringLogic } from '@/lib/taskUtils';
 import { withTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils';
 import { PostgrestError } from '@supabase/supabase-js'; // Import PostgrestError
@@ -38,14 +39,20 @@ export const fetchTasks = async (): Promise<Task[]> => {
   console.log('[fetchTasks] Fetching tasks from server');
   
   try {
-    // Ensure `withTimeout` is correctly typed to return a structure with data and error
-    // and that the Supabase query itself returns PostgrestResponse<Task>
-    const result = await withTimeout< { data: Task[] | null; error: PostgrestError | null } >(async (signal) => { // Adjusted generic type for withTimeout
-      return supabase
+    // Handle the raw response from Supabase and ensure correct typing
+    type RawTaskResponse = {
+      data: any[] | null;
+      error: PostgrestError | null;
+    };
+
+    const result = await withTimeout<RawTaskResponse>(async (signal) => {
+      const response = await supabase
         .from('tasks')
         .select('*')
         .order('created_at', { ascending: false })
         .abortSignal(signal);
+      
+      return response;
     }, DEFAULT_TIMEOUT_MS);
     
     const { data, error } = result;
@@ -63,7 +70,7 @@ export const fetchTasks = async (): Promise<Task[]> => {
       // Ensure default values are applied if missing from DB records
       const tasksWithDefaults = data.map(task => ({
         ...task,
-        priority: task.priority || 'medium',
+        priority: task.priority as TaskPriority || 'medium',
         frequency: task.frequency || 'daily',
         frequency_count: task.frequency_count || 1,
         usage_data: task.usage_data || Array(7).fill(0), // Or whatever default your logic expects
@@ -92,12 +99,12 @@ export const fetchTasks = async (): Promise<Task[]> => {
   }
 };
 
-// Changed from interface to type to correctly intersect with UseQueryResult
-export type TasksQueryResult = UseQueryResult<Task[], Error> & {
+// Define the TasksQueryResult type as an intersection type instead of extending an interface
+export type TasksQueryResult = ReturnType<typeof useQuery<Task[], Error>> & {
   isUsingCachedData: boolean;
 };
 
-export const useTasksQuery = (): TasksQueryResult => {
+export const useTasksQuery = () => {
   const queryResult = useQuery<Task[], Error>({
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
@@ -121,31 +128,43 @@ export const useTasksQuery = (): TasksQueryResult => {
   };
 };
 
-// For fetching a single task, it's often more efficient to select from the already fetched list.
-// However, if a direct fetch is needed, it can be implemented.
-// For now, we'll provide a selector-based approach if used within a component that also calls useTasksQuery.
-// A true useTaskQuery(id) would typically fetch a single item from the server if not in cache.
-// Given the requirement for staleTime: Infinity, we assume the full list is the source of truth.
-export const useTaskQuery = (taskId: string | null): UseQueryResult<Task | undefined, Error> => {
-  return useQuery<Task | undefined, Error, Task | undefined, (string | null)[]>({ // Adjusted queryKey type
+// For fetching a single task, modify the implementation to use the updated withTimeout
+export const useTaskQuery = (taskId: string | null) => {
+  return useQuery<Task | undefined, Error, Task | undefined, (string | null)[]>({
     queryKey: taskId ? TASK_QUERY_KEY(taskId) : ['tasks', null], // Handle null taskId
     queryFn: async () => {
       if (!taskId) return undefined;
       
       try {
-        const result = await withTimeout<{ data: Task | null; error: PostgrestError | null }>(async (signal) => { // Adjusted generic type
-          return supabase
+        type RawSingleTaskResponse = {
+          data: any | null;
+          error: PostgrestError | null;
+        };
+
+        const result = await withTimeout<RawSingleTaskResponse>(async (signal) => {
+          const response = await supabase
             .from("tasks")
             .select("*")
             .eq("id", taskId)
             .abortSignal(signal)
-            .single(); // .single() returns PostgrestSingleResponse
+            .single();
+          
+          return response;
         }, DEFAULT_TIMEOUT_MS);
         
         const { data, error } = result;
         
         if (error) throw error;
-        return data ? processTasksWithRecurringLogic([data as Task])[0] : undefined;
+        
+        if (!data) return undefined;
+        
+        // Ensure we properly cast any string priority to our TaskPriority type
+        const taskWithCorrectTypes = {
+          ...data,
+          priority: (data.priority || 'medium') as TaskPriority
+        } as Task;
+        
+        return processTasksWithRecurringLogic([taskWithCorrectTypes])[0];
       } catch (error) {
         console.error(`[useTaskQuery] Error fetching task with ID ${taskId}:`, error);
         throw error;
