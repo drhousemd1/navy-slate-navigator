@@ -1,15 +1,15 @@
+
 import React from 'react';
 import TaskCard from '../TaskCard';
-import { Task } from '@/lib/taskUtils';
-import TaskCardSkeleton from '@/components/task/TaskCardSkeleton';
+import { TaskWithId } from '@/data/tasks/types'; // Use TaskWithId
 import EmptyState from '@/components/common/EmptyState';
 import { ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface TasksListProps {
-  tasks: Task[];
-  isLoading: boolean;
-  onEditTask: (task: Task) => void;
+  tasks: TaskWithId[];
+  isLoading: boolean; // True if loading initial data and tasks array is empty
+  onEditTask: (task: TaskWithId) => void;
   onToggleCompletion: (taskId: string, completed: boolean) => void;
   onCreateTaskClick?: () => void;
 }
@@ -21,22 +21,20 @@ const TasksList: React.FC<TasksListProps> = ({
   onToggleCompletion,
   onCreateTaskClick 
 }) => {
+  // Show loading state (skeletons removed) ONLY if actively loading AND no tasks are available (empty cache)
   if (isLoading && tasks.length === 0) {
-    return (
-      <div className="space-y-4">
-        <TaskCardSkeleton />
-        <TaskCardSkeleton />
-        <TaskCardSkeleton />
-      </div>
-    );
+    // Per policy, no skeletons. Show a minimal loading text or nothing.
+    // For now, showing nothing while loading an empty list to avoid flickering before empty state.
+    // Or, a very subtle loading indicator can be used if preferred.
+    return <div className="text-center py-10 text-slate-400">Loading tasks...</div>;
   }
 
   if (!isLoading && tasks.length === 0) {
     return (
       <EmptyState
         icon={ClipboardList}
-        title="No Tasks Yet"
-        description="It looks like there are no tasks defined. Get started by creating your first one!"
+        title="You currently have no tasks."
+        description="Please create one to continue."
         action={onCreateTaskClick && (
           <Button 
             onClick={onCreateTaskClick} 
@@ -66,7 +64,7 @@ const TasksList: React.FC<TasksListProps> = ({
             focalPointY={task.focal_point_y}
             frequency={frequency}
             frequency_count={task.frequency_count}
-            usage_data={task.usage_data}
+            usage_data={task.usage_data || []} // Ensure usage_data is an array
             icon_url={task.icon_url}
             icon_name={task.icon_name}
             priority={task.priority}

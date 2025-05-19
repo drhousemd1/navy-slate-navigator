@@ -1,16 +1,17 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
-import { Task } from '@/lib/taskUtils'; // Assuming Task is defined here
 import { TaskWithId, CreateTaskVariables } from '@/data/tasks/types';
+import { TASKS_QUERY_KEY } from '../queries'; // Corrected import
+import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
+import { toast } from '@/hooks/use-toast';
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
 
   return useCreateOptimisticMutation<TaskWithId, Error, CreateTaskVariables>({
     queryClient,
-    queryKey: ['tasks'],
+    queryKey: TASKS_QUERY_KEY, // Use the constant
     mutationFn: async (variables: CreateTaskVariables) => {
       // Ensure all required fields for DB insertion are present,
       // relying on DB defaults for fields not in CreateTaskVariables or Task interface.
@@ -76,10 +77,23 @@ export const useCreateTask = () => {
         focal_point_y: variables.focal_point_y || 50,
         week_identifier: variables.week_identifier || null,
         icon_url: variables.icon_url || null,
-        usage_data: variables.usage_data || [],
+        usage_data: variables.usage_data || Array(7).fill(0), // Default usage_data
         background_images: variables.background_images || null,
         ...variables, // Spread remaining variables
       } as TaskWithId;
+    },
+    onSuccessCallback: async (newTaskData) => {
+      console.log('[useCreateTask onSuccessCallback] New task created on server, updating IndexedDB.', newTaskData);
+      try {
+        const localTasks = await loadTasksFromDB() || [];
+        const updatedLocalTasks = [newTaskData, ...localTasks.filter(t => t.id !== newTaskData.id && t.id !== (newTaskData as any).optimisticId)];
+        await saveTasksToDB(updatedLocalTasks);
+        await setLastSyncTimeForTasks(new Date().toISOString());
+        console.log('[useCreateTask onSuccessCallback] IndexedDB updated with new task.');
+      } catch (error) {
+        console.error('[useCreateTask onSuccessCallback] Error updating IndexedDB:', error);
+        toast({ variant: "destructive", title: "Local Save Error", description: "Task created on server, but failed to save locally." });
+      }
     },
   });
 };

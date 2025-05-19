@@ -2,15 +2,18 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
-import { Task } from '@/lib/taskUtils';
 import { TaskWithId } from '@/data/tasks/types';
+import { TASKS_QUERY_KEY } from '../queries'; // Corrected import
+import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
+import { toast } from '@/hooks/use-toast';
+
 
 export const useDeleteTask = () => {
   const queryClient = useQueryClient();
 
   return useDeleteOptimisticMutation<TaskWithId, Error, string>({
     queryClient,
-    queryKey: ['tasks'],
+    queryKey: TASKS_QUERY_KEY, // Use the constant
     mutationFn: async (taskId: string) => {
       // Also delete related task_completion_history records
       const { error: historyError } = await supabase
@@ -19,7 +22,6 @@ export const useDeleteTask = () => {
         .eq('task_id', taskId);
 
       if (historyError) {
-        // Log or handle partial failure, but proceed with task deletion
         console.warn(`Failed to delete task history for task ${taskId}:`, historyError.message);
       }
 
@@ -29,15 +31,21 @@ export const useDeleteTask = () => {
         .eq('id', taskId);
       
       if (error) throw error;
-      // No data is returned on successful delete
     },
     entityName: 'Task',
     idField: 'id',
-    // If tasks have related data in other queries that need to be cleaned up optimistically,
-    // specify `relatedQueryKey` and `relatedIdField` here.
-    // For example, if there's a 'taskDetails' query:
-    // relatedQueryKey: ['taskDetails'],
-    // relatedIdField: 'taskId', 
-    // For now, we only manage task_completion_history directly in mutationFn.
+    onSuccessCallback: async (deletedTaskId: string) => {
+      console.log('[useDeleteTask onSuccessCallback] Task deleted on server, updating IndexedDB for task ID:', deletedTaskId);
+      try {
+        const localTasks = await loadTasksFromDB() || [];
+        const updatedLocalTasks = localTasks.filter(t => t.id !== deletedTaskId);
+        await saveTasksToDB(updatedLocalTasks);
+        await setLastSyncTimeForTasks(new Date().toISOString());
+        console.log('[useDeleteTask onSuccessCallback] IndexedDB updated after deleting task.');
+      } catch (error) {
+        console.error('[useDeleteTask onSuccessCallback] Error updating IndexedDB:', error);
+        toast({ variant: "destructive", title: "Local Update Error", description: "Task deleted on server, but failed to update local data." });
+      }
+    },
   });
 };
