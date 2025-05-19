@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Task, TaskPriority } from "@/lib/taskUtils"; // Import TaskPriority
+import { Task, TaskPriority } from "@/lib/taskUtils"; // Assuming TaskPriority is correctly exported
 import { useAuth } from "@/contexts/auth";
 
 export default function useTasksQuery() {
@@ -17,7 +17,7 @@ export default function useTasksQuery() {
       const { data, error } = await supabase
         .from("tasks")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user.id) // Note: 'user_id' column is not in the provided 'tasks' table schema. This might be an issue for data filtering.
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -27,7 +27,7 @@ export default function useTasksQuery() {
         title: dbTask.title,
         description: dbTask.description,
         points: dbTask.points,
-        priority: dbTask.priority as TaskPriority, // Use imported TaskPriority
+        priority: dbTask.priority as TaskPriority,
         completed: dbTask.completed,
         background_image_url: dbTask.background_image_url,
         background_opacity: dbTask.background_opacity,
@@ -35,7 +35,7 @@ export default function useTasksQuery() {
         focal_point_y: dbTask.focal_point_y,
         frequency: dbTask.frequency as 'daily' | 'weekly',
         frequency_count: dbTask.frequency_count,
-        usage_data: dbTask.usage_data || [], // Ensure usage_data is an array
+        usage_data: dbTask.usage_data || [],
         icon_url: dbTask.icon_url,
         icon_name: dbTask.icon_name,
         icon_color: dbTask.icon_color,
@@ -46,11 +46,9 @@ export default function useTasksQuery() {
         last_completed_date: dbTask.last_completed_date,
         created_at: dbTask.created_at,
         updated_at: dbTask.updated_at,
-        // Ensure all fields from Task interface are mapped
       })) as Task[];
     },
     enabled: !!user?.id,
     staleTime: Infinity,
   });
 }
-

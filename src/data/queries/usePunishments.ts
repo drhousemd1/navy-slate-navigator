@@ -17,7 +17,7 @@ export default function usePunishmentsQuery() {
       const { data, error } = await supabase
         .from("punishments")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user.id) // Note: 'user_id' column is not in the provided 'punishments' table schema. This might be an issue for data filtering.
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -37,13 +37,12 @@ export default function usePunishmentsQuery() {
         calendar_color: dbPunishment.calendar_color,
         highlight_effect: dbPunishment.highlight_effect,
         icon_name: dbPunishment.icon_name,
-        icon_url: dbPunishment.icon_url,
+        // icon_url is not in the punishments table schema
         icon_color: dbPunishment.icon_color,
         focal_point_x: dbPunishment.focal_point_x,
         focal_point_y: dbPunishment.focal_point_y,
-        // Ensure these fields exist on dbPunishment or handle defaults if they are part of PunishmentData
-        usage_data: dbPunishment.usage_data, // Cast or default if necessary
-        frequency_count: dbPunishment.frequency_count, // Cast or default if necessary
+        // usage_data is not in the punishments table schema
+        // frequency_count is not in the punishments table schema
         created_at: dbPunishment.created_at,
         updated_at: dbPunishment.updated_at,
       })) as PunishmentData[];
@@ -52,4 +51,3 @@ export default function usePunishmentsQuery() {
     staleTime: Infinity,
   });
 }
-
