@@ -8,7 +8,8 @@ export { fetchPunishments } from './fetchPunishments';
 export { fetchPunishmentById } from './fetchPunishmentById'; // Added export
 export { fetchCurrentWeekPunishmentHistory } from './fetchPunishmentHistory';
 
-// Export query hooks
-export { usePunishmentsQuery, PunishmentsQueryResult } from './usePunishmentsQuery';
+// Export query hooks and types
+export { usePunishmentsQuery } from './usePunishmentsQuery';
+export type { PunishmentsQueryResult } from './usePunishmentsQuery'; // Export type properly
 export { usePunishmentQuery } from './usePunishmentQuery'; // Added export
 export { usePunishmentHistoryQuery } from './usePunishmentHistoryQuery';

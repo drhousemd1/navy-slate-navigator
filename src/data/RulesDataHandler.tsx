@@ -1,9 +1,14 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { saveRule, deleteRule } from '@/data/rules/saveRule';
-import { fetchRules } from '@/data/rules/fetchRules';
-import { recordRuleViolation } from '@/data/rules/recordViolation';
 import { Rule } from '@/data/interfaces/Rule';
 import { UseQueryResult, QueryObserverResult } from '@tanstack/react-query';
+import { fetchRules } from '@/data/rules/fetchRules';
+import { 
+  useCreateRule, 
+  useUpdateRule, 
+  useDeleteRule, 
+  useCreateRuleViolation 
+} from '@/data/rules/mutations';
 
 export type RulesQueryResult = {
   rules: Rule[]; 
@@ -32,53 +37,21 @@ export const useRulesData = (): RulesQueryResult => {
   // Determine if using cached data based on error state and data presence
   const isUsingCachedData = !!error && rules && rules.length > 0;
 
-  const saveRuleMutation = useMutation(
-    (ruleData: Partial<Rule>) => saveRule(ruleData),
-    {
-      onSuccess: (newRule) => {
-        // Directly update the rules array in the cache
-        queryClient.setQueryData<Rule[]>(['rules'], (oldRules) => {
-          if (oldRules) {
-            return [...oldRules.filter(rule => rule.id !== newRule.id), newRule];
-          }
-          return [newRule];
-        });
-      },
-      onError: (err) => {
-        console.error("Error saving rule:", err);
-      },
-    }
-  );
-
-  const deleteRuleMutation = useMutation(
-    (ruleId: string) => deleteRule(ruleId),
-    {
-      onSuccess: (ruleId) => {
-        // Optimistically update the cache
-        queryClient.setQueryData<Rule[]>(['rules'], (oldRules) =>
-          oldRules ? oldRules.filter((rule) => rule.id !== ruleId) : []
-        );
-      },
-      onError: (err) => {
-        console.error("Error deleting rule:", err);
-      },
-    }
-  );
-
-  const markRuleViolationMutation = useMutation(
-    (rule: Rule) => recordRuleViolation(rule),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['rules']);
-      },
-      onError: (err) => {
-        console.error("Error marking rule as broken:", err);
-      },
-    }
-  );
+  // Use the mutation hooks from the modern structure
+  const createUpdateRuleMutation = useUpdateRule();
+  const saveRuleMutation = useCreateRule();
+  const deleteRuleMutation = useDeleteRule();
+  const markRuleViolationMutation = useCreateRuleViolation();
 
   const saveRuleWrapper = async (ruleData: Partial<Rule>): Promise<Rule> => {
-    return await saveRuleMutation.mutateAsync(ruleData);
+    if (ruleData.id) {
+      return await createUpdateRuleMutation.mutateAsync({
+        id: ruleData.id,
+        ...ruleData
+      });
+    } else {
+      return await saveRuleMutation.mutateAsync(ruleData);
+    }
   };
 
   const deleteRuleWrapper = async (ruleId: string): Promise<void> => {

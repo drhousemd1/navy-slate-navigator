@@ -4,14 +4,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import PunishmentEditorForm from './punishments/PunishmentEditorForm';
 import { useIsMobile } from '@/hooks/use-mobile';
-// import { Tables } from '@/integrations/supabase/types'; // Not directly used here
 import { PunishmentData } from '@/contexts/punishments/types';
 
 interface PunishmentEditorProps {
   isOpen: boolean;
   onClose: () => void;
   punishmentData?: PunishmentData;
-  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData | void>; // Updated to allow void return
+  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData>; // Updated return type to always return PunishmentData
   onDelete?: (id: string) => void;
 }
 

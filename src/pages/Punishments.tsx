@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Skull, AlertTriangle, LoaderCircle } from 'lucide-react'; // Keep Skull if used by ErrorBoundary, added AlertTriangle
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
-import PunishmentEditor from './PunishmentEditor';
+import PunishmentEditor from '../components/PunishmentEditor'; // Fixed import path
 import { PunishmentData } from '@/contexts/punishments/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
@@ -47,7 +48,7 @@ const PunishmentsContent: React.FC<{
     setIsEditorOpen(true);
   };
   
-  const handleSavePunishmentEditor = async (punishmentDataToSave: Partial<PunishmentData>): Promise<PunishmentData | void> => { // Adjusted return type
+  const handleSavePunishmentEditor = async (punishmentDataToSave: Partial<PunishmentData>): Promise<PunishmentData> => { // Changed return type to always return PunishmentData
     try {
       let savedPunishment: PunishmentData;
       if (currentPunishment?.id) {
@@ -155,7 +156,7 @@ const PunishmentsContent: React.FC<{
         }}
         punishmentData={currentPunishment}
         onSave={handleSavePunishmentEditor}
-        onDelete={currentPunishment?.id ? () => handleDeletePunishmentEditor(currentPunishment!.id) : undefined}
+        onDelete={currentPunishment?.id ? handleDeletePunishmentEditor : undefined}
       />
     </div>
   );

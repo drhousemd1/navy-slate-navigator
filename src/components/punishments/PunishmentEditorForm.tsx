@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 import PunishmentBasicDetails from './form/PunishmentBasicDetails';
@@ -14,7 +15,7 @@ import { UseFormReturn } from 'react-hook-form';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
-  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData>; // Changed: takes Partial, returns PunishmentData
+  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData>; // Updated to always return PunishmentData
   onCancel: () => void;
   onDelete?: (id: string) => void;
 }
