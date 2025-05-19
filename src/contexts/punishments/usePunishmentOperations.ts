@@ -1,8 +1,7 @@
-
 import { useMemo } from 'react';
 import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
-import { PunishmentData, PunishmentHistoryItem, CreatePunishmentVariables } from './types'; // Import CreatePunishmentVariables
+import { PunishmentData, PunishmentHistoryItem } from './types'; // Removed CreatePunishmentVariables import
 import { useCreatePunishment } from "@/data/punishments/mutations/useCreatePunishment";
 // Assuming useUpdatePunishment exists and is similar to useCreatePunishment
 import { useUpdatePunishment } from "@/data/punishments/mutations/useUpdatePunishment"; 
@@ -47,25 +46,15 @@ export const usePunishmentOperations = () => {
 
   const createPunishmentOperation = async (punishmentData: Partial<Omit<PunishmentData, 'id' | 'created_at' | 'updated_at'>>): Promise<PunishmentData> => {
     try {
-      const variablesToPass: CreatePunishmentVariables = {
-        title: punishmentData.title || 'Default Title', 
-        points: punishmentData.points || 0, 
-        description: punishmentData.description,
-        icon_name: punishmentData.icon_name,
-        icon_color: punishmentData.icon_color,
-        background_image_url: punishmentData.background_image_url,
-        background_opacity: punishmentData.background_opacity,
-        title_color: punishmentData.title_color,
-        subtext_color: punishmentData.subtext_color,
-        calendar_color: punishmentData.calendar_color,
-        highlight_effect: punishmentData.highlight_effect,
-        focal_point_x: punishmentData.focal_point_x,
-        focal_point_y: punishmentData.focal_point_y,
-        dom_supply: punishmentData.dom_supply ?? 0,
-        user_id: user?.id, // Correctly assign user_id from auth context
+      // Since we're importing from useCreatePunishment directly now, use its type
+      // We'll create the new punishment object with the user id added
+      const newPunishmentData = {
+        ...punishmentData,
+        // Add the user_id here instead of trying to access it from punishmentData
+        user_id: user?.id
       };
       
-      const newPunishment = await createPunishmentMutation(variablesToPass);
+      const newPunishment = await createPunishmentMutation(newPunishmentData);
       queryClient.setQueryData<PunishmentData[]>(['punishments'], (oldData = []) =>
         [newPunishment, ...oldData]
       );
@@ -90,7 +79,7 @@ export const usePunishmentOperations = () => {
       console.log("Updating punishment with ID:", id);
       console.log("Data to update:", punishmentData);
       
-      // Ensure user_id is not accidentally overwritten if not provided
+      // Create a new object without user_id to avoid issues
       const { user_id, ...updatePayload } = punishmentData;
 
       const updatedPunishment = await updatePunishmentMutation({ id, ...updatePayload });
@@ -98,7 +87,6 @@ export const usePunishmentOperations = () => {
       queryClient.setQueryData<PunishmentData[]>(['punishments'], (oldData = []) =>
         oldData.map(p => p.id === updatedPunishment.id ? updatedPunishment : p)
       );
-      // queryClient.invalidateQueries({ queryKey: ['punishments', id] }); // Only if individual item query exists
       toast({
         title: "Success",
         description: "Punishment updated successfully",
@@ -183,7 +171,7 @@ export const usePunishmentOperations = () => {
   
   const refetchPunishments = async (): Promise<QueryObserverResult<PunishmentData[], Error>> => {
       await refetchHistory(); // Ensure history is fresh when punishments are refetched
-      return refetchPunishmentsFn(); // Return the result of refetching punishments
+      return await refetchPunishmentsFn(); // Return the result of refetching punishments - added 'await' to fix type issue
   };
 
   return {
@@ -205,4 +193,3 @@ export const usePunishmentOperations = () => {
     errorHistory,
   };
 };
-
