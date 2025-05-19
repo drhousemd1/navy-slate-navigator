@@ -1,12 +1,12 @@
-
 import { useState, useCallback, useEffect } from 'react';
-import { useTasksQuery, useTaskQuery } from '@/data/tasks/queries';
+import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries'; // Import TasksQueryResult
 import { TaskWithId } from '@/data/tasks/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
 import { useDeleteTask } from '@/data/mutations/tasks/useDeleteTask';
+import { TaskPriority } from '@/lib/taskUtils'; // Import TaskPriority
 
 export const useTasksData = () => {
   const { 
@@ -15,7 +15,7 @@ export const useTasksData = () => {
     error, 
     refetch,
     isUsingCachedData
-  } = useTasksQuery();
+  }: TasksQueryResult = useTasksQuery(); // Destructure from TasksQueryResult
   
   const queryClient = useQueryClient();
   const deleteTaskMutation = useDeleteTask();
@@ -59,8 +59,8 @@ export const useTasksData = () => {
         }
 
         // Update the local cache optimistically
-        queryClient.setQueryData<TaskWithId[]>(["tasks"], oldTasks => {
-          if (!oldTasks) return [taskData];
+        queryClient.setQueryData<TaskWithId[]>(["tasks"], (oldTasks) => {
+          if (!oldTasks) return [taskData]; // Should be TaskWithId[]
           const updatedTasks = oldTasks.map(t => 
             t.id === taskData.id ? { ...t, ...taskData, completed: t.completed } : t
           );
@@ -86,7 +86,7 @@ export const useTasksData = () => {
           background_opacity: taskData.background_opacity,
           icon_url: taskData.icon_url,
           icon_name: taskData.icon_name,
-          priority: taskData.priority,
+          priority: taskData.priority || 'medium' as TaskPriority, // Ensure priority is correctly typed
           title_color: taskData.title_color,
           subtext_color: taskData.subtext_color,
           calendar_color: taskData.calendar_color,
@@ -97,7 +97,7 @@ export const useTasksData = () => {
           usage_data: Array(7).fill(0) // Initialize with zeros for a week
         };
 
-        const { data: newTask, error } = await supabase
+        const { data: newTaskResponse, error } = await supabase
           .from("tasks")
           .insert([newTaskData])
           .select();
@@ -113,9 +113,10 @@ export const useTasksData = () => {
         }
 
         // Update the cache with the new task from the server
-        if (newTask && newTask[0]) {
-          queryClient.setQueryData<TaskWithId[]>(["tasks"], oldTasks => {
-            const newTasks = oldTasks ? [newTask[0], ...oldTasks] : [newTask[0]];
+        if (newTaskResponse && newTaskResponse[0]) {
+          const createdTask = newTaskResponse[0] as TaskWithId; // Cast to TaskWithId
+          queryClient.setQueryData<TaskWithId[]>(["tasks"], (oldTasks) => {
+            const newTasks = oldTasks ? [createdTask, ...oldTasks] : [createdTask];
             saveTasksToDB(newTasks); // Update IndexedDB
             return newTasks;
           });
@@ -124,7 +125,7 @@ export const useTasksData = () => {
             title: 'Task Created',
             description: 'Your new task has been created successfully.',
           });
-          return newTask[0] as TaskWithId;
+          return createdTask;
         }
       }
       
@@ -233,6 +234,7 @@ export const useTasksData = () => {
     isUsingCachedData,
     saveTask,
     deleteTask,
-    toggleTaskCompletion
+    toggleTaskCompletion,
+    refetch // ensure refetch is returned
   };
 };

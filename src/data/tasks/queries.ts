@@ -1,4 +1,3 @@
-
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -10,6 +9,7 @@ import {
 import { Task } from '@/lib/taskUtils';
 import { processTasksWithRecurringLogic } from '@/lib/taskUtils';
 import { withTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils';
+import { PostgrestError } from '@supabase/supabase-js'; // Import PostgrestError
 
 export const TASKS_QUERY_KEY = ["tasks"];
 export const TASK_QUERY_KEY = (taskId: string) => ["tasks", taskId];
@@ -38,7 +38,9 @@ export const fetchTasks = async (): Promise<Task[]> => {
   console.log('[fetchTasks] Fetching tasks from server');
   
   try {
-    const result = await withTimeout(async (signal) => {
+    // Ensure `withTimeout` is correctly typed to return a structure with data and error
+    // and that the Supabase query itself returns PostgrestResponse<Task>
+    const result = await withTimeout< { data: Task[] | null; error: PostgrestError | null } >(async (signal) => { // Adjusted generic type for withTimeout
       return supabase
         .from('tasks')
         .select('*')
@@ -90,9 +92,10 @@ export const fetchTasks = async (): Promise<Task[]> => {
   }
 };
 
-export interface TasksQueryResult extends UseQueryResult<Task[], Error> {
+// Changed from interface to type to correctly intersect with UseQueryResult
+export type TasksQueryResult = UseQueryResult<Task[], Error> & {
   isUsingCachedData: boolean;
-}
+};
 
 export const useTasksQuery = (): TasksQueryResult => {
   const queryResult = useQuery<Task[], Error>({
@@ -110,7 +113,7 @@ export const useTasksQuery = (): TasksQueryResult => {
   // Determine if we're using cached data
   const isUsingCachedData = 
     (!!queryResult.error && queryResult.data && queryResult.data.length > 0) || 
-    (queryResult.isStale && queryResult.errorUpdateCount > 0 && queryResult.data && queryResult.data.length > 0);
+    (queryResult.isStale && queryResult.fetchStatus === 'idle' && queryResult.data && queryResult.data.length > 0 && queryResult.errorUpdateCount > 0); // Adjusted condition for stale data with error
   
   return {
     ...queryResult,
@@ -130,13 +133,13 @@ export const useTaskQuery = (taskId: string | null): UseQueryResult<Task | undef
       if (!taskId) return undefined;
       
       try {
-        const result = await withTimeout(async (signal) => {
+        const result = await withTimeout<{ data: Task | null; error: PostgrestError | null }>(async (signal) => { // Adjusted generic type
           return supabase
             .from("tasks")
             .select("*")
             .eq("id", taskId)
             .abortSignal(signal)
-            .single();
+            .single(); // .single() returns PostgrestSingleResponse
         }, DEFAULT_TIMEOUT_MS);
         
         const { data, error } = result;
