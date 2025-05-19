@@ -1,23 +1,23 @@
+
 import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Task } from '@/data/tasks/types'; // CORRECTED IMPORT FOR Task type
-import { processTasksWithRecurringLogic } from '@/lib/taskUtils'; // Keep for the function
+import { Task, processTasksWithRecurringLogic } from '@/lib/taskUtils'; 
 import { toast } from '@/hooks/use-toast';
 import { fetchTasks } from './queries/tasks/fetchTasks';
 import { useCreateTask } from './tasks/mutations/useCreateTask';
 import { useUpdateTask, UpdateTaskVariables } from './tasks/mutations/useUpdateTask';
 import { useDeleteTask } from './tasks/mutations/useDeleteTask';
-import type { CreateTaskVariables } from './tasks/types'; // Task type from here
+import { CreateTaskVariables } from './tasks/types';
 import { useToggleCompletionWorkflowMutation } from './tasks/mutations/useToggleCompletionWorkflowMutation';
 
 export interface TasksDataHook {
   tasks: Task[];
   isLoading: boolean;
   error: Error | null;
-  saveTask: (taskData: Partial<Task>) => Promise<Task | null>; // Partial<Task> will now use the correct Task
+  saveTask: (taskData: Partial<Task>) => Promise<Task | null>;
   deleteTask: (taskId: string) => Promise<boolean>;
   toggleTaskCompletion: (taskId: string, completed: boolean, points: number) => Promise<boolean>;
-  refetchTasks: () => Promise<QueryObserverResult<Task[], Error>>;
+  refetchTasks: () => Promise<QueryObserverResult<Task[], Error>>; // This might be removed if not used elsewhere.
 }
 
 export const useTasksData = (): TasksDataHook => {
@@ -27,10 +27,11 @@ export const useTasksData = (): TasksDataHook => {
     data: tasks = [],
     isLoading,
     error,
-    refetch: refetchTasks,
-  } = useQuery<Task[], Error>({ // Task[] will use the correct Task
+    refetch: refetchTasks, // Keep refetch for now, though direct cache updates are preferred for mutations
+  } = useQuery<Task[], Error>({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
+    // staleTime, gcTime etc are now managed by useTasks query hook or global config
   });
 
   const { mutateAsync: createTaskMutation } = useCreateTask();
@@ -38,7 +39,7 @@ export const useTasksData = (): TasksDataHook => {
   const { mutateAsync: deleteTaskMutation } = useDeleteTask();
   const { mutateAsync: toggleCompletionWorkflowMutateAsync } = useToggleCompletionWorkflowMutation();
 
-  const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => { // taskData is Partial<CorrectTask>
+  const saveTask = async (taskData: Partial<Task>): Promise<Task | null> => {
     try {
       let savedTask: Task | undefined | null = null;
       if (taskData.id) {
@@ -47,36 +48,45 @@ export const useTasksData = (): TasksDataHook => {
           id, 
           ...updates 
         } as UpdateTaskVariables);
+        // Cache update should be handled by useUpdateTask mutation's onSuccess
+        // if (savedTask) {
+        //   queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
+        //     oldData.map(task => task.id === savedTask!.id ? savedTask! : task)
+        //   );
+        // }
       } else {
-        const { 
-          id, created_at, updated_at, completed, usage_data, last_completed_date, 
-          ...creatableDataFields // This will now correctly include week_identifier and background_images if present in taskData
-        } = taskData;
+        const { id, created_at, updated_at, completed, last_completed_date, ...creatableDataFields } = taskData;
         
-        // CreateTaskVariables is Omit<CorrectTask, ...>, so it includes week_identifier and background_images
         const variables: CreateTaskVariables = {
-          title: creatableDataFields.title || "Default Task Title", 
-          points: creatableDataFields.points || 0, 
-          priority: creatableDataFields.priority || 'medium', 
-          frequency: creatableDataFields.frequency || 'daily', 
-          frequency_count: creatableDataFields.frequency_count || 1, 
-          background_opacity: creatableDataFields.background_opacity || 100, 
-          focal_point_x: creatableDataFields.focal_point_x || 50, 
-          focal_point_y: creatableDataFields.focal_point_y || 50, 
-          icon_color: creatableDataFields.icon_color || '#9b87f5', 
-          highlight_effect: creatableDataFields.highlight_effect || false, 
-          title_color: creatableDataFields.title_color || '#FFFFFF', 
-          subtext_color: creatableDataFields.subtext_color || '#8E9196', 
-          calendar_color: creatableDataFields.calendar_color || '#7E69AB', 
-
+          title: creatableDataFields.title || "Default Task Title",
+          points: creatableDataFields.points || 0,
+          
           description: creatableDataFields.description,
-          background_image_url: creatableDataFields.background_image_url,
-          icon_url: creatableDataFields.icon_url,
+          frequency: creatableDataFields.frequency,
+          frequency_count: creatableDataFields.frequency_count,
+          priority: creatableDataFields.priority,
           icon_name: creatableDataFields.icon_name,
-          week_identifier: creatableDataFields.week_identifier, // Should now be fine
-          background_images: creatableDataFields.background_images, // Should now be fine
+          icon_color: creatableDataFields.icon_color,
+          title_color: creatableDataFields.title_color,
+          subtext_color: creatableDataFields.subtext_color,
+          calendar_color: creatableDataFields.calendar_color,
+          background_image_url: creatableDataFields.background_image_url,
+          background_opacity: creatableDataFields.background_opacity,
+          highlight_effect: creatableDataFields.highlight_effect,
+          focal_point_x: creatableDataFields.focal_point_x,
+          focal_point_y: creatableDataFields.focal_point_y,
+          icon_url: creatableDataFields.icon_url,
+          
+          week_identifier: (creatableDataFields as any).week_identifier,
+          background_images: (creatableDataFields as any).background_images,
         };
         savedTask = await createTaskMutation(variables);
+        // Cache update should be handled by useCreateTask mutation's onSuccess
+        // if (savedTask) {
+        //   queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
+        //     [savedTask!, ...oldData]
+        //   );
+        // }
       }
       return savedTask || null;
     } catch (e: any) {
@@ -89,22 +99,30 @@ export const useTasksData = (): TasksDataHook => {
   const deleteTask = async (taskId: string): Promise<boolean> => {
     try {
       await deleteTaskMutation(taskId);
-      // queryClient.invalidateQueries({ queryKey: ['tasks'] }); // Handled by optimistic mutation hook
+      // Cache update should be handled by useDeleteTask mutation's onSuccess
+      // queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
+      //   oldData.filter(task => task.id !== taskId)
+      // );
       return true;
     } catch (e: any) {
       console.error('Error deleting task:', e);
-      // toast({ title: 'Error Deleting Task', description: e.message, variant: 'destructive' }); // Handled by hook
+      // Toast is often handled by the mutation hook's onError
       return false;
     }
   };
 
-  const toggleTaskCompletion = async (taskId: string, completed: boolean, pointsValue: number): Promise<boolean> => {
+  const toggleTaskCompletion = async (taskId: string, completedParam: boolean, pointsValue: number): Promise<boolean> => {
     try {
-      await toggleCompletionWorkflowMutateAsync({ taskId, completed, pointsValue });
+      // The useToggleCompletionWorkflowMutation hook should handle its own cache updates (optimistic or on success).
+      // No need to get updatedTaskData here if the mutation handles the cache.
+      await toggleCompletionWorkflowMutateAsync({ taskId, completed: completedParam, pointsValue });
+      
+      // Removed manual queryClient.setQueryData calls.
+      // The mutation hook (useToggleCompletionWorkflowMutation) is now responsible for updating the cache.
+
       return true;
     } catch (e: any) {
       console.error('Error during toggleTaskCompletion workflow (TasksDataHandler):', e.message);
-      // Toast handled by the mutation hook
       return false;
     }
   };
@@ -119,3 +137,4 @@ export const useTasksData = (): TasksDataHook => {
     refetchTasks,
   };
 };
+

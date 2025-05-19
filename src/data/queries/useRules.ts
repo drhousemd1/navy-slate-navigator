@@ -1,76 +1,28 @@
 
-/**
- * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
- * No query, mutation, or sync logic is allowed in components or page files.
- * All logic must use these shared, optimized hooks and utilities only.
- */
-import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { supabase } from '@/integrations/supabase/client';
-import { Rule as AppRuleInterface } from "@/data/interfaces/Rule"; // Use the detailed Rule interface
-import {
-  loadRulesFromDB,
-  saveRulesToDB,
-  getLastSyncTimeForRules,
-  setLastSyncTimeForRules
-} from "../indexedDB/useIndexedDB";
-import { useAuth } from "@/contexts/auth"; // Assuming rules are user-specific
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Rule } from "@/data/interfaces/Rule";
+import { useAuth } from "@/contexts/auth";
 
-export function useRulesQuery() {
+export default function useRules() {
   const { user } = useAuth();
-  const profileId = user?.id;
 
-  const queryKey = ["rules", profileId] as const;
-
-  const queryFn = async (): Promise<AppRuleInterface[]> => {
-    if (!profileId) return []; // Do not fetch if no profileId
-
-    const localData = await loadRulesFromDB();
-    const lastSync = await getLastSyncTimeForRules();
-    let shouldFetch = true;
-
-    if (lastSync) {
-      const timeDiff = Date.now() - new Date(lastSync).getTime();
-      if (timeDiff < 1000 * 60 * 30) { // 30 minutes cache
-        shouldFetch = false;
+  return useQuery({
+    queryKey: ["rules"],
+    queryFn: async () => {
+      if (!user?.id) {
+        return [];
       }
-    }
 
-    if (!shouldFetch && localData) {
-      console.log("Serving rules from IndexedDB");
-      return localData; // This should now be AppRuleInterface[]
-    }
+      const { data, error } = await supabase
+        .from("rules")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
-    console.log("Fetching rules from Supabase for profileId:", profileId);
-    const { data, error } = await supabase
-      .from("rules")
-      .select("*")
-      .eq("user_id", profileId);
-
-    if (error) {
-      console.error("Error fetching rules:", error);
-      throw error;
-    }
-
-    if (data) {
-      const rulesData = data as AppRuleInterface[]; // Cast to the detailed interface
-      await saveRulesToDB(rulesData);
-      await setLastSyncTimeForRules(new Date().toISOString());
-      return rulesData;
-    }
-
-    return localData || []; // Fallback to localData or empty array
-  };
-
-  const queryOptions: UseQueryOptions<AppRuleInterface[], Error, AppRuleInterface[], typeof queryKey> = {
-    queryKey: queryKey,
-    queryFn: queryFn,
-    enabled: !!profileId, // Only run query if profileId exists
+      if (error) throw error;
+      return (data || []) as Rule[];
+    },
     staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-    gcTime: 1000 * 60 * 30, // 30 minutes
-  };
-  
-  return useQuery(queryOptions);
+  });
 }

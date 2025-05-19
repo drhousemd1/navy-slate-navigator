@@ -1,41 +1,34 @@
+import { Task } from '@/lib/taskUtils'; // Assuming Task is well-defined here
 
-// src/data/tasks/types.ts
+// Local type to ensure 'id' is present for the generic hook's TItem constraint
+export type TaskWithId = Task & { id: string };
 
-export type TaskPriority = "low" | "medium" | "high";
-export type TaskFrequency = "daily" | "weekly";
-
-export interface Task {
-  id: string;
+// Define variables for creating a task
+// Title and points are required, others can be optional or have defaults
+export type CreateTaskVariables = Partial<Omit<Task, 'id' | 'created_at' | 'updated_at' | 'completed' | 'last_completed_date' | 'title' | 'points'>> & {
   title: string;
-  description?: string | null;
   points: number;
-  priority: TaskPriority;
-  completed: boolean;
-  background_image_url?: string | null;
-  background_opacity: number; // Assuming 0-100 range
-  focal_point_x: number; // Percentage (0-100)
-  focal_point_y: number; // Percentage (0-100)
-  frequency: TaskFrequency;
-  frequency_count: number; // e.g., 3 times a week
-  usage_data: number[]; // Timestamps of completions or other relevant data
-  icon_url?: string | null;
-  icon_name?: string | null; // For Lucide icons or similar
-  icon_color: string; // Hex color
-  highlight_effect: boolean;
-  title_color: string; // Hex color
-  subtext_color: string; // Hex color
-  calendar_color: string; // Hex color for calendar display
-  last_completed_date?: string | null; // ISO date string
-  created_at: string; // ISO date string
-  updated_at: string; // ISO date string
-  // user_id?: string; // If tasks are user-specific and RLS is applied based on this
-  week_identifier?: string | null; // Added
-  background_images?: any | null; // Added, consider a more specific type if known (e.g., { desktop: string, mobile: string })
-}
+  // Explicitly add fields that were causing type errors, ensuring they are optional
+  week_identifier?: string | null;
+  background_images?: any; // Ideally, replace 'any' with a more specific type like JsonValue if available
+  
+  // Other optional fields explicitly listed for clarity
+  description?: string;
+  frequency?: string;
+  frequency_count?: number;
+  priority?: 'low' | 'medium' | 'high';
+  icon_name?: string;
+  icon_color?: string;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  background_image_url?: string;
+  background_opacity?: number;
+  highlight_effect?: boolean;
+  focal_point_x?: number;
+  focal_point_y?: number;
+  icon_url?: string;
+};
 
-// CreateTaskVariables will now correctly include optional week_identifier and background_images
-export type CreateTaskVariables = Omit<Task, "id" | "created_at" | "updated_at" | "completed" | "usage_data" | "last_completed_date">;
-
-// UpdateTaskVariables will also correctly include optional week_identifier and background_images
-export type UpdateTaskVariables = { id: string } & Partial<Omit<Task, "id" | "created_at" | "updated_at">>;
-
+// Define variables for updating a task
+export type UpdateTaskVariables = { id: string } & Partial<Omit<Task, 'id'>>;
