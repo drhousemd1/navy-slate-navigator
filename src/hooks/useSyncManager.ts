@@ -15,7 +15,7 @@ export const CRITICAL_QUERY_KEYS = {
   PROFILE: ['profile'] as QueryKey,
 };
 
-interface SyncOptions {
+export interface SyncOptions {
   intervalMs?: number;
   enabled?: boolean;
   includeKeys?: QueryKey[];
