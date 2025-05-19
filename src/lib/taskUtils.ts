@@ -1,17 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getMondayBasedDay } from "./utils";
-import { queryClient } from "@/data/queryClient";
-
-// Define and export TaskPriority
-export type TaskPriority = 'low' | 'medium' | 'high';
+import { queryClient } from "@/data/queryClient"; // queryClient is already imported
 
 export interface Task {
   id: string;
   title: string;
   description?: string;
   points: number;
-  priority: TaskPriority; // Use the exported type
+  priority: 'low' | 'medium' | 'high';
   completed: boolean;
   background_image_url?: string;
   background_opacity?: number;
@@ -134,8 +131,9 @@ export const resetTaskCompletions = async (
         // as it represents max completions, not current.
         // usage_data should be reset for the new day.
         // However, the current logic is to reset tasks not completed *today*.
-        // If full reset of daily progress is needed, usage_data handling needs careful consideration.
+        // If we clear usage_data, it will affect weekly view.
         // Let's stick to the original intent of resetting 'completed' status.
+        // If full reset of daily progress is needed, usage_data handling needs careful consideration.
       })
       .eq("frequency", "daily")
       .not("last_completed_date", "eq", today) // Only reset if not completed today
@@ -175,7 +173,7 @@ const processTaskFromDb = (task: any): Task => {
     title: task.title,
     description: task.description,
     points: task.points,
-    priority: (task.priority as string || 'medium') as TaskPriority, // Use TaskPriority here
+    priority: (task.priority as string || 'medium') as 'low' | 'medium' | 'high',
     completed: task.completed,
     background_image_url: task.background_image_url,
     background_opacity: task.background_opacity,

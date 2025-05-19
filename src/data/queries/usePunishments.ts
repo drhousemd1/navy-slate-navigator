@@ -1,58 +1,65 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+/**
+ * CENTRALIZED DATA LOGIC – DO NOT DUPLICATE OR MODIFY OUTSIDE THIS FOLDER.
+ * No query, mutation, or sync logic is allowed in components or page files.
+ * All logic must use these shared, optimized hooks and utilities only.
+ */
+
+import { useQuery } from "@tanstack/react-query"; // Changed from usePersistentQuery
+import { supabase } from '@/integrations/supabase/client';
+import {
+  loadPunishmentsFromDB,
+  savePunishmentsToDB,
+  getLastSyncTimeForPunishments,
+  setLastSyncTimeForPunishments
+} from "../indexedDB/useIndexedDB";
 import { PunishmentData } from "@/contexts/punishments/types";
-import { useAuth } from "@/contexts/auth";
 
-export default function usePunishmentsQuery() {
-  const { user } = useAuth();
+export function usePunishments() {
+  const queryResult = useQuery<PunishmentData[], Error>({ // Explicitly type queryResult
+    queryKey: ["punishments"],
+    queryFn: async () => {
+      const localData = await loadPunishmentsFromDB() as PunishmentData[] | null;
+      const lastSync = await getLastSyncTimeForPunishments();
+      let shouldFetch = true;
 
-  const queryKey = ["punishments", user?.id] as const;
+      if (lastSync) {
+        const timeDiff = Date.now() - new Date(lastSync as string).getTime();
+        if (timeDiff < 1000 * 60 * 30) { // 30 minutes
+          shouldFetch = false;
+        }
+      }
 
-  const queryFn = async (): Promise<PunishmentData[]> => {
-    const userId = user?.id;
-    if (!userId) {
-      return []; 
-    }
+      if (!shouldFetch && localData) {
+        return localData;
+      }
 
-    const { data, error } = await supabase
-      .from("punishments")
-      .select("*")
-      .eq("user_id", userId) // Note: 'user_id' column is not in the provided 'punishments' table schema. This might be an issue for data filtering.
-      .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("punishments").select("*");
+      if (error) throw error;
 
-    if (error) throw error;
+      if (data) {
+        const punishmentsData = data as PunishmentData[];
+        await savePunishmentsToDB(punishmentsData);
+        await setLastSyncTimeForPunishments(new Date().toISOString());
+        return punishmentsData;
+      }
 
-    return (data || []).map(dbPunishment => ({
-      id: dbPunishment.id,
-      title: dbPunishment.title,
-      description: dbPunishment.description,
-      points: dbPunishment.points,
-      dom_points: dbPunishment.dom_points,
-      dom_supply: dbPunishment.dom_supply,
-      background_image_url: dbPunishment.background_image_url,
-      background_opacity: dbPunishment.background_opacity,
-      title_color: dbPunishment.title_color,
-      subtext_color: dbPunishment.subtext_color,
-      calendar_color: dbPunishment.calendar_color,
-      highlight_effect: dbPunishment.highlight_effect,
-      icon_name: dbPunishment.icon_name,
-      icon_color: dbPunishment.icon_color,
-      focal_point_x: dbPunishment.focal_point_x,
-      focal_point_y: dbPunishment.focal_point_y,
-      created_at: dbPunishment.created_at,
-      updated_at: dbPunishment.updated_at,
-      // Ensure all properties match PunishmentData, adding undefined for optional ones if not in dbPunishment
-      icon_url: dbPunishment.icon_url || undefined, 
-      usage_data: dbPunishment.usage_data || undefined, 
-      frequency_count: dbPunishment.frequency_count || undefined, 
-    })) as PunishmentData[];
-  };
-
-  return useQuery({ // Removed explicit generic arguments
-    queryKey: queryKey,
-    queryFn: queryFn,
-    enabled: !!user?.id,
+      return localData || []; // Fallback to localData or empty array
+    },
+    // initialData: undefined, // Removed: Persister handles initial data hydration
     staleTime: Infinity,
+    gcTime: 3600000, // 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false
   });
+
+  return {
+    ...queryResult,
+    punishments: queryResult.data || [],
+    isLoading: queryResult.isLoading, // ensure isLoading is passed through
+    error: queryResult.error, // ensure error is passed through
+    refetchPunishments: queryResult.refetch
+  };
 }
+
