@@ -1,5 +1,5 @@
 
-import { SupabaseClient, PostgrestError, PostgrestResponse, PostgrestSingleResponse } from '@supabase/supabase-js'; // Added PostgrestResponse, PostgrestSingleResponse
+import { SupabaseClient, PostgrestError, PostgrestResponse, PostgrestSingleResponse } from '@supabase/supabase-js';
 
 export const DEFAULT_TIMEOUT_MS = 8000; // 8 seconds default timeout
 
@@ -39,45 +39,45 @@ export async function withTimeout<T>(
  * @param table - Table name
  * @param options - Additional options like timeout
  */
-export async function selectWithTimeout<RowType = any>( // Renamed T to RowType for clarity
+export async function selectWithTimeout<RowType = any>( 
   supabase: SupabaseClient,
   table: string,
   options: {
     columns?: string,
     eq?: [string, any],
     order?: [string, { ascending: boolean }],
-    single?: boolean, // Added option to fetch a single record
+    single?: boolean,
     timeoutMs?: number
   } = {}
-): Promise<{ data: RowType[] | RowType | null, error: PostgrestError | null }> { // Return type adjusted for single/multiple
+): Promise<{ data: RowType[] | RowType | null, error: PostgrestError | null }> { 
   const { columns = '*', eq, order, single = false, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
   
-  type QueryResponseType = single extends true ? PostgrestSingleResponse<RowType> : PostgrestResponse<RowType>;
-
-  // The queryFunction returns Promise<PostgrestResponse<RowType>> or Promise<PostgrestSingleResponse<RowType>>
-  // So withTimeout is generic over that response type
-  const supabaseResponse = await withTimeout<QueryResponseType>(async (signal) => {
+  return withTimeout(async (signal) => {
     let queryBuilder = supabase
       .from(table)
-      .select<string, RowType>(columns) // Explicitly type the select output row
+      .select<string, RowType>(columns)
       .abortSignal(signal);
       
     if (eq) {
       queryBuilder = queryBuilder.eq(eq[0], eq[1]);
     }
     
-    if (order && !single) { // order doesn't make sense with .single() which implies unique key
+    if (order && !single) {
       queryBuilder = queryBuilder.order(order[0], { ascending: order[1].ascending });
     }
     
+    let result;
     if (single) {
-      return queryBuilder.single() as PostgrestSingleResponse<RowType>;
+      // Use the `as unknown as` type conversion to properly handle the single response type
+      result = await (queryBuilder.single() as unknown as Promise<PostgrestSingleResponse<RowType>>);
+    } else {
+      // Use the `as unknown as` type conversion for the standard response type
+      result = await (queryBuilder as unknown as Promise<PostgrestResponse<RowType>>);
     }
-    return queryBuilder as PostgrestResponse<RowType>;
-  }, timeoutMs);
 
-  return { 
-    data: supabaseResponse.data,
-    error: supabaseResponse.error 
-  };
+    return { 
+      data: result.data,
+      error: result.error 
+    };
+  }, timeoutMs);
 }
