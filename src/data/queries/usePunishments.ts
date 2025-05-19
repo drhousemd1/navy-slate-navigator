@@ -10,12 +10,9 @@ export default function usePunishmentsQuery() {
   const queryKey = ["punishments", user?.id] as const;
 
   const queryFn = async (): Promise<PunishmentData[]> => {
-    // The user_id in the queryKey is already used to enable/disable the query.
-    // If user or user.id is not available, queryFn won't run due to `enabled` option.
-    // However, if it *does* run, user.id is guaranteed to be a string.
     const userId = user?.id;
     if (!userId) {
-      return []; // Should not happen if 'enabled' works correctly
+      return []; 
     }
 
     const { data, error } = await supabase
@@ -46,13 +43,13 @@ export default function usePunishmentsQuery() {
       created_at: dbPunishment.created_at,
       updated_at: dbPunishment.updated_at,
       // Ensure all properties match PunishmentData, adding undefined for optional ones if not in dbPunishment
-      icon_url: undefined, // Explicitly undefined as it's in PunishmentData but not fetched
-      usage_data: undefined, // Explicitly undefined
-      frequency_count: undefined, // Explicitly undefined
-    })) as PunishmentData[]; // Still casting, but ensure mapped object aligns with PunishmentData
+      icon_url: dbPunishment.icon_url || undefined, 
+      usage_data: dbPunishment.usage_data || undefined, 
+      frequency_count: dbPunishment.frequency_count || undefined, 
+    })) as PunishmentData[];
   };
 
-  return useQuery<PunishmentData[], Error, PunishmentData[], typeof queryKey>({
+  return useQuery({ // Removed explicit generic arguments
     queryKey: queryKey,
     queryFn: queryFn,
     enabled: !!user?.id,

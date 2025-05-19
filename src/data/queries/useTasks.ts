@@ -50,7 +50,7 @@ export default function useTasksQuery() {
     })) as Task[];
   };
 
-  return useQuery<Task[], Error, Task[], typeof queryKey>({
+  return useQuery({ // Removed explicit generic arguments
     queryKey: queryKey,
     queryFn: queryFn,
     enabled: !!user?.id,
