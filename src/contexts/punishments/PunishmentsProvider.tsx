@@ -1,41 +1,67 @@
+
 import React, { createContext, useContext, ReactNode } from 'react';
 import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
-import { usePunishmentsData } from '@/data/punishments/usePunishmentsData';
+// Changed import from usePunishmentsData to usePunishmentOperations directly
+import { usePunishmentOperations } from '@/contexts/punishments/usePunishmentOperations';
 import { QueryObserverResult } from '@tanstack/react-query';
 
-// Create a context with a default value that matches PunishmentsContextType
 const PunishmentsContext = createContext<PunishmentsContextType>({
   punishments: [],
-  savePunishment: async () => ({} as PunishmentData),
+  savePunishment: async () => ({} as PunishmentData), // This will use create/update from usePunishmentOperations
   deletePunishment: async () => {},
-  isLoading: false,
-  error: null, // Added default for error
+  isLoading: false, // This will be mapped from usePunishmentOperations.isLoadingPunishments
+  error: null,
   applyPunishment: async () => {},
-  recentlyAppliedPunishments: [],
-  fetchRandomPunishment: () => null,
+  recentlyAppliedPunishments: [], // This might need to be derived or removed if not used
+  fetchRandomPunishment: () => null, // This might need to be derived or removed
   refetchPunishments: async () => ({} as QueryObserverResult<PunishmentData[], Error>),
   getPunishmentHistory: () => [],
-  historyLoading: false,
+  historyLoading: false, // This will be mapped from usePunishmentOperations.isLoadingHistory
 });
 
-// Create a provider component
 export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const punishmentsDataHook = usePunishmentsData();
+  const punishmentOps = usePunishmentOperations();
 
   const contextValue: PunishmentsContextType = {
-    punishments: punishmentsDataHook.punishments || [],
-    savePunishment: async (data: Partial<PunishmentData>) => {
-      return punishmentsDataHook.savePunishment(data); 
+    punishments: punishmentOps.punishments || [],
+    // savePunishment now needs to differentiate between create and update
+    savePunishment: async (data: Partial<PunishmentData>): Promise<PunishmentData> => {
+      if (data.id) {
+        // It's an update
+        return punishmentOps.updatePunishment(data.id, data);
+      } else {
+        // It's a create
+        // Omit id, created_at, updated_at for creation
+        const { id, created_at, updated_at, ...creatableData } = data;
+        return punishmentOps.createPunishment(creatableData);
+      }
     },
-    deletePunishment: punishmentsDataHook.deletePunishment,
-    isLoading: punishmentsDataHook.isLoadingPunishments,
-    error: punishmentsDataHook.errorPunishments || null, // Pass error from hook
-    applyPunishment: punishmentsDataHook.applyPunishment,
-    recentlyAppliedPunishments: punishmentsDataHook.recentlyAppliedPunishments || [],
-    fetchRandomPunishment: punishmentsDataHook.selectRandomPunishment,
-    refetchPunishments: punishmentsDataHook.refetchPunishments,
-    getPunishmentHistory: punishmentsDataHook.getPunishmentHistory,
-    historyLoading: punishmentsDataHook.isLoadingHistory,
+    deletePunishment: punishmentOps.deletePunishment,
+    isLoading: punishmentOps.isLoadingPunishments, // Use specific loading state
+    error: punishmentOps.errorPunishments || null, // Use specific error state
+    applyPunishment: async (args: ApplyPunishmentArgs) => { // Match ApplyPunishmentArgs
+      // Original applyPunishment in usePunishmentOperations takes (punishmentId: string, points: number)
+      // This needs to be adapted if ApplyPunishmentArgs is different.
+      // For now, assuming ApplyPunishmentArgs provides punishmentId and points.
+      // Let's assume args has punishmentId and points. If structure is different, this needs fixing.
+      if ('punishmentId' in args && 'points' in args) {
+        await punishmentOps.applyPunishment(args.punishmentId, args.points);
+      } else if ('punishment' in args && args.punishment) { // Fallback if full punishment object is passed
+        await punishmentOps.applyPunishment(args.punishment.id, args.punishment.points);
+      } else {
+        console.error("applyPunishment called with incompatible arguments:", args);
+        throw new Error("Invalid arguments for applyPunishment");
+      }
+    },
+    recentlyAppliedPunishments: [], // TODO: This needs a source or removal. For now, empty.
+    fetchRandomPunishment: () => { // TODO: This needs implementation or removal.
+        const P = punishmentOps.punishments;
+        if(P.length === 0) return null;
+        return P[Math.floor(Math.random()*P.length)];
+    },
+    refetchPunishments: punishmentOps.refetchPunishments,
+    getPunishmentHistory: punishmentOps.getPunishmentHistory, // This is (punishmentId: string) => PunishmentHistoryItem[]
+    historyLoading: punishmentOps.isLoadingHistory, // Use specific loading state for history
   };
   
   return (

@@ -16,7 +16,7 @@ export interface TasksDataHook {
   saveTask: (taskData: Partial<Task>) => Promise<Task | null>;
   deleteTask: (taskId: string) => Promise<boolean>;
   toggleTaskCompletion: (taskId: string, completed: boolean, points: number) => Promise<boolean>;
-  refetchTasks: () => Promise<QueryObserverResult<Task[], Error>>;
+  refetchTasks: () => Promise<QueryObserverResult<Task[], Error>>; // This might be removed if not used elsewhere.
 }
 
 export const useTasksData = (): TasksDataHook => {
@@ -26,10 +26,11 @@ export const useTasksData = (): TasksDataHook => {
     data: tasks = [],
     isLoading,
     error,
-    refetch: refetchTasks,
+    refetch: refetchTasks, // Keep refetch for now, though direct cache updates are preferred for mutations
   } = useQuery<Task[], Error>({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
+    // staleTime, gcTime etc are now managed by useTasks query hook or global config
   });
 
   const { mutateAsync: createTaskMutation } = useCreateTask();
@@ -46,6 +47,11 @@ export const useTasksData = (): TasksDataHook => {
           id, 
           ...updates 
         } as UpdateTaskVariables);
+        if (savedTask) {
+          queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
+            oldData.map(task => task.id === savedTask!.id ? savedTask! : task)
+          );
+        }
       } else {
         const { id, created_at, updated_at, completed, last_completed_date, ...creatableDataFields } = taskData;
         
@@ -73,6 +79,11 @@ export const useTasksData = (): TasksDataHook => {
           background_images: (creatableDataFields as any).background_images,
         };
         savedTask = await createTaskMutation(variables);
+        if (savedTask) {
+          queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
+            [savedTask!, ...oldData]
+          );
+        }
       }
       return savedTask || null;
     } catch (e: any) {
@@ -85,16 +96,33 @@ export const useTasksData = (): TasksDataHook => {
   const deleteTask = async (taskId: string): Promise<boolean> => {
     try {
       await deleteTaskMutation(taskId);
+      queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
+        oldData.filter(task => task.id !== taskId)
+      );
       return true;
     } catch (e: any) {
       console.error('Error deleting task:', e);
+      // Toast is often handled by the mutation hook's onError
       return false;
     }
   };
 
-  const toggleTaskCompletion = async (taskId: string, completed: boolean, pointsValue: number): Promise<boolean> => {
+  const toggleTaskCompletion = async (taskId: string, completedParam: boolean, pointsValue: number): Promise<boolean> => {
     try {
-      await toggleCompletionWorkflowMutateAsync({ taskId, completed, pointsValue });
+      const updatedTaskData = await toggleCompletionWorkflowMutateAsync({ taskId, completed: completedParam, pointsValue });
+      
+      if (updatedTaskData && typeof updatedTaskData === 'object' && 'id' in updatedTaskData) {
+         queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
+           oldData.map(task => task.id === (updatedTaskData as Task).id ? (updatedTaskData as Task) : task)
+         );
+      } else {
+        queryClient.setQueryData<Task[]>(['tasks'], (oldData = []) =>
+          oldData.map(task =>
+            task.id === taskId ? { ...task, completed: completedParam, last_completed_date: completedParam ? new Date().toISOString() : task.last_completed_date } : task
+          )
+        );
+      }
+
       return true;
     } catch (e: any) {
       console.error('Error during toggleTaskCompletion workflow (TasksDataHandler):', e.message);

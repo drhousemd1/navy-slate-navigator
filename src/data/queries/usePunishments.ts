@@ -7,9 +7,9 @@ import { useAuth } from "@/contexts/auth";
 export default function usePunishments() {
   const { user } = useAuth();
   
-  return useQuery({
+  return useQuery<PunishmentData[], Error>({ // Explicitly type useQuery
     queryKey: ["punishments"],
-    queryFn: async () => {
+    queryFn: async (): Promise<PunishmentData[]> => { // Explicitly type queryFn return
       if (!user?.id) {
         return [];
       }
@@ -21,7 +21,7 @@ export default function usePunishments() {
         .order("created_at", { ascending: false });
         
       if (error) throw error;
-      return (data || []) as PunishmentData[];
+      return (data || []) as PunishmentData[]; // Keep cast
     },
     staleTime: Infinity,
   });

@@ -7,9 +7,9 @@ import { useAuth } from "@/contexts/auth";
 export default function useTasks() {
   const { user } = useAuth();
 
-  return useQuery({
+  return useQuery<Task[], Error>({ // Explicitly type useQuery
     queryKey: ["tasks"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Task[]> => { // Explicitly type queryFn return
       if (!user?.id) {
         return [];
       }
@@ -21,7 +21,7 @@ export default function useTasks() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data || []) as Task[];
+      return (data || []) as Task[]; // Keep cast here, but primary typing is on useQuery/queryFn
     },
     staleTime: Infinity,
   });
