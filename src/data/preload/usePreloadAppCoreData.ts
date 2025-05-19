@@ -2,7 +2,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { REWARDS_QUERY_KEY, fetchRewards } from '@/data/rewards/queries';
-import { RULES_QUERY_KEY, fetchRules } from '@/data/rules/queries';
+import { RULES_QUERY_KEY } from '@/data/rules/queries'; // Keep this for RULES_QUERY_KEY
+import { fetchRules } from '@/data/rules/fetchRules'; // Corrected import for fetchRules
 import { fetchTasks } from '@/data/tasks/queries';
 import { fetchPunishments } from '@/data/punishments/queries/fetchPunishments';
 import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
@@ -24,7 +25,7 @@ export const usePreloadAppCoreData = () => {
       // Rules
       await queryClient.prefetchQuery({
         queryKey: RULES_QUERY_KEY,
-        queryFn: fetchRules,
+        queryFn: fetchRules, // This will now use the correctly imported function
       });
       console.log('[PreloadAppCoreData] Rules pre-fetched.');
 
