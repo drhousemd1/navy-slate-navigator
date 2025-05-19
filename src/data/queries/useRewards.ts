@@ -5,11 +5,11 @@ import {
   saveRewardsToDB,
   getLastSyncTimeForRewards,
   setLastSyncTimeForRewards
-} from "../indexedDB/rewardsIndexedDB"; // Updated import path
-import { Reward } from '@/data/rewards/types';
+} from "../indexedDB/useIndexedDB";
+import { Reward } from '@/data/rewards/types'; // Corrected import
 import { fetchRewards as fetchRewardsFromServer } from '@/lib/rewardUtils';
 
-export function useRewards() {
+export function useRewards() { // This function is named useRewards
   return useQuery<Reward[]>({
     queryKey: ["rewards"],
     queryFn: async () => {
@@ -25,30 +25,19 @@ export function useRewards() {
       }
 
       if (!shouldFetch && localData) {
-        console.log('[useRewards] Returning rewards from IndexedDB');
         return localData;
       }
 
-      console.log('[useRewards] Fetching rewards from server');
-      const serverData = await fetchRewardsFromServer(); // This function needs to return Reward[]
+      const serverData = await fetchRewardsFromServer();
 
       if (serverData) {
-        // Ensure serverData is correctly typed as Reward[] before saving
-        await saveRewardsToDB(serverData as Reward[]);
+        await saveRewardsToDB(serverData);
         await setLastSyncTimeForRewards(new Date().toISOString());
-        console.log('[useRewards] Rewards fetched from server and saved to IndexedDB');
-        return serverData as Reward[];
+        return serverData;
       }
-      
-      // If server fetch fails or returns no data, return local data if available
-      if (localData) {
-        console.warn('[useRewards] Server fetch failed or returned no data, returning stale data from IndexedDB');
-        return localData;
-      }
-      
-      return []; // Fallback to empty array if no data anywhere
+      return localData || [];
     },
-    staleTime: Infinity, // Consider adjusting staleTime if frequent updates are expected
+    staleTime: Infinity,
     gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnWindowFocus: false
   });

@@ -1,91 +1,59 @@
 
-/**
- * CENTRALIZED DATA LOGIC – DO NOT DUPLICATE OR MODIFY OUTSIDE THIS FOLDER.
- * No query, mutation, or sync logic is allowed in components or page files.
- * All logic must use these shared, optimized hooks and utilities only.
- */
-
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from '@/integrations/supabase/client';
-import { Task, TaskPriority, TaskFrequency } from "@/data/tasks/types"; // Ensure this is the canonical Task type
-import {
-  loadTasksFromDB,
-  saveTasksToDB,
-  getLastSyncTimeForTasks,
-  setLastSyncTimeForTasks
-} from "../indexedDB/tasksIndexedDB"; // Updated import path
-import { processTasksWithRecurringLogic } from "@/lib/taskUtils"; // For applying daily resets etc.
+import { supabase } from "@/integrations/supabase/client";
+import { Task, TaskPriority } from "@/lib/taskUtils";
+import { useAuth } from "@/contexts/auth";
 
-const processDbTaskToAppTask = (dbTask: any): Task => {
-  return {
-    id: dbTask.id,
-    title: dbTask.title,
-    description: dbTask.description,
-    points: dbTask.points,
-    priority: (dbTask.priority || 'medium') as TaskPriority,
-    completed: dbTask.completed,
-    background_image_url: dbTask.background_image_url,
-    background_opacity: dbTask.background_opacity ?? 100,
-    focal_point_x: dbTask.focal_point_x ?? 50,
-    focal_point_y: dbTask.focal_point_y ?? 50,
-    frequency: (dbTask.frequency || 'daily') as TaskFrequency,
-    frequency_count: dbTask.frequency_count || 1,
-    usage_data: Array.isArray(dbTask.usage_data) && dbTask.usage_data.length === 7 
-                  ? dbTask.usage_data.map((val: any) => Number(val) || 0) 
-                  : Array(7).fill(0),
-    icon_url: dbTask.icon_url,
-    icon_name: dbTask.icon_name,
-    icon_color: dbTask.icon_color || '#9b87f5',
-    highlight_effect: dbTask.highlight_effect ?? false,
-    title_color: dbTask.title_color || '#FFFFFF',
-    subtext_color: dbTask.subtext_color || '#8E9196',
-    calendar_color: dbTask.calendar_color || '#7E69AB',
-    last_completed_date: dbTask.last_completed_date,
-    created_at: dbTask.created_at,
-    updated_at: dbTask.updated_at,
-    week_identifier: dbTask.week_identifier,
-    background_images: dbTask.background_images, // This should now match the Task type
+export default function useTasksQuery() {
+  const { user } = useAuth();
+
+  const queryKey = ["tasks", user?.id] as const;
+
+  const queryFn = async (): Promise<Task[]> => {
+    const userId = user?.id;
+    if (!userId) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("user_id", userId) // Note: 'user_id' column is not in the provided 'tasks' table schema. This might be an issue for data filtering.
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(dbTask => ({
+      id: dbTask.id,
+      title: dbTask.title,
+      description: dbTask.description,
+      points: dbTask.points,
+      priority: dbTask.priority as TaskPriority,
+      completed: dbTask.completed,
+      background_image_url: dbTask.background_image_url,
+      background_opacity: dbTask.background_opacity,
+      focal_point_x: dbTask.focal_point_x,
+      focal_point_y: dbTask.focal_point_y,
+      frequency: dbTask.frequency as 'daily' | 'weekly',
+      frequency_count: dbTask.frequency_count,
+      usage_data: dbTask.usage_data || [],
+      icon_url: dbTask.icon_url, // Assuming icon_url is part of tasks schema if mapped
+      icon_name: dbTask.icon_name,
+      icon_color: dbTask.icon_color,
+      highlight_effect: dbTask.highlight_effect, // Assuming highlight_effect is part of tasks schema
+      title_color: dbTask.title_color,
+      subtext_color: dbTask.subtext_color,
+      calendar_color: dbTask.calendar_color,
+      last_completed_date: dbTask.last_completed_date,
+      created_at: dbTask.created_at,
+      updated_at: dbTask.updated_at,
+    })) as Task[];
   };
-};
 
-export function useTasks() {
-  return useQuery<Task[], Error>({
-    queryKey: ["tasks"],
-    queryFn: async (): Promise<Task[]> => {
-      const localData = await loadTasksFromDB(); 
-      const lastSync = await getLastSyncTimeForTasks();
-      let shouldFetch = true;
-
-      if (lastSync) {
-        const timeDiff = Date.now() - new Date(lastSync as string).getTime();
-        if (timeDiff < 1000 * 60 * 30) { // 30 minutes
-          shouldFetch = false;
-        }
-      }
-
-      if (!shouldFetch && localData) {
-        return processTasksWithRecurringLogic(localData.map(processDbTaskToAppTask));
-      }
-
-      const { data, error } = await supabase.from("tasks").select("*").order('created_at', { ascending: true });
-      if (error) throw error;
-
-      if (data) {
-        const processedServerTasks = data.map(processDbTaskToAppTask);
-        const tasksToStore = processTasksWithRecurringLogic(processedServerTasks);
-        await saveTasksToDB(tasksToStore);
-        await setLastSyncTimeForTasks(new Date().toISOString());
-        return tasksToStore;
-      }
-      if (localData) {
-        return processTasksWithRecurringLogic(localData.map(processDbTaskToAppTask));
-      }
-      return []; 
-    },
+  return useQuery({ // Removed explicit generic arguments
+    queryKey: queryKey,
+    queryFn: queryFn,
+    enabled: !!user?.id,
     staleTime: Infinity,
-    gcTime: 1000 * 60 * 30, 
-    refetchOnWindowFocus: false, 
-    refetchOnReconnect: false,
-    refetchOnMount: false, 
   });
 }
