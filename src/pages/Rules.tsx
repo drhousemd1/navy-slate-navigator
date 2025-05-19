@@ -8,23 +8,25 @@ import RulesList from '../components/rule/RulesList';
 import { RewardsProvider } from '@/contexts/RewardsContext'; 
 import { RulesProvider, useRules } from '@/contexts/RulesContext';
 import { Rule } from '@/data/interfaces/Rule';
+import { useSyncManager } from '@/hooks/useSyncManager';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import useRulesQuery from '@/data/queries/useRules'; // Import the new hook
+// import { usePreloadRules } from "@/data/preload/usePreloadRules"; // Removed
 
 // Separate component to use the useRules hook inside RulesProvider
 const RulesWithContext: React.FC = () => {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
+  const { rules, isLoading, error, saveRule, deleteRule, markRuleBroken } = useRules();
+
+  // const { syncNow } = useSyncManager({ // syncNow from useSyncManager not used directly here anymore
+  //   intervalMs: 30000,
+  //   enabled: true 
+  // });
   
-  // Use the new hook
-  const { 
-    data: rules = [], 
-    isLoading, 
-    error 
-  } = useRulesQuery();
-  
-  const { saveRule, deleteRule, markRuleBroken } = useRules();
+  // useEffect(() => { // syncNow call removed as preloading handles initial fetch
+  //   // syncNow(); 
+  // }, []);
 
   const handleAddRule = () => {
     console.log('handleAddRule called in RulesWithContext');
@@ -34,7 +36,7 @@ const RulesWithContext: React.FC = () => {
 
   React.useEffect(() => {
     console.log('Setting up event listener for add-new-rule');
-    const element = document.querySelector('.RulesContent');
+    const element = document.querySelector('.RulesContent'); // Class name might need adjustment if layout changes
     if (element) {
       const handleAddEvent = () => {
         console.log('Received add-new-rule event');
@@ -64,7 +66,7 @@ const RulesWithContext: React.FC = () => {
 
   const handleDeleteRule = async (ruleId: string) => {
     try {
-      await deleteRule(ruleId);
+      await deleteRule(ruleId); // deleteRule from useRules now returns Promise<void>
       setCurrentRule(null);
       setIsEditorOpen(false);
     } catch (err) {
@@ -80,27 +82,18 @@ const RulesWithContext: React.FC = () => {
       console.error('Error marking rule as broken:', err);
     }
   };
-  
-  if (isLoading && !rules.length) {
-    // Show just the header during loading
+
+  if (error && (!rules || rules.length === 0)) { // Check rules length as well for empty state on error
     return (
       <div className="container mx-auto px-4 py-6 RulesContent">
-        <RulesHeader />
-      </div>
-    );
-  }
-  
-  if (!isLoading && (!rules || rules.length === 0)) {
-    // Show empty state
-    return (
-      <div className="container mx-auto px-4 py-6 RulesContent">
-        <RulesHeader />
-        <div className="text-white text-center mt-8">
-          <p>You currently have no rules.</p>
-          <p>Please create one to continue.</p>
+        <RulesHeader /> 
+        <div className="flex flex-col items-center justify-center mt-8">
+          <div className="text-red-500 p-4 border border-red-400 rounded-md bg-red-900/20">
+            <h3 className="font-bold mb-2">Error Loading Rules</h3>
+            <p>{error.message || "Couldn't connect to the server. Please try again."}</p>
+          </div>
         </div>
-        
-        <RuleEditor
+         <RuleEditor
           isOpen={isEditorOpen}
           onClose={() => {
             setIsEditorOpen(false);
@@ -114,14 +107,13 @@ const RulesWithContext: React.FC = () => {
     );
   }
   
-  // We have data
   return (
-    <div className="container mx-auto px-4 py-6 RulesContent">
-      <RulesHeader />
+    <div className="container mx-auto px-4 py-6 RulesContent"> {/* Added RulesContent class */}
+      <RulesHeader /> {/* Removed onAddNewRule prop */}
 
       <RulesList
         rules={rules}
-        isLoading={false} // We're handling loading state separately now
+        isLoading={isLoading && rules.length === 0}
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
         onCreateRuleClick={handleAddRule} 
@@ -153,7 +145,7 @@ const Rules: React.FC = () => {
         content.dispatchEvent(event);
       }
     }}>
-      <RewardsProvider>
+      <RewardsProvider> {/* This might be app-wide, ensure it's needed here specifically */}
         <RulesProvider>
           <ErrorBoundary fallbackMessage="Could not load rules. Please try reloading.">
             <RulesWithContext />
@@ -165,3 +157,4 @@ const Rules: React.FC = () => {
 };
 
 export default Rules;
+

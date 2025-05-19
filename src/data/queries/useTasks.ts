@@ -1,59 +1,74 @@
 
+/**
+ * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
+ * No query, mutation, or sync logic is allowed in components or page files.
+ * All logic must use these shared, optimized hooks and utilities only.
+ */
+
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Task, TaskPriority } from "@/lib/taskUtils";
-import { useAuth } from "@/contexts/auth";
+import { supabase } from '@/integrations/supabase/client';
+import { Task } from '@/lib/taskUtils'; // Assuming Task interface is correctly defined here
+import {
+  loadTasksFromDB,
+  saveTasksToDB,
+  getLastSyncTimeForTasks,
+  setLastSyncTimeForTasks
+} from "../indexedDB/useIndexedDB";
 
-export default function useTasksQuery() {
-  const { user } = useAuth();
+export function useTasks() {
+  return useQuery<Task[], Error>({ 
+    queryKey: ["tasks"],
+    queryFn: async () => {
+      const localData = await loadTasksFromDB() as Task[] | null;
+      const lastSync = await getLastSyncTimeForTasks();
+      let shouldFetch = true;
 
-  const queryKey = ["tasks", user?.id] as const;
+      if (lastSync) {
+        const timeDiff = Date.now() - new Date(lastSync as string).getTime();
+        // Sync if older than 30 minutes
+        if (timeDiff < 1000 * 60 * 30) { 
+          shouldFetch = false;
+        }
+      }
 
-  const queryFn = async (): Promise<Task[]> => {
-    const userId = user?.id;
-    if (!userId) {
-      return [];
-    }
+      if (!shouldFetch && localData) {
+        console.log("[useTasks] Using cached tasks from IndexedDB.");
+        return localData;
+      }
 
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("user_id", userId) // Note: 'user_id' column is not in the provided 'tasks' table schema. This might be an issue for data filtering.
-      .order("created_at", { ascending: false });
+      console.log("[useTasks] Fetching tasks from Supabase.");
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
+      if (error) {
+        console.error("[useTasks] Error fetching tasks from Supabase:", error);
+        // If Supabase fetch fails, and we have local data (even if stale), return it.
+        if (localData) {
+          console.warn("[useTasks] Supabase fetch failed, returning stale local data.");
+          return localData;
+        }
+        throw error; // Otherwise, throw the error to be handled by React Query
+      }
 
-    return (data || []).map(dbTask => ({
-      id: dbTask.id,
-      title: dbTask.title,
-      description: dbTask.description,
-      points: dbTask.points,
-      priority: dbTask.priority as TaskPriority,
-      completed: dbTask.completed,
-      background_image_url: dbTask.background_image_url,
-      background_opacity: dbTask.background_opacity,
-      focal_point_x: dbTask.focal_point_x,
-      focal_point_y: dbTask.focal_point_y,
-      frequency: dbTask.frequency as 'daily' | 'weekly',
-      frequency_count: dbTask.frequency_count,
-      usage_data: dbTask.usage_data || [],
-      icon_url: dbTask.icon_url, // Assuming icon_url is part of tasks schema if mapped
-      icon_name: dbTask.icon_name,
-      icon_color: dbTask.icon_color,
-      highlight_effect: dbTask.highlight_effect, // Assuming highlight_effect is part of tasks schema
-      title_color: dbTask.title_color,
-      subtext_color: dbTask.subtext_color,
-      calendar_color: dbTask.calendar_color,
-      last_completed_date: dbTask.last_completed_date,
-      created_at: dbTask.created_at,
-      updated_at: dbTask.updated_at,
-    })) as Task[];
-  };
+      if (data) {
+        const tasksData = data as Task[];
+        await saveTasksToDB(tasksData);
+        await setLastSyncTimeForTasks(new Date().toISOString());
+        console.log("[useTasks] Successfully fetched and cached tasks.");
+        return tasksData;
+      }
 
-  return useQuery({ // Removed explicit generic arguments
-    queryKey: queryKey,
-    queryFn: queryFn,
-    enabled: !!user?.id,
+      // Fallback to localData if Supabase returns no data (e.g. empty table)
+      // or if data is null for some reason but no error.
+      console.log("[useTasks] No data from Supabase, returning local data or empty array.");
+      return localData || []; 
+    },
     staleTime: Infinity,
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    refetchOnWindowFocus: false,
+    // refetchOnMount is false by default in queryClient config
+    // refetchOnReconnect is false by default in queryClient config
   });
 }

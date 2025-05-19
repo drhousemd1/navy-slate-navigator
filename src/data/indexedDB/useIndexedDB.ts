@@ -1,4 +1,3 @@
-
 import localforage from 'localforage';
 import { Reward } from '@/data/rewards/types';
 import { PunishmentData as ContextPunishmentData, PunishmentHistoryItem as ContextPunishmentHistoryItem } from '@/contexts/punishments/types';
