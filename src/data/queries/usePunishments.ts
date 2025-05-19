@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT DUPLICATE OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -63,12 +62,37 @@ export function usePunishments() {
 
       if (data) {
         // Process data to ensure it has all the necessary fields
-        const punishmentsData = data.map(item => ({
-          ...item,
-          icon_url: item.icon_url || null,
-          usage_data: item.usage_data || Array(7).fill(0),
-          frequency_count: item.frequency_count || 0
-        })) as Punishment[];
+        const punishmentsData = data.map(item => {
+          // Use 'as any' for properties that TypeScript might not see on 'item'
+          // but are expected from the database or need defaults.
+          const typedItem = item as any; 
+          return {
+            // Spread common properties that are assumed to be correctly typed
+            id: typedItem.id,
+            title: typedItem.title,
+            description: typedItem.description,
+            points: typedItem.points,
+            dom_points: typedItem.dom_points,
+            dom_supply: typedItem.dom_supply,
+            background_image_url: typedItem.background_image_url,
+            background_opacity: typedItem.background_opacity,
+            icon_name: typedItem.icon_name,
+            title_color: typedItem.title_color,
+            subtext_color: typedItem.subtext_color,
+            calendar_color: typedItem.calendar_color,
+            icon_color: typedItem.icon_color,
+            highlight_effect: typedItem.highlight_effect,
+            focal_point_x: typedItem.focal_point_x,
+            focal_point_y: typedItem.focal_point_y,
+            created_at: typedItem.created_at,
+            updated_at: typedItem.updated_at,
+            
+            // Handle fields that were causing TypeScript errors
+            icon_url: typedItem.icon_url || null,
+            usage_data: typedItem.usage_data || Array(7).fill(0),
+            frequency_count: 0, // Initialize to 0 as it's not directly from the DB table
+          };
+        }) as Punishment[];
         
         await savePunishmentsToDB(punishmentsData);
         await setLastSyncTimeForPunishments(new Date().toISOString());
