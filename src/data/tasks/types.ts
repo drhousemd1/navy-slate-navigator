@@ -1,6 +1,6 @@
 import { Task } from '@/lib/taskUtils'; // Assuming Task is well-defined here
 
-// Local type to ensure 'id' is present for the generic hook's TItem constraint
+// Export this to fix the import error in mutation files
 export type TaskWithId = Task & { id: string };
 
 // Define variables for creating a task
@@ -14,7 +14,7 @@ export type CreateTaskVariables = Partial<Omit<Task, 'id' | 'created_at' | 'upda
   
   // Other optional fields explicitly listed for clarity
   description?: string;
-  frequency?: string;
+  frequency?: 'daily' | 'weekly';
   frequency_count?: number;
   priority?: 'low' | 'medium' | 'high';
   icon_name?: string;
@@ -28,6 +28,7 @@ export type CreateTaskVariables = Partial<Omit<Task, 'id' | 'created_at' | 'upda
   focal_point_x?: number;
   focal_point_y?: number;
   icon_url?: string;
+  usage_data?: number[];
 };
 
 // Define variables for updating a task

@@ -29,6 +29,8 @@ export interface Task {
   updated_at?: string;
 }
 
+export type TaskPriority = 'low' | 'medium' | 'high';
+
 export const getLocalDateString = (): string => {
   const today = new Date();
   // Format as YYYY-MM-DD
@@ -117,7 +119,6 @@ export const fetchTasks = async (): Promise<Task[]> => {
   }
 };
 
-
 export const resetTaskCompletions = async (
   frequency: "daily" | "weekly"
 ): Promise<void> => {
@@ -167,7 +168,7 @@ export const resetTaskCompletions = async (
   }
 };
 
-const processTaskFromDb = (task: any): Task => {
+export const processTaskFromDb = (task: any): Task => {
   return {
     id: task.id,
     title: task.title,
@@ -195,6 +196,19 @@ const processTaskFromDb = (task: any): Task => {
     created_at: task.created_at,
     updated_at: task.updated_at
   };
+};
+
+export const processTasksWithRecurringLogic = (rawTasks: any[]): Task[] => {
+  if (!rawTasks) return [];
+  const todayStr = getLocalDateString();
+  return rawTasks.map(rawTask => {
+    const task = processTaskFromDb(rawTask);
+
+    if (task.frequency === 'daily' && task.completed && task.last_completed_date !== todayStr) {
+      return { ...task, completed: false };
+    }
+    return task;
+  });
 };
 
 export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
@@ -465,17 +479,4 @@ export const deleteTask = async (taskId: string): Promise<boolean> => {
   }
   console.log(`[taskUtils] Task ${taskId} deleted successfully.`);
   return true;
-};
-
-export const processTasksWithRecurringLogic = (rawTasks: any[]): Task[] => {
-  if (!rawTasks) return [];
-  const todayStr = getLocalDateString();
-  return rawTasks.map(rawTask => {
-    const task = processTaskFromDb(rawTask);
-
-    if (task.frequency === 'daily' && task.completed && task.last_completed_date !== todayStr) {
-      return { ...task, completed: false };
-    }
-    return task;
-  });
 };

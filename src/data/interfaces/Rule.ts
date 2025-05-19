@@ -1,4 +1,5 @@
 
+
 // Rule interface definition to be used across rule-related data handling
 export interface Rule {
   id: string;

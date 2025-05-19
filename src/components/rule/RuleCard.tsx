@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,8 @@ interface RuleCardProps {
 }
 
 const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken }) => {
+  const frequency = rule.frequency as 'daily' | 'weekly';
+
   return (
     <Card 
       className={`bg-dark-navy border-2 ${
@@ -75,7 +76,7 @@ const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken }) =
 
         <div className="flex items-center justify-between mt-2 relative z-10">
           <FrequencyTracker 
-            frequency={rule.frequency}
+            frequency={frequency}
             frequency_count={rule.frequency_count}
             calendar_color={rule.calendar_color}
             usage_data={rule.usage_data}
