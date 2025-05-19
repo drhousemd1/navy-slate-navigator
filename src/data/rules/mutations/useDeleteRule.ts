@@ -20,7 +20,7 @@ export const useDeleteRule = () => {
     },
     entityName: 'Rule',
     idField: 'id',
-    onSuccessCallback: async (ruleId: string) => { // Corrected signature
+    onSuccessCallback: async (ruleId: string) => { 
       console.log('[useDeleteRule onSuccessCallback] Rule deleted on server, updating IndexedDB for rule ID:', ruleId);
       try {
         const localRules = await loadRulesFromDB() || [];
@@ -34,11 +34,12 @@ export const useDeleteRule = () => {
         toast({ variant: "destructive", title: "Local Update Error", description: "Rule deleted on server, but failed to update local data." });
       }
     },
-    mutationOptions: { // onError moved into mutationOptions
-      onError: (error, ruleId) => { 
-        console.error('[useDeleteRule onError] Error deleting rule:', error, ruleId);
-        // Generic error toast is handled by useDeleteOptimisticMutation
-      },
+    mutationOptions: { 
+      // onError was here, it's removed as the optimistic hook handles it.
+      // The generic error toast is handled by useDeleteOptimisticMutation.
+      // Specific console logging like:
+      // console.error('[useDeleteRule onError] Error deleting rule:', error, ruleId);
+      // is now omitted.
     }
   });
 };

@@ -67,12 +67,12 @@ export const useCreateRule = () => {
         toast({ variant: "destructive", title: "Local Save Error", description: "Rule created on server, but failed to save locally." });
       }
     },
-    mutationOptions: { // onError moved into mutationOptions
-      onError: (error, variables) => {
-        console.error('[useCreateRule onError] Error creating rule:', error, variables);
-        // Generic error toast is handled by useCreateOptimisticMutation
-        // toast({ variant: "destructive", title: "Rule Creation Failed", description: error.message || "Could not create the rule." });
-      },
+    mutationOptions: { 
+      // onError was here, it's removed as the optimistic hook handles it.
+      // The generic error toast is handled by useCreateOptimisticMutation.
+      // Specific console logging like:
+      // console.error('[useCreateRule onError] Error creating rule:', error, variables);
+      // is now omitted. If this detailed logging is crucial, we can enhance the optimistic hook.
     }
   });
 };

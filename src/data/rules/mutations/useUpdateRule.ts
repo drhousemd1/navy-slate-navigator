@@ -43,11 +43,12 @@ export const useUpdateRule = () => {
         toast({ variant: "destructive", title: "Local Save Error", description: "Rule updated on server, but failed to save changes locally." });
       }
     },
-    mutationOptions: { // onError moved into mutationOptions
-      onError: (error, variables) => {
-        console.error('[useUpdateRule onError] Error updating rule:', error, variables);
-        // Generic error toast is handled by useUpdateOptimisticMutation
-      },
+    mutationOptions: { 
+      // onError was here, it's removed as the optimistic hook handles it.
+      // The generic error toast is handled by useUpdateOptimisticMutation.
+      // Specific console logging like:
+      // console.error('[useUpdateRule onError] Error updating rule:', error, variables);
+      // is now omitted.
     }
   });
 };
