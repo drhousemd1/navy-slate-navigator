@@ -1,16 +1,17 @@
-import { Task } from '@/lib/taskUtils'; // Assuming Task is well-defined here
 
-// Local type to ensure 'id' is present for the generic hook's TItem constraint
+import { Task } from '@/lib/taskUtils';
+
+// Export TaskWithId to fix the import errors
 export type TaskWithId = Task & { id: string };
 
 // Define variables for creating a task
 // Title and points are required, others can be optional or have defaults
-export type CreateTaskVariables = Partial<Omit<Task, 'id' | 'created_at' | 'updated_at' | 'completed' | 'last_completed_date' | 'title' | 'points'>> & {
+export type CreateTaskVariables = Partial<Omit<Task, 'id' | 'created_at' | 'updated_at' | 'completed' | 'last_completed_date' | 'title' | 'points' | 'usage_data'>> & {
   title: string;
   points: number;
   // Explicitly add fields that were causing type errors, ensuring they are optional
   week_identifier?: string | null;
-  background_images?: any; // Ideally, replace 'any' with a more specific type like JsonValue if available
+  background_images?: any; // Using any for compatibility, but ideally should match Task definition
   
   // Other optional fields explicitly listed for clarity
   description?: string;

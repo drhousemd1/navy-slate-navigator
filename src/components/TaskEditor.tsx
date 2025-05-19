@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
@@ -27,9 +28,9 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
     onClose(); 
   };
 
-  const handleDelete = (taskId: string) => {
+  const handleDelete = async (taskId: string) => {
     if (onDelete) {
-      onDelete(taskId);
+      await onDelete(taskId);
       onClose(); // Close editor after delete action
     }
   };

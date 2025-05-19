@@ -6,10 +6,10 @@ import {
   getLastSyncTimeForRewards,
   setLastSyncTimeForRewards
 } from "../indexedDB/useIndexedDB";
-import { Reward } from '@/data/rewards/types'; // Corrected import
+import { Reward } from '@/data/rewards/types'; 
 import { fetchRewards as fetchRewardsFromServer } from '@/lib/rewardUtils';
 
-export function useRewards() { // This function is named useRewards
+export function useRewards() {
   return useQuery<Reward[]>({
     queryKey: ["rewards"],
     queryFn: async () => {

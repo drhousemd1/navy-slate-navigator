@@ -21,6 +21,7 @@ export default function useRules() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+      // Make sure we're returning the correct Rule type
       return (data || []) as Rule[];
     },
     staleTime: Infinity,
