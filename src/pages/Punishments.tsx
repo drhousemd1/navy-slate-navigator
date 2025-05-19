@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Skull, AlertTriangle, LoaderCircle } from 'lucide-react'; // Keep Skull if used by ErrorBoundary, added AlertTriangle
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
-import PunishmentEditor from '../components/PunishmentEditor';
+import PunishmentEditor from './PunishmentEditor';
 import { PunishmentData } from '@/contexts/punishments/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { useSyncManager } from '@/hooks/useSyncManager';
 import PunishmentList from '@/components/punishments/PunishmentList';
 import { usePunishmentsQuery, PunishmentsQueryResult } from '@/data/punishments/queries'; // Import PunishmentsQueryResult
 import { useCreatePunishment, useUpdatePunishment, useDeletePunishment, CreatePunishmentVariables, UpdatePunishmentVariables } from '@/data/punishments/mutations';
-import { toast } from '@/components/ui/use-toast'; // Or from '@/hooks/use-toast'
+import { toast } from '@/hooks/use-toast'; // Changed to match other import patterns
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>

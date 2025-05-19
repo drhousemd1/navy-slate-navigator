@@ -11,7 +11,7 @@ interface PunishmentEditorProps {
   isOpen: boolean;
   onClose: () => void;
   punishmentData?: PunishmentData;
-  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData>; // Changed to accept Partial and return PunishmentData
+  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData | void>; // Updated to allow void return
   onDelete?: (id: string) => void;
 }
 

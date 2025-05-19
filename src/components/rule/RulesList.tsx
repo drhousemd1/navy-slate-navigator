@@ -1,4 +1,3 @@
-
 import React from 'react';
 import RuleCard from './RuleCard';
 import { Rule } from '@/data/interfaces/Rule';
@@ -63,16 +62,14 @@ const RulesList: React.FC<RulesListProps> = ({
     );
   }
 
-  const CachedDataBanner = isUsingCachedData && rules.length > 0 ? (
-    <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-md flex items-center gap-2">
-      <WifiOff className="h-5 w-5 text-amber-500" />
-      <span className="text-sm text-amber-700 dark:text-amber-400">Showing cached data. Some information might be outdated.</span>
-    </div>
-  ) : null;
-
   return (
     <>
-      {CachedDataBanner}
+      {isUsingCachedData && rules.length > 0 ? (
+        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-md flex items-center gap-2">
+          <WifiOff className="h-5 w-5 text-amber-500" />
+          <span className="text-sm text-amber-700 dark:text-amber-400">Showing cached data. Some information might be outdated.</span>
+        </div>
+      ) : null}
       <div className="space-y-4">
         {rules.map((rule) => (
           <RuleCard

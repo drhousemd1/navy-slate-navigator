@@ -80,7 +80,7 @@ const RewardsList: React.FC<RewardsListProps> = ({
           <RewardCard
             key={reward.id}
             reward={reward}
-            onEdit={onEdit}
+            onEdit={() => onEdit(reward)}
             handleBuyReward={handleBuyReward}
             handleUseReward={handleUseReward}
           />

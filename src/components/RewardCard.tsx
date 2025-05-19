@@ -5,79 +5,66 @@ import RewardHeader from './rewards/RewardHeader';
 import RewardContent from './rewards/RewardContent';
 import RewardFooter from './rewards/RewardFooter';
 import { useToast } from '../hooks/use-toast';
+import { Reward } from '@/data/rewards/types';
 
 interface RewardCardProps {
-  title: string;
-  description: string;
-  cost: number;
-  supply: number;
-  isDomReward?: boolean;
-  iconName?: string;
-  iconColor?: string;
-  onBuy?: (cost: number) => void;
-  onUse?: () => void;
+  reward: Reward;
   onEdit?: () => void;
-  backgroundImage?: string | null;
-  backgroundOpacity?: number;
-  focalPointX?: number;
-  focalPointY?: number;
-  highlight_effect?: boolean;
-  title_color?: string;
-  subtext_color?: string;
-  calendar_color?: string;
-  usageData?: boolean[];
-  frequencyCount?: number;
+  handleBuyReward?: (rewardId: string, cost: number) => void;
+  handleUseReward?: (rewardId: string) => void;
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({
-  title,
-  description,
-  cost,
-  supply,
-  isDomReward = false,
-  iconName = 'Gift',
-  iconColor = '#9b87f5',
-  onBuy,
-  onUse,
+  reward,
   onEdit,
-  backgroundImage,
-  backgroundOpacity = 100,
-  focalPointX = 50,
-  focalPointY = 50,
-  highlight_effect = false,
-  title_color = '#FFFFFF',
-  subtext_color = '#8E9196',
-  calendar_color = '#7E69AB',
-  usageData = Array(7).fill(false)
+  handleBuyReward,
+  handleUseReward
 }) => {
   const { toast } = useToast();
+  
+  // Extract all properties from reward object
+  const {
+    id,
+    title,
+    description = "",
+    cost,
+    supply,
+    is_dom_reward = false,
+    icon_name = 'Gift',
+    icon_url,
+    icon_color = '#9b87f5',
+    background_image_url: backgroundImage,
+    background_opacity = 100,
+    focal_point_x = 50,
+    focal_point_y = 50,
+    highlight_effect = false,
+    title_color = '#FFFFFF',
+    subtext_color = '#8E9196',
+    calendar_color = '#7E69AB',
+  } = reward;
 
-  const handleBuy = (cost: number) => {
-    if (onBuy) {
-      onBuy(cost);
+  const usageData = Array(7).fill(false); // Default usage data if not provided
+
+  const handleBuy = () => {
+    if (handleBuyReward && id) {
+      handleBuyReward(id, cost);
     }
   };
 
   const handleUse = () => {
-    if (onUse) {
-      onUse();
-    }
-  };
-
-  const handleEdit = () => {
-    if (onEdit) {
-      onEdit();
+    if (handleUseReward && id) {
+      handleUseReward(id);
     }
   };
 
   // Define border color based on if it's a dom reward and if there's supply
-  const cardBorderColor = isDomReward 
+  const cardBorderColor = is_dom_reward 
     ? "#ea384c" // Red for dom rewards
     : (supply > 0 ? "#FEF7CD" : "#00f0ff"); // Yellow for sub rewards with supply, blue otherwise
   
   const cardBorderStyle = {
     borderColor: cardBorderColor,
-    boxShadow: supply > 0 ? `0 0 8px 2px rgba(${isDomReward ? '234, 56, 76, 0.6' : '254, 247, 205, 0.6'})` : undefined,
+    boxShadow: supply > 0 ? `0 0 8px 2px rgba(${is_dom_reward ? '234, 56, 76, 0.6' : '254, 247, 205, 0.6'})` : undefined,
     backgroundColor: '#000000' // Adding black background as requested
   };
 
@@ -92,8 +79,8 @@ const RewardCard: React.FC<RewardCardProps> = ({
           style={{
             backgroundImage: `url(${backgroundImage})`,
             backgroundSize: 'cover',
-            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
-            opacity: backgroundOpacity / 100,
+            backgroundPosition: `${focal_point_x}% ${focal_point_y}%`,
+            opacity: background_opacity / 100,
           }}
         />
       )}
@@ -102,7 +89,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
           title={title}
           supply={supply}
           cost={cost}
-          isDomReward={isDomReward}
+          isDomReward={is_dom_reward}
           onBuy={handleBuy}
           onUse={handleUse}
         />
@@ -110,8 +97,8 @@ const RewardCard: React.FC<RewardCardProps> = ({
         <RewardContent
           title={title}
           description={description}
-          iconName={iconName}
-          iconColor={iconColor}
+          iconName={icon_name}
+          iconColor={icon_color}
           highlight_effect={highlight_effect}
           title_color={title_color}
           subtext_color={subtext_color}
@@ -120,7 +107,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
         <RewardFooter
           usageData={usageData}
           calendarColor={calendar_color}
-          onEdit={handleEdit}
+          onEdit={onEdit}
         />
       </div>
     </Card>

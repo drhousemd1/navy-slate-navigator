@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
@@ -9,7 +10,7 @@ interface RewardEditorProps {
   isOpen: boolean;
   onClose: () => void;
   rewardData?: any;
-  onSave: (rewardData: any) => Promise<void> | void;
+  onSave: (rewardData: any) => Promise<any> | void; // Updated to allow any return type
   onDelete?: (id: string) => void; // Changed from number to string
 }
 
