@@ -1,5 +1,5 @@
 
-import { useQuery, QueryKey } from "@tanstack/react-query";
+import { useQuery, QueryKey, UseQueryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PunishmentData } from "@/contexts/punishments/types";
 import { useAuth } from "@/contexts/auth";
@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/auth";
 export default function usePunishmentsQuery() {
   const { user } = useAuth();
 
-  return useQuery<PunishmentData[], Error, PunishmentData[], QueryKey>({
+  const queryOptions: UseQueryOptions<PunishmentData[], Error, PunishmentData[], QueryKey> = {
     queryKey: ["punishments", user?.id],
     queryFn: async (): Promise<PunishmentData[]> => {
       if (!user?.id) {
@@ -22,7 +22,6 @@ export default function usePunishmentsQuery() {
 
       if (error) throw error;
 
-      // Explicit mapping to ensure type alignment and help TS compiler
       return (data || []).map(dbPunishment => ({
         id: dbPunishment.id,
         title: dbPunishment.title,
@@ -37,17 +36,16 @@ export default function usePunishmentsQuery() {
         calendar_color: dbPunishment.calendar_color,
         highlight_effect: dbPunishment.highlight_effect,
         icon_name: dbPunishment.icon_name,
-        // icon_url is not in the punishments table schema
         icon_color: dbPunishment.icon_color,
         focal_point_x: dbPunishment.focal_point_x,
         focal_point_y: dbPunishment.focal_point_y,
-        // usage_data is not in the punishments table schema
-        // frequency_count is not in the punishments table schema
         created_at: dbPunishment.created_at,
         updated_at: dbPunishment.updated_at,
       })) as PunishmentData[];
     },
     enabled: !!user?.id,
     staleTime: Infinity,
-  });
+  };
+
+  return useQuery(queryOptions);
 }

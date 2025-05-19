@@ -1,13 +1,13 @@
 
-import { useQuery, QueryKey } from "@tanstack/react-query";
+import { useQuery, QueryKey, UseQueryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Task, TaskPriority } from "@/lib/taskUtils"; // Assuming TaskPriority is correctly exported
+import { Task, TaskPriority } from "@/lib/taskUtils"; // Assuming TaskPriority is correctly exported and defined
 import { useAuth } from "@/contexts/auth";
 
 export default function useTasksQuery() {
   const { user } = useAuth();
 
-  return useQuery<Task[], Error, Task[], QueryKey>({
+  const queryOptions: UseQueryOptions<Task[], Error, Task[], QueryKey> = {
     queryKey: ["tasks", user?.id],
     queryFn: async (): Promise<Task[]> => {
       if (!user?.id) {
@@ -50,5 +50,7 @@ export default function useTasksQuery() {
     },
     enabled: !!user?.id,
     staleTime: Infinity,
-  });
+  };
+
+  return useQuery(queryOptions);
 }
