@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
-// PunishmentCard is now used within PunishmentList
 import { Skull } from 'lucide-react';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
@@ -10,10 +9,8 @@ import { PunishmentData } from '@/contexts/punishments/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
-// PunishmentCardSkeleton is not used based on previous refactoring.
 import { useSyncManager } from '@/hooks/useSyncManager';
-// PUNISHMENTS_QUERY_KEY is not directly used here anymore.
-import PunishmentList from '@/components/punishments/PunishmentList'; // Import new component
+import PunishmentList from '@/components/punishments/PunishmentList';
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -45,7 +42,7 @@ const PunishmentsContent: React.FC<{
     return () => {
       contentRef.current = {};
     };
-  }, [contentRef]);
+  }, [contentRef]); // Added contentRef to dependency array
   
   const handleEditPunishment = (punishment: PunishmentData) => {
     setCurrentPunishment(punishment);
@@ -65,19 +62,7 @@ const PunishmentsContent: React.FC<{
     setCurrentPunishment(undefined);
   };
   
-  const showInitialLoader = isLoadingPunishments && punishments.length === 0;
-
-  if (showInitialLoader) {
-    return (
-      <div className="p-4 pt-6">
-        <PunishmentsHeader />
-        <div className="space-y-4 mt-4">
-          <p className="text-center text-gray-400">Loading punishments...</p>
-        </div>
-      </div>
-    );
-  }
-  
+  // Handle initial load error state separately
   if (!isLoadingPunishments && errorPunishments && punishments.length === 0) {
     return (
       <div className="p-4 pt-6 text-center">
@@ -96,42 +81,18 @@ const PunishmentsContent: React.FC<{
     );
   }
   
-  if (!isLoadingPunishments && punishments.length === 0 && !isEditorOpen) {
-    return (
-      <div className="p-4 pt-6">
-        <PunishmentsHeader />
-        <EmptyState
-          icon={Skull}
-          title="No Punishments Yet"
-          description="You currently have no punishments. Please create one to continue."
-          action={
-            <Button 
-              onClick={handleAddNewPunishment} 
-              className="mt-4"
-            >
-              Create Punishment
-            </Button>
-          }
-        />
-        
-        <PunishmentEditor
-          isOpen={isEditorOpen}
-          onClose={() => setIsEditorOpen(false)}
-          punishmentData={currentPunishment}
-          onSave={handleSavePunishmentEditor}
-          onDelete={handleDeletePunishmentEditor}
-        />
-      </div>
-    );
-  }
-  
+  // The PunishmentList will now handle its own loading and empty states.
+  // The editor is rendered regardless of the list's state if isEditorOpen is true.
   return (
     <div className="p-4 pt-6">
       <PunishmentsHeader />
       
       <PunishmentList 
         punishments={punishments}
+        // Pass true for isLoading if we are loading AND there are no punishments yet displayed (empty cache)
+        isLoading={isLoadingPunishments && punishments.length === 0}
         onEditPunishment={handleEditPunishment}
+        onCreatePunishmentClick={handleAddNewPunishment}
       />
       
       <PunishmentEditor
