@@ -23,18 +23,17 @@ const RulesList: React.FC<RulesListProps> = ({
   error,
   isUsingCachedData
 }) => {
-  // Only show toast for cached data once
   React.useEffect(() => {
-    if (isUsingCachedData) {
+    if (isUsingCachedData && !isLoading) { // Show toast only when not actively loading
       toast({
         title: "Using cached data",
         description: "We're currently showing you cached rules data due to connection issues.",
         variant: "default"
       });
     }
-  }, [isUsingCachedData]);
+  }, [isUsingCachedData, isLoading]);
 
-  if (isLoading && rules.length === 0) {
+  if (isLoading && (!rules || rules.length === 0)) {
     return (
       <div className="flex flex-col items-center justify-center py-10">
         <LoaderCircle className="h-10 w-10 text-primary animate-spin mb-2" />
@@ -43,18 +42,18 @@ const RulesList: React.FC<RulesListProps> = ({
     );
   }
 
-  if (error && rules.length === 0) {
+  if (error && (!rules || rules.length === 0)) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-10">
         <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
         <p className="text-lg font-semibold mb-2">Error loading rules</p>
         <p className="text-slate-400">{error.message}</p>
-        <p className="text-slate-400 mt-4">We'll automatically retry loading your data.</p>
+        <p className="text-slate-400 mt-4">We'll automatically retry loading your data. If the problem persists, check your connection.</p>
       </div>
     );
   }
 
-  if (!isLoading && rules.length === 0) {
+  if (!isLoading && rules.length === 0) { // Condition implies error is null or handled
     return (
       <EmptyState
         icon={ShieldOff}
@@ -64,11 +63,10 @@ const RulesList: React.FC<RulesListProps> = ({
     );
   }
 
-  // Show a banner if using cached data but we have rules to show
   const CachedDataBanner = isUsingCachedData && rules.length > 0 ? (
     <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-md flex items-center gap-2">
       <WifiOff className="h-5 w-5 text-amber-500" />
-      <span className="text-sm">Showing cached data due to connection issues.</span>
+      <span className="text-sm text-amber-700 dark:text-amber-400">Showing cached data. Some information might be outdated.</span>
     </div>
   ) : null;
 

@@ -6,20 +6,26 @@ import RewardsHeader from '../components/rewards/RewardsHeader';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-import { useRewards as useRewardsQuery } from '@/data/queries/useRewards';
+import { useRewards as useRewardsQuery, RewardsQueryResult } from '@/data/queries/useRewards';
 import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
-import { Reward, UpdateRewardVariables } from '@/data/rewards/types';
+import { Reward, UpdateRewardVariables, CreateRewardVariables } from '@/data/rewards/types';
 import { toast } from '@/hooks/use-toast';
 
 import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePointsManager } from '@/data/points/usePointsManager';
+import Hydrate from '@/components/Hydrate';
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
-  const { data: rewardsData, isLoading, error: queryError } = useRewardsQuery();
+  const { 
+    data: rewardsData, 
+    isLoading, 
+    error: queryError,
+    isUsingCachedData 
+  }: RewardsQueryResult = useRewardsQuery();
   const rewards = Array.isArray(rewardsData) ? rewardsData : [];
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -76,7 +82,7 @@ const RewardsContent: React.FC<{
         cost,
         currentSupply: rewardToBuy.supply,
         profileId: user.id,
-        currentPoints: currentUserPoints
+        currentPoints: currentUserPoints ?? 0
       });
     } catch (e) {
       console.error("Error buying reward from page:", e);
@@ -114,45 +120,53 @@ const RewardsContent: React.FC<{
   useEffect(() => {
     contentRef.current = { handleAddNewReward };
     return () => { contentRef.current = {}; };
-  }, [contentRef, handleAddNewReward]);
-
-  const handleSaveRewardEditor = async (formData: Partial<Reward>) => {
+  }, [contentRef]);
+  
+  const handleSaveRewardEditor = async (formData: Partial<Reward>): Promise<Reward | void> => {
     try {
       if (rewardBeingEdited?.id) {
         const updateVariables: UpdateRewardVariables = {
           id: rewardBeingEdited.id,
           ...formData, 
         };
-        await updateRewardMutation.mutateAsync(updateVariables);
+        const updated = await updateRewardMutation.mutateAsync(updateVariables);
+        setIsEditorOpen(false);
+        setRewardBeingEdited(undefined);
+        return updated;
       } else {
         if (!formData.title || typeof formData.cost !== 'number' || typeof formData.supply !== 'number' || typeof formData.is_dom_reward !== 'boolean') {
           toast({ title: "Missing required fields", description: "Title, cost, supply, and DOM status are required.", variant: "destructive" });
-          return;
+          throw new Error("Missing required fields for reward creation.");
         }
-        const createVariables = {
+        const createVariables: CreateRewardVariables = {
           title: formData.title,
           cost: formData.cost,
           supply: formData.supply,
           is_dom_reward: formData.is_dom_reward,
           description: formData.description || null,
           background_image_url: formData.background_image_url || null,
-          background_opacity: formData.background_opacity === undefined ? 100 : formData.background_opacity,
+          background_opacity: formData.background_opacity ?? 100,
           icon_name: formData.icon_name || 'Award',
           icon_url: formData.icon_url || null,
           icon_color: formData.icon_color || '#9b87f5',
           title_color: formData.title_color || '#FFFFFF',
           subtext_color: formData.subtext_color || '#8E9196',
           calendar_color: formData.calendar_color || '#7E69AB',
-          highlight_effect: formData.highlight_effect === undefined ? false : formData.highlight_effect,
-          focal_point_x: formData.focal_point_x === undefined ? 50 : formData.focal_point_x,
-          focal_point_y: formData.focal_point_y === undefined ? 50 : formData.focal_point_y,
+          highlight_effect: formData.highlight_effect ?? false,
+          focal_point_x: formData.focal_point_x ?? 50,
+          focal_point_y: formData.focal_point_y ?? 50,
         };
-        await createRewardMutation.mutateAsync(createVariables);
+        const created = await createRewardMutation.mutateAsync(createVariables);
+        setIsEditorOpen(false);
+        setRewardBeingEdited(undefined);
+        return created;
       }
-      setIsEditorOpen(false);
-      setRewardBeingEdited(undefined);
     } catch (e) {
       console.error("Error saving reward from page:", e);
+      if (!(e instanceof Error && e.message.includes("Missing required fields"))) {
+        toast({ title: "Save Error", description: e instanceof Error ? e.message : "Could not save reward.", variant: "destructive" });
+      }
+      throw e;
     }
   };
 
@@ -197,6 +211,8 @@ const RewardsContent: React.FC<{
         onEdit={handleEditReward}
         handleBuyReward={handleBuyRewardWrapper}
         handleUseReward={handleUseRewardWrapper}
+        error={queryError}
+        isUsingCachedData={isUsingCachedData}
       />
     );
   };
@@ -215,7 +231,7 @@ const RewardsContent: React.FC<{
         }}
         rewardData={rewardBeingEdited}
         onSave={handleSaveRewardEditor}
-        onDelete={handleDeleteRewardEditor}
+        onDelete={rewardBeingEdited?.id ? () => handleDeleteRewardEditor(rewardBeingEdited.id) : undefined}
       />
     </div>
   );
@@ -233,7 +249,9 @@ const Rewards: React.FC = () => {
   return (
     <AppLayout onAddNewItem={handleAddNewRewardFromLayout}>
       <ErrorBoundary fallbackMessage="Could not load rewards. Please try reloading.">
-        <RewardsContent contentRef={contentRef} />
+        <Hydrate fallbackMessage="Loading your rewards...">
+          <RewardsContent contentRef={contentRef} />
+        </Hydrate>
       </ErrorBoundary>
     </AppLayout>
   );

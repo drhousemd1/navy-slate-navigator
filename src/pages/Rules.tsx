@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import RuleEditor from '../components/RuleEditor';
 import RulesHeader from '../components/rule/RulesHeader';
@@ -7,13 +6,11 @@ import RulesList from '../components/rule/RulesList';
 import { Rule } from '@/data/interfaces/Rule';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Hydrate from '@/components/Hydrate';
-import { useRulesData } from '@/data/hooks/useRulesData';
+import { useRulesData, RulesQueryResult } from '@/data/RulesDataHandler';
 
-// Renamed component and using useRulesData directly
 const RulesPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
-  // Using useRulesData directly
   const { 
     rules, 
     isLoading, 
@@ -22,20 +19,18 @@ const RulesPageContent: React.FC = () => {
     deleteRule, 
     markRuleBroken,
     isUsingCachedData 
-  } = useRulesData();
+  }: RulesQueryResult = useRulesData();
 
   const handleAddRule = () => {
-    console.log('handleAddRule called in RulesPageContent');
     setCurrentRule(null);
     setIsEditorOpen(true);
   };
 
-  React.useEffect(() => {
-    console.log('Setting up event listener for add-new-rule');
+  useEffect(() => {
     const element = document.querySelector('.RulesContent'); 
     if (element) {
-      const handleAddEvent = () => {
-        console.log('Received add-new-rule event');
+      const handleAddEvent = (event: Event) => {
+        console.log('Received add-new-rule event on RulesContent');
         handleAddRule();
       };
       element.addEventListener('add-new-rule', handleAddEvent);
@@ -123,21 +118,18 @@ const RulesPageContent: React.FC = () => {
         }}
         ruleData={currentRule || undefined}
         onSave={handleSaveRule}
-        onDelete={handleDeleteRule}
+        onDelete={currentRule ? () => handleDeleteRule(currentRule.id) : undefined}
       />
     </div>
   );
 };
 
-// Main Rules component that sets up the providers
 const Rules: React.FC = () => {
   return (
     <AppLayout onAddNewItem={() => {
-      console.log('AppLayout onAddNewItem called for Rules');
       const content = document.querySelector('.RulesContent');
       if (content) {
-        console.log('Dispatching add-new-rule event');
-        const event = new CustomEvent('add-new-rule');
+        const event = new CustomEvent('add-new-rule', { bubbles: true });
         content.dispatchEvent(event);
       }
     }}>

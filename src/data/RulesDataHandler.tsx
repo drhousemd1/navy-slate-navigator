@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
+import { useQuery, useQueryClient, QueryObserverResult, UseQueryResult } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useCreateRule } from "@/data/rules/mutations/useCreateRule";
@@ -7,30 +7,12 @@ import { useDeleteRule } from "@/data/rules/mutations/useDeleteRule";
 import { Rule } from '@/data/interfaces/Rule';
 import { fetchRules } from '@/data/rules/fetchRules';
 import { recordViolation } from '@/data/rules/recordViolation';
+import { RULES_QUERY_KEY } from './rules/queries';
 
-// Export wrapper functions
-/*
-export async function createRuleInDb(newRule: any, profileId?: string): Promise<boolean> {
-  // This needs to be a component or custom hook to use useCreateRule
-  // const { mutateAsync } = useCreateRule(); 
-  // ...
-  return true;
-}
-
-export async function updateRuleInDb(ruleId: string, updates: Partial<Rule>): Promise<boolean> {
-  // This needs to be a component or custom hook to use useUpdateRule
-  // const { mutateAsync } = useUpdateRule();
-  // ...
-  return true;
-}
-
-export async function deleteRuleInDb(ruleId: string): Promise<boolean> {
-  // This needs to be a component or custom hook to use useDeleteRule
-  // const { mutateAsync } = useDeleteRule();
-  // ...
-  return true;
-}
-*/
+// Define the RulesQueryResult type
+export type RulesQueryResult = UseQueryResult<Rule[], Error> & {
+  isUsingCachedData: boolean;
+};
 
 export const useRulesData = () => {
   const queryClient = useQueryClient();
@@ -38,21 +20,21 @@ export const useRulesData = () => {
   const { mutateAsync: updateRule } = useUpdateRule();
   const { mutateAsync: deleteRule } = useDeleteRule();
 
-  // Query for fetching rules
-  const {
-    data: rules = [],
-    isLoading,
-    error,
-    refetch
-  } = useQuery<Rule[], Error>({
-    queryKey: ['rules'],
+  const queryResult = useQuery<Rule[], Error>({
+    queryKey: RULES_QUERY_KEY,
     queryFn: fetchRules,
-    staleTime: Infinity,
-    gcTime: 1000 * 60 * 30, // 30 minutes
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
+    retry: 1,
+    retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
   });
+
+  const isUsingCachedData =
+    (!!queryResult.error && queryResult.data && queryResult.data.length > 0) ||
+    (queryResult.isStale && queryResult.fetchStatus === 'idle' && queryResult.data && queryResult.data.length > 0 && queryResult.errorUpdateCount > 0);
 
   // Mark rule broken
   const markRuleBroken = async (rule: Rule): Promise<void> => {
@@ -147,13 +129,14 @@ export const useRulesData = () => {
 
   // Refetch rules
   const refetchRules = async (): Promise<QueryObserverResult<Rule[], Error>> => {
-    return refetch();
+    return queryResult.refetch();
   };
 
   return {
-    rules,
-    isLoading,
-    error,
+    rules: queryResult.data || [],
+    isLoading: queryResult.isLoading,
+    error: queryResult.error,
+    isUsingCachedData,
     saveRule: saveRuleOperation,
     deleteRule: deleteRuleOperation,
     markRuleBroken,
