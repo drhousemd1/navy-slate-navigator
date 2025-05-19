@@ -3,7 +3,7 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Plus, MessageSquare, BookOpen } from 'lucide-react';
+import { Plus, MessageSquare } from 'lucide-react'; // Removed BookOpen import
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/contexts/auth';
 import AccountSheet from './AccountSheet';
@@ -97,11 +97,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />
             
-            {/* App Guide icon */}
+            {/* App Guide icon - REMOVED
             <BookOpen 
               className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors"
               onClick={() => navigate('/app-guide')}
             />
+            */}
 
             {/* Messaging icon */}
             <MessageSquare 

@@ -10,7 +10,7 @@ import ThroneRoom from './pages/ThroneRoom';
 import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Encyclopedia from './pages/Encyclopedia';
-import AppGuide from './pages/AppGuide';
+// import AppGuide from './pages/AppGuide'; // Removed AppGuide import
 import Auth from './pages/auth'; // Import the main Auth component
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotFound from './pages/NotFound';
@@ -28,7 +28,7 @@ const AppRoutes = () => {
       <Route path="/profile" element={<ErrorBoundary><Profile /></ErrorBoundary>} />
       <Route path="/messages" element={<ErrorBoundary><Messages /></ErrorBoundary>} />
       <Route path="/encyclopedia" element={<ErrorBoundary><Encyclopedia /></ErrorBoundary>} />
-      <Route path="/app-guide" element={<ErrorBoundary><AppGuide /></ErrorBoundary>} />
+      {/* <Route path="/app-guide" element={<ErrorBoundary><AppGuide /></ErrorBoundary>} /> // Removed AppGuide route */}
       
       {/* Auth routes now use the main Auth component */}
       <Route path="/auth" element={<ErrorBoundary><Auth /></ErrorBoundary>} />
@@ -41,4 +41,3 @@ const AppRoutes = () => {
 };
 
 export default AppRoutes;
-
