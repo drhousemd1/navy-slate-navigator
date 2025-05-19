@@ -3,15 +3,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
+import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries'; // Correct import
+import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; // For IndexedDB
 
-// Local type to ensure 'id' is present for the generic hook's TItem constraint
 type PunishmentWithId = PunishmentData & { id: string };
 
 export type CreatePunishmentVariables = Partial<Omit<PunishmentData, 'id' | 'created_at' | 'updated_at' | 'dom_supply'>> & {
   title: string;
   points: number;
-  dom_supply?: number; // Make dom_supply optional here, will default if not provided
-  // profile_id?: string; // Add if it's part of the variables for creation
+  dom_supply?: number;
 };
 
 export const useCreatePunishment = () => {
@@ -19,11 +19,11 @@ export const useCreatePunishment = () => {
 
   return useCreateOptimisticMutation<PunishmentWithId, Error, CreatePunishmentVariables>({
     queryClient,
-    queryKey: ['punishments'],
+    queryKey: PUNISHMENTS_QUERY_KEY,
     mutationFn: async (variables: CreatePunishmentVariables) => {
       const dataToInsert = {
         ...variables,
-        dom_supply: variables.dom_supply ?? 0, // Default to 0 if not provided
+        dom_supply: variables.dom_supply ?? 0,
       };
       const { data, error } = await supabase
         .from('punishments')
@@ -32,13 +32,13 @@ export const useCreatePunishment = () => {
         .single();
       if (error) throw error;
       if (!data) throw new Error('Punishment creation failed.');
-      return data as PunishmentWithId; // Cast to ensure 'id' is seen as non-optional
+      return data as PunishmentWithId;
     },
     entityName: 'Punishment',
     createOptimisticItem: (variables, optimisticId) => {
       const now = new Date().toISOString();
       return {
-        id: optimisticId, // Now satisfies PunishmentWithId
+        id: optimisticId,
         created_at: now,
         updated_at: now,
         icon_name: variables.icon_name || 'ShieldAlert',
@@ -51,10 +51,13 @@ export const useCreatePunishment = () => {
         highlight_effect: variables.highlight_effect || false,
         focal_point_x: variables.focal_point_x || 50,
         focal_point_y: variables.focal_point_y || 50,
-        dom_supply: variables.dom_supply ?? 0, // Default dom_supply for optimistic item
-        ...variables, // title and points are required by CreatePunishmentVariables
-      } as PunishmentWithId; // Cast to ensure 'id' is seen as non-optional
+        dom_supply: variables.dom_supply ?? 0,
+        ...variables,
+      } as PunishmentWithId;
+    },
+    onSuccessOptimistic: async () => { // Changed from onMutateSuccess
+      const currentPunishments = queryClient.getQueryData<PunishmentWithId[]>(PUNISHMENTS_QUERY_KEY) || [];
+      await savePunishmentsToDB(currentPunishments);
     },
   });
 };
-

@@ -3,8 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
+import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries'; // Correct import
+import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; // For IndexedDB
 
-// Local type to ensure 'id' is present for the generic hook's TItem constraint
 type PunishmentWithId = PunishmentData & { id: string };
 
 export type UpdatePunishmentVariables = { id: string } & Partial<Omit<PunishmentData, 'id'>>;
@@ -14,7 +15,7 @@ export const useUpdatePunishment = () => {
 
   return useUpdateOptimisticMutation<PunishmentWithId, Error, UpdatePunishmentVariables>({
     queryClient,
-    queryKey: ['punishments'],
+    queryKey: PUNISHMENTS_QUERY_KEY,
     mutationFn: async (variables: UpdatePunishmentVariables) => {
       const { id, ...updates } = variables;
       const { data, error } = await supabase
@@ -25,9 +26,13 @@ export const useUpdatePunishment = () => {
         .single();
       if (error) throw error;
       if (!data) throw new Error('Punishment update failed.');
-      return data as PunishmentWithId; // Cast to ensure 'id' is seen as non-optional
+      return data as PunishmentWithId;
     },
     entityName: 'Punishment',
-    idField: 'id', // idField refers to the key name, 'id'
+    idField: 'id',
+    onSuccessOptimistic: async () => { // Changed from onMutateSuccess
+      const currentPunishments = queryClient.getQueryData<PunishmentWithId[]>(PUNISHMENTS_QUERY_KEY) || [];
+      await savePunishmentsToDB(currentPunishments);
+    },
   });
 };

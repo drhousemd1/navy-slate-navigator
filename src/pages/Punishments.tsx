@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentCard from '../components/PunishmentCard';
@@ -5,45 +6,37 @@ import { Skull } from 'lucide-react';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { usePunishments } from '@/contexts/punishments/PunishmentsProvider';
-import { PunishmentData } from '@/contexts/punishments/types';
-import { toast } from '@/hooks/use-toast';
-import { useDeletePunishment } from "@/data/punishments/mutations/useDeletePunishment";
-import { useCreatePunishment, CreatePunishmentVariables } from '@/data/punishments/mutations/useCreatePunishment';
-import { useUpdatePunishment, UpdatePunishmentVariables } from '@/data/punishments/mutations/useUpdatePunishment';
-import PunishmentCardSkeleton from '@/components/punishments/PunishmentCardSkeleton';
+import { PunishmentData } from '@/contexts/punishments/types'; // Keep this for type consistency
 import ErrorBoundary from '@/components/ErrorBoundary';
 import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
+import PunishmentCardSkeleton from '@/components/punishments/PunishmentCardSkeleton'; // Keep for loading state if desired, though prompt wants immediate render
+import { useSyncManager } from '@/hooks/useSyncManager'; // Import useSyncManager
+import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries'; // Import query key
+
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
 }> = ({ contentRef }) => {
-  // Use the hook from context provider
   const { 
-    punishments, // This now comes from the standardized usePunishmentsData via context
-    isLoading: isLoadingPunishments, // Renamed from isLoading to avoid conflict if other loading states are added
-    error: errorPunishments, // Renamed from error
-    refetchPunishments 
+    punishments,
+    isLoading: isLoadingPunishments,
+    error: errorPunishments,
+    refetchPunishments,
+    savePunishment, // from context
+    deletePunishment // from context
   } = usePunishments();
   
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  // No need for isInitialLoad if we rely on isLoadingPunishments from the hook for the very first load
   
-  const { mutateAsync: deletePunishmentAsync } = useDeletePunishment();
-  const { mutateAsync: createPunishmentAsync } = useCreatePunishment();
-  const { mutateAsync: updatePunishmentAsync } = useUpdatePunishment();
-  
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialLoad(false);
-    }, 200); // Short delay to allow initial cached data to render if available
-    return () => clearTimeout(timer);
-  }, []);
-  
-  // Use isLoadingPunishments from the context hook
-  const showLoader = isInitialLoad && isLoadingPunishments && punishments.length === 0;
-  
+  // useSyncManager({ includeKeys: [PUNISHMENTS_QUERY_KEY] }); // Sync only punishments data for this page
+  // Simpler: if PUNISHMENTS_QUERY_KEY is in CRITICAL_QUERY_KEYS, this will sync it by default.
+  // CRITICAL_QUERY_KEYS.PUNISHMENTS is ['punishments']
+  useSyncManager({ enabled: true });
+
+
   const handleAddNewPunishment = () => {
     setCurrentPunishment(undefined);
     setIsEditorOpen(true);
@@ -57,69 +50,44 @@ const PunishmentsContent: React.FC<{
     return () => {
       contentRef.current = {};
     };
-  }, [contentRef, handleAddNewPunishment]);
+  }, [contentRef]); // Removed handleAddNewPunishment from deps as it's stable due to useCallback in usePunishmentsData
   
   const handleEditPunishment = (punishment: PunishmentData) => {
     setCurrentPunishment(punishment);
     setIsEditorOpen(true);
   };
   
-  const handleSavePunishment = async (punishmentData: Partial<PunishmentData>): Promise<PunishmentData> => {
-    try {
-      if (punishmentData.id) {
-        const { id, ...updates } = punishmentData;
-        const updatedPunishment = await updatePunishmentAsync({ id, ...updates });
-        setIsEditorOpen(false);
-        setCurrentPunishment(undefined);
-        return updatedPunishment as PunishmentData;
-      } else {
-        const { id, created_at, updated_at, ...creatableData } = punishmentData;
-        const variables: CreatePunishmentVariables = {
-          title: creatableData.title || 'Default Title', 
-          points: creatableData.points || 0, 
-          dom_supply: creatableData.dom_supply ?? 0, 
-          ...creatableData,
-        };
-        const createdPunishment = await createPunishmentAsync(variables);
-        setIsEditorOpen(false);
-        setCurrentPunishment(undefined);
-        return createdPunishment as PunishmentData;
-      }
-    } catch (error) {
-      console.error("Error saving punishment (from page component):", error);
-      throw error;
-    }
+  // onSave for PunishmentEditor, matches (data: Partial<PunishmentData>) => Promise<PunishmentData>
+  const handleSavePunishmentEditor = async (punishmentData: Partial<PunishmentData>): Promise<PunishmentData> => {
+    // The savePunishment from context now aligns with the expected signature after changes in usePunishmentsData and provider
+    const saved = await savePunishment(punishmentData);
+    setIsEditorOpen(false);
+    setCurrentPunishment(undefined);
+    return saved; // savePunishment from context now returns PunishmentData
   };
   
-  const handleDeletePunishment = async (id: string) => {
-    try {
-      await deletePunishmentAsync(id);
-      setIsEditorOpen(false);
-      setCurrentPunishment(undefined);
-    } catch (error) {
-      console.error("Error deleting punishment:", error);
-      toast({
-        title: "Error on Page",
-        description: "Failed to delete punishment from page.",
-        variant: "destructive"
-      });
-    }
+  const handleDeletePunishmentEditor = async (id: string) => {
+    await deletePunishment(id);
+    setIsEditorOpen(false);
+    setCurrentPunishment(undefined);
   };
   
-  if (showLoader) {
+  // Show loader only if truly loading for the first time and punishments array is empty
+  const showInitialLoader = isLoadingPunishments && punishments.length === 0;
+
+  if (showInitialLoader) {
     return (
       <div className="p-4 pt-6">
         <PunishmentsHeader />
         <div className="space-y-4 mt-4">
-          <PunishmentCardSkeleton />
-          <PunishmentCardSkeleton />
-          <PunishmentCardSkeleton />
+          {/* Per instructions, skeletons should be removed if data renders immediately from cache. */}
+          {/* If cache is empty, it should go to EmptyState. If loading from network first time, a simple text indicator is better. */}
+          <p className="text-center text-gray-400">Loading punishments...</p>
         </div>
       </div>
     );
   }
   
-  // Use errorPunishments from the context hook
   if (!isLoadingPunishments && errorPunishments && punishments.length === 0) {
     return (
       <div className="p-4 pt-6 text-center">
@@ -138,6 +106,7 @@ const PunishmentsContent: React.FC<{
     );
   }
   
+  // Immediate render from cache: if not loading, and punishments array is empty
   if (!isLoadingPunishments && punishments.length === 0 && !isEditorOpen) {
     return (
       <div className="p-4 pt-6">
@@ -145,7 +114,7 @@ const PunishmentsContent: React.FC<{
         <EmptyState
           icon={Skull}
           title="No Punishments Yet"
-          description="Create your first punishment to get started."
+          description="You currently have no punishments. Please create one to continue."
           action={
             <Button 
               onClick={handleAddNewPunishment} 
@@ -157,11 +126,11 @@ const PunishmentsContent: React.FC<{
         />
         
         <PunishmentEditor
-          isOpen={isEditorOpen}
+          isOpen={isEditorOpen} // This would be false here, so editor won't show based on this block
           onClose={() => setIsEditorOpen(false)}
           punishmentData={currentPunishment}
-          onSave={handleSavePunishment}
-          onDelete={handleDeletePunishment}
+          onSave={handleSavePunishmentEditor}
+          onDelete={handleDeletePunishmentEditor}
         />
       </div>
     );
@@ -183,10 +152,13 @@ const PunishmentsContent: React.FC<{
       
       <PunishmentEditor
         isOpen={isEditorOpen}
-        onClose={() => setIsEditorOpen(false)}
+        onClose={() => {
+            setIsEditorOpen(false);
+            setCurrentPunishment(undefined);
+        }}
         punishmentData={currentPunishment}
-        onSave={handleSavePunishment}
-        onDelete={handleDeletePunishment}
+        onSave={handleSavePunishmentEditor}
+        onDelete={handleDeletePunishmentEditor}
       />
     </div>
   );
@@ -202,8 +174,12 @@ const Punishments: React.FC = () => {
   };
   
   return (
+    // PunishmentsProvider should be higher up if AppLayout or other siblings need it.
+    // Assuming PunishmentsProvider is already in AppProviders.tsx or similar.
+    // If not, it should wrap PunishmentsContent. For now, let's assume it's provided globally.
     <AppLayout onAddNewItem={handleAddNewPunishmentLayout}>
       <ErrorBoundary fallbackMessage="Could not load punishments. Please try reloading.">
+        {/* PunishmentsProvider is removed from here, assuming it's in AppProviders or similar higher component */}
         <PunishmentsContent contentRef={contentRef} />
       </ErrorBoundary>
     </AppLayout>

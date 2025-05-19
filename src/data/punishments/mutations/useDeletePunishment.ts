@@ -1,11 +1,11 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { PunishmentData } from '@/contexts/punishments/types'; // Original type
+import { PunishmentData, PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
+import { PUNISHMENTS_QUERY_KEY, PUNISHMENT_HISTORY_QUERY_KEY } from '@/data/punishments/queries'; // Correct import
+import { savePunishmentsToDB, savePunishmentHistoryToDB } from '@/data/indexedDB/useIndexedDB'; // For IndexedDB
 
-// Local type to ensure 'id' is present for the generic hook's TItem constraint
-// This TItem is for the items in the cache, not necessarily what mutationFn returns
 type PunishmentWithId = PunishmentData & { id: string };
 
 export const useDeletePunishment = () => {
@@ -13,14 +13,20 @@ export const useDeletePunishment = () => {
 
   return useDeleteOptimisticMutation<PunishmentWithId, Error, string>({
     queryClient,
-    queryKey: ['punishments'],
+    queryKey: PUNISHMENTS_QUERY_KEY,
     mutationFn: async (punishmentId: string) => {
       const { error } = await supabase.from('punishments').delete().eq('id', punishmentId);
       if (error) throw error;
     },
     entityName: 'Punishment',
-    idField: 'id', // idField refers to the key name, 'id'
-    relatedQueryKey: ['allPunishmentHistory'], 
+    idField: 'id',
+    relatedQueryKey: PUNISHMENT_HISTORY_QUERY_KEY, 
     relatedIdField: 'punishment_id', 
+    onSuccessOptimistic: async () => { // Changed from onMutateSuccess
+      const currentPunishments = queryClient.getQueryData<PunishmentWithId[]>(PUNISHMENTS_QUERY_KEY) || [];
+      await savePunishmentsToDB(currentPunishments);
+      const currentHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY) || [];
+      await savePunishmentHistoryToDB(currentHistory);
+    },
   });
 };

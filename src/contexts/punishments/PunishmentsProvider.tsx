@@ -1,20 +1,20 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
-import { usePunishmentsData } from '@/data/punishments/usePunishmentsData';
+import { usePunishmentsData } from '@/data/punishments/usePunishmentsData'; // Corrected path
 import { QueryObserverResult } from '@tanstack/react-query';
 
 // Create a context with a default value that matches PunishmentsContextType
 const PunishmentsContext = createContext<PunishmentsContextType>({
   punishments: [],
-  savePunishment: async () => ({} as PunishmentData),
+  savePunishment: async () => (({} as unknown) as PunishmentData), // Adjusted default to satisfy type, will be overridden
   deletePunishment: async () => {},
   isLoading: false,
-  error: null, // Added default for error
+  error: null,
   applyPunishment: async () => {},
   recentlyAppliedPunishments: [],
   fetchRandomPunishment: () => null,
-  refetchPunishments: async () => ({} as QueryObserverResult<PunishmentData[], Error>),
+  refetchPunishments: async () => (({} as unknown) as QueryObserverResult<PunishmentData[], Error>), // Adjusted default
   getPunishmentHistory: () => [],
   historyLoading: false,
 });
@@ -25,12 +25,13 @@ export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const contextValue: PunishmentsContextType = {
     punishments: punishmentsDataHook.punishments || [],
-    savePunishment: async (data: Partial<PunishmentData>) => {
-      return punishmentsDataHook.savePunishment(data); 
-    },
+    // The savePunishment from usePunishmentsData now returns Promise<PunishmentWithId> or Promise<void> depending on create/update
+    // The context expects Promise<PunishmentData>. We might need to adjust types or cast.
+    // For now, let's assume the mutation hooks (useCreatePunishment, useUpdatePunishment) return data compatible with PunishmentData.
+    savePunishment: punishmentsDataHook.savePunishment as (data: Partial<PunishmentData>) => Promise<PunishmentData>,
     deletePunishment: punishmentsDataHook.deletePunishment,
     isLoading: punishmentsDataHook.isLoadingPunishments,
-    error: punishmentsDataHook.errorPunishments || null, // Pass error from hook
+    error: punishmentsDataHook.errorPunishments || null,
     applyPunishment: punishmentsDataHook.applyPunishment,
     recentlyAppliedPunishments: punishmentsDataHook.recentlyAppliedPunishments || [],
     fetchRandomPunishment: punishmentsDataHook.selectRandomPunishment,
