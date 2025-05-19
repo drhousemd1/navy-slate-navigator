@@ -1,4 +1,3 @@
-
 // Types for the Punishments feature
 export interface PunishmentData {
   id?: string; // Made optional to reflect that new punishments won't have an ID until saved
@@ -43,10 +42,8 @@ export interface ApplyPunishmentArgs {
 
 export interface PunishmentsContextType {
   punishments: PunishmentData[];
-  savePunishment: (data: Partial<PunishmentData>) => Promise<PunishmentData>;
-  deletePunishment: (id: string) => Promise<void>;
   isLoading: boolean;
-  error: Error | null; // Added error property
+  error: Error | null;
   applyPunishment: (args: ApplyPunishmentArgs) => Promise<void>;
   recentlyAppliedPunishments: PunishmentHistoryItem[];
   fetchRandomPunishment: () => PunishmentData | null;
