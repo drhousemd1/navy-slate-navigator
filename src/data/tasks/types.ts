@@ -33,6 +33,8 @@ export interface Task {
   // user_id?: string; // If tasks are user-specific and fetched for a user
 }
 
+export type TaskWithId = Task & { id: string };
+
 // Variables for creating a task. 'id', 'created_at', 'updated_at' are usually auto-generated.
 // 'usage_data' typically starts as an array of zeros.
 export type CreateTaskVariables = Omit<Task, 'id' | 'created_at' | 'updated_at' | 'usage_data'> & {
@@ -41,4 +43,3 @@ export type CreateTaskVariables = Omit<Task, 'id' | 'created_at' | 'updated_at' 
 
 // Variables for updating a task. 'id' is required to identify the task.
 export type UpdateTaskVariables = { id: string } & Partial<Omit<Task, 'id'>>;
-

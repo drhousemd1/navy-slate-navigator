@@ -7,13 +7,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from '@/integrations/supabase/client';
-import { Rule } from "@/data/interfaces/Rule";
+import { Rule } from "@/data/interfaces/Rule"; // Canonical Rule interface
 import {
   loadRulesFromDB,
   saveRulesToDB,
   getLastSyncTimeForRules,
   setLastSyncTimeForRules
-} from "../indexedDB/useIndexedDB";
+} from "../indexedDB/rulesIndexedDB"; // Updated import path
 
 // Helper to process raw DB data into Rule
 const processRuleFromDb = (dbRule: any): Rule => {
@@ -25,29 +25,30 @@ const processRuleFromDb = (dbRule: any): Rule => {
     dom_points_deducted: dbRule.dom_points_deducted,
     priority: dbRule.priority || 'medium',
     background_image_url: dbRule.background_image_url,
-    background_opacity: dbRule.background_opacity,
+    background_opacity: dbRule.background_opacity ?? 100,
     icon_url: dbRule.icon_url,
     icon_name: dbRule.icon_name,
-    title_color: dbRule.title_color,
-    subtext_color: dbRule.subtext_color,
-    calendar_color: dbRule.calendar_color,
-    icon_color: dbRule.icon_color,
-    highlight_effect: dbRule.highlight_effect,
-    focal_point_x: dbRule.focal_point_x,
-    focal_point_y: dbRule.focal_point_y,
+    title_color: dbRule.title_color || '#FFFFFF',
+    subtext_color: dbRule.subtext_color || '#8E9196',
+    calendar_color: dbRule.calendar_color || '#7E69AB',
+    icon_color: dbRule.icon_color || '#9b87f5',
+    highlight_effect: dbRule.highlight_effect ?? false,
+    focal_point_x: dbRule.focal_point_x ?? 50,
+    focal_point_y: dbRule.focal_point_y ?? 50,
     frequency: dbRule.frequency || 'daily',
     frequency_count: dbRule.frequency_count || 1,
-    usage_data: Array.isArray(dbRule.usage_data) ? dbRule.usage_data : [], // Ensure it's an array
+    usage_data: Array.isArray(dbRule.usage_data) && dbRule.usage_data.length === 7 
+                  ? dbRule.usage_data.map((val: any) => Number(val) || 0) 
+                  : Array(7).fill(0),
     created_at: dbRule.created_at,
     updated_at: dbRule.updated_at,
     user_id: dbRule.user_id,
-    // background_images: dbRule.background_images, // This field is in DB but not in Rule interface. Add if needed.
   };
 };
 
 export function useRules() {
   return useQuery<Rule[], Error>({
-    queryKey: ["rules"], // Removed profileId as rules are not user-specific in the current schema
+    queryKey: ["rules"], 
     queryFn: async (): Promise<Rule[]> => {
       const localData = await loadRulesFromDB(); // Should return Rule[] | null
       const lastSync = await getLastSyncTimeForRules();
@@ -62,14 +63,14 @@ export function useRules() {
 
       if (!shouldFetch && localData) {
         console.log("Serving rules from IndexedDB");
-        return localData;
+        return localData; // localData is already Rule[]
       }
       console.log("Fetching rules from Supabase");
       const { data, error } = await supabase.from("rules").select("*").order('created_at', { ascending: true });
       if (error) throw error;
 
       if (data) {
-        const rulesData = data.map(processRuleFromDb);
+        const rulesData = data.map(processRuleFromDb); // Ensures data conforms to Rule interface
         await saveRulesToDB(rulesData);
         await setLastSyncTimeForRules(new Date().toISOString());
         return rulesData;

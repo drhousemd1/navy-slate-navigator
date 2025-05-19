@@ -1,12 +1,12 @@
 import { useQuery, useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, processTasksWithRecurringLogic } from '@/lib/taskUtils'; 
+import { Task, CreateTaskVariables } from './tasks/types'; 
+import { processTasksWithRecurringLogic } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { fetchTasks } from './queries/tasks/fetchTasks';
 import { useCreateTask } from './tasks/mutations/useCreateTask';
 import { useUpdateTask, UpdateTaskVariables } from './tasks/mutations/useUpdateTask';
 import { useDeleteTask } from './tasks/mutations/useDeleteTask';
-import { CreateTaskVariables } from './tasks/types';
 import { useToggleCompletionWorkflowMutation } from './tasks/mutations/useToggleCompletionWorkflowMutation';
 
 export interface TasksDataHook {
@@ -47,32 +47,31 @@ export const useTasksData = (): TasksDataHook => {
           ...updates 
         } as UpdateTaskVariables);
       } else {
-        const { id, created_at, updated_at, completed, last_completed_date, ...creatableDataFields } = taskData;
-        
-        const variables: CreateTaskVariables = {
-          title: creatableDataFields.title || "Default Task Title",
-          points: creatableDataFields.points || 0,
-          
-          description: creatableDataFields.description,
-          frequency: creatableDataFields.frequency,
-          frequency_count: creatableDataFields.frequency_count,
-          priority: creatableDataFields.priority,
-          icon_name: creatableDataFields.icon_name,
-          icon_color: creatableDataFields.icon_color,
-          title_color: creatableDataFields.title_color,
-          subtext_color: creatableDataFields.subtext_color,
-          calendar_color: creatableDataFields.calendar_color,
-          background_image_url: creatableDataFields.background_image_url,
-          background_opacity: creatableDataFields.background_opacity,
-          highlight_effect: creatableDataFields.highlight_effect,
-          focal_point_x: creatableDataFields.focal_point_x,
-          focal_point_y: creatableDataFields.focal_point_y,
-          icon_url: creatableDataFields.icon_url,
-          
-          week_identifier: (creatableDataFields as any).week_identifier,
-          background_images: (creatableDataFields as any).background_images,
+        const creatableDataFields: CreateTaskVariables = {
+          title: taskData.title || "Default Task Title",
+          description: taskData.description || null,
+          points: taskData.points || 0,
+          priority: taskData.priority || 'medium',
+          completed: taskData.completed ?? false,
+          frequency: taskData.frequency || 'daily',
+          frequency_count: taskData.frequency_count || 1,
+          usage_data: taskData.usage_data || Array(7).fill(0),
+          icon_url: taskData.icon_url,
+          icon_name: taskData.icon_name,
+          icon_color: taskData.icon_color || '#9b87f5',
+          highlight_effect: taskData.highlight_effect ?? false,
+          title_color: taskData.title_color || '#FFFFFF',
+          subtext_color: taskData.subtext_color || '#8E9196',
+          calendar_color: taskData.calendar_color || '#7E69AB',
+          last_completed_date: taskData.last_completed_date,
+          week_identifier: taskData.week_identifier,
+          background_image_url: taskData.background_image_url,
+          background_opacity: taskData.background_opacity ?? 100,
+          focal_point_x: taskData.focal_point_x ?? 50,
+          focal_point_y: taskData.focal_point_y ?? 50,
+          background_images: taskData.background_images,
         };
-        savedTask = await createTaskMutation(variables);
+        savedTask = await createTaskMutation(creatableDataFields);
       }
       return savedTask || null;
     } catch (e: any) {

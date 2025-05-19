@@ -5,26 +5,26 @@ import {
   saveTasksToDB,
   getLastSyncTimeForTasks,
   setLastSyncTimeForTasks,
-} from '@/data/indexedDB/useIndexedDB';
-import { Task } from '@/lib/taskUtils';
-import { processTasksWithRecurringLogic } from '@/lib/taskUtils'; // Assuming this function exists or will be created
+} from '@/data/indexedDB/tasksIndexedDB'; // Updated import path
+import { Task } from '@/data/tasks/types'; // Use canonical Task type
+import { processTasksWithRecurringLogic } from '@/lib/taskUtils'; 
 
 export const fetchTasks = async (): Promise<Task[]> => {
-  const localData = (await loadTasksFromDB()) as Task[] | null;
+  const localData = (await loadTasksFromDB()) as Task[] | null; // loadTasksFromDB should return Task[]
   const lastSync = await getLastSyncTimeForTasks();
   let shouldFetchFromServer = true;
 
   if (lastSync) {
     const timeDiff = Date.now() - new Date(lastSync as string).getTime();
-    // Sync if data is older than 30 minutes
-    if (timeDiff < 1000 * 60 * 30) {
+    if (timeDiff < 1000 * 60 * 30) { // 30 minutes
       shouldFetchFromServer = false;
     }
   }
 
   if (!shouldFetchFromServer && localData) {
     console.log('[fetchTasks] Returning tasks from IndexedDB');
-    return processTasksWithRecurringLogic(localData);
+    // processTasksWithRecurringLogic expects Task[] from types.ts
+    return processTasksWithRecurringLogic(localData); 
   }
 
   console.log('[fetchTasks] Fetching tasks from server');
@@ -35,22 +35,22 @@ export const fetchTasks = async (): Promise<Task[]> => {
 
   if (error) {
     console.error('[fetchTasks] Supabase error fetching tasks:', error);
-    // If server fetch fails, try to return local data if available
     if (localData) {
       console.warn('[fetchTasks] Server fetch failed, returning stale data from IndexedDB');
       return processTasksWithRecurringLogic(localData);
     }
-    throw error; // Rethrow if no local data to fall back to
+    throw error; 
   }
 
   if (data) {
-    const processedData = processTasksWithRecurringLogic(data as Task[]);
+    // Ensure data from Supabase is cast to Task[] before processing
+    const serverTasks = data as unknown as Task[]; 
+    const processedData = processTasksWithRecurringLogic(serverTasks);
     await saveTasksToDB(processedData);
     await setLastSyncTimeForTasks(new Date().toISOString());
     console.log('[fetchTasks] Tasks fetched from server and saved to IndexedDB');
     return processedData;
   }
 
-  // Fallback to local data if server returns no data (should be rare if no error)
   return localData ? processTasksWithRecurringLogic(localData) : [];
 };

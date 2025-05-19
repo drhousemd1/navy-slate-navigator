@@ -7,47 +7,44 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from '@/integrations/supabase/client';
-import { Task } from "@/data/tasks/types"; // Ensure this is the canonical Task type
+import { Task, TaskPriority, TaskFrequency } from "@/data/tasks/types"; // Ensure this is the canonical Task type
 import {
   loadTasksFromDB,
   saveTasksToDB,
   getLastSyncTimeForTasks,
   setLastSyncTimeForTasks
-} from "../indexedDB/useIndexedDB";
+} from "../indexedDB/tasksIndexedDB"; // Updated import path
 import { processTasksWithRecurringLogic } from "@/lib/taskUtils"; // For applying daily resets etc.
 
-// It's good practice to have a processor function if DB shape differs from client shape
-// or if client-side defaults/transformations are needed.
 const processDbTaskToAppTask = (dbTask: any): Task => {
-  // This should align with processTaskFromDb in taskUtils or be the sole source of truth for this transformation
   return {
     id: dbTask.id,
     title: dbTask.title,
     description: dbTask.description,
     points: dbTask.points,
-    priority: dbTask.priority || 'medium',
+    priority: (dbTask.priority || 'medium') as TaskPriority,
     completed: dbTask.completed,
     background_image_url: dbTask.background_image_url,
-    background_opacity: dbTask.background_opacity,
-    focal_point_x: dbTask.focal_point_x,
-    focal_point_y: dbTask.focal_point_y,
-    frequency: dbTask.frequency || 'daily',
+    background_opacity: dbTask.background_opacity ?? 100,
+    focal_point_x: dbTask.focal_point_x ?? 50,
+    focal_point_y: dbTask.focal_point_y ?? 50,
+    frequency: (dbTask.frequency || 'daily') as TaskFrequency,
     frequency_count: dbTask.frequency_count || 1,
     usage_data: Array.isArray(dbTask.usage_data) && dbTask.usage_data.length === 7 
                   ? dbTask.usage_data.map((val: any) => Number(val) || 0) 
                   : Array(7).fill(0),
     icon_url: dbTask.icon_url,
     icon_name: dbTask.icon_name,
-    icon_color: dbTask.icon_color,
-    highlight_effect: dbTask.highlight_effect,
-    title_color: dbTask.title_color,
-    subtext_color: dbTask.subtext_color,
-    calendar_color: dbTask.calendar_color,
+    icon_color: dbTask.icon_color || '#9b87f5',
+    highlight_effect: dbTask.highlight_effect ?? false,
+    title_color: dbTask.title_color || '#FFFFFF',
+    subtext_color: dbTask.subtext_color || '#8E9196',
+    calendar_color: dbTask.calendar_color || '#7E69AB',
     last_completed_date: dbTask.last_completed_date,
     created_at: dbTask.created_at,
     updated_at: dbTask.updated_at,
     week_identifier: dbTask.week_identifier,
-    background_images: dbTask.background_images,
+    background_images: dbTask.background_images, // This should now match the Task type
   };
 };
 
@@ -55,7 +52,7 @@ export function useTasks() {
   return useQuery<Task[], Error>({
     queryKey: ["tasks"],
     queryFn: async (): Promise<Task[]> => {
-      const localData = await loadTasksFromDB(); // Type from IndexedDB should be Task[]
+      const localData = await loadTasksFromDB(); 
       const lastSync = await getLastSyncTimeForTasks();
       let shouldFetch = true;
 
@@ -67,7 +64,6 @@ export function useTasks() {
       }
 
       if (!shouldFetch && localData) {
-        // Apply recurring logic even to local data to ensure UI consistency
         return processTasksWithRecurringLogic(localData.map(processDbTaskToAppTask));
       }
 
@@ -76,22 +72,20 @@ export function useTasks() {
 
       if (data) {
         const processedServerTasks = data.map(processDbTaskToAppTask);
-        // Apply recurring logic after fetching from server
         const tasksToStore = processTasksWithRecurringLogic(processedServerTasks);
         await saveTasksToDB(tasksToStore);
         await setLastSyncTimeForTasks(new Date().toISOString());
         return tasksToStore;
       }
-      // If server fetch fails but local data exists, process and return it
       if (localData) {
         return processTasksWithRecurringLogic(localData.map(processDbTaskToAppTask));
       }
-      return []; // Fallback to empty array
+      return []; 
     },
     staleTime: Infinity,
-    gcTime: 1000 * 60 * 30, // 30 minutes
-    refetchOnWindowFocus: false, // Consider user preference or app needs
+    gcTime: 1000 * 60 * 30, 
+    refetchOnWindowFocus: false, 
     refetchOnReconnect: false,
-    refetchOnMount: false, // Data is loaded via persister or initial fetch
+    refetchOnMount: false, 
   });
 }
