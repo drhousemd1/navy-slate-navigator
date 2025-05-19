@@ -1,88 +1,49 @@
 
-import { useState, useCallback } from 'react';
-import { toast } from '@/hooks/use-toast';
+import { useCallback } from 'react';
+// import { toast } from '@/hooks/use-toast'; // Toasts are now handled by mutation hooks or useRulesData
 import { Rule } from '@/data/interfaces/Rule';
-import { useCreateRule } from '@/data/rules/mutations/useCreateRule';
-import { useUpdateRule } from '@/data/rules/mutations/useUpdateRule';
-import { useDeleteRule } from '@/data/rules/mutations/useDeleteRule';
+// Mutations are now called within useRulesData
+// import { useCreateRule } from '@/data/rules/mutations/useCreateRule';
+// import { useUpdateRule } from '@/data/rules/mutations/useUpdateRule';
+// import { useDeleteRule } from '@/data/rules/mutations/useDeleteRule';
+import { useRulesData } from '@/data/hooks/useRulesData'; // The main data handler
 
-export const useRuleOperations = (initialRules = []) => {
-  const [rules, setRules] = useState(initialRules);
-  const { mutateAsync: createRuleMutation } = useCreateRule();
-  const { mutateAsync: updateRuleMutation } = useUpdateRule();
-  const { mutateAsync: deleteRuleMutation } = useDeleteRule();
+/**
+ * @deprecated This hook is becoming a thin wrapper or might be obsolete.
+ * Consider using `useRulesData` directly or integrating its logic into `RulesContext` initialization.
+ */
+export const useRuleOperations = () => {
+  // This hook no longer manages its own state for 'rules'.
+  // It delegates operations to useRulesData.
+  const { 
+    saveRule: saveData, 
+    deleteRule: deleteData,
+    // rules, // rules list comes from useRulesData directly in the context or page
+    // isLoading, // same
+    // error // same
+  } = useRulesData(); 
   
-  // Create a new rule
-  const createRule = useCallback(async (ruleData) => {
-    try {
-      const newRule = await createRuleMutation(ruleData);
-      
-      if (newRule) {
-        toast({
-          title: "Rule Created",
-          description: `${ruleData.title} has been added to your rules.`,
-        });
-        return newRule;
-      }
-    } catch (error) {
-      console.error('Error creating rule:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create rule. Please try again.',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  }, [createRuleMutation]);
+  const createRule = useCallback(async (ruleData: Partial<Omit<Rule, 'id'>>) => {
+    // The distinction between create and update is handled by saveData based on presence of id
+    return saveData(ruleData);
+  }, [saveData]);
   
-  // Update an existing rule
-  const updateRule = useCallback(async (ruleId, updates) => {
-    try {
-      const updatedRule = await updateRuleMutation({ id: ruleId, ...updates });
-      
-      if (updatedRule) {
-        toast({
-          title: "Rule Updated",
-          description: `${updates.title || 'Rule'} has been updated.`,
-        });
-        return updatedRule;
-      }
-    } catch (error) {
-      console.error('Error updating rule:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update rule. Please try again.',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  }, [updateRuleMutation]);
+  const updateRule = useCallback(async (ruleId: string, updates: Partial<Rule>) => {
+    return saveData({ ...updates, id: ruleId });
+  }, [saveData]);
   
-  // Delete a rule
-  const deleteRule = useCallback(async (ruleId) => {
-    try {
-      await deleteRuleMutation(ruleId);
-      
-      toast({
-        title: "Rule Deleted",
-        description: "The rule has been deleted.",
-      });
-      return true;
-    } catch (error) {
-      console.error('Error deleting rule:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete rule. Please try again.',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  }, [deleteRuleMutation]);
+  const deleteRule = useCallback(async (ruleId: string) => {
+    await deleteData(ruleId);
+    return true; // Matching original plan's expectation, though deleteData is void
+  }, [deleteData]);
   
   return {
-    rules,
-    createRule,
-    updateRule,
-    deleteRule
+    // rules, // Not provided by this hook anymore directly
+    // isLoading, // Not provided by this hook anymore directly
+    // error, // Not provided by this hook anymore directly
+    createRule, // This now effectively calls the saveRule from useRulesData
+    updateRule, // This now effectively calls the saveRule from useRulesData
+    deleteRule, // This now calls deleteRule from useRulesData
+    // markRuleBroken and refetchRules should be accessed from useRulesData directly where needed
   };
 };

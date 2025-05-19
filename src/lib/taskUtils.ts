@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getMondayBasedDay } from "./utils";
-import { queryClient } from "@/data/queryClient"; // queryClient is already imported
+import { queryClient } from "@/data/queryClient";
+import type { Task, TaskPriority, TaskFrequency } from '@/data/tasks/types';
 
 export interface Task {
   id: string;
@@ -27,6 +28,8 @@ export interface Task {
   last_completed_date?: string; // YYYY-MM-DD
   created_at?: string;
   updated_at?: string;
+  week_identifier?: string;
+  background_images?: string[];
 }
 
 export const getLocalDateString = (): string => {
@@ -85,24 +88,31 @@ export const fetchTasks = async (): Promise<Task[]> => {
       return [];
     }
     
-    const processedTasks = (data || []).map(processTaskFromDb);
+    const processedTasks = (data || []).map(task => processTaskFromDb(task));
     
     const tasksToReset = processedTasks.filter(task => 
+      task.frequency === 'daily' && // only reset daily tasks here
       task.completed && 
-      task.frequency === 'daily' && 
       !wasCompletedToday(task)
     );
     
     if (tasksToReset.length > 0) {
-      for (const task of tasksToReset) {
-        await supabase
+      const updates = tasksToReset.map(task =>
+        supabase
           .from('tasks')
-          .update({ completed: false })
-          .eq('id', task.id);
+          .update({ completed: false, last_completed_date: null }) // Also reset last_completed_date
+          .eq('id', task.id)
+      );
+      await Promise.all(updates);
           
-        // Update the local task object
-        task.completed = false;
-      }
+      // Update the local task objects
+      tasksToReset.forEach(task => {
+        const originalTask = processedTasks.find(pt => pt.id === task.id);
+        if (originalTask) {
+          originalTask.completed = false;
+          originalTask.last_completed_date = null;
+        }
+      });
     }
     
     return processedTasks;
@@ -116,7 +126,6 @@ export const fetchTasks = async (): Promise<Task[]> => {
     return [];
   }
 };
-
 
 export const resetTaskCompletions = async (
   frequency: "daily" | "weekly"
@@ -173,17 +182,17 @@ const processTaskFromDb = (task: any): Task => {
     title: task.title,
     description: task.description,
     points: task.points,
-    priority: (task.priority as string || 'medium') as 'low' | 'medium' | 'high',
+    priority: (task.priority || 'medium') as TaskPriority,
     completed: task.completed,
     background_image_url: task.background_image_url,
     background_opacity: task.background_opacity,
     focal_point_x: task.focal_point_x,
     focal_point_y: task.focal_point_y,
-    frequency: (task.frequency as string || 'daily') as 'daily' | 'weekly',
-    frequency_count: task.frequency_count || 1, // Ensure default frequency count is at least 1
+    frequency: (task.frequency || 'daily') as TaskFrequency,
+    frequency_count: task.frequency_count || 1,
     usage_data: Array.isArray(task.usage_data) && task.usage_data.length === 7 ? 
       task.usage_data.map((val: any) => Number(val) || 0) : 
-      Array(7).fill(0), // Ensure it's a 7-element array of numbers
+      Array(7).fill(0),
     icon_url: task.icon_url,
     icon_name: task.icon_name,
     icon_color: task.icon_color,
@@ -193,7 +202,9 @@ const processTaskFromDb = (task: any): Task => {
     calendar_color: task.calendar_color,
     last_completed_date: task.last_completed_date,
     created_at: task.created_at,
-    updated_at: task.updated_at
+    updated_at: task.updated_at,
+    week_identifier: task.week_identifier,
+    background_images: task.background_images,
   };
 };
 
@@ -204,73 +215,79 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     console.log('Saving task with icon color:', task.icon_color);
     console.log('Saving task with usage_data:', task.usage_data);
     
-    const usage_data = task.usage_data || Array(7).fill(0);
+    const usage_data = task.usage_data && task.usage_data.length === 7 ? task.usage_data : Array(7).fill(0);
     const now = new Date().toISOString();
     
+    const commonData = {
+      title: task.title,
+      description: task.description,
+      points: task.points,
+      priority: task.priority,
+      completed: task.completed,
+      frequency: task.frequency,
+      frequency_count: task.frequency_count,
+      background_image_url: task.background_image_url,
+      background_opacity: task.background_opacity,
+      icon_url: task.icon_url,
+      icon_name: task.icon_name,
+      title_color: task.title_color,
+      subtext_color: task.subtext_color,
+      calendar_color: task.calendar_color,
+      highlight_effect: task.highlight_effect,
+      focal_point_x: task.focal_point_x,
+      focal_point_y: task.focal_point_y,
+      icon_color: task.icon_color,
+      last_completed_date: task.last_completed_date,
+      usage_data: usage_data,
+      week_identifier: task.week_identifier,
+      background_images: task.background_images,
+    };
+
     if (task.id) {
       const { data, error } = await supabase
         .from('tasks')
-        .update({
-          title: task.title,
-          description: task.description,
-          points: task.points,
-          completed: task.completed,
-          frequency: task.frequency,
-          frequency_count: task.frequency_count,
-          background_image_url: task.background_image_url,
-          background_opacity: task.background_opacity,
-          icon_url: task.icon_url,
-          icon_name: task.icon_name,
-          title_color: task.title_color,
-          subtext_color: task.subtext_color,
-          calendar_color: task.calendar_color,
-          highlight_effect: task.highlight_effect,
-          focal_point_x: task.focal_point_x,
-          focal_point_y: task.focal_point_y,
-          priority: task.priority,
-          icon_color: task.icon_color,
-          last_completed_date: task.last_completed_date,
-          usage_data: usage_data,
-          updated_at: now,
-        })
+        .update({ ...commonData, updated_at: now })
         .eq('id', task.id)
         .select()
         .single();
       
       if (error) throw error;
-      return data as Task;
+      return processTaskFromDb(data);
     } else {
+      // Ensure all required fields for DB insert are present
+      const insertData: Omit<Task, 'id' | 'created_at' | 'updated_at'> & { created_at?: string } = {
+        title: task.title || "Untitled Task", // DB requires title
+        description: task.description,
+        points: task.points || 0, // DB requires points
+        priority: task.priority || 'medium', // DB requires priority
+        completed: task.completed ?? false, // DB requires completed
+        frequency: task.frequency || 'daily', // DB requires frequency
+        frequency_count: task.frequency_count || 1, // DB requires frequency_count
+        background_opacity: task.background_opacity ?? 100, // DB requires background_opacity
+        focal_point_x: task.focal_point_x ?? 50, // DB requires focal_point_x
+        focal_point_y: task.focal_point_y ?? 50, // DB requires focal_point_y
+        icon_color: task.icon_color || '#9b87f5', // DB requires icon_color
+        highlight_effect: task.highlight_effect ?? false, // DB requires highlight_effect
+        title_color: task.title_color || '#FFFFFF', // DB requires title_color
+        subtext_color: task.subtext_color || '#8E9196', // DB requires subtext_color
+        calendar_color: task.calendar_color || '#7E69AB', // DB requires calendar_color
+        usage_data: usage_data,
+        background_image_url: task.background_image_url,
+        icon_url: task.icon_url,
+        icon_name: task.icon_name,
+        last_completed_date: task.last_completed_date,
+        week_identifier: task.week_identifier,
+        background_images: task.background_images,
+      };
+
       const { data, error } = await supabase
         .from('tasks')
-        .insert({
-          title: task.title,
-          description: task.description,
-          points: task.points,
-          completed: task.completed ?? false, // Ensure default
-          frequency: task.frequency ?? 'daily', // Ensure default
-          frequency_count: task.frequency_count ?? 1, // Ensure default
-          background_image_url: task.background_image_url,
-          background_opacity: task.background_opacity,
-          icon_url: task.icon_url,
-          icon_name: task.icon_name,
-          title_color: task.title_color,
-          subtext_color: task.subtext_color,
-          calendar_color: task.calendar_color,
-          highlight_effect: task.highlight_effect,
-          focal_point_x: task.focal_point_x,
-          focal_point_y: task.focal_point_y,
-          priority: task.priority ?? 'medium', // Ensure default
-          icon_color: task.icon_color,
-          last_completed_date: null,
-          usage_data: usage_data,
-          created_at: now,
-          // updated_at will be set by default by db or trigger if configured
-        })
+        .insert(insertData)
         .select()
         .single();
       
       if (error) throw error;
-      return data as Task;
+      return processTaskFromDb(data);
     }
   } catch (err: any) {
     console.error('Error saving task:', err);
