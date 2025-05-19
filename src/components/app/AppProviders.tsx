@@ -4,6 +4,7 @@ import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
 // OfflineBanner is already rendered in App.tsx, rendering it here too would be duplicative.
 // import { OfflineBanner } from '@/components/OfflineBanner';
 import { RewardsProvider } from '@/contexts/RewardsContext';
+import { PunishmentsProvider } from '@/contexts/PunishmentsContext'; // Added PunishmentsProvider import
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 // Toaster is already rendered in App.tsx
 // import { Toaster } from '@/components/ui/toaster';
@@ -12,7 +13,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import localforage from 'localforage';
 import { APP_CACHE_VERSION } from '@/lib/react-query-config';
-import { AuthProvider } from '../../contexts/AuthContext'; // Added AuthProvider import
+import { AuthProvider } from '../../contexts/AuthContext';
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -43,11 +44,12 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
       }}
     >
       <NetworkStatusProvider>
-        <AuthProvider> {/* AuthProvider wraps RewardsProvider and children */}
+        <AuthProvider>
           <RewardsProvider>
-            {children}
-            {/* Toaster and OfflineBanner are rendered in App.tsx to be inside Hydrate context */}
-            {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
+            <PunishmentsProvider> {/* PunishmentsProvider wraps children now */}
+              {children}
+              {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
+            </PunishmentsProvider>
           </RewardsProvider>
         </AuthProvider>
       </NetworkStatusProvider>
