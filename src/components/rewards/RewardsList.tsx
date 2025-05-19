@@ -9,7 +9,6 @@ import { Reward } from '@/data/rewards/types';
 
 interface RewardsListProps {
   onEdit: (reward: Reward) => void;
-  onCreateRewardClick?: () => void;
   rewards: Reward[];
   isLoading: boolean;
   handleBuyReward: (rewardId: string, cost: number) => void;
@@ -18,7 +17,6 @@ interface RewardsListProps {
 
 const RewardsList: React.FC<RewardsListProps> = ({
   onEdit,
-  onCreateRewardClick,
   rewards,
   isLoading,
   handleBuyReward,
@@ -39,15 +37,7 @@ const RewardsList: React.FC<RewardsListProps> = ({
       <EmptyState
         icon={Award}
         title="No Rewards Yet"
-        description="You don't have any rewards yet. Click the button to create your first one!"
-        action={onCreateRewardClick && (
-          <Button 
-            onClick={onCreateRewardClick} 
-            className="mt-4"
-          >
-            Create First Reward
-          </Button>
-        )}
+        description="You don't have any rewards configured."
       />
     );
   }

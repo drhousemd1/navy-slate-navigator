@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Skull, AlertTriangle } from 'lucide-react'; // Keep Skull if used by ErrorBoundary, added AlertTriangle
@@ -6,7 +5,6 @@ import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { PunishmentData } from '@/contexts/punishments/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import PunishmentList from '@/components/punishments/PunishmentList';
@@ -73,7 +71,7 @@ const PunishmentsContent: React.FC<{
           title: punishmentDataToSave.title,
           points: punishmentDataToSave.points,
           description: punishmentDataToSave.description,
-          dom_supply: punishmentDataToSave.dom_supply, // Added dom_supply
+          dom_supply: punishmentDataToSave.dom_supply, 
           icon_name: punishmentDataToSave.icon_name,
           icon_color: punishmentDataToSave.icon_color,
           background_image_url: punishmentDataToSave.background_image_url,
@@ -146,9 +144,9 @@ const PunishmentsContent: React.FC<{
         punishments={punishments}
         isLoading={isLoadingPunishments && punishments.length === 0} // Pass loading only if initial load & no cached data
         onEditPunishment={handleEditPunishment}
-        onCreatePunishmentClick={handleAddNewPunishment} // For the empty state button
-        // Pass error explicitly if PunishmentList needs to show an inline error for list specific issues
-        // error={errorPunishments} // Example, if list handles its own specific errors
+        // onCreatePunishmentClick is removed. The button in the read-only PunishmentList component
+        // should not render as its 'action' prop will be conditional on this missing prop.
+        // The description inside that EmptyState will remain as "Define the first one to get started."
       />
       
       <PunishmentEditor

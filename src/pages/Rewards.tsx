@@ -179,7 +179,6 @@ const RewardsContent: React.FC<{
             rewards={[]}
             isLoading={true}
             onEdit={handleEditReward}
-            onCreateRewardClick={handleAddNewReward}
             handleBuyReward={handleBuyRewardWrapper}
             handleUseReward={handleUseRewardWrapper}
           />
@@ -196,7 +195,6 @@ const RewardsContent: React.FC<{
         rewards={rewards}
         isLoading={isLoading && rewards.length === 0}
         onEdit={handleEditReward}
-        onCreateRewardClick={handleAddNewReward}
         handleBuyReward={handleBuyRewardWrapper}
         handleUseReward={handleUseRewardWrapper}
       />

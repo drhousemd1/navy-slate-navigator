@@ -1,17 +1,14 @@
-
 import React from 'react';
 import RuleCard from './RuleCard';
 import { Rule } from '@/data/interfaces/Rule';
-import EmptyState from '@/components/common/EmptyState'; // Import the EmptyState component
-import { ShieldOff, LoaderCircle } from 'lucide-react'; // Import LoaderCircle for consistent loading
+import EmptyState from '@/components/common/EmptyState'; 
+import { ShieldOff, LoaderCircle } from 'lucide-react'; 
 
 interface RulesListProps {
   rules: Rule[];
   isLoading: boolean;
   onEditRule: (rule: Rule) => void;
   onRuleBroken: (rule: Rule) => void;
-  // Add a prop to allow customizing the action, e.g., a "Create Rule" button
-  onCreateRuleClick?: () => void; 
 }
 
 const RulesList: React.FC<RulesListProps> = ({ 
@@ -19,7 +16,6 @@ const RulesList: React.FC<RulesListProps> = ({
   isLoading,
   onEditRule,
   onRuleBroken,
-  onCreateRuleClick
 }) => {
   if (isLoading) {
     return (
@@ -35,15 +31,7 @@ const RulesList: React.FC<RulesListProps> = ({
       <EmptyState
         icon={ShieldOff}
         title="No Rules Yet"
-        description="It looks like there are no rules defined. Get started by creating your first one!"
-        action={onCreateRuleClick && (
-          <button 
-            onClick={onCreateRuleClick} 
-            className="mt-4 px-4 py-2 bg-primary-purple text-white rounded-md hover:bg-opacity-90 transition-colors"
-          >
-            Create First Rule
-          </button>
-        )}
+        description="It looks like there are no rules defined. You can create rules using the dedicated button."
       />
     );
   }

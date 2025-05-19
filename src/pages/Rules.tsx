@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import RuleEditor from '../components/RuleEditor';
@@ -103,7 +102,6 @@ const RulesPageContent: React.FC = () => {
         isLoading={isLoading}
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
-        onCreateRuleClick={handleAddRule} 
       />
 
       <RuleEditor

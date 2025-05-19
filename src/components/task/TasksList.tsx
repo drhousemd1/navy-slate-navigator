@@ -1,17 +1,16 @@
-
 import React from 'react';
 import TaskCard from '../TaskCard';
 import { TaskWithId } from '@/data/tasks/types'; // Use TaskWithId
 import EmptyState from '@/components/common/EmptyState';
 import { ClipboardList } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+// import { Button } from '@/components/ui/button'; // Button not needed if action is removed
 
 interface TasksListProps {
   tasks: TaskWithId[];
-  isLoading: boolean; // True if loading initial data and tasks array is empty
+  isLoading: boolean; 
   onEditTask: (task: TaskWithId) => void;
   onToggleCompletion: (taskId: string, completed: boolean) => void;
-  onCreateTaskClick?: () => void;
+  // onCreateTaskClick?: () => void; // Removed
 }
 
 const TasksList: React.FC<TasksListProps> = ({ 
@@ -19,13 +18,9 @@ const TasksList: React.FC<TasksListProps> = ({
   isLoading,
   onEditTask,
   onToggleCompletion,
-  onCreateTaskClick 
+  // onCreateTaskClick // Removed
 }) => {
-  // Show loading state (skeletons removed) ONLY if actively loading AND no tasks are available (empty cache)
   if (isLoading && tasks.length === 0) {
-    // Per policy, no skeletons. Show a minimal loading text or nothing.
-    // For now, showing nothing while loading an empty list to avoid flickering before empty state.
-    // Or, a very subtle loading indicator can be used if preferred.
     return <div className="text-center py-10 text-slate-400">Loading tasks...</div>;
   }
 
@@ -34,15 +29,8 @@ const TasksList: React.FC<TasksListProps> = ({
       <EmptyState
         icon={ClipboardList}
         title="You currently have no tasks."
-        description="Please create one to continue."
-        action={onCreateTaskClick && (
-          <Button 
-            onClick={onCreateTaskClick} 
-            className="mt-4"
-          >
-            Create First Task
-          </Button>
-        )}
+        description="Please create tasks using the dedicated button."
+        // action prop removed
       />
     );
   }

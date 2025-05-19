@@ -129,7 +129,6 @@ const TasksPageContent: React.FC = () => {
         isLoading={isLoading && tasks.length === 0} 
         onEditTask={handleEditTask}
         onToggleCompletion={handleToggleCompletion}
-        onCreateTaskClick={handleAddTask} 
       />
 
       <TaskEditor
