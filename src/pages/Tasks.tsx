@@ -5,7 +5,6 @@ import TasksHeader from '../components/task/TasksHeader';
 import TasksList from '../components/task/TasksList';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TaskWithId } from '@/data/tasks/types';
-import { useSyncManager } from '@/hooks/useSyncManager';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useTasksData } from '@/hooks/useTasksData';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
@@ -26,9 +25,6 @@ const TasksPageContent: React.FC = () => {
   } = useTasksData();
   const { refreshPointsFromDatabase } = useRewards();
   
-  useSyncManager({ 
-    enabled: true 
-  });
 
   const handleAddTask = () => {
     console.log('handleAddTask called in TasksPageContent');

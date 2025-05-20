@@ -4,7 +4,7 @@ import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { PunishmentData } from '@/contexts/punishments/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { useSyncManager } from '@/hooks/useSyncManager';
+// Removed: import { useSyncManager } from '@/hooks/useSyncManager';
 import PunishmentList from '@/components/punishments/PunishmentList';
 import { usePunishmentsQuery, PunishmentsQueryResult } from '@/data/punishments/queries';
 import { useCreatePunishment, useUpdatePunishment, useDeletePunishment, CreatePunishmentVariables, UpdatePunishmentVariables } from '@/data/punishments/mutations';
@@ -26,11 +26,9 @@ const PunishmentsContent: React.FC<{
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   
-  const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
+  // Removed: const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
 
-  useEffect(() => {
-    syncNow();
-  }, [syncNow]);
+  // Removed: useEffect for syncNow
 
   const handleAddNewPunishment = () => {
     setCurrentPunishment(undefined);
@@ -38,6 +36,8 @@ const PunishmentsContent: React.FC<{
   };
   
   useEffect(() => {
+    // Simplified: directly assign handleAddNewPunishment if it's stable
+    // Or ensure it's memoized if it changes frequently
     contentRef.current = { handleAddNewPunishment };
     return () => { contentRef.current = {}; };
   }, [contentRef, handleAddNewPunishment]);
