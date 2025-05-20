@@ -49,7 +49,6 @@ const Tasks: React.FC = () => {
         await updateTask({ ...data, id: data.id } as UpdateTaskVariables); 
         toast({ title: "Task Updated", description: "Your task has been successfully updated." });
       } else { 
-        // user_id must be part of CreateTaskVariables and provided here
         const taskDataWithUser = { ...data, user_id: user.id } as CreateTaskVariables;
         await createTask(taskDataWithUser); 
         toast({ title: "Task Created", description: "Your new task has been successfully created." });
@@ -62,12 +61,11 @@ const Tasks: React.FC = () => {
     }
   };
   
-  const handleDeleteTask = async (taskId: string) => { // Argument is string taskId
+  const handleDeleteTask = async (taskId: string) => { 
     try {
       await deleteTask(taskId); 
       toast({ title: "Task Deleted", description: "The task has been successfully deleted." });
       refetchTasks(); 
-      // Consider if editor should close only if deleting the currently editing task
       if (editingTask?.id === taskId) {
         handleCloseEditor(); 
       }
@@ -82,7 +80,6 @@ const Tasks: React.FC = () => {
         toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive"});
         return;
     }
-    // task.user_id should be valid due to type and DB changes. Fallback to auth user.id if absolutely necessary.
     const currentTaskUserId = task.user_id || user.id; 
     if (!currentTaskUserId) {
       toast({ title: "User ID missing", description: "Cannot toggle task completion without a user ID.", variant: "destructive" });
@@ -131,13 +128,10 @@ const Tasks: React.FC = () => {
           {tasks.map((task) => (
             <TaskCard 
               key={task.id} 
-              // Pass individual props as expected by TaskCard
-              // Note: TaskCard.tsx is read-only, ensure these props match its definition.
-              // Assuming common props based on TaskWithId:
-              id={task.id} // TaskCard might need id for internal operations or edit/delete triggers
+              // id prop removed as it's not in TaskCardProps
               title={task.title || 'Untitled Task'}
-              description={task.description}
-              points={task.points}
+              description={task.description || ''} // Ensure description is a string
+              points={task.points || 0} // Ensure points is a number
               completed={task.completed}
               priority={task.priority}
               frequency={task.frequency}
@@ -148,17 +142,15 @@ const Tasks: React.FC = () => {
               title_color={task.title_color}
               subtext_color={task.subtext_color}
               calendar_color={task.calendar_color}
-              background_image_url={task.background_image_url}
-              background_opacity={task.background_opacity}
+              background_image_url={task.background_image_url} // Prop is backgroundImage in TaskCard
+              backgroundOpacity={task.background_opacity}
               highlight_effect={task.highlight_effect}
               focal_point_x={task.focal_point_x}
               focal_point_y={task.focal_point_y}
               icon_url={task.icon_url}
-              last_completed_date={task.last_completed_date}
-              // actions:
+              // last_completed_date={task.last_completed_date} // Not a prop in TaskCard
               onEdit={() => handleOpenEditor(task)}
-              onToggleComplete={() => handleToggleComplete(task)}
-              // onDelete might be handled via onEdit then inside TaskEditor, or directly if TaskCard has delete button
+              onToggleComplete={() => handleToggleComplete(task)} 
             />
           ))}
         </div>
@@ -169,10 +161,8 @@ const Tasks: React.FC = () => {
           isOpen={isEditorOpen}
           onClose={handleCloseEditor}
           onSave={handleSaveTask}
-          // Pass callback for onDelete, TaskEditor will call it with taskId string
           onDelete={editingTask?.id ? handleDeleteTask : undefined} 
-          taskData={editingTask} // Pass the whole task object or undefined
-          // userId prop removed as TaskEditor does not expect it
+          taskData={editingTask} 
         />
       )}
     </div>
