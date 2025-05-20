@@ -10,14 +10,24 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+const authStorage = typeof window !== 'undefined' ? window.localStorage : undefined;
+console.log('[SupabaseClient] Using auth storage:', authStorage ? 'localStorage' : 'undefined (server-side or no window)');
+
 // Create a properly configured client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined
+    storage: authStorage,
   }
+});
+
+console.log('[SupabaseClient] Supabase client initialized with options:', {
+  autoRefreshToken: true,
+  persistSession: true,
+  detectSessionInUrl: true,
+  storage: authStorage ? 'localStorage' : 'undefined',
 });
 
 // Helper function to check if a session exists (for debugging)

@@ -5,8 +5,8 @@
 import { supabase } from '@/integrations/supabase/client';
 // import { useQueryClient } from '@tanstack/react-query'; // Not directly needed here now
 import { ApplyPunishmentArgs, PunishmentData } from '@/contexts/punishments/types';
-import { useApplyPunishment } from '@/data/punishments/mutations/useApplyPunishment'; // Import the actual mutation hook
-import { toast } from '@/hooks/use-toast'; // Keep for initial validation errors if any
+import { useApplyPunishment } from '@/data/punishments/mutations/useApplyPunishment';
+import { toast } from '@/hooks/use-toast';
 
 interface UsePunishmentApplyProps {
   punishment: PunishmentData;
@@ -16,19 +16,28 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
   const applyPunishmentMutation = useApplyPunishment();
   
   const handlePunish = async () => {
+    console.log('[usePunishmentApply] handlePunish called for punishment ID:', punishment.id);
     if (!punishment.id) {
       toast({
         title: 'Error',
         description: 'Cannot apply punishment: missing ID',
         variant: 'destructive',
       });
+      console.error('[usePunishmentApply] Punishment ID is missing.');
       return;
     }
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('[usePunishmentApply] Error getting user from supabase.auth.getUser():', userError);
+        toast({ title: 'Authentication Error', description: 'Could not verify user session. Please try logging in again.', variant: 'destructive' });
+        return;
+      }
       
       if (user) {
+        console.log('[usePunishmentApply] User verified:', user.id, 'Proceeding to fetch profile.');
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('dom_points, points')
@@ -41,9 +50,10 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
             description: 'Could not fetch user profile data.',
             variant: 'destructive',
           });
-          console.error("Error fetching profile:", profileError);
+          console.error("[usePunishmentApply] Error fetching profile:", profileError, "Profile data:", profileData);
           return;
         }
+        console.log('[usePunishmentApply] Profile data fetched:', profileData);
           
         const currentDomPoints = profileData.dom_points || 0;
         const currentSubPoints = profileData.points || 0;
@@ -57,34 +67,40 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
           domPoints: currentDomPoints
         };
 
-        // Call the mutation. Toasts and query invalidations are handled within useApplyPunishment.
-        await applyPunishmentMutation.mutateAsync(args);
-        
-        // Toasts for success/error are now handled by the useApplyPunishment hook.
-        // Refreshing points and punishments list is also handled by query invalidations in useApplyPunishment.
+        console.log('[usePunishmentApply] Calling applyPunishmentMutation.mutateAsync with args:', args);
+        // Session check before mutation
+        const { data: { session: currentSessionBeforeMutation } } = await supabase.auth.getSession();
+        if (!currentSessionBeforeMutation) {
+            console.error('[usePunishmentApply] CRITICAL: No active session before calling mutateAsync. Aborting.');
+            toast({ title: 'Session Error', description: 'Your session has expired. Please log in again.', variant: 'destructive' });
+            // Potentially trigger a sign out or redirect here if appropriate
+            // await supabase.auth.signOut(); // Example, might be too aggressive
+            return;
+        }
+        console.log('[usePunishmentApply] Session active before mutateAsync. User ID:', currentSessionBeforeMutation.user.id);
 
+        await applyPunishmentMutation.mutateAsync(args);
+        console.log('[usePunishmentApply] applyPunishmentMutation.mutateAsync completed.');
+        
       } else {
+         console.warn('[usePunishmentApply] No authenticated user found by supabase.auth.getUser().');
          toast({
             title: 'Error',
-            description: 'User not authenticated.',
+            description: 'User not authenticated. Please log in.',
             variant: 'destructive',
           });
       }
     } catch (error) {
-      // Errors from mutateAsync will be caught by the mutation's onError handler,
-      // which will show a toast. Logging here is still useful for debugging.
-      console.error('Error initiating apply punishment process:', error);
-      // Avoid showing a duplicate toast if the mutation hook already showed one.
-      // If the error is *before* calling mutateAsync (e.g., fetching user profile), this toast is fine.
-      if (!applyPunishmentMutation.isError) { // Check if mutation itself errored
+      console.error('[usePunishmentApply] Error in handlePunish process:', error);
+      if (!applyPunishmentMutation.isError) {
          toast({
             title: 'Error',
-            description: 'Failed to apply punishment before submitting.', // More specific message
+            description: `Failed to apply punishment: ${error instanceof Error ? error.message : 'Unknown error'}`,
             variant: 'destructive',
           });
       }
     }
   };
   
-  return { handlePunish, isLoading: applyPunishmentMutation.isPending }; // Expose loading state
+  return { handlePunish, isLoading: applyPunishmentMutation.isPending };
 };
