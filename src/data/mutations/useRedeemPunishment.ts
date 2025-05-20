@@ -23,17 +23,17 @@ export interface RedeemPunishmentVariables {
   currentDomSupply: number; // Current dom_supply of the punishment
   costPoints: number; // Cost in sub points
   domEarn: number; // Dom points earned by dominant
-  profileId: string; // User's profile ID
-  currentSubPoints: number; // Current sub points of the user
-  currentDomPoints: number; // Current dom points of the user
+  profileId: string; // User's profile ID (submissive's ID)
+  currentSubPoints: number; // Current sub points of the user (submissive)
+  currentDomPoints: number; // Current dom points of the user (submissive)
   punishmentTitle?: string; // Optional: for toast messages
 }
 
 interface RedeemPunishmentSuccessData {
   success: boolean;
   punishmentId: string;
-  newSubPoints: number;
-  newDomPoints: number;
+  newSubPoints: number; // Submissive's new sub points
+  newDomPoints: number; // Submissive's new dom points (should be unchanged by this action)
 }
 
 interface ProfilePoints {
@@ -45,7 +45,7 @@ interface ProfilePoints {
 interface RedeemPunishmentOptimisticContext {
   previousPunishments?: PunishmentData[];
   previousProfile?: ProfilePoints;
-  previousProfilePoints?: ProfilePointsData; // Added for consistent rollback
+  previousProfilePoints?: ProfilePointsData;
 }
 
 export const useRedeemPunishment = () => {
@@ -64,12 +64,12 @@ export const useRedeemPunishment = () => {
       id,
       currentDomSupply,
       costPoints,
-      domEarn,
-      profileId,
-      currentSubPoints,
-      currentDomPoints,
+      domEarn, // This is for the dominant partner, not the submissive
+      profileId, // Submissive's ID
+      currentSubPoints, // Submissive's current sub points
+      currentDomPoints, // Submissive's current dom points
     }) => {
-      console.log("Redeeming punishment:", { id, costPoints, domEarn, profileId });
+      console.log("Redeeming punishment:", { id, costPoints, domEarn, profileId, currentSubPoints, currentDomPoints });
       
       if (currentDomSupply <= 0) {
         toast({
@@ -81,7 +81,7 @@ export const useRedeemPunishment = () => {
       }
 
       const today = new Date();
-      const dayOfWeek = today.getDay(); // 0 (Sun) - 6 (Sat)
+      const dayOfWeek = today.getDay(); 
       const weekNumber = getISOWeekString(today);
 
       // 1. Log usage history
@@ -104,36 +104,42 @@ export const useRedeemPunishment = () => {
         .eq("id", id);
       if (punishmentUpdateError) throw punishmentUpdateError;
 
-      // 3. Update profile totals
-      const newSubPoints = currentSubPoints - costPoints;
-      const newDomPoints = currentDomPoints + domEarn;
+      // 3. Update submissive's profile totals
+      const actualNewSubPoints = currentSubPoints - costPoints;
+      // Submissive's DOM points do not change from domEarn in this transaction.
+      // domEarn is for the dominant partner, which this hook doesn't directly handle.
+      const actualNewDomPoints = currentDomPoints; 
+
       const { error: profileUpdateError } = await supabase
         .from("profiles")
         .update({
-          points: newSubPoints,
-          dom_points: newDomPoints,
+          points: actualNewSubPoints,
+          dom_points: actualNewDomPoints, // Use submissive's unchanged DOM points
           updated_at: new Date().toISOString(),
         })
         .eq("id", profileId);
       if (profileUpdateError) throw profileUpdateError;
       
       // Update points in cache using the central updateProfilePoints function
+      // This should be called for the user whose points actually changed and are being displayed.
+      // Assuming profileId is the logged-in user or the user whose points we want to reflect.
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user && user.id === profileId) {
-          console.log("Using updateProfilePoints to update points:", newSubPoints, newDomPoints);
-          await updateProfilePoints(newSubPoints, newDomPoints);
+          console.log("Using updateProfilePoints for submissive:", actualNewSubPoints, actualNewDomPoints);
+          await updateProfilePoints(actualNewSubPoints, actualNewDomPoints);
         }
+        // If there's a linked dominant partner, their points (domEarn) need to be updated separately.
+        // This hook currently doesn't do that. `useApplyPunishment` is more suited for that.
       } catch (err) {
-        console.error("Error updating points in cache:", err);
-        // Continue with the operation, we'll fallback to query invalidation
+        console.error("Error updating points in cache for submissive:", err);
       }
 
       return {
         success: true,
         punishmentId: id,
-        newSubPoints,
-        newDomPoints,
+        newSubPoints: actualNewSubPoints, // Return submissive's actual new points
+        newDomPoints: actualNewDomPoints, // Return submissive's actual (unchanged) dom points
       };
     },
     onMutate: async (variables) => {
@@ -145,7 +151,6 @@ export const useRedeemPunishment = () => {
       const previousProfile = queryClient.getQueryData<ProfilePoints>(PROFILE_QUERY_KEY);
       const previousProfilePoints = queryClient.getQueryData<ProfilePointsData>(PROFILE_POINTS_QUERY_KEY);
 
-      // Optimistic update for punishments
       if (previousPunishments) {
         queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, (oldPunishments = []) =>
           oldPunishments.map(p =>
@@ -154,47 +159,55 @@ export const useRedeemPunishment = () => {
         );
       }
       
-      // Optimistic update for profile points in both contexts
-      const newPoints = variables.currentSubPoints - variables.costPoints;
-      const newDomPoints = variables.currentDomPoints + variables.domEarn;
+      const optimisticNewSubPoints = variables.currentSubPoints - variables.costPoints;
+      // Submissive's DOM points for optimistic update should be their current DOM points.
+      const optimisticNewDomPoints = variables.currentDomPoints; 
       
       // Update for usePointsManager
       queryClient.setQueryData<ProfilePointsData>(PROFILE_POINTS_QUERY_KEY, {
-        points: newPoints,
-        dom_points: newDomPoints
+        points: optimisticNewSubPoints,
+        dom_points: optimisticNewDomPoints 
       });
       
-      // Update for RewardsContext
-      queryClient.setQueryData(["rewards", "points"], newPoints);
-      queryClient.setQueryData(["rewards", "dom_points"], newDomPoints);
+      // Update for RewardsContext (legacy)
+      queryClient.setQueryData(["rewards", "points"], optimisticNewSubPoints);
+      queryClient.setQueryData(["rewards", "dom_points"], optimisticNewDomPoints); 
       
-      // Update for profile
       if (previousProfile) {
          queryClient.setQueryData<ProfilePoints>(PROFILE_QUERY_KEY, (oldProfile = {}) => ({
           ...oldProfile,
-          points: newPoints,
-          dom_points: newDomPoints,
+          points: optimisticNewSubPoints,
+          dom_points: optimisticNewDomPoints,
         }));
       } else { 
         queryClient.setQueryData<ProfilePoints>(PROFILE_QUERY_KEY, {
-            points: newPoints,
-            dom_points: newDomPoints,
+            points: optimisticNewSubPoints,
+            dom_points: optimisticNewDomPoints,
         });
       }
 
       return { previousPunishments, previousProfile, previousProfilePoints };
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (data, variables) => { // data now contains submissive's correct newSubPoints and newDomPoints
       toast({
         title: "Punishment Applied",
         description: `${variables.punishmentTitle || 'The punishment'} has been successfully applied.`,
       });
       
-      // Update all points-related cache keys using our central function
+      // updateProfilePoints is called with the submissive's correct points.
+      // This assumes the current user whose cache is being updated is the submissive.
+      // If this hook can be called by a dominant applying to a sub, this needs more context.
+      // For now, this makes the submissive's points correct.
       try {
+         // The mutationFn already calls updateProfilePoints if user.id === profileId.
+         // Calling it again here might be redundant unless specifically for a different user
+         // or if the mutationFn's call might fail silently.
+         // Given the current structure, let's ensure it's robustly updated.
+         // The `data` object contains the submissive's final point state.
         updateProfilePoints(data.newSubPoints, data.newDomPoints);
+        console.log("useRedeemPunishment onSuccess: updated profile points with", data.newSubPoints, data.newDomPoints);
       } catch (err) {
-        console.error("Error updating points after success:", err);
+        console.error("Error updating points after success in useRedeemPunishment:", err);
       }
     },
     onError: (error, variables, context) => {
@@ -213,7 +226,7 @@ export const useRedeemPunishment = () => {
         queryClient.setQueryData(["rewards", "dom_points"], domPoints);
       }
       
-      console.error('Error applying punishment:', error);
+      console.error('Error applying punishment via useRedeemPunishment:', error);
       if (error.message !== "Punishment has no supply left") {
         toast({
           title: "Failed to Apply Punishment",
@@ -223,13 +236,11 @@ export const useRedeemPunishment = () => {
       }
     },
     onSettled: (_data, _error, variables) => {
-      // Invalidate all points-related queries
       queryClient.invalidateQueries({ queryKey: PROFILE_POINTS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ["rewards", "points"] });
       queryClient.invalidateQueries({ queryKey: ["rewards", "dom_points"] });
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY });
       
-      // Invalidate other related queries
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
       if (variables?.id) {
         queryClient.invalidateQueries({ queryKey: ['punishments', variables.id] });
