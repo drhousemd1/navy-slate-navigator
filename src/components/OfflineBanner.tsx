@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useNetworkStatus } from '@/contexts/NetworkStatusContext'; // Corrected import
 import { Wifi, WifiOff } from 'lucide-react';
 
 export const OfflineBanner = () => {
