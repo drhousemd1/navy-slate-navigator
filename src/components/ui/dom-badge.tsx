@@ -1,4 +1,5 @@
 
+//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import React from 'react';
 import { Badge } from './badge';
 import { Box, Crown } from 'lucide-react';

@@ -1,26 +1,36 @@
 
+//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import { queryClient } from "../queryClient";
 import localforage from "localforage";
-import { PROFILE_POINTS_QUERY_KEY } from '@/data/points/usePointsManager';
-import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries';
+import { getProfilePointsQueryKey, PROFILE_POINTS_QUERY_KEY_BASE } from "@/data/points/usePointsManager";
 
-/**
- * Updates all relevant cache keys for profile points to ensure consistent UI display
- * across all components that use points data
- * 
- * @param points Submissive points (regular points)
- * @param dom_points Dominant points
- */
-export async function updateProfilePoints(points: number, dom_points: number) {
-  console.log("updateProfilePoints called with:", { points, dom_points });
+// This function now requires a userId to ensure cache and local storage are updated for the correct user.
+export async function updateProfilePoints(userId: string, points: number, dom_points: number) {
+  if (!userId) {
+    console.error("updateProfilePoints: userId is required.");
+    return;
+  }
+
+  const userProfilePointsKey = getProfilePointsQueryKey(userId); // e.g., ["profile_points", "user-id-123"]
   
-  // Update the profile_points for usePointsManager
-  queryClient.setQueryData(PROFILE_POINTS_QUERY_KEY, { points, dom_points });
+  // Update primary profile points cache key used by usePointsManager
+  queryClient.setQueryData(userProfilePointsKey, { points, dom_points });
   
-  // Update the points for the older RewardsContext system
-  queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, points);
-  queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, dom_points);
+  // Update legacy keys, now also scoped by userId for consistency
+  // ["rewards", "points", "user-id-123"]
+  // ["rewards", "dom_points", "user-id-123"]
+  queryClient.setQueryData(["rewards", "points", userId], points);
+  queryClient.setQueryData(["rewards", "dom_points", userId], dom_points);
   
-  // Update local storage for offline/persistent access
-  await localforage.setItem("profile_points", { points, dom_points });
+  // Update general profile key, also scoped by userId
+  // This assumes ["profile", userId] is or will be the pattern for fetching a specific user's full profile.
+  queryClient.setQueryData(["profile", userId], (oldProfile: any) => {
+    if (!oldProfile) return { id: userId, points, dom_points }; // Include id if creating new
+    return { ...oldProfile, points, dom_points };
+  });
+  
+  // Store in localForage, scoped by userId
+  await localforage.setItem(`profile_points_${userId}`, { points, dom_points });
+  await localforage.setItem(`rewards_points_${userId}`, points);
+  await localforage.setItem(`rewards_dom_points_${userId}`, dom_points);
 }

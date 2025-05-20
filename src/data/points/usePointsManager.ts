@@ -2,24 +2,36 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/hooks/use-toast';
-import { updateProfilePoints } from "@/data/sync/updateProfilePoints";
-import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from "@/data/rewards/queries";
 
-export const PROFILE_POINTS_QUERY_KEY = ["profile_points"];
+// Define a base key for profile points
+export const PROFILE_POINTS_QUERY_KEY_BASE = "profile_points";
 
-interface ProfilePointsData {
+// Function to generate the query key for a specific user or the current user
+export const getProfilePointsQueryKey = (userId?: string | null) => {
+  // If no userId is provided, it implies the current authenticated user.
+  // We use a specific string "current_authenticated_user" in the key
+  // to differentiate from a guest or unauthenticated state.
+  // The fetchProfilePoints function will resolve this to the actual user ID.
+  return [PROFILE_POINTS_QUERY_KEY_BASE, userId || "current_authenticated_user"];
+};
+
+export interface ProfilePointsData {
   points: number;
   dom_points: number;
 }
 
-// Function to fetch points from Supabase
-const fetchProfilePoints = async (): Promise<ProfilePointsData> => {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    console.warn("User not authenticated or error fetching user. Returning default points.");
-    return { points: 0, dom_points: 0 };
+// Function to fetch points from Supabase, now accepts an optional userIdToFetch
+const fetchProfilePoints = async (userIdToFetch?: string | null): Promise<ProfilePointsData> => {
+  let userId = userIdToFetch;
+
+  if (!userId || userId === "current_authenticated_user") {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData.user) {
+      // console.warn("User not authenticated or error fetching user. Returning default points.");
+      return { points: 0, dom_points: 0 };
+    }
+    userId = userData.user.id;
   }
-  const userId = userData.user.id;
 
   const { data, error } = await supabase
     .from("profiles")
@@ -28,34 +40,39 @@ const fetchProfilePoints = async (): Promise<ProfilePointsData> => {
     .single();
 
   if (error) {
-    console.error("Error fetching profile points:", error);
-    if (error.code === 'PGRST116') { // PGRST116: "The result contains 0 rows"
-        console.warn(`No profile found for user ${userId}. Returning default points.`);
-        return { points: 0, dom_points: 0 };
+    // console.error("Error fetching profile points for user", userId, error);
+    if (error.code === 'PGRST116') {
+      // console.warn(`No profile found for user ${userId}. Returning default points.`);
+      return { points: 0, dom_points: 0 };
     }
-    return { points: 0, dom_points: 0 }; 
+    return { points: 0, dom_points: 0 };
   }
 
   return data ? { points: data.points || 0, dom_points: data.dom_points || 0 } : { points: 0, dom_points: 0 };
 };
 
-export const usePointsManager = () => {
+// targetUserId: specific user to fetch for. If undefined/null, fetches for current authenticated user.
+export const usePointsManager = (targetUserId?: string | null) => {
   const queryClient = useQueryClient();
+  const queryKey = getProfilePointsQueryKey(targetUserId);
 
-  const { 
-    data: pointsData, 
-    isLoading, 
+  const {
+    data: pointsData,
+    isLoading,
     error,
     refetch: refreshPointsFromServer,
   } = useQuery<ProfilePointsData, Error>({
-    queryKey: PROFILE_POINTS_QUERY_KEY,
-    queryFn: fetchProfilePoints,
+    queryKey: queryKey,
+    queryFn: () => fetchProfilePoints(targetUserId), // Pass targetUserId to fetch function
+    // staleTime, gcTime, etc., will be inherited from defaultQueryOptions in QueryClient
   });
 
   const currentPoints = pointsData?.points ?? 0;
   const currentDomPoints = pointsData?.dom_points ?? 0;
 
   // Mutation to update points (generic for both types)
+  // This mutation, as part of usePointsManager, will update points for the user
+  // whose ID was used to instantiate this instance of usePointsManager (via targetUserId or current auth user).
   const updatePointsMutation = useMutation<
     Partial<ProfilePointsData>,
     Error,
@@ -63,55 +80,52 @@ export const usePointsManager = () => {
     { previousPointsData?: ProfilePointsData }
   >({
     mutationFn: async (updates) => {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError || !authData.user) {
-        throw new Error("User not authenticated. Cannot update points.");
+      let userIdToUpdate = targetUserId;
+      if (!userIdToUpdate || userIdToUpdate === "current_authenticated_user") {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError || !authData.user) {
+          throw new Error("User not authenticated. Cannot update points.");
+        }
+        userIdToUpdate = authData.user.id;
       }
-      const userId = authData.user.id;
+      
+      if (!userIdToUpdate) throw new Error("Could not determine user ID for points update.");
 
       const { data, error: updateError } = await supabase
         .from("profiles")
         .update(updates)
-        .eq("id", userId)
+        .eq("id", userIdToUpdate)
         .select('points, dom_points')
         .single();
 
-      if (updateError) {
-        throw updateError;
-      }
-      if (!data) {
-        throw new Error("Failed to update points: No data returned.");
-      }
+      if (updateError) throw updateError;
+      if (!data) throw new Error("Failed to update points: No data returned.");
       return { points: data.points, dom_points: data.dom_points };
     },
     onMutate: async (newValues) => {
-      await queryClient.cancelQueries({ queryKey: PROFILE_POINTS_QUERY_KEY });
-      await queryClient.cancelQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
-      await queryClient.cancelQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY });
-      
-      const previousPointsData = queryClient.getQueryData<ProfilePointsData>(PROFILE_POINTS_QUERY_KEY);
-      
-      const updatedPoints = {
-        points: newValues.points !== undefined ? newValues.points : (previousPointsData?.points ?? 0),
-        dom_points: newValues.dom_points !== undefined ? newValues.dom_points : (previousPointsData?.dom_points ?? 0),
-      };
-      
-      // Update all relevant query keys
-      await updateProfilePoints(updatedPoints.points, updatedPoints.dom_points);
-      
+      // queryKey here is already user-specific due to getProfilePointsQueryKey(targetUserId)
+      await queryClient.cancelQueries({ queryKey });
+      const previousPointsData = queryClient.getQueryData<ProfilePointsData>(queryKey);
+
+      queryClient.setQueryData<ProfilePointsData>(queryKey, (old) => ({
+        points: newValues.points !== undefined ? newValues.points : (old?.points ?? 0),
+        dom_points: newValues.dom_points !== undefined ? newValues.dom_points : (old?.dom_points ?? 0),
+      }));
+
       return { previousPointsData };
     },
     onError: (err, _newValues, context) => {
       if (context?.previousPointsData) {
-        // Restore previous points to all relevant query keys
-        updateProfilePoints(context.previousPointsData.points, context.previousPointsData.dom_points);
+        queryClient.setQueryData(queryKey, context.previousPointsData);
       }
       toast({ title: "Error updating points", description: err.message, variant: "destructive" });
     },
     onSuccess: (data) => {
-      // Ensure all query keys are updated with the latest values
-      updateProfilePoints(data.points ?? currentPoints, data.dom_points ?? currentDomPoints);
+      queryClient.setQueryData(queryKey, data);
     },
+    // onSettled: () => { // No longer invalidating globally here, specific invalidations will handle this.
+    //   queryClient.invalidateQueries({ queryKey });
+    // },
   });
 
   const setTotalPoints = async (newPoints: number) => {
@@ -133,15 +147,7 @@ export const usePointsManager = () => {
   };
 
   const refreshPoints = async () => {
-    try {
-      const freshPoints = await refreshPointsFromServer();
-      if (freshPoints.data) {
-        // Make sure we update all other query keys for consistency
-        await updateProfilePoints(freshPoints.data.points, freshPoints.data.dom_points);
-      }
-    } catch (error) {
-      console.error("Error refreshing points:", error);
-    }
+    await refreshPointsFromServer();
   };
 
   return {
