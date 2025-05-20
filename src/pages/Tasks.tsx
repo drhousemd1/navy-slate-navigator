@@ -1,169 +1,172 @@
+import React, { useState, useEffect } from 'react';
+import AppLayout from '../components/AppLayout';
+import TaskEditor from '../components/TaskEditor';
+import TasksHeader from '../components/task/TasksHeader';
+import TasksList from '../components/task/TasksList';
+import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
+import { TaskWithId } from '@/data/tasks/types';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { useTasksData } from '@/hooks/useTasksData';
+import ErrorDisplay from '@/components/common/ErrorDisplay';
+import EmptyState from '@/components/common/EmptyState';
+import { ListChecks, LoaderCircle } from 'lucide-react';
 
-//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
-import React, { useState, useCallback } from 'react';
-import { useTasksData, UseTasksDataResult } from '@/hooks/useTasksData';
-import TaskCard from '@/components/TaskCard';
-import TaskEditor from '@/components/TaskEditor';
-import TasksHeader from '@/components/task/TasksHeader';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
-import { TaskWithId, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types';
-import { useAuth } from '@/contexts/auth';
-import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from '@/hooks/use-toast';
-
-const Tasks: React.FC = () => {
-  const { user } = useAuth();
+const TasksPageContent: React.FC = () => {
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [currentTask, setCurrentTask] = useState<TaskWithId | null>(null);
   const { 
     tasks, 
     isLoading, 
     error, 
-    createTask, 
-    updateTask, 
+    saveTask, 
     deleteTask, 
     toggleTaskCompletion,
-    refetchTasks 
-  }: UseTasksDataResult = useTasksData();
+    refetch 
+  } = useTasksData();
+  const { refreshPointsFromDatabase } = useRewards();
+  
 
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<TaskWithId | undefined>(undefined);
-
-  const handleOpenEditor = (task?: TaskWithId) => {
-    setEditingTask(task);
+  const handleAddTask = () => {
+    console.log('handleAddTask called in TasksPageContent');
+    setCurrentTask(null);
     setIsEditorOpen(true);
   };
 
-  const handleCloseEditor = () => {
-    setEditingTask(undefined);
-    setIsEditorOpen(false);
+  React.useEffect(() => {
+    console.log('Setting up event listener for add-new-task');
+    const element = document.querySelector('.TasksContent'); 
+    if (element) {
+      const handleAddEvent = (event: Event) => { 
+        console.log('Received add-new-task event', event);
+        handleAddTask();
+      };
+      element.addEventListener('add-new-task', handleAddEvent);
+      return () => {
+        element.removeEventListener('add-new-task', handleAddEvent);
+      };
+    }
+  }, []); 
+
+  const handleEditTask = (task: TaskWithId) => {
+    setCurrentTask(task);
+    setIsEditorOpen(true);
   };
 
-  const handleSaveTask = async (data: CreateTaskVariables | UpdateTaskVariables) => {
-    if (!user) {
-      toast({ title: "Authentication Error", description: "You must be logged in to save tasks.", variant: "destructive" });
-      return;
-    }
-
+  const handleSaveTask = async (taskData: TaskWithId) => { 
     try {
-      if ('id' in data && data.id) { 
-        await updateTask(data as UpdateTaskVariables); 
-        toast({ title: "Task Updated", description: "Your task has been successfully updated." });
-      } else { 
-        // Ensure user_id is correctly included for new tasks
-        const taskDataWithUser = { ...data, user_id: user.id } as CreateTaskVariables;
-        await createTask(taskDataWithUser); 
-        toast({ title: "Task Created", description: "Your new task has been successfully created." });
+      const savedTask = await saveTask(taskData);
+      if (savedTask && savedTask.id) {
+        // setCurrentTask(savedTask); 
       }
-      refetchTasks(); 
-      handleCloseEditor();
-    } catch (e: any) {
-      toast({ title: "Save Failed", description: e.message || "Could not save the task.", variant: "destructive" });
-      console.error("Failed to save task:", e);
-    }
-  };
-  
-  const handleDeleteTask = async (taskId: string) => { 
-    try {
-      await deleteTask(taskId); 
-      toast({ title: "Task Deleted", description: "The task has been successfully deleted." });
-      refetchTasks(); 
-      handleCloseEditor(); 
-    } catch (e: any) {
-      toast({ title: "Delete Failed", description: e.message || "Could not delete the task.", variant: "destructive" });
-      console.error("Failed to delete task:", e);
+    } catch (err) {
+      console.error('Error saving task in UI:', err);
     }
   };
 
-  const handleToggleComplete = async (task: TaskWithId) => {
-    if (!user) {
-        toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive"});
-        return;
-    }
-    // Ensure user_id from task is used if available, otherwise from auth context. This is crucial.
-    const taskUserId = task.user_id || user.id; 
-    if (!taskUserId) {
-        toast({ title: "User ID Error", description: "Cannot determine user for task operation.", variant: "destructive"});
-        return;
-    }
+  const handleDeleteTask = async (taskId: string) => {
     try {
-      await toggleTaskCompletion({ taskId: task.id, completed: !task.completed, points: task.points, userId: taskUserId });
-      toast({ title: "Task Status Updated", description: `Task marked as ${!task.completed ? 'complete' : 'incomplete'}.` });
-    } catch (e: any)
-    {
-      toast({ title: "Update Failed", description: e.message || "Could not update task completion.", variant: "destructive"});
-      console.error("Failed to toggle task completion:", e);
+      await deleteTask(taskId);
+    } catch (err) {
+      console.error('Error deleting task in UI:', err);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-4 md:p-6 bg-background text-foreground min-h-screen">
-        <TasksHeader taskCount={0} completedCount={0} /> 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mt-6">
-          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[200px] w-full rounded-lg bg-muted" />)}
-        </div>
+  const handleToggleCompletion = async (taskId: string, completed: boolean) => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) {
+        console.error(`Task with id ${taskId} not found.`);
+        return;
+      }
+      await toggleTaskCompletion(taskId, completed, task.points || 0); 
+      if (completed) {
+        setTimeout(() => {
+          refreshPointsFromDatabase();
+        }, 500); 
+      }
+    } catch (err) {
+      console.error('Error toggling task completion in UI:', err);
+    }
+  };
+
+  useEffect(() => {
+    refreshPointsFromDatabase(); 
+  }, [refreshPointsFromDatabase]); 
+
+  let content;
+  if (isLoading && tasks.length === 0) {
+    content = (
+      <div className="flex flex-col items-center justify-center py-10 mt-4">
+        <LoaderCircle className="h-10 w-10 text-primary animate-spin mb-2" />
+        <p className="text-muted-foreground">Loading tasks...</p>
       </div>
+    );
+  } else if (error && tasks.length === 0) {
+    content = (
+      <ErrorDisplay
+        title="Error Loading Tasks"
+        message={error.message || "Could not fetch tasks. Please check your connection or try again later."}
+      />
+    );
+  } else if (!isLoading && tasks.length === 0 && !error) {
+    content = (
+      <EmptyState
+        icon={ListChecks} 
+        title="No Tasks Yet"
+        description="You do not have any tasks yet, create one to get started."
+      />
+    );
+  } else {
+    content = (
+      <TasksList
+        tasks={tasks}
+        isLoading={false} 
+        onEditTask={handleEditTask}
+        onToggleCompletion={handleToggleCompletion}
+        error={error} 
+      />
     );
   }
 
-  if (error) {
-    return <div className="text-red-500 p-4">Error loading tasks: {error.message}</div>;
-  }
+  return (
+    <div className="p-4 pt-6 TasksContent">
+      <TasksHeader /> 
+      {content}
+      <TaskEditor
+        isOpen={isEditorOpen}
+        onClose={() => {
+          setIsEditorOpen(false);
+          setCurrentTask(null);
+        }}
+        taskData={currentTask || undefined} 
+        onSave={handleSaveTask}
+        onDelete={handleDeleteTask}
+      />
+    </div>
+  );
+};
 
-  const completedCount = tasks.filter(task => task.completed).length;
+const Tasks: React.FC = () => {
+  const handleAddNewItem = () => {
+    console.log('AppLayout onAddNewItem called for Tasks');
+    const content = document.querySelector('.TasksContent');
+    if (content) {
+      console.log('Dispatching add-new-task event to .TasksContent');
+      const event = new CustomEvent('add-new-task');
+      content.dispatchEvent(event);
+    } else {
+      console.warn('.TasksContent element not found for dispatching event. Ensure TasksPageContent renders a div with this class.');
+    }
+  };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 bg-background text-foreground min-h-screen">
-      <TasksHeader taskCount={tasks.length} completedCount={completedCount} />
-      
-      {tasks.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-xl text-muted-foreground mb-4">No tasks yet. Get started by adding one!</p>
-          <Button onClick={() => handleOpenEditor()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Task
-          </Button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mt-6">
-          {tasks.map((task) => (
-            <TaskCard 
-              key={task.id} 
-              title={task.title || 'Untitled Task'}
-              description={task.description || ''} 
-              points={task.points || 0} 
-              completed={task.completed}
-              priority={task.priority}
-              frequency={task.frequency}
-              frequency_count={task.frequency_count}
-              usage_data={task.usage_data || []}
-              icon_name={task.icon_name}
-              icon_color={task.icon_color}
-              title_color={task.title_color}
-              subtext_color={task.subtext_color}
-              calendar_color={task.calendar_color}
-              backgroundImage={task.background_image_url}
-              backgroundOpacity={task.background_opacity}
-              highlight_effect={task.highlight_effect}
-              focal_point_x={task.focal_point_x}
-              focal_point_y={task.focal_point_y}
-              icon_url={task.icon_url}
-              onEdit={() => handleOpenEditor(task)}
-              onToggleComplete={() => handleToggleComplete(task)} 
-            />
-          ))}
-        </div>
-      )}
-
-      {isEditorOpen && (
-        <TaskEditor
-          isOpen={isEditorOpen}
-          onClose={handleCloseEditor}
-          onSave={handleSaveTask}
-          onDelete={editingTask?.id ? () => handleDeleteTask(editingTask!.id) : undefined} 
-          taskData={editingTask} 
-        />
-      )}
-    </div>
+    <AppLayout onAddNewItem={handleAddNewItem}>
+      <RewardsProvider>
+        <ErrorBoundary fallbackMessage="Could not load tasks. Please try reloading.">
+          <TasksPageContent />
+        </ErrorBoundary>
+      </RewardsProvider>
+    </AppLayout>
   );
 };
 

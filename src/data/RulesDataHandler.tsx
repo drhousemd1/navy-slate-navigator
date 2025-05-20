@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Rule } from '@/data/interfaces/Rule';
 import { QueryObserverResult, UseQueryResult } from '@tanstack/react-query';
@@ -11,7 +10,6 @@ import {
   useCreateRuleViolation 
 } from '@/data/rules/mutations';
 import { CreateRuleViolationVariables } from '@/data/rules/types';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 export type RulesQueryResult = {
   rules: Rule[]; 
@@ -25,7 +23,6 @@ export type RulesQueryResult = {
 
 export const useRulesData = (): RulesQueryResult => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate(); // Initialize navigate
   
   const { 
     data: rules = [], 
@@ -35,11 +32,11 @@ export const useRulesData = (): RulesQueryResult => {
   }: UseQueryResult<Rule[], Error> = useQuery<Rule[], Error>({
     queryKey: ['rules'],
     queryFn: fetchRules,
-    staleTime: 1000 * 60 * 5, // 5 minutes staleTime
+    staleTime: Infinity,
     gcTime: 1000 * 60 * 60, 
-    refetchOnWindowFocus: true, // Allow refetch on focus for rules
-    refetchOnReconnect: true,  
-    refetchOnMount: true,     
+    refetchOnWindowFocus: false, 
+    refetchOnReconnect: false,  
+    refetchOnMount: false,     
     retry: 1, 
     retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
   });
@@ -90,8 +87,6 @@ export const useRulesData = (): RulesQueryResult => {
       rule_id: rule.id 
     };
     await markRuleViolationMutation.mutateAsync(violationVariables);
-    // After successfully marking as broken, navigate to punishments page
-    navigate('/punishments'); 
   };
 
   return { 

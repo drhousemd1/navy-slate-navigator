@@ -2,7 +2,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/hooks/use-toast';
-import { PROFILE_POINTS_QUERY_KEY_BASE } from '@/data/points/usePointsManager'; // Added import
 
 interface BuySubRewardVars { 
   rewardId: string; 
@@ -54,8 +53,7 @@ export const useBuySubReward = () => {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      // Updated to invalidate points managed by usePointsManager
-      await queryClient.invalidateQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] }); 
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
       toast({
         title: "Reward Purchased",
         description: "Reward purchased successfully!",
@@ -70,4 +68,3 @@ export const useBuySubReward = () => {
     },
   });
 };
-
