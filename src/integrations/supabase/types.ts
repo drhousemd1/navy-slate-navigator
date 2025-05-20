@@ -290,64 +290,64 @@ export type Database = {
         Row: {
           background_image_url: string | null
           background_images: Json | null
-          background_opacity: number | null
-          calendar_color: string | null
+          background_opacity: number
+          calendar_color: string
           created_at: string | null
-          description: string | null
-          dom_points: number | null
+          description: string
+          dom_points: number
           dom_supply: number
-          focal_point_x: number | null
-          focal_point_y: number | null
-          highlight_effect: boolean | null
-          icon_color: string | null
+          focal_point_x: number
+          focal_point_y: number
+          highlight_effect: boolean
+          icon_color: string
           icon_name: string | null
           id: string
           points: number
-          subtext_color: string | null
+          subtext_color: string
           title: string
-          title_color: string | null
+          title_color: string
           updated_at: string | null
         }
         Insert: {
           background_image_url?: string | null
           background_images?: Json | null
-          background_opacity?: number | null
-          calendar_color?: string | null
+          background_opacity?: number
+          calendar_color?: string
           created_at?: string | null
-          description?: string | null
-          dom_points?: number | null
+          description?: string
+          dom_points?: number
           dom_supply?: number
-          focal_point_x?: number | null
-          focal_point_y?: number | null
-          highlight_effect?: boolean | null
-          icon_color?: string | null
+          focal_point_x?: number
+          focal_point_y?: number
+          highlight_effect?: boolean
+          icon_color?: string
           icon_name?: string | null
           id?: string
           points?: number
-          subtext_color?: string | null
+          subtext_color?: string
           title: string
-          title_color?: string | null
+          title_color?: string
           updated_at?: string | null
         }
         Update: {
           background_image_url?: string | null
           background_images?: Json | null
-          background_opacity?: number | null
-          calendar_color?: string | null
+          background_opacity?: number
+          calendar_color?: string
           created_at?: string | null
-          description?: string | null
-          dom_points?: number | null
+          description?: string
+          dom_points?: number
           dom_supply?: number
-          focal_point_x?: number | null
-          focal_point_y?: number | null
-          highlight_effect?: boolean | null
-          icon_color?: string | null
+          focal_point_x?: number
+          focal_point_y?: number
+          highlight_effect?: boolean
+          icon_color?: string
           icon_name?: string | null
           id?: string
           points?: number
-          subtext_color?: string | null
+          subtext_color?: string
           title?: string
-          title_color?: string | null
+          title_color?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -615,6 +615,7 @@ export type Database = {
           title_color: string
           updated_at: string
           usage_data: Json | null
+          user_id: string | null
           week_identifier: string | null
         }
         Insert: {
@@ -642,6 +643,7 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
+          user_id?: string | null
           week_identifier?: string | null
         }
         Update: {
@@ -669,9 +671,18 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
+          user_id?: string | null
           week_identifier?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

@@ -2,28 +2,37 @@
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Minus, Crown, Coins } from 'lucide-react';
+import { Minus, Crown, Coins, Package } from 'lucide-react'; // Added Package icon
 
 interface PunishmentCardHeaderProps {
   points: number;
-  dom_points?: number;
+  dom_points: number; // Now required
+  dom_supply: number; // Added dom_supply
   onPunish: () => void;
 }
 
 const PunishmentCardHeader: React.FC<PunishmentCardHeaderProps> = ({
   points,
   dom_points,
+  dom_supply, // Added dom_supply
   onPunish
 }) => {
-  // If dom_points is not provided, use half the points as default
-  const displayDomPoints = dom_points !== undefined ? dom_points : Math.ceil(Math.abs(points) / 2);
+  // dom_points is now required, so direct usage. Defaulting logic removed.
+  const displayDomPoints = dom_points;
 
   return (
     <div className="flex justify-between items-center mb-3">
-      <div className="h-6"></div>
+      {/* DOM Supply Badge - New element */}
+      <Badge
+        className="bg-gray-700 text-white font-semibold flex items-center gap-1 px-2 py-1 text-xs border border-gray-500"
+        variant="default"
+      >
+        <Package className="h-3 w-3" />
+        {dom_supply} Left
+      </Badge>
       
       <div className="flex items-center gap-2">
-        {/* Points badge for deduction - updated with Coins icon and matching header style */}
+        {/* Points badge for deduction */}
         <Badge 
           className="bg-black text-white font-bold flex items-center gap-1 px-2 border border-[#00f0ff]"
           variant="default"
@@ -35,7 +44,7 @@ const PunishmentCardHeader: React.FC<PunishmentCardHeaderProps> = ({
           </span>
         </Badge>
         
-        {/* Points badge for dom rewards - updated to match header style */}
+        {/* Points badge for dom rewards */}
         <Badge
           className="bg-black text-white font-bold flex items-center gap-1 px-2 border border-red-500"
           variant="default"
@@ -44,12 +53,13 @@ const PunishmentCardHeader: React.FC<PunishmentCardHeaderProps> = ({
           {displayDomPoints}
         </Badge>
         
-        {/* Punish button - updated size to match reward "Buy" buttons */}
+        {/* Punish button */}
         <Button
           variant="destructive"
           size="sm"
           className="bg-red-500 text-white hover:bg-red-600/90 h-8 px-3 text-sm"
           onClick={onPunish}
+          disabled={dom_supply <= 0} // Disable if no supply
         >
           Punish
         </Button>

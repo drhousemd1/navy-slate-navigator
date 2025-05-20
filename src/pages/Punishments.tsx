@@ -51,13 +51,23 @@ const PunishmentsContent: React.FC<{
     try {
       let savedPunishment: PunishmentData;
       if (currentPunishment?.id) {
+        // For updates, ensure all required fields from PunishmentData are present or defaulted if needed.
+        // The form should provide these.
         const updateVariables: UpdatePunishmentVariables = {
           id: currentPunishment.id,
           ...punishmentDataToSave,
+          // Ensure non-nullable fields that might be missing from Partial<PunishmentData> get a default
+          // if the form doesn't guarantee them. However, PunishmentFormProvider schema now has defaults.
+          description: punishmentDataToSave.description ?? currentPunishment.description ?? '',
+          dom_points: punishmentDataToSave.dom_points ?? currentPunishment.dom_points ?? 0,
+          dom_supply: punishmentDataToSave.dom_supply ?? currentPunishment.dom_supply ?? 0,
+          // other required fields should be handled by form defaults or here if necessary
         };
         savedPunishment = await updatePunishmentMutation.mutateAsync(updateVariables);
         toast({ title: "Success", description: "Punishment updated successfully." });
       } else {
+        // For creation, ensure all required fields for CreatePunishmentVariables are present.
+        // The Zod schema in PunishmentFormProvider provides defaults for many of these.
         if (!punishmentDataToSave.title || typeof punishmentDataToSave.points !== 'number') {
           toast({ title: "Validation Error", description: "Title and points are required to create a punishment.", variant: "destructive" });
           throw new Error("Title and points are required to create a punishment.");
@@ -65,18 +75,19 @@ const PunishmentsContent: React.FC<{
         const createVariables: CreatePunishmentVariables = {
           title: punishmentDataToSave.title,
           points: punishmentDataToSave.points,
-          description: punishmentDataToSave.description,
-          dom_supply: punishmentDataToSave.dom_supply ?? 0, 
+          description: punishmentDataToSave.description ?? '', // Ensured by schema default now
+          dom_points: punishmentDataToSave.dom_points ?? Math.ceil(punishmentDataToSave.points / 2), // Default logic if not from form
+          dom_supply: punishmentDataToSave.dom_supply ?? 0, // Ensured by schema default
           icon_name: punishmentDataToSave.icon_name,
-          icon_color: punishmentDataToSave.icon_color ?? '#ea384c',
+          icon_color: punishmentDataToSave.icon_color ?? '#ea384c', // Ensured by schema default
           background_image_url: punishmentDataToSave.background_image_url,
-          background_opacity: punishmentDataToSave.background_opacity ?? 50,
-          title_color: punishmentDataToSave.title_color ?? '#FFFFFF',
-          subtext_color: punishmentDataToSave.subtext_color ?? '#8E9196',
-          calendar_color: punishmentDataToSave.calendar_color ?? '#ea384c',
-          highlight_effect: punishmentDataToSave.highlight_effect ?? false,
-          focal_point_x: punishmentDataToSave.focal_point_x ?? 50,
-          focal_point_y: punishmentDataToSave.focal_point_y ?? 50,
+          background_opacity: punishmentDataToSave.background_opacity ?? 50, // Ensured by schema default
+          title_color: punishmentDataToSave.title_color ?? '#FFFFFF', // Ensured by schema default
+          subtext_color: punishmentDataToSave.subtext_color ?? '#8E9196', // Ensured by schema default
+          calendar_color: punishmentDataToSave.calendar_color ?? '#ea384c', // Ensured by schema default
+          highlight_effect: punishmentDataToSave.highlight_effect ?? false, // Ensured by schema default
+          focal_point_x: punishmentDataToSave.focal_point_x ?? 50, // Ensured by schema default
+          focal_point_y: punishmentDataToSave.focal_point_y ?? 50, // Ensured by schema default
         };
         savedPunishment = await createPunishmentMutation.mutateAsync(createVariables);
         toast({ title: "Success", description: "Punishment created successfully." });
