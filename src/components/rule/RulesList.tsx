@@ -1,9 +1,10 @@
+
 import React from 'react';
 import RuleCard from './RuleCard';
 import { Rule } from '@/data/interfaces/Rule';
 import EmptyState from '@/components/common/EmptyState'; 
 import { ShieldOff, LoaderCircle, AlertTriangle, WifiOff } from 'lucide-react'; 
-import { toast } from "@/hooks/use-toast";
+// import { toast } from "@/hooks/use-toast"; // Toast removed
 
 interface RulesListProps {
   rules: Rule[];
@@ -22,15 +23,15 @@ const RulesList: React.FC<RulesListProps> = ({
   error,
   isUsingCachedData
 }) => {
-  React.useEffect(() => {
-    if (isUsingCachedData && !isLoading) { // Show toast only when not actively loading
-      toast({
-        title: "Using cached data",
-        description: "We're currently showing you cached rules data due to connection issues.",
-        variant: "default"
-      });
-    }
-  }, [isUsingCachedData, isLoading]);
+  // React.useEffect(() => { // Toast removed
+  //   if (isUsingCachedData && !isLoading) { 
+  //     toast({
+  //       title: "Using cached data",
+  //       description: "We're currently showing you cached rules data due to connection issues.",
+  //       variant: "default"
+  //     });
+  //   }
+  // }, [isUsingCachedData, isLoading]);
 
   if (isLoading && (!rules || rules.length === 0)) {
     return (
@@ -52,7 +53,7 @@ const RulesList: React.FC<RulesListProps> = ({
     );
   }
 
-  if (!isLoading && rules.length === 0) { // Condition implies error is null or handled
+  if (!isLoading && rules.length === 0) { 
     return (
       <EmptyState
         icon={ShieldOff}
@@ -67,7 +68,7 @@ const RulesList: React.FC<RulesListProps> = ({
       {isUsingCachedData && rules.length > 0 ? (
         <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-md flex items-center gap-2">
           <WifiOff className="h-5 w-5 text-amber-500" />
-          <span className="text-sm text-amber-700 dark:text-amber-400">Showing cached data. Some information might be outdated.</span>
+          <span className="text-sm text-amber-700 dark:text-amber-400">Showing cached data due to an error during sync. Some information might be outdated.</span>
         </div>
       ) : null}
       <div className="space-y-4">
@@ -85,3 +86,4 @@ const RulesList: React.FC<RulesListProps> = ({
 };
 
 export default RulesList;
+

@@ -1,5 +1,4 @@
-
-import { useQuery, UseQueryResult } from "@tanstack/react-query"; // Added UseQueryResult
+import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import {
   loadRewardsFromDB,
   saveRewardsToDB,
@@ -7,7 +6,7 @@ import {
   setLastSyncTimeForRewards
 } from "../indexedDB/useIndexedDB";
 import { Reward } from '@/data/rewards/types';
-import { fetchRewards as fetchRewardsFromServer } from '@/lib/rewardUtils'; // This now uses withTimeout
+import { fetchRewards as fetchRewardsFromServer } from '@/data/rewards/queries'; 
 
 export const REWARDS_QUERY_KEY = ["rewards"];
 
@@ -34,43 +33,41 @@ export function useRewards(): RewardsQueryResult {
       }
       
       if (!shouldFetch && localData) {
-        console.log('[useRewards] Returning rewards from IndexedDB');
+        console.log('[useRewards] Returning rewards from IndexedDB (hook-level)');
         return localData;
       }
 
-      console.log('[useRewards] Fetching rewards from server');
+      console.log('[useRewards] Fetching rewards from server (via hook)');
       try {
-        const serverData = await fetchRewardsFromServer(); // This function now uses withTimeout
+        const serverData = await fetchRewardsFromServer(); 
 
         if (serverData) {
           await saveRewardsToDB(serverData);
           await setLastSyncTimeForRewards(new Date().toISOString());
-          console.log('[useRewards] Rewards fetched from server and saved to IndexedDB');
+          console.log('[useRewards] Rewards fetched from server and saved to IndexedDB (via hook)');
           return serverData;
         }
-        // If server fetch fails or returns no data, but we have local data, return it.
-        return localData || [];
+        return localData || []; // Fallback to local data if server returns nothing
       } catch (error) {
-        console.error('[useRewards] Error fetching rewards from server:', error);
+        console.error('[useRewards] Error fetching rewards from server (via hook):', error);
         if (localData) {
-          console.warn('[useRewards] Server fetch failed, returning stale data from IndexedDB');
+          console.warn('[useRewards] Server fetch failed, returning stale data from IndexedDB (via hook)');
           return localData;
         }
-        throw error; // Rethrow if no local data to fall back on
+        throw error; 
       }
     },
-    staleTime: 1000 * 60 * 5, // Stale after 5 minutes
+    staleTime: Infinity, // Data is fresh indefinitely
     gcTime: 1000 * 60 * 60, // 1 hour
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    refetchOnMount: true,
+    refetchOnWindowFocus: false, // Controlled by sync manager
+    refetchOnReconnect: false,  // Controlled by sync manager
+    refetchOnMount: false,     // Controlled by sync manager
     retry: 1,
     retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
   });
 
-  const isUsingCachedData =
-    (!!queryResult.error && queryResult.data && queryResult.data.length > 0) ||
-    (queryResult.isStale && queryResult.fetchStatus === 'idle' && queryResult.data && queryResult.data.length > 0 && queryResult.errorUpdateCount > 0);
+  // Simplified: Indicates if an error occurred but we are still showing data from cache.
+  const isUsingCachedData = !!queryResult.error && !!queryResult.data && queryResult.data.length > 0;
 
   return {
     ...queryResult,

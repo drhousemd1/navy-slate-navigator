@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import RuleEditor from '../components/RuleEditor';
@@ -5,7 +6,7 @@ import RulesHeader from '../components/rule/RulesHeader';
 import RulesList from '../components/rule/RulesList';
 import { Rule } from '@/data/interfaces/Rule';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import Hydrate from '@/components/Hydrate';
+// import Hydrate from '@/components/Hydrate'; // Removed Hydrate
 import { useRulesData, RulesQueryResult } from '@/data/RulesDataHandler';
 
 const RulesPageContent: React.FC = () => {
@@ -73,7 +74,7 @@ const RulesPageContent: React.FC = () => {
     }
   };
 
-  if (error && (!rules || rules.length === 0)) {
+  if (error && (!rules || rules.length === 0) && !isLoading) { // Added !isLoading to prevent flash of error
     return (
       <div className="container mx-auto px-4 py-6 RulesContent">
         <RulesHeader /> 
@@ -103,7 +104,7 @@ const RulesPageContent: React.FC = () => {
 
       <RulesList
         rules={rules}
-        isLoading={isLoading}
+        isLoading={isLoading && rules.length === 0} // Show loader only if loading and no rules displayed
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
         error={error}
@@ -134,12 +135,13 @@ const Rules: React.FC = () => {
       }
     }}>
       <ErrorBoundary fallbackMessage="Could not load rules. Please try reloading.">
-        <Hydrate fallbackMessage="Loading your rules...">
+        {/* <Hydrate fallbackMessage="Loading your rules..."> */}
           <RulesPageContent />
-        </Hydrate>
+        {/* </Hydrate> */}
       </ErrorBoundary>
     </AppLayout>
   );
 };
 
 export default Rules;
+

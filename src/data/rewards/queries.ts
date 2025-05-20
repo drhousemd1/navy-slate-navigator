@@ -1,68 +1,94 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/data/rewards/types';
-import { loadRewardsFromDB, getLastSyncTimeForRewards } from '../indexedDB/useIndexedDB';
+import {
+  loadRewardsFromDB,
+  saveRewardsToDB,
+  getLastSyncTimeForRewards,
+  setLastSyncTimeForRewards
+} from '../indexedDB/useIndexedDB'; // Import IndexedDB functions
 import { logQueryPerformance } from '@/lib/react-query-config';
+import { selectWithTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils'; // For fetching
 
 export const REWARDS_QUERY_KEY = ['rewards'];
 export const REWARDS_POINTS_QUERY_KEY = ['rewards', 'points'];
 export const REWARDS_DOM_POINTS_QUERY_KEY = ['rewards', 'dom_points'];
 export const REWARDS_SUPPLY_QUERY_KEY = ['rewards', 'supply'];
 
+// Default values for processing, similar to fetchRules
+const defaultRewardValues = {
+  is_dom_reward: false,
+  background_opacity: 100,
+  icon_name: 'Award',
+  icon_color: '#9b87f5',
+  title_color: '#FFFFFF',
+  subtext_color: '#8E9196',
+  calendar_color: '#7E69AB',
+  highlight_effect: false,
+  focal_point_x: 50,
+  focal_point_y: 50,
+  supply: 0, // Default supply if not specified
+  cost: 10, // Default cost
+};
+
+const processRewardData = (reward: any): Reward => {
+  return {
+    id: reward.id,
+    title: reward.title,
+    description: reward.description,
+    cost: reward.cost ?? defaultRewardValues.cost,
+    supply: reward.supply ?? defaultRewardValues.supply,
+    is_dom_reward: reward.is_dom_reward ?? defaultRewardValues.is_dom_reward,
+    background_image_url: reward.background_image_url,
+    background_opacity: reward.background_opacity ?? defaultRewardValues.background_opacity,
+    icon_url: reward.icon_url,
+    icon_name: reward.icon_name ?? defaultRewardValues.icon_name,
+    title_color: reward.title_color ?? defaultRewardValues.title_color,
+    subtext_color: reward.subtext_color ?? defaultRewardValues.subtext_color,
+    calendar_color: reward.calendar_color ?? defaultRewardValues.calendar_color,
+    icon_color: reward.icon_color ?? defaultRewardValues.icon_color,
+    highlight_effect: reward.highlight_effect ?? defaultRewardValues.highlight_effect,
+    focal_point_x: reward.focal_point_x ?? defaultRewardValues.focal_point_x,
+    focal_point_y: reward.focal_point_y ?? defaultRewardValues.focal_point_y,
+    created_at: reward.created_at,
+    updated_at: reward.updated_at,
+    // Ensure all fields from Reward type are covered
+  };
+};
+
 export const fetchRewards = async (): Promise<Reward[]> => {
-  console.log("[fetchRewards] Starting rewards fetch");
   const startTime = performance.now();
-  
-  const CACHE_KEY = 'kingdom-app-rewards';
+  // No longer using localStorage cache directly here; hook `useRewards` handles IndexedDB interaction.
+  // This function will now primarily be responsible for fetching from Supabase and processing.
+  // The hook `useRewards` will decide whether to call this based on its own IndexedDB cache status.
+
+  console.log("[fetchRewards from queries.ts] Fetching rewards from Supabase server");
   
   try {
-    const { data, error } = await supabase
-      .from('rewards')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await selectWithTimeout<Reward>(
+      supabase,
+      'rewards',
+      {
+        order: ['created_at', { ascending: false }],
+        timeoutMs: DEFAULT_TIMEOUT_MS 
+      }
+    );
     
     if (error) {
-      console.error('[fetchRewards] Error:', error);
-      throw error;
+      console.error('[fetchRewards from queries.ts] Supabase error:', error);
+      logQueryPerformance('fetchRewards (server-error)', startTime);
+      throw error; // Let the calling hook (useRewards) handle fallback to its cache
     }
     
-    logQueryPerformance('fetchRewards', startTime, data?.length);
+    const processedData = (Array.isArray(data) ? data : (data ? [data] : [])).map(processRewardData);
+    logQueryPerformance('fetchRewards (server-success)', startTime, processedData.length);
     
-    // Store in localStorage as a backup cache
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data || []));
-      console.log(`[fetchRewards] Saved ${data?.length || 0} rewards to localStorage cache`);
-    } catch (e) {
-      console.warn('[fetchRewards] Could not save to localStorage:', e);
-    }
-    
-    // Ensure is_dom_reward is always defined in the returned data
-    const rewardsWithDomProperty = data?.map(reward => ({
-      ...reward,
-      is_dom_reward: reward.is_dom_reward ?? false // Default to false if not present
-    })) as Reward[];
-    
-    return rewardsWithDomProperty || [];
+    // The hook `useRewards` will handle saving to IndexedDB.
+    return processedData;
+
   } catch (error) {
-    console.error('[fetchRewards] Fetch failed:', error);
-    
-    // Try to get cached data from localStorage
-    const cachedData = localStorage.getItem(CACHE_KEY);
-    if (cachedData) {
-      console.log('[fetchRewards] Using cached rewards data');
-      try {
-        const parsedData = JSON.parse(cachedData);
-        // Ensure is_dom_reward is defined for cached data too
-        const cachedWithDomProperty = parsedData.map((reward: any) => ({
-          ...reward,
-          is_dom_reward: reward.is_dom_reward ?? false
-        })) as Reward[];
-        return cachedWithDomProperty;
-      } catch (parseError) {
-        console.error('[fetchRewards] Error parsing cached data:', parseError);
-      }
-    }
-    
-    throw error;
+    console.error('[fetchRewards from queries.ts] Fetch failed:', error);
+    logQueryPerformance('fetchRewards (fetch-exception)', startTime);
+    throw error; // Rethrow for the calling hook to handle
   }
 };
 

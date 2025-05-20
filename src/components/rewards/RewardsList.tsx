@@ -4,7 +4,7 @@ import RewardCard from '../RewardCard';
 import { Reward } from '@/data/rewards/types';
 import EmptyState from '@/components/common/EmptyState';
 import { Gift, LoaderCircle, AlertTriangle, WifiOff } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+// import { toast } from '@/hooks/use-toast'; // Toast removed
 
 interface RewardsListProps {
   rewards: Reward[];
@@ -25,15 +25,15 @@ const RewardsList: React.FC<RewardsListProps> = ({
   error,
   isUsingCachedData,
 }) => {
-  React.useEffect(() => {
-    if (isUsingCachedData && !isLoading) {
-      toast({
-        title: "Using cached data",
-        description: "We're currently showing you cached rewards data due to connection issues.",
-        variant: "default"
-      });
-    }
-  }, [isUsingCachedData, isLoading]);
+  // React.useEffect(() => { // Toast removed
+  //   if (isUsingCachedData && !isLoading) {
+  //     toast({
+  //       title: "Using cached data",
+  //       description: "We're currently showing you cached rewards data due to connection issues.",
+  //       variant: "default"
+  //     });
+  //   }
+  // }, [isUsingCachedData, isLoading]);
 
   if (isLoading && (!rewards || rewards.length === 0)) {
     return (
@@ -55,7 +55,7 @@ const RewardsList: React.FC<RewardsListProps> = ({
     );
   }
   
-  if (!isLoading && rewards.length === 0) { // Error is null or handled
+  if (!isLoading && rewards.length === 0) {
     return (
       <EmptyState
         icon={Gift}
@@ -68,7 +68,7 @@ const RewardsList: React.FC<RewardsListProps> = ({
   const CachedDataBanner = isUsingCachedData && rewards.length > 0 ? (
     <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-md flex items-center gap-2">
       <WifiOff className="h-5 w-5 text-amber-500" />
-      <span className="text-sm text-amber-700 dark:text-amber-400">Showing cached data. Some information might be outdated.</span>
+      <span className="text-sm text-amber-700 dark:text-amber-400">Showing cached data due to an error during sync. Some information might be outdated.</span>
     </div>
   ) : null;
 
@@ -91,3 +91,4 @@ const RewardsList: React.FC<RewardsListProps> = ({
 };
 
 export default RewardsList;
+

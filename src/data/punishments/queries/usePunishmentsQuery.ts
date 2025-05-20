@@ -13,21 +13,21 @@ export const usePunishmentsQuery = (): PunishmentsQueryResult => {
   const queryResult = useQuery<PunishmentData[], Error>({
     queryKey: PUNISHMENTS_QUERY_KEY,
     queryFn: fetchPunishments,
-    staleTime: 1000 * 60 * 5, // Stale after 5 minutes
+    staleTime: Infinity, // Data is fresh indefinitely
     gcTime: 1000 * 60 * 60, // 1 hour
-    refetchOnWindowFocus: true, // Standard practice
-    refetchOnReconnect: true,
-    refetchOnMount: true, 
-    retry: 1, // Retry once on failure
-    retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000), // Exponential backoff with max of 10s
+    refetchOnWindowFocus: false, // Controlled by sync manager
+    refetchOnReconnect: false,  // Controlled by sync manager
+    refetchOnMount: false,     // Controlled by sync manager
+    retry: 1, 
+    retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
   });
   
-  const isUsingCachedData =
-    (!!queryResult.error && queryResult.data && queryResult.data.length > 0) ||
-    (queryResult.isStale && queryResult.fetchStatus === 'idle' && queryResult.data && queryResult.data.length > 0 && queryResult.errorUpdateCount > 0);
+  // Simplified: Indicates if an error occurred but we are still showing data from cache.
+  const isUsingCachedData = !!queryResult.error && !!queryResult.data && queryResult.data.length > 0;
   
   return {
     ...queryResult,
     isUsingCachedData
   };
 };
+
