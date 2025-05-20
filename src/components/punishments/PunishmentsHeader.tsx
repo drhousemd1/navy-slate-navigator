@@ -1,93 +1,38 @@
 
-//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
-import { useRewards } from '@/contexts/RewardsContext';
+import { useRewards } from '@/contexts/RewardsContext'; // Keep for totalRewardsSupply, totalDomRewardsSupply
 import { Box, Coins, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import RandomPunishmentSelections from './RandomPunishmentSelections';
-import { usePointsManager } from '@/data/points/usePointsManager';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/auth'; // Import useAuth
+// import { useProfilePoints } from "@/data/queries/useProfilePoints"; // Remove this
+import { usePointsManager } from '@/data/points/usePointsManager'; // Add this
 
 const PunishmentsHeader: React.FC = () => {
-  const { totalRewardsSupply, totalDomRewardsSupply } = useRewards();
+  const { totalRewardsSupply, totalDomRewardsSupply, refreshPointsFromDatabase: refreshRewardsContextPoints } = useRewards();
   const { punishments } = usePunishments();
-  const { user } = useAuth(); // Get user from useAuth
+  // const { data: profile } = useProfilePoints(); // Remove this
+  // const totalPoints = profile?.points ?? 0; // Remove this
+  // const domPoints = profile?.dom_points ?? 0; // Remove this
   
   const { 
     points: totalPoints, 
     domPoints, 
-    refreshPoints,
-  } = usePointsManager(); 
-  
-  // const [profileId, setProfileId] = useState<string | null>(null); // This state can be derived from useAuth
-  const profileId = user?.id || null; // Use profileId from useAuth
+    isLoadingPoints, 
+    refreshPoints 
+  } = usePointsManager();
+
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
 
-  // useEffect(() => { // No longer needed if profileId comes directly from useAuth
-  //   const fetchProfileId = async () => {
-  //     const { data: { user } } = await supabase.auth.getUser();
-  //     if (user) {
-  //       setProfileId(user.id);
-  //     }
-  //   };
-  //   fetchProfileId();
-  // }, []);
-
+  // Refresh points when component mounts
   useEffect(() => {
-    const refreshPointsData = async () => {
-      try {
-        console.log("PunishmentsHeader: Refreshing points data");
-        await refreshPoints();
-      } catch (error) {
-        console.error("Error refreshing points in PunishmentsHeader:", error);
-      }
-    };
-    
-    if (profileId) { // Only refresh if profileId is available
-        refreshPointsData(); // Initial fetch
-    }
+    refreshPoints(); // Use this from usePointsManager
+    // refreshRewardsContextPoints(); // See comment in RewardsHeader.tsx
+  }, [refreshPoints]);
 
-
-    let profileChangesChannel: any; 
-
-    if (profileId) { 
-      profileChangesChannel = supabase
-        .channel(`profile_changes_punishments_header_${profileId}`) 
-        .on(
-          'postgres_changes',
-          { 
-            event: 'UPDATE', 
-            schema: 'public', 
-            table: 'profiles',
-            filter: `id=eq.${profileId}` 
-          },
-          (payload) => {
-            console.log("PunishmentsHeader: Profile change detected via Supabase realtime", payload);
-            refreshPointsData();
-          }
-        )
-        .subscribe((status, err) => {
-          if (status === 'SUBSCRIBED') {
-            console.log(`PunishmentsHeader: Subscribed to profile changes for ${profileId}`);
-          }
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.error(`PunishmentsHeader: Subscription error for ${profileId}:`, err);
-          }
-        });
-    }
-          
-    return () => {
-      if (profileChangesChannel) {
-        supabase.removeChannel(profileChangesChannel);
-        console.log(`PunishmentsHeader: Unsubscribed from profile changes for ${profileId}`);
-      }
-    };
-  }, [refreshPoints, profileId]); 
-
+  // Style for badges - black background with cyan border
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
 
   return (
@@ -102,24 +47,28 @@ const PunishmentsHeader: React.FC = () => {
         <Shuffle className="w-4 h-4" />
         Random
       </Button>
-      <div className="flex items-center gap-2">
-        <Badge 
-          className="text-white font-bold px-3 py-1 flex items-center gap-1"
-          style={badgeStyle}
-        >
-          <Box className="w-3 h-3" />
-          <span>{totalRewardsSupply}</span>
-        </Badge>
-        <Badge 
-          className="text-white font-bold px-3 py-1 flex items-center gap-1"
-          style={badgeStyle}
-        >
-          <Coins className="w-3 h-3" />
-          <span>{totalPoints ?? 0}</span>
-        </Badge>
-        <DOMBadge icon="box" value={totalDomRewardsSupply} />
-        <DOMBadge icon="crown" value={domPoints ?? 0} />
-      </div>
+      {isLoadingPoints ? (
+        <span className="text-sm text-gray-400">Loading points...</span>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Badge 
+            className="text-white font-bold px-3 py-1 flex items-center gap-1"
+            style={badgeStyle}
+          >
+            <Box className="w-3 h-3" />
+            <span>{totalRewardsSupply}</span>
+          </Badge>
+          <Badge 
+            className="text-white font-bold px-3 py-1 flex items-center gap-1"
+            style={badgeStyle}
+          >
+            <Coins className="w-3 h-3" />
+            <span>{totalPoints}</span>
+          </Badge>
+          <DOMBadge icon="box" value={totalDomRewardsSupply} />
+          <DOMBadge icon="crown" value={domPoints} />
+        </div>
+      )}
       
       <RandomPunishmentSelections
         isOpen={isRandomSelectorOpen} 
