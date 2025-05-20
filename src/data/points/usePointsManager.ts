@@ -1,11 +1,10 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/hooks/use-toast';
 
 export const PROFILE_POINTS_QUERY_KEY = ["profile_points"];
 
-interface ProfilePointsData {
+export interface ProfilePointsData {
   points: number;
   dom_points: number;
 }
