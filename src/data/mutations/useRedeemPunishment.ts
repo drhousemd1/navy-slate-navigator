@@ -1,8 +1,9 @@
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/hooks/use-toast';
-import { PunishmentData } from "@/contexts/punishments/types"; // Assuming this path is correct and type is available
+import { PunishmentData } from "@/contexts/punishments/types";
+import { WEEKLY_METRICS_QUERY_KEY } from "@/data/queries/metrics/useWeeklyMetrics";
+import { MONTHLY_METRICS_QUERY_KEY } from "@/data/queries/metrics/useMonthlyMetrics";
 
 // Helper function to generate ISO week string (YYYY-Wxx format)
 // Consider moving to a shared util file.
@@ -47,7 +48,8 @@ interface RedeemPunishmentOptimisticContext {
 export const useRedeemPunishment = () => {
   const queryClient = useQueryClient();
   const PUNISHMENTS_QUERY_KEY = ['punishments'];
-  const PROFILE_QUERY_KEY = ['profile']; // Assuming 'profile' holds points, dom_points
+  const PROFILE_QUERY_KEY = ['profile'];
+  const WEEKLY_METRICS_SUMMARY_QUERY_KEY = ['weekly-metrics-summary'];
 
   return useMutation<
     RedeemPunishmentSuccessData,
@@ -81,12 +83,11 @@ export const useRedeemPunishment = () => {
       const { error: historyError } = await supabase.from("punishment_history").insert([
         {
           punishment_id: id,
-          profile_id: profileId, // It's good practice to log who applied/received
+          profile_id: profileId, 
           day_of_week: dayOfWeek,
           week_number: weekNumber,
           points_deducted: costPoints,
           applied_date: today.toISOString(),
-          // dom_points_earned: domEarn, // Consider adding if schema supports
         }
       ]);
       if (historyError) throw historyError;
@@ -141,7 +142,7 @@ export const useRedeemPunishment = () => {
           points: (oldProfile.points ?? variables.currentSubPoints) - variables.costPoints,
           dom_points: (oldProfile.dom_points ?? variables.currentDomPoints) + variables.domEarn,
         }));
-      } else { // Fallback if profile not in cache, set based on variables
+      } else { 
         queryClient.setQueryData<ProfilePoints>(PROFILE_QUERY_KEY, {
             points: variables.currentSubPoints - variables.costPoints,
             dom_points: variables.currentDomPoints + variables.domEarn,
@@ -155,8 +156,6 @@ export const useRedeemPunishment = () => {
         title: "Punishment Applied",
         description: `${variables.punishmentTitle || 'The punishment'} has been successfully applied.`,
       });
-      // The original onSuccess had syncCardById and updateProfilePoints.
-      // These are now handled by optimistic updates and invalidations in onSettled.
     },
     onError: (error, variables, context) => {
       if (context?.previousPunishments) {
@@ -166,7 +165,6 @@ export const useRedeemPunishment = () => {
         queryClient.setQueryData<ProfilePoints>(PROFILE_QUERY_KEY, context.previousProfile);
       }
       console.error('Error applying punishment:', error);
-      // Avoid double toasting if validation error already toasted (e.g. by mutationFn pre-checks)
       if (error.message !== "Punishment has no supply left") {
         toast({
           title: "Failed to Apply Punishment",
@@ -179,8 +177,11 @@ export const useRedeemPunishment = () => {
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY });
       if (variables?.id) {
-        queryClient.invalidateQueries({ queryKey: ['punishments', variables.id] }); // Specific punishment
+        queryClient.invalidateQueries({ queryKey: ['punishments', variables.id] });
       }
+      queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: MONTHLY_METRICS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_SUMMARY_QUERY_KEY });
     },
   });
 };

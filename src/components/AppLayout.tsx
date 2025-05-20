@@ -1,4 +1,3 @@
-
 import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -8,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/contexts/auth';
 import AccountSheet from './AccountSheet';
 // import CacheMonitorPanel from './dev/CacheMonitorPanel'; // Removed import
-import SyncStatusIndicator from './common/SyncStatusIndicator';
+// Removed: import SyncStatusIndicator from './common/SyncStatusIndicator';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -91,18 +90,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Sync Status Indicator Icon */}
-            <SyncStatusIndicator />
+            {/* Sync Status Indicator Icon - REMOVED */}
+            {/* <SyncStatusIndicator /> */}
 
             {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />
             
-            {/* App Guide icon - REMOVED
-            <BookOpen 
-              className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors"
-              onClick={() => navigate('/app-guide')}
-            />
-            */}
+            {/* App Guide icon - REMOVED */}
 
             {/* Messaging icon */}
             <MessageSquare 
@@ -137,9 +131,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       )}
       
       <MobileNavbar />
-      {/* Conditionally render CacheMonitorPanel in development mode - REMOVED */}
-      {/* {import.meta.env.DEV && <CacheMonitorPanel />} */}
-      {/* SyncStatusIndicator was moved to the header */}
     </div>
   );
 };

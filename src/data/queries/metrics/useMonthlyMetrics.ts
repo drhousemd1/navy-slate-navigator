@@ -1,8 +1,8 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
+import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config'; // Import standard config
 
 export interface MonthlyDataItem {
   date: string;
@@ -23,6 +23,7 @@ export interface MonthlyMetricsData {
   dataArray: MonthlyDataItem[];
   monthlyTotals: MonthlyMetricsSummary;
 }
+
 
 export const MONTHLY_METRICS_QUERY_KEY = ['monthly-metrics'];
 
@@ -133,13 +134,16 @@ const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
   }
 };
 
-export const useMonthlyMetrics = () => {
+interface UseMonthlyMetricsOptions {
+  enabled?: boolean;
+}
+
+export const useMonthlyMetrics = (options?: UseMonthlyMetricsOptions) => {
   return useQuery<MonthlyMetricsData, Error>({
     queryKey: MONTHLY_METRICS_QUERY_KEY,
     queryFn: fetchMonthlyData,
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000, // Aggressive refresh
-    staleTime: 0,
-    gcTime: 0,
+    ...STANDARD_QUERY_CONFIG, // Use standard config
+    enabled: options?.enabled ?? false, // Default to false, enable on ThroneRoom page
+     // Removed refetchInterval, staleTime, gcTime, refetchOnWindowFocus (now covered by STANDARD_QUERY_CONFIG or explicit enabled)
   });
 };

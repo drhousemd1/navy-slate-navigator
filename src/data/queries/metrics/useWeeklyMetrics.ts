@@ -1,9 +1,9 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { generateMondayBasedWeekDates } from '@/lib/utils';
+import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 
 export interface WeeklyDataItem {
   date: string;
@@ -85,15 +85,15 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
     }
 
     // Fetch punishments
-    const { data: punishments, error: punishmentError } = await supabase
+    const { data: punishmentsData, error: punishmentError } = await supabase
       .from('punishment_history')
       .select('applied_date')
       .gte('applied_date', start.toISOString())
       .lte('applied_date', end.toISOString());
 
     if (punishmentError) console.error('Error fetching punishments:', punishmentError);
-    else if (punishments) {
-      punishments.forEach(entry => {
+    else if (punishmentsData) {
+      punishmentsData.forEach(entry => {
         const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
         if (metricsMap.has(date)) metricsMap.get(date)!.punishments++;
       });
@@ -113,13 +113,15 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
   }
 };
 
-export const useWeeklyMetrics = () => {
+interface UseWeeklyMetricsOptions {
+  enabled?: boolean;
+}
+
+export const useWeeklyMetrics = (options?: UseWeeklyMetricsOptions) => {
   return useQuery<WeeklyDataItem[], Error>({
     queryKey: WEEKLY_METRICS_QUERY_KEY,
     queryFn: fetchWeeklyData,
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000, // Aggressive refresh
-    staleTime: 0,
-    gcTime: 0,
+    ...STANDARD_QUERY_CONFIG,
+    enabled: options?.enabled ?? false,
   });
 };

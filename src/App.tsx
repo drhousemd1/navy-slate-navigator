@@ -1,9 +1,10 @@
+
 import React, { useEffect } from 'react';
 import AppRoutes from './AppRoutes';
 import { Toaster } from '@/components/ui/toaster';
 import { supabase } from './integrations/supabase/client';
 import { OfflineBanner } from './components/OfflineBanner';
-import SyncStatusIndicator from './components/common/SyncStatusIndicator';
+// Removed: import SyncStatusIndicator from './components/common/SyncStatusIndicator';
 import { queryClient } from './data/queryClient';
 import Hydrate from './components/Hydrate';
 import { purgeQueryCache } from './lib/react-query-config';
@@ -39,7 +40,7 @@ function App() {
       <Toaster />
       <AppRoutes />
       <OfflineBanner />
-      <SyncStatusIndicator />
+      {/* Removed: <SyncStatusIndicator /> */}
       {/* <CacheMonitorPanel /> */}
     </Hydrate>
   );
