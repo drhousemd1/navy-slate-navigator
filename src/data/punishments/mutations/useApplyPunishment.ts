@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { User } from '@supabase/supabase-js'; // Added type import for clarity
 import { PunishmentHistoryItem, ApplyPunishmentArgs } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
@@ -256,42 +257,49 @@ export const useApplyPunishment = () => {
     },
     onError: async (error, _args, context) => {
       console.error("Error in useApplyPunishment onError:", error);
-      const currentAuthUserKey = getProfilePointsQueryKey();
-      const submissiveUserKey = getProfilePointsQueryKey(_args.profileId);
+      const currentAuthUserKey = getProfilePointsQueryKey(); // Key for the currently authenticated user
+      const submissiveUserKey = getProfilePointsQueryKey(_args.profileId); // Key for the user being punished
+
+      let authUser: User | undefined; // Declare authUser here, visible to the whole onError scope
+      try {
+        const { data: authDataResponse, error: authError } = await supabase.auth.getUser();
+        if (authError) {
+          console.error("Error fetching user in onError for rollback:", authError);
+        } else {
+          authUser = authDataResponse?.user ?? undefined; // Ensure it's User | undefined
+        }
+      } catch (e) {
+        console.error("Exception during supabase.auth.getUser() in onError:", e);
+        // authUser remains undefined
+      }
 
       // Roll back history
       if (context?.previousHistory) {
         queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, context.previousHistory);
       }
       
-      // Roll back current user's points
+      // Roll back points for the user whose data was in previousProfilePointsForCurrentUser (typically the authenticated user)
       if (context?.previousProfilePointsForCurrentUser) {
         queryClient.setQueryData<ProfilePointsData>(currentAuthUserKey, context.previousProfilePointsForCurrentUser);
         
-        // Also rollback legacy keys if current user is submissive
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        if (authError) {
-          console.error("Error fetching user in onError for rollback:", authError);
-        }
-        const user = authData?.user;
-
-        if (user && user.id === _args.profileId) {
+        // If this authenticated user is also the one being punished, update their specific legacy keys
+        if (authUser && authUser.id === _args.profileId) {
           queryClient.setQueryData(["rewards", "points", _args.profileId], context.previousProfilePointsForCurrentUser.points);
           queryClient.setQueryData(["rewards", "dom_points", _args.profileId], context.previousProfilePointsForCurrentUser.dom_points);
         }
       }
       
-      // Roll back submissive points if different from current user
-      if (submissiveUserKey !== currentAuthUserKey) {
-        // It might be better to use previous data from context if available or invalidate
-        const submissivePreviousPoints = queryClient.getQueryData<ProfilePointsData>(submissiveUserKey);
-        if (submissivePreviousPoints && context?.previousProfilePointsForCurrentUser?.points !== undefined && _args.profileId !== user?.id) {
-             // This logic might need refinement based on what's stored in context for non-current-user submissives
-        }
+      // Roll back submissive's specific points if the submissive is NOT the authenticated user.
+      // This handles cases where an admin punishes another user, or if the user context is somehow different.
+      // It avoids double-rolling back if the authenticated user IS the submissive and was handled above.
+      if (authUser?.id !== _args.profileId) {
+        // The punished user is different from the authenticated user.
+        // Invalidate their specific caches.
+        // We don't have distinct `previousProfilePointsForSubmissive` in context if submissive !== authUser,
+        // so invalidation is the safest strategy for their specific keys.
         queryClient.invalidateQueries({ queryKey: submissiveUserKey });
         queryClient.invalidateQueries({ queryKey: ["rewards", "points", _args.profileId] });
         queryClient.invalidateQueries({ queryKey: ["rewards", "dom_points", _args.profileId] });
-
       }
       
       // Roll back dominant points
