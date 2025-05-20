@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, ReactNode, useRef } from 'react';
 import { Session, User, AuthChangeEvent, Subscription } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -7,6 +7,7 @@ import localforage from 'localforage';
 import { STORAGE_PREFIX as FORM_STATE_PREFIX } from '@/hooks/useFormStatePersister';
 import { useAuthOperations } from './auth/useAuthOperations';
 import { useUserProfile } from './auth/useUserProfile';
+import { PROFILE_POINTS_QUERY_KEY_BASE } from '@/data/points/usePointsManager';
 
 interface AuthState {
   user: User | null;
@@ -55,139 +56,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   const userProfileUtils = useUserProfile(authState.user, wrappedSetUserForProfile);
 
-  useEffect(() => {
-    const checkInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Error getting initial session:", error);
-        setAuthState(prev => ({ ...prev, loading: false }));
-        return;
-      }
-
-      if (session) {
-        const user = session.user;
-        let isAdmin = false;
-        if (user) {
-          try {
-            const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
-              requested_user_id: user.id,
-              requested_role: 'admin'
-            });
-            if (roleError) {
-              console.error("Error checking admin role via RPC:", roleError);
-            } else {
-              isAdmin = !!hasAdminRole;
-            }
-            console.log("Is admin check result:", isAdmin);
-          } catch (e) {
-            console.error("Error during admin role check:", e);
-          }
-        }
-        setAuthState({
-          user: user,
-          session: session,
-          loading: false,
-          isAuthenticated: true,
-          isAdmin: isAdmin,
-          userExists: !!user,
-          sessionExists: !!session,
-        });
-        console.log("AuthContext initialized. Current state:", {
-          userExists: !!user,
-          sessionExists: !!session,
-          isAuthenticated: true,
-          isAdmin: isAdmin,
-          loading: false,
-        });
-      } else {
-        setAuthState(prev => ({ ...prev, loading: false, isAuthenticated: false, isAdmin: false, userExists: false, sessionExists: false }));
-        console.log("AuthContext initialized. No active session.");
-      }
-    };
-
-    checkInitialSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event: AuthChangeEvent | 'USER_DELETED', session) => {
-        console.log("Auth state change event:", _event, "Session:", session);
-        const user = session?.user ?? null;
-        let isAdmin = false;
-
-        if (user) {
-          try {
-            const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
-              requested_user_id: user.id,
-              requested_role: 'admin'
-            });
-            if (roleError) {
-              console.error("Error checking admin role on auth state change via RPC:", roleError);
-            } else {
-              isAdmin = !!hasAdminRole;
-            }
-          } catch (e) {
-            console.error("Error checking admin role on auth state change:", e);
-          }
-        }
-        
-        setAuthState({
-          user: user,
-          session: session,
-          loading: false,
-          isAuthenticated: !!session,
-          isAdmin: isAdmin,
-          userExists: !!user,
-          sessionExists: !!session,
-        });
-
-        switch (_event) {
-          case 'SIGNED_IN':
-            console.log("Auth state: User session detected (SIGNED_IN)");
-            break;
-          case 'SIGNED_OUT':
-            console.log("Auth state: User signed out (SIGNED_OUT)");
-            await clearAllCaches();
-            break;
-          case 'USER_DELETED':
-            console.log("Auth state: User deleted (USER_DELETED)");
-            await clearAllCaches();
-            break;
-          case 'PASSWORD_RECOVERY':
-            console.log("Auth state: Password recovery initiated (PASSWORD_RECOVERY)");
-            break;
-          case 'TOKEN_REFRESHED':
-            console.log("Auth state: Token refreshed (TOKEN_REFRESHED)");
-            break;
-          case 'USER_UPDATED':
-            console.log("Auth state: User updated (USER_UPDATED)");
-            break;
-          case 'MFA_CHALLENGE_VERIFIED':
-            console.log("Auth state: MFA challenge verified (MFA_CHALLENGE_VERIFIED)");
-            break;
-          default:
-            const unhandledEvent: string = _event as string; // Cast to string to handle any value
-            console.log(`Auth state change: Unhandled event type: ${unhandledEvent}`);
-            break;
-        }
-      }
-    );
-
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, []);
+  // Ref to store the last known authenticated user ID for cache management
+  const lastAuthenticatedUserIdRef = useRef<string | null>(null);
 
   const clearAllCaches = async () => {
     try {
       // Clear React Query in-memory cache
-      queryClient.clear();
-      console.log('[CacheClear] React Query in-memory cache cleared.');
+      queryClient.clear(); // This clears everything including profile_points etc.
+      console.log('[CacheClear] React Query in-memory cache cleared on user change or sign out.');
 
-      // Remove the persisted React Query cache from localforage
-      // The key 'APP_QUERY_CACHE' should match the one used in AppProviders.tsx
-      await localforage.removeItem('APP_QUERY_CACHE');
+      await localforage.removeItem('APP_QUERY_CACHE'); // Key used by TanStack Query Persister
       console.log('[CacheClear] Persisted React Query cache (APP_QUERY_CACHE) removed from localforage.');
       
-      // Clear persisted form drafts
       const keys = await localforage.keys();
       const formStateKeys = keys.filter(key => key.startsWith(FORM_STATE_PREFIX));
       for (const key of formStateKeys) {
@@ -195,32 +75,127 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       console.log(`[CacheClear] Cleared ${formStateKeys.length} persisted form drafts using prefix: ${FORM_STATE_PREFIX}`);
       
-      // Optionally, if there's other app-specific data in localforage that needs clearing on logout,
-      // you could call localforage.clear() here, but be cautious as it wipes everything.
-      // For now, targeted removal is safer.
-
-      toast({ title: "Cache Cleared", description: "Application cache and drafts have been cleared." });
+      toast({ title: "Cache Cleared", description: "User session changed. Application cache and drafts have been cleared." });
     } catch (error) {
       console.error("Error clearing caches:", error);
       toast({ title: "Cache Clear Error", description: "Could not clear all application caches.", variant: "destructive" });
     }
   };
 
+  useEffect(() => {
+    const checkInitialSession = async () => {
+      console.log("AuthContext: Checking initial session...");
+      setAuthState(prev => ({ ...prev, loading: true })); // Ensure loading is true
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Error getting initial session:", error);
+        setAuthState(prev => ({ ...prev, user: null, session: null, loading: false, isAuthenticated: false, isAdmin: false, userExists: false, sessionExists: false }));
+        lastAuthenticatedUserIdRef.current = null;
+        return;
+      }
+
+      const initialUser = session?.user ?? null;
+      const initialUserId = initialUser?.id ?? null;
+      let isAdmin = false;
+
+      if (initialUser) {
+        try {
+          const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
+            requested_user_id: initialUser.id,
+            requested_role: 'admin'
+          });
+          isAdmin = roleError ? false : !!hasAdminRole;
+        } catch (e) { console.error("Error during admin role check in initial session:", e); }
+      }
+      
+      console.log(`AuthContext: Initial session check. User: ${initialUserId}, Last recorded user for cache: ${lastAuthenticatedUserIdRef.current}`);
+      // If the user from the session is different from a potentially lingering ref value (e.g. from HMR),
+      // or if there was a user and now there isn't (or vice-versa).
+      // This specific check might be less critical if onAuthStateChange handles it robustly.
+      // The main purpose of lastAuthenticatedUserIdRef is for transitions in onAuthStateChange.
+      lastAuthenticatedUserIdRef.current = initialUserId; // Set the baseline
+
+      setAuthState({
+        user: initialUser,
+        session: session,
+        loading: false,
+        isAuthenticated: !!session,
+        isAdmin: isAdmin,
+        userExists: !!initialUser,
+        sessionExists: !!session,
+      });
+      console.log("AuthContext: Initial session processed. Loading false.");
+    };
+
+    checkInitialSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event: AuthChangeEvent | 'USER_DELETED', session) => {
+        console.log(`AuthContext: Auth state change event: ${_event}`);
+        setAuthState(prev => ({ ...prev, loading: true })); // Set loading true during transition
+
+        const newUser = session?.user ?? null;
+        const newUserId = newUser?.id ?? null;
+        let newIsAdmin = false;
+
+        if (newUserId !== lastAuthenticatedUserIdRef.current) {
+          console.warn(`AuthContext: User identity changed. Previous: ${lastAuthenticatedUserIdRef.current}, New: ${newUserId}. Event: ${_event}. Clearing all caches.`);
+          await clearAllCaches();
+        }
+        lastAuthenticatedUserIdRef.current = newUserId;
+
+        if (newUser) {
+          try {
+            const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
+              requested_user_id: newUser.id,
+              requested_role: 'admin'
+            });
+            newIsAdmin = roleError ? false : !!hasAdminRole;
+          } catch (e) { console.error("Error checking admin role on auth state change:", e); }
+        }
+        
+        setAuthState({
+          user: newUser,
+          session: session,
+          loading: false, // Set loading false after processing
+          isAuthenticated: !!session,
+          isAdmin: newIsAdmin,
+          userExists: !!newUser,
+          sessionExists: !!session,
+        });
+        console.log(`AuthContext: Auth state updated. User: ${newUserId}, Event: ${_event}. Loading false.`);
+
+        // Cache clearing for SIGNED_OUT/USER_DELETED is now handled by the userId change logic above,
+        // but keeping explicit calls in switch can be a fallback.
+        // The userId check is more comprehensive for any kind of user switch.
+        // switch (_event) {
+        //   case 'SIGNED_OUT':
+        //   case 'USER_DELETED':
+        //     // clearAllCaches() already called if userId changed to null
+        //     break;
+        // // ... other cases
+        // }
+      }
+    );
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []); // Empty dependency array, clearAllCaches is stable due to useRef/useState
+
   const signOut = async () => {
     setAuthState(prev => ({ ...prev, loading: true }));
+    console.log("AuthContext: Signing out...");
     const { error } = await supabase.auth.signOut();
     
     if (error) {
       console.error('Error signing out:', error);
       toast({ title: "Sign Out Error", description: error.message, variant: "destructive" });
-      setAuthState(prev => ({ ...prev, loading: false }));
+      setAuthState(prev => ({ ...prev, loading: false })); // Reset loading on error
     } else {
-      // clearAllCaches is already called by the onAuthStateChange 'SIGNED_OUT' event handler.
-      // Calling it here again would be redundant but generally harmless.
-      // To avoid double calls, we can rely on the event handler.
-      // If immediate clearing before state update is critical, keep it here and ensure handler is idempotent.
-      // For now, relying on the event handler is cleaner.
-      console.log("Sign out successful, cache clearing handled by onAuthStateChange.");
+      // onAuthStateChange with SIGNED_OUT (and newUserId being null) will trigger clearAllCaches.
+      console.log("AuthContext: Sign out successful. AuthStateChange handler will clear caches.");
+      // No need to set loading: false here, onAuthStateChange will do it.
     }
   };
 

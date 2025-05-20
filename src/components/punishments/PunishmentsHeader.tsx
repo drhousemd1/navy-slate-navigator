@@ -1,38 +1,54 @@
 
+//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import React, { useEffect } from 'react';
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
-import { useRewards } from '@/contexts/RewardsContext'; // Keep for totalRewardsSupply, totalDomRewardsSupply
+import { useRewards } from '@/contexts/RewardsContext';
 import { Box, Coins, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import RandomPunishmentSelections from './RandomPunishmentSelections';
-// import { useProfilePoints } from "@/data/queries/useProfilePoints"; // Remove this
-import { usePointsManager } from '@/data/points/usePointsManager'; // Add this
+import { usePointsManager } from '@/data/points/usePointsManager';
+import { supabase } from '@/integrations/supabase/client';
 
 const PunishmentsHeader: React.FC = () => {
-  const { totalRewardsSupply, totalDomRewardsSupply, refreshPointsFromDatabase: refreshRewardsContextPoints } = useRewards();
+  const { totalRewardsSupply, totalDomRewardsSupply } = useRewards();
   const { punishments } = usePunishments();
-  // const { data: profile } = useProfilePoints(); // Remove this
-  // const totalPoints = profile?.points ?? 0; // Remove this
-  // const domPoints = profile?.dom_points ?? 0; // Remove this
   
   const { 
     points: totalPoints, 
     domPoints, 
-    isLoadingPoints, 
     refreshPoints 
-  } = usePointsManager();
+  } = usePointsManager(); // Fetches for the current authenticated user by default
 
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
 
-  // Refresh points when component mounts
+  // Force refresh points data on mount and when punishment actions occur
   useEffect(() => {
-    refreshPoints(); // Use this from usePointsManager
-    // refreshRewardsContextPoints(); // See comment in RewardsHeader.tsx
+    const refreshPointsData = async () => {
+      try {
+        console.log("PunishmentsHeader: Refreshing points data");
+        await refreshPoints();
+      } catch (error) {
+        console.error("Error refreshing points in PunishmentsHeader:", error);
+      }
+    };
+    
+    refreshPointsData();
+    
+    // Also refresh when points data might change from an external source
+    const channel = supabase
+      .channel('profiles_changes')
+      .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'profiles' },
+          refreshPointsData)
+      .subscribe();
+          
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refreshPoints]);
 
-  // Style for badges - black background with cyan border
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
 
   return (
@@ -47,28 +63,24 @@ const PunishmentsHeader: React.FC = () => {
         <Shuffle className="w-4 h-4" />
         Random
       </Button>
-      {isLoadingPoints ? (
-        <span className="text-sm text-gray-400">Loading points...</span>
-      ) : (
-        <div className="flex items-center gap-2">
-          <Badge 
-            className="text-white font-bold px-3 py-1 flex items-center gap-1"
-            style={badgeStyle}
-          >
-            <Box className="w-3 h-3" />
-            <span>{totalRewardsSupply}</span>
-          </Badge>
-          <Badge 
-            className="text-white font-bold px-3 py-1 flex items-center gap-1"
-            style={badgeStyle}
-          >
-            <Coins className="w-3 h-3" />
-            <span>{totalPoints}</span>
-          </Badge>
-          <DOMBadge icon="box" value={totalDomRewardsSupply} />
-          <DOMBadge icon="crown" value={domPoints} />
-        </div>
-      )}
+      <div className="flex items-center gap-2">
+        <Badge 
+          className="text-white font-bold px-3 py-1 flex items-center gap-1"
+          style={badgeStyle}
+        >
+          <Box className="w-3 h-3" />
+          <span>{totalRewardsSupply}</span>
+        </Badge>
+        <Badge 
+          className="text-white font-bold px-3 py-1 flex items-center gap-1"
+          style={badgeStyle}
+        >
+          <Coins className="w-3 h-3" />
+          <span>{totalPoints}</span>
+        </Badge>
+        <DOMBadge icon="box" value={totalDomRewardsSupply} />
+        <DOMBadge icon="crown" value={domPoints} />
+      </div>
       
       <RandomPunishmentSelections
         isOpen={isRandomSelectorOpen} 

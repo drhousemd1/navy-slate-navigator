@@ -1,4 +1,5 @@
 
+//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Upload } from 'lucide-react';

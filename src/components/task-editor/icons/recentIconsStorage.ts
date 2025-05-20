@@ -1,4 +1,5 @@
 
+//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 // Type for storing recently used icons
 export interface RecentIcon {
   name: string;
