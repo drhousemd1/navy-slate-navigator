@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentHistoryItem, ApplyPunishmentArgs } from '@/contexts/punishments/types';
@@ -255,7 +254,7 @@ export const useApplyPunishment = () => {
         dominantId
       };
     },
-    onError: (error, _args, context) => {
+    onError: async (error, _args, context) => {
       console.error("Error in useApplyPunishment onError:", error);
       const currentAuthUserKey = getProfilePointsQueryKey();
       const submissiveUserKey = getProfilePointsQueryKey(_args.profileId);
@@ -270,7 +269,12 @@ export const useApplyPunishment = () => {
         queryClient.setQueryData<ProfilePointsData>(currentAuthUserKey, context.previousProfilePointsForCurrentUser);
         
         // Also rollback legacy keys if current user is submissive
-        const { data: { user } } = supabase.auth.getUser();
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) {
+          console.error("Error fetching user in onError for rollback:", authError);
+        }
+        const user = authData?.user;
+
         if (user && user.id === _args.profileId) {
           queryClient.setQueryData(["rewards", "points", _args.profileId], context.previousProfilePointsForCurrentUser.points);
           queryClient.setQueryData(["rewards", "dom_points", _args.profileId], context.previousProfilePointsForCurrentUser.dom_points);
@@ -279,8 +283,15 @@ export const useApplyPunishment = () => {
       
       // Roll back submissive points if different from current user
       if (submissiveUserKey !== currentAuthUserKey) {
+        // It might be better to use previous data from context if available or invalidate
+        const submissivePreviousPoints = queryClient.getQueryData<ProfilePointsData>(submissiveUserKey);
+        if (submissivePreviousPoints && context?.previousProfilePointsForCurrentUser?.points !== undefined && _args.profileId !== user?.id) {
+             // This logic might need refinement based on what's stored in context for non-current-user submissives
+        }
         queryClient.invalidateQueries({ queryKey: submissiveUserKey });
         queryClient.invalidateQueries({ queryKey: ["rewards", "points", _args.profileId] });
+        queryClient.invalidateQueries({ queryKey: ["rewards", "dom_points", _args.profileId] });
+
       }
       
       // Roll back dominant points
