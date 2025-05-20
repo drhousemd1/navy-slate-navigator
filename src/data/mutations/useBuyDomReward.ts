@@ -2,24 +2,22 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Reward } from '@/data/rewards/types';
-import { PROFILE_POINTS_QUERY_KEY_BASE, getProfilePointsQueryKey } from '@/data/points/usePointsManager';
 
 interface BuyDomRewardArgs {
   rewardId: string;
   cost: number;
-  currentSupply: number; 
+  currentSupply: number; // This is likely the reward's total supply, not user's
   profileId: string;
   currentDomPoints: number;
 }
 
 interface BuyDomRewardOptimisticContext {
   previousRewards?: Reward[];
-  previousProfilePoints?: { points: number, dom_points: number };
+  previousDomPoints?: number;
 }
 
 export const useBuyDomReward = () => {
   const queryClient = useQueryClient();
-  const userProfilePointsKey = (profileId: string) => getProfilePointsQueryKey(profileId);
 
   return useMutation<Reward, Error, BuyDomRewardArgs, BuyDomRewardOptimisticContext>({
       mutationFn: async ({ rewardId, cost, currentSupply, profileId, currentDomPoints }) => {
@@ -48,7 +46,7 @@ export const useBuyDomReward = () => {
         // Update user's Dom points
         const { error: pointsError } = await supabase
           .from('profiles')
-          .update({ dom_points: newDomPoints, updated_at: new Date().toISOString() })
+          .update({ dom_points: newDomPoints })
           .eq('id', profileId);
 
         if (pointsError) {
@@ -69,14 +67,12 @@ export const useBuyDomReward = () => {
         return updatedReward as Reward;
       },
       onMutate: async (variables) => {
-        const profileKey = userProfilePointsKey(variables.profileId);
         await queryClient.cancelQueries({ queryKey: ['rewards'] });
-        await queryClient.cancelQueries({ queryKey: profileKey });
-        await queryClient.cancelQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE]}); // Also cancel base for current user if different
+        await queryClient.cancelQueries({ queryKey: ['rewardsDomPoints'] });
 
         const previousRewards = queryClient.getQueryData<Reward[]>(['rewards']);
-        const previousProfilePoints = queryClient.getQueryData<{ points: number, dom_points: number }>(profileKey);
-        
+        const previousDomPoints = queryClient.getQueryData<number>(['rewardsDomPoints']);
+
         queryClient.setQueryData<Reward[]>(['rewards'], (old = []) =>
           old.map(reward =>
             reward.id === variables.rewardId
@@ -85,19 +81,18 @@ export const useBuyDomReward = () => {
           )
         );
 
-        queryClient.setQueryData<{ points: number, dom_points: number }>(profileKey, (old) => ({
-            points: old?.points ?? 0, // Sub points unchanged
-            dom_points: (old?.dom_points ?? variables.currentDomPoints) - variables.cost,
-        }));
+        queryClient.setQueryData<number>(['rewardsDomPoints'], (oldPoints = 0) =>
+          (oldPoints || 0) - variables.cost
+        );
         
-        return { previousRewards, previousProfilePoints };
+        return { previousRewards, previousDomPoints };
       },
       onError: (err, variables, context) => {
         if (context?.previousRewards) {
           queryClient.setQueryData<Reward[]>(['rewards'], context.previousRewards);
         }
-        if (context?.previousProfilePoints) {
-          queryClient.setQueryData(userProfilePointsKey(variables.profileId), context.previousProfilePoints);
+        if (context?.previousDomPoints !== undefined) {
+          queryClient.setQueryData<number>(['rewardsDomPoints'], context.previousDomPoints);
         }
         toast({ title: "Purchase Failed", description: err.message, variant: "destructive" });
       },
@@ -105,13 +100,13 @@ export const useBuyDomReward = () => {
         queryClient.setQueryData<Reward[]>(['rewards'], (oldRewards = []) => {
           return oldRewards.map(r => r.id === data.id ? data : r);
         });
-        // No need to setQueryData for points, invalidation will refetch the true state.
+        queryClient.invalidateQueries({ queryKey: ['rewardsDomPoints'] });
+        
         toast({ title: "Reward Purchased!", description: `You bought ${data.title}.` });
       },
-      onSettled: (_data, _error, variables) => { // Added variables to onSettled
+      onSettled: () => {
         queryClient.invalidateQueries({ queryKey: ['rewards'] });
-        queryClient.invalidateQueries({ queryKey: userProfilePointsKey(variables.profileId) });
-        queryClient.invalidateQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] }); // General invalidation for current user
+        queryClient.invalidateQueries({ queryKey: ['rewardsDomPoints'] });
       },
     }
   );

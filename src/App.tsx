@@ -1,5 +1,4 @@
 
-//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import React, { useEffect } from 'react';
 import AppRoutes from './AppRoutes';
 import { Toaster } from '@/components/ui/toaster';

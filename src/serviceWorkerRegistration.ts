@@ -1,5 +1,4 @@
 
-//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 // Centralised service-worker registration with auto-update.
 // 1. Registers SW in every environment (dev & prod).
 // 2. The first time a brand-new build finishes installing, the page

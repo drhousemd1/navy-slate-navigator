@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Reward } from '@/data/rewards/types';
-import { PROFILE_POINTS_QUERY_KEY_BASE, getProfilePointsQueryKey } from '@/data/points/usePointsManager';
 
 interface BuySubRewardArgs {
   rewardId: string;
@@ -14,12 +13,11 @@ interface BuySubRewardArgs {
 
 interface BuySubRewardOptimisticContext {
   previousRewards?: Reward[];
-  previousProfilePoints?: { points: number, dom_points: number };
+  previousPoints?: number;
 }
 
 export const useBuySubReward = () => {
   const queryClient = useQueryClient();
-  const userProfilePointsKey = (profileId: string) => getProfilePointsQueryKey(profileId);
 
   return useMutation<Reward, Error, BuySubRewardArgs, BuySubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, cost, currentSupply, profileId, currentPoints }) => {
@@ -42,7 +40,7 @@ export const useBuySubReward = () => {
 
       const { error: pointsError } = await supabase
         .from('profiles')
-        .update({ points: newPoints, updated_at: new Date().toISOString() })
+        .update({ points: newPoints })
         .eq('id', profileId);
 
       if (pointsError) {
@@ -62,13 +60,11 @@ export const useBuySubReward = () => {
       return updatedReward as Reward;
     },
     onMutate: async (variables) => {
-      const profileKey = userProfilePointsKey(variables.profileId);
       await queryClient.cancelQueries({ queryKey: ['rewards'] });
-      await queryClient.cancelQueries({ queryKey: profileKey });
-      await queryClient.cancelQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE]});
+      await queryClient.cancelQueries({ queryKey: ['rewardsPoints'] });
 
       const previousRewards = queryClient.getQueryData<Reward[]>(['rewards']);
-      const previousProfilePoints = queryClient.getQueryData<{ points: number, dom_points: number }>(profileKey);
+      const previousPoints = queryClient.getQueryData<number>(['rewardsPoints']);
       
       queryClient.setQueryData<Reward[]>(['rewards'], (old = []) =>
         old.map(reward =>
@@ -77,19 +73,18 @@ export const useBuySubReward = () => {
             : reward
         )
       );
-      queryClient.setQueryData<{ points: number, dom_points: number }>(profileKey, (old) => ({
-        points: (old?.points ?? variables.currentPoints) - variables.cost,
-        dom_points: old?.dom_points ?? 0, // Dom points unchanged
-      }));
+      queryClient.setQueryData<number>(['rewardsPoints'], (oldPoints = 0) =>
+        (oldPoints || 0) - variables.cost
+      );
 
-      return { previousRewards, previousProfilePoints };
+      return { previousRewards, previousPoints };
     },
     onError: (err, variables, context) => {
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(['rewards'], context.previousRewards);
       }
-      if (context?.previousProfilePoints) {
-        queryClient.setQueryData(userProfilePointsKey(variables.profileId), context.previousProfilePoints);
+      if (context?.previousPoints !== undefined) {
+        queryClient.setQueryData<number>(['rewardsPoints'], context.previousPoints);
       }
       toast({ title: "Purchase Failed", description: err.message, variant: "destructive" });
     },
@@ -97,12 +92,12 @@ export const useBuySubReward = () => {
       queryClient.setQueryData<Reward[]>(['rewards'], (oldRewards = []) => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
+      queryClient.invalidateQueries({ queryKey: ['rewardsPoints'] });
       toast({ title: "Reward Purchased!", description: `You bought ${data.title}.` });
     },
-    onSettled: (_data, _error, variables) => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      queryClient.invalidateQueries({ queryKey: userProfilePointsKey(variables.profileId) });
-      queryClient.invalidateQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] });
+      queryClient.invalidateQueries({ queryKey: ['rewardsPoints'] });
     },
   });
 };

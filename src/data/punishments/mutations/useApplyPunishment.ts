@@ -1,24 +1,24 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { User } from '@supabase/supabase-js'; // Added type import for clarity
 import { PunishmentHistoryItem, ApplyPunishmentArgs } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { PUNISHMENTS_QUERY_KEY, PUNISHMENT_HISTORY_QUERY_KEY } from '@/data/punishments/queries';
-import { getProfilePointsQueryKey, ProfilePointsData, PROFILE_POINTS_QUERY_KEY_BASE } from '@/data/points/usePointsManager'; 
+import { PROFILE_POINTS_QUERY_KEY } from '@/data/points/usePointsManager';
 import { updateProfilePoints } from '@/data/sync/updateProfilePoints';
 
 // Define necessary keys directly or ensure they are imported from a valid source
-const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics']; 
-const MONTHLY_METRICS_QUERY_KEY = ['monthly-metrics'];
-const WEEKLY_METRICS_SUMMARY_QUERY_KEY = ['weekly-metrics-summary'];
+// const PROFILE_QUERY_KEY = ['profile']; // Replaced by PROFILE_POINTS_QUERY_KEY for points display
+// const REWARDS_POINTS_QUERY_KEY = ['rewardsPoints']; // Replaced
+// const REWARDS_DOM_POINTS_QUERY_KEY = ['rewardsDomPoints']; // Replaced
+const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics']; // For Throne Room
+const MONTHLY_METRICS_QUERY_KEY = ['monthly-metrics']; // For Throne Room
+const WEEKLY_METRICS_SUMMARY_QUERY_KEY = ['weekly-metrics-summary']; // For Throne Room
+
 
 interface ApplyPunishmentContext {
   previousHistory?: PunishmentHistoryItem[];
   optimisticHistoryId?: string;
-  previousProfilePointsForCurrentUser?: ProfilePointsData;
-  previousDominantProfilePoints?: ProfilePointsData;
-  dominantId?: string;
 }
 
 export const useApplyPunishment = () => {
@@ -26,139 +26,91 @@ export const useApplyPunishment = () => {
 
   return useMutation<void, Error, ApplyPunishmentArgs, ApplyPunishmentContext>({
     mutationFn: async (args: ApplyPunishmentArgs) => {
-        console.log("Applying punishment with args:", args);
-        const { id: punishmentId, costPoints, domEarn, profileId, subPoints: initialSubPoints, domPoints: initialProfileDomPoints } = args;
+        const { id: punishmentId, costPoints, domEarn, profileId, subPoints: initialSubPoints, domPoints: initialDomPoints } = args;
 
-        try {
-            const newSubPoints = initialSubPoints - costPoints;
-            let finalPartnerDomPoints = 0; 
-            let dominantPartnerId: string | null = null;
+        const newSubPoints = initialSubPoints - costPoints;
+        let finalDomPoints = initialDomPoints; // Initialize with current dom points
 
-            // 1. Update submissive profile (deduct points)
-            const { error: subProfileError } = await supabase
+        const { error: subProfileError } = await supabase
+            .from('profiles')
+            .update({ points: newSubPoints, updated_at: new Date().toISOString() })
+            .eq('id', profileId);
+        if (subProfileError) throw new Error(`Failed to update submissive profile: ${subProfileError.message}`);
+
+        const { data: userProfile } = await supabase.from('profiles').select('linked_partner_id').eq('id', profileId).single();
+        if (userProfile?.linked_partner_id) {
+            const { data: partnerProfile, error: partnerProfileError } = await supabase
                 .from('profiles')
-                .update({ points: newSubPoints, updated_at: new Date().toISOString() }) 
-                .eq('id', profileId);
-            if (subProfileError) {
-                console.error("Failed to update submissive profile:", subProfileError);
-                throw new Error(`Failed to update submissive profile: ${subProfileError.message}`);
-            }
-
-            // 2. Find dominant partner
-            const { data: submissiveUserProfile, error: submissiveUserError } = await supabase
-                .from('profiles')
-                .select('linked_partner_id')
-                .eq('id', profileId)
+                .select('dom_points')
+                .eq('id', userProfile.linked_partner_id)
                 .single();
 
-            if (submissiveUserError) {
-                console.error("Failed to fetch submissive user profile:", submissiveUserError);
-                throw new Error(`Failed to fetch submissive user profile: ${submissiveUserError.message}`);
-            }
-
-            // 3. Update dominant partner if exists
-            if (submissiveUserProfile?.linked_partner_id) {
-                dominantPartnerId = submissiveUserProfile.linked_partner_id;
-                const { data: partnerProfile, error: partnerProfileError } = await supabase
-                    .from('profiles')
-                    .select('dom_points')
-                    .eq('id', dominantPartnerId)
-                    .single();
-
-                if (partnerProfileError) {
-                    console.error("Failed to fetch partner profile:", partnerProfileError);
-                    throw new Error(`Failed to fetch partner profile: ${partnerProfileError.message}`);
-                }
-                
-                if (partnerProfile) {
-                    const currentPartnerDomPoints = partnerProfile.dom_points || 0;
-                    finalPartnerDomPoints = currentPartnerDomPoints + domEarn;
-                    const { error: domProfileError } = await supabase
-                        .from('profiles')
-                        .update({ dom_points: finalPartnerDomPoints, updated_at: new Date().toISOString() })
-                        .eq('id', dominantPartnerId);
-                    if (domProfileError) {
-                        console.error("Failed to update dominant profile:", domProfileError);
-                        throw new Error(`Failed to update dominant profile: ${domProfileError.message}`);
-                    }
-                }
-            }
-
-            // 4. Log punishment history
-            const historyEntry: Omit<PunishmentHistoryItem, 'id' | 'applied_date'> & { punishment_id: string; applied_date?: string } = {
-                punishment_id: punishmentId, 
-                applied_date: new Date().toISOString(),
-                points_deducted: costPoints,
-                day_of_week: new Date().getDay(), 
-            };
-            const { error: historyError } = await supabase.from('punishment_history').insert(historyEntry).select().single();
-            if (historyError) {
-                console.error("Failed to record punishment history:", historyError);
-                throw new Error(`Failed to record punishment history: ${historyError.message}`);
-            }
-
-            // 5. Update caches using updateProfilePoints
-            console.log("Updating submissive points in mutationFn:", profileId, newSubPoints, initialProfileDomPoints);
-            await updateProfilePoints(profileId, newSubPoints, initialProfileDomPoints);
-
-            // For dominant partner (if exists and points changed):
-            if (dominantPartnerId && domEarn > 0) {
-                 const { data: domPartnerCurrentProfile, error: domPartnerCurrentProfileError } = await supabase
-                    .from('profiles')
-                    .select('points') // Need current sub_points of dominant to pass to updateProfilePoints
-                    .eq('id', dominantPartnerId)
-                    .single();
-                
-                if (domPartnerCurrentProfileError) throw domPartnerCurrentProfileError;
-                
-                const domPartnerCurrentSubPoints = domPartnerCurrentProfile?.points ?? 0;
-                console.log("Updating dominant partner points in mutationFn:", dominantPartnerId, domPartnerCurrentSubPoints, finalPartnerDomPoints);
-                await updateProfilePoints(dominantPartnerId, domPartnerCurrentSubPoints, finalPartnerDomPoints);
-            }
+            if (partnerProfileError) throw new Error(`Failed to fetch partner profile: ${partnerProfileError.message}`);
             
-            // Force immediate global cache refresh to ensure headers display correct values
-            queryClient.invalidateQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] });
-        } catch (error) {
-            console.error("Error in useApplyPunishment mutationFn:", error);
-            throw error;
+            if (partnerProfile) {
+                const currentPartnerDomPoints = partnerProfile.dom_points || 0;
+                finalDomPoints = currentPartnerDomPoints + domEarn; // Update finalDomPoints here
+                const { error: domProfileError } = await supabase
+                    .from('profiles')
+                    .update({ dom_points: finalDomPoints, updated_at: new Date().toISOString() })
+                    .eq('id', userProfile.linked_partner_id);
+                if (domProfileError) throw new Error(`Failed to update dominant profile: ${domProfileError.message}`);
+            }
+        } else {
+          // If there's no linked partner, the 'domEarn' logic might need clarification.
+          // For now, we assume if there's no partner, the 'domPoints' passed to updateProfilePoints will be the initialDomPoints.
+          // Or, if domEarn is meant for the current user's dom_points if they are also the dominant one (e.g. self-play):
+          // finalDomPoints = initialDomPoints + domEarn;
+          // const { error: selfDomProfileError } = await supabase
+          //   .from('profiles')
+          //   .update({ dom_points: finalDomPoints, updated_at: new Date().toISOString() })
+          //   .eq('id', profileId); // Update current user's dom_points
+          // if (selfDomProfileError) throw new Error(`Failed to update own dominant profile points: ${selfDomProfileError.message}`);
+          // This part depends on the intended logic for dom_points when no partner is linked.
+          // Assuming for now that dom_points are only for the linked partner.
+        }
+
+        const historyEntry: Omit<PunishmentHistoryItem, 'id' | 'applied_date'> & { punishment_id: string; applied_date?: string } = {
+            punishment_id: punishmentId, 
+            applied_date: new Date().toISOString(),
+            points_deducted: costPoints,
+            day_of_week: new Date().getDay(), 
+        };
+        const { error: historyError } = await supabase.from('punishment_history').insert(historyEntry).select().single();
+        if (historyError) throw new Error(`Failed to record punishment history: ${historyError.message}`);
+
+        // Directly update the cache using updateProfilePoints
+        // If no partner, finalDomPoints would be initialDomPoints.
+        // If there is a partner, it's partnerProfile.dom_points + domEarn
+        // If the current user *is* the dominant and receives points, that needs specific handling.
+        // Assuming `finalDomPoints` reflects the dominant partner's new total,
+        // and `newSubPoints` is the submissive's new total.
+        // The `updateProfilePoints` function updates the *current user's* view of their points.
+        // If the current user is the submissive, their `dom_points` field in `profiles` table might not change here,
+        // unless they are also acting as a dominant in some context.
+        // `updateProfilePoints` updates the local cache for `PROFILE_POINTS_QUERY_KEY`.
+        // We need to ensure it updates the correct values based on whose points changed.
+        // If the logged-in user is the SUBMISSIVE, their `points` change. Their `dom_points` might not.
+        // If the logged-in user is the DOMINANT, their `dom_points` change. Their `points` (sub_points) might not.
+
+        // Let's get the current user's ID again to be sure whose points we are updating in the cache.
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+            if (currentUser.id === profileId) { // Current user is the submissive who got punished
+                await updateProfilePoints(newSubPoints, initialDomPoints); // Their sub points change, their dom points (if any) don't change from *this* action.
+            } else if (userProfile?.linked_partner_id && currentUser.id === userProfile.linked_partner_id) { // Current user is the dominant partner
+                 await updateProfilePoints(initialSubPoints, finalDomPoints); // Their dom points change, their sub points (if any) don't change from *this* action.
+            }
+            // Else, if the current user is neither the punished user nor their direct partner,
+            // their local point display might not need an immediate update from this specific action,
+            // or it implies a more complex relationship not covered here.
+            // For now, we assume direct involvement.
         }
     },
-    onMutate: async (args: ApplyPunishmentArgs) => {
-      // Get query keys for both current user and submissive (if different)
-      const currentAuthUserKey = getProfilePointsQueryKey(); 
-      const submissiveUserKey = getProfilePointsQueryKey(args.profileId);
-      let dominantId: string | undefined;
-      let previousDominantProfilePoints: ProfilePointsData | undefined;
-
-      // Find dominant partner ID for optimistic updates
-      try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('linked_partner_id')
-          .eq('id', args.profileId)
-          .single();
-          
-        if (data?.linked_partner_id) {
-          dominantId = data.linked_partner_id;
-          const dominantKey = getProfilePointsQueryKey(dominantId);
-          await queryClient.cancelQueries({ queryKey: dominantKey });
-          previousDominantProfilePoints = queryClient.getQueryData<ProfilePointsData>(dominantKey);
-        }
-      } catch (err) {
-        console.error("Error finding dominant partner for optimistic update:", err);
-      }
-
-      // Cancel relevant queries
+    onMutate: async (args) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
-      await queryClient.cancelQueries({ queryKey: submissiveUserKey });
-      await queryClient.cancelQueries({ queryKey: currentAuthUserKey });
-      await queryClient.cancelQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE]});
-
-      // Store previous state
       const previousHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY);
-      const previousProfilePointsForCurrentUser = queryClient.getQueryData<ProfilePointsData>(currentAuthUserKey);
-
-      // Create optimistic history entry
+      
       const optimisticHistoryId = uuidv4();
       const optimisticHistoryEntry: PunishmentHistoryItem = {
         id: optimisticHistoryId,
@@ -167,248 +119,35 @@ export const useApplyPunishment = () => {
         points_deducted: args.costPoints,
         day_of_week: new Date().getDay(), 
       };
-      
-      // Update history optimistically
       queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => 
         [optimisticHistoryEntry, ...old]
       );
-
-      try {
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        
-        if (currentUser) {
-            // Optimistic update for submissive - always update submissiveUserKey
-            queryClient.setQueryData<ProfilePointsData>(submissiveUserKey, (oldData) => {
-              return {
-                points: (oldData?.points ?? args.subPoints) - args.costPoints,
-                dom_points: oldData?.dom_points ?? args.domPoints,
-              };
-            });
-            
-            // Update legacy keys for submissive
-            queryClient.setQueryData(["rewards", "points", args.profileId], 
-              (oldVal?: number) => (oldVal ?? args.subPoints) - args.costPoints);
-            
-            // If current user is the submissive, also update currentAuthUserKey (if different)
-            if (currentUser.id === args.profileId && submissiveUserKey !== currentAuthUserKey) {
-              queryClient.setQueryData<ProfilePointsData>(currentAuthUserKey, (oldData) => {
-                return {
-                  points: (oldData?.points ?? args.subPoints) - args.costPoints,
-                  dom_points: oldData?.dom_points ?? args.domPoints,
-                };
-              });
-            }
-            
-            // Update base profile points key for global state
-            queryClient.setQueryData<ProfilePointsData>([PROFILE_POINTS_QUERY_KEY_BASE], (oldData) => {
-              if (currentUser.id === args.profileId) {
-                // Current user is submissive
-                return {
-                  points: (oldData?.points ?? args.subPoints) - args.costPoints,
-                  dom_points: oldData?.dom_points ?? args.domPoints,
-                };
-              } else if (currentUser.id === dominantId) {
-                // Current user is dominant
-                return {
-                  points: oldData?.points ?? 0,
-                  dom_points: (oldData?.dom_points ?? 0) + args.domEarn,
-                };
-              }
-              return oldData || { points: 0, dom_points: 0 };
-            });
-            
-            // If dominant partner exists and was found, optimistically update their points too
-            if (dominantId) {
-              const dominantKey = getProfilePointsQueryKey(dominantId);
-              
-              queryClient.setQueryData<ProfilePointsData>(dominantKey, (oldData) => {
-                return {
-                  points: oldData?.points ?? 0,
-                  dom_points: (oldData?.dom_points ?? 0) + args.domEarn,
-                };
-              });
-              
-              // Update legacy key for dominant
-              queryClient.setQueryData(["rewards", "dom_points", dominantId], 
-                (oldVal?: number) => (oldVal ?? 0) + args.domEarn);
-                
-              // If current user is dominant, also update currentAuthUserKey
-              if (currentUser.id === dominantId && dominantKey !== currentAuthUserKey) {
-                queryClient.setQueryData<ProfilePointsData>(currentAuthUserKey, (oldData) => {
-                  return {
-                    points: oldData?.points ?? 0,
-                    dom_points: (oldData?.dom_points ?? 0) + args.domEarn,
-                  };
-                });
-              }
-            }
-        }
-      } catch (error) {
-        console.error("Error in optimistic update:", error);
-      }
-
-      return { 
-        previousHistory, 
-        optimisticHistoryId, 
-        previousProfilePointsForCurrentUser,
-        previousDominantProfilePoints,
-        dominantId
-      };
+      return { previousHistory, optimisticHistoryId };
     },
-    onError: async (error, _args, context) => {
-      console.error("Error in useApplyPunishment onError:", error);
-      const currentAuthUserKey = getProfilePointsQueryKey(); // Key for the currently authenticated user
-      const submissiveUserKey = getProfilePointsQueryKey(_args.profileId); // Key for the user being punished
-
-      let authUser: User | undefined; // Declare authUser here, visible to the whole onError scope
-      try {
-        const { data: authDataResponse, error: authError } = await supabase.auth.getUser();
-        if (authError) {
-          console.error("Error fetching user in onError for rollback:", authError);
-        } else {
-          authUser = authDataResponse?.user ?? undefined; // Ensure it's User | undefined
-        }
-      } catch (e) {
-        console.error("Exception during supabase.auth.getUser() in onError:", e);
-        // authUser remains undefined
-      }
-
-      // Roll back history
+    onError: (error, _args, context) => {
       if (context?.previousHistory) {
         queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, context.previousHistory);
       }
-      
-      // Roll back points for the user whose data was in previousProfilePointsForCurrentUser (typically the authenticated user)
-      if (context?.previousProfilePointsForCurrentUser) {
-        queryClient.setQueryData<ProfilePointsData>(currentAuthUserKey, context.previousProfilePointsForCurrentUser);
-        
-        // If this authenticated user is also the one being punished, update their specific legacy keys
-        if (authUser && authUser.id === _args.profileId) {
-          queryClient.setQueryData(["rewards", "points", _args.profileId], context.previousProfilePointsForCurrentUser.points);
-          queryClient.setQueryData(["rewards", "dom_points", _args.profileId], context.previousProfilePointsForCurrentUser.dom_points);
-        }
-      }
-      
-      // Roll back submissive's specific points if the submissive is NOT the authenticated user.
-      // This handles cases where an admin punishes another user, or if the user context is somehow different.
-      // It avoids double-rolling back if the authenticated user IS the submissive and was handled above.
-      if (authUser?.id !== _args.profileId) {
-        // The punished user is different from the authenticated user.
-        // Invalidate their specific caches.
-        // We don't have distinct `previousProfilePointsForSubmissive` in context if submissive !== authUser,
-        // so invalidation is the safest strategy for their specific keys.
-        queryClient.invalidateQueries({ queryKey: submissiveUserKey });
-        queryClient.invalidateQueries({ queryKey: ["rewards", "points", _args.profileId] });
-        queryClient.invalidateQueries({ queryKey: ["rewards", "dom_points", _args.profileId] });
-      }
-      
-      // Roll back dominant points
-      if (context?.dominantId && context?.previousDominantProfilePoints) {
-        const dominantKey = getProfilePointsQueryKey(context.dominantId);
-        queryClient.setQueryData<ProfilePointsData>(dominantKey, context.previousDominantProfilePoints);
-        queryClient.setQueryData(["rewards", "dom_points", context.dominantId], context.previousDominantProfilePoints.dom_points);
-      }
-
       toast({ title: 'Error applying punishment', description: error.message, variant: 'destructive' });
-      
-      // Force global refresh after error
-      queryClient.invalidateQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] });
     },
-    onSuccess: async (_data, args) => { 
+    onSuccess: async () => {
+      // Invalidate queries to refetch data
+      await queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }); 
+      await queryClient.invalidateQueries({ queryKey: PROFILE_POINTS_QUERY_KEY }); 
+      await queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: MONTHLY_METRICS_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_SUMMARY_QUERY_KEY });
+      
       toast({ title: 'Punishment applied successfully!' });
-      
-      // Clear any stale data
-      await queryClient.invalidateQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] });
-      await queryClient.invalidateQueries({ queryKey: getProfilePointsQueryKey(args.profileId) });
-      
-      // Find dominant partner and invalidate their cache
-      try {
-        const { data: subProfile } = await supabase
-          .from('profiles')
-          .select('linked_partner_id')
-          .eq('id', args.profileId)
-          .single();
-          
-        if (subProfile?.linked_partner_id) {
-          const partnerId = subProfile.linked_partner_id;
-          await queryClient.invalidateQueries({ queryKey: getProfilePointsQueryKey(partnerId) });
-          console.log("Invalidating dominant partner cache:", partnerId);
-          
-          // Force update of dominant partner points in cache
-          const { data: dominantProfile } = await supabase
-            .from('profiles')
-            .select('points, dom_points')
-            .eq('id', partnerId)
-            .single();
-            
-          if (dominantProfile) {
-            console.log("Forcing update of dominant points in cache:", partnerId, dominantProfile.points, dominantProfile.dom_points);
-            await updateProfilePoints(partnerId, dominantProfile.points, dominantProfile.dom_points);
-          }
-        }
-      } catch (e) {
-        console.warn("Could not fetch partner ID or update cache in onSuccess:", e);
-      }
     },
-    onSettled: async (_data, _error, args) => {
-      // Comprehensive invalidation strategy
-      
-      // 1. Invalidate submissive points
-      queryClient.invalidateQueries({ queryKey: getProfilePointsQueryKey(args.profileId) });
-      queryClient.invalidateQueries({ queryKey: ["rewards", "points", args.profileId] });
-      queryClient.invalidateQueries({ queryKey: ["rewards", "dom_points", args.profileId] });
-      queryClient.invalidateQueries({ queryKey: ["profile", args.profileId]});
-
-      // 2. Find and invalidate dominant partner's cache
-      try {
-        const { data: subProfile } = await supabase
-          .from('profiles')
-          .select('linked_partner_id')
-          .eq('id', args.profileId)
-          .single();
-          
-        if (subProfile?.linked_partner_id) {
-          const partnerId = subProfile.linked_partner_id;
-          queryClient.invalidateQueries({ queryKey: getProfilePointsQueryKey(partnerId) });
-          queryClient.invalidateQueries({ queryKey: ["rewards", "points", partnerId] });
-          queryClient.invalidateQueries({ queryKey: ["rewards", "dom_points", partnerId] });
-          queryClient.invalidateQueries({ queryKey: ["profile", partnerId]});
-        }
-      } catch (e) {
-        console.warn("Could not fetch partner ID in onSettled for invalidation:", e);
-      }
-      
-      // 3. Global invalidation of points and profiles
-      queryClient.invalidateQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] });
-      queryClient.invalidateQueries({ queryKey: ["rewards"] });
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-      
-      // 4. Other punishment-related data
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: PROFILE_POINTS_QUERY_KEY }); 
       queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: MONTHLY_METRICS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_SUMMARY_QUERY_KEY });
-      
-      // 5. Force immediate refresh of headers via updateProfilePoints
-      // Get current authenticated user
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('points, dom_points')
-            .eq('id', user.id)
-            .single();
-            
-          if (profile) {
-            console.log("Forcing update of current user points in cache:", user.id, profile.points, profile.dom_points);
-            await updateProfilePoints(user.id, profile.points, profile.dom_points);
-          }
-        }
-      } catch (err) {
-        console.error("Error refreshing current user points in onSettled:", err);
-      }
     }
   });
 };

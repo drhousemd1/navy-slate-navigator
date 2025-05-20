@@ -1,5 +1,4 @@
 
-//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { REWARDS_QUERY_KEY, fetchRewards } from '@/data/rewards/queries';

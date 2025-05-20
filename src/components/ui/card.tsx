@@ -1,5 +1,3 @@
-
-//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
