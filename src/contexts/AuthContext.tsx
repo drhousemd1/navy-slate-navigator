@@ -56,35 +56,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const userProfileUtils = useUserProfile(authState.user, wrappedSetUserForProfile);
 
   useEffect(() => {
-    console.log('[AuthContext] useEffect mounting. Setting up auth state listener.');
     const checkInitialSession = async () => {
-      console.log('[AuthContext] checkInitialSession called.');
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
-        console.error("[AuthContext] Error getting initial session:", error);
+        console.error("Error getting initial session:", error);
         setAuthState(prev => ({ ...prev, loading: false }));
         return;
       }
 
       if (session) {
         const user = session.user;
-        console.log('[AuthContext] Initial session found:', { userId: user?.id, expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : 'N/A' });
         let isAdmin = false;
         if (user) {
           try {
-            console.log('[AuthContext] Checking admin role for initial session user:', user.id);
             const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
               requested_user_id: user.id,
               requested_role: 'admin'
             });
             if (roleError) {
-              console.error("[AuthContext] Error checking admin role (initial session) via RPC:", roleError);
+              console.error("Error checking admin role via RPC:", roleError);
             } else {
               isAdmin = !!hasAdminRole;
-              console.log("[AuthContext] Admin role (initial session) check result:", isAdmin);
             }
+            console.log("Is admin check result:", isAdmin);
           } catch (e) {
-            console.error("[AuthContext] Exception during admin role check (initial session):", e);
+            console.error("Error during admin role check:", e);
           }
         }
         setAuthState({
@@ -96,7 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           userExists: !!user,
           sessionExists: !!session,
         });
-        console.log("[AuthContext] Initialized with session. Current state:", {
+        console.log("AuthContext initialized. Current state:", {
           userExists: !!user,
           sessionExists: !!session,
           isAuthenticated: true,
@@ -104,9 +100,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           loading: false,
         });
       } else {
-        console.log('[AuthContext] No initial session found.');
         setAuthState(prev => ({ ...prev, loading: false, isAuthenticated: false, isAdmin: false, userExists: false, sessionExists: false }));
-        console.log("[AuthContext] Initialized without session.");
+        console.log("AuthContext initialized. No active session.");
       }
     };
 
@@ -114,31 +109,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event: AuthChangeEvent | 'USER_DELETED', session) => {
-        console.log(`[AuthContext] onAuthStateChange event: ${_event}`, { sessionId: session?.user?.id, currentAuthStateUser: authState.user?.id });
-        if (session) {
-            console.log(`[AuthContext] Session details: Expires at ${new Date(session.expires_at * 1000)}, User ID: ${session.user.id}`);
-        } else {
-            console.log('[AuthContext] No session in this event.');
-        }
-
+        console.log("Auth state change event:", _event, "Session:", session);
         const user = session?.user ?? null;
         let isAdmin = false;
 
         if (user) {
           try {
-            console.log('[AuthContext] Checking admin role for user in onAuthStateChange:', user.id);
             const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
               requested_user_id: user.id,
               requested_role: 'admin'
             });
             if (roleError) {
-              console.error("[AuthContext] Error checking admin role (onAuthStateChange) via RPC:", roleError);
+              console.error("Error checking admin role on auth state change via RPC:", roleError);
             } else {
               isAdmin = !!hasAdminRole;
-               console.log("[AuthContext] Admin role (onAuthStateChange) check result:", isAdmin);
             }
           } catch (e) {
-            console.error("[AuthContext] Exception during admin role check (onAuthStateChange):", e);
+            console.error("Error checking admin role on auth state change:", e);
           }
         }
         
@@ -154,41 +141,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         switch (_event) {
           case 'SIGNED_IN':
-            console.log("[AuthContext] Event: SIGNED_IN. User authenticated.", { userId: user?.id });
+            console.log("Auth state: User session detected (SIGNED_IN)");
             break;
           case 'SIGNED_OUT':
-            console.log("[AuthContext] Event: SIGNED_OUT. User signed out.");
+            console.log("Auth state: User signed out (SIGNED_OUT)");
             await clearAllCaches();
             break;
           case 'USER_DELETED':
-            console.log("[AuthContext] Event: USER_DELETED.");
+            console.log("Auth state: User deleted (USER_DELETED)");
             await clearAllCaches();
             break;
           case 'PASSWORD_RECOVERY':
-            console.log("[AuthContext] Event: PASSWORD_RECOVERY.");
+            console.log("Auth state: Password recovery initiated (PASSWORD_RECOVERY)");
             break;
           case 'TOKEN_REFRESHED':
-            console.log("[AuthContext] Event: TOKEN_REFRESHED. Session token refreshed.", { newExpiry: session ? new Date(session.expires_at * 1000) : 'N/A' });
+            console.log("Auth state: Token refreshed (TOKEN_REFRESHED)");
             break;
           case 'USER_UPDATED':
-            console.log("[AuthContext] Event: USER_UPDATED.", { userId: user?.id });
+            console.log("Auth state: User updated (USER_UPDATED)");
             break;
           case 'MFA_CHALLENGE_VERIFIED':
-            console.log("[AuthContext] Event: MFA_CHALLENGE_VERIFIED.");
+            console.log("Auth state: MFA challenge verified (MFA_CHALLENGE_VERIFIED)");
             break;
           default:
-            const unhandledEvent: string = _event as string; 
-            console.log(`[AuthContext] Event: Unhandled - ${unhandledEvent}`);
+            const unhandledEvent: string = _event as string; // Cast to string to handle any value
+            console.log(`Auth state change: Unhandled event type: ${unhandledEvent}`);
             break;
         }
       }
     );
 
     return () => {
-      console.log('[AuthContext] useEffect unmounting. Unsubscribing from auth state changes.');
       subscription?.unsubscribe();
     };
-  }, []); // Removed authState from dependencies to prevent re-running on its own state changes
+  }, []);
 
   const clearAllCaches = async () => {
     try {
@@ -209,6 +195,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       console.log(`[CacheClear] Cleared ${formStateKeys.length} persisted form drafts using prefix: ${FORM_STATE_PREFIX}`);
       
+      // Optionally, if there's other app-specific data in localforage that needs clearing on logout,
+      // you could call localforage.clear() here, but be cautious as it wipes everything.
+      // For now, targeted removal is safer.
+
       toast({ title: "Cache Cleared", description: "Application cache and drafts have been cleared." });
     } catch (error) {
       console.error("Error clearing caches:", error);
@@ -217,18 +207,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signOut = async () => {
-    console.log('[AuthContext] signOut called.');
     setAuthState(prev => ({ ...prev, loading: true }));
     const { error } = await supabase.auth.signOut();
     
     if (error) {
-      console.error('[AuthContext] Error signing out:', error);
+      console.error('Error signing out:', error);
       toast({ title: "Sign Out Error", description: error.message, variant: "destructive" });
-      // State will be updated by onAuthStateChange 'SIGNED_OUT' event
-      setAuthState(prev => ({ ...prev, loading: false })); // Explicitly set loading false here too
+      setAuthState(prev => ({ ...prev, loading: false }));
     } else {
-      console.log("[AuthContext] Sign out successful via signOut call. Cache clearing handled by onAuthStateChange.");
-      // onAuthStateChange will set loading to false and update auth state.
+      // clearAllCaches is already called by the onAuthStateChange 'SIGNED_OUT' event handler.
+      // Calling it here again would be redundant but generally harmless.
+      // To avoid double calls, we can rely on the event handler.
+      // If immediate clearing before state update is critical, keep it here and ensure handler is idempotent.
+      // For now, relying on the event handler is cleaner.
+      console.log("Sign out successful, cache clearing handled by onAuthStateChange.");
     }
   };
 
