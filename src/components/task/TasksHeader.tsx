@@ -8,12 +8,12 @@ import { usePointsManager } from '@/data/points/usePointsManager';
 import { useRewards } from '@/contexts/RewardsContext'; 
 
 interface TasksHeaderProps {
-  // onAddTask?: () => void; // This was already removed, which is correct.
-  taskCount: number; // Added for consistency if needed, or can be removed if not used
-  completedCount: number; // Added for consistency if needed, or can be removed if not used
+  // onAddTask prop was already correctly removed from here.
+  taskCount: number; 
+  completedCount: number;
 }
 
-const TasksHeader: React.FC<TasksHeaderProps> = ({ taskCount, completedCount }) => { // Destructure props
+const TasksHeader: React.FC<TasksHeaderProps> = ({ taskCount, completedCount }) => { 
   const { 
     points: totalPoints, 
     domPoints, 
@@ -31,7 +31,7 @@ const TasksHeader: React.FC<TasksHeaderProps> = ({ taskCount, completedCount }) 
   return (
     <div className="flex items-center mb-6">
       <h1 className="text-base font-semibold text-white mr-auto">My Tasks</h1>
-      {/* Display task counts if passed, or remove if not part of design */}
+      {/* Removed the direct display of task counts, if this was intended by UI design */}
       {/* <span className="text-sm text-gray-400 mr-4">{completedCount}/{taskCount} Tasks</span> */}
       <div className="flex items-center gap-2 ml-auto">
         <Badge 
@@ -56,3 +56,4 @@ const TasksHeader: React.FC<TasksHeaderProps> = ({ taskCount, completedCount }) 
 };
 
 export default TasksHeader;
+

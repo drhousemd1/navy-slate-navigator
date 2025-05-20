@@ -1,10 +1,9 @@
 
-import { Task as BaseTask } from '@/lib/taskUtils'; // Renaming to BaseTask to avoid conflict if Task is locally defined elsewhere
+import { Task as BaseTask } from '@/lib/taskUtils'; 
 
-// Export TaskWithId which is BaseTask extended with DB fields
 export type TaskWithId = BaseTask & { 
   id: string;
-  user_id: string; // Added user_id
+  user_id: string; // Ensured user_id is here and required
   week_identifier?: string | null;
   background_images?: any; 
   description?: string | null; 
@@ -25,24 +24,18 @@ export type TaskWithId = BaseTask & {
   usage_data?: number[] | null; 
   completed?: boolean; 
   last_completed_date?: string | null; 
-  points?: number; 
-  title?: string; 
+  // points is already in BaseTask
+  // title is already in BaseTask
 };
 
-// Re-export BaseTask if it's needed directly by other modules from this file
-export type Task = BaseTask; // This was causing "Task is declared locally but not exported" - ensure BaseTask is what's intended if Task is used.
+export type Task = BaseTask;
 
-// Define variables for creating a task
-// Title and points are required, others can be optional or have defaults
-export type CreateTaskVariables = Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at' | 'completed' | 'last_completed_date' | 'title' | 'points' | 'user_id'>> & {
+export type CreateTaskVariables = Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at' | 'completed' | 'last_completed_date' | 'title' | 'points' | 'user_id' | 'priority' | 'frequency' | 'frequency_count' | 'usage_data' >> & {
   title: string;
   points: number;
-  user_id: string; // user_id is here for creation
-  // Explicitly add fields that were causing type errors, ensuring they are optional
+  user_id: string; 
   week_identifier?: string | null;
-  background_images?: any; // Ideally, replace 'any' with a more specific type like JsonValue if available
-  
-  // Other optional fields explicitly listed for clarity
+  background_images?: any;
   description?: string;
   frequency?: 'daily' | 'weekly';
   frequency_count?: number;
@@ -61,5 +54,5 @@ export type CreateTaskVariables = Partial<Omit<TaskWithId, 'id' | 'created_at' |
   usage_data?: number[];
 };
 
-// Define variables for updating a task
-export type UpdateTaskVariables = { id: string } & Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at' | 'user_id'>>; // user_id likely shouldn't be updatable this way
+export type UpdateTaskVariables = { id: string } & Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at' | 'user_id'>>;
+

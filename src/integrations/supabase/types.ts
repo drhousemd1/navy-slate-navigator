@@ -615,6 +615,7 @@ export type Database = {
           title_color: string
           updated_at: string
           usage_data: Json | null
+          user_id: string | null
           week_identifier: string | null
         }
         Insert: {
@@ -642,6 +643,7 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
+          user_id?: string | null
           week_identifier?: string | null
         }
         Update: {
@@ -669,9 +671,18 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
+          user_id?: string | null
           week_identifier?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

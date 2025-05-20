@@ -1,8 +1,10 @@
 
-import { useQueryClient } from "@tanstack/react-query"; // Import useQueryClient
-import { useTasksQuery, TasksQueryResult, useTaskByIdQuery } from '@/data/tasks/queries'; 
+import { useQueryClient } from "@tanstack/react-query"; 
+import { useTasksQuery, TasksQueryResult, useTaskByIdQuery, fetchTaskById } from '@/data/tasks/queries'; 
 import { TaskWithId, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types';
 import { useCreateTask, useUpdateTask, useDeleteTask, useToggleTaskCompletionMutation } from '@/data/tasks/mutations';
+// Assuming OptimisticMutationContext is a general type or defined elsewhere.
+// For this fix, specific context types are handled in their respective mutation hooks.
 
 export type UseTasksDataResult = {
   tasks: TaskWithId[];
@@ -33,9 +35,10 @@ export const useTasksData = (): UseTasksDataResult => {
   const toggleTaskCompletionMutation = useToggleTaskCompletionMutation();
 
   const fetchTaskByIdClient = async (taskId: string): Promise<TaskWithId | null> => {
-    const data = await queryClientHook.fetchQuery<TaskWithId | null, Error, TaskWithId | null, readonly (string | undefined)[]>({ // Use queryClientHook
+    // Corrected: Use queryClientHook obtained from useQueryClient()
+    const data = await queryClientHook.fetchQuery<TaskWithId | null, Error, TaskWithId | null, readonly (string | undefined)[]>({ 
         queryKey: ['tasks', taskId],
-        queryFn: () => import('@/data/tasks/queries').then(mod => mod.fetchTaskById(taskId))
+        queryFn: () => fetchTaskById(taskId) // Directly use imported fetchTaskById
     });
     return data;
   };
@@ -53,3 +56,4 @@ export const useTasksData = (): UseTasksDataResult => {
     useTaskByIdQuery: useTaskByIdQuery,
   };
 };
+

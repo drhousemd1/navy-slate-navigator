@@ -1,7 +1,8 @@
+
 export interface Reward {
   id: string;
   title: string;
-  description?: string | null; // Changed to optional
+  description?: string | null; 
   cost: number;
   supply: number;
   background_image_url?: string | null;
@@ -31,7 +32,7 @@ export type CreateRewardVariables = {
   is_dom_reward: boolean;
   description?: string | null;
   background_image_url?: string | null;
-  background_opacity: number; // Changed from optional to required
+  background_opacity: number; 
   icon_name?: string | null;
   icon_url?: string | null;
   icon_color: string;
@@ -46,7 +47,9 @@ export type CreateRewardVariables = {
 export type UpdateRewardVariables = { id: string } & Partial<Omit<Reward, 'id' | 'created_at' | 'updated_at'>>;
 
 export type RewardWithPointsAndSupply = Reward & {
-  // userSubPoints: number; // These might not be needed per reward item if managed globally
-  // userDomPoints: number; // These might not be needed per reward item if managed globally
-  supply: number; // Supply is already part of Reward, but explicitly listing if it's specifically for this combined type
+  // No additional fields are strictly necessary here based on current errors.
+  // If user points per reward were needed, they could be added:
+  // userSubPoints?: number;
+  // userDomPoints?: number;
 };
+

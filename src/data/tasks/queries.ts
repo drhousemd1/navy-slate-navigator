@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
-import { TaskWithId } from './types'; // Use TaskWithId consistently
+import { TaskWithId } from './types'; 
 
 export const TASKS_QUERY_KEY = ['tasks'];
 export const taskQueryKey = (taskId: string) => ['tasks', taskId];
@@ -13,11 +13,8 @@ export const fetchTasks = async (): Promise<TaskWithId[]> => {
     .order('created_at', { ascending: false });
   
   if (error) throw error;
-  // Ensure user_id is mapped if it's not directly available or has a different name from DB
-  return ((data || []) as any[]).map(task => ({
-    ...task,
-    user_id: task.user_id || 'default_user_id_placeholder', // Ensure user_id is present
-  })) as TaskWithId[];
+  // user_id should now come directly from the database after migration
+  return (data || []) as TaskWithId[];
 };
 
 export const fetchTaskById = async (taskId: string): Promise<TaskWithId | null> => {
@@ -35,15 +32,13 @@ export const fetchTaskById = async (taskId: string): Promise<TaskWithId | null> 
     throw error;
   }
   if (!data) return null;
-  return {
-    ...data,
-    user_id: data.user_id || 'default_user_id_placeholder', // Ensure user_id is present
-  } as TaskWithId;
+  // user_id should now come directly from the database after migration
+  return data as TaskWithId;
 };
 
-export type TasksQueryResult = UseQueryResult<TaskWithId[], Error>; // Use TaskWithId
+export type TasksQueryResult = UseQueryResult<TaskWithId[], Error>; 
 
-export function useTasksQuery(options?: { enabled?: boolean }): TasksQueryResult { // Use TaskWithId
+export function useTasksQuery(options?: { enabled?: boolean }): TasksQueryResult { 
   return useQuery<TaskWithId[], Error>({ 
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
@@ -58,8 +53,8 @@ export function useTasksQuery(options?: { enabled?: boolean }): TasksQueryResult
   });
 }
 
-export const useTaskByIdQuery = (taskId: string, options?: { enabled?: boolean }) => { // Use TaskWithId
-  return useQuery<TaskWithId | null, Error>({ // Use TaskWithId
+export const useTaskByIdQuery = (taskId: string, options?: { enabled?: boolean }) => { 
+  return useQuery<TaskWithId | null, Error>({ 
     queryKey: taskQueryKey(taskId),
     queryFn: () => fetchTaskById(taskId),
     staleTime: 1000 * 60 * 5,
@@ -72,3 +67,4 @@ export const useTaskByIdQuery = (taskId: string, options?: { enabled?: boolean }
     enabled: !!taskId && (options?.enabled === undefined ? true : options.enabled), 
   });
 };
+

@@ -1,59 +1,48 @@
+
 import { useQuery, useQueryClient, UseQueryResult } from "@tanstack/react-query";
 import { useCallback } from 'react'; // Added useCallback import
 import { 
   REWARDS_QUERY_KEY, 
   REWARDS_POINTS_QUERY_KEY, 
-  REWARDS_DOM_POINTS_QUERY_KEY, 
-  REWARDS_SUPPLY_QUERY_KEY, // Assuming this is for global supply, not individual
+  REWARDS_DOM_POINTS_QUERY_KEY,
   fetchRewards, 
-  fetchRewardSupply, // Assuming this is exported from queries
+  // fetchRewardSupply, // This function is not exported from queries.ts; supply is on Reward object
+  fetchUserPoints as fetchUserPointsQuery, // Aliased to avoid naming conflicts
+  fetchUserDomPoints as fetchUserDomPointsQuery // Aliased
 } from "./queries"; 
-import { Reward, RewardWithPointsAndSupply } from "./types"; // RewardWithPointsAndSupply should now be available
-import { useAuth } from "@/contexts/auth"; // Import useAuth to get user ID for points
-
-// Aliasing imports to avoid conflict, or ensure local functions have different names
-import { fetchUserPoints as fetchUserPointsQuery, fetchUserDomPoints as fetchUserDomPointsQuery } from "./queries";
-
+import { Reward, RewardWithPointsAndSupply } from "./types"; // Corrected RewardWithPointsAndSupply import
+import { useAuth } from "@/contexts/auth"; 
 
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth(); // Get the current user
-  const userId = user?.id; // Extract userId
+  const { user } = useAuth(); 
+  const userId = user?.id; 
 
   const { data: rewards = [], isLoading: isLoadingRewards, error: rewardsError, refetch: refetchRewards } = useQuery<Reward[], Error>({
     queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
   });
 
-  // Local function to fetch user points (sub points)
-  const fetchLocalUserPoints = async (currentUserId?: string): Promise<number> => {
-    if (!currentUserId) return 0;
-    // This should ideally use a query hook if it's for display, or be part of a mutation
-    // For now, direct fetch as it was structured
-    const { data, error } = await queryClient.fetchQuery({
-        queryKey: ['profile_points', currentUserId, 'sub'], // More specific key
-        queryFn: () => fetchUserPointsQuery(currentUserId), // Use aliased import
+  const fetchLocalUserPoints = useCallback(async (currentUserIdParam?: string): Promise<number> => {
+    const idToFetch = currentUserIdParam || userId;
+    if (!idToFetch) return 0;
+    // fetchQuery returns the data directly.
+    const pointsData = await queryClient.fetchQuery<number, Error, number, readonly (string | undefined)[]>({ 
+        queryKey: REWARDS_POINTS_QUERY_KEY(idToFetch), 
+        queryFn: () => fetchUserPointsQuery(idToFetch),
     });
-    if (error) {
-        console.error("Error fetching user points in useRewardsData:", error);
-        return 0; // Default to 0 on error
-    }
-    return data ?? 0;
-  };
+    return pointsData || 0;
+  }, [queryClient, userId, fetchUserPointsQuery]);
 
-  // Local function to fetch user DOM points
-  const fetchLocalUserDomPoints = async (currentUserId?: string): Promise<number> => {
-    if (!currentUserId) return 0;
-    const { data, error } = await queryClient.fetchQuery({
-        queryKey: ['profile_points', currentUserId, 'dom'], // More specific key
-        queryFn: () => fetchUserDomPointsQuery(currentUserId), // Use aliased import
+  const fetchLocalUserDomPoints = useCallback(async (currentUserIdParam?: string): Promise<number> => {
+    const idToFetch = currentUserIdParam || userId;
+    if (!idToFetch) return 0;
+    const pointsData = await queryClient.fetchQuery<number, Error, number, readonly (string | undefined)[]>({
+        queryKey: REWARDS_DOM_POINTS_QUERY_KEY(idToFetch), 
+        queryFn: () => fetchUserDomPointsQuery(idToFetch),
     });
-     if (error) {
-        console.error("Error fetching user DOM points in useRewardsData:", error);
-        return 0; // Default to 0 on error
-    }
-    return data ?? 0;
-  };
+    return pointsData || 0;
+  }, [queryClient, userId, fetchUserDomPointsQuery]);
 
   const { data: userPoints = 0, isLoading: isLoadingUserPoints, refetch: refetchUserPoints } = useQuery<number, Error>({
     queryKey: REWARDS_POINTS_QUERY_KEY(userId), 
@@ -67,48 +56,44 @@ export const useRewardsData = () => {
     enabled: !!userId, 
   });
 
-  const getRewardSupply = useCallback(async (rewardId: string) => {
-    return fetchRewardSupply(rewardId);
-  }, [fetchRewardSupply]); // Added fetchRewardSupply to dependency array
+  const getRewardSupply = useCallback(async (rewardId: string): Promise<number> => {
+    const reward = rewards.find(r => r.id === rewardId);
+    return reward ? reward.supply : 0;
+  }, [rewards]);
 
-  const rewardsWithPointsAndSupply: UseQueryResult<RewardWithPointsAndSupply[], Error> = useQuery<RewardWithPointsAndSupply[], Error, RewardWithPointsAndSupply[], (string | undefined)[]>({ // Corrected queryKey type
-    queryKey: [REWARDS_QUERY_KEY[0], userId, 'withPointsAndSupply'], // Use REWARDS_QUERY_KEY[0] for the base key string
+  // This query combines rewards with user's points.
+  // The 'supply' is already on each reward object from `fetchRewards`.
+  // `RewardWithPointsAndSupply` type now essentially mirrors `Reward`.
+  const rewardsWithPointsAndSupplyQuery: UseQueryResult<RewardWithPointsAndSupply[], Error> = useQuery<RewardWithPointsAndSupply[], Error, RewardWithPointsAndSupply[], ReadonlyArray<string | undefined | Reward[]>>({
+    queryKey: [REWARDS_QUERY_KEY[0], userId, 'withPointsAndSupply', rewards], 
     queryFn: async () => {
-      const baseRewards = await fetchRewards();
-      // const currentSubPoints = userId ? await fetchUserPointsQuery(userId) : 0; // Not needed per reward
-      // const currentDomPoints = userId ? await fetchUserDomPointsQuery(userId) : 0; // Not needed per reward
-
-      return Promise.all(
-        baseRewards.map(async (reward) => {
-          const supply = await fetchRewardSupply(reward.id);
-          return {
-            ...reward,
-            // userSubPoints: currentSubPoints, 
-            // userDomPoints: currentDomPoints,
-            supply: supply, // supply here might be redundant if Reward type already has it with correct meaning
-          };
-        })
-      );
+      // `rewards` is already available from the first query.
+      // If you need to re-fetch, use `fetchRewards()`
+      return rewards.map(reward => ({
+        ...reward,
+        // No specific points transformation per reward item here unless defined in RewardWithPointsAndSupply
+      }));
     },
-    enabled: !!userId || !user, 
+    enabled: (!!userId || !user) && rewards.length > 0, 
   });
 
 
   return {
-    rewards, // Raw rewards list
-    rewardsWithSupply: rewardsWithPointsAndSupply.data || [], // Rewards enhanced with supply (and potentially points if needed)
-    isLoadingRewards: isLoadingRewards || rewardsWithPointsAndSupply.isLoading,
-    rewardsError: rewardsError || rewardsWithPointsAndSupply.error, // Combine errors
-    userPoints, // Sub points for the current user
-    userDomPoints, // DOM points for the current user
+    rewards, 
+    rewardsWithSupply: rewardsWithPointsAndSupplyQuery.data || [], 
+    isLoadingRewards: isLoadingRewards || rewardsWithPointsAndSupplyQuery.isLoading,
+    rewardsError: rewardsError || rewardsWithPointsAndSupplyQuery.error, 
+    userPoints, 
+    userDomPoints, 
     isLoadingUserPoints,
     isLoadingUserDomPoints,
-    refetchRewards, // Refetch base rewards
-    refetchUserPoints, // Refetch user's sub points
-    refetchUserDomPoints, // Refetch user's DOM points
-    refetchRewardsWithSupply: rewardsWithPointsAndSupply.refetch, // Refetch combined data
+    refetchRewards, 
+    refetchUserPoints, 
+    refetchUserDomPoints, 
+    refetchRewardsWithSupply: rewardsWithPointsAndSupplyQuery.refetch, 
     getRewardSupply,
-    fetchUserPoints: fetchLocalUserPoints, // Expose local fetcher
-    fetchUserDomPoints: fetchLocalUserDomPoints, // Expose local fetcher
+    fetchUserPoints: fetchLocalUserPoints, 
+    fetchUserDomPoints: fetchLocalUserDomPoints, 
   };
 };
+
