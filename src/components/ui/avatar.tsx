@@ -1,5 +1,4 @@
 
-//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 

@@ -1,5 +1,4 @@
 
-//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import { currentWeekKey, resetTaskCompletions } from "@/lib/taskUtils";
 import { queryClient } from "../queryClient";
 import { loadRewardsFromDB, saveRewardsToDB } from "../indexedDB/useIndexedDB";
