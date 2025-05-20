@@ -7,43 +7,18 @@
 
 import { useQuery, UseQueryResult } from "@tanstack/react-query"; 
 import { supabase } from '@/integrations/supabase/client';
+import { Reward } from '../rewards/types'; // Import Reward type from the canonical source
 import {
-  loadRewardsFromDB, // Assuming similar DB functions exist for rewards
-  saveRewardsToDB,   // Assuming similar DB functions exist for rewards
-  getLastSyncTimeForRewards, // Assuming similar DB functions exist for rewards
-  setLastSyncTimeForRewards    // Assuming similar DB functions exist for rewards
-} from "../indexedDB/useIndexedDB"; // Adjust path if reward DB functions are elsewhere or differently named
+  loadRewardsFromDB,
+  saveRewardsToDB,
+  getLastSyncTimeForRewards,
+  setLastSyncTimeForRewards
+} from "../indexedDB/useIndexedDB";
 
-// Copied from Rewards.tsx for Reward interface, ensure this matches actual structure
-export interface Reward {
-  id: string;
-  title: string;
-  description?: string | null;
-  cost: number;
-  supply: number;
-  is_dom_reward: boolean;
-  background_image_url?: string | null;
-  background_opacity?: number;
-  icon_name?: string | null;
-  icon_url?: string | null; // Added as it was in original Punishment interface example
-  icon_color?: string;
-  title_color?: string;
-  subtext_color?: string;
-  calendar_color?: string;
-  highlight_effect?: boolean;
-  focal_point_x?: number;
-  focal_point_y?: number;
-  usage_data?: number[]; // from punishment example
-  frequency_count?: number; // from punishment example
-  created_at?: string;
-  updated_at?: string;
-}
+// Local Reward interface definition removed, as we are now importing it.
 
-// Adjusted RewardsQueryResult to remove isUsingCachedData
 export type RewardsQueryResult = UseQueryResult<Reward[], Error>;
 
-// This function assumes similar IndexedDB helpers exist for rewards as for punishments.
-// If not, the IndexedDB logic here would need to be adapted or use generic helpers.
 async function fetchRewardsWithCache(): Promise<Reward[]> {
   const localData = await loadRewardsFromDB() as Reward[] | null;
   const lastSync = await getLastSyncTimeForRewards();
@@ -52,11 +27,11 @@ async function fetchRewardsWithCache(): Promise<Reward[]> {
   if (lastSync) {
     const timeDiff = Date.now() - new Date(lastSync as string).getTime();
     if (timeDiff < 1000 * 60 * 30) { // 30 minutes
-      if (localData && localData.length > 0) { // Only skip fetch if localData exists
+      if (localData && localData.length > 0) {
         shouldFetch = false;
       }
     }
-  } else if (localData && localData.length > 0) { // If no sync time but local data, use it initially
+  } else if (localData && localData.length > 0) {
      shouldFetch = false;
   }
 
@@ -73,16 +48,24 @@ async function fetchRewardsWithCache(): Promise<Reward[]> {
     console.error('[useRewards] Supabase error fetching rewards:', error);
     if (localData) {
       console.warn('[useRewards] Server fetch failed, returning stale data from IndexedDB');
-      return localData; // Return local data if fetch fails
+      return localData;
     }
-    throw error; // If no local data, throw error
+    throw error;
   }
 
   if (data) {
-    const rewardsData = data.map(item => ({
-      ...item,
-      // Ensure defaults for any potentially missing fields, similar to fetchPunishments
+    // Ensure the data conforms to the imported Reward type
+    const rewardsData: Reward[] = data.map(item => ({
+      id: item.id,
+      title: item.title,
+      description: item.description === undefined ? null : item.description, // Ensure null if undefined
+      cost: item.cost,
+      supply: item.supply,
+      is_dom_reward: item.is_dom_reward,
+      background_image_url: item.background_image_url === undefined ? null : item.background_image_url,
       background_opacity: item.background_opacity ?? 100,
+      icon_name: item.icon_name === undefined ? null : item.icon_name,
+      icon_url: item.icon_url === undefined ? null : item.icon_url,
       icon_color: item.icon_color ?? '#9b87f5',
       title_color: item.title_color ?? '#FFFFFF',
       subtext_color: item.subtext_color ?? '#8E9196',
@@ -90,15 +73,16 @@ async function fetchRewardsWithCache(): Promise<Reward[]> {
       highlight_effect: item.highlight_effect ?? false,
       focal_point_x: item.focal_point_x ?? 50,
       focal_point_y: item.focal_point_y ?? 50,
-      // Ensure all fields from Reward interface are present
-    })) as Reward[];
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+    }));
     
     await saveRewardsToDB(rewardsData);
     await setLastSyncTimeForRewards(new Date().toISOString());
     return rewardsData;
   }
 
-  return localData || []; // Fallback to localData or empty array
+  return localData || [];
 }
 
 export function useRewards(): RewardsQueryResult {
@@ -114,3 +98,4 @@ export function useRewards(): RewardsQueryResult {
     retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
   });
 }
+
