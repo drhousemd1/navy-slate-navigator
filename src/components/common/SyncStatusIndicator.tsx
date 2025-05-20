@@ -1,9 +1,9 @@
 
 import React from 'react';
 import { useIsMutating, useIsFetching } from '@tanstack/react-query';
-import { useSyncManager } from '@/hooks/useSyncManager';
+// Removed: import { useSyncManager } from '@/hooks/useSyncManager';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { WifiOff, RefreshCw, Wifi, AlertTriangle } from 'lucide-react'; // Changed Sync to RefreshCw
+import { WifiOff, RefreshCw, Wifi, AlertTriangle } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -12,18 +12,18 @@ import {
 } from "@/components/ui/tooltip";
 
 const SyncStatusIndicator: React.FC = () => {
-  const { isSyncing: backgroundSyncIsSyncing } = useSyncManager();
+  // Removed: const { isSyncing: backgroundSyncIsSyncing } = useSyncManager();
   const { 
     isOnline, 
-    isSyncing: manualSyncIsSyncing, 
+    isSyncing: manualSyncIsSyncing, // This is from NetworkStatusContext for forceSyncNow
     pendingMutationsCount: contextPendingMutations 
   } = useNetworkStatus();
   
   const activeMutations = useIsMutating(); 
   const activeFetches = useIsFetching();
 
-  let message: string = "Online"; // Default message
-  let icon: React.ReactNode = <Wifi className="h-5 w-5 text-green-500" />; // Default to online icon
+  let message: string = "Online";
+  let icon: React.ReactNode = <Wifi className="h-5 w-5 text-green-500" />;
   let iconColorClass = "text-green-500";
 
   if (!isOnline) {
@@ -38,21 +38,22 @@ const SyncStatusIndicator: React.FC = () => {
     }
   } else {
     // Online states, prioritized
-    if (manualSyncIsSyncing) {
+    if (manualSyncIsSyncing) { // This now refers to the isSyncing state from NetworkStatusContext (forceSyncNow)
       message = "Manual sync in progress...";
-      icon = <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />; // Changed Sync to RefreshCw
+      icon = <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />;
       iconColorClass = "text-blue-400";
-    } else if (backgroundSyncIsSyncing) {
-      message = "Auto-sync in progress...";
-      icon = <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />; // Changed Sync to RefreshCw
-      iconColorClass = "text-blue-400";
+    // Removed backgroundSyncIsSyncing condition
+    // } else if (backgroundSyncIsSyncing) {
+    //   message = "Auto-sync in progress...";
+    //   icon = <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />;
+    //   iconColorClass = "text-blue-400";
     } else if (activeMutations > 0) {
       message = `Saving ${activeMutations} change${activeMutations > 1 ? 's' : ''}...`;
-      icon = <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />; // Changed Sync to RefreshCw
+      icon = <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />;
       iconColorClass = "text-blue-400";
     } else if (activeFetches > 0) {
       message = "Refreshing data...";
-      icon = <RefreshCw className="h-5 w-5 animate-spin text-cyan-400" />; // Changed Sync to RefreshCw
+      icon = <RefreshCw className="h-5 w-5 animate-spin text-cyan-400" />;
       iconColorClass = "text-cyan-400";
     }
     // If none of the above, message is "Online" and icon is Wifi (green)
@@ -75,3 +76,4 @@ const SyncStatusIndicator: React.FC = () => {
 };
 
 export default SyncStatusIndicator;
+

@@ -1,6 +1,8 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { queryClient } from '@/data/queryClient';
 import { toast } from '@/hooks/use-toast';
+import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries'; // Import points query keys
+import { QueryKey } from '@tanstack/react-query'; // Import QueryKey type
 
 interface NetworkStatusContextType {
   isOnline: boolean;
@@ -16,6 +18,18 @@ export const NetworkStatusContext = createContext<NetworkStatusContextType | und
 interface NetworkStatusProviderProps {
   children: ReactNode;
 }
+
+// Define critical query keys here
+const CRITICAL_QUERY_KEYS_FOR_FORCESYNC: QueryKey[] = [
+  ['tasks'],
+  ['rewards'],
+  REWARDS_POINTS_QUERY_KEY,
+  REWARDS_DOM_POINTS_QUERY_KEY,
+  ['punishments'],
+  ['rules'],
+  ['profile'],
+];
+
 
 export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ children }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -55,7 +69,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
     }
     
     setIsSyncing(true);
-    const MAX_RETRIES = 1; // Try original + 1 retry
+    const MAX_RETRIES = 1; 
     let attempt = 0;
 
     while (attempt <= MAX_RETRIES) {
@@ -63,57 +77,51 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
         if (attempt > 0) {
           toast({ title: `Sync Retry (Attempt ${attempt + 1})`, description: "Trying to synchronize your data again..."});
         } else {
-          toast({ title: "Syncing Data...", description: "Attempting to synchronize your data." });
+          toast({ title: "Refreshing Data...", description: "Attempting to refresh your data." });
         }
         
         console.log(`[NetworkStatusContext] forceSyncNow - Attempt ${attempt + 1}`);
-        // Resume any paused mutations first
         await queryClient.resumePausedMutations();
         console.log(`[NetworkStatusContext] Paused mutations resumed (if any).`);
         
-        // Invalidate critical queries to force refetch
-        const criticalQueries = [
-          ['rewards'], ['tasks'], ['rules'], ['punishments'], ['profile'],
-          // Add specific points queries if they are separate and critical for immediate sync
-          // Example: REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY from useSyncManager
-        ];
+        // Use the defined CRITICAL_QUERY_KEYS_FOR_FORCESYNC
+        const criticalQueriesToInvalidate = CRITICAL_QUERY_KEYS_FOR_FORCESYNC;
         
-        console.log('[NetworkStatusContext] Invalidating critical queries:', criticalQueries.map(q => q.join('/')));
+        console.log('[NetworkStatusContext] Invalidating critical queries:', criticalQueriesToInvalidate.map(q => Array.isArray(q) ? q.join('/') : String(q)));
         await Promise.all(
-          criticalQueries.map(queryKey => 
+          criticalQueriesToInvalidate.map(queryKey => 
             queryClient.invalidateQueries({queryKey})
           )
         );
         
         toast({
-          title: "Sync Complete",
-          description: "Your data has been successfully synchronized.",
-          variant: "default", // 'default' for sonner success
+          title: "Data Refresh Complete",
+          description: "Your data has been successfully refreshed.",
+          variant: "default", 
         });
         setIsSyncing(false);
-        return; // Successful sync
+        return; 
       } catch (error) {
-        console.error(`[NetworkStatusContext] Error during forced sync (Attempt ${attempt + 1}):`, error);
+        console.error(`[NetworkStatusContext] Error during forced sync/refresh (Attempt ${attempt + 1}):`, error);
         if (attempt < MAX_RETRIES) {
           toast({
-            title: `Sync Attempt ${attempt + 1} Failed`,
+            title: `Refresh Attempt ${attempt + 1} Failed`,
             description: "Will retry shortly...",
-            variant: "default", // 'default' for sonner warning/info
+            variant: "default", 
           });
-          await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before retrying
+          await new Promise(resolve => setTimeout(resolve, 3000)); 
           attempt++;
         } else {
           toast({
-            title: "Sync Failed",
-            description: "Could not synchronize data after multiple attempts. Please check console.",
+            title: "Data Refresh Failed",
+            description: "Could not refresh data after multiple attempts. Please check console.",
             variant: "destructive",
           });
           setIsSyncing(false);
-          return; // Final failure
+          return; 
         }
       }
     }
-    // Fallback, though theoretically unreachable if loop logic is correct
     setIsSyncing(false);
   }, [isOnline]);
 
@@ -126,7 +134,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
       if (lastOnlineTime !== null) { // Avoid toast on initial load if already online
         toast({
           title: 'Back Online',
-          description: 'Connection restored. Syncing pending changes.',
+          description: 'Connection restored. Syncing pending changes.', // Message can be generic now
           variant: 'default',
         });
       }
@@ -135,16 +143,13 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
         .then(() => {
           const currentPendingCount = queryClient.getMutationCache().getAll().filter(m => m.state.status === 'pending').length;
           console.log(`[NetworkStatusContext] Paused mutations resumed. Pending count now: ${currentPendingCount}`);
-          if (currentPendingCount > 0 && lastOnlineTime !== null) { // Only toast if there were actual mutations processed due to going online
-             // This toast might be redundant if forceSyncNow or other mechanisms also toast.
-             // For now, let's keep it simple.
-          }
+          // Toasting for resumed mutations can be kept if desired, or removed for less noise
         })
         .catch(error => {
           console.error('[NetworkStatusContext] Error resuming paused mutations on network online:', error);
           toast({
-            title: 'Sync Error',
-            description: 'Could not resume all pending operations. Try manual sync.',
+            title: 'Operation Error', // Generic error
+            description: 'Could not resume all pending operations. Try manual refresh.',
             variant: 'destructive',
           });
         });
@@ -153,7 +158,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
     const handleOffline = () => {
       console.log('[NetworkStatusContext] App is offline.');
       setIsOnline(false);
-      setLastOnlineTime(new Date()); // Record the time we went offline
+      setLastOnlineTime(new Date()); 
       
       toast({
         title: 'Offline Mode Active',
@@ -165,13 +170,11 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initial check and setup
     setIsOnline(navigator.onLine);
     if (!navigator.onLine) {
-        setLastOnlineTime(new Date()); // If starting offline, record it.
+        setLastOnlineTime(new Date()); 
     }
     
-    // Initial pending mutations count
     const initialMutations = queryClient.getMutationCache().getAll();
     const initialPending = initialMutations.filter(m => m.state.status === 'pending').length;
     setPendingMutationsCount(initialPending);
@@ -181,7 +184,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [lastOnlineTime]); // Removed pendingMutationsCount from dependency array as it's managed by its own effect now
+  }, [lastOnlineTime]);
 
   return (
     <NetworkStatusContext.Provider value={{ 

@@ -1,15 +1,13 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
 import RewardEditor from '../components/RewardEditor';
 import RewardsHeader from '../components/rewards/RewardsHeader';
-import { useSyncManager } from '@/hooks/useSyncManager';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 import { useRewards as useRewardsQuery, RewardsQueryResult } from '@/data/queries/useRewards';
-import { Reward } from '@/data/rewards/types'; // Import Reward directly from its canonical source
-import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/mutations/useSaveReward'; // Types moved
+import { Reward } from '@/data/rewards/types';
+import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
 import { toast } from '@/hooks/use-toast';
 
@@ -30,8 +28,6 @@ const RewardsContent: React.FC<{
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<Reward | undefined>(undefined);
   
-  const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
-  
   const createRewardMutation = useCreateRewardMutation();
   const updateRewardMutation = useUpdateRewardMutation();
   const deleteRewardMutation = useDeleteRewardMutation();
@@ -41,10 +37,6 @@ const RewardsContent: React.FC<{
   const { user } = useAuth();
   const { points: currentUserPoints } = usePointsManager();
 
-  useEffect(() => {
-    syncNow();
-  }, [syncNow]);
-  
   const handleAddNewReward = () => {
     setRewardBeingEdited(undefined);
     setIsEditorOpen(true);
@@ -143,7 +135,7 @@ const RewardsContent: React.FC<{
           background_image_url: formData.background_image_url || null,
           background_opacity: formData.background_opacity ?? 100,
           icon_name: formData.icon_name || 'Award',
-          icon_url: formData.icon_url || null, // Ensure icon_url is handled
+          icon_url: formData.icon_url || null,
           icon_color: formData.icon_color || '#9b87f5',
           title_color: formData.title_color || '#FFFFFF',
           subtext_color: formData.subtext_color || '#8E9196',
@@ -227,4 +219,3 @@ const Rewards: React.FC = () => {
 };
 
 export default Rewards;
-

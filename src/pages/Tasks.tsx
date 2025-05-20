@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -23,7 +22,7 @@ const TasksPageContent: React.FC = () => {
     saveTask, 
     deleteTask, 
     toggleTaskCompletion,
-    refetch // Changed from refetchTasks to refetch
+    refetch 
   } = useTasksData();
   const { refreshPointsFromDatabase } = useRewards();
   
@@ -116,7 +115,7 @@ const TasksPageContent: React.FC = () => {
   } else if (!isLoading && tasks.length === 0 && !error) {
     content = (
       <EmptyState
-        icon={ListChecks} // Example icon for tasks
+        icon={ListChecks} 
         title="No Tasks Yet"
         description="You do not have any tasks yet, create one to get started."
       />
@@ -125,17 +124,17 @@ const TasksPageContent: React.FC = () => {
     content = (
       <TasksList
         tasks={tasks}
-        isLoading={false} // Main loading handled above, TasksList internal loader might still trigger if it has own logic
+        isLoading={false} 
         onEditTask={handleEditTask}
         onToggleCompletion={handleToggleCompletion}
-        error={error} // Pass error for potential internal handling in read-only TasksList
+        error={error} 
       />
     );
   }
 
   return (
     <div className="p-4 pt-6 TasksContent">
-      <TasksHeader /> {/* Removed onAddTask prop if it was there */}
+      <TasksHeader /> 
       {content}
       <TaskEditor
         isOpen={isEditorOpen}

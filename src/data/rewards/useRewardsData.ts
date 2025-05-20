@@ -7,8 +7,6 @@ import {
   REWARDS_DOM_POINTS_QUERY_KEY,
   REWARDS_SUPPLY_QUERY_KEY,
   fetchRewards, 
-  fetchUserPoints,
-  fetchUserDomPoints,
   fetchTotalRewardsSupply
 } from './queries'; 
 
@@ -91,10 +89,10 @@ export const useRewardsData = () => {
         .on('postgres_changes', 
           { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, 
           (payload) => {
-            console.log('Real-time points update for user:', userId, payload);
-            // refreshPointsFromDatabase(); // This might be too broad or cause loops if not handled carefully
+            console.log('Real-time points/profile update for user:', userId, payload);
             queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY});
             queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY});
+            queryClient.invalidateQueries({ queryKey: ['profile'] }); // Added to ensure profile data (like points) is re-fetched
           }
         )
         .subscribe();
