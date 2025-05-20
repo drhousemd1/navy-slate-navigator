@@ -1,23 +1,35 @@
 
 import { queryClient } from "../queryClient";
 import localforage from "localforage";
+import { getProfilePointsQueryKey, PROFILE_POINTS_QUERY_KEY_BASE } from "@/data/points/usePointsManager";
 
-export async function updateProfilePoints(points: number, dom_points: number) {
+// This function now requires a userId to ensure cache and local storage are updated for the correct user.
+export async function updateProfilePoints(userId: string, points: number, dom_points: number) {
+  if (!userId) {
+    console.error("updateProfilePoints: userId is required.");
+    return;
+  }
+
+  const userProfilePointsKey = getProfilePointsQueryKey(userId); // e.g., ["profile_points", "user-id-123"]
+  
   // Update primary profile points cache key used by usePointsManager
-  queryClient.setQueryData(["profile_points"], { points, dom_points });
+  queryClient.setQueryData(userProfilePointsKey, { points, dom_points });
   
-  // Update legacy keys used by RewardsContext for backward compatibility
-  queryClient.setQueryData(["rewards", "points"], points);
-  queryClient.setQueryData(["rewards", "dom_points"], dom_points);
+  // Update legacy keys, now also scoped by userId for consistency
+  // ["rewards", "points", "user-id-123"]
+  // ["rewards", "dom_points", "user-id-123"]
+  queryClient.setQueryData(["rewards", "points", userId], points);
+  queryClient.setQueryData(["rewards", "dom_points", userId], dom_points);
   
-  // Update profile key that might be used by other components
-  queryClient.setQueryData(["profile"], (oldProfile: any) => {
-    if (!oldProfile) return { points, dom_points };
+  // Update general profile key, also scoped by userId
+  // This assumes ["profile", userId] is or will be the pattern for fetching a specific user's full profile.
+  queryClient.setQueryData(["profile", userId], (oldProfile: any) => {
+    if (!oldProfile) return { id: userId, points, dom_points }; // Include id if creating new
     return { ...oldProfile, points, dom_points };
   });
   
-  // Store in localForage for persistence across page reloads
-  await localforage.setItem("profile_points", { points, dom_points });
-  await localforage.setItem("rewards_points", points);
-  await localforage.setItem("rewards_dom_points", dom_points);
+  // Store in localForage, scoped by userId
+  await localforage.setItem(`profile_points_${userId}`, { points, dom_points });
+  await localforage.setItem(`rewards_points_${userId}`, points);
+  await localforage.setItem(`rewards_dom_points_${userId}`, dom_points);
 }
