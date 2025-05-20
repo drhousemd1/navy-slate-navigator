@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
-import { AlertTriangle } from 'lucide-react';
+// AlertTriangle removed as ErrorDisplay/PunishmentList handles it
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { PunishmentData } from '@/contexts/punishments/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { Button } from '@/components/ui/button';
+// Button for Try Again is now inside ErrorDisplay, so direct import might not be needed here.
 import { useSyncManager } from '@/hooks/useSyncManager';
 import PunishmentList from '@/components/punishments/PunishmentList';
 import { usePunishmentsQuery, PunishmentsQueryResult } from '@/data/punishments/queries';
@@ -45,7 +45,7 @@ const PunishmentsContent: React.FC<{
   useEffect(() => {
     contentRef.current = { handleAddNewPunishment };
     return () => { contentRef.current = {}; };
-  }, [contentRef, handleAddNewPunishment]); // Added handleAddNewPunishment to dependency array
+  }, [contentRef, handleAddNewPunishment]);
   
   const handleEditPunishment = (punishment: PunishmentData) => {
     setCurrentPunishment(punishment);
@@ -88,6 +88,7 @@ const PunishmentsContent: React.FC<{
       }
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
+      // refetchPunishments(); // Query invalidation should handle this via mutation's onSuccess
       return savedPunishment;
     } catch (error) {
       console.error("Error saving punishment:", error);
@@ -108,6 +109,7 @@ const PunishmentsContent: React.FC<{
       toast({ title: "Success", description: "Punishment deleted successfully." });
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
+      // refetchPunishments(); // Query invalidation should handle this
     } catch (error) {
       console.error("Error deleting punishment:", error);
       toast({
@@ -119,32 +121,20 @@ const PunishmentsContent: React.FC<{
     }
   };
   
-  if (errorPunishments && !isLoadingPunishments && punishments.length === 0) {
-    return (
-      <div className="p-4 pt-6 text-center">
-        <PunishmentsHeader /> {/* MODIFIED: Removed onAddNewPunishment prop */}
-        <div className="flex flex-col items-center justify-center mt-8">
-          <AlertTriangle className="w-16 h-16 text-yellow-400 mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">Error Loading Punishments</h3>
-          <p className="text-slate-400 mb-6">{errorPunishments.message || "Could not load punishments. Please try again."}</p>
-          <Button onClick={() => refetchPunishments()} className="mt-4">
-            Try Again
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  
+  // The specific error block previously here is now handled by PunishmentList
+  // if (errorPunishments && !isLoadingPunishments && punishments.length === 0) { ... }
+
   return (
     <div className="p-4 pt-6">
-      <PunishmentsHeader /> {/* MODIFIED: Removed onAddNewPunishment prop */}
+      <PunishmentsHeader />
       
       <PunishmentList 
         punishments={punishments}
-        isLoading={isLoadingPunishments && punishments.length === 0} 
+        isLoading={isLoadingPunishments} // Pass isLoading directly
         onEditPunishment={handleEditPunishment}
         error={errorPunishments} 
         isUsingCachedData={isUsingCachedData}
+        refetch={refetchPunishments}
       />
       
       <PunishmentEditor

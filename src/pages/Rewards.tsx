@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -23,7 +24,8 @@ const RewardsContent: React.FC<{
     data: rewardsData, 
     isLoading, 
     error: queryError,
-    isUsingCachedData 
+    isUsingCachedData,
+    refetch: refetchRewards // Added refetch
   }: RewardsQueryResult = useRewardsQuery();
   const rewards = Array.isArray(rewardsData) ? rewardsData : [];
 
@@ -69,7 +71,6 @@ const RewardsContent: React.FC<{
       toast({ title: "Error", description: "User profile not available. Please log in.", variant: "destructive" });
       return;
     }
-    // Assuming non-DOM reward for this specific hook
     if (rewardToBuy.is_dom_reward) {
         toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward purchase not implemented on this button yet.", variant: "destructive" });
         return;
@@ -83,9 +84,9 @@ const RewardsContent: React.FC<{
         profileId: user.id,
         currentPoints: currentUserPoints ?? 0
       });
+      // refetchRewards(); // Mutation should invalidate
     } catch (e) {
       console.error("Error buying reward from page:", e);
-      // Error toast should be handled by the mutation hook's onError
     }
   };
 
@@ -99,7 +100,6 @@ const RewardsContent: React.FC<{
       toast({ title: "Error", description: "User profile not available. Please log in.", variant: "destructive" });
       return;
     }
-    // Assuming non-DOM reward for this specific hook
      if (rewardToUse.is_dom_reward) {
         toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward usage not implemented on this button yet.", variant: "destructive" });
         return;
@@ -111,6 +111,7 @@ const RewardsContent: React.FC<{
         currentSupply: rewardToUse.supply,
         profileId: user.id
       });
+      // refetchRewards(); // Mutation should invalidate
     } catch (e) {
       console.error("Error using reward from page:", e);
     }
@@ -119,7 +120,7 @@ const RewardsContent: React.FC<{
   useEffect(() => {
     contentRef.current = { handleAddNewReward };
     return () => { contentRef.current = {}; };
-  }, [contentRef]);
+  }, [contentRef]); // Removed handleAddNewReward as it doesn't change
   
   const handleSaveRewardEditor = async (formData: Partial<Reward>): Promise<Reward | void> => {
     try {
@@ -131,6 +132,7 @@ const RewardsContent: React.FC<{
         const updated = await updateRewardMutation.mutateAsync(updateVariables);
         setIsEditorOpen(false);
         setRewardBeingEdited(undefined);
+        // refetchRewards(); // Mutation should invalidate
         return updated;
       } else {
         if (!formData.title || typeof formData.cost !== 'number' || typeof formData.supply !== 'number' || typeof formData.is_dom_reward !== 'boolean') {
@@ -158,6 +160,7 @@ const RewardsContent: React.FC<{
         const created = await createRewardMutation.mutateAsync(createVariables);
         setIsEditorOpen(false);
         setRewardBeingEdited(undefined);
+        // refetchRewards(); // Mutation should invalidate
         return created;
       }
     } catch (e) {
@@ -179,48 +182,26 @@ const RewardsContent: React.FC<{
       await deleteRewardMutation.mutateAsync(finalIdToDelete);
       setIsEditorOpen(false);
       setRewardBeingEdited(undefined);
+      // refetchRewards(); // Mutation should invalidate
     } catch (e) {
       console.error("Error deleting reward from page:", e);
     }
   };
   
-  const renderContent = () => {
-    if (isLoading && rewards.length === 0) {
-      return (
-        <div className="space-y-4 mt-4">
-          <RewardsList 
-            rewards={[]}
-            isLoading={true}
-            onEdit={handleEditReward}
-            handleBuyReward={handleBuyRewardWrapper}
-            handleUseReward={handleUseRewardWrapper}
-          />
-        </div>
-      );
-    }
-    
-    if (queryError && rewards.length === 0) { // Show error prominently only if no data to display
-        return <div className="text-red-500 p-4 text-center">Error loading rewards: {queryError.message}</div>;
-    }
-
-    return (
-      <RewardsList 
-        rewards={rewards}
-        isLoading={isLoading && rewards.length === 0}
-        onEdit={handleEditReward}
-        handleBuyReward={handleBuyRewardWrapper}
-        handleUseReward={handleUseRewardWrapper}
-        error={queryError} // Pass error for potential inline display by RewardsList if data exists
-        isUsingCachedData={isUsingCachedData}
-      />
-    );
-  };
-
   return (
     <div className="p-4 pt-6">
       <RewardsHeader onAddNewReward={handleAddNewReward} /> 
       <div className="mt-4">
-        {renderContent()}
+        <RewardsList 
+          rewards={rewards}
+          isLoading={isLoading} // Pass isLoading directly
+          onEdit={handleEditReward}
+          handleBuyReward={handleBuyRewardWrapper}
+          handleUseReward={handleUseRewardWrapper}
+          error={queryError}
+          isUsingCachedData={isUsingCachedData}
+          refetch={refetchRewards}
+        />
       </div>
       <RewardEditor
         isOpen={isEditorOpen}

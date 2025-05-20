@@ -3,8 +3,9 @@ import React from 'react';
 import RuleCard from './RuleCard';
 import { Rule } from '@/data/interfaces/Rule';
 import EmptyState from '@/components/common/EmptyState'; 
-import { ShieldOff, LoaderCircle, AlertTriangle, WifiOff } from 'lucide-react'; 
-// import { toast } from "@/hooks/use-toast"; // Toast removed
+import { ShieldOff, LoaderCircle } from 'lucide-react'; 
+import ErrorDisplay from '@/components/common/ErrorDisplay';
+import CachedDataBanner from '@/components/common/CachedDataBanner';
 
 interface RulesListProps {
   rules: Rule[];
@@ -13,6 +14,7 @@ interface RulesListProps {
   onRuleBroken: (rule: Rule) => void;
   error?: Error | null;
   isUsingCachedData?: boolean;
+  refetch?: () => void;
 }
 
 const RulesList: React.FC<RulesListProps> = ({ 
@@ -21,19 +23,11 @@ const RulesList: React.FC<RulesListProps> = ({
   onEditRule,
   onRuleBroken,
   error,
-  isUsingCachedData
+  isUsingCachedData,
+  refetch
 }) => {
-  // React.useEffect(() => { // Toast removed
-  //   if (isUsingCachedData && !isLoading) { 
-  //     toast({
-  //       title: "Using cached data",
-  //       description: "We're currently showing you cached rules data due to connection issues.",
-  //       variant: "default"
-  //     });
-  //   }
-  // }, [isUsingCachedData, isLoading]);
 
-  if (isLoading && (!rules || rules.length === 0)) {
+  if (isLoading && rules.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-10">
         <LoaderCircle className="h-10 w-10 text-primary animate-spin mb-2" />
@@ -42,18 +36,17 @@ const RulesList: React.FC<RulesListProps> = ({
     );
   }
 
-  if (error && (!rules || rules.length === 0)) {
+  if (error && rules.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-10">
-        <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
-        <p className="text-lg font-semibold mb-2">Error loading rules</p>
-        <p className="text-slate-400">{error.message}</p>
-        <p className="text-slate-400 mt-4">We'll automatically retry loading your data. If the problem persists, check your connection.</p>
-      </div>
+      <ErrorDisplay
+        title="Error Loading Rules"
+        error={error}
+        onRetry={refetch}
+      />
     );
   }
 
-  if (!isLoading && rules.length === 0) { 
+  if (!isLoading && rules.length === 0 && !error) { 
     return (
       <EmptyState
         icon={ShieldOff}
@@ -65,13 +58,8 @@ const RulesList: React.FC<RulesListProps> = ({
 
   return (
     <>
-      {isUsingCachedData && rules.length > 0 ? (
-        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-md flex items-center gap-2">
-          <WifiOff className="h-5 w-5 text-amber-500" />
-          <span className="text-sm text-amber-700 dark:text-amber-400">Showing cached data due to an error during sync. Some information might be outdated.</span>
-        </div>
-      ) : null}
-      <div className="space-y-4">
+      {isUsingCachedData && rules.length > 0 && <CachedDataBanner />}
+      <div className="space-y-4 mt-4">
         {rules.map((rule) => (
           <RuleCard
             key={rule.id}
@@ -86,4 +74,3 @@ const RulesList: React.FC<RulesListProps> = ({
 };
 
 export default RulesList;
-

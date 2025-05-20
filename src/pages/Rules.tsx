@@ -6,8 +6,7 @@ import RulesHeader from '../components/rule/RulesHeader';
 import RulesList from '../components/rule/RulesList';
 import { Rule } from '@/data/interfaces/Rule';
 import ErrorBoundary from '@/components/ErrorBoundary';
-// import Hydrate from '@/components/Hydrate'; // Removed Hydrate
-import { useRulesData, RulesQueryResult } from '@/data/RulesDataHandler';
+import { useRulesData, RulesQueryResult } from '@/data/RulesDataHandler'; // RulesQueryResult has refetch as refetchRules
 
 const RulesPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -19,7 +18,8 @@ const RulesPageContent: React.FC = () => {
     saveRule, 
     deleteRule, 
     markRuleBroken,
-    isUsingCachedData 
+    isUsingCachedData,
+    refetchRules // This is the refetch function from RulesQueryResult
   }: RulesQueryResult = useRulesData();
 
   const handleAddRule = () => {
@@ -31,7 +31,7 @@ const RulesPageContent: React.FC = () => {
     const element = document.querySelector('.RulesContent'); 
     if (element) {
       const handleAddEvent = (event: Event) => {
-        console.log('Received add-new-rule event on RulesContent');
+        // console.log('Received add-new-rule event on RulesContent'); // Kept for debugging if needed
         handleAddRule();
       };
       element.addEventListener('add-new-rule', handleAddEvent);
@@ -39,7 +39,7 @@ const RulesPageContent: React.FC = () => {
         element.removeEventListener('add-new-rule', handleAddEvent);
       };
     }
-  }, []);
+  }, []); // handleAddRule is stable if defined outside or wrapped in useCallback
 
   const handleEditRule = (rule: Rule) => {
     setCurrentRule(rule);
@@ -51,8 +51,10 @@ const RulesPageContent: React.FC = () => {
       await saveRule(ruleData);
       setIsEditorOpen(false);
       setCurrentRule(null);
+      // refetchRules(); // saveRule should invalidate queries
     } catch (err) {
       console.error('Error saving rule:', err);
+      // Toast for error is usually handled within saveRule or its mutation
     }
   };
 
@@ -61,6 +63,7 @@ const RulesPageContent: React.FC = () => {
       await deleteRule(ruleId); 
       setCurrentRule(null);
       setIsEditorOpen(false);
+      // refetchRules(); // deleteRule should invalidate queries
     } catch (err) {
       console.error('Error deleting rule:', err);
     }
@@ -69,46 +72,27 @@ const RulesPageContent: React.FC = () => {
   const handleRuleBroken = async (rule: Rule) => {
     try {
       await markRuleBroken(rule);
+      // refetchRules(); // markRuleBroken should invalidate queries
     } catch (err) {
       console.error('Error marking rule as broken:', err);
     }
   };
-
-  if (error && (!rules || rules.length === 0) && !isLoading) { // Added !isLoading to prevent flash of error
-    return (
-      <div className="container mx-auto px-4 py-6 RulesContent">
-        <RulesHeader /> 
-        <div className="flex flex-col items-center justify-center mt-8">
-          <div className="text-red-500 p-4 border border-red-400 rounded-md bg-red-900/20">
-            <h3 className="font-bold mb-2">Error Loading Rules</h3>
-            <p>{error.message || "Couldn't connect to the server. Please try again."}</p>
-          </div>
-        </div>
-         <RuleEditor
-          isOpen={isEditorOpen}
-          onClose={() => {
-            setIsEditorOpen(false);
-            setCurrentRule(null);
-          }}
-          ruleData={currentRule || undefined}
-          onSave={handleSaveRule}
-          onDelete={handleDeleteRule}
-        />
-      </div>
-    );
-  }
+  
+  // The specific error block previously here is now handled by RulesList
+  // if (error && (!rules || rules.length === 0) && !isLoading) { ... }
   
   return (
     <div className="container mx-auto px-4 py-6 RulesContent">
-      <RulesHeader />
+      <RulesHeader /> {/* Assuming RulesHeader doesn't need onAddNewRule directly for this pattern */}
 
       <RulesList
         rules={rules}
-        isLoading={isLoading && rules.length === 0} // Show loader only if loading and no rules displayed
+        isLoading={isLoading} // Pass isLoading directly
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
         error={error}
         isUsingCachedData={isUsingCachedData}
+        refetch={refetchRules}
       />
 
       <RuleEditor
@@ -135,13 +119,10 @@ const Rules: React.FC = () => {
       }
     }}>
       <ErrorBoundary fallbackMessage="Could not load rules. Please try reloading.">
-        {/* <Hydrate fallbackMessage="Loading your rules..."> */}
           <RulesPageContent />
-        {/* </Hydrate> */}
       </ErrorBoundary>
     </AppLayout>
   );
 };
 
 export default Rules;
-
