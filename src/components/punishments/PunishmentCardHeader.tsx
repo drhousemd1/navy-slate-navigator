@@ -2,34 +2,28 @@
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Minus, Crown, Coins, Package } from 'lucide-react'; // Added Package icon
+import { Minus, Crown, Coins } from 'lucide-react'; // Removed Package icon
 
 interface PunishmentCardHeaderProps {
   points: number;
-  dom_points: number; // Now required
-  dom_supply: number; // Added dom_supply
+  dom_points: number;
+  dom_supply: number;
   onPunish: () => void;
 }
 
 const PunishmentCardHeader: React.FC<PunishmentCardHeaderProps> = ({
   points,
   dom_points,
-  dom_supply, // Added dom_supply
+  dom_supply,
   onPunish
 }) => {
-  // dom_points is now required, so direct usage. Defaulting logic removed.
   const displayDomPoints = dom_points;
 
   return (
     <div className="flex justify-between items-center mb-3">
-      {/* DOM Supply Badge - New element */}
-      <Badge
-        className="bg-gray-700 text-white font-semibold flex items-center gap-1 px-2 py-1 text-xs border border-gray-500"
-        variant="default"
-      >
-        <Package className="h-3 w-3" />
-        {dom_supply} Left
-      </Badge>
+      {/* DOM Supply Badge - Removed this new element */}
+      {/* The empty div or a placeholder on the left side can be removed if not needed for layout */}
+      <div></div> {/* Retaining a div for layout balance if the original design had something on the left, otherwise can be removed too if it was only for the new badge */}
       
       <div className="flex items-center gap-2">
         {/* Points badge for deduction */}
@@ -59,7 +53,7 @@ const PunishmentCardHeader: React.FC<PunishmentCardHeaderProps> = ({
           size="sm"
           className="bg-red-500 text-white hover:bg-red-600/90 h-8 px-3 text-sm"
           onClick={onPunish}
-          disabled={dom_supply <= 0} // Disable if no supply
+          disabled={dom_supply <= 0} // Disable if no supply - this logic remains
         >
           Punish
         </Button>
