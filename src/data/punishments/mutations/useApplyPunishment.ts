@@ -220,45 +220,56 @@ export const useApplyPunishment = () => {
 
       toast({ title: 'Error applying punishment', description: error.message, variant: 'destructive' });
     },
-    onSuccess: async (_data, args) => { // Added args to onSuccess
+    onSuccess: async (_data, args) => { 
       toast({ title: 'Punishment applied successfully!' });
-      // The mutationFn already calls updateProfilePoints.
-      // onSuccess invalidations will handle refetching.
-      // To be absolutely sure, we can call updateProfilePoints for the relevant user again,
-      // but it might be better to rely on invalidations triggered in onSettled.
-      // Let's ensure the mutationFn handles the primary update.
-      // Forcing an update here might be needed if mutationFn's auth check is too restrictive.
-      // Fetch current user again to decide whose points to update, similar to mutationFn
+      
         try {
             const { data: { user: currentUser } } = await supabase.auth.getUser();
             if (!currentUser) return;
 
             const { data: submissiveUserProfile, error: subUserError } = await supabase
                 .from('profiles')
-                .select('linked_partner_id points dom_points') // fetch sub's points as well
-                .eq('id', args.profileId) // args.profileId is the submissive's ID
+                .select('linked_partner_id, points, dom_points') // Corrected select string
+                .eq('id', args.profileId) 
                 .single();
 
             if (subUserError) {
                 console.error("onSuccess: Failed to fetch submissive profile for point update check", subUserError);
+                // Ensure we also toast or handle this error more visibly if needed
+                toast({ title: 'Error', description: `Failed to fetch submissive profile: ${subUserError.message}`, variant: 'destructive' });
                 return;
             }
             
-            if (currentUser.id === args.profileId && submissiveUserProfile) { // Current user is submissive
+            // It's also good to check if submissiveUserProfile is null, in case .single() finds no match but no error.
+            if (!submissiveUserProfile) {
+                console.error("onSuccess: Submissive profile not found for ID:", args.profileId);
+                toast({ title: 'Error', description: 'Submissive profile not found.', variant: 'destructive' });
+                return;
+            }
+            
+            if (currentUser.id === args.profileId) { // Current user is submissive
                 const finalSubPoints = (submissiveUserProfile.points ?? args.subPoints) - args.costPoints;
-                const finalSubDomPoints = submissiveUserProfile.dom_points ?? args.domPoints; // Sub's DOM points
+                const finalSubDomPoints = submissiveUserProfile.dom_points ?? args.domPoints; 
                 console.log("useApplyPunishment onSuccess: Updating submissive points:", finalSubPoints, finalSubDomPoints);
                 await updateProfilePoints(finalSubPoints, finalSubDomPoints);
-            } else if (submissiveUserProfile?.linked_partner_id && currentUser.id === submissiveUserProfile.linked_partner_id) { // Current user is dominant
+            } else if (submissiveUserProfile.linked_partner_id && currentUser.id === submissiveUserProfile.linked_partner_id) { // Current user is dominant
                 const { data: domProfile, error: domError } = await supabase
                     .from('profiles')
-                    .select('points dom_points')
+                    .select('points, dom_points') // Corrected select string
                     .eq('id', currentUser.id)
                     .single();
-                if (domError || !domProfile) {
+
+                if (domError) {
                     console.error("onSuccess: Failed to fetch dominant profile for point update", domError);
+                    toast({ title: 'Error', description: `Failed to fetch dominant profile: ${domError.message}`, variant: 'destructive' });
                     return;
                 }
+                if (!domProfile) {
+                    console.error("onSuccess: Dominant profile not found for ID:", currentUser.id);
+                    toast({ title: 'Error', description: 'Dominant profile not found.', variant: 'destructive' });
+                    return;
+                }
+                
                 const finalDomSubPoints = domProfile.points ?? 0;
                 const finalDomDomPoints = (domProfile.dom_points ?? 0) + args.domEarn;
                 console.log("useApplyPunishment onSuccess: Updating dominant points:", finalDomSubPoints, finalDomDomPoints);
@@ -266,10 +277,12 @@ export const useApplyPunishment = () => {
             }
         } catch (err) {
             console.error("Error in onSuccess of useApplyPunishment during explicit point update:", err);
+            if (err instanceof Error) {
+              toast({ title: 'Update Error', description: err.message, variant: 'destructive'});
+            } else {
+              toast({ title: 'Update Error', description: 'An unknown error occurred during point update.', variant: 'destructive'});
+            }
         }
-
-      // Invalidation is good, but explicit updateProfilePoints for the *correct* user is more direct.
-      // Let onSettled handle broad invalidations.
     },
     onSettled: () => {
       // Invalidate everything related to points to ensure consistency
