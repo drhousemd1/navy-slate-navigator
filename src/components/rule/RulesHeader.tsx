@@ -6,18 +6,40 @@ import { DOMBadge } from '../ui/dom-badge';
 import { Box, Coins } from 'lucide-react';
 import { useRewards } from '@/contexts/RewardsContext';
 import { usePointsManager } from '@/data/points/usePointsManager';
+import { supabase } from '@/integrations/supabase/client';
 
 const RulesHeader: React.FC = () => {
   const { totalRewardsSupply, totalDomRewardsSupply } = useRewards();
   const { 
     points: totalPoints, 
     domPoints, 
-    // isLoadingPoints, // No longer used for conditional rendering here
     refreshPoints 
   } = usePointsManager(); // Fetches for the current authenticated user by default
 
+  // Force refresh points data on mount and when profile changes
   useEffect(() => {
-    refreshPoints();
+    const refreshPointsData = async () => {
+      try {
+        console.log("RulesHeader: Refreshing points data");
+        await refreshPoints();
+      } catch (error) {
+        console.error("Error refreshing points in RulesHeader:", error);
+      }
+    };
+    
+    refreshPointsData();
+    
+    // Also refresh when points data might change from an external source
+    const channel = supabase
+      .channel('profiles_changes')
+      .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'profiles' },
+          refreshPointsData)
+      .subscribe();
+          
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refreshPoints]);
 
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
@@ -25,7 +47,6 @@ const RulesHeader: React.FC = () => {
   return (
     <div className="flex items-center mb-6">
       <h1 className="text-base font-semibold text-white mr-auto">Rules</h1>
-      {/* Badges are now always rendered. isLoadingPoints is handled internally by usePointsManager returning 0 until loaded. */}
       <div className="flex items-center gap-2">
         <Badge 
           className="text-white font-bold px-3 py-1 flex items-center gap-1"

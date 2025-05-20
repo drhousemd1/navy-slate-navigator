@@ -11,26 +11,40 @@ export async function updateProfilePoints(userId: string, points: number, dom_po
     return;
   }
 
+  console.log(`updateProfilePoints: Updating cache for user ${userId} with points=${points}, dom_points=${dom_points}`);
+
   const userProfilePointsKey = getProfilePointsQueryKey(userId); // e.g., ["profile_points", "user-id-123"]
   
   // Update primary profile points cache key used by usePointsManager
   queryClient.setQueryData(userProfilePointsKey, { points, dom_points });
   
   // Update legacy keys, now also scoped by userId for consistency
-  // ["rewards", "points", "user-id-123"]
-  // ["rewards", "dom_points", "user-id-123"]
   queryClient.setQueryData(["rewards", "points", userId], points);
   queryClient.setQueryData(["rewards", "dom_points", userId], dom_points);
   
   // Update general profile key, also scoped by userId
-  // This assumes ["profile", userId] is or will be the pattern for fetching a specific user's full profile.
   queryClient.setQueryData(["profile", userId], (oldProfile: any) => {
     if (!oldProfile) return { id: userId, points, dom_points }; // Include id if creating new
     return { ...oldProfile, points, dom_points };
   });
   
+  // Also update general base key if this is the current authenticated user
+  try {
+    const { data } = await fetch('/api/auth/user').then(res => res.json());
+    if (data?.user?.id === userId) {
+      console.log("Updating base key for current authenticated user", userId);
+      queryClient.setQueryData([PROFILE_POINTS_QUERY_KEY_BASE], { points, dom_points });
+    }
+  } catch (error) {
+    console.error("Error checking if userId is current user:", error);
+  }
+  
   // Store in localForage, scoped by userId
-  await localforage.setItem(`profile_points_${userId}`, { points, dom_points });
-  await localforage.setItem(`rewards_points_${userId}`, points);
-  await localforage.setItem(`rewards_dom_points_${userId}`, dom_points);
+  try {
+    await localforage.setItem(`profile_points_${userId}`, { points, dom_points });
+    await localforage.setItem(`rewards_points_${userId}`, points);
+    await localforage.setItem(`rewards_dom_points_${userId}`, dom_points);
+  } catch (error) {
+    console.error("Error saving points to localForage:", error);
+  }
 }

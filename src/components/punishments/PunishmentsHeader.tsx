@@ -9,6 +9,7 @@ import { Button } from '../ui/button';
 import { usePunishments } from '@/contexts/PunishmentsContext';
 import RandomPunishmentSelections from './RandomPunishmentSelections';
 import { usePointsManager } from '@/data/points/usePointsManager';
+import { supabase } from '@/integrations/supabase/client';
 
 const PunishmentsHeader: React.FC = () => {
   const { totalRewardsSupply, totalDomRewardsSupply } = useRewards();
@@ -17,14 +18,35 @@ const PunishmentsHeader: React.FC = () => {
   const { 
     points: totalPoints, 
     domPoints, 
-    // isLoadingPoints, // No longer used for conditional rendering here
     refreshPoints 
   } = usePointsManager(); // Fetches for the current authenticated user by default
 
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
 
+  // Force refresh points data on mount and when punishment actions occur
   useEffect(() => {
-    refreshPoints();
+    const refreshPointsData = async () => {
+      try {
+        console.log("PunishmentsHeader: Refreshing points data");
+        await refreshPoints();
+      } catch (error) {
+        console.error("Error refreshing points in PunishmentsHeader:", error);
+      }
+    };
+    
+    refreshPointsData();
+    
+    // Also refresh when points data might change from an external source
+    const channel = supabase
+      .channel('profiles_changes')
+      .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'profiles' },
+          refreshPointsData)
+      .subscribe();
+          
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refreshPoints]);
 
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
@@ -41,7 +63,6 @@ const PunishmentsHeader: React.FC = () => {
         <Shuffle className="w-4 h-4" />
         Random
       </Button>
-      {/* Badges are now always rendered. isLoadingPoints is handled internally by usePointsManager returning 0 until loaded. */}
       <div className="flex items-center gap-2">
         <Badge 
           className="text-white font-bold px-3 py-1 flex items-center gap-1"
