@@ -1,125 +1,128 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { TASKS_QUERY_KEY, taskQueryKey } from "@/data/tasks/queries";
+import { TaskWithId } from "@/data/tasks/types"; // Correctly import TaskWithId
+import { toast } from "@/hooks/use-toast";
+// import { getCurrentWeekDates, getDayOfWeek, getWeekIdentifier } from "@/lib/dateUtils"; // Commented out due to unavailability
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { TASKS_QUERY_KEY } from '../queries';
-import { TaskWithId } from '../types'; // Use TaskWithId
-import { toast } from '@/hooks/use-toast';
-import { updateProfilePoints } from '@/data/sync/updateProfilePoints';
-// Removed unused dateUtils imports: getCurrentWeekDates, getDayOfWeek, getWeekIdentifier
-
-export interface ToggleTaskCompletionVariables {
-  taskId: string;
-  isCompleted: boolean;
-  points: number;
-  frequency: 'daily' | 'weekly'; // Made non-optional as task should have it
-  frequency_count: number; // Made non-optional
-  last_completed_date: string | null;
-  week_identifier: string | null;
-  user_id: string;
-}
-
-async function toggleTaskCompletionAPI(variables: ToggleTaskCompletionVariables): Promise<TaskWithId | null> {
-  const { taskId, isCompleted, points, user_id, last_completed_date } = variables; // frequency, frequency_count, week_identifier are available if needed
-  const today = new Date().toISOString().split('T')[0];
-  // Removed unused: currentDayOfWeek, currentWeekIdentifier
-
-  // Update task completion status
-  const { data: updatedTask, error: updateError } = await supabase
-    .from('tasks')
-    .update({
-      completed: isCompleted,
-      last_completed_date: isCompleted ? today : last_completed_date,
-    })
-    .eq('id', taskId)
-    .select()
-    .single();
-
-  if (updateError) throw updateError;
-
-  if (isCompleted) {
-    // Record completion in history
-    const { error: historyError } = await supabase
-      .from('task_completion_history')
-      .insert({
-        task_id: taskId,
-        user_id: user_id,
-      });
-    if (historyError) {
-      console.error("Error recording task completion history:", historyError);
-    }
-
-    // Update user points
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('points')
-      .eq('id', user_id)
-      .single();
-
-    if (profileError) throw profileError;
-
-    const currentPoints = profileData?.points || 0;
-    const newPoints = currentPoints + points;
-
-    const { error: pointsUpdateError } = await supabase
-      .from('profiles')
-      .update({ points: newPoints })
-      .eq('id', user_id);
-
-    if (pointsUpdateError) throw pointsUpdateError;
-    await updateProfilePoints(user_id, newPoints, undefined); // Pass undefined or actual dom_points change if any
-
-  } else {
-    // Logic for un-completing (e.g., point deduction) can be added here
-    // For now, simplified: if uncompleting, deduct points if they were awarded
-    // This part needs careful consideration of game logic
-    if (points > 0) { // Only deduct if task completion awarded points
-        const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('points')
-            .eq('id', user_id)
-            .single();
-
-        if (profileError) throw profileError;
-
-        const currentPoints = profileData?.points || 0;
-        const newPoints = Math.max(0, currentPoints - points); // Ensure points don't go negative
-
-        const { error: pointsUpdateError } = await supabase
-            .from('profiles')
-            .update({ points: newPoints })
-            .eq('id', user_id);
-        
-        if (pointsUpdateError) throw pointsUpdateError;
-        await updateProfilePoints(user_id, newPoints, undefined);
-    }
-  }
-
-  return updatedTask as TaskWithId | null;
-}
-
-export function useToggleTaskCompletionMutation() {
+export const useToggleTaskCompletionMutation = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<TaskWithId | null, Error, ToggleTaskCompletionVariables>({ // Return type changed to TaskWithId
-    mutationFn: toggleTaskCompletionAPI,
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: ['profile_points', variables.user_id] });
-      queryClient.invalidateQueries({ queryKey: ['profile_points'] });
-      
-      toast({
-        title: data?.completed ? "Task Completed!" : "Task Updated",
-        description: data?.completed ? `You earned ${variables.points} points.` : `Task status reverted. ${variables.points > 0 ? `${variables.points} points deducted.` : ''}`,
-      });
+  return useMutation<
+    TaskWithId | null,
+    Error,
+    { taskId: string; completed: boolean; points?: number; currentTasks?: TaskWithId[] }
+  >({
+    mutationFn: async ({ taskId, completed, points }) => {
+      // const today = new Date();
+      // const dayOfWeek = getDayOfWeek(today); // Commented out
+      // const weekIdentifier = getWeekIdentifier(today); // Commented out
+
+      // Optimistically update task locally for usage_data if needed
+      // let taskToUpdate = queryClient.getQueryData<TaskWithId>(taskQueryKey(taskId));
+      // if (!taskToUpdate) {
+      //   const tasks = queryClient.getQueryData<TaskWithId[]>(TASKS_QUERY_KEY);
+      //   taskToUpdate = tasks?.find(t => t.id === taskId) ?? null;
+      // }
+
+      // let newUsageData = taskToUpdate?.usage_data ? [...taskToUpdate.usage_data] : [];
+      // TODO: Re-implement usage_data update if date utilities become available
+      // if (completed) {
+      //   if (!newUsageData.includes(dayOfWeek)) {
+      //     newUsageData.push(dayOfWeek);
+      //   }
+      // } else {
+      //   newUsageData = newUsageData.filter(d => d !== dayOfWeek);
+      // }
+
+      const { data, error } = await supabase
+        .from("tasks")
+        .update({
+          completed,
+          last_completed_date: completed ? new Date().toISOString() : null,
+          // usage_data: newUsageData, // Commented out
+          // week_identifier: weekIdentifier, // Commented out
+        })
+        .eq("id", taskId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (completed && points && data?.user_id) {
+        const { error: pointsError } = await supabase.rpc('increment_user_points', { 
+          user_id_param: data.user_id, 
+          points_to_add: points 
+        });
+        if (pointsError) {
+          console.error("Error updating points:", pointsError);
+          toast({ title: "Points Update Failed", description: pointsError.message, variant: "destructive" });
+          // Potentially throw or handle this more gracefully
+        } else {
+          // Invalidate points query
+          queryClient.invalidateQueries({ queryKey: ['profile_points', data.user_id] });
+          queryClient.invalidateQueries({ queryKey: ['profile_points'] }); // Base key
+        }
+      } else if (!completed && points && data?.user_id) {
+        const { error: pointsError } = await supabase.rpc('decrement_user_points', {
+            user_id_param: data.user_id,
+            points_to_subtract: points
+        });
+         if (pointsError) {
+          console.error("Error updating points:", pointsError);
+          toast({ title: "Points Update Failed", description: pointsError.message, variant: "destructive" });
+        } else {
+          queryClient.invalidateQueries({ queryKey: ['profile_points', data.user_id] });
+          queryClient.invalidateQueries({ queryKey: ['profile_points'] });
+        }
+      }
+
+
+      return data as TaskWithId | null;
     },
-    onError: (error) => {
-      console.error("Error toggling task completion:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Could not update task status.",
-        variant: "destructive",
-      });
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey: taskQueryKey(variables.taskId) });
+
+      const previousTasks = queryClient.getQueryData<TaskWithId[]>(TASKS_QUERY_KEY);
+      const previousTask = queryClient.getQueryData<TaskWithId>(taskQueryKey(variables.taskId));
+
+      // Optimistic update for the list
+      if (previousTasks) {
+        queryClient.setQueryData<TaskWithId[]>(TASKS_QUERY_KEY, (old) =>
+          old?.map((task) =>
+            task.id === variables.taskId
+              ? { ...task, completed: variables.completed, last_completed_date: variables.completed ? new Date().toISOString() : null }
+              : task
+          ) ?? []
+        );
+      }
+
+      // Optimistic update for the single task view
+      if (previousTask) {
+        queryClient.setQueryData<TaskWithId>(taskQueryKey(variables.taskId), (old) =>
+          old ? { ...old, completed: variables.completed, last_completed_date: variables.completed ? new Date().toISOString() : null } : null
+        );
+      }
+      
+      return { previousTasks, previousTask };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData<TaskWithId[]>(TASKS_QUERY_KEY, context.previousTasks);
+      }
+      if (context?.previousTask) {
+        queryClient.setQueryData<TaskWithId>(taskQueryKey(variables.taskId), context.previousTask);
+      }
+      toast({ title: "Error", description: `Failed to update task: ${err.message}`, variant: "destructive" });
+    },
+    onSettled: (data, error, variables) => {
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: taskQueryKey(variables.taskId) });
+      if (data?.user_id) {
+        queryClient.invalidateQueries({ queryKey: ['profile_points', data.user_id] });
+        queryClient.invalidateQueries({ queryKey: ['profile_points'] });
+      }
     },
   });
-}
-
+};

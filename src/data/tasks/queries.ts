@@ -1,7 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
-import { TaskWithId } from './types'; // Use TaskWithId
+import { TaskWithId } from './types'; // Use TaskWithId consistently
 
 export const TASKS_QUERY_KEY = ['tasks'];
 export const taskQueryKey = (taskId: string) => ['tasks', taskId];
@@ -23,14 +22,21 @@ export const fetchTaskById = async (taskId: string): Promise<TaskWithId | null> 
     .eq('id', taskId)
     .single();
   
-  if (error) throw error;
+  if (error) {
+    // For "PGRST116" (JSON object requested, multiple (or no) rows returned), return null
+    if (error.code === 'PGRST116') {
+        console.warn(`fetchTaskById: No task found or multiple tasks found for ID ${taskId}. Returning null.`);
+        return null;
+    }
+    throw error;
+  }
   return data as TaskWithId | null;
 };
 
-export type TasksQueryResult = UseQueryResult<TaskWithId[], Error>; // Use TaskWithId
+export type TasksQueryResult = UseQueryResult<TaskWithId[], Error>;
 
 export function useTasksQuery(options?: { enabled?: boolean }): TasksQueryResult {
-  return useQuery<TaskWithId[], Error>({ // Use TaskWithId
+  return useQuery<TaskWithId[], Error>({ 
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
     staleTime: 1000 * 60 * 5,
@@ -44,3 +50,18 @@ export function useTasksQuery(options?: { enabled?: boolean }): TasksQueryResult
   });
 }
 
+// Need to add useTaskByIdQuery if it's used elsewhere or for consistency
+export const useTaskByIdQuery = (taskId: string, options?: { enabled?: boolean }) => {
+  return useQuery<TaskWithId | null, Error>({
+    queryKey: taskQueryKey(taskId),
+    queryFn: () => fetchTaskById(taskId),
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
+    retry: 1,
+    retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
+    enabled: !!taskId && (options?.enabled === undefined ? true : options.enabled), // Ensure taskId exists
+  });
+};

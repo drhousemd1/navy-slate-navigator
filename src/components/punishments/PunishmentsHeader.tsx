@@ -1,3 +1,4 @@
+
 //INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import React, { useEffect, useState } from 'react';
 import { Badge } from '../ui/badge';
@@ -9,30 +10,32 @@ import { usePunishments } from '@/contexts/PunishmentsContext';
 import RandomPunishmentSelections from './RandomPunishmentSelections';
 import { usePointsManager } from '@/data/points/usePointsManager';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/auth'; // Import useAuth
 
 const PunishmentsHeader: React.FC = () => {
   const { totalRewardsSupply, totalDomRewardsSupply } = useRewards();
   const { punishments } = usePunishments();
+  const { user } = useAuth(); // Get user from useAuth
   
   const { 
     points: totalPoints, 
     domPoints, 
     refreshPoints,
-    // profileId // Removed as it's not provided by usePointsManager
   } = usePointsManager(); 
   
-  const [profileId, setProfileId] = useState<string | null>(null); // State for profileId
+  // const [profileId, setProfileId] = useState<string | null>(null); // This state can be derived from useAuth
+  const profileId = user?.id || null; // Use profileId from useAuth
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
 
-  useEffect(() => {
-    const fetchProfileId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setProfileId(user.id);
-      }
-    };
-    fetchProfileId();
-  }, []);
+  // useEffect(() => { // No longer needed if profileId comes directly from useAuth
+  //   const fetchProfileId = async () => {
+  //     const { data: { user } } = await supabase.auth.getUser();
+  //     if (user) {
+  //       setProfileId(user.id);
+  //     }
+  //   };
+  //   fetchProfileId();
+  // }, []);
 
   useEffect(() => {
     const refreshPointsData = async () => {
@@ -44,20 +47,23 @@ const PunishmentsHeader: React.FC = () => {
       }
     };
     
-    refreshPointsData(); // Initial fetch
+    if (profileId) { // Only refresh if profileId is available
+        refreshPointsData(); // Initial fetch
+    }
 
-    let profileChangesChannel: any; // Declare channel variable
 
-    if (profileId) { // Only subscribe if profileId is available
+    let profileChangesChannel: any; 
+
+    if (profileId) { 
       profileChangesChannel = supabase
-        .channel(`profile_changes_punishments_header_${profileId}`) // Unique channel name
+        .channel(`profile_changes_punishments_header_${profileId}`) 
         .on(
           'postgres_changes',
           { 
             event: 'UPDATE', 
             schema: 'public', 
             table: 'profiles',
-            filter: `id=eq.${profileId}` // Filter for current user's profile
+            filter: `id=eq.${profileId}` 
           },
           (payload) => {
             console.log("PunishmentsHeader: Profile change detected via Supabase realtime", payload);
@@ -80,7 +86,7 @@ const PunishmentsHeader: React.FC = () => {
         console.log(`PunishmentsHeader: Unsubscribed from profile changes for ${profileId}`);
       }
     };
-  }, [refreshPoints, profileId]); // Add profileId to dependency array
+  }, [refreshPoints, profileId]); 
 
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
 
@@ -109,10 +115,10 @@ const PunishmentsHeader: React.FC = () => {
           style={badgeStyle}
         >
           <Coins className="w-3 h-3" />
-          <span>{totalPoints ?? 0}</span> {/* Ensure points are not undefined */}
+          <span>{totalPoints ?? 0}</span>
         </Badge>
         <DOMBadge icon="box" value={totalDomRewardsSupply} />
-        <DOMBadge icon="crown" value={domPoints ?? 0} /> {/* Ensure points are not undefined */}
+        <DOMBadge icon="crown" value={domPoints ?? 0} />
       </div>
       
       <RandomPunishmentSelections

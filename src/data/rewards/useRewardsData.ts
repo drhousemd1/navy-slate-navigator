@@ -1,183 +1,122 @@
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Reward, CreateRewardVariables, UpdateRewardVariables } from './types';
+
+import { useQuery, useQueryClient, UseQueryResult } from "@tanstack/react-query";
 import { 
   REWARDS_QUERY_KEY, 
-  REWARDS_SUPPLY_QUERY_KEY
-} from './queries';
-import { 
+  REWARDS_POINTS_QUERY_KEY, // Keep this
+  REWARDS_DOM_POINTS_QUERY_KEY, // Keep this
+  REWARDS_SUPPLY_QUERY_KEY, // Keep this for reward specific supply
   fetchRewards, 
-  fetchTotalRewardsSupply 
-} from './queries';
-import { 
-  useCreateRewardMutation, 
-  useUpdateRewardMutation 
-} from './mutations/useSaveReward';
-import { useDeleteReward as useDeleteRewardMutation } from './mutations/useDeleteReward';
-import { toast } from '@/hooks/use-toast';
+  // fetchUserPoints, // This conflicts, will use local version or alias
+  // fetchUserDomPoints, // This conflicts, will use local version or alias
+  fetchRewardSupply,
+  // No need to import getProfilePointsQueryKey if not used directly here, points are handled by usePointsManager
+} from "./queries"; 
+import { Reward, RewardWithPointsAndSupply } from "./types";
+import { useAuth } from "@/contexts/auth"; // Import useAuth to get user ID for points
+
+// Aliasing imports to avoid conflict, or ensure local functions have different names
+import { fetchUserPoints as fetchUserPointsQuery, fetchUserDomPoints as fetchUserDomPointsQuery } from "./queries";
+
 
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
-  const { data: authUser } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-    staleTime: Infinity,
-  });
-  const profileId = authUser?.id;
+  const { user } = useAuth(); // Get the current user
+  const userId = user?.id; // Extract userId
 
-  const { 
-    data: rewards = [], 
-    isLoading: isRewardsLoading, 
-    refetch: refetchRewards 
-  } = useQuery<Reward[]>({
+  const { data: rewards = [], isLoading: isLoadingRewards, error: rewardsError, refetch: refetchRewards } = useQuery<Reward[], Error>({
     queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
   });
 
-  const { data: totalPoints = 0, isLoading: isPointsLoading } = useQuery<number>({
-    queryKey: getProfilePointsQueryKey(profileId, 'points'),
-    queryFn: () => fetchUserPoints(profileId),
-    enabled: !!profileId,
-  });
-
-  const { data: domPoints = 0, isLoading: isDomPointsLoading } = useQuery<number>({
-    queryKey: getProfilePointsQueryKey(profileId, 'dom_points'),
-    queryFn: () => fetchUserDomPoints(profileId),
-    enabled: !!profileId,
-  });
-  
-  const { data: totalRewardsSupply = 0, isLoading: isSupplyLoading } = useQuery<number>({
-    queryKey: REWARDS_SUPPLY_QUERY_KEY,
-    queryFn: fetchTotalRewardsSupply,
-  });
-
-  const createRewardMutation = useCreateRewardMutation();
-  const updateRewardMutation = useUpdateRewardMutation();
-  const deleteRewardMutation = useDeleteRewardMutation();
-
-  const totalDomRewardsSupply = rewards
-    .filter(reward => reward.is_dom_reward)
-    .reduce((total, reward) => total + (reward.supply === -1 ? 0 : reward.supply), 0);
-    
-  const isLoading = isRewardsLoading || isPointsLoading || isDomPointsLoading || isSupplyLoading || !profileId;
-
-  const saveReward = async (rewardData: Partial<Reward>): Promise<Reward | null> => {
-    try {
-      if (rewardData.id) {
-        // Update existing reward
-        const updateVariables: UpdateRewardVariables = {
-          id: rewardData.id,
-          ...rewardData,
-        };
-        return await updateRewardMutation.mutateAsync(updateVariables);
-      } else {
-        // Create new reward
-        if (!rewardData.title || typeof rewardData.cost !== 'number' || typeof rewardData.supply !== 'number' || typeof rewardData.is_dom_reward !== 'boolean') {
-          toast({ 
-            title: "Missing required fields", 
-            description: "Title, cost, supply, and DOM status are required.", 
-            variant: "destructive" 
-          });
-          return null;
-        }
-        
-        const createVariables: CreateRewardVariables = {
-          title: rewardData.title,
-          cost: rewardData.cost,
-          supply: rewardData.supply,
-          is_dom_reward: rewardData.is_dom_reward,
-          description: rewardData.description || null,
-          background_image_url: rewardData.background_image_url || null,
-          background_opacity: rewardData.background_opacity ?? 100, 
-          icon_name: rewardData.icon_name || 'Award', 
-          icon_url: rewardData.icon_url || null,
-          icon_color: rewardData.icon_color || '#9b87f5', 
-          title_color: rewardData.title_color || '#FFFFFF', 
-          subtext_color: rewardData.subtext_color || '#8E9196', 
-          calendar_color: rewardData.calendar_color || '#7E69AB', 
-          highlight_effect: rewardData.highlight_effect ?? false, 
-          focal_point_x: rewardData.focal_point_x ?? 50, 
-          focal_point_y: rewardData.focal_point_y ?? 50, 
-        };
-        
-        return await createRewardMutation.mutateAsync(createVariables);
-      }
-    } catch (error) {
-      console.error("Error in saveReward (useRewardsData):", error);
-      toast({ title: "Save Error", description: error instanceof Error ? error.message : "Could not save reward.", variant: "destructive" });
-      return null;
+  // Local function to fetch user points (sub points)
+  const fetchLocalUserPoints = async (currentUserId?: string): Promise<number> => {
+    if (!currentUserId) return 0;
+    // This should ideally use a query hook if it's for display, or be part of a mutation
+    // For now, direct fetch as it was structured
+    const { data, error } = await queryClient.fetchQuery({
+        queryKey: ['profile_points', currentUserId, 'sub'], // More specific key
+        queryFn: () => fetchUserPointsQuery(currentUserId), // Use aliased import
+    });
+    if (error) {
+        console.error("Error fetching user points in useRewardsData:", error);
+        return 0; // Default to 0 on error
     }
+    return data ?? 0;
   };
 
-  const deleteReward = async (rewardId: string): Promise<boolean> => {
-    try {
-      await deleteRewardMutation.mutateAsync(rewardId);
-      return true;
-    } catch (error) {
-      console.error("Error in deleteReward (useRewardsData):", error);
-      toast({ title: "Delete Error", description: error instanceof Error ? error.message : "Could not delete reward.", variant: "destructive" });
-      return false;
+  // Local function to fetch user DOM points
+  const fetchLocalUserDomPoints = async (currentUserId?: string): Promise<number> => {
+    if (!currentUserId) return 0;
+    const { data, error } = await queryClient.fetchQuery({
+        queryKey: ['profile_points', currentUserId, 'dom'], // More specific key
+        queryFn: () => fetchUserDomPointsQuery(currentUserId), // Use aliased import
+    });
+     if (error) {
+        console.error("Error fetching user DOM points in useRewardsData:", error);
+        return 0; // Default to 0 on error
     }
+    return data ?? 0;
   };
-  
-  const refreshPoints = async () => {
-    if (!profileId) return;
-    await queryClient.invalidateQueries({ queryKey: getProfilePointsQueryKey(profileId, 'points') });
-    await queryClient.invalidateQueries({ queryKey: getProfilePointsQueryKey(profileId, 'dom_points') });
-  };
+
+
+  // This query is for the general points, often managed by usePointsManager elsewhere
+  // If this hook is solely for rewards list and their individual supplies, these might be redundant
+  // For now, wiring them up with the userId from useAuth
+  const { data: userPoints = 0, isLoading: isLoadingUserPoints, refetch: refetchUserPoints } = useQuery<number, Error>({
+    queryKey: REWARDS_POINTS_QUERY_KEY(userId), // Use userId
+    queryFn: () => userId ? fetchUserPointsQuery(userId) : Promise.resolve(0),
+    enabled: !!userId, // Only run if userId is available
+  });
+
+  const { data: userDomPoints = 0, isLoading: isLoadingUserDomPoints, refetch: refetchUserDomPoints } = useQuery<number, Error>({
+    queryKey: REWARDS_DOM_POINTS_QUERY_KEY(userId), // Use userId
+    queryFn: () => userId ? fetchUserDomPointsQuery(userId) : Promise.resolve(0),
+    enabled: !!userId, // Only run if userId is available
+  });
+
+  const getRewardSupply = useCallback(async (rewardId: string) => {
+    // This can remain a direct fetch or be converted to a useQuery instance if needed reactively elsewhere
+    return fetchRewardSupply(rewardId);
+  }, []);
+
+  const rewardsWithPointsAndSupply: UseQueryResult<RewardWithPointsAndSupply[], Error> = useQuery<RewardWithPointsAndSupply[], Error, RewardWithPointsAndSupply[], unknown[]>({
+    queryKey: [REWARDS_QUERY_KEY, userId, 'withPointsAndSupply'],
+    queryFn: async () => {
+      const baseRewards = await fetchRewards();
+      // const currentSubPoints = userId ? await fetchUserPointsQuery(userId) : 0;
+      // const currentDomPoints = userId ? await fetchUserDomPointsQuery(userId) : 0;
+
+      return Promise.all(
+        baseRewards.map(async (reward) => {
+          const supply = await fetchRewardSupply(reward.id);
+          return {
+            ...reward,
+            // userSubPoints: currentSubPoints, // Points are now typically managed by usePointsManager globally
+            // userDomPoints: currentDomPoints, // So, these might not be needed per reward item here.
+            supply: supply,
+          };
+        })
+      );
+    },
+    enabled: !!userId || !user, // Fetch even if user is null initially (for public rewards), then refetch if user changes
+  });
 
 
   return {
-    rewards,
-    totalPoints,
-    domPoints,
-    totalRewardsSupply,
-    totalDomRewardsSupply,
-    isLoading,
-    profileId,
-    saveReward,
-    deleteReward,
-    refetchRewards,
-    refreshPoints,
+    rewards, // Raw rewards list
+    rewardsWithSupply: rewardsWithPointsAndSupply.data || [], // Rewards enhanced with supply (and potentially points if needed)
+    isLoadingRewards: isLoadingRewards || rewardsWithPointsAndSupply.isLoading,
+    rewardsError, // Error from base rewards fetch
+    userPoints, // Sub points for the current user
+    userDomPoints, // DOM points for the current user
+    isLoadingUserPoints,
+    isLoadingUserDomPoints,
+    refetchRewards, // Refetch base rewards
+    refetchUserPoints, // Refetch user's sub points
+    refetchUserDomPoints, // Refetch user's DOM points
+    refetchRewardsWithSupply: rewardsWithPointsAndSupply.refetch, // Refetch combined data
+    getRewardSupply,
+    fetchUserPoints: fetchLocalUserPoints, // Expose local fetcher
+    fetchUserDomPoints: fetchLocalUserDomPoints, // Expose local fetcher
   };
 };
-
-// Helper to create query keys for profile-specific points
-const getProfilePointsQueryKey = (profileId: string | undefined, type: 'points' | 'dom_points') => {
-  return ['profile_points', profileId || 'guest', type];
-};
-
-// Need to re-define fetchUserPoints and fetchUserDomPoints to accept profileId
-// or ensure the existing ones in ./queries can be used without modification if they fetch for the current auth user.
-// For useRewardsData, it's better if these fetches can target a specific profileId.
-
-async function fetchUserPoints(profileId?: string): Promise<number> {
-  if (!profileId) return 0;
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('points')
-    .eq('id', profileId)
-    .single();
-  if (error) {
-    console.error("Error fetching user points:", error);
-    return 0; // Or throw error
-  }
-  return data?.points || 0;
-}
-
-async function fetchUserDomPoints(profileId?: string): Promise<number> {
-  if (!profileId) return 0;
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('dom_points')
-    .eq('id', profileId)
-    .single();
-  if (error) {
-    console.error("Error fetching user dom points:", error);
-    return 0; // Or throw error
-  }
-  return data?.dom_points || 0;
-}
