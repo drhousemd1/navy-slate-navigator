@@ -2,35 +2,33 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { TASKS_QUERY_KEY } from '../queries';
-import { Task } from '../types';
+import { TaskWithId } from '../types'; // Use TaskWithId
 import { toast } from '@/hooks/use-toast';
-import { updateProfilePoints } from '@/data/sync/updateProfilePoints'; // Assuming this path is correct
-import { getCurrentWeekDates, getDayOfWeek, getWeekIdentifier } from '@/lib/dateUtils'; // Assuming path
+import { updateProfilePoints } from '@/data/sync/updateProfilePoints';
+// Removed unused dateUtils imports: getCurrentWeekDates, getDayOfWeek, getWeekIdentifier
 
 export interface ToggleTaskCompletionVariables {
   taskId: string;
   isCompleted: boolean;
   points: number;
-  frequency: string;
-  frequency_count: number;
+  frequency: 'daily' | 'weekly'; // Made non-optional as task should have it
+  frequency_count: number; // Made non-optional
   last_completed_date: string | null;
   week_identifier: string | null;
-  user_id: string; // Added user_id
+  user_id: string;
 }
 
-async function toggleTaskCompletionAPI(variables: ToggleTaskCompletionVariables) {
-  const { taskId, isCompleted, points, frequency, frequency_count, last_completed_date, week_identifier, user_id } = variables;
+async function toggleTaskCompletionAPI(variables: ToggleTaskCompletionVariables): Promise<TaskWithId | null> {
+  const { taskId, isCompleted, points, user_id, last_completed_date } = variables; // frequency, frequency_count, week_identifier are available if needed
   const today = new Date().toISOString().split('T')[0];
-  const currentDayOfWeek = getDayOfWeek(new Date()); // 0 (Sun) - 6 (Sat)
-  const currentWeekIdentifier = getWeekIdentifier(new Date());
+  // Removed unused: currentDayOfWeek, currentWeekIdentifier
 
   // Update task completion status
   const { data: updatedTask, error: updateError } = await supabase
     .from('tasks')
     .update({
       completed: isCompleted,
-      last_completed_date: isCompleted ? today : last_completed_date, // Only update if completing
-      // Update usage_data if needed based on frequency (complex, simplified here)
+      last_completed_date: isCompleted ? today : last_completed_date,
     })
     .eq('id', taskId)
     .select()
@@ -44,13 +42,10 @@ async function toggleTaskCompletionAPI(variables: ToggleTaskCompletionVariables)
       .from('task_completion_history')
       .insert({
         task_id: taskId,
-        user_id: user_id, // Use user_id from variables
-        // completed_at is defaulted by db
+        user_id: user_id,
       });
     if (historyError) {
-      // Rollback task completion status if history fails? (Consider atomicity)
       console.error("Error recording task completion history:", historyError);
-      // Potentially throw to trigger onError in useMutation
     }
 
     // Update user points
@@ -71,31 +66,50 @@ async function toggleTaskCompletionAPI(variables: ToggleTaskCompletionVariables)
       .eq('id', user_id);
 
     if (pointsUpdateError) throw pointsUpdateError;
-    // Call centralized point update function for cache consistency
-    await updateProfilePoints(user_id, newPoints, 0); // Assuming dom_points are not affected here
+    await updateProfilePoints(user_id, newPoints, undefined); // Pass undefined or actual dom_points change if any
 
   } else {
-    // If un-completing, potentially deduct points and remove from history (more complex)
-    // For now, we only handle completion.
-    // Consider implications if a task completion that awarded points is "undone".
+    // Logic for un-completing (e.g., point deduction) can be added here
+    // For now, simplified: if uncompleting, deduct points if they were awarded
+    // This part needs careful consideration of game logic
+    if (points > 0) { // Only deduct if task completion awarded points
+        const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('points')
+            .eq('id', user_id)
+            .single();
+
+        if (profileError) throw profileError;
+
+        const currentPoints = profileData?.points || 0;
+        const newPoints = Math.max(0, currentPoints - points); // Ensure points don't go negative
+
+        const { error: pointsUpdateError } = await supabase
+            .from('profiles')
+            .update({ points: newPoints })
+            .eq('id', user_id);
+        
+        if (pointsUpdateError) throw pointsUpdateError;
+        await updateProfilePoints(user_id, newPoints, undefined);
+    }
   }
 
-  return updatedTask;
+  return updatedTask as TaskWithId | null;
 }
 
 export function useToggleTaskCompletionMutation() {
   const queryClient = useQueryClient();
 
-  return useMutation<Task | null, Error, ToggleTaskCompletionVariables>({
+  return useMutation<TaskWithId | null, Error, ToggleTaskCompletionVariables>({ // Return type changed to TaskWithId
     mutationFn: toggleTaskCompletionAPI,
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: ['profile_points', variables.user_id] }); // Invalidate specific user points
-      queryClient.invalidateQueries({ queryKey: ['profile_points'] }); // Invalidate general points query for usePointsManager
+      queryClient.invalidateQueries({ queryKey: ['profile_points', variables.user_id] });
+      queryClient.invalidateQueries({ queryKey: ['profile_points'] });
       
       toast({
         title: data?.completed ? "Task Completed!" : "Task Updated",
-        description: data?.completed ? `You earned ${variables.points} points.` : "Task status reverted.",
+        description: data?.completed ? `You earned ${variables.points} points.` : `Task status reverted. ${variables.points > 0 ? `${variables.points} points deducted.` : ''}`,
       });
     },
     onError: (error) => {
@@ -108,3 +122,4 @@ export function useToggleTaskCompletionMutation() {
     },
   });
 }
+

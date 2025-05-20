@@ -1,6 +1,6 @@
 
 import { useContext } from 'react';
-import { NetworkStatusContext } from '@/contexts/NetworkStatusContext';
+import { NetworkStatusContext } from '@/contexts/NetworkStatusContext'; // Correctly import if exported
 
 export const useNetworkStatus = () => {
   const context = useContext(NetworkStatusContext);
@@ -9,3 +9,4 @@ export const useNetworkStatus = () => {
   }
   return context;
 };
+

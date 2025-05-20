@@ -3,14 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Reward, CreateRewardVariables, UpdateRewardVariables } from './types';
 import { 
   REWARDS_QUERY_KEY, 
-  REWARDS_POINTS_QUERY_KEY,
-  REWARDS_DOM_POINTS_QUERY_KEY,
   REWARDS_SUPPLY_QUERY_KEY
 } from './queries';
 import { 
   fetchRewards, 
-  fetchUserPoints, 
-  fetchUserDomPoints, 
   fetchTotalRewardsSupply 
 } from './queries';
 import { 
@@ -19,7 +15,6 @@ import {
 } from './mutations/useSaveReward';
 import { useDeleteReward as useDeleteRewardMutation } from './mutations/useDeleteReward';
 import { toast } from '@/hooks/use-toast';
-import { updateProfilePoints } from '@/data/sync/updateProfilePoints';
 
 export const useRewardsData = () => {
   const queryClient = useQueryClient();

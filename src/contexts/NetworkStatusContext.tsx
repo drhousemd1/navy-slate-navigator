@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { TASKS_QUERY_KEY } from '@/data/tasks/queries';
@@ -9,11 +10,16 @@ interface NetworkStatusContextType {
   isOnline: boolean;
 }
 
-const NetworkStatusContext = createContext<NetworkStatusContextType>({
-  isOnline: navigator.onLine,
-});
+// Export the context
+export const NetworkStatusContext = createContext<NetworkStatusContextType | undefined>(undefined);
 
-export const useNetworkStatus = () => useContext(NetworkStatusContext);
+export const useNetworkStatus = () => {
+  const context = useContext(NetworkStatusContext);
+  if (context === undefined) {
+    throw new Error('useNetworkStatus must be used within a NetworkStatusProvider');
+  }
+  return context;
+};
 
 export const NetworkStatusProvider = ({ children }: { children: React.ReactNode }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -41,9 +47,7 @@ export const NetworkStatusProvider = ({ children }: { children: React.ReactNode 
       queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      // Consider invalidating profile points generally as well
       queryClient.invalidateQueries({ queryKey: ['profile_points'] });
-
     }
 
     return () => {
@@ -58,3 +62,4 @@ export const NetworkStatusProvider = ({ children }: { children: React.ReactNode 
     </NetworkStatusContext.Provider>
   );
 };
+

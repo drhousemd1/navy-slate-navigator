@@ -1,26 +1,22 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
-import { Task } from './types'; // Assuming Task type is in ./types or adjust path
+import { TaskWithId } from './types'; // Use TaskWithId
 
-// Define query keys for tasks
 export const TASKS_QUERY_KEY = ['tasks'];
-
-// You might also have keys for individual tasks, e.g.
 export const taskQueryKey = (taskId: string) => ['tasks', taskId];
 
-// Query functions for fetching tasks
-export const fetchTasks = async () => {
+export const fetchTasks = async (): Promise<TaskWithId[]> => {
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
     .order('created_at', { ascending: false });
   
   if (error) throw error;
-  return data || [];
+  return (data as TaskWithId[]) || [];
 };
 
-export const fetchTaskById = async (taskId: string) => {
+export const fetchTaskById = async (taskId: string): Promise<TaskWithId | null> => {
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -28,16 +24,16 @@ export const fetchTaskById = async (taskId: string) => {
     .single();
   
   if (error) throw error;
-  return data;
+  return data as TaskWithId | null;
 };
 
-export type TasksQueryResult = UseQueryResult<Task[], Error>;
+export type TasksQueryResult = UseQueryResult<TaskWithId[], Error>; // Use TaskWithId
 
 export function useTasksQuery(options?: { enabled?: boolean }): TasksQueryResult {
-  return useQuery<Task[], Error>({
+  return useQuery<TaskWithId[], Error>({ // Use TaskWithId
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
-    staleTime: 1000 * 60 * 5, // 5 minutes staleTime
+    staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 60, 
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,  

@@ -1,14 +1,15 @@
-import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries'; // Updated import
-import { Task } from '@/data/tasks/types';
-import { useCreateTask, useUpdateTask, useDeleteTask } from '@/data/tasks/mutations';
-import { useToggleTaskCompletionMutation } from '@/data/tasks/mutations';
+
+import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries';
+import { TaskWithId, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types'; // Use TaskWithId and variable types
+import { useCreateTask, useUpdateTask, useDeleteTask, useToggleTaskCompletionMutation } from '@/data/tasks/mutations'; // Ensure correct import path
+// Removed: import { useToggleTaskCompletionMutation } from '@/data/tasks/mutations'; (duplicate)
 
 export type UseTasksDataResult = {
-  tasks: Task[];
+  tasks: TaskWithId[]; // Use TaskWithId
   isLoading: boolean;
   error: Error | null;
-  createTask: ReturnType<typeof useCreateTask>['mutateAsync'];
-  updateTask: ReturnType<typeof useUpdateTask>['mutateAsync'];
+  createTask: (variables: CreateTaskVariables) => Promise<TaskWithId | null>; // Adjusted type
+  updateTask: (variables: UpdateTaskVariables) => Promise<TaskWithId | null>; // Adjusted type
   deleteTask: ReturnType<typeof useDeleteTask>['mutateAsync'];
   toggleTaskCompletion: ReturnType<typeof useToggleTaskCompletionMutation>['mutateAsync'];
   refetchTasks: () => void;
@@ -20,7 +21,7 @@ export const useTasksData = (): UseTasksDataResult => {
     isLoading, 
     error,
     refetch: refetchTasks
-  }: TasksQueryResult = useTasksQuery(); // Using the new hook
+  }: TasksQueryResult = useTasksQuery();
 
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
@@ -38,3 +39,4 @@ export const useTasksData = (): UseTasksDataResult => {
     refetchTasks,
   };
 };
+

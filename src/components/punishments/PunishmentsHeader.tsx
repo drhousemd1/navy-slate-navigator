@@ -1,6 +1,5 @@
-
 //INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
 import { useRewards } from '@/contexts/RewardsContext';
@@ -19,10 +18,21 @@ const PunishmentsHeader: React.FC = () => {
     points: totalPoints, 
     domPoints, 
     refreshPoints,
-    profileId // Get profileId from usePointsManager
+    // profileId // Removed as it's not provided by usePointsManager
   } = usePointsManager(); 
-
+  
+  const [profileId, setProfileId] = useState<string | null>(null); // State for profileId
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
+
+  useEffect(() => {
+    const fetchProfileId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setProfileId(user.id);
+      }
+    };
+    fetchProfileId();
+  }, []);
 
   useEffect(() => {
     const refreshPointsData = async () => {
