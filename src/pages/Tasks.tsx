@@ -1,3 +1,4 @@
+
 //INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import React, { useState, useCallback } from 'react';
 import { useTasksData, UseTasksDataResult } from '@/hooks/useTasksData';
@@ -48,6 +49,7 @@ const Tasks: React.FC = () => {
         await updateTask(data as UpdateTaskVariables); 
         toast({ title: "Task Updated", description: "Your task has been successfully updated." });
       } else { 
+        // Ensure user_id is correctly included for new tasks
         const taskDataWithUser = { ...data, user_id: user.id } as CreateTaskVariables;
         await createTask(taskDataWithUser); 
         toast({ title: "Task Created", description: "Your new task has been successfully created." });
@@ -77,7 +79,8 @@ const Tasks: React.FC = () => {
         toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive"});
         return;
     }
-    const taskUserId = task.user_id || user.id;
+    // Ensure user_id from task is used if available, otherwise from auth context. This is crucial.
+    const taskUserId = task.user_id || user.id; 
     if (!taskUserId) {
         toast({ title: "User ID Error", description: "Cannot determine user for task operation.", variant: "destructive"});
         return;
@@ -138,7 +141,7 @@ const Tasks: React.FC = () => {
               title_color={task.title_color}
               subtext_color={task.subtext_color}
               calendar_color={task.calendar_color}
-              backgroundImage={task.background_image_url} {/* Corrected prop name here */}
+              backgroundImage={task.background_image_url}
               backgroundOpacity={task.background_opacity}
               highlight_effect={task.highlight_effect}
               focal_point_x={task.focal_point_x}
