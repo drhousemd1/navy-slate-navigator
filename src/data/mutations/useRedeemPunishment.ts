@@ -4,6 +4,8 @@ import { toast } from '@/hooks/use-toast';
 import { PunishmentData } from "@/contexts/punishments/types";
 import { WEEKLY_METRICS_QUERY_KEY } from "@/data/queries/metrics/useWeeklyMetrics";
 import { MONTHLY_METRICS_QUERY_KEY } from "@/data/queries/metrics/useMonthlyMetrics";
+import { updateProfilePoints } from "@/data/sync/updateProfilePoints";
+import { ProfilePointsData, PROFILE_POINTS_QUERY_KEY } from "@/data/points/usePointsManager";
 
 // Helper function to generate ISO week string (YYYY-Wxx format)
 // Consider moving to a shared util file.
@@ -43,6 +45,7 @@ interface ProfilePoints {
 interface RedeemPunishmentOptimisticContext {
   previousPunishments?: PunishmentData[];
   previousProfile?: ProfilePoints;
+  previousProfilePoints?: ProfilePointsData; // Added for consistent rollback
 }
 
 export const useRedeemPunishment = () => {
@@ -66,6 +69,8 @@ export const useRedeemPunishment = () => {
       currentSubPoints,
       currentDomPoints,
     }) => {
+      console.log("Redeeming punishment:", { id, costPoints, domEarn, profileId });
+      
       if (currentDomSupply <= 0) {
         toast({
           title: "Punishment Unavailable",
@@ -111,6 +116,18 @@ export const useRedeemPunishment = () => {
         })
         .eq("id", profileId);
       if (profileUpdateError) throw profileUpdateError;
+      
+      // Update points in cache using the central updateProfilePoints function
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && user.id === profileId) {
+          console.log("Using updateProfilePoints to update points:", newSubPoints, newDomPoints);
+          await updateProfilePoints(newSubPoints, newDomPoints);
+        }
+      } catch (err) {
+        console.error("Error updating points in cache:", err);
+        // Continue with the operation, we'll fallback to query invalidation
+      }
 
       return {
         success: true,
@@ -122,9 +139,11 @@ export const useRedeemPunishment = () => {
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
       await queryClient.cancelQueries({ queryKey: PROFILE_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey: PROFILE_POINTS_QUERY_KEY });
 
       const previousPunishments = queryClient.getQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY);
       const previousProfile = queryClient.getQueryData<ProfilePoints>(PROFILE_QUERY_KEY);
+      const previousProfilePoints = queryClient.getQueryData<ProfilePointsData>(PROFILE_POINTS_QUERY_KEY);
 
       // Optimistic update for punishments
       if (previousPunishments) {
@@ -135,27 +154,48 @@ export const useRedeemPunishment = () => {
         );
       }
       
-      // Optimistic update for profile points
+      // Optimistic update for profile points in both contexts
+      const newPoints = variables.currentSubPoints - variables.costPoints;
+      const newDomPoints = variables.currentDomPoints + variables.domEarn;
+      
+      // Update for usePointsManager
+      queryClient.setQueryData<ProfilePointsData>(PROFILE_POINTS_QUERY_KEY, {
+        points: newPoints,
+        dom_points: newDomPoints
+      });
+      
+      // Update for RewardsContext
+      queryClient.setQueryData(["rewards", "points"], newPoints);
+      queryClient.setQueryData(["rewards", "dom_points"], newDomPoints);
+      
+      // Update for profile
       if (previousProfile) {
          queryClient.setQueryData<ProfilePoints>(PROFILE_QUERY_KEY, (oldProfile = {}) => ({
           ...oldProfile,
-          points: (oldProfile.points ?? variables.currentSubPoints) - variables.costPoints,
-          dom_points: (oldProfile.dom_points ?? variables.currentDomPoints) + variables.domEarn,
+          points: newPoints,
+          dom_points: newDomPoints,
         }));
       } else { 
         queryClient.setQueryData<ProfilePoints>(PROFILE_QUERY_KEY, {
-            points: variables.currentSubPoints - variables.costPoints,
-            dom_points: variables.currentDomPoints + variables.domEarn,
+            points: newPoints,
+            dom_points: newDomPoints,
         });
       }
 
-      return { previousPunishments, previousProfile };
+      return { previousPunishments, previousProfile, previousProfilePoints };
     },
     onSuccess: (data, variables) => {
       toast({
         title: "Punishment Applied",
         description: `${variables.punishmentTitle || 'The punishment'} has been successfully applied.`,
       });
+      
+      // Update all points-related cache keys using our central function
+      try {
+        updateProfilePoints(data.newSubPoints, data.newDomPoints);
+      } catch (err) {
+        console.error("Error updating points after success:", err);
+      }
     },
     onError: (error, variables, context) => {
       if (context?.previousPunishments) {
@@ -164,6 +204,15 @@ export const useRedeemPunishment = () => {
       if (context?.previousProfile) {
         queryClient.setQueryData<ProfilePoints>(PROFILE_QUERY_KEY, context.previousProfile);
       }
+      if (context?.previousProfilePoints) {
+        queryClient.setQueryData<ProfilePointsData>(PROFILE_POINTS_QUERY_KEY, context.previousProfilePoints);
+        // Also restore legacy keys
+        const points = context.previousProfilePoints.points;
+        const domPoints = context.previousProfilePoints.dom_points;
+        queryClient.setQueryData(["rewards", "points"], points);
+        queryClient.setQueryData(["rewards", "dom_points"], domPoints);
+      }
+      
       console.error('Error applying punishment:', error);
       if (error.message !== "Punishment has no supply left") {
         toast({
@@ -173,9 +222,15 @@ export const useRedeemPunishment = () => {
         });
       }
     },
-    onSettled: (data, error, variables) => {
-      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+    onSettled: (_data, _error, variables) => {
+      // Invalidate all points-related queries
+      queryClient.invalidateQueries({ queryKey: PROFILE_POINTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ["rewards", "points"] });
+      queryClient.invalidateQueries({ queryKey: ["rewards", "dom_points"] });
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY });
+      
+      // Invalidate other related queries
+      queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
       if (variables?.id) {
         queryClient.invalidateQueries({ queryKey: ['punishments', variables.id] });
       }
