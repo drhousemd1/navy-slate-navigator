@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
-import { AlertTriangle } from 'lucide-react'; // Skull and LoaderCircle removed as they are handled by PunishmentList
+import { AlertTriangle } from 'lucide-react';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { PunishmentData } from '@/contexts/punishments/types';
@@ -45,7 +45,7 @@ const PunishmentsContent: React.FC<{
   useEffect(() => {
     contentRef.current = { handleAddNewPunishment };
     return () => { contentRef.current = {}; };
-  }, [contentRef]);
+  }, [contentRef, handleAddNewPunishment]); // Added handleAddNewPunishment to dependency array
   
   const handleEditPunishment = (punishment: PunishmentData) => {
     setCurrentPunishment(punishment);
@@ -122,7 +122,7 @@ const PunishmentsContent: React.FC<{
   if (errorPunishments && !isLoadingPunishments && punishments.length === 0) {
     return (
       <div className="p-4 pt-6 text-center">
-        <PunishmentsHeader onAddNewPunishment={handleAddNewPunishment} /> {/* Keep header accessible */}
+        <PunishmentsHeader /> {/* MODIFIED: Removed onAddNewPunishment prop */}
         <div className="flex flex-col items-center justify-center mt-8">
           <AlertTriangle className="w-16 h-16 text-yellow-400 mb-4" />
           <h3 className="text-xl font-semibold text-white mb-2">Error Loading Punishments</h3>
@@ -137,13 +137,13 @@ const PunishmentsContent: React.FC<{
   
   return (
     <div className="p-4 pt-6">
-      <PunishmentsHeader onAddNewPunishment={handleAddNewPunishment} />
+      <PunishmentsHeader /> {/* MODIFIED: Removed onAddNewPunishment prop */}
       
       <PunishmentList 
         punishments={punishments}
-        isLoading={isLoadingPunishments && punishments.length === 0} // Show loader only if no data and loading
+        isLoading={isLoadingPunishments && punishments.length === 0} 
         onEditPunishment={handleEditPunishment}
-        error={errorPunishments} // Pass error for PunishmentList to handle if data exists
+        error={errorPunishments} 
         isUsingCachedData={isUsingCachedData}
       />
       
@@ -155,7 +155,7 @@ const PunishmentsContent: React.FC<{
         }}
         punishmentData={currentPunishment}
         onSave={handleSavePunishmentEditor}
-        onDelete={currentPunishment?.id ? () => handleDeletePunishmentEditor(currentPunishment.id) : undefined} // Ensure ID exists for delete
+        onDelete={currentPunishment?.id ? () => handleDeletePunishmentEditor(currentPunishment.id) : undefined}
       />
     </div>
   );
@@ -180,4 +180,3 @@ const Punishments: React.FC = () => {
 };
 
 export default Punishments;
-
