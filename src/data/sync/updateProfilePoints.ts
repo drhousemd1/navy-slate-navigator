@@ -2,34 +2,12 @@
 import { queryClient } from "../queryClient";
 import localforage from "localforage";
 import { getProfilePointsQueryKey, PROFILE_POINTS_QUERY_KEY_BASE } from "@/data/points/usePointsManager";
-import { supabase } from "@/integrations/supabase/client";
 
 // This function now requires a userId to ensure cache and local storage are updated for the correct user.
 export async function updateProfilePoints(userId: string, points: number, dom_points: number) {
   if (!userId) {
     console.error("updateProfilePoints: userId is required.");
     return;
-  }
-
-  // Update database first
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        points, 
-        dom_points, 
-        updated_at: new Date().toISOString() 
-      })
-      .eq('id', userId);
-      
-    if (error) {
-      console.error("Failed to update profile points in database:", error);
-      throw error;
-    }
-  } catch (error) {
-    console.error("Error updating profile in database:", error);
-    // Continue with cache updates even if database update fails
-    // The next refetch will sync with database
   }
 
   const userProfilePointsKey = getProfilePointsQueryKey(userId); // e.g., ["profile_points", "user-id-123"]
@@ -54,10 +32,4 @@ export async function updateProfilePoints(userId: string, points: number, dom_po
   await localforage.setItem(`profile_points_${userId}`, { points, dom_points });
   await localforage.setItem(`rewards_points_${userId}`, points);
   await localforage.setItem(`rewards_dom_points_${userId}`, dom_points);
-  
-  // Invalidate queries to force components to refetch if needed
-  queryClient.invalidateQueries({ queryKey: userProfilePointsKey });
-  queryClient.invalidateQueries({ queryKey: ["rewards", "points", userId] });
-  queryClient.invalidateQueries({ queryKey: ["rewards", "dom_points", userId] });
-  queryClient.invalidateQueries({ queryKey: ["profile", userId] });
 }
