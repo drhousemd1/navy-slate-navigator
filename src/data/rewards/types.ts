@@ -1,9 +1,8 @@
 
-
 export interface Reward {
   id: string;
   title: string;
-  description: string | null;
+  description?: string | null; // Changed to optional
   cost: number;
   supply: number;
   background_image_url?: string | null;
@@ -46,4 +45,3 @@ export type CreateRewardVariables = {
 };
 
 export type UpdateRewardVariables = { id: string } & Partial<Omit<Reward, 'id' | 'created_at' | 'updated_at'>>;
-

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -22,7 +23,7 @@ const TasksPageContent: React.FC = () => {
     saveTask, 
     deleteTask, 
     toggleTaskCompletion,
-    refetchTasks
+    refetch // Changed from refetchTasks to refetch
   } = useTasksData();
   const { refreshPointsFromDatabase } = useRewards();
   
