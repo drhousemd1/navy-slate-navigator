@@ -15,7 +15,6 @@ import { toast } from '@/hooks/use-toast';
 import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePointsManager } from '@/data/points/usePointsManager';
-import Hydrate from '@/components/Hydrate';
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
@@ -200,8 +199,8 @@ const RewardsContent: React.FC<{
       );
     }
     
-    if (queryError) {
-        return <div className="text-red-500 p-4">Error loading rewards: {queryError.message}</div>;
+    if (queryError && rewards.length === 0) { // Show error prominently only if no data to display
+        return <div className="text-red-500 p-4 text-center">Error loading rewards: {queryError.message}</div>;
     }
 
     return (
@@ -211,7 +210,7 @@ const RewardsContent: React.FC<{
         onEdit={handleEditReward}
         handleBuyReward={handleBuyRewardWrapper}
         handleUseReward={handleUseRewardWrapper}
-        error={queryError}
+        error={queryError} // Pass error for potential inline display by RewardsList if data exists
         isUsingCachedData={isUsingCachedData}
       />
     );
@@ -249,9 +248,7 @@ const Rewards: React.FC = () => {
   return (
     <AppLayout onAddNewItem={handleAddNewRewardFromLayout}>
       <ErrorBoundary fallbackMessage="Could not load rewards. Please try reloading.">
-        <Hydrate fallbackMessage="Loading your rewards...">
-          <RewardsContent contentRef={contentRef} />
-        </Hydrate>
+        <RewardsContent contentRef={contentRef} />
       </ErrorBoundary>
     </AppLayout>
   );

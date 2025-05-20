@@ -1,17 +1,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
-import { Skull, AlertTriangle, LoaderCircle } from 'lucide-react'; // Keep Skull if used by ErrorBoundary, added AlertTriangle
+import { AlertTriangle } from 'lucide-react'; // Skull and LoaderCircle removed as they are handled by PunishmentList
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
-import PunishmentEditor from '../components/PunishmentEditor'; // Fixed import path
+import PunishmentEditor from '../components/PunishmentEditor';
 import { PunishmentData } from '@/contexts/punishments/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import PunishmentList from '@/components/punishments/PunishmentList';
-import { usePunishmentsQuery, PunishmentsQueryResult } from '@/data/punishments/queries'; // Import PunishmentsQueryResult
+import { usePunishmentsQuery, PunishmentsQueryResult } from '@/data/punishments/queries';
 import { useCreatePunishment, useUpdatePunishment, useDeletePunishment, CreatePunishmentVariables, UpdatePunishmentVariables } from '@/data/punishments/mutations';
-import { toast } from '@/hooks/use-toast'; // Changed to match other import patterns
+import { toast } from '@/hooks/use-toast';
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -21,8 +21,8 @@ const PunishmentsContent: React.FC<{
     isLoading: isLoadingPunishments,
     error: errorPunishments,
     refetch: refetchPunishments,
-    isUsingCachedData // Destructure new prop
-  }: PunishmentsQueryResult = usePunishmentsQuery(); // Use PunishmentsQueryResult
+    isUsingCachedData
+  }: PunishmentsQueryResult = usePunishmentsQuery();
   
   const createPunishmentMutation = useCreatePunishment();
   const updatePunishmentMutation = useUpdatePunishment();
@@ -31,7 +31,11 @@ const PunishmentsContent: React.FC<{
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
   
-  // useSyncManager({ enabled: true }); // Sync manager can be enabled if needed for punishments specifically
+  const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
+
+  useEffect(() => {
+    syncNow();
+  }, [syncNow]);
 
   const handleAddNewPunishment = () => {
     setCurrentPunishment(undefined);
@@ -41,14 +45,14 @@ const PunishmentsContent: React.FC<{
   useEffect(() => {
     contentRef.current = { handleAddNewPunishment };
     return () => { contentRef.current = {}; };
-  }, [contentRef]); // Removed handleAddNewPunishment from deps as it's stable due to no external deps
+  }, [contentRef]);
   
   const handleEditPunishment = (punishment: PunishmentData) => {
     setCurrentPunishment(punishment);
     setIsEditorOpen(true);
   };
   
-  const handleSavePunishmentEditor = async (punishmentDataToSave: Partial<PunishmentData>): Promise<PunishmentData> => { // Changed return type to always return PunishmentData
+  const handleSavePunishmentEditor = async (punishmentDataToSave: Partial<PunishmentData>): Promise<PunishmentData> => {
     try {
       let savedPunishment: PunishmentData;
       if (currentPunishment?.id) {
@@ -87,7 +91,6 @@ const PunishmentsContent: React.FC<{
       return savedPunishment;
     } catch (error) {
       console.error("Error saving punishment:", error);
-      // Toast already shown in mutation hooks or here for validation
       if (!(error instanceof Error && error.message.includes("Title and points are required"))) {
          toast({
            title: "Error Saving Punishment",
@@ -105,7 +108,6 @@ const PunishmentsContent: React.FC<{
       toast({ title: "Success", description: "Punishment deleted successfully." });
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
-      // refetchPunishments(); // Mutations should handle cache invalidation
     } catch (error) {
       console.error("Error deleting punishment:", error);
       toast({
@@ -113,17 +115,14 @@ const PunishmentsContent: React.FC<{
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
         variant: "destructive",
       });
-      throw error; // Re-throw
+      throw error;
     }
   };
-  
-  // Error state specifically for initial load if query fails and no data is cached/displayed
-  // This state is now primarily handled by PunishmentList
   
   if (errorPunishments && !isLoadingPunishments && punishments.length === 0) {
     return (
       <div className="p-4 pt-6 text-center">
-        <PunishmentsHeader />
+        <PunishmentsHeader onAddNewPunishment={handleAddNewPunishment} /> {/* Keep header accessible */}
         <div className="flex flex-col items-center justify-center mt-8">
           <AlertTriangle className="w-16 h-16 text-yellow-400 mb-4" />
           <h3 className="text-xl font-semibold text-white mb-2">Error Loading Punishments</h3>
@@ -137,15 +136,15 @@ const PunishmentsContent: React.FC<{
   }
   
   return (
-    <div className="p-4 pt-6"> {/* Standard page padding */}
-      <PunishmentsHeader />
+    <div className="p-4 pt-6">
+      <PunishmentsHeader onAddNewPunishment={handleAddNewPunishment} />
       
       <PunishmentList 
         punishments={punishments}
-        isLoading={isLoadingPunishments} 
+        isLoading={isLoadingPunishments && punishments.length === 0} // Show loader only if no data and loading
         onEditPunishment={handleEditPunishment}
-        error={errorPunishments}
-        isUsingCachedData={isUsingCachedData} // Pass new prop
+        error={errorPunishments} // Pass error for PunishmentList to handle if data exists
+        isUsingCachedData={isUsingCachedData}
       />
       
       <PunishmentEditor
@@ -156,7 +155,7 @@ const PunishmentsContent: React.FC<{
         }}
         punishmentData={currentPunishment}
         onSave={handleSavePunishmentEditor}
-        onDelete={currentPunishment?.id ? handleDeletePunishmentEditor : undefined}
+        onDelete={currentPunishment?.id ? () => handleDeletePunishmentEditor(currentPunishment.id) : undefined} // Ensure ID exists for delete
       />
     </div>
   );
@@ -181,3 +180,4 @@ const Punishments: React.FC = () => {
 };
 
 export default Punishments;
+
