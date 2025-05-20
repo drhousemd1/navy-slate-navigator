@@ -57,12 +57,10 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
           domPoints: currentDomPoints
         };
 
+        console.log("Applying punishment with args:", args);
         // Call the mutation. Toasts and query invalidations are handled within useApplyPunishment.
         await applyPunishmentMutation.mutateAsync(args);
         
-        // Toasts for success/error are now handled by the useApplyPunishment hook.
-        // Refreshing points and punishments list is also handled by query invalidations in useApplyPunishment.
-
       } else {
          toast({
             title: 'Error',
@@ -71,20 +69,16 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
           });
       }
     } catch (error) {
-      // Errors from mutateAsync will be caught by the mutation's onError handler,
-      // which will show a toast. Logging here is still useful for debugging.
       console.error('Error initiating apply punishment process:', error);
-      // Avoid showing a duplicate toast if the mutation hook already showed one.
-      // If the error is *before* calling mutateAsync (e.g., fetching user profile), this toast is fine.
-      if (!applyPunishmentMutation.isError) { // Check if mutation itself errored
+      if (!applyPunishmentMutation.isError) {
          toast({
             title: 'Error',
-            description: 'Failed to apply punishment before submitting.', // More specific message
+            description: 'Failed to apply punishment before submitting.',
             variant: 'destructive',
           });
       }
     }
   };
   
-  return { handlePunish, isLoading: applyPunishmentMutation.isPending }; // Expose loading state
+  return { handlePunish, isLoading: applyPunishmentMutation.isPending };
 };

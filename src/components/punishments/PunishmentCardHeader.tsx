@@ -2,18 +2,20 @@
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Minus, Crown, Coins } from 'lucide-react';
+import { Minus, Crown, Coins, Loader2 } from 'lucide-react';
 
 interface PunishmentCardHeaderProps {
   points: number;
   dom_points?: number;
   onPunish: () => void;
+  isLoading?: boolean;
 }
 
 const PunishmentCardHeader: React.FC<PunishmentCardHeaderProps> = ({
   points,
   dom_points,
-  onPunish
+  onPunish,
+  isLoading = false
 }) => {
   // If dom_points is not provided, use half the points as default
   const displayDomPoints = dom_points !== undefined ? dom_points : Math.ceil(Math.abs(points) / 2);
@@ -50,8 +52,16 @@ const PunishmentCardHeader: React.FC<PunishmentCardHeaderProps> = ({
           size="sm"
           className="bg-red-500 text-white hover:bg-red-600/90 h-8 px-3 text-sm"
           onClick={onPunish}
+          disabled={isLoading}
         >
-          Punish
+          {isLoading ? (
+            <>
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              Applying
+            </>
+          ) : (
+            'Punish'
+          )}
         </Button>
       </div>
     </div>
