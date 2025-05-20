@@ -1,8 +1,7 @@
-
 //INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
-import React, { useState } from 'react'; // Removed useCallback as it's not used
+import React, { useState, useCallback } from 'react';
 import { useTasksData, UseTasksDataResult } from '@/hooks/useTasksData';
-import TaskCard from '@/components/TaskCard'; 
+import TaskCard from '@/components/TaskCard';
 import TaskEditor from '@/components/TaskEditor';
 import TasksHeader from '@/components/task/TasksHeader';
 import { Button } from '@/components/ui/button';
@@ -46,7 +45,7 @@ const Tasks: React.FC = () => {
 
     try {
       if ('id' in data && data.id) { 
-        await updateTask({ ...data, id: data.id } as UpdateTaskVariables); 
+        await updateTask(data as UpdateTaskVariables); 
         toast({ title: "Task Updated", description: "Your task has been successfully updated." });
       } else { 
         const taskDataWithUser = { ...data, user_id: user.id } as CreateTaskVariables;
@@ -66,9 +65,7 @@ const Tasks: React.FC = () => {
       await deleteTask(taskId); 
       toast({ title: "Task Deleted", description: "The task has been successfully deleted." });
       refetchTasks(); 
-      if (editingTask?.id === taskId) {
-        handleCloseEditor(); 
-      }
+      handleCloseEditor(); 
     } catch (e: any) {
       toast({ title: "Delete Failed", description: e.message || "Could not delete the task.", variant: "destructive" });
       console.error("Failed to delete task:", e);
@@ -80,13 +77,13 @@ const Tasks: React.FC = () => {
         toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive"});
         return;
     }
-    const currentTaskUserId = task.user_id || user.id; 
-    if (!currentTaskUserId) {
-      toast({ title: "User ID missing", description: "Cannot toggle task completion without a user ID.", variant: "destructive" });
-      return;
+    const taskUserId = task.user_id || user.id;
+    if (!taskUserId) {
+        toast({ title: "User ID Error", description: "Cannot determine user for task operation.", variant: "destructive"});
+        return;
     }
     try {
-      await toggleTaskCompletion({ taskId: task.id, completed: !task.completed, points: task.points, userId: currentTaskUserId });
+      await toggleTaskCompletion({ taskId: task.id, completed: !task.completed, points: task.points, userId: taskUserId });
       toast({ title: "Task Status Updated", description: `Task marked as ${!task.completed ? 'complete' : 'incomplete'}.` });
     } catch (e: any)
     {
@@ -128,10 +125,9 @@ const Tasks: React.FC = () => {
           {tasks.map((task) => (
             <TaskCard 
               key={task.id} 
-              // id prop removed as it's not in TaskCardProps
               title={task.title || 'Untitled Task'}
-              description={task.description || ''} // Ensure description is a string
-              points={task.points || 0} // Ensure points is a number
+              description={task.description || ''} 
+              points={task.points || 0} 
               completed={task.completed}
               priority={task.priority}
               frequency={task.frequency}
@@ -142,13 +138,12 @@ const Tasks: React.FC = () => {
               title_color={task.title_color}
               subtext_color={task.subtext_color}
               calendar_color={task.calendar_color}
-              background_image_url={task.background_image_url} // Prop is backgroundImage in TaskCard
+              backgroundImage={task.background_image_url} {/* Corrected prop name here */}
               backgroundOpacity={task.background_opacity}
               highlight_effect={task.highlight_effect}
               focal_point_x={task.focal_point_x}
               focal_point_y={task.focal_point_y}
               icon_url={task.icon_url}
-              // last_completed_date={task.last_completed_date} // Not a prop in TaskCard
               onEdit={() => handleOpenEditor(task)}
               onToggleComplete={() => handleToggleComplete(task)} 
             />
@@ -161,7 +156,7 @@ const Tasks: React.FC = () => {
           isOpen={isEditorOpen}
           onClose={handleCloseEditor}
           onSave={handleSaveTask}
-          onDelete={editingTask?.id ? handleDeleteTask : undefined} 
+          onDelete={editingTask?.id ? () => handleDeleteTask(editingTask!.id) : undefined} 
           taskData={editingTask} 
         />
       )}
@@ -170,4 +165,3 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
-
