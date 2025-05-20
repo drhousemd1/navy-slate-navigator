@@ -1,19 +1,16 @@
 
 import React from 'react';
-import PunishmentCard from '../PunishmentCard'; // Assuming PunishmentCard exists and is correctly imported
+import PunishmentCard from '../PunishmentCard';
 import { PunishmentData } from '@/contexts/punishments/types';
 import EmptyState from '@/components/common/EmptyState';
 import { LoaderCircle, ShieldAlert } from 'lucide-react';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
-// CachedDataBanner import removed
 
 interface PunishmentListProps {
   punishments: PunishmentData[];
   isLoading: boolean;
   onEditPunishment: (punishment: PunishmentData) => void;
   error?: Error | null;
-  // isUsingCachedData prop removed
-  // refetch prop removed
 }
 
 const PunishmentList: React.FC<PunishmentListProps> = ({ 
@@ -21,8 +18,6 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
   isLoading, 
   onEditPunishment,
   error,
-  // isUsingCachedData, // removed
-  // refetch // removed
 }) => {
 
   if (isLoading && punishments.length === 0) {
@@ -39,7 +34,6 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
       <ErrorDisplay
         title="Error Loading Punishments"
         message={error.message || "Could not fetch punishments. Please check your connection or try again later."}
-        // onRetry is not passed
       />
     );
   }
@@ -56,12 +50,11 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
 
   return (
     <>
-      {/* CachedDataBanner removed */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {punishments.map((punishment) => (
           <PunishmentCard
             key={punishment.id}
-            {...punishment}
+            punishment={punishment} // Pass the punishment object as a single prop
             onEdit={() => onEditPunishment(punishment)}
           />
         ))}
