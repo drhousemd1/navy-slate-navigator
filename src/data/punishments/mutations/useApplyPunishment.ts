@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentHistoryItem, ApplyPunishmentArgs } from '@/contexts/punishments/types';
@@ -222,60 +223,49 @@ export const useApplyPunishment = () => {
         previousProfilePointsForPartner
       };
     },
-    onError: async (error, _args, context) => {
+    onError: (error, _args, context) => {
       console.error("Error in useApplyPunishment onError:", error);
-      const currentAuthUserKey = getProfilePointsQueryKey(); 
+      const currentAuthUserKey = getProfilePointsQueryKey(); // Key for the current authenticated user
 
+      // Restore history data
       if (context?.previousHistory) {
         queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, context.previousHistory);
       }
       
+      // Restore current user points
       if (context?.previousProfilePointsForCurrentUser) {
         queryClient.setQueryData<ProfilePointsData>(currentAuthUserKey, context.previousProfilePointsForCurrentUser);
         
-        const userId = currentAuthUserKey[1]; 
-        if (userId && typeof userId === 'string') { // Ensure userId is a string before using it
-            queryClient.setQueryData(["rewards", "points", userId], context.previousProfilePointsForCurrentUser.points);
-            queryClient.setQueryData(["rewards", "dom_points", userId], context.previousProfilePointsForCurrentUser.dom_points);
-        }
+        // Rollback legacy keys for current user
+        const userId = currentAuthUserKey[1];
+        queryClient.setQueryData(["rewards", "points", userId], context.previousProfilePointsForCurrentUser.points);
+        queryClient.setQueryData(["rewards", "dom_points", userId], context.previousProfilePointsForCurrentUser.dom_points);
       }
       
+      // Attempt to restore partner data if available
       try {
-        const sessionResult = await supabase.auth.getSession(); // Explicitly await and store result
-        const sessionData = sessionResult.data;
-        const sessionError = sessionResult.error;
-
-        if (sessionError) {
-          console.error("Error fetching session for partner data restoration:", sessionError);
-        } else {
-          const user = sessionData?.session?.user;
-          if (user) {
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('linked_partner_id')
-              .eq('id', user.id)
-              .single();
-
-            if (profileError) {
-              console.error("Error fetching profile for partner data restoration:", profileError);
-            } else if (profile?.linked_partner_id && context?.previousProfilePointsForPartner) {
-              const partnerId = profile.linked_partner_id;
-              const partnerKey = getProfilePointsQueryKey(partnerId);
-              queryClient.setQueryData(partnerKey, context.previousProfilePointsForPartner);
-              
-              queryClient.setQueryData(
-                ["rewards", "points", partnerId], 
-                context.previousProfilePointsForPartner.points
-              );
-              queryClient.setQueryData(
-                ["rewards", "dom_points", partnerId], 
-                context.previousProfilePointsForPartner.dom_points
-              );
-            }
-          }
+        const { data: { user } } = supabase.auth.getSession();
+        if (user) {
+          supabase.from('profiles').select('linked_partner_id').eq('id', user.id).single()
+            .then(({ data: profile }) => {
+              if (profile?.linked_partner_id && context?.previousProfilePointsForPartner) {
+                const partnerKey = getProfilePointsQueryKey(profile.linked_partner_id);
+                queryClient.setQueryData(partnerKey, context.previousProfilePointsForPartner);
+                
+                // Rollback legacy keys for partner
+                queryClient.setQueryData(
+                  ["rewards", "points", profile.linked_partner_id], 
+                  context.previousProfilePointsForPartner.points
+                );
+                queryClient.setQueryData(
+                  ["rewards", "dom_points", profile.linked_partner_id], 
+                  context.previousProfilePointsForPartner.dom_points
+                );
+              }
+            });
         }
       } catch (err) {
-        console.error("Error restoring partner data in onError:", err);
+        console.error("Error restoring partner data:", err);
       }
 
       toast({ title: 'Error applying punishment', description: error.message, variant: 'destructive' });
