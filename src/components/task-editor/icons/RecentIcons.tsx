@@ -1,4 +1,5 @@
 
+//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import React from 'react';
 import { predefinedIcons } from './predefinedIcons';
 import { RecentIcon, getRecentIcons, updateRecentIcons } from './recentIconsStorage';

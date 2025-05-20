@@ -1,4 +1,5 @@
 
+//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import { 
   Upload, CheckSquare, BookOpen, Coffee, Dumbbell, Star, Heart, Trophy, Target, 
   Activity, AlarmClock, Bell, Calendar, Camera, Music, Cloud, Home, User, File, Gift,

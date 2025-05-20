@@ -1,4 +1,5 @@
 
+//INSTRUCTIONS FOR LOVABLE: NEVER EVER CHANGE UI ELEMENTS OR UI DESIGN FOR ANY REASON
 import React, { useEffect } from 'react';
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
@@ -14,11 +15,11 @@ const TasksHeader: React.FC<TasksHeaderProps> = () => {
   const { 
     points: totalPoints, 
     domPoints, 
-    isLoadingPoints, 
+    // isLoadingPoints, // No longer used for conditional rendering here
     refreshPoints,
-  } = usePointsManager();
+  } = usePointsManager(); // Fetches for the current authenticated user by default
 
-  const { totalRewardsSupply, totalDomRewardsSupply } = useRewards(); // Get supply data from RewardsContext
+  const { totalRewardsSupply, totalDomRewardsSupply } = useRewards();
 
   useEffect(() => {
     refreshPoints();
@@ -29,28 +30,25 @@ const TasksHeader: React.FC<TasksHeaderProps> = () => {
   return (
     <div className="flex items-center mb-6">
       <h1 className="text-base font-semibold text-white mr-auto">My Tasks</h1>
-      {isLoadingPoints ? (
-        <span className="text-sm text-gray-400 ml-auto">Loading points...</span>
-      ) : (
-        <div className="flex items-center gap-2 ml-auto">
-          <Badge 
-            className="text-white font-bold px-3 py-1 flex items-center gap-1"
-            style={badgeStyle}
-          >
-            <Box className="w-3 h-3" /> {/* Icon for total rewards supply */}
-            <span>{totalRewardsSupply}</span>
-          </Badge>
-          <Badge 
-            className="text-white font-bold px-3 py-1 flex items-center gap-1"
-            style={badgeStyle}
-          >
-            <Coins className="w-3 h-3" />
-            <span>{totalPoints}</span>
-          </Badge>
-          <DOMBadge icon="box" value={totalDomRewardsSupply} /> {/* DOMBadge for DOM rewards supply */}
-          <DOMBadge icon="crown" value={domPoints} />
-        </div>
-      )}
+      {/* Badges are now always rendered. isLoadingPoints is handled internally by usePointsManager returning 0 until loaded. */}
+      <div className="flex items-center gap-2 ml-auto">
+        <Badge 
+          className="text-white font-bold px-3 py-1 flex items-center gap-1"
+          style={badgeStyle}
+        >
+          <Box className="w-3 h-3" /> {/* Icon for total rewards supply */}
+          <span>{totalRewardsSupply}</span>
+        </Badge>
+        <Badge 
+          className="text-white font-bold px-3 py-1 flex items-center gap-1"
+          style={badgeStyle}
+        >
+          <Coins className="w-3 h-3" />
+          <span>{totalPoints}</span>
+        </Badge>
+        <DOMBadge icon="box" value={totalDomRewardsSupply} /> {/* DOMBadge for DOM rewards supply */}
+        <DOMBadge icon="crown" value={domPoints} />
+      </div>
     </div>
   );
 };
