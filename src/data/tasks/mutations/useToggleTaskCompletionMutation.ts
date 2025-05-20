@@ -1,160 +1,217 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
-import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
-import { TASKS_QUERY_KEY } from '../queries';
-import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
-import { TaskWithId } from '@/data/tasks/types';
-
+import { Task } from '@/lib/taskUtils'; // Assuming Task type is defined here
+import { TASKS_QUERY_KEY } from '@/data/tasks/queries'; // Assuming TASKS_QUERY_KEY is defined
+import { updateProfilePoints } from '@/data/sync/updateProfilePoints'; // If tasks affect points
+import { getProfilePointsQueryKey, PROFILE_POINTS_QUERY_KEY_BASE } from '@/data/points/usePointsManager';
 
 interface ToggleTaskCompletionVariables {
   taskId: string;
-  completed: boolean;
-  pointsValue: number;
-  task?: TaskWithId; // Optional: pass the full task for easier optimistic update
+  isCompleted: boolean; // The new desired state
+  points?: number; // Optional: points awarded/deducted for this task
+  profileId?: string; // Optional: if points are affected, whose profile
+  currentSubPoints?: number; // Optional: for point calculation
+  currentDomPoints?: number; // Optional: for point calculation
+  maxCompletions?: number; // Maximum number of completions allowed
+  currentCompletions?: number; // Current number of completions
 }
 
-export function useToggleTaskCompletionMutation() {
+interface TaskCompletionContext {
+  previousTask?: Task;
+  previousProfilePoints?: any;
+}
+
+export const useToggleTaskCompletionMutation = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, ToggleTaskCompletionVariables, { previousTasks?: TaskWithId[] }>(
-    {
-      mutationFn: async ({ taskId, completed, pointsValue }) => {
-        const { data: authUser } = await supabase.auth.getUser();
-        if (!authUser?.user?.id) {
-          toast({ title: 'Authentication Error', description: "User not authenticated.", variant: 'destructive' });
-          throw new Error("User not authenticated.");
+  return useMutation<Task, Error, ToggleTaskCompletionVariables, TaskCompletionContext>({
+    mutationFn: async ({ 
+      taskId, 
+      isCompleted, 
+      points, 
+      profileId, 
+      currentSubPoints, 
+      currentDomPoints,
+      maxCompletions,
+      currentCompletions
+    }) => {
+      // Check if we've reached max completions
+      if (isCompleted && maxCompletions !== undefined && currentCompletions !== undefined) {
+        if (currentCompletions >= maxCompletions) {
+          throw new Error(`Task has already been completed the maximum number of times (${maxCompletions}).`);
         }
-        const userId = authUser.user.id;
+      }
 
-        const todayStr = new Date().toISOString().split('T')[0];
-        const taskFieldsToUpdate: { completed: boolean; last_completed_date: string | null } = {
-          completed,
-          last_completed_date: completed ? todayStr : null,
-        };
+      // 1. Update task completion status in DB
+      const { data: updatedTask, error: taskUpdateError } = await supabase
+        .from('tasks')
+        .update({ 
+          completed: isCompleted, 
+          updated_at: new Date().toISOString(),
+          completions: isCompleted ? (currentCompletions || 0) + 1 : currentCompletions
+        })
+        .eq('id', taskId)
+        .select()
+        .single();
 
-        const { error: updateError } = await supabase
-          .from('tasks')
-          .update(taskFieldsToUpdate)
-          .eq('id', taskId);
+      if (taskUpdateError) throw taskUpdateError;
+      if (!updatedTask) throw new Error('Failed to update task, no data returned.');
 
-        if (updateError) {
-          toast({ title: 'Error Updating Task', description: updateError.message, variant: 'destructive' });
-          throw updateError;
-        }
-
-        if (completed) {
-          const { error: historyError } = await supabase
-            .from('task_completion_history')
-            .insert({ task_id: taskId, user_id: userId });
-
-          if (historyError) {
-            console.error('Error recording task completion history:', historyError);
-            toast({ title: 'History Record Error', description: historyError.message, variant: 'destructive' });
-            throw historyError;
-          }
-
-          const { data: currentProfile, error: fetchProfileError } = await supabase
-            .from('profiles')
-            .select('points')
-            .eq('id', userId)
-            .single();
-
-          if (fetchProfileError) {
-            console.error('Error fetching profile for points update:', fetchProfileError);
-            toast({ title: 'Profile Fetch Error', description: fetchProfileError.message, variant: 'destructive' });
-            throw fetchProfileError;
-          }
-
-          const newPoints = (currentProfile?.points || 0) + pointsValue;
-          const { error: updatePointsError } = await supabase
-            .from('profiles')
-            .update({ points: newPoints })
-            .eq('id', userId);
-
-          if (updatePointsError) {
-            console.error('Error updating profile points:', updatePointsError);
-            toast({ title: 'Points Update Error', description: updatePointsError.message, variant: 'destructive' });
-            throw updatePointsError;
-          }
-        }
-      },
-      onMutate: async ({ taskId, completed, task: taskFromVariables }) => {
-        await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
-        const previousTasks = queryClient.getQueryData<TaskWithId[]>(TASKS_QUERY_KEY);
-        
-        queryClient.setQueryData<TaskWithId[]>(TASKS_QUERY_KEY, (oldTasks = []) => {
-          const todayStr = new Date().toISOString().split('T')[0];
-          return oldTasks.map(task =>
-            task.id === taskId
-              ? { 
-                  ...task, 
-                  completed, 
-                  last_completed_date: completed ? todayStr : null,
-                  // Optimistically update usage_data if applicable (complex, might need more logic)
-                  // For daily tasks, if 'completed' is true, increment today's usage_data
-                  // This depends on how processTasksWithRecurringLogic and usage_data are structured/used
-                }
-              : task
-          );
-        });
-        return { previousTasks };
-      },
-      onSuccess: async (data, variables) => {
-        toast({ 
-          title: `Task ${variables.completed ? 'Completed' : 'Marked Incomplete'}`, 
-          description: variables.completed ? 'Points and history have been updated.' : 'Task status updated.' 
-        });
-
-        // Update IndexedDB after successful server update
+      // 2. Record completion history if needed
+      if (isCompleted) {
         try {
-            const localTasks = await loadTasksFromDB() || [];
-            const todayStr = new Date().toISOString().split('T')[0];
-            const updatedLocalTasks = localTasks.map(t => 
-              t.id === variables.taskId 
-              ? { ...t, completed: variables.completed, last_completed_date: variables.completed ? todayStr : null } 
-              : t
-            );
-            await saveTasksToDB(updatedLocalTasks as Task[]); // Cast if TaskWithId is not directly Task
-            await setLastSyncTimeForTasks(new Date().toISOString());
-            console.log('[useToggleTaskCompletionMutation onSuccessCallback] IndexedDB updated for task completion.');
+          await supabase.from('task_completions').insert({
+            task_id: taskId,
+            profile_id: profileId,
+            completed_at: new Date().toISOString(),
+            points_awarded: points || 0
+          });
         } catch (error) {
-            console.error('[useToggleTaskCompletionMutation onSuccessCallback] Error updating IndexedDB:', error);
-            toast({ variant: "destructive", title: "Local Update Error", description: "Task status updated on server, but local sync failed." });
+          console.error("Error recording task completion history:", error);
+          // Don't throw here, as the main task update succeeded
         }
+      }
 
-        if (variables.completed) {
-            queryClient.invalidateQueries({ queryKey: ['profile'] });
-            queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
-            queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+      // 3. Update points if task completion affects points
+      if (points && profileId && typeof currentSubPoints === 'number' && typeof currentDomPoints === 'number') {
+        const pointsToAdd = isCompleted ? points : -points; // Add if completed, subtract if un-completed
+        const newSubPoints = currentSubPoints + pointsToAdd;
+        
+        // Update profile points in database
+        const { error: pointsUpdateError } = await supabase
+          .from('profiles')
+          .update({ 
+            points: newSubPoints,
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', profileId);
+          
+        if (pointsUpdateError) {
+          console.error("Error updating profile points:", pointsUpdateError);
+          throw pointsUpdateError;
         }
-        // No explicit invalidation of TASKS_QUERY_KEY here if onSettled handles it,
-        // or if optimistic update + onSuccess IndexedDB write is considered sufficient
-        // until next natural sync. However, checklist implies immediate data consistency.
-      },
-      onError: (error, variables, context) => {
-        if (context?.previousTasks) {
-          queryClient.setQueryData<TaskWithId[]>(TASKS_QUERY_KEY, context.previousTasks);
+        
+        // Update points in cache
+        await updateProfilePoints(profileId, newSubPoints, currentDomPoints);
+      }
+      
+      return updatedTask as Task;
+    },
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
+      
+      // If points are affected, also cancel those queries
+      if (variables.profileId && variables.points) {
+        const profilePointsKey = getProfilePointsQueryKey(variables.profileId);
+        await queryClient.cancelQueries({ queryKey: profilePointsKey });
+        await queryClient.cancelQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] });
+      }
+      
+      // Save the previous values
+      const previousTask = queryClient.getQueryData<Task>(['tasks', variables.taskId]);
+      let previousProfilePoints;
+      
+      if (variables.profileId && variables.points) {
+        previousProfilePoints = queryClient.getQueryData(getProfilePointsQueryKey(variables.profileId));
+      }
+      
+      // Optimistically update tasks list
+      queryClient.setQueryData<Task[]>(TASKS_QUERY_KEY, (old = []) => {
+        return old.map(task => {
+          if (task.id === variables.taskId) {
+            return {
+              ...task,
+              completed: variables.isCompleted,
+              completions: variables.isCompleted 
+                ? (variables.currentCompletions || 0) + 1 
+                : variables.currentCompletions
+            };
+          }
+          return task;
+        });
+      });
+      
+      // Optimistically update individual task if it exists in cache
+      queryClient.setQueryData<Task>(['tasks', variables.taskId], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          completed: variables.isCompleted,
+          completions: variables.isCompleted 
+            ? (variables.currentCompletions || 0) + 1 
+            : variables.currentCompletions
+        };
+      });
+      
+      // Optimistically update points if applicable
+      if (variables.profileId && variables.points && 
+          typeof variables.currentSubPoints === 'number' && 
+          typeof variables.currentDomPoints === 'number') {
+        
+        const pointsToAdd = variables.isCompleted ? variables.points : -variables.points;
+        const newSubPoints = variables.currentSubPoints + pointsToAdd;
+        
+        queryClient.setQueryData(getProfilePointsQueryKey(variables.profileId), {
+          points: newSubPoints,
+          dom_points: variables.currentDomPoints
+        });
+        
+        // Also update legacy keys
+        queryClient.setQueryData(['rewards', 'points', variables.profileId], newSubPoints);
+        
+        // Update base key if this is the current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && user.id === variables.profileId) {
+          queryClient.setQueryData([PROFILE_POINTS_QUERY_KEY_BASE], {
+            points: newSubPoints,
+            dom_points: variables.currentDomPoints
+          });
         }
-        // Generic toast unless specific ones were shown in mutationFn
-         if (!error.message.includes('Error Updating Task') && 
-             !error.message.includes('History Record Error') &&
-             !error.message.includes('Profile Fetch Error') &&
-             !error.message.includes('Points Update Error') &&
-             !error.message.includes('User not authenticated')) {
-             toast({ title: 'Task Status Update Failed', description: error.message, variant: 'destructive' });
-        }
-      },
-      onSettled: (data, error, variables) => {
-        // Always refetch tasks to ensure data consistency after the workflow.
-        queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-        if (variables.completed) {
-            queryClient.invalidateQueries({ queryKey: ['profile'] });
-            queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
-            queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
-        }
-      },
-    }
-  );
-}
+      }
+      
+      return { previousTask, previousProfilePoints };
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: `Task ${variables.isCompleted ? 'Completed' : 'Marked Incomplete'}`,
+        description: `Task "${data.title}" has been updated.`,
+      });
+    },
+    onError: (error, variables, context) => {
+      // Revert optimistic updates
+      if (context?.previousTask) {
+        queryClient.setQueryData<Task[]>(TASKS_QUERY_KEY, (old = []) => {
+          return old.map(task => task.id === variables.taskId ? context.previousTask as Task : task);
+        });
+        
+        queryClient.setQueryData<Task>(['tasks', variables.taskId], context.previousTask);
+      }
+      
+      // Revert points if applicable
+      if (variables.profileId && variables.points && context?.previousProfilePoints) {
+        queryClient.setQueryData(getProfilePointsQueryKey(variables.profileId), context.previousProfilePoints);
+        queryClient.setQueryData(['rewards', 'points', variables.profileId], context.previousProfilePoints.points);
+      }
+      
+      toast({
+        title: 'Error Updating Task',
+        description: error.message || 'Could not update task status.',
+        variant: 'destructive',
+      });
+    },
+    onSettled: (_data, _error, variables) => {
+      // Always invalidate affected queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['tasks', variables.taskId] });
+      
+      // If points were affected, also invalidate points queries
+      if (variables.points && variables.profileId) {
+        queryClient.invalidateQueries({ queryKey: getProfilePointsQueryKey(variables.profileId) });
+        queryClient.invalidateQueries({ queryKey: ['rewards', 'points', variables.profileId] });
+        queryClient.invalidateQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] });
+      }
+    },
+  });
+};

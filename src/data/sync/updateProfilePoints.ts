@@ -3,6 +3,7 @@
 import { queryClient } from "../queryClient";
 import localforage from "localforage";
 import { getProfilePointsQueryKey, PROFILE_POINTS_QUERY_KEY_BASE } from "@/data/points/usePointsManager";
+import { supabase } from "@/integrations/supabase/client"; // Import supabase
 
 // This function now requires a userId to ensure cache and local storage are updated for the correct user.
 export async function updateProfilePoints(userId: string, points: number, dom_points: number) {
@@ -30,13 +31,14 @@ export async function updateProfilePoints(userId: string, points: number, dom_po
   
   // Also update general base key if this is the current authenticated user
   try {
-    const { data } = await fetch('/api/auth/user').then(res => res.json());
-    if (data?.user?.id === userId) {
+    // Use supabase.auth.getUser() to reliably get the current user
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser && currentUser.id === userId) {
       console.log("Updating base key for current authenticated user", userId);
       queryClient.setQueryData([PROFILE_POINTS_QUERY_KEY_BASE], { points, dom_points });
     }
   } catch (error) {
-    console.error("Error checking if userId is current user:", error);
+    console.error("Error checking if userId is current user in updateProfilePoints:", error);
   }
   
   // Store in localForage, scoped by userId

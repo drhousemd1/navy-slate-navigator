@@ -13,10 +13,10 @@ const RulesHeader: React.FC = () => {
   const { 
     points: totalPoints, 
     domPoints, 
-    refreshPoints 
-  } = usePointsManager(); // Fetches for the current authenticated user by default
+    refreshPoints,
+    profileId // Get profileId from usePointsManager for targeted subscription
+  } = usePointsManager(); 
 
-  // Force refresh points data on mount and when profile changes
   useEffect(() => {
     const refreshPointsData = async () => {
       try {
@@ -27,20 +27,43 @@ const RulesHeader: React.FC = () => {
       }
     };
     
-    refreshPointsData();
+    refreshPointsData(); // Initial fetch
     
-    // Also refresh when points data might change from an external source
-    const channel = supabase
-      .channel('profiles_changes')
-      .on('postgres_changes', 
-          { event: 'UPDATE', schema: 'public', table: 'profiles' },
-          refreshPointsData)
-      .subscribe();
+    let profileChangesChannel: any; // Declare channel variable
+
+    if (profileId) { // Only subscribe if profileId is available
+      profileChangesChannel = supabase
+        .channel(`profile_changes_rules_header_${profileId}`) // Unique channel name
+        .on(
+          'postgres_changes',
+          { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'profiles', 
+            filter: `id=eq.${profileId}` // Filter for current user's profile
+          },
+          (payload) => {
+            console.log("RulesHeader: Profile change detected via Supabase realtime", payload);
+            refreshPointsData();
+          }
+        )
+        .subscribe((status, err) => {
+          if (status === 'SUBSCRIBED') {
+            console.log(`RulesHeader: Subscribed to profile changes for ${profileId}`);
+          }
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.error(`RulesHeader: Subscription error for ${profileId}:`, err);
+          }
+        });
+    }
           
     return () => {
-      supabase.removeChannel(channel);
+      if (profileChangesChannel) {
+        supabase.removeChannel(profileChangesChannel);
+        console.log(`RulesHeader: Unsubscribed from profile changes for ${profileId}`);
+      }
     };
-  }, [refreshPoints]);
+  }, [refreshPoints, profileId]); // Add profileId to dependency array
 
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
 
@@ -60,10 +83,10 @@ const RulesHeader: React.FC = () => {
           style={badgeStyle}
         >
           <Coins className="w-3 h-3" />
-          <span>{totalPoints}</span>
+          <span>{totalPoints ?? 0}</span> {/* Ensure points are not undefined */}
         </Badge>
         <DOMBadge icon="box" value={totalDomRewardsSupply} />
-        <DOMBadge icon="crown" value={domPoints} />
+        <DOMBadge icon="crown" value={domPoints ?? 0} /> {/* Ensure points are not undefined */}
       </div>
     </div>
   );

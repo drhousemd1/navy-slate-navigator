@@ -31,60 +31,57 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
       if (user) {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('dom_points, points')
+          .select('dom_points, points') // Ensure these are the correct column names
           .eq('id', user.id)
           .single();
           
         if (profileError || !profileData) {
           toast({
             title: 'Error',
-            description: 'Could not fetch user profile data.',
+            description: 'Could not fetch user profile data for punishment.', // Specific message
             variant: 'destructive',
           });
-          console.error("Error fetching profile:", profileError);
+          console.error("Error fetching profile for punishment:", profileError);
           return;
         }
           
-        const currentDomPoints = profileData.dom_points || 0;
-        const currentSubPoints = profileData.points || 0;
+        const currentSubPoints = profileData.points ?? 0; // Use 'points' for sub_points
+        const currentDomPoints = profileData.dom_points ?? 0;
         
         const args: ApplyPunishmentArgs = {
-          id: punishment.id,
-          costPoints: Math.abs(punishment.points),
-          domEarn: punishment.dom_points !== undefined && punishment.dom_points !== null ? punishment.dom_points : Math.ceil(Math.abs(punishment.points) / 2),
-          profileId: user.id,
-          subPoints: currentSubPoints,
-          domPoints: currentDomPoints
+          id: punishment.id, // Punishment ID
+          costPoints: Math.abs(punishment.points), // Cost to submissive
+          domEarn: punishment.dom_points !== undefined && punishment.dom_points !== null 
+                     ? punishment.dom_points 
+                     : Math.ceil(Math.abs(punishment.points) / 2), // DOM points earned by dominant
+          profileId: user.id, // ID of the submissive (current user in this context)
+          subPoints: currentSubPoints, // Submissive's current sub_points
+          domPoints: currentDomPoints  // Submissive's current dom_points
         };
 
-        // Call the mutation. Toasts and query invalidations are handled within useApplyPunishment.
+        console.log("Calling applyPunishmentMutation with args:", args);
         await applyPunishmentMutation.mutateAsync(args);
         
-        // Toasts for success/error are now handled by the useApplyPunishment hook.
-        // Refreshing points and punishments list is also handled by query invalidations in useApplyPunishment.
-
       } else {
          toast({
-            title: 'Error',
-            description: 'User not authenticated.',
+            title: 'Authentication Error',
+            description: 'User not authenticated. Please log in to apply punishment.', // Clearer message
             variant: 'destructive',
           });
       }
-    } catch (error) {
-      // Errors from mutateAsync will be caught by the mutation's onError handler,
-      // which will show a toast. Logging here is still useful for debugging.
+    } catch (error: any) {
       console.error('Error initiating apply punishment process:', error);
       // Avoid showing a duplicate toast if the mutation hook already showed one.
-      // If the error is *before* calling mutateAsync (e.g., fetching user profile), this toast is fine.
-      if (!applyPunishmentMutation.isError) { // Check if mutation itself errored
+      // This toast is for errors *before* calling mutateAsync (e.g., fetching user profile).
+      if (!applyPunishmentMutation.isError && !error.message.includes("supabase.auth.getUser")) {
          toast({
-            title: 'Error',
-            description: 'Failed to apply punishment before submitting.', // More specific message
+            title: 'Punishment Failed',
+            description: error.message || 'An unexpected error occurred before submitting the punishment.',
             variant: 'destructive',
           });
       }
     }
   };
   
-  return { handlePunish, isLoading: applyPunishmentMutation.isPending }; // Expose loading state
+  return { handlePunish, isLoading: applyPunishmentMutation.isPending }; 
 };
