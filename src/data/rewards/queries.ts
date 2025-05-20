@@ -11,6 +11,9 @@ import { selectWithTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils'; // 
 
 // Define query keys for rewards
 export const REWARDS_QUERY_KEY = ['rewards'];
+export const REWARDS_POINTS_QUERY_KEY = ['rewards_points']; // Added
+export const REWARDS_DOM_POINTS_QUERY_KEY = ['rewards_dom_points']; // Added
+export const REWARDS_SUPPLY_QUERY_KEY = ['rewards_supply']; // Added
 
 // You might also have keys for individual rewards, e.g.
 // export const rewardQueryKey = (rewardId: string) => ['rewards', rewardId];

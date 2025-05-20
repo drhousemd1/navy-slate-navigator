@@ -7,7 +7,12 @@ import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables
 import { useDeleteReward as useDeleteRewardMutation } from './rewards/mutations/useDeleteReward'; // Corrected import and aliased
 
 import { fetchRewards, fetchUserPoints, fetchUserDomPoints, fetchTotalRewardsSupply } from './rewards/queries';
-import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY } from './rewards/queries';
+import { 
+  REWARDS_QUERY_KEY, 
+  REWARDS_POINTS_QUERY_KEY, // Corrected
+  REWARDS_DOM_POINTS_QUERY_KEY, // Corrected
+  REWARDS_SUPPLY_QUERY_KEY // Corrected
+} from './rewards/queries';
 import { toast } from '@/hooks/use-toast';
 import { saveRewardsToDB, savePointsToDB, saveDomPointsToDB } from './indexedDB/useIndexedDB';
 
@@ -91,7 +96,7 @@ export const useRewardsData = () => {
           return null;
         }
         
-        const createVariables = {
+        const createVariables: CreateRewardVariables = {
           title: rewardData.title,
           cost: rewardData.cost,
           supply: rewardData.supply,

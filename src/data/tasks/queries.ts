@@ -1,3 +1,8 @@
+
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, UseQueryResult } from "@tanstack/react-query";
+import { Task } from './types'; // Assuming Task type is in ./types or adjust path
+
 // Define query keys for tasks
 export const TASKS_QUERY_KEY = ['tasks'];
 
@@ -26,5 +31,20 @@ export const fetchTaskById = async (taskId: string) => {
   return data;
 };
 
-// Import supabase client
-import { supabase } from '@/integrations/supabase/client';
+export type TasksQueryResult = UseQueryResult<Task[], Error>;
+
+export function useTasksQuery(options?: { enabled?: boolean }): TasksQueryResult {
+  return useQuery<Task[], Error>({
+    queryKey: TASKS_QUERY_KEY,
+    queryFn: fetchTasks,
+    staleTime: 1000 * 60 * 5, // 5 minutes staleTime
+    gcTime: 1000 * 60 * 60, 
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,  
+    refetchOnMount: true,     
+    retry: 1, 
+    retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
+    ...(options && { enabled: options.enabled }),
+  });
+}
+
