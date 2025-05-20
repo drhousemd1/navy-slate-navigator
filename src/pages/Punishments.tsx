@@ -1,12 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
-// AlertTriangle removed as ErrorDisplay/PunishmentList handles it
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { PunishmentData } from '@/contexts/punishments/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
-// Button for Try Again is now inside ErrorDisplay, so direct import might not be needed here.
 import { useSyncManager } from '@/hooks/useSyncManager';
 import PunishmentList from '@/components/punishments/PunishmentList';
 import { usePunishmentsQuery, PunishmentsQueryResult } from '@/data/punishments/queries';
@@ -20,8 +17,6 @@ const PunishmentsContent: React.FC<{
     data: punishments = [],
     isLoading: isLoadingPunishments,
     error: errorPunishments,
-    refetch: refetchPunishments,
-    isUsingCachedData
   }: PunishmentsQueryResult = usePunishmentsQuery();
   
   const createPunishmentMutation = useCreatePunishment();
@@ -88,7 +83,6 @@ const PunishmentsContent: React.FC<{
       }
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
-      // refetchPunishments(); // Query invalidation should handle this via mutation's onSuccess
       return savedPunishment;
     } catch (error) {
       console.error("Error saving punishment:", error);
@@ -109,7 +103,6 @@ const PunishmentsContent: React.FC<{
       toast({ title: "Success", description: "Punishment deleted successfully." });
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
-      // refetchPunishments(); // Query invalidation should handle this
     } catch (error) {
       console.error("Error deleting punishment:", error);
       toast({
@@ -121,20 +114,15 @@ const PunishmentsContent: React.FC<{
     }
   };
   
-  // The specific error block previously here is now handled by PunishmentList
-  // if (errorPunishments && !isLoadingPunishments && punishments.length === 0) { ... }
-
   return (
     <div className="p-4 pt-6">
       <PunishmentsHeader />
       
       <PunishmentList 
         punishments={punishments}
-        isLoading={isLoadingPunishments} // Pass isLoading directly
+        isLoading={isLoadingPunishments}
         onEditPunishment={handleEditPunishment}
         error={errorPunishments} 
-        isUsingCachedData={isUsingCachedData}
-        refetch={refetchPunishments}
       />
       
       <PunishmentEditor

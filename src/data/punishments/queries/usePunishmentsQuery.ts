@@ -1,33 +1,28 @@
 
-import { useQuery, QueryObserverResult, UseQueryResult } from '@tanstack/react-query';
+import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { fetchPunishments } from './fetchPunishments';
 import { PUNISHMENTS_QUERY_KEY } from './index';
 
-// Define the PunishmentsQueryResult type
-export type PunishmentsQueryResult = UseQueryResult<PunishmentData[], Error> & {
-  isUsingCachedData: boolean;
-};
+// Define the PunishmentsQueryResult type, removing isUsingCachedData
+export type PunishmentsQueryResult = UseQueryResult<PunishmentData[], Error>;
 
 export const usePunishmentsQuery = (): PunishmentsQueryResult => {
   const queryResult = useQuery<PunishmentData[], Error>({
     queryKey: PUNISHMENTS_QUERY_KEY,
     queryFn: fetchPunishments,
-    staleTime: Infinity, // Data is fresh indefinitely
-    gcTime: 1000 * 60 * 60, // 1 hour
-    refetchOnWindowFocus: false, // Controlled by sync manager
-    refetchOnReconnect: false,  // Controlled by sync manager
-    refetchOnMount: false,     // Controlled by sync manager
+    staleTime: Infinity, 
+    gcTime: 1000 * 60 * 60, 
+    refetchOnWindowFocus: false, 
+    refetchOnReconnect: false,  
+    refetchOnMount: false,     
     retry: 1, 
     retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
   });
   
-  // Simplified: Indicates if an error occurred but we are still showing data from cache.
-  const isUsingCachedData = !!queryResult.error && !!queryResult.data && queryResult.data.length > 0;
+  // isUsingCachedData is removed as banners are removed.
+  // The presence of `data` alongside `error` implicitly means cached data is shown during a sync error.
   
-  return {
-    ...queryResult,
-    isUsingCachedData
-  };
+  return queryResult;
 };
 

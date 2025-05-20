@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import RuleEditor from '../components/RuleEditor';
@@ -6,7 +5,7 @@ import RulesHeader from '../components/rule/RulesHeader';
 import RulesList from '../components/rule/RulesList';
 import { Rule } from '@/data/interfaces/Rule';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { useRulesData, RulesQueryResult } from '@/data/RulesDataHandler'; // RulesQueryResult has refetch as refetchRules
+import { useRulesData, RulesQueryResult } from '@/data/RulesDataHandler';
 
 const RulesPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -18,8 +17,6 @@ const RulesPageContent: React.FC = () => {
     saveRule, 
     deleteRule, 
     markRuleBroken,
-    isUsingCachedData,
-    refetchRules // This is the refetch function from RulesQueryResult
   }: RulesQueryResult = useRulesData();
 
   const handleAddRule = () => {
@@ -31,7 +28,6 @@ const RulesPageContent: React.FC = () => {
     const element = document.querySelector('.RulesContent'); 
     if (element) {
       const handleAddEvent = (event: Event) => {
-        // console.log('Received add-new-rule event on RulesContent'); // Kept for debugging if needed
         handleAddRule();
       };
       element.addEventListener('add-new-rule', handleAddEvent);
@@ -39,7 +35,7 @@ const RulesPageContent: React.FC = () => {
         element.removeEventListener('add-new-rule', handleAddEvent);
       };
     }
-  }, []); // handleAddRule is stable if defined outside or wrapped in useCallback
+  }, []);
 
   const handleEditRule = (rule: Rule) => {
     setCurrentRule(rule);
@@ -51,10 +47,8 @@ const RulesPageContent: React.FC = () => {
       await saveRule(ruleData);
       setIsEditorOpen(false);
       setCurrentRule(null);
-      // refetchRules(); // saveRule should invalidate queries
     } catch (err) {
       console.error('Error saving rule:', err);
-      // Toast for error is usually handled within saveRule or its mutation
     }
   };
 
@@ -63,7 +57,6 @@ const RulesPageContent: React.FC = () => {
       await deleteRule(ruleId); 
       setCurrentRule(null);
       setIsEditorOpen(false);
-      // refetchRules(); // deleteRule should invalidate queries
     } catch (err) {
       console.error('Error deleting rule:', err);
     }
@@ -72,27 +65,21 @@ const RulesPageContent: React.FC = () => {
   const handleRuleBroken = async (rule: Rule) => {
     try {
       await markRuleBroken(rule);
-      // refetchRules(); // markRuleBroken should invalidate queries
     } catch (err) {
       console.error('Error marking rule as broken:', err);
     }
   };
   
-  // The specific error block previously here is now handled by RulesList
-  // if (error && (!rules || rules.length === 0) && !isLoading) { ... }
-  
   return (
     <div className="container mx-auto px-4 py-6 RulesContent">
-      <RulesHeader /> {/* Assuming RulesHeader doesn't need onAddNewRule directly for this pattern */}
+      <RulesHeader />
 
       <RulesList
         rules={rules}
-        isLoading={isLoading} // Pass isLoading directly
+        isLoading={isLoading}
         onEditRule={handleEditRule}
         onRuleBroken={handleRuleBroken}
         error={error}
-        isUsingCachedData={isUsingCachedData}
-        refetch={refetchRules}
       />
 
       <RuleEditor

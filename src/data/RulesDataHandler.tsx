@@ -1,22 +1,20 @@
-
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Rule } from '@/data/interfaces/Rule';
-import { UseQueryResult, QueryObserverResult } from '@tanstack/react-query';
+import { QueryObserverResult, UseQueryResult } from '@tanstack/react-query';
 import { fetchRules } from '@/data/rules/fetchRules';
 import { 
   useCreateRule, 
-  CreateRuleVariables, // Import CreateRuleVariables
+  CreateRuleVariables,
   useUpdateRule, 
   useDeleteRule, 
   useCreateRuleViolation 
 } from '@/data/rules/mutations';
-import { CreateRuleViolationVariables } from '@/data/rules/types'; // Import CreateRuleViolationVariables
+import { CreateRuleViolationVariables } from '@/data/rules/types';
 
 export type RulesQueryResult = {
   rules: Rule[]; 
   isLoading: boolean;
   error: Error | null;
-  isUsingCachedData: boolean;
   saveRule: (ruleData: Partial<Rule>) => Promise<Rule>;
   deleteRule: (ruleId: string) => Promise<void>;
   markRuleBroken: (rule: Rule) => Promise<void>;
@@ -31,39 +29,35 @@ export const useRulesData = (): RulesQueryResult => {
     isLoading,
     error,
     refetch
-  } = useQuery<Rule[], Error>({
+  }: UseQueryResult<Rule[], Error> = useQuery<Rule[], Error>({
     queryKey: ['rules'],
-    queryFn: fetchRules
+    queryFn: fetchRules,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 60, 
+    refetchOnWindowFocus: false, 
+    refetchOnReconnect: false,  
+    refetchOnMount: false,     
+    retry: 1, 
+    retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
   });
 
-  // Determine if using cached data based on error state and data presence
-  const isUsingCachedData = !!error && rules && rules.length > 0;
-
-  // Use the mutation hooks from the modern structure
-  const updateRuleMutation = useUpdateRule(); // Renamed for clarity
-  const createRuleMutation = useCreateRule(); // Renamed for clarity
+  const updateRuleMutation = useUpdateRule();
+  const createRuleMutation = useCreateRule();
   const deleteRuleMutation = useDeleteRule();
   const markRuleViolationMutation = useCreateRuleViolation();
 
   const saveRuleWrapper = async (ruleData: Partial<Rule>): Promise<Rule> => {
     if (ruleData.id) {
-      // This is an update operation
-      // useUpdateRule expects { id: string, ...updates }
-      // Ensure ruleData has an id, which it does in this block
       return await updateRuleMutation.mutateAsync({
         id: ruleData.id,
         ...ruleData
       });
     } else {
-      // This is a create operation
-      // useCreateRule expects CreateRuleVariables, which requires title
       if (!ruleData.title) {
         throw new Error("Rule title is required for creation.");
       }
-      // Ensure the object passed matches CreateRuleVariables
-      // All other properties in CreateRuleVariables are optional or have defaults in the mutation
       const createVariables: CreateRuleVariables = {
-        title: ruleData.title, // title is now guaranteed
+        title: ruleData.title, 
         description: ruleData.description,
         priority: ruleData.priority,
         background_image_url: ruleData.background_image_url,
@@ -79,7 +73,6 @@ export const useRulesData = (): RulesQueryResult => {
         focal_point_y: ruleData.focal_point_y,
         frequency: ruleData.frequency,
         frequency_count: ruleData.frequency_count,
-        // 'id', 'created_at', 'updated_at', 'usage_data' are handled by the backend or mutation defaults
       };
       return await createRuleMutation.mutateAsync(createVariables);
     }
@@ -90,7 +83,6 @@ export const useRulesData = (): RulesQueryResult => {
   };
 
   const markRuleViolationWrapper = async (rule: Rule): Promise<void> => {
-    // useCreateRuleViolation expects { rule_id: string }
     const violationVariables: CreateRuleViolationVariables = {
       rule_id: rule.id 
     };
@@ -101,11 +93,9 @@ export const useRulesData = (): RulesQueryResult => {
     rules, 
     isLoading, 
     error: error || null, 
-    isUsingCachedData,
     saveRule: saveRuleWrapper,
     deleteRule: deleteRuleWrapper,
     markRuleBroken: markRuleViolationWrapper,
     refetchRules: refetch
   };
 };
-

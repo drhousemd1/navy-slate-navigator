@@ -1,14 +1,16 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
 import TasksHeader from '../components/task/TasksHeader';
 import TasksList from '../components/task/TasksList';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
 import { TaskWithId } from '@/data/tasks/types';
-import { useSyncManager, SyncOptions, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+import { useSyncManager } from '@/hooks/useSyncManager';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useTasksData } from '@/hooks/useTasksData';
+import ErrorDisplay from '@/components/common/ErrorDisplay';
+import EmptyState from '@/components/common/EmptyState';
+import { ListChecks, LoaderCircle } from 'lucide-react';
 
 const TasksPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -17,10 +19,10 @@ const TasksPageContent: React.FC = () => {
     tasks, 
     isLoading, 
     error, 
-    isUsingCachedData,
     saveTask, 
     deleteTask, 
-    toggleTaskCompletion, 
+    toggleTaskCompletion,
+    refetchTasks
   } = useTasksData();
   const { refreshPointsFromDatabase } = useRewards();
   
@@ -68,8 +70,6 @@ const TasksPageContent: React.FC = () => {
   const handleDeleteTask = async (taskId: string) => {
     try {
       await deleteTask(taskId);
-      // setCurrentTask(null); 
-      // setIsEditorOpen(false);
     } catch (err) {
       console.error('Error deleting task in UI:', err);
     }
@@ -82,7 +82,6 @@ const TasksPageContent: React.FC = () => {
         console.error(`Task with id ${taskId} not found.`);
         return;
       }
-      // Assuming toggleTaskCompletion in useTasksData handles points correctly
       await toggleTaskCompletion(taskId, completed, task.points || 0); 
       if (completed) {
         setTimeout(() => {
@@ -98,43 +97,45 @@ const TasksPageContent: React.FC = () => {
     refreshPointsFromDatabase(); 
   }, [refreshPointsFromDatabase]); 
 
-  if (error && !isLoading && tasks.length === 0) {
-    return (
-      <div className="container mx-auto px-4 py-6 TasksContent">
-        <TasksHeader /> {/* Removed onAddTask prop */}
-        <div className="flex flex-col items-center justify-center mt-8">
-          <div className="text-red-500 p-4 border border-red-400 rounded-md bg-red-900/20">
-            <h3 className="font-bold mb-2">Error Loading Tasks</h3>
-            <p>{error.message || "Couldn't connect to the server. Please try again."}</p>
-          </div>
-        </div>
-        <TaskEditor
-          isOpen={isEditorOpen}
-          onClose={() => {
-            setIsEditorOpen(false);
-            setCurrentTask(null);
-          }}
-          taskData={currentTask || undefined} 
-          onSave={handleSaveTask}
-          onDelete={handleDeleteTask}
-        />
+  let content;
+  if (isLoading && tasks.length === 0) {
+    content = (
+      <div className="flex flex-col items-center justify-center py-10 mt-4">
+        <LoaderCircle className="h-10 w-10 text-primary animate-spin mb-2" />
+        <p className="text-muted-foreground">Loading tasks...</p>
       </div>
+    );
+  } else if (error && tasks.length === 0) {
+    content = (
+      <ErrorDisplay
+        title="Error Loading Tasks"
+        message={error.message || "Could not fetch tasks. Please check your connection or try again later."}
+      />
+    );
+  } else if (!isLoading && tasks.length === 0 && !error) {
+    content = (
+      <EmptyState
+        icon={ListChecks} // Example icon for tasks
+        title="No Tasks Yet"
+        description="You do not have any tasks yet, create one to get started."
+      />
+    );
+  } else {
+    content = (
+      <TasksList
+        tasks={tasks}
+        isLoading={false} // Main loading handled above, TasksList internal loader might still trigger if it has own logic
+        onEditTask={handleEditTask}
+        onToggleCompletion={handleToggleCompletion}
+        error={error} // Pass error for potential internal handling in read-only TasksList
+      />
     );
   }
 
   return (
     <div className="p-4 pt-6 TasksContent">
-      <TasksHeader /> {/* Removed onAddTask prop */}
-
-      <TasksList
-        tasks={tasks}
-        isLoading={isLoading && tasks.length === 0} 
-        onEditTask={handleEditTask}
-        onToggleCompletion={handleToggleCompletion}
-        error={error}
-        isUsingCachedData={isUsingCachedData}
-      />
-
+      <TasksHeader /> {/* Removed onAddTask prop if it was there */}
+      {content}
       <TaskEditor
         isOpen={isEditorOpen}
         onClose={() => {
@@ -164,7 +165,7 @@ const Tasks: React.FC = () => {
 
   return (
     <AppLayout onAddNewItem={handleAddNewItem}>
-      <RewardsProvider> {/* Consider if RewardsProvider is needed here or higher up */}
+      <RewardsProvider>
         <ErrorBoundary fallbackMessage="Could not load tasks. Please try reloading.">
           <TasksPageContent />
         </ErrorBoundary>

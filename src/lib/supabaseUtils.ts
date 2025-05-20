@@ -1,7 +1,6 @@
-
 import { SupabaseClient, PostgrestError, PostgrestResponse, PostgrestSingleResponse } from '@supabase/supabase-js';
 
-export const DEFAULT_TIMEOUT_MS = 8000; // 8 seconds default timeout
+export const DEFAULT_TIMEOUT_MS = 15000; // Increased from 8000 to 15 seconds
 
 /**
  * Wraps a Supabase query with a timeout to prevent hanging

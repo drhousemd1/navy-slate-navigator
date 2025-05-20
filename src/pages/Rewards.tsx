@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -7,10 +6,10 @@ import RewardsHeader from '../components/rewards/RewardsHeader';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-import { useRewards as useRewardsQuery, RewardsQueryResult } from '@/data/queries/useRewards';
-import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
+import { useRewards as useRewardsQuery, RewardsQueryResult, Reward } from '@/data/queries/useRewards'; // Reward type also from here
+import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/mutations/useSaveReward'; // Types moved
 import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
-import { Reward, UpdateRewardVariables, CreateRewardVariables } from '@/data/rewards/types';
+// Reward type from '@/data/rewards/types' removed as it's now from useRewards.ts
 import { toast } from '@/hooks/use-toast';
 
 import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
@@ -24,9 +23,9 @@ const RewardsContent: React.FC<{
     data: rewardsData, 
     isLoading, 
     error: queryError,
-    isUsingCachedData,
-    refetch: refetchRewards // Added refetch
-  }: RewardsQueryResult = useRewardsQuery();
+    // isUsingCachedData, // Removed from RewardsQueryResult
+    // refetch: refetchRewards // No longer passed to RewardsList for retry
+  }: RewardsQueryResult = useRewardsQuery(); // RewardsQueryResult already updated
   const rewards = Array.isArray(rewardsData) ? rewardsData : [];
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -84,7 +83,6 @@ const RewardsContent: React.FC<{
         profileId: user.id,
         currentPoints: currentUserPoints ?? 0
       });
-      // refetchRewards(); // Mutation should invalidate
     } catch (e) {
       console.error("Error buying reward from page:", e);
     }
@@ -111,7 +109,6 @@ const RewardsContent: React.FC<{
         currentSupply: rewardToUse.supply,
         profileId: user.id
       });
-      // refetchRewards(); // Mutation should invalidate
     } catch (e) {
       console.error("Error using reward from page:", e);
     }
@@ -120,8 +117,8 @@ const RewardsContent: React.FC<{
   useEffect(() => {
     contentRef.current = { handleAddNewReward };
     return () => { contentRef.current = {}; };
-  }, [contentRef]); // Removed handleAddNewReward as it doesn't change
-  
+  }, [contentRef]); 
+
   const handleSaveRewardEditor = async (formData: Partial<Reward>): Promise<Reward | void> => {
     try {
       if (rewardBeingEdited?.id) {
@@ -132,7 +129,6 @@ const RewardsContent: React.FC<{
         const updated = await updateRewardMutation.mutateAsync(updateVariables);
         setIsEditorOpen(false);
         setRewardBeingEdited(undefined);
-        // refetchRewards(); // Mutation should invalidate
         return updated;
       } else {
         if (!formData.title || typeof formData.cost !== 'number' || typeof formData.supply !== 'number' || typeof formData.is_dom_reward !== 'boolean') {
@@ -160,7 +156,6 @@ const RewardsContent: React.FC<{
         const created = await createRewardMutation.mutateAsync(createVariables);
         setIsEditorOpen(false);
         setRewardBeingEdited(undefined);
-        // refetchRewards(); // Mutation should invalidate
         return created;
       }
     } catch (e) {
@@ -182,7 +177,6 @@ const RewardsContent: React.FC<{
       await deleteRewardMutation.mutateAsync(finalIdToDelete);
       setIsEditorOpen(false);
       setRewardBeingEdited(undefined);
-      // refetchRewards(); // Mutation should invalidate
     } catch (e) {
       console.error("Error deleting reward from page:", e);
     }
@@ -194,13 +188,13 @@ const RewardsContent: React.FC<{
       <div className="mt-4">
         <RewardsList 
           rewards={rewards}
-          isLoading={isLoading} // Pass isLoading directly
+          isLoading={isLoading}
           onEdit={handleEditReward}
           handleBuyReward={handleBuyRewardWrapper}
           handleUseReward={handleUseRewardWrapper}
           error={queryError}
-          isUsingCachedData={isUsingCachedData}
-          refetch={refetchRewards}
+          // isUsingCachedData prop removed
+          // refetch prop removed
         />
       </div>
       <RewardEditor

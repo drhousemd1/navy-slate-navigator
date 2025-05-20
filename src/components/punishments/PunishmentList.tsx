@@ -1,19 +1,19 @@
 
 import React from 'react';
-import PunishmentCard from '../PunishmentCard';
+import PunishmentCard from '../PunishmentCard'; // Assuming PunishmentCard exists and is correctly imported
 import { PunishmentData } from '@/contexts/punishments/types';
 import EmptyState from '@/components/common/EmptyState';
 import { LoaderCircle, ShieldAlert } from 'lucide-react';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
-import CachedDataBanner from '@/components/common/CachedDataBanner';
+// CachedDataBanner import removed
 
 interface PunishmentListProps {
   punishments: PunishmentData[];
   isLoading: boolean;
   onEditPunishment: (punishment: PunishmentData) => void;
   error?: Error | null;
-  isUsingCachedData?: boolean;
-  refetch?: () => void;
+  // isUsingCachedData prop removed
+  // refetch prop removed
 }
 
 const PunishmentList: React.FC<PunishmentListProps> = ({ 
@@ -21,8 +21,8 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
   isLoading, 
   onEditPunishment,
   error,
-  isUsingCachedData,
-  refetch
+  // isUsingCachedData, // removed
+  // refetch // removed
 }) => {
 
   if (isLoading && punishments.length === 0) {
@@ -38,8 +38,8 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
     return (
       <ErrorDisplay
         title="Error Loading Punishments"
-        error={error}
-        onRetry={refetch}
+        message={error.message || "Could not fetch punishments. Please check your connection or try again later."}
+        // onRetry is not passed
       />
     );
   }
@@ -49,14 +49,14 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
       <EmptyState
         icon={ShieldAlert}
         title="No Punishments Yet"
-        description="It looks like there are no punishments defined."
+        description="You do not have any punishments yet, create one to get started."
       />
     );
   }
 
   return (
     <>
-      {isUsingCachedData && punishments.length > 0 && <CachedDataBanner />}
+      {/* CachedDataBanner removed */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {punishments.map((punishment) => (
           <PunishmentCard

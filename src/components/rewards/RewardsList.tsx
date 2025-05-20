@@ -1,11 +1,11 @@
 
 import React from 'react';
-import RewardCard from '../RewardCard';
-import { Reward } from '@/data/rewards/types';
+import RewardCard from '../RewardCard'; // Assuming RewardCard exists
+import { Reward } from '@/data/rewards/types'; // Assuming Reward type path is correct
 import EmptyState from '@/components/common/EmptyState';
 import { Gift, LoaderCircle } from 'lucide-react';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
-import CachedDataBanner from '@/components/common/CachedDataBanner';
+// CachedDataBanner import removed
 
 interface RewardsListProps {
   rewards: Reward[];
@@ -14,8 +14,8 @@ interface RewardsListProps {
   handleBuyReward: (rewardId: string, cost: number) => void;
   handleUseReward: (rewardId: string) => void;
   error?: Error | null;
-  isUsingCachedData?: boolean;
-  refetch?: () => void;
+  // isUsingCachedData prop removed
+  // refetch prop removed
 }
 
 const RewardsList: React.FC<RewardsListProps> = ({
@@ -25,8 +25,8 @@ const RewardsList: React.FC<RewardsListProps> = ({
   handleBuyReward,
   handleUseReward,
   error,
-  isUsingCachedData,
-  refetch,
+  // isUsingCachedData, // removed
+  // refetch, // removed
 }) => {
 
   if (isLoading && rewards.length === 0) {
@@ -42,8 +42,8 @@ const RewardsList: React.FC<RewardsListProps> = ({
     return (
       <ErrorDisplay
         title="Error Loading Rewards"
-        error={error}
-        onRetry={refetch}
+        message={error.message || "Could not fetch rewards. Please check your connection or try again later."}
+        // onRetry is not passed
       />
     );
   }
@@ -53,14 +53,14 @@ const RewardsList: React.FC<RewardsListProps> = ({
       <EmptyState
         icon={Gift}
         title="No Rewards Yet"
-        description="Looks like there are no rewards defined yet. Create one to get started!"
+        description="You do not have any rewards yet, create one to get started."
       />
     );
   }
   
   return (
     <>
-      {isUsingCachedData && rewards.length > 0 && <CachedDataBanner />}
+      {/* CachedDataBanner removed */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {rewards.map((reward) => (
           <RewardCard
