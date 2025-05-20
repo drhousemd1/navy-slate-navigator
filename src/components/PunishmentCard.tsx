@@ -1,61 +1,110 @@
 
 import React from 'react';
 import { Card } from './ui/card';
+import PunishmentEditor from './PunishmentEditor';
+// import { cn } from '@/lib/utils'; // Not used
 import PunishmentCardHeader from './punishments/PunishmentCardHeader';
 import PunishmentCardContent from './punishments/PunishmentCardContent';
 import PunishmentCardFooter from './punishments/PunishmentCardFooter';
-import { PunishmentData } from '@/contexts/punishments/types';
-import { usePunishmentApply } from './punishments/hooks/usePunishmentApply';
-import { usePunishmentHistory } from './punishments/hooks/usePunishmentHistory';
-// usePunishmentCard is not directly used for edit click based on page structure, can be removed if not needed for other card-specific logic
-// import { usePunishmentCard } from './punishments/hooks/usePunishmentCard'; 
+import PunishmentBackground from './punishments/PunishmentBackground';
+import { usePunishmentCard } from './punishments/hooks/usePunishmentCard';
+import { PunishmentData } from '@/contexts/punishments/types'; // Import PunishmentData
 
-interface PunishmentCardProps {
-  punishment: PunishmentData;
-  onEdit?: (punishment: PunishmentData) => void;
+interface PunishmentCardProps extends PunishmentData { // Extend PunishmentData to get all its props
+  // id, title, points, dom_supply, etc., are from PunishmentData
+  onEdit?: (punishment: PunishmentData) => void; // Changed to pass the full punishment
 }
 
-const PunishmentCard: React.FC<PunishmentCardProps> = ({ punishment, onEdit }) => {
-  const { handlePunish, isLoading: isLoadingApply } = usePunishmentApply({ punishment });
-  
-  const punishmentHistoryHook = usePunishmentHistory({ id: punishment.id || '' });
-  // const history = punishmentHistoryHook.getHistory(); // history data isn't directly used by card children based on current props
-  // const isLoadingHistory = punishmentHistoryHook.isLoading; // isLoadingHistory isn't directly used by card children
+const PunishmentCard: React.FC<PunishmentCardProps> = (props) => {
+  // Destructure all props, which includes all fields from PunishmentData
+  const { 
+    id, title, description = "", points, dom_points, dom_supply, // Added dom_supply here
+    icon_name, 
+    icon_color = '#ea384c', title_color = '#FFFFFF', subtext_color = '#8E9196', 
+    calendar_color = '#ea384c', highlight_effect = false, background_image_url, 
+    background_opacity = 50, focal_point_x = 50, focal_point_y = 50, 
+    onEdit, ...restOfPunishmentData // Capture rest for passing to hooks/components
+  } = props;
 
-  // The properties handleEditClick, imgRef, zoomEnabled, toggleZoom were removed from usePunishmentCard.
-  // The onEdit functionality is handled by the onEdit prop passed from the parent.
+  // Create the punishment object from props
+  const currentPunishment: PunishmentData = {
+    id, title, description, points, dom_points, dom_supply, // Added dom_supply here
+    icon_name, icon_color,
+    title_color, subtext_color, calendar_color, highlight_effect,
+    background_image_url, background_opacity, focal_point_x, focal_point_y,
+    usage_data: props.usage_data,
+    frequency_count: props.frequency_count,
+    icon_url: props.icon_url,
+    created_at: props.created_at,
+    updated_at: props.updated_at,
+  };
+  
+  const {
+    isEditorOpen,
+    setIsEditorOpen,
+    weekData,
+    frequencyCount,
+    handlePunish,
+    handleSavePunishment,
+    handleDeletePunishment
+  } = usePunishmentCard({ punishment: currentPunishment }); // Pass the full punishment object
+
+  const displayDomPoints = currentPunishment?.dom_points !== undefined ? currentPunishment.dom_points : dom_points;
+
+  const handleEditAction = () => {
+    if (onEdit) {
+      onEdit(currentPunishment); // Pass the full punishment object
+    } else {
+      setIsEditorOpen(true); // Fallback to internal editor toggle
+    }
+  };
 
   return (
-    <Card className="bg-card rounded-md shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
-      <PunishmentCardHeader 
-        points={punishment.points} 
-        dom_points={punishment.dom_points}
-        onPunish={handlePunish}
-        isLoading={isLoadingApply}
+    <>
+      <Card className="relative overflow-hidden border-2 border-red-500 bg-navy">
+        <PunishmentBackground 
+          background_image_url={background_image_url}
+          background_opacity={background_opacity}
+          focal_point_x={focal_point_x}
+          focal_point_y={focal_point_y}
+        />
+        
+        <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
+          <PunishmentCardHeader 
+            points={points}
+            dom_points={displayDomPoints} 
+            onPunish={handlePunish}
+            // Consider passing dom_supply to header if it needs to display it
+            // dom_supply={currentPunishment.dom_supply} 
+          />
+          
+          <PunishmentCardContent 
+            icon_name={icon_name}
+            icon_color={icon_color}
+            title={title}
+            description={description}
+            title_color={title_color}
+            subtext_color={subtext_color}
+            highlight_effect={highlight_effect}
+          />
+          
+          <PunishmentCardFooter 
+            frequency_count={frequencyCount}
+            calendar_color={calendar_color}
+            usage_data={weekData}
+            onEdit={handleEditAction} // Use the correct edit handler
+          />
+        </div>
+      </Card>
+      
+      <PunishmentEditor 
+        isOpen={isEditorOpen}
+        onClose={() => setIsEditorOpen(false)}
+        punishmentData={currentPunishment} // Pass the constructed punishment object
+        onSave={handleSavePunishment}
+        onDelete={handleDeletePunishment}
       />
-
-      <PunishmentCardContent 
-        icon_name={punishment.icon_name}
-        icon_color={punishment.icon_color}
-        title={punishment.title}
-        description={punishment.description || ''}
-        title_color={punishment.title_color}
-        subtext_color={punishment.subtext_color}
-        highlight_effect={punishment.highlight_effect}
-        // showIcon can be true by default or configured if needed
-      />
-
-      <PunishmentCardFooter 
-        frequency_count={punishment.frequency_count || 0}
-        calendar_color={punishment.calendar_color}
-        usage_data={punishment.usage_data || []}
-        onEdit={() => {
-          if (onEdit) {
-            onEdit(punishment);
-          }
-        }}
-      />
-    </Card>
+    </>
   );
 };
 
