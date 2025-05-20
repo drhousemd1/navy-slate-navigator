@@ -1,15 +1,21 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentHistoryItem, ApplyPunishmentArgs } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
-import { savePunishmentHistoryToDB, savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; 
+// import { savePunishmentHistoryToDB, savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; // Not currently used after Supabase migration
 import { PUNISHMENTS_QUERY_KEY, PUNISHMENT_HISTORY_QUERY_KEY } from '@/data/punishments/queries';
+import { PROFILE_POINTS_QUERY_KEY } from '@/data/points/usePointsManager'; // Import the correct key
 
 // Define necessary keys directly or ensure they are imported from a valid source
-const PROFILE_QUERY_KEY = ['profile'];
-const REWARDS_POINTS_QUERY_KEY = ['rewardsPoints'];
-const REWARDS_DOM_POINTS_QUERY_KEY = ['rewardsDomPoints'];
+// const PROFILE_QUERY_KEY = ['profile']; // Replaced by PROFILE_POINTS_QUERY_KEY for points display
+// const REWARDS_POINTS_QUERY_KEY = ['rewardsPoints']; // Replaced
+// const REWARDS_DOM_POINTS_QUERY_KEY = ['rewardsDomPoints']; // Replaced
+const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics']; // For Throne Room
+const MONTHLY_METRICS_QUERY_KEY = ['monthly-metrics']; // For Throne Room
+const WEEKLY_METRICS_SUMMARY_QUERY_KEY = ['weekly-metrics-summary']; // For Throne Room
+
 
 interface ApplyPunishmentContext {
   previousHistory?: PunishmentHistoryItem[];
@@ -83,23 +89,26 @@ export const useApplyPunishment = () => {
       toast({ title: 'Error applying punishment', description: error.message, variant: 'destructive' });
     },
     onSuccess: async () => {
+      // Invalidate queries to refetch data
       await queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
       await queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }); 
-      await queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.PROFILE
-      await queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS_POINTS
-      await queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS
+      await queryClient.invalidateQueries({ queryKey: PROFILE_POINTS_QUERY_KEY }); // Correct key for UI points
+      await queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: MONTHLY_METRICS_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_SUMMARY_QUERY_KEY });
       
-      const currentHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY) || [];
-      await savePunishmentHistoryToDB(currentHistory);
+      // const currentHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY) || [];
+      // await savePunishmentHistoryToDB(currentHistory); // Not used with Supabase backend
       
       toast({ title: 'Punishment applied successfully!' });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.PROFILE
-      queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS_POINTS
-      queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS
+      queryClient.invalidateQueries({ queryKey: PROFILE_POINTS_QUERY_KEY }); // Correct key for UI points
+      queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: MONTHLY_METRICS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_SUMMARY_QUERY_KEY });
     }
   });
 };

@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from "@/hooks/use-toast";
 import { PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchPunishments as fetchPunishmentsData } from '@/data/punishments/queries/fetchPunishments';
@@ -38,19 +37,10 @@ export const usePunishmentOperations = () => {
 
   // Updated applyPunishment signature and placeholder implementation
   const applyPunishment = async (args: ApplyPunishmentArgs): Promise<void> => {
-    console.warn("applyPunishment in usePunishmentOperations called. Consider moving to a dedicated mutation hook or ensure this correctly wraps useApplyPunishment.", args);
+    console.warn("applyPunishment in usePunishmentOperations called. This is a placeholder and does not perform the actual mutation. Ensure components use the dedicated mutation hook.", args);
     // This is a placeholder. Actual application should use useApplyPunishment mutation hook directly.
-    // Example of how it might call the mutation if it were to wrap it:
-    // const applyPunishmentMutation = useApplyPunishment(); // Assuming hook can be called here
-    // await applyPunishmentMutation.mutateAsync(args);
-    toast({
-        title: "Punishment Applied (Context Placeholder)",
-        description: `${args.costPoints} points deducted for punishment ID ${args.id}. This is a placeholder.`,
-        variant: "destructive", // Placeholder, actual toasts are in the mutation hook
-      });
-    // In a real scenario, this would invalidate queries, but the actual mutation hook does that.
-    // queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
-    // queryClient.invalidateQueries({ queryKey: ['profile_points']}); // Or more specific profile keys
+    // The toast that was here has been removed as it was redundant and causing overlap.
+    // The actual mutation hook (useApplyPunishment) handles success/error toasts.
   };
 
   const getPunishmentHistory = (punishmentId: string): PunishmentHistoryItem[] => {
@@ -67,7 +57,7 @@ export const usePunishmentOperations = () => {
         await refetchPunishments();
         await refetchHistory();
     },
-    applyPunishment,
+    applyPunishment, // This remains a placeholder; actual mutation is separate
     getPunishmentHistory
   };
 };
