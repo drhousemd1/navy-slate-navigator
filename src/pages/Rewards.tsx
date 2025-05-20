@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -6,10 +7,10 @@ import RewardsHeader from '../components/rewards/RewardsHeader';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-import { useRewards as useRewardsQuery, RewardsQueryResult, Reward } from '@/data/queries/useRewards'; // Reward type also from here
+import { useRewards as useRewardsQuery, RewardsQueryResult } from '@/data/queries/useRewards';
+import { Reward } from '@/data/rewards/types'; // Import Reward directly from its canonical source
 import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/mutations/useSaveReward'; // Types moved
 import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
-// Reward type from '@/data/rewards/types' removed as it's now from useRewards.ts
 import { toast } from '@/hooks/use-toast';
 
 import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
@@ -23,9 +24,7 @@ const RewardsContent: React.FC<{
     data: rewardsData, 
     isLoading, 
     error: queryError,
-    // isUsingCachedData, // Removed from RewardsQueryResult
-    // refetch: refetchRewards // No longer passed to RewardsList for retry
-  }: RewardsQueryResult = useRewardsQuery(); // RewardsQueryResult already updated
+  }: RewardsQueryResult = useRewardsQuery();
   const rewards = Array.isArray(rewardsData) ? rewardsData : [];
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -144,7 +143,7 @@ const RewardsContent: React.FC<{
           background_image_url: formData.background_image_url || null,
           background_opacity: formData.background_opacity ?? 100,
           icon_name: formData.icon_name || 'Award',
-          icon_url: formData.icon_url || null,
+          icon_url: formData.icon_url || null, // Ensure icon_url is handled
           icon_color: formData.icon_color || '#9b87f5',
           title_color: formData.title_color || '#FFFFFF',
           subtext_color: formData.subtext_color || '#8E9196',
@@ -193,8 +192,6 @@ const RewardsContent: React.FC<{
           handleBuyReward={handleBuyRewardWrapper}
           handleUseReward={handleUseRewardWrapper}
           error={queryError}
-          // isUsingCachedData prop removed
-          // refetch prop removed
         />
       </div>
       <RewardEditor
@@ -230,3 +227,4 @@ const Rewards: React.FC = () => {
 };
 
 export default Rewards;
+

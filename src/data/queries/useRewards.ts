@@ -65,7 +65,7 @@ async function fetchRewardsWithCache(): Promise<Reward[]> {
       background_image_url: item.background_image_url === undefined ? null : item.background_image_url,
       background_opacity: item.background_opacity ?? 100,
       icon_name: item.icon_name === undefined ? null : item.icon_name,
-      icon_url: item.icon_url === undefined ? null : item.icon_url,
+      icon_url: null, // icon_url is not in the database table, set to null
       icon_color: item.icon_color ?? '#9b87f5',
       title_color: item.title_color ?? '#FFFFFF',
       subtext_color: item.subtext_color ?? '#8E9196',
