@@ -1,13 +1,15 @@
+
 import React, { useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '@/contexts/auth';
-import { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsSummary';
+import { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsSummary'; // Correct type import
 import MonthlyMetricsChart from '@/components/throne/MonthlyMetricsChart';
 import WeeklyMetricsChart from '@/components/throne/WeeklyMetricsChart';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useWeeklyMetricsSummary, WeeklyMetricsSummary } from '@/data/queries/useWeeklyMetricsSummary';
+// Corrected import: Only import the hook from here
+import { useWeeklyMetricsSummary } from '@/data/queries/useWeeklyMetricsSummary'; 
 import { useWeeklyMetrics } from '@/data/queries/metrics/useWeeklyMetrics';
 import { useMonthlyMetrics } from '@/data/queries/metrics/useMonthlyMetrics';
 
@@ -24,10 +26,9 @@ const ThroneRoom: React.FC = () => {
   useWeeklyMetrics({ enabled: true });
   useMonthlyMetrics({ enabled: true });
   
-  // This summary hook might have its own fetching logic. If it relies on the above, it's fine.
-  // If it fetches independently and polls, it would need similar adjustments (but it's read-only for me).
   const { data: metricsSummaryData, isLoading, error } = useWeeklyMetricsSummary();
 
+  // This will now correctly use the WeeklyMetricsSummary type imported from '@/components/throne/WeeklyMetricsSummary'
   const metricsSummary: WeeklyMetricsSummary = metricsSummaryData || { 
     tasksCompleted: 0, 
     rulesBroken: 0, 
