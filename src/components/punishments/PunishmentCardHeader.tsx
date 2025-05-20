@@ -47,13 +47,13 @@ const PunishmentCardHeader: React.FC<PunishmentCardHeaderProps> = ({
           {displayDomPoints}
         </Badge>
         
-        {/* Punish button */}
+        {/* Punish button - REMOVED disabled attribute */}
         <Button
           variant="destructive"
           size="sm"
           className="bg-red-500 text-white hover:bg-red-600/90 h-8 px-3 text-sm"
           onClick={onPunish}
-          disabled={dom_supply <= 0} // Disable if no supply - this logic remains
+          // disabled={dom_supply <= 0} // This line is removed
         >
           Punish
         </Button>
