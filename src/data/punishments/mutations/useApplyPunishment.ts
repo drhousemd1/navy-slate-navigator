@@ -222,7 +222,7 @@ export const useApplyPunishment = () => {
         previousProfilePointsForPartner
       };
     },
-    onError: async (error, _args, context) => { // Made onError async
+    onError: async (error, _args, context) => {
       console.error("Error in useApplyPunishment onError:", error);
       const currentAuthUserKey = getProfilePointsQueryKey(); 
 
@@ -233,15 +233,18 @@ export const useApplyPunishment = () => {
       if (context?.previousProfilePointsForCurrentUser) {
         queryClient.setQueryData<ProfilePointsData>(currentAuthUserKey, context.previousProfilePointsForCurrentUser);
         
-        const userId = currentAuthUserKey[1]; // Assuming currentAuthUserKey is ['profilePoints', userId]
-        if (userId) { // Ensure userId is defined before using it
+        const userId = currentAuthUserKey[1]; 
+        if (userId && typeof userId === 'string') { // Ensure userId is a string before using it
             queryClient.setQueryData(["rewards", "points", userId], context.previousProfilePointsForCurrentUser.points);
             queryClient.setQueryData(["rewards", "dom_points", userId], context.previousProfilePointsForCurrentUser.dom_points);
         }
       }
       
       try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        const sessionResult = await supabase.auth.getSession(); // Explicitly await and store result
+        const sessionData = sessionResult.data;
+        const sessionError = sessionResult.error;
+
         if (sessionError) {
           console.error("Error fetching session for partner data restoration:", sessionError);
         } else {
