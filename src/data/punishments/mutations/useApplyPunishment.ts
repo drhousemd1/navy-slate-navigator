@@ -202,9 +202,25 @@ export const useApplyPunishment = () => {
     onSuccess: async (_data, args) => { 
       toast({ title: 'Punishment applied successfully!' });
       // The mutationFn already calls updateProfilePoints for both submissive and dominant (if applicable).
-      // Explicit updates here are redundant if mutationFn is comprehensive.
-      // For safety, one might re-fetch or re-ensure, but it risks race conditions if not handled carefully.
-      // The primary point update responsibility is in mutationFn.
+      // Invalidate the general points query key to ensure usePointsManager (used by headers) refreshes.
+      await queryClient.invalidateQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] });
+      // Explicitly invalidate for the submissive user as well, ensuring their specific cache is fresh.
+      await queryClient.invalidateQueries({ queryKey: getProfilePointsQueryKey(args.profileId) });
+
+      // Attempt to find partner ID to invalidate their points as well
+      try {
+        const { data: subProfile } = await supabase
+          .from('profiles')
+          .select('linked_partner_id')
+          .eq('id', args.profileId)
+          .single();
+        if (subProfile?.linked_partner_id) {
+          const partnerId = subProfile.linked_partner_id;
+          await queryClient.invalidateQueries({ queryKey: getProfilePointsQueryKey(partnerId) });
+        }
+      } catch (e) {
+        console.warn("Could not fetch partner ID in onSuccess for invalidation:", e);
+      }
     },
     onSettled: async (_data, _error, args) => {
       // Invalidate points for all potentially affected users to ensure consistency.
@@ -214,10 +230,8 @@ export const useApplyPunishment = () => {
       queryClient.invalidateQueries({ queryKey: ["rewards", "dom_points", args.profileId] });
       queryClient.invalidateQueries({ queryKey: ["profile", args.profileId]});
 
-
       // Attempt to find partner ID to invalidate their points as well
-      // This is a bit of a workaround as partnerId isn't directly in args.
-      // Ideally, partnerId would be returned by mutationFn or part of context if needed here.
+      let partnerIdInvalidated = false;
       try {
         const { data: subProfile } = await supabase
           .from('profiles')
@@ -230,21 +244,29 @@ export const useApplyPunishment = () => {
           queryClient.invalidateQueries({ queryKey: ["rewards", "points", partnerId] });
           queryClient.invalidateQueries({ queryKey: ["rewards", "dom_points", partnerId] });
           queryClient.invalidateQueries({ queryKey: ["profile", partnerId]});
+          partnerIdInvalidated = true;
         }
       } catch (e) {
         console.warn("Could not fetch partner ID in onSettled for invalidation:", e);
-        // Fallback to broader invalidation if partner ID fetch fails
-        queryClient.invalidateQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] });
-        queryClient.invalidateQueries({ queryKey: ["rewards"] }); // Broad invalidation for rewards related keys
-        queryClient.invalidateQueries({ queryKey: ["profile"] }); // Broad invalidation for profile related keys
+      }
+      
+      // Always invalidate the base key for usePointsManager,
+      // covering the current user regardless of their role in the punishment
+      // or if partner lookup failed.
+      queryClient.invalidateQueries({ queryKey: [PROFILE_POINTS_QUERY_KEY_BASE] });
+      
+      // Fallback broad invalidations if specific partner invalidation might have been missed
+      if (!partnerIdInvalidated) {
+          queryClient.invalidateQueries({ queryKey: ["rewards"] }); // Broad invalidation for rewards related keys
+          queryClient.invalidateQueries({ queryKey: ["profile"] }); // Broad invalidation for profile related keys
       }
       
       // Other related queries
       queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: MONTHLY_METRICS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_SUMMARY_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] }); // Ensure consistency with defined key
+      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] }); // Ensure consistency with defined key
+      queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] }); // Ensure consistency with defined key
     }
   });
 };
