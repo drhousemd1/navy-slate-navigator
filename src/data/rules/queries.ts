@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -6,7 +5,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { Rule } from "@/data/interfaces/Rule"; // Ensure this is the primary Rule interface
+import { Rule } from "@/data/interfaces/Rule"; 
 import { fetchRules as fetchRulesFromServer } from "@/data/rules/fetchRules";
 import {
   loadRulesFromDB,
@@ -14,14 +13,14 @@ import {
   getLastSyncTimeForRules,
   setLastSyncTimeForRules
 } from "../indexedDB/useIndexedDB";
-import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+// Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
-export const RULES_QUERY_KEY = CRITICAL_QUERY_KEYS.RULES;
+export const RULES_QUERY_KEY = ['rules']; // Replaced CRITICAL_QUERY_KEYS.RULES
 
 export function useRules() {
-  return useQuery<Rule[], Error, Rule[]>({ // Explicitly type queryFn return, data, and select data
+  return useQuery<Rule[], Error, Rule[]>({ 
     queryKey: RULES_QUERY_KEY,
-    queryFn: async (): Promise<Rule[]> => { // Ensure queryFn returns Promise<Rule[]>
+    queryFn: async (): Promise<Rule[]> => { 
       const localData: Rule[] | null = await loadRulesFromDB();
       const lastSync = await getLastSyncTimeForRules();
       let shouldFetch = true;

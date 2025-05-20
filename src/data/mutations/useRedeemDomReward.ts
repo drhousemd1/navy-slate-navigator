@@ -1,13 +1,11 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useSyncManager, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 import { Reward } from '@/data/rewards/types';
 
 interface RedeemDomRewardArgs {
   rewardId: string;
-  currentSupply: number; // This is user's supply of this reward if tracked, or reward's total supply if not
+  currentSupply: number; 
   profileId: string;
 }
 
@@ -17,7 +15,6 @@ interface RedeemDomRewardOptimisticContext {
 
 export const useRedeemDomReward = () => {
   const queryClient = useQueryClient();
-  const { syncKeys } = useSyncManager();
 
   return useMutation<Reward, Error, RedeemDomRewardArgs, RedeemDomRewardOptimisticContext>({
     mutationFn: async ({ rewardId, currentSupply }) => {
@@ -54,13 +51,13 @@ export const useRedeemDomReward = () => {
       return updatedReward as Reward;
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
-      const previousRewards = queryClient.getQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS);
+      await queryClient.cancelQueries({ queryKey: ['rewards'] });
+      const previousRewards = queryClient.getQueryData<Reward[]>(['rewards']);
 
-      queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (old = []) =>
+      queryClient.setQueryData<Reward[]>(['rewards'], (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
-            ? { ...reward, supply: reward.supply - 1 } // Total reward stock decreases
+            ? { ...reward, supply: reward.supply - 1 } 
             : reward
         )
       );
@@ -68,18 +65,18 @@ export const useRedeemDomReward = () => {
     },
     onError: (err, variables, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, context.previousRewards);
+        queryClient.setQueryData<Reward[]>(['rewards'], context.previousRewards);
       }
       toast({ title: "Failed to Use Reward", description: err.message, variant: "destructive" });
     },
     onSuccess: (data, variables) => {
-       queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (oldRewards = []) => {
+       queryClient.setQueryData<Reward[]>(['rewards'], (oldRewards = []) => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
       toast({ title: "Reward Used!", description: `You used ${data.title}.` });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
     },
   });
 };

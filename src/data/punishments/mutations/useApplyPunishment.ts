@@ -1,12 +1,15 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentHistoryItem, ApplyPunishmentArgs } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
-import { savePunishmentHistoryToDB, savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; // For IndexedDB
+import { savePunishmentHistoryToDB, savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB'; 
 import { PUNISHMENTS_QUERY_KEY, PUNISHMENT_HISTORY_QUERY_KEY } from '@/data/punishments/queries';
-import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager'; // For REWARDS_POINTS, PROFILE
+
+// Define necessary keys directly or ensure they are imported from a valid source
+const PROFILE_QUERY_KEY = ['profile'];
+const REWARDS_POINTS_QUERY_KEY = ['rewardsPoints'];
+const REWARDS_DOM_POINTS_QUERY_KEY = ['rewardsDomPoints'];
 
 interface ApplyPunishmentContext {
   previousHistory?: PunishmentHistoryItem[];
@@ -55,8 +58,6 @@ export const useApplyPunishment = () => {
         };
         const { data: savedHistory, error: historyError } = await supabase.from('punishment_history').insert(historyEntry).select().single();
         if (historyError) throw new Error(`Failed to record punishment history: ${historyError.message}`);
-        
-        // Return savedHistory or some indicator if needed, though mutationFn is void
     },
     onMutate: async (args) => {
       await queryClient.cancelQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
@@ -82,14 +83,12 @@ export const useApplyPunishment = () => {
       toast({ title: 'Error applying punishment', description: error.message, variant: 'destructive' });
     },
     onSuccess: async () => {
-      // Invalidate related queries
       await queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }); // from '@/data/punishments/queries'
-      await queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.PROFILE });
-      await queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS_POINTS });
-      await queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS });
+      await queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY }); 
+      await queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.PROFILE
+      await queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS_POINTS
+      await queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS
       
-      // Persist to IndexedDB
       const currentHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY) || [];
       await savePunishmentHistoryToDB(currentHistory);
       
@@ -98,9 +97,9 @@ export const useApplyPunishment = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.PROFILE });
-      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS_POINTS });
-      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS });
+      queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.PROFILE
+      queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS_POINTS
+      queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS
     }
   });
 };

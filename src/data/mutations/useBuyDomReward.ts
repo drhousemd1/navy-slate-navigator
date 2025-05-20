@@ -1,8 +1,6 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useSyncManager, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 import { Reward } from '@/data/rewards/types';
 
 interface BuyDomRewardArgs {
@@ -20,7 +18,6 @@ interface BuyDomRewardOptimisticContext {
 
 export const useBuyDomReward = () => {
   const queryClient = useQueryClient();
-  const { syncKeys } = useSyncManager();
 
   return useMutation<Reward, Error, BuyDomRewardArgs, BuyDomRewardOptimisticContext>({
       mutationFn: async ({ rewardId, cost, currentSupply, profileId, currentDomPoints }) => {
@@ -70,49 +67,46 @@ export const useBuyDomReward = () => {
         return updatedReward as Reward;
       },
       onMutate: async (variables) => {
-        await queryClient.cancelQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
-        await queryClient.cancelQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS });
+        await queryClient.cancelQueries({ queryKey: ['rewards'] });
+        await queryClient.cancelQueries({ queryKey: ['rewardsDomPoints'] });
 
-        const previousRewards = queryClient.getQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS);
-        const previousDomPoints = queryClient.getQueryData<number>(CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS);
+        const previousRewards = queryClient.getQueryData<Reward[]>(['rewards']);
+        const previousDomPoints = queryClient.getQueryData<number>(['rewardsDomPoints']);
 
-        queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (old = []) =>
+        queryClient.setQueryData<Reward[]>(['rewards'], (old = []) =>
           old.map(reward =>
             reward.id === variables.rewardId
-              // This should reflect what happens on BUY. If supply means total stock, it decreases.
-              // If user gets an "instance", their "owned supply" for this reward would increase.
-              // Based on error "Reward is out of stock", supply is total stock.
               ? { ...reward, supply: reward.supply - 1 } 
               : reward
           )
         );
 
-        queryClient.setQueryData<number>(CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS, (oldPoints = 0) =>
-          (oldPoints || 0) - variables.cost // Ensure oldPoints is not undefined
+        queryClient.setQueryData<number>(['rewardsDomPoints'], (oldPoints = 0) =>
+          (oldPoints || 0) - variables.cost
         );
         
         return { previousRewards, previousDomPoints };
       },
       onError: (err, variables, context) => {
         if (context?.previousRewards) {
-          queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, context.previousRewards);
+          queryClient.setQueryData<Reward[]>(['rewards'], context.previousRewards);
         }
         if (context?.previousDomPoints !== undefined) {
-          queryClient.setQueryData<number>(CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS, context.previousDomPoints);
+          queryClient.setQueryData<number>(['rewardsDomPoints'], context.previousDomPoints);
         }
         toast({ title: "Purchase Failed", description: err.message, variant: "destructive" });
       },
       onSuccess: (data, variables) => {
-        queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (oldRewards = []) => {
+        queryClient.setQueryData<Reward[]>(['rewards'], (oldRewards = []) => {
           return oldRewards.map(r => r.id === data.id ? data : r);
         });
-        queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS });
+        queryClient.invalidateQueries({ queryKey: ['rewardsDomPoints'] });
         
-        toast({ title: "Reward Purchased!", description: `You bought ${data.title}.` }); // Use data.title
+        toast({ title: "Reward Purchased!", description: `You bought ${data.title}.` });
       },
       onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
-        queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS });
+        queryClient.invalidateQueries({ queryKey: ['rewards'] });
+        queryClient.invalidateQueries({ queryKey: ['rewardsDomPoints'] });
       },
     }
   );

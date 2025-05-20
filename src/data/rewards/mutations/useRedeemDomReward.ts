@@ -1,9 +1,10 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Reward } from '../types'; // Use the centralized type
-import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+import { Reward } from '../types'; 
+// Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+
+const REWARDS_QUERY_KEY = ['rewards'];
 
 interface RedeemDomRewardVariables {
   rewardId: string;
@@ -32,7 +33,6 @@ export const useRedeemDomReward = () => {
 
       if (supplyError) throw supplyError;
 
-      // Get the updated reward
       const { data: updatedReward, error: fetchError } = await supabase
         .from('rewards')
         .select('*')
@@ -45,10 +45,10 @@ export const useRedeemDomReward = () => {
       return updatedReward as Reward;
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
-      const previousRewards = queryClient.getQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS);
+      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY); // Replaced CRITICAL_QUERY_KEYS.REWARDS
 
-      queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (old = []) =>
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => // Replaced CRITICAL_QUERY_KEYS.REWARDS
         old.map(reward =>
           reward.id === variables.rewardId
             ? { ...reward, supply: reward.supply - 1 }
@@ -59,7 +59,7 @@ export const useRedeemDomReward = () => {
     },
     onError: (err, variables, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, context.previousRewards);
+        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards); // Replaced CRITICAL_QUERY_KEYS.REWARDS
       }
       toast({ 
         title: "Failed to Use Reward", 
@@ -68,13 +68,13 @@ export const useRedeemDomReward = () => {
       });
     },
     onSuccess: (data, variables) => {
-      queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (oldRewards = []) => {
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => { // Replaced CRITICAL_QUERY_KEYS.REWARDS
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
       toast({ title: "Reward Used!", description: `You used ${data.title}.` });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS
     },
   });
 };

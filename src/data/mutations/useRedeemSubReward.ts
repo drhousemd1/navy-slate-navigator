@@ -1,8 +1,6 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useSyncManager, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 import { Reward } from '@/data/rewards/types';
 
 /** Returns ISO-8601 week string like "2025-W20" **/
@@ -17,7 +15,7 @@ function getISOWeekString(date: Date): string {
 
 interface RedeemSubRewardArgs {
   rewardId: string;
-  currentSupply: number; // Reward's total supply
+  currentSupply: number; 
   profileId: string; 
 }
 
@@ -27,14 +25,14 @@ interface RedeemSubRewardOptimisticContext {
 
 export const useRedeemSubReward = () => {
   const queryClient = useQueryClient();
-  const { syncKeys } = useSyncManager();
+  // Removed: const { syncKeys } = useSyncManager();
 
   return useMutation<Reward, Error, RedeemSubRewardArgs, RedeemSubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, currentSupply }) => {
       if (currentSupply <= 0) {
         throw new Error("Reward is out of stock, cannot use.");
       }
-      const newSupply = currentSupply - 1; // Reward's total supply decreases
+      const newSupply = currentSupply - 1;
 
       const { error: supplyError } = await supabase
         .from('rewards')
@@ -55,13 +53,13 @@ export const useRedeemSubReward = () => {
       return updatedReward as Reward;
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
-      const previousRewards = queryClient.getQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS);
+      await queryClient.cancelQueries({ queryKey: ['rewards'] });
+      const previousRewards = queryClient.getQueryData<Reward[]>(['rewards']);
 
-      queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (old = []) =>
+      queryClient.setQueryData<Reward[]>(['rewards'], (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
-            ? { ...reward, supply: reward.supply - 1 } // Reward's total supply decreases
+            ? { ...reward, supply: reward.supply - 1 } 
             : reward
         )
       );
@@ -69,18 +67,18 @@ export const useRedeemSubReward = () => {
     },
     onError: (err, variables, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, context.previousRewards);
+        queryClient.setQueryData<Reward[]>(['rewards'], context.previousRewards);
       }
       toast({ title: "Failed to Use Reward", description: err.message, variant: "destructive" });
     },
     onSuccess: (data, variables) => {
-      queryClient.setQueryData<Reward[]>(CRITICAL_QUERY_KEYS.REWARDS, (oldRewards = []) => {
+      queryClient.setQueryData<Reward[]>(['rewards'], (oldRewards = []) => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
       toast({ title: "Reward Used!", description: `You used ${data.title}.` });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: CRITICAL_QUERY_KEYS.REWARDS });
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
     },
   });
 };

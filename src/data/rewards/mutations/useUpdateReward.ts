@@ -1,16 +1,17 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward, UpdateRewardVariables } from '@/data/rewards/types';
-import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+// Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+
+const REWARDS_QUERY_KEY = ['rewards'];
 
 export const useUpdateReward = () => {
   const queryClient = useQueryClient();
 
   return useUpdateOptimisticMutation<Reward, Error, UpdateRewardVariables>({
     queryClient,
-    queryKey: [...CRITICAL_QUERY_KEYS.REWARDS], // Corrected: spread to create mutable array
+    queryKey: REWARDS_QUERY_KEY, // Replaced [...CRITICAL_QUERY_KEYS.REWARDS]
     mutationFn: async (variables: UpdateRewardVariables) => {
       const { id, ...updates } = variables;
       const { data, error } = await supabase

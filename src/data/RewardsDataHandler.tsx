@@ -10,7 +10,6 @@ import { fetchRewards, fetchUserPoints, fetchUserDomPoints, fetchTotalRewardsSup
 import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY } from './rewards/queries';
 import { toast } from '@/hooks/use-toast';
 import { saveRewardsToDB, savePointsToDB, saveDomPointsToDB } from './indexedDB/useIndexedDB';
-import { useSyncManager, CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
 export interface SaveRewardParams {
   rewardData: Partial<Reward>;
@@ -19,7 +18,6 @@ export interface SaveRewardParams {
 
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
-  const { syncKeys } = useSyncManager();
   
   // Query hooks
   const { 
@@ -62,7 +60,7 @@ export const useRewardsData = () => {
   // Mutation hooks
   const createRewardMutation = useCreateRewardMutation();
   const updateRewardMutation = useUpdateRewardMutation();
-  const deleteRewardMutation = useDeleteRewardMutation(); // Usage remains the same
+  const deleteRewardMutation = useDeleteRewardMutation();
 
   // Calculate total dom rewards supply
   const totalDomRewardsSupply = rewards
@@ -123,7 +121,7 @@ export const useRewardsData = () => {
   // Delete reward function
   const deleteReward = async (rewardId: string): Promise<boolean> => {
     try {
-      await deleteRewardMutation.mutateAsync(rewardId); // Usage remains the same
+      await deleteRewardMutation.mutateAsync(rewardId);
       return true;
     } catch (error) {
       console.error("Error in deleteReward:", error);
@@ -198,7 +196,9 @@ export const useRewardsData = () => {
         return updatedRewards;
       });
       
-      syncKeys([REWARDS_QUERY_KEY, isDomReward ? REWARDS_DOM_POINTS_QUERY_KEY : REWARDS_POINTS_QUERY_KEY]);
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: isDomReward ? REWARDS_DOM_POINTS_QUERY_KEY : REWARDS_POINTS_QUERY_KEY });
+      
       return true;
     } catch (error) {
       console.error("Error in buyReward:", error);
@@ -249,7 +249,7 @@ export const useRewardsData = () => {
         return updatedRewards;
       });
       
-      syncKeys([REWARDS_QUERY_KEY]);
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
       return true;
     } catch (error) {
       console.error("Error in useReward:", error);
@@ -278,7 +278,7 @@ export const useRewardsData = () => {
       
       queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, newPoints);
       await savePointsToDB(newPoints);
-      syncKeys([REWARDS_POINTS_QUERY_KEY]);
+      queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
       return true;
     } catch (error) {
       console.error("Error in updatePoints:", error);
@@ -307,7 +307,7 @@ export const useRewardsData = () => {
       
       queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, newPoints);
       await saveDomPointsToDB(newPoints);
-      syncKeys([REWARDS_DOM_POINTS_QUERY_KEY]);
+      queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY });
       return true;
     } catch (error) {
       console.error("Error in updateDomPoints:", error);
