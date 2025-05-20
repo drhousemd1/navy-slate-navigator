@@ -1,4 +1,3 @@
-
 export interface Reward {
   id: string;
   title: string;
@@ -45,3 +44,9 @@ export type CreateRewardVariables = {
 };
 
 export type UpdateRewardVariables = { id: string } & Partial<Omit<Reward, 'id' | 'created_at' | 'updated_at'>>;
+
+export type RewardWithPointsAndSupply = Reward & {
+  // userSubPoints: number; // These might not be needed per reward item if managed globally
+  // userDomPoints: number; // These might not be needed per reward item if managed globally
+  supply: number; // Supply is already part of Reward, but explicitly listing if it's specifically for this combined type
+};

@@ -1,17 +1,14 @@
-
 import { useQuery, useQueryClient, UseQueryResult } from "@tanstack/react-query";
+import { useCallback } from 'react'; // Added useCallback import
 import { 
   REWARDS_QUERY_KEY, 
-  REWARDS_POINTS_QUERY_KEY, // Keep this
-  REWARDS_DOM_POINTS_QUERY_KEY, // Keep this
-  REWARDS_SUPPLY_QUERY_KEY, // Keep this for reward specific supply
+  REWARDS_POINTS_QUERY_KEY, 
+  REWARDS_DOM_POINTS_QUERY_KEY, 
+  REWARDS_SUPPLY_QUERY_KEY, // Assuming this is for global supply, not individual
   fetchRewards, 
-  // fetchUserPoints, // This conflicts, will use local version or alias
-  // fetchUserDomPoints, // This conflicts, will use local version or alias
-  fetchRewardSupply,
-  // No need to import getProfilePointsQueryKey if not used directly here, points are handled by usePointsManager
+  fetchRewardSupply, // Assuming this is exported from queries
 } from "./queries"; 
-import { Reward, RewardWithPointsAndSupply } from "./types";
+import { Reward, RewardWithPointsAndSupply } from "./types"; // RewardWithPointsAndSupply should now be available
 import { useAuth } from "@/contexts/auth"; // Import useAuth to get user ID for points
 
 // Aliasing imports to avoid conflict, or ensure local functions have different names
@@ -58,47 +55,42 @@ export const useRewardsData = () => {
     return data ?? 0;
   };
 
-
-  // This query is for the general points, often managed by usePointsManager elsewhere
-  // If this hook is solely for rewards list and their individual supplies, these might be redundant
-  // For now, wiring them up with the userId from useAuth
   const { data: userPoints = 0, isLoading: isLoadingUserPoints, refetch: refetchUserPoints } = useQuery<number, Error>({
-    queryKey: REWARDS_POINTS_QUERY_KEY(userId), // Use userId
+    queryKey: REWARDS_POINTS_QUERY_KEY(userId), 
     queryFn: () => userId ? fetchUserPointsQuery(userId) : Promise.resolve(0),
-    enabled: !!userId, // Only run if userId is available
+    enabled: !!userId, 
   });
 
   const { data: userDomPoints = 0, isLoading: isLoadingUserDomPoints, refetch: refetchUserDomPoints } = useQuery<number, Error>({
-    queryKey: REWARDS_DOM_POINTS_QUERY_KEY(userId), // Use userId
+    queryKey: REWARDS_DOM_POINTS_QUERY_KEY(userId), 
     queryFn: () => userId ? fetchUserDomPointsQuery(userId) : Promise.resolve(0),
-    enabled: !!userId, // Only run if userId is available
+    enabled: !!userId, 
   });
 
   const getRewardSupply = useCallback(async (rewardId: string) => {
-    // This can remain a direct fetch or be converted to a useQuery instance if needed reactively elsewhere
     return fetchRewardSupply(rewardId);
-  }, []);
+  }, [fetchRewardSupply]); // Added fetchRewardSupply to dependency array
 
-  const rewardsWithPointsAndSupply: UseQueryResult<RewardWithPointsAndSupply[], Error> = useQuery<RewardWithPointsAndSupply[], Error, RewardWithPointsAndSupply[], unknown[]>({
-    queryKey: [REWARDS_QUERY_KEY, userId, 'withPointsAndSupply'],
+  const rewardsWithPointsAndSupply: UseQueryResult<RewardWithPointsAndSupply[], Error> = useQuery<RewardWithPointsAndSupply[], Error, RewardWithPointsAndSupply[], (string | undefined)[]>({ // Corrected queryKey type
+    queryKey: [REWARDS_QUERY_KEY[0], userId, 'withPointsAndSupply'], // Use REWARDS_QUERY_KEY[0] for the base key string
     queryFn: async () => {
       const baseRewards = await fetchRewards();
-      // const currentSubPoints = userId ? await fetchUserPointsQuery(userId) : 0;
-      // const currentDomPoints = userId ? await fetchUserDomPointsQuery(userId) : 0;
+      // const currentSubPoints = userId ? await fetchUserPointsQuery(userId) : 0; // Not needed per reward
+      // const currentDomPoints = userId ? await fetchUserDomPointsQuery(userId) : 0; // Not needed per reward
 
       return Promise.all(
         baseRewards.map(async (reward) => {
           const supply = await fetchRewardSupply(reward.id);
           return {
             ...reward,
-            // userSubPoints: currentSubPoints, // Points are now typically managed by usePointsManager globally
-            // userDomPoints: currentDomPoints, // So, these might not be needed per reward item here.
-            supply: supply,
+            // userSubPoints: currentSubPoints, 
+            // userDomPoints: currentDomPoints,
+            supply: supply, // supply here might be redundant if Reward type already has it with correct meaning
           };
         })
       );
     },
-    enabled: !!userId || !user, // Fetch even if user is null initially (for public rewards), then refetch if user changes
+    enabled: !!userId || !user, 
   });
 
 
@@ -106,7 +98,7 @@ export const useRewardsData = () => {
     rewards, // Raw rewards list
     rewardsWithSupply: rewardsWithPointsAndSupply.data || [], // Rewards enhanced with supply (and potentially points if needed)
     isLoadingRewards: isLoadingRewards || rewardsWithPointsAndSupply.isLoading,
-    rewardsError, // Error from base rewards fetch
+    rewardsError: rewardsError || rewardsWithPointsAndSupply.error, // Combine errors
     userPoints, // Sub points for the current user
     userDomPoints, // DOM points for the current user
     isLoadingUserPoints,

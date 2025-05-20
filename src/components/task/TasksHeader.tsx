@@ -5,19 +5,20 @@ import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
 import { Box, Coins } from 'lucide-react';
 import { usePointsManager } from '@/data/points/usePointsManager';
-import { useRewards } from '@/contexts/RewardsContext'; // Added import for useRewards
+import { useRewards } from '@/contexts/RewardsContext'; 
 
 interface TasksHeaderProps {
-  // onAddTask?: () => void; // Removed onAddTask prop
+  // onAddTask?: () => void; // This was already removed, which is correct.
+  taskCount: number; // Added for consistency if needed, or can be removed if not used
+  completedCount: number; // Added for consistency if needed, or can be removed if not used
 }
 
-const TasksHeader: React.FC<TasksHeaderProps> = () => {
+const TasksHeader: React.FC<TasksHeaderProps> = ({ taskCount, completedCount }) => { // Destructure props
   const { 
     points: totalPoints, 
     domPoints, 
-    // isLoadingPoints, // No longer used for conditional rendering here
     refreshPoints,
-  } = usePointsManager(); // Fetches for the current authenticated user by default
+  } = usePointsManager(); 
 
   const { totalRewardsSupply, totalDomRewardsSupply } = useRewards();
 
@@ -30,13 +31,14 @@ const TasksHeader: React.FC<TasksHeaderProps> = () => {
   return (
     <div className="flex items-center mb-6">
       <h1 className="text-base font-semibold text-white mr-auto">My Tasks</h1>
-      {/* Badges are now always rendered. isLoadingPoints is handled internally by usePointsManager returning 0 until loaded. */}
+      {/* Display task counts if passed, or remove if not part of design */}
+      {/* <span className="text-sm text-gray-400 mr-4">{completedCount}/{taskCount} Tasks</span> */}
       <div className="flex items-center gap-2 ml-auto">
         <Badge 
           className="text-white font-bold px-3 py-1 flex items-center gap-1"
           style={badgeStyle}
         >
-          <Box className="w-3 h-3" /> {/* Icon for total rewards supply */}
+          <Box className="w-3 h-3" /> 
           <span>{totalRewardsSupply}</span>
         </Badge>
         <Badge 
@@ -46,7 +48,7 @@ const TasksHeader: React.FC<TasksHeaderProps> = () => {
           <Coins className="w-3 h-3" />
           <span>{totalPoints}</span>
         </Badge>
-        <DOMBadge icon="box" value={totalDomRewardsSupply} /> {/* DOMBadge for DOM rewards supply */}
+        <DOMBadge icon="box" value={totalDomRewardsSupply} /> 
         <DOMBadge icon="crown" value={domPoints} />
       </div>
     </div>

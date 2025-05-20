@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { TaskWithId } from './types'; // Use TaskWithId consistently
@@ -12,7 +13,11 @@ export const fetchTasks = async (): Promise<TaskWithId[]> => {
     .order('created_at', { ascending: false });
   
   if (error) throw error;
-  return (data as TaskWithId[]) || [];
+  // Ensure user_id is mapped if it's not directly available or has a different name from DB
+  return ((data || []) as any[]).map(task => ({
+    ...task,
+    user_id: task.user_id || 'default_user_id_placeholder', // Ensure user_id is present
+  })) as TaskWithId[];
 };
 
 export const fetchTaskById = async (taskId: string): Promise<TaskWithId | null> => {
@@ -23,19 +28,22 @@ export const fetchTaskById = async (taskId: string): Promise<TaskWithId | null> 
     .single();
   
   if (error) {
-    // For "PGRST116" (JSON object requested, multiple (or no) rows returned), return null
     if (error.code === 'PGRST116') {
         console.warn(`fetchTaskById: No task found or multiple tasks found for ID ${taskId}. Returning null.`);
         return null;
     }
     throw error;
   }
-  return data as TaskWithId | null;
+  if (!data) return null;
+  return {
+    ...data,
+    user_id: data.user_id || 'default_user_id_placeholder', // Ensure user_id is present
+  } as TaskWithId;
 };
 
-export type TasksQueryResult = UseQueryResult<TaskWithId[], Error>;
+export type TasksQueryResult = UseQueryResult<TaskWithId[], Error>; // Use TaskWithId
 
-export function useTasksQuery(options?: { enabled?: boolean }): TasksQueryResult {
+export function useTasksQuery(options?: { enabled?: boolean }): TasksQueryResult { // Use TaskWithId
   return useQuery<TaskWithId[], Error>({ 
     queryKey: TASKS_QUERY_KEY,
     queryFn: fetchTasks,
@@ -50,9 +58,8 @@ export function useTasksQuery(options?: { enabled?: boolean }): TasksQueryResult
   });
 }
 
-// Need to add useTaskByIdQuery if it's used elsewhere or for consistency
-export const useTaskByIdQuery = (taskId: string, options?: { enabled?: boolean }) => {
-  return useQuery<TaskWithId | null, Error>({
+export const useTaskByIdQuery = (taskId: string, options?: { enabled?: boolean }) => { // Use TaskWithId
+  return useQuery<TaskWithId | null, Error>({ // Use TaskWithId
     queryKey: taskQueryKey(taskId),
     queryFn: () => fetchTaskById(taskId),
     staleTime: 1000 * 60 * 5,
@@ -62,6 +69,6 @@ export const useTaskByIdQuery = (taskId: string, options?: { enabled?: boolean }
     refetchOnMount: true,
     retry: 1,
     retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
-    enabled: !!taskId && (options?.enabled === undefined ? true : options.enabled), // Ensure taskId exists
+    enabled: !!taskId && (options?.enabled === undefined ? true : options.enabled), 
   });
 };

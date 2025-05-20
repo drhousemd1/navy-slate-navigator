@@ -1,8 +1,10 @@
+
 import { Task as BaseTask } from '@/lib/taskUtils'; // Renaming to BaseTask to avoid conflict if Task is locally defined elsewhere
 
 // Export TaskWithId which is BaseTask extended with DB fields
 export type TaskWithId = BaseTask & { 
   id: string;
+  user_id: string; // Added user_id
   week_identifier?: string | null;
   background_images?: any; 
   description?: string | null; 
@@ -28,14 +30,14 @@ export type TaskWithId = BaseTask & {
 };
 
 // Re-export BaseTask if it's needed directly by other modules from this file
-export type Task = BaseTask;
+export type Task = BaseTask; // This was causing "Task is declared locally but not exported" - ensure BaseTask is what's intended if Task is used.
 
 // Define variables for creating a task
 // Title and points are required, others can be optional or have defaults
 export type CreateTaskVariables = Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at' | 'completed' | 'last_completed_date' | 'title' | 'points' | 'user_id'>> & {
   title: string;
   points: number;
-  user_id: string; // Add user_id as it's usually required
+  user_id: string; // user_id is here for creation
   // Explicitly add fields that were causing type errors, ensuring they are optional
   week_identifier?: string | null;
   background_images?: any; // Ideally, replace 'any' with a more specific type like JsonValue if available
