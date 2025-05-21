@@ -11,7 +11,7 @@ import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables
 import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
 import { toast } from '@/hooks/use-toast';
 
-import { useBuySubReward, useRedeemSubReward, useBuyDomReward, useRedeemDomReward } from '@/data/rewards/mutations';
+import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePointsManager } from '@/data/points/usePointsManager';
 
@@ -33,11 +33,9 @@ const RewardsContent: React.FC<{
   const deleteRewardMutation = useDeleteRewardMutation();
   
   const buySubRewardMutation = useBuySubReward();
-  const buyDomRewardMutation = useBuyDomReward();
   const redeemSubRewardMutation = useRedeemSubReward();
-  const redeemDomRewardMutation = useRedeemDomReward();
   const { user } = useAuth();
-  const { points: currentUserPoints, domPoints: currentUserDomPoints } = usePointsManager();
+  const { points: currentUserPoints } = usePointsManager();
 
   const handleAddNewReward = () => {
     setRewardBeingEdited(undefined);
@@ -63,25 +61,19 @@ const RewardsContent: React.FC<{
       toast({ title: "Error", description: "User profile not available. Please log in.", variant: "destructive" });
       return;
     }
+    if (rewardToBuy.is_dom_reward) {
+        toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward purchase not implemented on this button yet.", variant: "destructive" });
+        return;
+    }
 
     try {
-      if (rewardToBuy.is_dom_reward) {
-        await buyDomRewardMutation.mutateAsync({
-          rewardId,
-          cost,
-          currentSupply: rewardToBuy.supply,
-          profileId: user.id,
-          currentDomPoints: currentUserDomPoints ?? 0,
-        });
-      } else {
-        await buySubRewardMutation.mutateAsync({ 
-          rewardId, 
-          cost,
-          currentSupply: rewardToBuy.supply,
-          profileId: user.id,
-          currentPoints: currentUserPoints ?? 0
-        });
-      }
+      await buySubRewardMutation.mutateAsync({ 
+        rewardId, 
+        cost,
+        currentSupply: rewardToBuy.supply,
+        profileId: user.id,
+        currentPoints: currentUserPoints ?? 0
+      });
     } catch (e) {
       console.error("Error buying reward from page:", e);
     }
@@ -97,21 +89,17 @@ const RewardsContent: React.FC<{
       toast({ title: "Error", description: "User profile not available. Please log in.", variant: "destructive" });
       return;
     }
+     if (rewardToUse.is_dom_reward) {
+        toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward usage not implemented on this button yet.", variant: "destructive" });
+        return;
+    }
 
     try {
-      if (rewardToUse.is_dom_reward) {
-        await redeemDomRewardMutation.mutateAsync({
-          rewardId,
-          currentSupply: rewardToUse.supply,
-          profileId: user.id 
-        });
-      } else {
-        await redeemSubRewardMutation.mutateAsync({
-          rewardId,
-          currentSupply: rewardToUse.supply,
-          profileId: user.id
-        });
-      }
+      await redeemSubRewardMutation.mutateAsync({
+        rewardId,
+        currentSupply: rewardToUse.supply,
+        profileId: user.id
+      });
     } catch (e) {
       console.error("Error using reward from page:", e);
     }

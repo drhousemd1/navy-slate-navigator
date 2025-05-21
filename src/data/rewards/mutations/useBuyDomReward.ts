@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/hooks/use-toast';
@@ -30,13 +29,12 @@ export const useBuyDomReward = () => {
       if (currentDomPoints < cost) {
         toast({
           title: "Not enough points",
-          description: "You do not have enough DOM points to purchase this reward.",
+          description: "You do not have enough points to purchase this reward.",
           variant: "destructive",
         });
         throw new Error("Not enough points");
       }
 
-      // Only consider out of stock if supply is exactly 0 (unlimited is -1)
       if (currentSupply === 0) {
         toast({
           title: "Out of stock",
@@ -53,18 +51,13 @@ export const useBuyDomReward = () => {
 
       const newPoints = currentDomPoints - cost;
       const { error: profileError } = await supabase.from('profiles').update({ dom_points: newPoints }).eq('id', profileId);
-      if (profileError) {
-        // Attempt to revert supply update on profile points update failure
-        await supabase.from('rewards').update({ supply: currentSupply }).eq('id', rewardId);
-        throw profileError;
-      }
+      if (profileError) throw profileError;
 
       return { rewardId, newSupply, newPoints };
     },
     onSuccess: async (data, variables) => {
       await queryClient.invalidateQueries({ queryKey: ['rewards'] });
       await queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId] });
-      // Invalidate counts as supply changes
       await queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] });
       await queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
       toast({
@@ -73,14 +66,11 @@ export const useBuyDomReward = () => {
       });
     },
     onError: (error: Error) => {
-      // Avoid redundant toasts for known, pre-toasted errors
-      if (error.message !== "Not enough points" && error.message !== "Out of stock") {
-        toast({
-          title: "Purchase Error",
-          description: error.message || "Failed to purchase reward.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: `Failed to purchase reward: ${error.message}`,
+        variant: "destructive",
+      });
     },
   });
 };
