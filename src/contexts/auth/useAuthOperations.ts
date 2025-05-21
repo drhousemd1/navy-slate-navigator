@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -169,10 +168,40 @@ export function useAuthOperations() {
     }
   };
 
+  // Delete user account
+  const deleteAccount = async () => {
+    try {
+      const { error } = await supabase.rpc('delete_user_account');
+      
+      if (error) {
+        console.error('Account deletion error:', error);
+        toast({
+          title: 'Error deleting account',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return { error };
+      }
+
+      console.log('Account deletion initiated successfully');
+      toast({
+        title: 'Account deletion initiated',
+        description: 'Your account is scheduled for deletion. You will be logged out shortly.',
+      });
+      
+      // User will be logged out automatically by auth listener when account is deleted
+      return { error: null };
+    } catch (error: any) {
+      console.error('Exception during account deletion:', error);
+      return { error };
+    }
+  };
+
   return {
     signIn,
     signUp,
     resetPassword,
-    updatePassword
+    updatePassword,
+    deleteAccount
   };
 }

@@ -1,6 +1,8 @@
+
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { uploadFile, deleteFiles } from '@/data/storageService';
 
 export function useUserProfile(user: User | null, setUser: (user: User | null) => void) {
   // Update user nickname
@@ -107,12 +109,103 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
     }
   };
 
+  // Upload profile image and update user metadata
+  const uploadProfileImageAndUpdateState = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+    
+    try {
+      const userId = user.id;
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+      
+      // Upload the file to storage
+      const { publicUrl } = await uploadFile('avatars', filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+      
+      if (!publicUrl) {
+        throw new Error('Failed to get public URL after upload');
+      }
+      
+      // Update user metadata with the new avatar URL
+      const { error } = await supabase.auth.updateUser({
+        data: { 
+          avatar_url: publicUrl 
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setProfileImageState(publicUrl);
+      
+      return publicUrl;
+    } catch (error: any) {
+      console.error('Error uploading profile image:', error);
+      toast({
+        title: 'Error updating profile image',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return null;
+    }
+  };
+  
+  // Delete user profile image
+  const deleteUserProfileImage = async (): Promise<void> => {
+    if (!user) return;
+    
+    try {
+      const currentAvatarUrl = getProfileImage();
+      
+      if (!currentAvatarUrl) {
+        console.log('No avatar to delete');
+        return;
+      }
+      
+      // Extract the file path from the URL
+      const urlParts = currentAvatarUrl.split('/');
+      const filePath = urlParts[urlParts.length - 2] + '/' + urlParts[urlParts.length - 1];
+      
+      // Delete the file from storage
+      await deleteFiles('avatars', [filePath]);
+      
+      // Update user metadata to remove the avatar URL
+      const { error } = await supabase.auth.updateUser({
+        data: { 
+          avatar_url: null 
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setProfileImageState(null);
+      
+    } catch (error: any) {
+      console.error('Error deleting profile image:', error);
+      toast({
+        title: 'Error deleting profile image',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   return {
     updateNickname,
     getNickname,
-    setProfileImageState, // Export renamed function
+    setProfileImageState,
     getProfileImage,
     getUserRole,
-    updateUserRole
+    updateUserRole,
+    uploadProfileImageAndUpdateState,
+    deleteUserProfileImage
   };
 }
