@@ -16,7 +16,8 @@ const Profile: React.FC = () => {
     getNickname, 
     updateNickname, 
     getProfileImage, 
-    updateProfileImage, 
+    uploadProfileImageAndUpdateState, 
+    deleteUserProfileImage, 
     signOut,
     updateUserRole,
     deleteAccount 
@@ -85,17 +86,20 @@ const Profile: React.FC = () => {
     setLoadingProfileImage(true);
     setError(null);
     try {
-      const newImageUrl = await updateProfileImage(newProfileImageFile);
+      // Use the new function for uploading
+      const newImageUrl = await uploadProfileImageAndUpdateState(newProfileImageFile);
       if (newImageUrl) {
         setProfileImage(newImageUrl); 
         setNewProfileImageFile(null); 
         toast({ title: 'Success', description: 'Profile image updated successfully.' });
-      } else if (newProfileImageFile) {
-        throw new Error("Failed to get new image URL after upload.");
       } else {
-        // This case (null file, null URL) could be for deletion, handled by handleDeleteAvatar
-        // or if updateProfileImage(null) was called here.
-        // For clarity, upload should expect a URL if a file was given.
+         // This case implies uploadProfileImageAndUpdateState can return null/undefined on failure,
+         // which is handled by the catch block. If it's expected to always return a URL on success,
+         // this 'else' branch might indicate a problem or be unnecessary.
+         // For now, assuming it returns string on success and throws error on failure.
+        console.warn('Profile Page: uploadProfileImageAndUpdateState did not return a new image URL as expected, but did not throw.');
+        // If newImageUrl can be null on success (e.g. after deletion, though this is upload path)
+        // toast({ title: 'Info', description: 'Profile image operation completed.' });
       }
     } catch (err: any) {
       console.error('Error uploading profile image:', err);
@@ -111,7 +115,8 @@ const Profile: React.FC = () => {
     setLoadingProfileImage(true); 
     setError(null);
     try {
-      await updateProfileImage(null); 
+      // Use the new function for deleting
+      await deleteUserProfileImage(); 
       setProfileImage(null); 
       setNewProfileImageFile(null); 
       toast({ title: 'Success', description: 'Profile image removed.' });
@@ -131,11 +136,11 @@ const Profile: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user || !deleteAccount) return;
+    if (!user || !deleteAccount) return; // Check if deleteAccount is available
     try {
       await deleteAccount();
       toast({ title: "Account Deletion Initiated", description: "Your account is scheduled for deletion. You will be logged out." });
-      await signOut();
+      // signOut is called within deleteAccount if successful, or handled by onAuthStateChange
     } catch (err: any) {
       console.error('Error deleting account:', err);
       toast({ title: 'Error', description: err.message || 'Failed to delete account.', variant: 'destructive' });
@@ -148,7 +153,7 @@ const Profile: React.FC = () => {
     if (!user) return;
     try {
       await updateUserRole(newRole);
-      setCurrentRole(newRole);
+      setCurrentRole(newRole); // Update local state to reflect change immediately
       toast({ title: 'Success', description: `Role updated to ${newRole}.` });
     } catch (err: any) {
       console.error('Error updating role:', err);
@@ -268,7 +273,7 @@ const Profile: React.FC = () => {
             <Button onClick={handleLogout} variant="outline" className="w-full border-gray-600 hover:bg-gray-700 flex items-center">
               <LogOut className="w-4 h-4 mr-2" /> Log Out
             </Button>
-            <Button onClick={() => setIsDeleteAccountDialogOpen(true)} variant="destructive" className="w-full flex items-center">
+            <Button onClick={() => setIsDeleteAccountDialogOpen(true)} variant="destructive" className="w-full flex items-center" disabled={!deleteAccount}>
               <Trash2 className="w-4 h-4 mr-2" /> Delete Account
             </Button>
           </div>

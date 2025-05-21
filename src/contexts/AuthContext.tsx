@@ -11,7 +11,7 @@ import { useUserProfile } from './auth/useUserProfile';
 interface AuthState {
   user: User | null;
   session: Session | null;
-  loading: boolean; // This will now primarily reflect initial session fetch
+  loading: boolean; 
   isAuthenticated: boolean;
   isAdmin: boolean;
   userExists: boolean;
@@ -24,11 +24,14 @@ export interface AuthContextType extends AuthState {
   signUp: ReturnType<typeof useAuthOperations>['signUp'];
   resetPassword: ReturnType<typeof useAuthOperations>['resetPassword'];
   updatePassword: ReturnType<typeof useAuthOperations>['updatePassword'];
+  deleteAccount: ReturnType<typeof useAuthOperations>['deleteAccount']; // Added deleteAccount
   getNickname: ReturnType<typeof useUserProfile>['getNickname'];
   getProfileImage: ReturnType<typeof useUserProfile>['getProfileImage'];
   getUserRole: ReturnType<typeof useUserProfile>['getUserRole'];
   updateNickname: ReturnType<typeof useUserProfile>['updateNickname'];
-  updateProfileImage: ReturnType<typeof useUserProfile>['updateProfileImage'];
+  // Updated profile image functions
+  uploadProfileImageAndUpdateState: ReturnType<typeof useUserProfile>['uploadProfileImageAndUpdateState'];
+  deleteUserProfileImage: ReturnType<typeof useUserProfile>['deleteUserProfileImage'];
   updateUserRole: ReturnType<typeof useUserProfile>['updateUserRole'];
 }
 
@@ -38,7 +41,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     session: null,
-    loading: true, // True initially, will be set to false quickly
+    loading: true, 
     isAuthenticated: false,
     isAdmin: false,
     userExists: false,
@@ -53,6 +56,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       userExists: !!updatedUser,
     }));
   };
+  // Assuming useUserProfile now exports uploadProfileImageAndUpdateState and deleteUserProfileImage
   const userProfileUtils = useUserProfile(authState.user, wrappedSetUserForProfile);
 
   useEffect(() => {
@@ -257,11 +261,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     signUp: authOperations.signUp,
     resetPassword: authOperations.resetPassword,
     updatePassword: authOperations.updatePassword,
+    deleteAccount: authOperations.deleteAccount, // Added deleteAccount
     getNickname: userProfileUtils.getNickname,
     getProfileImage: userProfileUtils.getProfileImage,
     getUserRole: userProfileUtils.getUserRole,
     updateNickname: userProfileUtils.updateNickname,
-    updateProfileImage: userProfileUtils.updateProfileImage,
+    // Mapped to new function names
+    uploadProfileImageAndUpdateState: userProfileUtils.uploadProfileImageAndUpdateState,
+    deleteUserProfileImage: userProfileUtils.deleteUserProfileImage,
     updateUserRole: userProfileUtils.updateUserRole,
   };
 
