@@ -6,6 +6,8 @@ import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { TaskWithId } from '@/data/tasks/types';
+import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery'; // Added import
+import { useUserIds } from '@/contexts/UserIdsContext'; // Added import
 
 
 interface ToggleTaskCompletionVariables {
@@ -17,6 +19,7 @@ interface ToggleTaskCompletionVariables {
 
 export function useToggleTaskCompletionMutation() {
   const queryClient = useQueryClient();
+  const { subUserId } = useUserIds(); // Get subUserId
 
   return useMutation<void, Error, ToggleTaskCompletionVariables, { previousTasks?: TaskWithId[] }>(
     {
@@ -162,12 +165,6 @@ export function useToggleTaskCompletionMutation() {
             console.error('[useToggleTaskCompletionMutation onSuccessCallback] Error updating IndexedDB:', error);
             toast({ variant: "destructive", title: "Local Sync Error", description: "Task status updated on server, but local sync failed." });
         }
-
-        if (variables.completed) {
-            queryClient.invalidateQueries({ queryKey: ['profile'] });
-            queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
-            queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
-        }
       },
       onError: (error, variables, context) => {
         if (context?.previousTasks) {
@@ -184,11 +181,14 @@ export function useToggleTaskCompletionMutation() {
       },
       onSettled: (data, error, variables) => {
         queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-        if (variables.completed || !variables.completed) { // Invalidate points/profile if status changes, regardless of direction
-            queryClient.invalidateQueries({ queryKey: ['profile'] });
-            queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
-            queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+        // Invalidate profile, user-specific points, general rewards points, and weekly summary
+        // This ensures all related data is refetched whether a task is completed or uncompleted.
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
+        if (subUserId) { // Ensure subUserId is available before invalidating
+            queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
         }
+        queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY }); // This seems to be a general key for points, keeping it.
+        queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
       },
     }
   );
