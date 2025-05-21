@@ -1,12 +1,10 @@
-Here's the full code for `src/components/app/AppProviders.tsx`:
 
-```tsx
 import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { UserIdsProvider } from '@/contexts/UserIdsContext'; // Import UserIdsProvider
+import { UserIdsProvider } from '@/contexts/UserIdsContext';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 import { queryClient } from '@/data/queryClient';
 import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
@@ -36,4 +34,3 @@ export const AppProviders: React.FC<React.PropsWithChildren<{}>> = ({ children }
     </Router>
   );
 };
-```
