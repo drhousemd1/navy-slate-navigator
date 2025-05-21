@@ -171,7 +171,8 @@ export function useAuthOperations() {
   // Delete user account
   const deleteAccount = async () => {
     try {
-      const { error } = await supabase.rpc('delete_user_account');
+      // Use type assertion 'as any' to bypass TypeScript error due to potentially stale types
+      const { error } = await supabase.rpc('delete_user_account' as any);
       
       if (error) {
         console.error('Account deletion error:', error);
