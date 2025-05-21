@@ -1,9 +1,10 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Reward } from '../types';
 
-const REWARDS_QUERY_KEY_BASE = 'rewards';
+const REWARDS_QUERY_KEY = ['rewards'];
 
 interface RedeemSubRewardVariables {
   rewardId: string;
@@ -44,10 +45,10 @@ export const useRedeemSubReward = () => {
       return updatedReward as Reward;
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: [REWARDS_QUERY_KEY_BASE] });
-      const previousRewards = queryClient.getQueryData<Reward[]>([REWARDS_QUERY_KEY_BASE]);
+      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
 
-      queryClient.setQueryData<Reward[]>([REWARDS_QUERY_KEY_BASE], (old = []) =>
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
             ? { ...reward, supply: reward.supply - 1 }
@@ -58,7 +59,7 @@ export const useRedeemSubReward = () => {
     },
     onError: (err, variables, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>([REWARDS_QUERY_KEY_BASE], context.previousRewards);
+        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
       }
       toast({ 
         title: "Failed to Use Reward", 
@@ -67,14 +68,14 @@ export const useRedeemSubReward = () => {
       });
     },
     onSuccess: (data, variables) => {
-      queryClient.setQueryData<Reward[]>([REWARDS_QUERY_KEY_BASE], (oldRewards = []) => {
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
       toast({ title: "Reward Used!", description: `You used ${data.title}.` });
     },
     onSettled: (_data, _error, variables) => { 
-      queryClient.invalidateQueries({ queryKey: [REWARDS_QUERY_KEY_BASE, variables.rewardId] });
-      queryClient.invalidateQueries({ queryKey: [REWARDS_QUERY_KEY_BASE] });
+      queryClient.invalidateQueries({ queryKey: [...REWARDS_QUERY_KEY, variables.rewardId] });
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
     },
   });
 };

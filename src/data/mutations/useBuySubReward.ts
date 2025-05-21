@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -18,6 +19,10 @@ interface BuySubRewardOptimisticContext {
 
 export const useBuySubReward = () => {
   const queryClient = useQueryClient();
+  
+  // Use consistent array query keys
+  const REWARDS_QUERY_KEY = ['rewards'];
+  const REWARDS_POINTS_QUERY_KEY = ['rewardsPoints'];
 
   return useMutation<Reward, Error, BuySubRewardArgs, BuySubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, cost, currentSupply, profileId, currentPoints }) => {
@@ -60,20 +65,20 @@ export const useBuySubReward = () => {
       return updatedReward as Reward;
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: ['rewards'] });
-      await queryClient.cancelQueries({ queryKey: ['rewardsPoints'] });
+      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
 
-      const previousRewards = queryClient.getQueryData<Reward[]>(['rewards']);
-      const previousPoints = queryClient.getQueryData<number>(['rewardsPoints']);
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
+      const previousPoints = queryClient.getQueryData<number>(REWARDS_POINTS_QUERY_KEY);
       
-      queryClient.setQueryData<Reward[]>(['rewards'], (old = []) =>
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
             ? { ...reward, supply: reward.supply - 1 } 
             : reward
         )
       );
-      queryClient.setQueryData<number>(['rewardsPoints'], (oldPoints = 0) =>
+      queryClient.setQueryData<number>(REWARDS_POINTS_QUERY_KEY, (oldPoints = 0) =>
         (oldPoints || 0) - variables.cost
       );
 
@@ -81,23 +86,23 @@ export const useBuySubReward = () => {
     },
     onError: (err, variables, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(['rewards'], context.previousRewards);
+        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
       }
       if (context?.previousPoints !== undefined) {
-        queryClient.setQueryData<number>(['rewardsPoints'], context.previousPoints);
+        queryClient.setQueryData<number>(REWARDS_POINTS_QUERY_KEY, context.previousPoints);
       }
       toast({ title: "Purchase Failed", description: err.message, variant: "destructive" });
     },
     onSuccess: (data, variables) => {
-      queryClient.setQueryData<Reward[]>(['rewards'], (oldRewards = []) => {
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
-      queryClient.invalidateQueries({ queryKey: ['rewardsPoints'] });
+      queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
       toast({ title: "Reward Purchased!", description: `You bought ${data.title}.` });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      queryClient.invalidateQueries({ queryKey: ['rewardsPoints'] });
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
     },
   });
 };

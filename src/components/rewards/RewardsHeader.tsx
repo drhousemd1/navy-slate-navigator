@@ -23,7 +23,6 @@ const RewardsHeader: React.FC<RewardsHeaderProps> = ({ onAddNewReward }) => {
   const { data: domRewardTypesCount } = useDomRewardTypesCountQuery();
 
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
-  // isLoadingDisplay logic removed
 
   return (
     <div className="flex items-center mb-6">
