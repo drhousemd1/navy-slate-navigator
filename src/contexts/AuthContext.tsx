@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         session: initialSupabaseSession,
         loading: false, // KEY CHANGE: Set loading false now
         isAuthenticated: !!initialSupabaseSession,
-        isAdmin: false, // Tentatively false, will be updated asynchronously
+        isAdmin: false, // Tentatively false for initial load, will be updated asynchronously
         userExists: !!user,
         sessionExists: !!initialSupabaseSession,
       });
@@ -98,6 +98,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           });
           if (roleError) {
             console.error("AuthContext: Initial session - Error checking admin role (async):", roleError);
+            // Optionally set isAdmin to false explicitly on error, or let it be.
+            // Current behavior is to leave it as it was (which was false from above).
           } else {
             setAuthState(prev => ({ ...prev, isAdmin: !!hasAdminRole }));
             console.log("AuthContext: Initial session - Async admin role check complete. isAdmin updated to:", !!hasAdminRole);
@@ -115,22 +117,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log("AuthContext: Auth state change event:", _event, "New Session State:", newSessionState);
         const user = newSessionState?.user ?? null;
 
-        // Update primary auth state. Loading remains false. isAdmin is tentatively false.
+        // Update primary auth state. Loading remains false.
+        // CRITICAL FIX: Preserve previous isAdmin if user exists, otherwise set to false.
         setAuthState(prev => ({
-          ...prev, // Keep existing loading state (should be false)
+          ...prev,
           user: user,
           session: newSessionState,
           loading: false, // Ensure loading is false after any event
           isAuthenticated: !!newSessionState,
-          isAdmin: false, // Tentatively false, will be updated asynchronously
+          isAdmin: user ? prev.isAdmin : false, // Preserve isAdmin if user exists, else false
           userExists: !!user,
           sessionExists: !!newSessionState,
         }));
-        console.log("AuthContext: State updated after auth event. New state (isAdmin tentative):", {
+        console.log("AuthContext: State updated after auth event. New state (isAdmin preserved if user exists):", {
             userExists: !!user,
             sessionExists: !!newSessionState,
             isAuthenticated: !!newSessionState,
-            isAdmin: false, // At this point
+            isAdmin: user ? authState.isAdmin : false, // Log current isAdmin for clarity
             loading: false,
         });
 
@@ -144,13 +147,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
             if (roleError) {
               console.error("AuthContext: Auth state change - Error checking admin role (async):", roleError);
+              // If role check fails, we might want to set isAdmin to false.
+              // Or, trust the previous state if the failure is transient.
+              // For now, only update on success.
             } else {
-              setAuthState(prev => ({ ...prev, isAdmin: !!hasAdminRole }));
-              console.log("AuthContext: Auth state change - Async admin role check complete. isAdmin updated to:", !!hasAdminRole);
+              // Only update isAdmin if it has actually changed from the async check
+              setAuthState(prev => {
+                if (prev.isAdmin !== !!hasAdminRole) {
+                  console.log(`AuthContext: Auth state change - Async admin role changed from ${prev.isAdmin} to ${!!hasAdminRole}`);
+                  return { ...prev, isAdmin: !!hasAdminRole };
+                }
+                console.log(`AuthContext: Auth state change - Async admin role confirmed as ${prev.isAdmin}, no change.`);
+                return prev;
+              });
             }
           } catch (e) {
             console.error("AuthContext: Auth state change - Exception during async admin role check:", e);
           }
+        } else {
+          // If no user, ensure isAdmin is false (already handled by the main setAuthState above, but good to be explicit)
+          setAuthState(prev => ({ ...prev, isAdmin: false }));
+          console.log("AuthContext: Auth state change - No user, isAdmin definitively false.");
         }
         
         switch (_event) {
@@ -159,18 +176,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             break;
           case 'SIGNED_OUT':
             console.log("AuthContext: Event SIGNED_OUT processed. Clearing caches.");
-            await clearAllCaches(); // This itself can be async
-            // State is already updated (user null, session null, isAdmin false, loading false)
+            await clearAllCaches(); 
+            // isAdmin is already false because user is null
             break;
           case 'USER_DELETED':
             console.log("AuthContext: Event USER_DELETED processed. Clearing caches.");
             await clearAllCaches();
+            // isAdmin is already false
             break;
           case 'PASSWORD_RECOVERY':
             console.log("AuthContext: Event PASSWORD_RECOVERY processed.");
             break;
           case 'TOKEN_REFRESHED':
-            console.log("AuthContext: Event TOKEN_REFRESHED processed. Session and admin role (async) re-validated.");
+            console.log("AuthContext: Event TOKEN_REFRESHED processed. Session and admin role (async) re-validated. isAdmin should have been preserved initially.");
             break;
           case 'USER_UPDATED':
             console.log("AuthContext: Event USER_UPDATED processed.");
@@ -219,19 +237,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signOut = async () => {
     console.log("AuthContext: signOut called. Setting loading true temporarily for operation.");
-    // Set loading to true specifically for the sign-out operation,
-    // onAuthStateChange will set it back to false.
     setAuthState(prev => ({ ...prev, loading: true })); 
     const { error } = await supabase.auth.signOut();
     
     if (error) {
       console.error('AuthContext: Error signing out:', error);
       toast({ title: "Sign Out Error", description: error.message, variant: "destructive" });
-      // Ensure loading is set to false if onAuthStateChange doesn't fire or if an error occurs before it.
       setAuthState(prev => ({ ...prev, loading: false })); 
     } else {
       console.log("AuthContext: Sign out successful via supabase.auth.signOut(). Waiting for onAuthStateChange for cache clearing and final state update (which includes loading: false).");
-      // onAuthStateChange will set loading to false.
+      // onAuthStateChange will set loading to false and isAdmin to false.
     }
   };
 
