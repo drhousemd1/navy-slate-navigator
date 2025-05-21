@@ -8,8 +8,8 @@ import {
   SheetTitle,
   SheetTrigger
 } from '@/components/ui/sheet';
-import { UserCircle2, User, LogOut, BookOpen, ShieldCheck } from 'lucide-react'; // Added ShieldCheck for admin
-import { useAuth } from '@/contexts/AuthContext';
+import { UserCircle2, User, LogOut, BookOpen, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/contexts/auth'; // Changed import path
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 // import { useQueryClient } from '@tanstack/react-query'; // No longer needed for purge
