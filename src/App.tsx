@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { OfflineBanner } from './components/OfflineBanner';
 import Hydrate from './components/Hydrate';
 import { usePreloadAppCoreData } from '@/data/preload/usePreloadAppCoreData';
-import AuthenticatedAppLoader from '@/components/AuthenticatedAppLoader'; // New import
+// AuthenticatedAppLoader import is removed
 
 // APP_CACHE_VERSION is used by AppProviders now
 // import { APP_CACHE_VERSION } from './lib/react-query-config';
@@ -19,15 +19,14 @@ function App() {
   // as auth state changes (including sign out cache clearing) are centralized in AuthContext.tsx
 
   return (
-    <AuthenticatedAppLoader>
-      <Hydrate fallbackMessage="Failed to load application data. Please try clearing site data or contact support.">
-        <Toaster />
-        <AppRoutes />
-        <OfflineBanner />
-        {/* Removed: <SyncStatusIndicator /> */}
-        {/* <CacheMonitorPanel /> */}
-      </Hydrate>
-    </AuthenticatedAppLoader>
+    // AuthenticatedAppLoader wrapper is removed
+    <Hydrate fallbackMessage="Failed to load application data. Please try clearing site data or contact support.">
+      <Toaster />
+      <AppRoutes />
+      <OfflineBanner />
+      {/* Removed: <SyncStatusIndicator /> */}
+      {/* <CacheMonitorPanel /> */}
+    </Hydrate>
   );
 }
 

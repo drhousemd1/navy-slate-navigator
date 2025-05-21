@@ -11,7 +11,7 @@ import { useUserProfile } from './auth/useUserProfile';
 interface AuthState {
   user: User | null;
   session: Session | null;
-  loading: boolean;
+  loading: boolean; // This will now primarily reflect initial session fetch
   isAuthenticated: boolean;
   isAdmin: boolean;
   userExists: boolean;
@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     session: null,
-    loading: true,
+    loading: true, // True initially, will be set to false quickly
     isAuthenticated: false,
     isAdmin: false,
     userExists: false,
@@ -59,107 +59,108 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log("AuthContext: Initializing, setting up listeners...");
     const checkInitialSession = async () => {
       console.log("AuthContext: Checking initial session...");
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("AuthContext: Error getting initial session:", error);
+      const { data: { session: initialSupabaseSession }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error("AuthContext: Error getting initial session:", sessionError);
         setAuthState(prev => ({ ...prev, loading: false }));
         return;
       }
 
-      console.log("AuthContext: Initial session data:", session);
+      console.log("AuthContext: Initial session data from Supabase:", initialSupabaseSession);
+      const user = initialSupabaseSession?.user ?? null;
 
-      if (session) {
-        const user = session.user;
-        let isAdminRole = false; // Renamed to avoid conflict with authState.isAdmin
-        if (user) {
-          try {
-            console.log("AuthContext: Initial session - User found, checking admin role for", user.id);
-            const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
-              requested_user_id: user.id,
-              requested_role: 'admin'
-            });
-            if (roleError) {
-              console.error("AuthContext: Initial session - Error checking admin role via RPC:", roleError);
-            } else {
-              isAdminRole = !!hasAdminRole;
-            }
-            console.log("AuthContext: Initial session - Is admin check result:", isAdminRole);
-          } catch (e) {
-            console.error("AuthContext: Initial session - Exception during admin role check:", e);
+      // Set primary auth state and loading to false first. isAdmin is tentatively false.
+      setAuthState({
+        user: user,
+        session: initialSupabaseSession,
+        loading: false, // KEY CHANGE: Set loading false now
+        isAuthenticated: !!initialSupabaseSession,
+        isAdmin: false, // Tentatively false, will be updated asynchronously
+        userExists: !!user,
+        sessionExists: !!initialSupabaseSession,
+      });
+      console.log("AuthContext: Initialized. Primary state set, loading false. Current state:", {
+        userExists: !!user,
+        sessionExists: !!initialSupabaseSession,
+        isAuthenticated: !!initialSupabaseSession,
+        isAdmin: false, // At this point
+        loading: false,
+      });
+
+      // If user exists, asynchronously check admin role
+      if (user) {
+        try {
+          console.log("AuthContext: Initial session - User found, async checking admin role for", user.id);
+          const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
+            requested_user_id: user.id,
+            requested_role: 'admin'
+          });
+          if (roleError) {
+            console.error("AuthContext: Initial session - Error checking admin role (async):", roleError);
+          } else {
+            setAuthState(prev => ({ ...prev, isAdmin: !!hasAdminRole }));
+            console.log("AuthContext: Initial session - Async admin role check complete. isAdmin updated to:", !!hasAdminRole);
           }
+        } catch (e) {
+          console.error("AuthContext: Initial session - Exception during async admin role check:", e);
         }
-        setAuthState({
-          user: user,
-          session: session,
-          loading: false,
-          isAuthenticated: true,
-          isAdmin: isAdminRole,
-          userExists: !!user,
-          sessionExists: !!session,
-        });
-        console.log("AuthContext: Initialized with active session. Current state:", {
-          userExists: !!user,
-          sessionExists: !!session,
-          isAuthenticated: true,
-          isAdmin: isAdminRole,
-          loading: false,
-        });
-      } else {
-        setAuthState(prev => ({ ...prev, loading: false, isAuthenticated: false, isAdmin: false, userExists: false, sessionExists: false }));
-        console.log("AuthContext: Initialized. No active session.");
       }
     };
 
     checkInitialSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event: AuthChangeEvent | 'USER_DELETED', session) => {
-        console.log("AuthContext: Auth state change event:", _event, "Session:", session);
-        const user = session?.user ?? null;
-        let eventIsAdminRole = false; // Renamed for clarity
+      async (_event: AuthChangeEvent | 'USER_DELETED', newSessionState: Session | null) => {
+        console.log("AuthContext: Auth state change event:", _event, "New Session State:", newSessionState);
+        const user = newSessionState?.user ?? null;
 
+        // Update primary auth state. Loading remains false. isAdmin is tentatively false.
+        setAuthState(prev => ({
+          ...prev, // Keep existing loading state (should be false)
+          user: user,
+          session: newSessionState,
+          loading: false, // Ensure loading is false after any event
+          isAuthenticated: !!newSessionState,
+          isAdmin: false, // Tentatively false, will be updated asynchronously
+          userExists: !!user,
+          sessionExists: !!newSessionState,
+        }));
+        console.log("AuthContext: State updated after auth event. New state (isAdmin tentative):", {
+            userExists: !!user,
+            sessionExists: !!newSessionState,
+            isAuthenticated: !!newSessionState,
+            isAdmin: false, // At this point
+            loading: false,
+        });
+
+        // If user exists, asynchronously check admin role
         if (user) {
           try {
-            console.log("AuthContext: Auth state change - User found, checking admin role for", user.id);
+            console.log("AuthContext: Auth state change - User found, async checking admin role for", user.id);
             const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
               requested_user_id: user.id,
               requested_role: 'admin'
             });
             if (roleError) {
-              console.error("AuthContext: Auth state change - Error checking admin role via RPC:", roleError);
+              console.error("AuthContext: Auth state change - Error checking admin role (async):", roleError);
             } else {
-              eventIsAdminRole = !!hasAdminRole;
+              setAuthState(prev => ({ ...prev, isAdmin: !!hasAdminRole }));
+              console.log("AuthContext: Auth state change - Async admin role check complete. isAdmin updated to:", !!hasAdminRole);
             }
-            console.log("AuthContext: Auth state change - Is admin check result:", eventIsAdminRole);
           } catch (e) {
-            console.error("AuthContext: Auth state change - Error checking admin role:", e);
+            console.error("AuthContext: Auth state change - Exception during async admin role check:", e);
           }
         }
         
-        setAuthState({
-          user: user,
-          session: session,
-          loading: false,
-          isAuthenticated: !!session,
-          isAdmin: eventIsAdminRole,
-          userExists: !!user,
-          sessionExists: !!session,
-        });
-        console.log("AuthContext: State updated after auth event. New state:", {
-            userExists: !!user,
-            sessionExists: !!session,
-            isAuthenticated: !!session,
-            isAdmin: eventIsAdminRole,
-            loading: false,
-        });
-
         switch (_event) {
           case 'SIGNED_IN':
             console.log("AuthContext: Event SIGNED_IN processed.");
             break;
           case 'SIGNED_OUT':
             console.log("AuthContext: Event SIGNED_OUT processed. Clearing caches.");
-            await clearAllCaches();
+            await clearAllCaches(); // This itself can be async
+            // State is already updated (user null, session null, isAdmin false, loading false)
             break;
           case 'USER_DELETED':
             console.log("AuthContext: Event USER_DELETED processed. Clearing caches.");
@@ -169,10 +170,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.log("AuthContext: Event PASSWORD_RECOVERY processed.");
             break;
           case 'TOKEN_REFRESHED':
-            console.log("AuthContext: Event TOKEN_REFRESHED processed. Session and admin role re-validated.");
+            console.log("AuthContext: Event TOKEN_REFRESHED processed. Session and admin role (async) re-validated.");
             break;
           case 'USER_UPDATED':
             console.log("AuthContext: Event USER_UPDATED processed.");
+            // Admin role will be re-checked by the async logic if user is present
             break;
           case 'MFA_CHALLENGE_VERIFIED':
             console.log("AuthContext: Event MFA_CHALLENGE_VERIFIED processed.");
@@ -216,19 +218,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signOut = async () => {
-    console.log("AuthContext: signOut called. Setting loading true.");
-    setAuthState(prev => ({ ...prev, loading: true }));
+    console.log("AuthContext: signOut called. Setting loading true temporarily for operation.");
+    // Set loading to true specifically for the sign-out operation,
+    // onAuthStateChange will set it back to false.
+    setAuthState(prev => ({ ...prev, loading: true })); 
     const { error } = await supabase.auth.signOut();
     
     if (error) {
       console.error('AuthContext: Error signing out:', error);
       toast({ title: "Sign Out Error", description: error.message, variant: "destructive" });
-      // State will be updated by onAuthStateChange, including setting loading to false
-      // Set loading false here only if onAuthStateChange might not fire or to be defensive
+      // Ensure loading is set to false if onAuthStateChange doesn't fire or if an error occurs before it.
       setAuthState(prev => ({ ...prev, loading: false })); 
     } else {
-      console.log("AuthContext: Sign out successful via supabase.auth.signOut(). Waiting for onAuthStateChange for cache clearing and final state update.");
-      // Cache clearing and final state update (including loading: false) is handled by the 'SIGNED_OUT' event in onAuthStateChange.
+      console.log("AuthContext: Sign out successful via supabase.auth.signOut(). Waiting for onAuthStateChange for cache clearing and final state update (which includes loading: false).");
+      // onAuthStateChange will set loading to false.
     }
   };
 
