@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task } from '@/lib/taskUtils';
+import { Task, getCurrentDayOfWeek } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { TASKS_QUERY_KEY } from '../queries';
@@ -52,7 +52,8 @@ export function useToggleTaskCompletionMutation() {
           if (historyError) {
             console.error('Error recording task completion history:', historyError);
             toast({ title: 'History Record Error', description: historyError.message, variant: 'destructive' });
-            throw historyError;
+            // Not throwing here to allow points update if possible, but logging it.
+            // Or decide to throw: throw historyError;
           }
 
           const { data: currentProfile, error: fetchProfileError } = await supabase
@@ -86,42 +87,80 @@ export function useToggleTaskCompletionMutation() {
         
         queryClient.setQueryData<TaskWithId[]>(TASKS_QUERY_KEY, (oldTasks = []) => {
           const todayStr = new Date().toISOString().split('T')[0];
-          return oldTasks.map(task =>
-            task.id === taskId
-              ? { 
-                  ...task, 
-                  completed, 
-                  last_completed_date: completed ? todayStr : null,
-                  // Optimistically update usage_data if applicable (complex, might need more logic)
-                  // For daily tasks, if 'completed' is true, increment today's usage_data
-                  // This depends on how processTasksWithRecurringLogic and usage_data are structured/used
-                }
-              : task
-          );
+          const dayOfWeek = getCurrentDayOfWeek();
+
+          return oldTasks.map(task => {
+            if (task.id === taskId) {
+              const currentUsageData = task.usage_data || Array(7).fill(0);
+              const newUsageData = [...currentUsageData];
+              const frequencyCount = task.frequency_count || 1;
+
+              if (completed) { // Marking as complete
+                newUsageData[dayOfWeek] = Math.min((newUsageData[dayOfWeek] || 0) + 1, frequencyCount);
+              } else { // Marking as incomplete
+                newUsageData[dayOfWeek] = Math.max((newUsageData[dayOfWeek] || 0) - 1, 0);
+              }
+              
+              // The task's main `completed` status reflects if it's fully done for the day/period
+              // This is driven by whether the new usage count meets the frequency count
+              const isNowFullyCompletedForDay = newUsageData[dayOfWeek] >= frequencyCount;
+              // If not a recurring task or no frequency, 'completed' follows the direct 'completed' variable
+              const taskCompletedStatus = (task.frequency && task.frequency_count) ? isNowFullyCompletedForDay : completed;
+
+
+              return { 
+                ...task, 
+                completed: taskCompletedStatus, 
+                last_completed_date: completed ? todayStr : (taskCompletedStatus ? task.last_completed_date : null), // Keep last_completed_date if still completed, else null
+                usage_data: newUsageData,
+              };
+            }
+            return task;
+          });
         });
         return { previousTasks };
       },
       onSuccess: async (data, variables) => {
         toast({ 
-          title: `Task ${variables.completed ? 'Completed' : 'Marked Incomplete'}`, 
-          description: variables.completed ? 'Points and history have been updated.' : 'Task status updated.' 
+          title: `Task ${variables.completed ? 'Activity Logged' : 'Activity Reversed'}`, 
+          description: variables.completed ? 'Points and history have been updated if applicable.' : 'Task status updated.' 
         });
 
-        // Update IndexedDB after successful server update
         try {
             const localTasks = await loadTasksFromDB() || [];
             const todayStr = new Date().toISOString().split('T')[0];
-            const updatedLocalTasks = localTasks.map(t => 
-              t.id === variables.taskId 
-              ? { ...t, completed: variables.completed, last_completed_date: variables.completed ? todayStr : null } 
-              : t
-            );
-            await saveTasksToDB(updatedLocalTasks as Task[]); // Cast if TaskWithId is not directly Task
+            const dayOfWeek = getCurrentDayOfWeek();
+
+            const updatedLocalTasks = localTasks.map(t => {
+              if (t.id === variables.taskId) {
+                const currentUsageData = t.usage_data || Array(7).fill(0);
+                const newUsageData = [...currentUsageData];
+                const frequencyCount = t.frequency_count || 1;
+
+                if (variables.completed) { // Action was to mark as complete
+                  newUsageData[dayOfWeek] = Math.min((newUsageData[dayOfWeek] || 0) + 1, frequencyCount);
+                } else { // Action was to mark as incomplete
+                  newUsageData[dayOfWeek] = Math.max((newUsageData[dayOfWeek] || 0) - 1, 0);
+                }
+                
+                const isNowFullyCompletedForDay = newUsageData[dayOfWeek] >= frequencyCount;
+                const taskCompletedStatus = (t.frequency && t.frequency_count) ? isNowFullyCompletedForDay : variables.completed;
+
+                return { 
+                  ...t, 
+                  completed: taskCompletedStatus, 
+                  last_completed_date: variables.completed ? todayStr : (taskCompletedStatus ? t.last_completed_date : null),
+                  usage_data: newUsageData 
+                };
+              }
+              return t;
+            });
+            await saveTasksToDB(updatedLocalTasks as Task[]);
             await setLastSyncTimeForTasks(new Date().toISOString());
-            console.log('[useToggleTaskCompletionMutation onSuccessCallback] IndexedDB updated for task completion.');
+            console.log('[useToggleTaskCompletionMutation onSuccessCallback] IndexedDB updated for task completion with usage_data.');
         } catch (error) {
             console.error('[useToggleTaskCompletionMutation onSuccessCallback] Error updating IndexedDB:', error);
-            toast({ variant: "destructive", title: "Local Update Error", description: "Task status updated on server, but local sync failed." });
+            toast({ variant: "destructive", title: "Local Sync Error", description: "Task status updated on server, but local sync failed." });
         }
 
         if (variables.completed) {
@@ -129,9 +168,6 @@ export function useToggleTaskCompletionMutation() {
             queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
             queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
         }
-        // No explicit invalidation of TASKS_QUERY_KEY here if onSettled handles it,
-        // or if optimistic update + onSuccess IndexedDB write is considered sufficient
-        // until next natural sync. However, checklist implies immediate data consistency.
       },
       onError: (error, variables, context) => {
         if (context?.previousTasks) {
@@ -147,9 +183,8 @@ export function useToggleTaskCompletionMutation() {
         }
       },
       onSettled: (data, error, variables) => {
-        // Always refetch tasks to ensure data consistency after the workflow.
         queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-        if (variables.completed) {
+        if (variables.completed || !variables.completed) { // Invalidate points/profile if status changes, regardless of direction
             queryClient.invalidateQueries({ queryKey: ['profile'] });
             queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
             queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
