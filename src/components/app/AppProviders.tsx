@@ -1,6 +1,6 @@
 
 import React from 'react';
-// Remove: import { BrowserRouter as Router } from 'react-router-dom';
+// import { BrowserRouter as Router } from 'react-router-dom'; // This line was correctly commented out
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -14,23 +14,22 @@ import { PunishmentsProvider } from '@/contexts/PunishmentsContext';
 
 export const AppProviders: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   return (
-    // <Router> Removed this wrapper
-      <QueryClientProvider client={queryClient}>
-        <NetworkStatusProvider>
-          <AuthProvider>
-            <UserIdsProvider>
-              <RewardsProvider>
-                <PunishmentsProvider>
-                  <OfflineBanner />
-                  {children}
-                  <SonnerToaster richColors closeButton />
-                </PunishmentsProvider>
-              </RewardsProvider>
-            </UserIdsProvider>
-          </AuthProvider>
-        </NetworkStatusProvider>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </QueryClientProvider>
-    // </Router> Removed this closing tag
+    <QueryClientProvider client={queryClient}>
+      <NetworkStatusProvider>
+        <AuthProvider>
+          <UserIdsProvider>
+            <RewardsProvider>
+              <PunishmentsProvider>
+                <OfflineBanner />
+                {children}
+                <SonnerToaster richColors closeButton />
+              </PunishmentsProvider>
+            </RewardsProvider>
+          </UserIdsProvider>
+        </AuthProvider>
+      </NetworkStatusProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 };
+
