@@ -1,35 +1,32 @@
 
-import React, { useEffect } from 'react';
+import React from 'react'; // Removed useEffect
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
 import { Box, Coins } from 'lucide-react';
-import { usePointsManager } from '@/data/points/usePointsManager';
-import { useRewards } from '@/contexts/RewardsContext'; // Added import for useRewards
 
-interface TasksHeaderProps {
-  // onAddTask?: () => void; // Removed onAddTask prop
-}
+import { useUserIds } from '@/contexts/UserIdsContext';
+import { useUserPointsQuery } from '@/data/points/useUserPointsQuery';
+import { useUserDomPointsQuery } from '@/data/points/useUserDomPointsQuery';
+import { useSubRewardTypesCountQuery } from '@/data/rewards/queries/useSubRewardTypesCountQuery';
+import { useDomRewardTypesCountQuery } from '@/data/rewards/queries/useDomRewardTypesCountQuery';
 
-const TasksHeader: React.FC<TasksHeaderProps> = () => {
-  const { 
-    points: totalPoints, 
-    domPoints, 
-    isLoadingPoints, 
-    refreshPoints,
-  } = usePointsManager();
+// interface TasksHeaderProps { } // Removed onAddTask prop, so interface might not be needed if empty
 
-  const { totalRewardsSupply, totalDomRewardsSupply } = useRewards(); // Get supply data from RewardsContext
+const TasksHeader: React.FC<{}> = () => { // Updated to React.FC<{}>
+  const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
 
-  useEffect(() => {
-    refreshPoints();
-  }, [refreshPoints]);
-
+  const { data: subPoints, isLoading: isLoadingSubPoints } = useUserPointsQuery(subUserId);
+  const { data: domPoints, isLoading: isLoadingDomPoints } = useUserDomPointsQuery(domUserId);
+  const { data: subRewardTypesCount, isLoading: isLoadingSubSupply } = useSubRewardTypesCountQuery();
+  const { data: domRewardTypesCount, isLoading: isLoadingDomSupply } = useDomRewardTypesCountQuery();
+  
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
+  const isLoadingDisplay = isLoadingUserIds || isLoadingSubPoints || isLoadingDomPoints || isLoadingSubSupply || isLoadingDomSupply;
 
   return (
     <div className="flex items-center mb-6">
       <h1 className="text-base font-semibold text-white mr-auto">My Tasks</h1>
-      {isLoadingPoints ? (
+      {isLoadingDisplay ? (
         <span className="text-sm text-gray-400 ml-auto">Loading points...</span>
       ) : (
         <div className="flex items-center gap-2 ml-auto">
@@ -37,18 +34,18 @@ const TasksHeader: React.FC<TasksHeaderProps> = () => {
             className="text-white font-bold px-3 py-1 flex items-center gap-1"
             style={badgeStyle}
           >
-            <Box className="w-3 h-3" /> {/* Icon for total rewards supply */}
-            <span>{totalRewardsSupply}</span>
+            <Box className="w-3 h-3" />
+            <span>{subRewardTypesCount ?? 0}</span>
           </Badge>
           <Badge 
             className="text-white font-bold px-3 py-1 flex items-center gap-1"
             style={badgeStyle}
           >
             <Coins className="w-3 h-3" />
-            <span>{totalPoints}</span>
+            <span>{subPoints ?? 0}</span>
           </Badge>
-          <DOMBadge icon="box" value={totalDomRewardsSupply} /> {/* DOMBadge for DOM rewards supply */}
-          <DOMBadge icon="crown" value={domPoints} />
+          <DOMBadge icon="box" value={domRewardTypesCount ?? 0} />
+          <DOMBadge icon="crown" value={domPoints ?? 0} />
         </div>
       )}
     </div>

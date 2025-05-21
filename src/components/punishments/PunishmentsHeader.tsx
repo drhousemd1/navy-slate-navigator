@@ -2,38 +2,33 @@
 import React, { useEffect } from 'react';
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
-import { useRewards } from '@/contexts/RewardsContext'; // Keep for totalRewardsSupply, totalDomRewardsSupply
 import { Box, Coins, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
-import { usePunishments } from '@/contexts/PunishmentsContext';
+import { usePunishments } from '@/contexts/PunishmentsContext'; // Still needed for RandomPunishmentSelections
 import RandomPunishmentSelections from './RandomPunishmentSelections';
-// import { useProfilePoints } from "@/data/queries/useProfilePoints"; // Remove this
-import { usePointsManager } from '@/data/points/usePointsManager'; // Add this
+
+import { useUserIds } from '@/contexts/UserIdsContext';
+import { useUserPointsQuery } from '@/data/points/useUserPointsQuery';
+import { useUserDomPointsQuery } from '@/data/points/useUserDomPointsQuery';
+import { useSubRewardTypesCountQuery } from '@/data/rewards/queries/useSubRewardTypesCountQuery';
+import { useDomRewardTypesCountQuery } from '@/data/rewards/queries/useDomRewardTypesCountQuery';
 
 const PunishmentsHeader: React.FC = () => {
-  const { totalRewardsSupply, totalDomRewardsSupply, refreshPointsFromDatabase: refreshRewardsContextPoints } = useRewards();
-  const { punishments } = usePunishments();
-  // const { data: profile } = useProfilePoints(); // Remove this
-  // const totalPoints = profile?.points ?? 0; // Remove this
-  // const domPoints = profile?.dom_points ?? 0; // Remove this
-  
-  const { 
-    points: totalPoints, 
-    domPoints, 
-    isLoadingPoints, 
-    refreshPoints 
-  } = usePointsManager();
+  const { punishments } = usePunishments(); // For random selector disabling
+  const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
 
+  const { data: subPoints, isLoading: isLoadingSubPoints } = useUserPointsQuery(subUserId);
+  const { data: domPoints, isLoading: isLoadingDomPoints } = useUserDomPointsQuery(domUserId);
+  const { data: subRewardTypesCount, isLoading: isLoadingSubSupply } = useSubRewardTypesCountQuery();
+  const { data: domRewardTypesCount, isLoading: isLoadingDomSupply } = useDomRewardTypesCountQuery();
+  
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
 
-  // Refresh points when component mounts
-  useEffect(() => {
-    refreshPoints(); // Use this from usePointsManager
-    // refreshRewardsContextPoints(); // See comment in RewardsHeader.tsx
-  }, [refreshPoints]);
+  // No specific useEffect for point refresh needed here anymore, relying on query staleness and invalidation.
 
-  // Style for badges - black background with cyan border
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
+
+  const isLoadingDisplay = isLoadingUserIds || isLoadingSubPoints || isLoadingDomPoints || isLoadingSubSupply || isLoadingDomSupply;
 
   return (
     <div className="flex items-center mb-6">
@@ -47,7 +42,7 @@ const PunishmentsHeader: React.FC = () => {
         <Shuffle className="w-4 h-4" />
         Random
       </Button>
-      {isLoadingPoints ? (
+      {isLoadingDisplay ? (
         <span className="text-sm text-gray-400">Loading points...</span>
       ) : (
         <div className="flex items-center gap-2">
@@ -56,17 +51,17 @@ const PunishmentsHeader: React.FC = () => {
             style={badgeStyle}
           >
             <Box className="w-3 h-3" />
-            <span>{totalRewardsSupply}</span>
+            <span>{subRewardTypesCount ?? 0}</span> {/* Submissive "Supply" (Reward Types Count) */}
           </Badge>
           <Badge 
             className="text-white font-bold px-3 py-1 flex items-center gap-1"
             style={badgeStyle}
           >
             <Coins className="w-3 h-3" />
-            <span>{totalPoints}</span>
+            <span>{subPoints ?? 0}</span> {/* Submissive Points */}
           </Badge>
-          <DOMBadge icon="box" value={totalDomRewardsSupply} />
-          <DOMBadge icon="crown" value={domPoints} />
+          <DOMBadge icon="box" value={domRewardTypesCount ?? 0} /> {/* Dominant "Supply" (Reward Types Count) */}
+          <DOMBadge icon="crown" value={domPoints ?? 0} /> {/* Dominant Points */}
         </div>
       )}
       

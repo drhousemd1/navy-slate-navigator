@@ -1,30 +1,30 @@
 
-import React, { useEffect } from 'react';
+import React from 'react'; // Removed useEffect
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
 import { Box, Coins } from 'lucide-react';
-import { useRewards } from '@/contexts/RewardsContext';
-// import { useProfilePoints } from "@/data/queries/useProfilePoints"; // Remove this
-import { usePointsManager } from '@/data/points/usePointsManager'; // Add this
+
+import { useUserIds } from '@/contexts/UserIdsContext';
+import { useUserPointsQuery } from '@/data/points/useUserPointsQuery';
+import { useUserDomPointsQuery } from '@/data/points/useUserDomPointsQuery';
+import { useSubRewardTypesCountQuery } from '@/data/rewards/queries/useSubRewardTypesCountQuery';
+import { useDomRewardTypesCountQuery } from '@/data/rewards/queries/useDomRewardTypesCountQuery';
 
 const RulesHeader: React.FC = () => {
-  const { totalRewardsSupply, totalDomRewardsSupply, refreshPointsFromDatabase } = useRewards();
-  // const { data: profile } = useProfilePoints(); // Remove this
-  const { points: totalPoints, domPoints, isLoadingPoints, refreshPoints } = usePointsManager(); // Use this
+  const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
 
-  // Refresh points when component mounts - using refreshPoints from usePointsManager
-  useEffect(() => {
-    // refreshPointsFromDatabase(); // This was from useRewards, let's use the one from usePointsManager
-    refreshPoints(); // From usePointsManager
-  }, [refreshPoints]);
+  const { data: subPoints, isLoading: isLoadingSubPoints } = useUserPointsQuery(subUserId);
+  const { data: domPoints, isLoading: isLoadingDomPoints } = useUserDomPointsQuery(domUserId);
+  const { data: subRewardTypesCount, isLoading: isLoadingSubSupply } = useSubRewardTypesCountQuery();
+  const { data: domRewardTypesCount, isLoading: isLoadingDomSupply } = useDomRewardTypesCountQuery();
 
-  // Style for badges - black background with cyan border
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
+  const isLoadingDisplay = isLoadingUserIds || isLoadingSubPoints || isLoadingDomPoints || isLoadingSubSupply || isLoadingDomSupply;
 
   return (
     <div className="flex items-center mb-6">
       <h1 className="text-base font-semibold text-white mr-auto">Rules</h1>
-      {isLoadingPoints ? (
+      {isLoadingDisplay ? (
         <span className="text-sm text-gray-400">Loading points...</span>
       ) : (
         <div className="flex items-center gap-2">
@@ -33,17 +33,17 @@ const RulesHeader: React.FC = () => {
             style={badgeStyle}
           >
             <Box className="w-3 h-3" />
-            <span>{totalRewardsSupply}</span>
+            <span>{subRewardTypesCount ?? 0}</span>
           </Badge>
           <Badge 
             className="text-white font-bold px-3 py-1 flex items-center gap-1"
             style={badgeStyle}
           >
             <Coins className="w-3 h-3" />
-            <span>{totalPoints}</span>
+            <span>{subPoints ?? 0}</span>
           </Badge>
-          <DOMBadge icon="box" value={totalDomRewardsSupply} />
-          <DOMBadge icon="crown" value={domPoints} />
+          <DOMBadge icon="box" value={domRewardTypesCount ?? 0} />
+          <DOMBadge icon="crown" value={domPoints ?? 0} />
         </div>
       )}
     </div>

@@ -1,13 +1,17 @@
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/hooks/use-toast';
+
+import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
+// For reward supply changes potentially affecting counts:
+import { SUB_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useSubRewardTypesCountQuery';
+import { DOM_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useDomRewardTypesCountQuery';
 
 interface BuySubRewardVars { 
   rewardId: string; 
   cost: number; 
   currentSupply: number; 
-  profileId: string; 
+  profileId: string; // This is the subUserId
   currentPoints: number 
 }
 
@@ -51,9 +55,11 @@ export const useBuySubReward = () => {
 
       return { rewardId, newSupply, newPoints };
     },
-    onSuccess: async () => {
+    onSuccess: async (data, variables) => {
       await queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      await queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId] });
+      await queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] });
+      await queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
       toast({
         title: "Reward Purchased",
         description: "Reward purchased successfully!",
