@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { useMessages } from '@/hooks/useMessages';
 import { toast } from '@/hooks/use-toast';
 import MessageList from '@/components/messages/MessageList';
@@ -101,7 +100,7 @@ const Messages: React.FC = () => {
         variant: "destructive"
       });
     }
-  }, [user, message, imageFile, partnerId, uploadImage, sendMessage, refetch]);
+  }, [user, message, imageFile, partnerId, uploadImage, sendMessage, refetch, setImageFile]);
 
   const handleLoadOlderMessages = async () => {
     if (messages.length === 0 || loadingOlder) return;

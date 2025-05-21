@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './AuthContext'; // Assuming AuthContext provides the current user
+import { useAuth } from '@/contexts/auth'; // Changed import path
 
 interface UserIds {
   subUserId: string | null;
