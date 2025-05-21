@@ -5,14 +5,13 @@ import RewardEditor from '../components/RewardEditor';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-import { useRewards as useRewardsQuery, RewardsQueryResult, REWARDS_QUERY_KEY } from '@/data/queries/useRewards';
+import { useRewards as useRewardsQuery, RewardsQueryResult } from '@/data/queries/useRewards';
 import { Reward } from '@/data/rewards/types';
 import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
 import { toast } from '@/hooks/use-toast';
 
-import { useBuySubReward } from '@/data/rewards/mutations/useBuySubReward';
-import { useRedeemSubReward } from '@/data/rewards/mutations/useRedeemSubReward';
+import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePointsManager } from '@/data/points/usePointsManager';
 
@@ -25,7 +24,6 @@ const RewardsContent: React.FC<{
     error: queryError,
   }: RewardsQueryResult = useRewardsQuery();
   const rewards = Array.isArray(rewardsData) ? rewardsData : [];
-  console.log("Rewards loaded:", rewards.length, "items");
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<Reward | undefined>(undefined);

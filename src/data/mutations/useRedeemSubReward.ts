@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -27,9 +26,6 @@ interface RedeemSubRewardOptimisticContext {
 export const useRedeemSubReward = () => {
   const queryClient = useQueryClient();
   // Removed: const { syncKeys } = useSyncManager();
-  
-  // Use consistent array query key
-  const REWARDS_QUERY_KEY = ['rewards'];
 
   return useMutation<Reward, Error, RedeemSubRewardArgs, RedeemSubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, currentSupply }) => {
@@ -57,10 +53,10 @@ export const useRedeemSubReward = () => {
       return updatedReward as Reward;
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
-      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
+      await queryClient.cancelQueries({ queryKey: ['rewards'] });
+      const previousRewards = queryClient.getQueryData<Reward[]>(['rewards']);
 
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
+      queryClient.setQueryData<Reward[]>(['rewards'], (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
             ? { ...reward, supply: reward.supply - 1 } 
@@ -71,18 +67,18 @@ export const useRedeemSubReward = () => {
     },
     onError: (err, variables, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
+        queryClient.setQueryData<Reward[]>(['rewards'], context.previousRewards);
       }
       toast({ title: "Failed to Use Reward", description: err.message, variant: "destructive" });
     },
     onSuccess: (data, variables) => {
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => {
+      queryClient.setQueryData<Reward[]>(['rewards'], (oldRewards = []) => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
       toast({ title: "Reward Used!", description: `You used ${data.title}.` });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
     },
   });
 };
