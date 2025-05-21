@@ -1,4 +1,3 @@
-
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -18,14 +17,14 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
     }
   };
 
-  // Update user profile image
-  const updateProfileImage = (imageUrl: string) => {
+  // Renamed function: Update user profile image state locally
+  const setProfileImageState = (imageUrl: string | null) => { // Allow null for deletion
     if (user) {
       const updatedUser = {
         ...user,
         user_metadata: {
           ...(user.user_metadata || {}),
-          avatar_url: imageUrl
+          avatar_url: imageUrl // Use imageUrl, which can be null
         }
       };
       setUser(updatedUser);
@@ -111,7 +110,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
   return {
     updateNickname,
     getNickname,
-    updateProfileImage,
+    setProfileImageState, // Export renamed function
     getProfileImage,
     getUserRole,
     updateUserRole

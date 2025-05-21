@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/auth'; // Changed import path
+import { useAuth } from '@/contexts/auth';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
 import { Camera, Trash2, LogOut } from 'lucide-react';
-import DeleteAccountDialog from '@/components/profile/DeleteAccountDialog';
-import DeleteAvatarDialog from '@/components/profile/DeleteAvatarDialog';
-// import { useQueryClient } from '@tanstack/react-query'; // No longer needed for purge
-// import { purgeQueryCache } from '@/lib/react-query-config'; // No longer needed here
+import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
+import { DeleteAvatarDialog } from '@/components/profile/DeleteAvatarDialog';
 
 const Profile: React.FC = () => {
   const { 
@@ -21,7 +18,8 @@ const Profile: React.FC = () => {
     getProfileImage, 
     updateProfileImage, 
     signOut,
-    updateUserRole // Added updateUserRole
+    updateUserRole,
+    deleteAccount 
   } = useAuth();
   const [nickname, setNickname] = useState<string>('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -31,8 +29,7 @@ const Profile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] = useState(false);
   const [isDeleteAvatarDialogOpen, setIsDeleteAvatarDialogOpen] = useState(false);
-  const [currentRole, setCurrentRole] = useState<string | null>(null); // State for current role
-  // const queryClient = useQueryClient(); // No longer needed
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -44,11 +41,9 @@ const Profile: React.FC = () => {
       console.log('Profile Page: Current profile image from context:', currentImage);
       setProfileImage(currentImage);
 
-      // Fetch and set the current user role
-      const role = user.user_metadata?.role || 'Not Set'; // Adjust based on actual metadata structure
+      const role = user.user_metadata?.role || 'Not Set';
       setCurrentRole(role);
       console.log('Profile Page: Current user role from metadata:', role);
-
     }
   }, [user, getNickname, getProfileImage]);
 
@@ -92,11 +87,15 @@ const Profile: React.FC = () => {
     try {
       const newImageUrl = await updateProfileImage(newProfileImageFile);
       if (newImageUrl) {
-        setProfileImage(newImageUrl); // Update local state with the URL from context
-        setNewProfileImageFile(null); // Clear the file input state
+        setProfileImage(newImageUrl); 
+        setNewProfileImageFile(null); 
         toast({ title: 'Success', description: 'Profile image updated successfully.' });
-      } else {
+      } else if (newProfileImageFile) {
         throw new Error("Failed to get new image URL after upload.");
+      } else {
+        // This case (null file, null URL) could be for deletion, handled by handleDeleteAvatar
+        // or if updateProfileImage(null) was called here.
+        // For clarity, upload should expect a URL if a file was given.
       }
     } catch (err: any) {
       console.error('Error uploading profile image:', err);
@@ -109,13 +108,12 @@ const Profile: React.FC = () => {
   
   const handleDeleteAvatar = async () => {
     if (!user) return;
-    setLoadingProfileImage(true); // Reuse for loading state
+    setLoadingProfileImage(true); 
     setError(null);
     try {
-      // Call updateProfileImage with null to signify deletion
       await updateProfileImage(null); 
-      setProfileImage(null); // Clear local preview
-      setNewProfileImageFile(null); // Clear any staged file
+      setProfileImage(null); 
+      setNewProfileImageFile(null); 
       toast({ title: 'Success', description: 'Profile image removed.' });
     } catch (err: any)      {
       console.error('Error deleting profile image:', err);
@@ -128,32 +126,16 @@ const Profile: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    // Cache clearing is now handled by AuthContext on SIGNED_OUT event
     await signOut();
-    // queryClient.clear(); // Removed: Handled by AuthContext
-    // await purgeQueryCache(queryClient); // Removed: Handled by AuthContext
     console.log('Profile Page: User signed out. Cache purging handled by AuthContext.');
-    // Navigation to /auth should happen automatically if AppRoutes protects this page
-    // or by the AuthContext's listener if it handles global navigation post-logout.
-    // If not, add navigate('/auth') here.
   };
 
   const handleDeleteAccount = async () => {
-    if (!user) return;
+    if (!user || !deleteAccount) return;
     try {
-      const { error: deleteAuthUserError } = await supabase.rpc('delete_user_account');
-
-      if (deleteAuthUserError) {
-        throw deleteAuthUserError;
-      }
-      
+      await deleteAccount();
       toast({ title: "Account Deletion Initiated", description: "Your account is scheduled for deletion. You will be logged out." });
-      
-      // It's important to sign out the user locally after initiating deletion.
-      // The actual user deletion in Supabase Auth might be asynchronous or handled by the trigger.
-      await signOut(); 
-      // Navigation will be handled by AuthContext or protected routes
-      
+      await signOut();
     } catch (err: any) {
       console.error('Error deleting account:', err);
       toast({ title: 'Error', description: err.message || 'Failed to delete account.', variant: 'destructive' });
@@ -165,21 +147,20 @@ const Profile: React.FC = () => {
   const handleRoleChange = async (newRole: 'sub' | 'dom') => {
     if (!user) return;
     try {
-      await updateUserRole(newRole); // Call the context function
-      setCurrentRole(newRole); // Update local state
+      await updateUserRole(newRole);
+      setCurrentRole(newRole);
       toast({ title: 'Success', description: `Role updated to ${newRole}.` });
     } catch (err: any) {
       console.error('Error updating role:', err);
       toast({ title: 'Error', description: err.message || 'Failed to update role.', variant: 'destructive' });
     }
   };
-  
+
   if (!user) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-full">
           <p className="text-white">Loading user profile...</p>
-          {/* Or redirect to login: <Navigate to="/auth" replace /> */}
         </div>
       </AppLayout>
     );
@@ -297,6 +278,7 @@ const Profile: React.FC = () => {
         isOpen={isDeleteAccountDialogOpen}
         onClose={() => setIsDeleteAccountDialogOpen(false)}
         onConfirm={handleDeleteAccount}
+        type="delete"
       />
       <DeleteAvatarDialog
         isOpen={isDeleteAvatarDialogOpen}
