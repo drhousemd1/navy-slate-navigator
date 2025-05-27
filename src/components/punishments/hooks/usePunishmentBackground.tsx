@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger'; // keep existing import
 
 export const usePunishmentBackground = (initialImageUrl?: string | null) => {
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
@@ -32,4 +32,3 @@ export const usePunishmentBackground = (initialImageUrl?: string | null) => {
     setImagePreview
   };
 };
-

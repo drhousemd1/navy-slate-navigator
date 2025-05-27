@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward } from '@/data/rewards/types';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger'; // keep existing import
 // Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
 const REWARDS_QUERY_KEY = ['rewards'];
@@ -31,4 +31,3 @@ export const useDeleteReward = () => {
     idField: 'id',
   });
 };
-

@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentData } from '@/contexts/punishments/types';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger'; // keep existing import
 
 export const fetchPunishmentById = async (id: string): Promise<PunishmentData | null> => {
   const { data, error } = await supabase
@@ -20,4 +20,3 @@ export const fetchPunishmentById = async (id: string): Promise<PunishmentData | 
   }
   return data as PunishmentData | null;
 };
-

@@ -1,8 +1,7 @@
-
 import React, { useEffect, useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { getMondayBasedDay } from '@/lib/utils';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger'; // keep existing import
 
 interface WeeklyUsageTrackerProps {
   usageData: boolean[] | number[];
