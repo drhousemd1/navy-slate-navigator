@@ -1,8 +1,5 @@
 
 // THIS FILE IS DEPRECATED AND WILL BE DELETED SOON.
-// All console statements have been replaced with logger calls
-// as part of a cleanup effort.
-
 // This file is kept temporarily for reference
 // and will be deleted once the refactoring is verified
 
@@ -60,4 +57,3 @@ export const fetchCurrentWeekPunishmentHistory = async (): Promise<PunishmentHis
   logger.debug(`[fetchCurrentWeekPunishmentHistory] Retrieved ${data?.length || 0} history items`);
   return data || [];
 };
-
