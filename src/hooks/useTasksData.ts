@@ -1,5 +1,6 @@
+
 import { useState, useCallback, useEffect } from 'react';
-import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries'; // Import TasksQueryResult
+import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries';
 import { TaskWithId } from '@/data/tasks/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -7,7 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
 import { useDeleteTask } from '@/data/mutations/tasks/useDeleteTask';
 import { TaskPriority } from '@/lib/taskUtils'; 
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
 export const useTasksData = () => {
   const { 
@@ -16,7 +17,7 @@ export const useTasksData = () => {
     error, 
     refetch,
     isUsingCachedData
-  }: TasksQueryResult = useTasksQuery(); // Destructure from TasksQueryResult
+  }: TasksQueryResult = useTasksQuery();
   
   const queryClient = useQueryClient();
   const deleteTaskMutation = useDeleteTask();
@@ -25,7 +26,7 @@ export const useTasksData = () => {
     try {
       if (taskData.id) {
         // Update existing task
-        const { error: updateError } = await supabase // aliased error
+        const { error: updateError } = await supabase
           .from("tasks")
           .update({
             title: taskData.title,
@@ -49,7 +50,7 @@ export const useTasksData = () => {
           .eq("id", taskData.id);
 
         if (updateError) {
-          logger.error("Error updating task:", updateError); // Replaced console.error
+          logger.error("Error updating task:", updateError);
           toast({
             title: 'Error',
             description: 'Failed to update task: ' + updateError.message,
@@ -60,7 +61,7 @@ export const useTasksData = () => {
 
         // Update the local cache optimistically
         queryClient.setQueryData<TaskWithId[]>(["tasks"], (oldTasks) => {
-          if (!oldTasks) return [taskData]; // Should be TaskWithId[]
+          if (!oldTasks) return [taskData];
           const updatedTasks = oldTasks.map(t => 
             t.id === taskData.id ? { ...t, ...taskData, completed: t.completed } : t
           );
@@ -86,7 +87,7 @@ export const useTasksData = () => {
           background_opacity: taskData.background_opacity,
           icon_url: taskData.icon_url,
           icon_name: taskData.icon_name,
-          priority: taskData.priority || 'medium' as TaskPriority, // Ensure priority is correctly typed
+          priority: taskData.priority || 'medium' as TaskPriority,
           title_color: taskData.title_color,
           subtext_color: taskData.subtext_color,
           calendar_color: taskData.calendar_color,
@@ -94,16 +95,16 @@ export const useTasksData = () => {
           highlight_effect: taskData.highlight_effect,
           focal_point_x: taskData.focal_point_x,
           focal_point_y: taskData.focal_point_y,
-          usage_data: Array(7).fill(0) // Initialize with zeros for a week
+          usage_data: Array(7).fill(0)
         };
 
-        const { data: newTaskResponse, error: insertError } = await supabase // aliased error
+        const { data: newTaskResponse, error: insertError } = await supabase
           .from("tasks")
           .insert([newTaskData])
           .select();
 
         if (insertError) {
-          logger.error("Error creating task:", insertError); // Replaced console.error
+          logger.error("Error creating task:", insertError);
           toast({
             title: 'Error',
             description: 'Failed to create task: ' + insertError.message,
@@ -114,7 +115,7 @@ export const useTasksData = () => {
 
         // Update the cache with the new task from the server
         if (newTaskResponse && newTaskResponse[0]) {
-          const createdTask = newTaskResponse[0] as TaskWithId; // Cast to TaskWithId
+          const createdTask = newTaskResponse[0] as TaskWithId;
           queryClient.setQueryData<TaskWithId[]>(["tasks"], (oldTasks) => {
             const newTasks = oldTasks ? [createdTask, ...oldTasks] : [createdTask];
             saveTasksToDB(newTasks); // Update IndexedDB
@@ -129,10 +130,10 @@ export const useTasksData = () => {
         }
       }
       
-      await refetch(); // Refresh data to ensure UI is up to date
+      await refetch();
       return null;
     } catch (err) {
-      logger.error("Error in saveTask:", err); // Replaced console.error
+      logger.error("Error in saveTask:", err);
       throw err;
     }
   };
@@ -154,13 +155,13 @@ export const useTasksData = () => {
       });
 
       // Then update the database
-      const { error: toggleError } = await supabase // aliased error
+      const { error: toggleError } = await supabase
         .from("tasks")
         .update({ completed })
         .eq("id", taskId);
 
       if (toggleError) {
-        logger.error("Error updating task completion:", toggleError); // Replaced console.error
+        logger.error("Error updating task completion:", toggleError);
         
         // Revert the optimistic update
         queryClient.setQueryData<TaskWithId[]>(["tasks"], oldTasks => {
@@ -209,7 +210,7 @@ export const useTasksData = () => {
             description: `You earned ${points} points!`,
           });
         } catch (err) {
-          logger.error("Error recording task completion or updating points:", err); // Replaced console.error
+          logger.error("Error recording task completion or updating points:", err);
           // We don't need to revert the UI state here since the task is still marked complete
           // Just inform the user about points issue
           toast({
@@ -222,7 +223,7 @@ export const useTasksData = () => {
 
       return true;
     } catch (err) {
-      logger.error("Error in toggleTaskCompletion:", err); // Replaced console.error
+      logger.error("Error in toggleTaskCompletion:", err);
       return false;
     }
   };
@@ -235,6 +236,7 @@ export const useTasksData = () => {
     saveTask,
     deleteTask,
     toggleTaskCompletion,
-    refetch // ensure refetch is returned
+    refetch
   };
 };
+

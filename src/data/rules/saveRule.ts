@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
+import { logger } from '@/lib/logger';
 
 export const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
   if (ruleData.id) {
@@ -31,7 +32,7 @@ export const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
       .single();
 
     if (error) {
-      console.error('Error updating rule:', error);
+      logger.error('Error updating rule:', error);
       throw error;
     }
 
@@ -74,7 +75,7 @@ export const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
       .single();
 
     if (error) {
-      console.error('Error creating rule:', error);
+      logger.error('Error creating rule:', error);
       throw error;
     }
 
