@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +7,7 @@ import { useAuthForm } from './useAuthForm';
 import { useDebugMode } from './useDebugMode';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
   const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
@@ -21,7 +21,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       setIsLoggingIn(true);
       updateFormState({ loginError: null });
       
-      console.log("Attempting login with:", {
+      logger.log("Attempting login with:", {
         email: formState.email,
         passwordLength: formState.password?.length || 0
       });
@@ -33,7 +33,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       });
       
       if (error) {
-        console.error("Login error:", error);
+        logger.error("Login error:", error);
         
         // Display a user-friendly error message
         let errorMessage = "Authentication failed. Please check your credentials.";
@@ -46,7 +46,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       }
       
       if (data && data.user) {
-        console.log("Login successful:", data.user.email);
+        logger.log("Login successful:", data.user.email);
         toast({
           title: "Login successful",
           description: "You have been successfully logged in.",
@@ -57,8 +57,8 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
           loginError: "Login succeeded but no user data returned."
         });
       }
-    } catch (error) {
-      console.error("Exception during login:", error);
+    } catch (error: any) {
+      logger.error("Exception during login:", error);
       updateFormState({ 
         loginError: error.message || "An unexpected error occurred. Please try again."
       });
@@ -160,7 +160,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 className="mt-2 text-xs"
                 onClick={() => {
                   console.clear();
-                  console.log('Debug console cleared');
+                  logger.log('Debug console cleared');
                 }}
               >
                 <RefreshCw className="w-3 h-3 mr-1" />

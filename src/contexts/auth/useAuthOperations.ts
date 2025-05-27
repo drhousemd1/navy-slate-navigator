@@ -1,30 +1,32 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export function useAuthOperations() {
   // Sign in with email and password
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Starting sign in process for email:', email);
+      logger.log('Starting sign in process for email:', email); // Replaced console.log
       
       // Input validation - ensure values are properly trimmed
       const trimmedEmail = email.trim().toLowerCase();
       const trimmedPassword = password.trim();
       
       if (!trimmedEmail || !trimmedPassword) {
-        console.error('Sign in validation error: Missing email or password');
+        logger.error('Sign in validation error: Missing email or password'); // Replaced console.error
         return { error: { message: 'Email and password are required' }, user: null };
       }
       
       // Use the trimmed values for authentication
-      console.log('Making authentication request with:', { email: trimmedEmail });
+      logger.log('Making authentication request with:', { email: trimmedEmail }); // Replaced console.log
       const { data, error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: trimmedPassword,
       });
       
       if (error) {
-        console.error('Sign in error:', error);
+        logger.error('Sign in error:', error); // Replaced console.error
         
         // More specific error messages
         let errorMsg = error.message;
@@ -35,12 +37,12 @@ export function useAuthOperations() {
         return { error: { ...error, message: errorMsg }, user: null };
       }
       
-      console.log('Sign in successful:', data.user?.email);
-      console.log('Session data:', data.session ? 'Session exists' : 'No session');
+      logger.log('Sign in successful:', data.user?.email); // Replaced console.log
+      logger.log('Session data:', data.session ? 'Session exists' : 'No session'); // Replaced console.log
       
       // Make sure we validate the session before confirming success
       if (!data.session) {
-        console.error('Sign in produced no session');
+        logger.error('Sign in produced no session'); // Replaced console.error
         return { 
           error: { message: 'Authentication successful but no session was created. Please try again.' },
           user: data.user 
@@ -49,7 +51,7 @@ export function useAuthOperations() {
       
       return { error: null, user: data.user, session: data.session };
     } catch (error: any) {
-      console.error('Exception during sign in:', error);
+      logger.error('Exception during sign in:', error); // Replaced console.error
       return { error, user: null };
     }
   };
@@ -79,11 +81,11 @@ export function useAuthOperations() {
       });
       
       if (error) {
-        console.error('Sign up error:', error);
+        logger.error('Sign up error:', error); // Replaced console.error
         return { error, data: null };
       }
       
-      console.log('Sign up successful:', data.user?.email);
+      logger.log('Sign up successful:', data.user?.email); // Replaced console.log
       toast({
         title: 'Registration successful',
         description: data.session ? 'You are now logged in.' : 'Please check your email to verify your account.',
@@ -91,7 +93,7 @@ export function useAuthOperations() {
       
       return { error: null, data };
     } catch (error: any) {
-      console.error('Exception during sign up:', error);
+      logger.error('Exception during sign up:', error); // Replaced console.error
       return { error, data: null };
     }
   };
@@ -105,22 +107,22 @@ export function useAuthOperations() {
         return { error: { message: 'Email is required' } };
       }
       
-      console.log('Sending password reset to:', trimmedEmail);
+      logger.log('Sending password reset to:', trimmedEmail); // Replaced console.log
       
       // Get the current origin for the redirect
       const siteUrl = window.location.origin;
-      console.log('Using site URL for password reset:', siteUrl);
+      logger.log('Using site URL for password reset:', siteUrl); // Replaced console.log
       
       const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
         redirectTo: `${siteUrl}/reset-password`,
       });
       
       if (error) {
-        console.error('Password reset error:', error);
+        logger.error('Password reset error:', error); // Replaced console.error
         return { error };
       }
       
-      console.log('Password reset email sent to:', trimmedEmail);
+      logger.log('Password reset email sent to:', trimmedEmail); // Replaced console.log
       toast({
         title: 'Password reset email sent',
         description: 'Check your email for the password reset link.',
@@ -128,7 +130,7 @@ export function useAuthOperations() {
       
       return { error: null };
     } catch (error: any) {
-      console.error('Exception during password reset:', error);
+      logger.error('Exception during password reset:', error); // Replaced console.error
       return { error };
     }
   };
@@ -151,11 +153,11 @@ export function useAuthOperations() {
       });
       
       if (error) {
-        console.error('Password update error:', error);
+        logger.error('Password update error:', error); // Replaced console.error
         return { error };
       }
       
-      console.log('Password updated successfully');
+      logger.log('Password updated successfully'); // Replaced console.log
       toast({
         title: 'Password updated',
         description: 'Your password has been successfully updated.',
@@ -163,7 +165,7 @@ export function useAuthOperations() {
       
       return { error: null };
     } catch (error: any) {
-      console.error('Exception during password update:', error);
+      logger.error('Exception during password update:', error); // Replaced console.error
       return { error };
     }
   };
@@ -175,7 +177,7 @@ export function useAuthOperations() {
       const { error } = await supabase.rpc('delete_user_account' as any);
       
       if (error) {
-        console.error('Account deletion error:', error);
+        logger.error('Account deletion error:', error); // Replaced console.error
         toast({
           title: 'Error deleting account',
           description: error.message,
@@ -184,7 +186,7 @@ export function useAuthOperations() {
         return { error };
       }
 
-      console.log('Account deletion initiated successfully');
+      logger.log('Account deletion initiated successfully'); // Replaced console.log
       toast({
         title: 'Account deletion initiated',
         description: 'Your account is scheduled for deletion. You will be logged out shortly.',
@@ -193,7 +195,7 @@ export function useAuthOperations() {
       // User will be logged out automatically by auth listener when account is deleted
       return { error: null };
     } catch (error: any) {
-      console.error('Exception during account deletion:', error);
+      logger.error('Exception during account deletion:', error); // Replaced console.error
       return { error };
     }
   };
@@ -206,3 +208,4 @@ export function useAuthOperations() {
     deleteAccount
   };
 }
+

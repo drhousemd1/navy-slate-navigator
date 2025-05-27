@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const deleteRuleFromDb = async (ruleId: string): Promise<boolean> => {
   const { error } = await supabase
@@ -8,7 +9,7 @@ export const deleteRuleFromDb = async (ruleId: string): Promise<boolean> => {
     .eq('id', ruleId);
 
   if (error) {
-    console.error('Error deleting rule:', error);
+    logger.error('Error deleting rule:', error); // Replaced console.error
     throw error;
   }
 

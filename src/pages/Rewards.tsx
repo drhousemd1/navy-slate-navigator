@@ -14,6 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePointsManager } from '@/data/points/usePointsManager';
+import { logger } from '@/lib/logger'; // Added logger import
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
@@ -75,7 +76,7 @@ const RewardsContent: React.FC<{
         currentPoints: currentUserPoints ?? 0
       });
     } catch (e) {
-      console.error("Error buying reward from page:", e);
+      logger.error("Error buying reward from page:", e);
     }
   };
 
@@ -101,7 +102,7 @@ const RewardsContent: React.FC<{
         profileId: user.id
       });
     } catch (e) {
-      console.error("Error using reward from page:", e);
+      logger.error("Error using reward from page:", e);
     }
   };
   
@@ -150,7 +151,7 @@ const RewardsContent: React.FC<{
         return created;
       }
     } catch (e) {
-      console.error("Error saving reward from page:", e);
+      logger.error("Error saving reward from page:", e);
       if (!(e instanceof Error && e.message.includes("Missing required fields"))) {
         toast({ title: "Save Error", description: e instanceof Error ? e.message : "Could not save reward.", variant: "destructive" });
       }
@@ -169,7 +170,7 @@ const RewardsContent: React.FC<{
       setIsEditorOpen(false);
       setRewardBeingEdited(undefined);
     } catch (e) {
-      console.error("Error deleting reward from page:", e);
+      logger.error("Error deleting reward from page:", e);
     }
   };
   

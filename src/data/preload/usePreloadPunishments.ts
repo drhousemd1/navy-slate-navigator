@@ -1,7 +1,9 @@
+
 import { currentWeekKey, resetTaskCompletions } from "@/lib/taskUtils";
 import { loadPunishmentsFromDB } from "../indexedDB/useIndexedDB";
 import { queryClient } from "../queryClient";
 import { PUNISHMENTS_QUERY_KEY } from "@/data/punishments/queries";
+import { logger } from '@/lib/logger'; // Added logger import
 
 export function usePreloadPunishments() {
   return async () => {
@@ -9,18 +11,19 @@ export function usePreloadPunishments() {
       await resetTaskCompletions("weekly");
       localStorage.setItem("lastWeek", currentWeekKey());
     }
-    console.log('[PreloadPunishments] Attempting to load punishments from IndexedDB...');
+    logger.log('[PreloadPunishments] Attempting to load punishments from IndexedDB...'); // Replaced console.log
     try {
       const data = await loadPunishmentsFromDB();
       if (data && Array.isArray(data) && data.length > 0) {
         queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, data);
-        console.log(`[PreloadPunishments] Successfully preloaded ${data.length} punishments into query cache.`);
+        logger.log(`[PreloadPunishments] Successfully preloaded ${data.length} punishments into query cache.`); // Replaced console.log
       } else {
-        console.log('[PreloadPunishments] No punishments found in IndexedDB or data was empty.');
+        logger.log('[PreloadPunishments] No punishments found in IndexedDB or data was empty.'); // Replaced console.log
       }
     } catch (error) {
-      console.error('[PreloadPunishments] Error loading punishments from IndexedDB:', error);
+      logger.error('[PreloadPunishments] Error loading punishments from IndexedDB:', error); // Replaced console.error
     }
     return null;
   };
 }
+

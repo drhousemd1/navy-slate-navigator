@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { clearAuthState } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export function useDebugMode() {
   const [debugMode, setDebugMode] = useState<boolean>(false);
@@ -12,7 +13,7 @@ export function useDebugMode() {
       if (newCount >= 5) {
         // Enable debug mode after 5 clicks
         setDebugMode(true);
-        console.log('Debug mode enabled');
+        logger.log('Debug mode enabled'); // Replaced console.log
         return 0; // Reset click counter
       }
       return newCount;
@@ -23,12 +24,12 @@ export function useDebugMode() {
     if (!debugMode) return;
     
     try {
-      console.log('Manually clearing auth state');
+      logger.log('Manually clearing auth state'); // Replaced console.log
       await clearAuthState();
-      console.log('Auth state cleared successfully');
+      logger.log('Auth state cleared successfully'); // Replaced console.log
       return true;
     } catch (error) {
-      console.error('Error clearing auth state:', error);
+      logger.error('Error clearing auth state:', error); // Replaced console.error
       return false;
     }
   }, [debugMode]);
@@ -39,3 +40,4 @@ export function useDebugMode() {
     resetAuthState
   };
 }
+
