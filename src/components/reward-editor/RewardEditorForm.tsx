@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
 
 interface RewardEditorFormProps {
-  rewardData?: Partial<Reward>;
+  rewardData?: Reward; // Changed from Partial<Reward>
   onSave: (formData: RewardFormValues) => Promise<void>;
   onCancel: () => void;
   onDelete?: (id: string) => void;
@@ -196,7 +196,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         />
         
         <RewardFormActions 
-          rewardData={rewardData}
+          rewardData={rewardData} // This is now Reward | undefined
           isDeleteDialogOpen={isDeleteDialogOpen}
           setIsDeleteDialogOpen={setIsDeleteDialogOpen}
           onCancel={handleCancelWrapped}

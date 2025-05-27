@@ -10,7 +10,7 @@ import { Reward, RewardFormValues } from '@/data/rewards/types';
 interface RewardEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  rewardData?: Partial<Reward>;
+  rewardData?: Reward; // Changed from Partial<Reward>
   onSave: (rewardData: RewardFormValues) => Promise<Reward>; 
   onDelete?: (id: string) => void;
 }
