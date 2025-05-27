@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import RuleEditor from '../components/RuleEditor';
@@ -6,6 +7,7 @@ import RulesList from '../components/rule/RulesList';
 import { Rule } from '@/data/interfaces/Rule';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useRulesData, RulesQueryResult } from '@/data/RulesDataHandler';
+import { logger } from '@/lib/logger'; // Added logger import
 
 const RulesPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -27,7 +29,7 @@ const RulesPageContent: React.FC = () => {
   useEffect(() => {
     const element = document.querySelector('.RulesContent'); 
     if (element) {
-      const handleAddEvent = (event: Event) => {
+      const handleAddEvent = (_event: Event) => { // event param can be ignored if not used
         handleAddRule();
       };
       element.addEventListener('add-new-rule', handleAddEvent);
@@ -48,7 +50,7 @@ const RulesPageContent: React.FC = () => {
       setIsEditorOpen(false);
       setCurrentRule(null);
     } catch (err) {
-      console.error('Error saving rule:', err);
+      logger.error('Error saving rule:', err); // Replaced console.error
     }
   };
 
@@ -58,7 +60,7 @@ const RulesPageContent: React.FC = () => {
       setCurrentRule(null);
       setIsEditorOpen(false);
     } catch (err) {
-      console.error('Error deleting rule:', err);
+      logger.error('Error deleting rule:', err); // Replaced console.error
     }
   };
 
@@ -66,7 +68,7 @@ const RulesPageContent: React.FC = () => {
     try {
       await markRuleBroken(rule);
     } catch (err) {
-      console.error('Error marking rule as broken:', err);
+      logger.error('Error marking rule as broken:', err); // Replaced console.error
     }
   };
   

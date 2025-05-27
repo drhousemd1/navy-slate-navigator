@@ -1,7 +1,7 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 export const PROFILE_POINTS_QUERY_KEY = ["profile_points"];
 
@@ -14,7 +14,7 @@ interface ProfilePointsData {
 const fetchProfilePoints = async (): Promise<ProfilePointsData> => {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) {
-    // console.warn("User not authenticated or error fetching user. Returning default points.");
+    // logger.warn("User not authenticated or error fetching user. Returning default points.");
     return { points: 0, dom_points: 0 };
   }
   const userId = userData.user.id;
@@ -26,9 +26,9 @@ const fetchProfilePoints = async (): Promise<ProfilePointsData> => {
     .single();
 
   if (error) {
-    // console.error("Error fetching profile points:", error);
+    // logger.error("Error fetching profile points:", error);
     if (error.code === 'PGRST116') { // PGRST116: "The result contains 0 rows"
-        // console.warn(`No profile found for user ${userId}. Returning default points.`);
+        // logger.warn(`No profile found for user ${userId}. Returning default points.`);
         return { points: 0, dom_points: 0 };
     }
     // For other errors, we might want to throw or handle differently.
@@ -68,7 +68,7 @@ export const usePointsManager = () => {
     mutationFn: async (updates) => {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError || !authData.user) {
-        // console.error("Mutation: User not authenticated or error fetching user:", authError);
+        // logger.error("Mutation: User not authenticated or error fetching user:", authError);
         throw new Error("User not authenticated. Cannot update points.");
       }
       const userId = authData.user.id;
@@ -81,11 +81,11 @@ export const usePointsManager = () => {
         .single(); // Assuming update returns the updated row
 
       if (updateError) {
-        // console.error("Error updating points in Supabase:", updateError);
+        // logger.error("Error updating points in Supabase:", updateError);
         throw updateError;
       }
       if (!data) {
-        // console.error("Failed to update points: No data returned from Supabase.");
+        // logger.error("Failed to update points: No data returned from Supabase.");
         throw new Error("Failed to update points: No data returned.");
       }
       return { points: data.points, dom_points: data.dom_points };

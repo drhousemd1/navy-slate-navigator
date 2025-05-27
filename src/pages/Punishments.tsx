@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
@@ -9,6 +10,7 @@ import PunishmentList from '@/components/punishments/PunishmentList';
 import { usePunishmentsQuery, PunishmentsQueryResult } from '@/data/punishments/queries';
 import { useCreatePunishment, useUpdatePunishment, useDeletePunishment, CreatePunishmentVariables, UpdatePunishmentVariables } from '@/data/punishments/mutations';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger'; // Added logger import
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -40,7 +42,7 @@ const PunishmentsContent: React.FC<{
     // Or ensure it's memoized if it changes frequently
     contentRef.current = { handleAddNewPunishment };
     return () => { contentRef.current = {}; };
-  }, [contentRef, handleAddNewPunishment]);
+  }, [contentRef, handleAddNewPunishment]); // handleAddNewPunishment should be memoized if it's complex
   
   const handleEditPunishment = (punishment: PunishmentData) => {
     setCurrentPunishment(punishment);
@@ -96,7 +98,7 @@ const PunishmentsContent: React.FC<{
       setCurrentPunishment(undefined);
       return savedPunishment;
     } catch (error) {
-      console.error("Error saving punishment:", error);
+      logger.error("Error saving punishment:", error); // Replaced console.error
       if (!(error instanceof Error && error.message.includes("Title and points are required"))) {
          toast({
            title: "Error Saving Punishment",
@@ -115,7 +117,7 @@ const PunishmentsContent: React.FC<{
       setIsEditorOpen(false);
       setCurrentPunishment(undefined);
     } catch (error) {
-      console.error("Error deleting punishment:", error);
+      logger.error("Error deleting punishment:", error); // Replaced console.error
       toast({
         title: "Error Deleting Punishment",
         description: error instanceof Error ? error.message : "An unexpected error occurred.",

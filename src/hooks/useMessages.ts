@@ -6,6 +6,7 @@ import { useMessagesFetch } from './messages/useMessagesFetch';
 import { useMessageSend } from './messages/useMessageSend';
 import { useImageUpload } from './messages/useImageUpload';
 import { useRealtimeMessages } from './messages/useRealtimeMessages';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export type { Message } from './messages/types';
 
@@ -27,10 +28,10 @@ export const useMessages = (initialPartnerId?: string) => {
         
         // For testing without a partner, use the user's own ID
         const newPartnerId = data?.linked_partner_id || user.id;
-        console.log('Setting partnerId to:', newPartnerId);
+        logger.debug('Setting partnerId to:', newPartnerId); // Replaced console.log
         setPartnerId(newPartnerId);
       } catch (err) {
-        console.error('Error fetching partner ID:', err);
+        logger.error('Error fetching partner ID:', err); // Replaced console.error
         // Fallback to user's own ID for testing
         setPartnerId(user.id);
       }

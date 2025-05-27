@@ -1,9 +1,8 @@
-
 import localforage from 'localforage';
 import { Reward } from '@/data/rewards/types';
 import { PunishmentData as ContextPunishmentData, PunishmentHistoryItem as ContextPunishmentHistoryItem } from '@/contexts/punishments/types';
 import { Rule } from '@/data/interfaces/Rule'; // Import the correct Rule interface
-import { logger } from '@/lib/logger'; // Added import
+import { logger } from '@/lib/logger'; // Ensure logger is imported
 
 // Define types for other entities or import them if they exist elsewhere
 export interface Task { id: string; [key: string]: any; }
