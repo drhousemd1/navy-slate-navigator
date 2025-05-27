@@ -1,200 +1,283 @@
-import React from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Reward } from '@/data/rewards/types'; // Changed import path
-import { Badge } from '@/components/ui/badge';
-import { useRewards } from '@/contexts/RewardsContext';
-import { cn } from '@/lib/utils';
-import { Crown, Coins, Box, Loader2 } from 'lucide-react';
+
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Reward, RewardFrequency } from '@/contexts/rewards/types';
+import { Zap, Edit3, Trash2, ShoppingCart, Gift, ShieldCheck, UserCheck, MinusCircle, PlusCircle } from 'lucide-react';
+import ImageWithFallback from '@/components/ImageWithFallback';
+import IconRenderer from '@/components/IconRenderer';
+import WeeklyUsageTracker from './WeeklyUsageTracker';
+import RewardEditorModal from '../reward-editor/RewardEditorModal'; // Ensure correct path
+import { useAuth } from '@/contexts/auth';
+import { useUserIds } from '@/contexts/UserIdsContext';
+import { useBuySubReward, useBuyDomReward, useRedeemSubReward, useRedeemDomReward } from '@/data/rewards/mutations';
+import { useDeleteReward } from '@/data/rewards/mutations'; // For deleting
+import { toast } from '@/hooks/use-toast';
+import DeleteRewardDialog from './DeleteRewardDialog'; // Create this component
+import { logger } from '@/lib/logger';
 
 interface RewardCardProps {
   reward: Reward;
-  onEdit?: () => void;
+  // Removed onBuy, onRedeem as mutations are used directly
+  // Removed onEdit, onDelete as these are handled internally or via editor modal
+  currentPoints: number; // Sub's points
+  currentDomPoints: number; // Dom's points
+  canModify?: boolean; // True if current user can edit/delete this reward
 }
 
-const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
-  const { handleBuyReward, handleUseReward, totalPoints, domPoints } = useRewards();
-  const [buying, setBuying] = React.useState(false);
-  const [using, setUsing] = React.useState(false);
-  
-  // Explicitly enforce boolean type for is_dom_reward
-  const isDomReward = Boolean(reward.is_dom_reward);
-  
-  // Use appropriate points based on reward type
-  const currentPoints = isDomReward ? domPoints : totalPoints;
-  const canAfford = currentPoints >= reward.cost;
-  const hasAvailable = reward.supply > 0;
+const RewardCard: React.FC<RewardCardProps> = ({
+  reward,
+  currentPoints,
+  currentDomPoints,
+  canModify = false,
+}) => {
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { user } = useAuth();
+  const { subUserId, domUserId } = useUserIds();
 
-  const handleBuyClick = async () => {
-    if (buying) return; // Prevent multiple clicks
-    
+  const buySubRewardMutation = useBuySubReward();
+  const buyDomRewardMutation = useBuyDomReward();
+  const redeemSubRewardMutation = useRedeemSubReward();
+  const redeemDomRewardMutation = useRedeemDomReward();
+  const deleteRewardMutation = useDeleteReward();
+
+  const isSubUser = user?.id === subUserId;
+  const isDomUser = user?.id === domUserId;
+
+  const effectiveCost = useMemo(() => {
+    if (reward.cost_type === 'sub_points' || !reward.cost_type) return reward.cost_points; // Default to sub_points
+    if (reward.cost_type === 'dom_points') return reward.dom_cost_points || 0;
+    return reward.cost_points; // Fallback
+  }, [reward.cost_type, reward.cost_points, reward.dom_cost_points]);
+
+  const canAfford = useMemo(() => {
+    if (reward.cost_type === 'sub_points' || !reward.cost_type) return currentPoints >= (reward.cost_points || 0);
+    if (reward.cost_type === 'dom_points') return currentDomPoints >= (reward.dom_cost_points || 0);
+    return true; // Free or unassigned cost type
+  }, [reward.cost_type, reward.cost_points, reward.dom_cost_points, currentPoints, currentDomPoints]);
+
+  const handleBuy = async () => {
+    if (!user || !subUserId || !domUserId) {
+      toast({ title: "Error", description: "User information not available.", variant: "destructive" });
+      return;
+    }
+    if (!reward.id) {
+       toast({ title: "Error", description: "Reward ID is missing.", variant: "destructive" });
+       return;
+    }
+
+    logger.log(`Attempting to buy reward: ${reward.title} by user ${user.id}. Cost type: ${reward.cost_type}`);
+
     try {
-      setBuying(true);
-      // Pass the isDomReward flag explicitly to ensure it's handled correctly
-      await handleBuyReward(reward.id, reward.cost, isDomReward);
+      if (reward.cost_type === 'sub_points' || !reward.cost_type) { // Sub buys with their points
+        await buySubRewardMutation.mutateAsync({ rewardId: reward.id, userId: subUserId, cost: reward.cost_points || 0 });
+      } else if (reward.cost_type === 'dom_points') { // Dom buys with their points (for Sub)
+        await buyDomRewardMutation.mutateAsync({ rewardId: reward.id, userId: domUserId, cost: reward.dom_cost_points || 0, subIdToCredit: subUserId });
+      } else {
+        toast({ title: "Unsupported", description: "This reward has an unsupported cost type.", variant: "destructive" });
+      }
     } catch (error) {
-      console.error('Error buying reward:', error);
-    } finally {
-      // Set buying false after a short delay to prevent multiple clicks
-      setTimeout(() => setBuying(false), 500);
+      // Mutation hooks should handle their own error toasts. This is a fallback.
+      logger.error("Error in handleBuy:", error);
+      if (!(error instanceof Error && error.message.includes("Insufficient"))) { // Avoid double toast for known handled errors
+        toast({ title: "Purchase Failed", description: "Could not complete the purchase.", variant: "destructive" });
+      }
     }
   };
 
-  const handleUseClick = async () => {
-    if (using) return; // Prevent multiple clicks
-    
+  const handleRedeem = async () => {
+     if (!user || !subUserId || !domUserId) {
+      toast({ title: "Error", description: "User information not available.", variant: "destructive" });
+      return;
+    }
+    if (!reward.id) {
+       toast({ title: "Error", description: "Reward ID is missing.", variant: "destructive" });
+       return;
+    }
+    logger.log(`Attempting to redeem reward: ${reward.title} by user ${user.id}. Redemption type: ${reward.redemption_type}`);
+
     try {
-      setUsing(true);
-      await handleUseReward(reward.id);
+      if (reward.redemption_type === 'sub_redeems') { // Sub redeems
+        await redeemSubRewardMutation.mutateAsync({ rewardId: reward.id, userId: subUserId });
+      } else if (reward.redemption_type === 'dom_redeems') { // Dom redeems (for Sub)
+        await redeemDomRewardMutation.mutateAsync({ rewardId: reward.id, userId: domUserId, subIdToApply: subUserId });
+      } else {
+        toast({ title: "Unsupported", description: "This reward has an unsupported redemption type.", variant: "destructive" });
+      }
     } catch (error) {
-      console.error('Error using reward:', error);
-    } finally {
-      // Set using false after a short delay to prevent multiple clicks
-      setTimeout(() => setUsing(false), 500);
+      logger.error("Error in handleRedeem:", error);
+      // Mutation hooks should handle their own error toasts.
+       if (!(error instanceof Error && error.message.includes("not available for redemption"))) {
+        toast({ title: "Redemption Failed", description: "Could not complete redemption.", variant: "destructive" });
+      }
     }
   };
 
-  // Get background style with focal points and opacity
-  const getBgStyle = () => {
-    if (!reward.background_image_url) return {};
-    
-    return {
-      backgroundImage: `url(${reward.background_image_url})`,
-      backgroundSize: 'cover',
-      backgroundPosition: `${reward.focal_point_x || 50}% ${reward.focal_point_y || 50}%`,
-      opacity: reward.background_opacity / 100,
-    };
+  const handleDelete = async () => {
+    if (!reward.id) {
+      toast({ title: "Error", description: "Reward ID missing, cannot delete.", variant: "destructive" });
+      return;
+    }
+    try {
+      await deleteRewardMutation.mutateAsync(reward.id);
+      // Success toast is handled by useDeleteReward
+      setIsDeleteDialogOpen(false); // Close dialog on success
+    } catch (error) {
+      // Error toast is handled by useDeleteReward
+      logger.error(`Failed to delete reward ${reward.id}:`, error);
+    }
   };
 
-  // Define styles based on if it's a dom reward
-  const costBadgeColor = isDomReward ? "bg-red-600" : "bg-nav-active";
-  const buyButtonColor = isDomReward 
-    ? "bg-red-600 hover:bg-red-700" 
-    : "bg-nav-active hover:bg-nav-active/80";
-
-  // Define border color based on if it's a dom reward and if there's supply
-  const cardBorderColor = isDomReward 
-    ? "#ea384c" // Red for dom rewards
-    : (hasAvailable ? "#FEF7CD" : "#00f0ff"); // Yellow for sub rewards with supply, blue otherwise
-  
-  const cardBorderStyle = {
-    borderColor: cardBorderColor,
-    boxShadow: hasAvailable ? `0 0 8px 2px rgba(${isDomReward ? '234, 56, 76, 0.6' : '254, 247, 205, 0.6'})` : undefined
+  const cardStyle = {
+    borderColor: reward.highlight_effect ? (reward.calendar_color || '#FFD700') : undefined,
+    boxShadow: reward.highlight_effect ? `0 0 10px ${reward.calendar_color || '#FFD700'}33, 0 0 5px ${reward.calendar_color || '#FFD700'}22` : undefined,
   };
 
-  // Define supply badge color based on if it's a dom reward
-  const supplyBadgeColor = isDomReward ? "bg-red-500" : "bg-blue-500";
+  const isPurchasableByCurrentUser = 
+    (isSubUser && (reward.cost_type === 'sub_points' || !reward.cost_type)) || 
+    (isDomUser && reward.cost_type === 'dom_points');
+
+  const isRedeemableByCurrentUser =
+    (isSubUser && reward.redemption_type === 'sub_redeems') ||
+    (isDomUser && reward.redemption_type === 'dom_redeems');
+
+  const hasSupply = reward.supply === null || reward.supply === undefined || reward.supply > 0; // Treat null/undefined as infinite supply
+
+  // Determine if the "Buy" button should be shown and enabled
+  const showBuyButton = reward.cost_points > 0 || reward.dom_cost_points > 0; // Show if there's any cost
+  const buyButtonDisabled = !canAfford || !isPurchasableByCurrentUser || !hasSupply || 
+                            buySubRewardMutation.isPending || buyDomRewardMutation.isPending;
+
+  // Determine if the "Redeem" button should be shown and enabled
+  const showRedeemButton = true; // Always show redeem if available, disable if not owned or not redeemable by user
+  const redeemButtonDisabled = !reward.is_available_for_redemption || !isRedeemableByCurrentUser ||
+                               redeemSubRewardMutation.isPending || redeemDomRewardMutation.isPending;
+
 
   return (
-    <Card className="relative overflow-hidden bg-dark-navy border-2 border-light-navy text-white"
-          style={cardBorderStyle}>
-      {/* Background image with opacity */}
-      {reward.background_image_url && (
-        <div 
-          className="absolute inset-0 z-0" 
-          style={getBgStyle()}
-        />
-      )}
-      
-      {/* Card content */}
-      <div className="relative z-10 p-4 flex flex-col h-full">
-        <div className="flex justify-between items-start">
-          <div>
-            {isDomReward && (
-              <div className="mb-2">
-                <Badge variant="outline" className="bg-amber-800/80 text-amber-200 border-amber-500 flex items-center space-x-1">
-                  <Crown className="h-3 w-3 mr-1" />
-                  <span>Dom Reward</span>
-                </Badge>
+    <>
+      <Card className="relative flex flex-col bg-card text-card-foreground rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full" style={cardStyle}>
+        <CardHeader className="relative p-0 h-48">
+          <ImageWithFallback
+            src={reward.background_image_url}
+            alt={reward.title || "Reward background"}
+            className="w-full h-full object-cover"
+            fallbackClassName="bg-gradient-to-br from-slate-800 to-slate-900"
+            style={{ 
+              objectPosition: `${reward.focal_point_x || 50}% ${reward.focal_point_y || 50}%`,
+              opacity: (reward.background_opacity !== undefined ? reward.background_opacity : 50) / 100,
+            }}
+          />
+          <div className="absolute inset-0 bg-black/30 flex flex-col justify-between p-4">
+            <div className="flex justify-between items-start">
+              <div className="p-2 bg-black/50 rounded-full">
+                <IconRenderer iconName={reward.icon_name} iconUrl={reward.icon_url} color={reward.icon_color || '#FFFFFF'} className="h-8 w-8" />
               </div>
-            )}
-            
-            <h3 className={cn(
-              "text-lg font-semibold",
-              reward.highlight_effect && "bg-yellow-300/30 px-2 py-1 rounded",
-            )}
-            style={{ color: reward.title_color }}>
+              {canModify && (
+                <div className="flex space-x-2">
+                  <Button variant="icon" size="icon" className="bg-black/50 hover:bg-black/70 text-white rounded-full" onClick={() => setIsEditorOpen(true)}>
+                    <Edit3 size={18} />
+                  </Button>
+                  <Button variant="icon" size="icon" className="bg-black/50 hover:bg-black/70 text-destructive rounded-full" onClick={() => setIsDeleteDialogOpen(true)}>
+                    <Trash2 size={18} />
+                  </Button>
+                </div>
+              )}
+            </div>
+             <CardTitle className="text-2xl font-bold truncate" style={{ color: reward.title_color || '#FFFFFF' }}>
               {reward.title}
-            </h3>
-            
-            {reward.description && (
-              <p className={cn(
-                "text-sm mt-1",
-                reward.highlight_effect && "bg-yellow-300/20 px-2 py-1 rounded",
-              )}
-              style={{ color: reward.subtext_color }}>
-                {reward.description}
-              </p>
-            )}
+            </CardTitle>
           </div>
+        </CardHeader>
+        
+        <CardContent className="flex-grow p-4 space-y-3">
+          <p className="text-sm line-clamp-3" style={{ color: reward.subtext_color || '#8E9196' }}>
+            {reward.description}
+          </p>
           
-          <div className="flex flex-col items-end">
-            {onEdit && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={onEdit}
-                className="h-8 px-2 text-light-navy hover:text-white hover:bg-light-navy"
-              >
-                Edit
-              </Button>
-            )}
-            
-            <div 
-              className="text-sm font-medium rounded-full px-3 py-1 mt-1 flex items-center" 
-              style={{ backgroundColor: isDomReward ? "#ea384c" : (reward.calendar_color || '#7E69AB') }}
-            >
-              {isDomReward ? (
-                <Crown className="h-3 w-3 mr-1" />
-              ) : (
-                <Coins className="h-3 w-3 mr-1" />
-              )}
-              {reward.cost} pts
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-semibold" style={{color: reward.calendar_color || '#4ADE80'}}>Cost:</span>
+            <div className="flex items-center">
+              <Zap size={16} className="mr-1" style={{color: reward.calendar_color || '#4ADE80'}}/> 
+              {effectiveCost} {reward.cost_type === 'dom_points' ? 'Dom Points' : 'Points'}
             </div>
           </div>
-        </div>
+
+          {(reward.supply !== null && reward.supply !== undefined) && (
+             <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold" style={{color: reward.calendar_color || '#4ADE80'}}>Supply Left:</span>
+                <span>{reward.supply}</span>
+            </div>
+          )}
+
+          {reward.redemption_type === 'sub_redeems' && <span className="text-xs inline-flex items-center px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300"><UserCheck size={12} className="mr-1"/> Sub Redeems</span>}
+          {reward.redemption_type === 'dom_redeems' && <span className="text-xs inline-flex items-center px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300"><ShieldCheck size={12} className="mr-1"/> Dom Redeems</span>}
+
+          {reward.usage_data && reward.usage_data.length > 0 && (
+            <div className="pt-2">
+              <WeeklyUsageTracker usageData={reward.usage_data} calendarColor={reward.calendar_color || '#4ADE80'} />
+            </div>
+          )}
+        </CardContent>
         
-        <div className="mt-auto pt-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <Badge className={`${supplyBadgeColor} text-white font-bold flex items-center gap-1`}>
-              <Box className="h-3 w-3" />
-              <span>{reward.supply}</span>
-            </Badge>
-          </div>
-          
-          <div className="flex space-x-2">
+        <CardFooter className="grid grid-cols-2 gap-2 p-4 border-t border-border/20">
+          {showBuyButton && (
             <Button
-              variant="outline"
-              size="sm"
-              disabled={!hasAvailable || using}
-              onClick={handleUseClick}
-              className="border-light-navy hover:bg-light-navy min-w-[60px]"
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleBuy}
+              disabled={buyButtonDisabled}
+              aria-label={`Buy ${reward.title}`}
             >
-              {using ? (
-                <span className="flex items-center">
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  <span>...</span>
-                </span>
-              ) : "Use"}
+              {buySubRewardMutation.isPending || buyDomRewardMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <ShoppingCart size={16} className="mr-2" />
+              )}
+              Buy
             </Button>
-            
-            <Button
-              size="sm"
-              disabled={!canAfford || buying}
-              onClick={handleBuyClick}
-              className={`${canAfford ? buyButtonColor : 'bg-dark-navy text-light-navy'} min-w-[60px]`}
+          )}
+
+          {showRedeemButton && (
+             <Button
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={handleRedeem}
+              disabled={redeemButtonDisabled}
+              aria-label={`Redeem ${reward.title}`}
             >
-              {buying ? (
-                <span className="flex items-center">
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  <span>...</span>
-                </span>
-              ) : "Buy"}
+              {redeemSubRewardMutation.isPending || redeemDomRewardMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Gift size={16} className="mr-2" />
+              )}
+              Redeem
             </Button>
-          </div>
-        </div>
-      </div>
-    </Card>
+          )}
+
+          {/* Fallback if no cost and not explicitly redeemable, or as a placeholder */}
+          {!showBuyButton && !showRedeemButton && (
+            <p className="col-span-2 text-center text-sm text-muted-foreground">No actions available.</p>
+          )}
+        </CardFooter>
+      </Card>
+
+      {canModify && isEditorOpen && (
+        <RewardEditorModal
+          isOpen={isEditorOpen}
+          onClose={() => setIsEditorOpen(false)}
+          rewardData={reward}
+        />
+      )}
+      {canModify && (
+        <DeleteRewardDialog
+            isOpen={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+            onDelete={handleDelete}
+            rewardName={reward.title || "this reward"}
+            isDeleting={deleteRewardMutation.isPending}
+        />
+      )}
+    </>
   );
 };
 

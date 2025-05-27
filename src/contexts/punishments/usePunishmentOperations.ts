@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,25 +39,39 @@ export const usePunishmentOperations = () => {
   // Updated applyPunishment signature and placeholder implementation
   const applyPunishment = async (args: ApplyPunishmentArgs): Promise<void> => {
     logger.warn("[usePunishmentOperations] applyPunishment called. This is a placeholder and does not perform the actual mutation. Ensure components use the dedicated mutation hook.", args);
-    // This is a placeholder. Actual application should use useApplyPunishment mutation hook directly.
-    // The toast that was here has been removed as it was redundant and causing overlap.
-    // The actual mutation hook (useApplyPunishment) handles success/error toasts.
+    // This is a placeholder. Actual application should use useApplyPunishmentMutation hook (likely from @/data/punishments/mutations) directly.
+    // No toasts here; the mutation hook should handle them.
   };
 
   const getPunishmentHistory = (punishmentId: string): PunishmentHistoryItem[] => {
     return punishmentHistory.filter(item => item.punishment_id === punishmentId);
   };
+  
+  const refetchPunishmentsData = useCallback(async () => {
+    logger.log("[usePunishmentOperations] Refetching punishments and history data.");
+    try {
+      await queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
+      // Optional: await Promise.all([refetchPunishments(), refetchHistory()]); if direct refetch needed over invalidate
+      logger.log("[usePunishmentOperations] Punishments and history refetch initiated.");
+    } catch (error) {
+      logger.error("[usePunishmentOperations] Error during refetchPunishmentsData:", error);
+      toast({
+        title: "Data Refresh Error",
+        description: "Could not refresh punishment data.",
+        variant: "destructive",
+      });
+    }
+  }, [queryClient]);
 
   return {
     punishments,
     punishmentHistory,
+    // Consolidate loading and error states if appropriate, or keep separate
     loading: isLoadingPunishments || isLoadingHistory,
-    error: errorPunishments || errorHistory,
+    error: errorPunishments || errorHistory, // Prioritize or combine error messages if needed
     totalPointsDeducted,
-    refetchPunishmentsData: async () => { 
-        await refetchPunishments();
-        await refetchHistory();
-    },
+    refetchPunishmentsData, // Use the new useCallback wrapped version
     applyPunishment, // This remains a placeholder; actual mutation is separate
     getPunishmentHistory
   };

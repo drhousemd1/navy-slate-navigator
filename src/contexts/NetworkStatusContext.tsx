@@ -1,8 +1,10 @@
-import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
+
+import React, { createContext, useState, useEffect, ReactNode, useCallback, useContext } from 'react'; // Added useContext
 import { queryClient } from '@/data/queryClient';
 import { toast } from '@/hooks/use-toast';
-import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries'; // Import points query keys
-import { QueryKey } from '@tanstack/react-query'; // Import QueryKey type
+import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries';
+import { QueryKey } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
 
 interface NetworkStatusContextType {
   isOnline: boolean;
@@ -19,44 +21,44 @@ interface NetworkStatusProviderProps {
   children: ReactNode;
 }
 
-// Define critical query keys here
 const CRITICAL_QUERY_KEYS_FOR_FORCESYNC: QueryKey[] = [
   ['tasks'],
   ['rewards'],
   REWARDS_POINTS_QUERY_KEY,
   REWARDS_DOM_POINTS_QUERY_KEY,
   ['punishments'],
+  ['punishment_history'], // Added punishment history
   ['rules'],
   ['profile'],
+  // Consider adding ['messages'] if they are critical to sync this way
 ];
-
 
 export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ children }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [isSyncing, setIsSyncing] = useState(false); // This is for forceSyncNow
+  const [isSyncing, setIsSyncing] = useState(false);
   const [lastOnlineTime, setLastOnlineTime] = useState<Date | null>(isOnline ? new Date() : null);
   const [reconnectTime, setReconnectTime] = useState<Date | null>(null);
   const [pendingMutationsCount, setPendingMutationsCount] = useState(0);
 
-  // Track pending mutations
   useEffect(() => {
     const mutationCache = queryClient.getMutationCache();
     
     const updatePendingCount = () => {
       const mutations = mutationCache.getAll();
       const pending = mutations.filter(mutation => 
-        mutation.state.status === 'pending' // React Query v5 status for paused/offline
+        mutation.state.status === 'pending'
       ).length;
       setPendingMutationsCount(pending);
     };
 
-    updatePendingCount(); // Initial count
+    updatePendingCount();
+    logger.info(`[NetworkStatusContext] Initial pending mutations: ${pendingMutationsCount}`);
     const unsubscribe = mutationCache.subscribe(updatePendingCount);
     
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [pendingMutationsCount]); // Added pendingMutationsCount to dependency array to log initial count correctly.
 
   const forceSyncNow = useCallback(async () => {
     if (!isOnline) {
@@ -80,14 +82,13 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
           toast({ title: "Refreshing Data...", description: "Attempting to refresh your data." });
         }
         
-        console.log(`[NetworkStatusContext] forceSyncNow - Attempt ${attempt + 1}`);
+        logger.info(`[NetworkStatusContext] forceSyncNow - Attempt ${attempt + 1}`);
         await queryClient.resumePausedMutations();
-        console.log(`[NetworkStatusContext] Paused mutations resumed (if any).`);
+        logger.info(`[NetworkStatusContext] Paused mutations resumed (if any).`);
         
-        // Use the defined CRITICAL_QUERY_KEYS_FOR_FORCESYNC
         const criticalQueriesToInvalidate = CRITICAL_QUERY_KEYS_FOR_FORCESYNC;
         
-        console.log('[NetworkStatusContext] Invalidating critical queries:', criticalQueriesToInvalidate.map(q => Array.isArray(q) ? q.join('/') : String(q)));
+        logger.info('[NetworkStatusContext] Invalidating critical queries:', criticalQueriesToInvalidate.map(q => Array.isArray(q) ? q.join('/') : String(q)));
         await Promise.all(
           criticalQueriesToInvalidate.map(queryKey => 
             queryClient.invalidateQueries({queryKey})
@@ -102,7 +103,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
         setIsSyncing(false);
         return; 
       } catch (error) {
-        console.error(`[NetworkStatusContext] Error during forced sync/refresh (Attempt ${attempt + 1}):`, error);
+        logger.error(`[NetworkStatusContext] Error during forced sync/refresh (Attempt ${attempt + 1}):`, error);
         if (attempt < MAX_RETRIES) {
           toast({
             title: `Refresh Attempt ${attempt + 1} Failed`,
@@ -127,14 +128,14 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
 
   useEffect(() => {
     const handleOnline = () => {
-      console.log('[NetworkStatusContext] App is back online.');
+      logger.info('[NetworkStatusContext] App is back online.');
       setIsOnline(true);
       setReconnectTime(new Date());
       
-      if (lastOnlineTime !== null) { // Avoid toast on initial load if already online
+      if (lastOnlineTime !== null) {
         toast({
           title: 'Back Online',
-          description: 'Connection restored. Syncing pending changes.', // Message can be generic now
+          description: 'Connection restored. Syncing pending changes.',
           variant: 'default',
         });
       }
@@ -142,13 +143,12 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
       queryClient.resumePausedMutations()
         .then(() => {
           const currentPendingCount = queryClient.getMutationCache().getAll().filter(m => m.state.status === 'pending').length;
-          console.log(`[NetworkStatusContext] Paused mutations resumed. Pending count now: ${currentPendingCount}`);
-          // Toasting for resumed mutations can be kept if desired, or removed for less noise
+          logger.info(`[NetworkStatusContext] Paused mutations resumed. Pending count now: ${currentPendingCount}`);
         })
         .catch(error => {
-          console.error('[NetworkStatusContext] Error resuming paused mutations on network online:', error);
+          logger.error('[NetworkStatusContext] Error resuming paused mutations on network online:', error);
           toast({
-            title: 'Operation Error', // Generic error
+            title: 'Operation Error',
             description: 'Could not resume all pending operations. Try manual refresh.',
             variant: 'destructive',
           });
@@ -156,7 +156,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
     };
 
     const handleOffline = () => {
-      console.log('[NetworkStatusContext] App is offline.');
+      logger.info('[NetworkStatusContext] App is offline.');
       setIsOnline(false);
       setLastOnlineTime(new Date()); 
       
@@ -170,16 +170,6 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    setIsOnline(navigator.onLine);
-    if (!navigator.onLine) {
-        setLastOnlineTime(new Date()); 
-    }
-    
-    const initialMutations = queryClient.getMutationCache().getAll();
-    const initialPending = initialMutations.filter(m => m.state.status === 'pending').length;
-    setPendingMutationsCount(initialPending);
-    console.log(`[NetworkStatusContext] Initial pending mutations: ${initialPending}`);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -187,15 +177,16 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
   }, [lastOnlineTime]);
 
   return (
-    <NetworkStatusContext.Provider value={{ 
-      isOnline, 
-      isSyncing, 
-      lastOnlineTime, 
-      reconnectTime, 
-      pendingMutationsCount,
-      forceSyncNow
-    }}>
+    <NetworkStatusContext.Provider value={{ isOnline, isSyncing, lastOnlineTime, reconnectTime, pendingMutationsCount, forceSyncNow }}>
       {children}
     </NetworkStatusContext.Provider>
   );
+};
+
+export const useNetworkStatus = (): NetworkStatusContextType => {
+  const context = useContext(NetworkStatusContext);
+  if (context === undefined) {
+    throw new Error('useNetworkStatus must be used within a NetworkStatusProvider');
+  }
+  return context;
 };

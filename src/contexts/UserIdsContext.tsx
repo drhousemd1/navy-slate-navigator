@@ -1,6 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/auth'; // Changed import path
+import { useAuth } from '@/contexts/auth';
+import { logger } from '@/lib/logger';
 
 interface UserIds {
   subUserId: string | null;
@@ -17,7 +19,7 @@ const UserIdsContext = createContext<UserIdsContextType | undefined>(undefined);
 export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [userIds, setUserIds] = useState<UserIds>({ subUserId: null, domUserId: null });
   const [isLoadingUserIds, setIsLoadingUserIds] = useState(true);
-  const { user } = useAuth(); // Get the current authenticated user
+  const { user } = useAuth();
 
   const initializeUserIds = useCallback(async () => {
     if (!user) {
@@ -30,65 +32,54 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ childre
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, linked_partner_id')
+        .select('id, linked_partner_id, role') // Added role to select
         .eq('id', user.id)
         .single();
 
       if (error) {
-        console.error('Error fetching profile for UserIdsContext:', error);
-        setUserIds({ subUserId: user.id, domUserId: user.id }); // Fallback for solo user
+        logger.error('Error fetching profile for UserIdsContext:', error);
+        // Fallback: if a user exists but profile fetch fails, use their ID for both roles temporarily.
+        // This might happen if the profile row hasn't been created yet for a new user.
+        setUserIds({ subUserId: user.id, domUserId: user.id }); 
         setIsLoadingUserIds(false);
         return;
       }
 
       if (profile) {
-        if (profile.linked_partner_id) {
-          // Assuming the current user `profile.id` is the submissive one if a partner is linked.
-          // This logic might need adjustment based on how primary role is determined.
-          // For now, let's assume current user is 'sub' if linked, partner is 'dom'.
-          // If the app has a clearer role definition (e.g. a 'role' field in profile), that should be used.
-          // One common pattern: if user A links to user B, user A might be sub, user B dom.
-          // Or, it could be that `user.id` is always one role, and `linked_partner_id` is the other.
-          // For this implementation, we'll make a simple assumption:
-          // User logs in. If they have a linked partner, their ID is subId, partner's is domId.
-          // If no partner, their ID is used for both.
-          // This needs to be robust. A common pattern is to have a 'primary_role' field.
-          // Lacking that, this is an educated guess.
-          
-          // Let's assume a simple scenario: the logged-in user is considered primary.
-          // If they have a linked partner, we need to decide who is sub and who is dom.
-          // For now: logged-in user is sub, partner is dom. This is a placeholder assumption.
-          // A more robust system would involve fetching both profiles if linked_partner_id exists
-          // and determining roles, or having a 'role' field on the profile.
-          
-          // Simplified: current user is always sub for their view, partner (if any) is dom.
-          // If current user is dom, then their ID is domId, partner is subId.
-          // This context needs a way to know the logged-in user's "perspective" or primary role.
+        const currentUserRole = profile.role; // 'submissive' or 'dominant'
+        const partnerId = profile.linked_partner_id;
 
-          // Let's refine: If user A is logged in.
-          // subUserId = userA.id
-          // domUserId = userA.linked_partner_id ?? userA.id
-          // This means the "submissive" view is always the logged-in user's direct points/supply.
-          // The "dominant" view is their partner's points/supply, or their own if solo.
-          // This seems a reasonable interpretation for now.
+        if (currentUserRole === 'submissive') {
           setUserIds({
             subUserId: profile.id,
-            domUserId: profile.linked_partner_id || profile.id,
+            domUserId: partnerId || profile.id, // Partner is Dom, or self if no partner
           });
-        } else {
-          // Solo user, their ID is used for both roles
+        } else if (currentUserRole === 'dominant') {
           setUserIds({
-            subUserId: profile.id,
+            subUserId: partnerId || profile.id, // Partner is Sub, or self if no partner
             domUserId: profile.id,
           });
+        } else {
+          // Default or unknown role: assume current user is sub, partner is dom (or self)
+          logger.warn(`User ${profile.id} has an unrecognized role: ${currentUserRole}. Defaulting user ID assignment.`);
+          setUserIds({
+            subUserId: profile.id,
+            domUserId: partnerId || profile.id,
+          });
         }
+        logger.log('UserIdsContext: User IDs initialized:', {
+            subUserId: currentUserRole === 'submissive' ? profile.id : (partnerId || profile.id),
+            domUserId: currentUserRole === 'dominant' ? profile.id : (partnerId || profile.id)
+        });
       } else {
-         // Should not happen if user is authenticated, but as a fallback
+        // This case should ideally not be reached if 'user' is present and profile creation is robust.
+        logger.warn('UserIdsContext: Profile data not found for authenticated user. Using user.id as fallback for both roles.');
         setUserIds({ subUserId: user.id, domUserId: user.id });
       }
     } catch (e) {
-      console.error('Exception in initializeUserIds:', e);
-      setUserIds({ subUserId: user.id, domUserId: user.id }); // Fallback
+      logger.error('Exception in initializeUserIds:', e);
+      // Fallback to user's ID for both in case of unexpected errors
+      setUserIds({ subUserId: user.id, domUserId: user.id });
     } finally {
       setIsLoadingUserIds(false);
     }

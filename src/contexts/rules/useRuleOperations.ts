@@ -1,12 +1,9 @@
-
 import { useState, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
-// Rule import removed as it's not directly used in this revised snippet
-// import { Rule } from '@/data/interfaces/Rule'; 
 import { useCreateRule } from '@/data/rules/mutations/useCreateRule';
 import { useUpdateRule } from '@/data/rules/mutations/useUpdateRule';
 import { useDeleteRule } from '@/data/rules/mutations/useDeleteRule';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
 export const useRuleOperations = (initialRules = []) => {
   const [rules, setRules] = useState(initialRules);
@@ -15,22 +12,22 @@ export const useRuleOperations = (initialRules = []) => {
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
   
   // Create a new rule
-  const createRule = useCallback(async (ruleData: any) => { // Added type for ruleData for clarity
+  const createRule = useCallback(async (ruleData: any) => {
     try {
       const newRule = await createRuleMutation(ruleData);
       
       if (newRule) {
         toast({
           title: "Rule Created",
-          description: `${ruleData.title} has been added to your rules.`,
+          description: `${ruleData.title || 'The new rule'} has been added.`,
         });
         return newRule;
       }
     } catch (error) {
-      logger.error('Error creating rule:', error); // Changed console.error to logger.error
+      logger.error('Error creating rule:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to create rule. Please try again.',
+        title: 'Error Creating Rule',
+        description: (error instanceof Error && error.message) ? error.message : 'Failed to create rule. Please try again.',
         variant: 'destructive',
       });
       throw error;
@@ -38,22 +35,22 @@ export const useRuleOperations = (initialRules = []) => {
   }, [createRuleMutation]);
   
   // Update an existing rule
-  const updateRule = useCallback(async (ruleId: string, updates: any) => { // Added types
+  const updateRule = useCallback(async (ruleId: string, updates: any) => {
     try {
       const updatedRule = await updateRuleMutation({ id: ruleId, ...updates });
       
       if (updatedRule) {
         toast({
           title: "Rule Updated",
-          description: `${updates.title || 'Rule'} has been updated.`,
+          description: `${updates.title || 'The rule'} has been updated.`,
         });
         return updatedRule;
       }
     } catch (error) {
-      logger.error('Error updating rule:', error); // Changed console.error to logger.error
+      logger.error('Error updating rule:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to update rule. Please try again.',
+        title: 'Error Updating Rule',
+        description: (error instanceof Error && error.message) ? error.message : 'Failed to update rule. Please try again.',
         variant: 'destructive',
       });
       throw error;
@@ -61,20 +58,19 @@ export const useRuleOperations = (initialRules = []) => {
   }, [updateRuleMutation]);
   
   // Delete a rule
-  const deleteRule = useCallback(async (ruleId: string) => { // Added type
+  const deleteRule = useCallback(async (ruleId: string) => {
     try {
       await deleteRuleMutation(ruleId);
-      
       toast({
         title: "Rule Deleted",
-        description: "The rule has been deleted.",
+        description: "The rule has been successfully deleted.",
       });
       return true;
     } catch (error) {
-      logger.error('Error deleting rule:', error); // Changed console.error to logger.error
+      logger.error('Error deleting rule:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to delete rule. Please try again.',
+        title: 'Error Deleting Rule',
+        description: (error instanceof Error && error.message) ? error.message : 'Failed to delete rule. Please try again.',
         variant: 'destructive',
       });
       throw error;
@@ -83,6 +79,7 @@ export const useRuleOperations = (initialRules = []) => {
   
   return {
     rules,
+    setRules,
     createRule,
     updateRule,
     deleteRule

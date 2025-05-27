@@ -1,136 +1,64 @@
-import React, { ReactNode, useEffect, useState } from 'react';
+
+import React, { useState, Suspense } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import MobileNavbar from './MobileNavbar';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Plus, MessageSquare } from 'lucide-react'; // Removed BookOpen import
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { useAuth } from '@/contexts/auth';
-import AccountSheet from './AccountSheet';
-// import CacheMonitorPanel from './dev/CacheMonitorPanel'; // Removed import
-// Removed: import SyncStatusIndicator from './common/SyncStatusIndicator';
+import Sidebar from './Sidebar';
+import { useAuth } from '@/contexts/AuthContext';
+import LoginPage from '@/pages/Login'; // Ensure this path is correct
+import LoadingSpinner from '@/components/ui/LoadingSpinner'; // Ensure this path is correct
+import { useNetworkStatus } from '@/contexts/NetworkStatusContext';
+import OfflineBanner from '@/components/OfflineBanner';
+import { logger } from '@/lib/logger';
 
-interface AppLayoutProps {
-  children: React.ReactNode;
-  onAddNewItem?: () => void;
-}
-
-const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
+const AppLayout: React.FC = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
-  const { getNickname, getProfileImage, getUserRole } = useAuth();
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const { isOnline } = useNetworkStatus();
 
-  // Only show "Add" button for specific routes
-  const shouldShowAddButton = 
-    location.pathname === '/tasks' || 
-    location.pathname === '/rules' || 
-    location.pathname === '/rewards' || 
-    location.pathname === '/punishments';
-    
-  // Don't add bottom padding on messages page
-  const isMessagesPage = location.pathname === '/messages';
-
-  const handleAddNewItem = () => {
-    if (onAddNewItem) {
-      onAddNewItem();
-    }
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
   };
+
+  logger.log(`AppLayout: Auth loading: ${authLoading}, IsAuthenticated: ${isAuthenticated}`);
+
+  if (authLoading) {
+    // Enhanced global loading state for initial auth check
+    return (
+      <div className="flex items-center justify-center h-screen bg-background text-foreground">
+        <LoadingSpinner size="large" />
+        <p className="ml-4 text-lg">Initializing Application...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && location.pathname !== '/login' && location.pathname !== '/signup') {
+    // If not authenticated and not on login/signup, show LoginPage.
+    // This effectively makes LoginPage the fallback for unauthenticated users.
+    // Consider redirecting to /login instead of rendering LoginPage directly for cleaner URLs.
+    logger.log('AppLayout: Not authenticated, rendering LoginPage.');
+    return <LoginPage />;
+  }
   
-  // Get profile image and nickname for the avatar directly from context
-  const nickname = getNickname();
-  const userRole = getUserRole();
-
-  // Get profile image from context - no direct Supabase calls
-  useEffect(() => {
-    const contextImage = getProfileImage();
-    if (contextImage) {
-      console.log('Using profile image from context:', contextImage);
-      setProfileImage(contextImage);
-    }
-  }, [getProfileImage]);
-
-  // Determine if we're on the rewards page, tasks page, punishments page, or rules page for special styling
-  const isRewardsPage = location.pathname === '/rewards';
-  const isTasksPage = location.pathname === '/tasks';
-  const isPunishmentsPage = location.pathname === '/punishments';
-  const isRulesPage = location.pathname === '/rules';
-  const useCircleButton = isRewardsPage || isTasksPage || isPunishmentsPage || isRulesPage;
+  // For authenticated users or users on login/signup page
+  const showNavigation = isAuthenticated && location.pathname !== '/login' && location.pathname !== '/signup';
+  logger.log(`AppLayout: showNavigation: ${showNavigation}`);
 
   return (
-    <div className="flex flex-col min-h-screen bg-dark-navy">
-      {/* Top header section with account and settings icons */}
-      <div className="w-full bg-navy border-b border-light-navy py-2 px-4">
-        <div className="max-w-screen-lg mx-auto flex justify-between items-center">
-          <div className="flex items-center">
-            {/* Left side avatar */}
-            <Avatar 
-              className="h-7 w-7 cursor-pointer" 
-              onClick={() => navigate('/profile')}
-            >
-              {profileImage ? (
-                <AvatarImage 
-                  src={profileImage} 
-                  alt={nickname ?? "User Avatar"}
-                  onError={(e) => {
-                    console.error('Failed to load avatar image:', profileImage);
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              ) : null}
-              <AvatarFallback className="bg-light-navy text-nav-active text-xs">
-                {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
-              </AvatarFallback>
-            </Avatar>
-            
-            {/* Username and role display */}
-            <div className="ml-2">
-              <p className="text-white text-sm font-medium leading-tight">{nickname}</p>
-              <p className="text-gray-400 text-xs leading-tight">{userRole}</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {/* Sync Status Indicator Icon - REMOVED */}
-            {/* <SyncStatusIndicator /> */}
-
-            {/* Character icon for account/login using our new AccountSheet component */}
-            <AccountSheet />
-            
-            {/* App Guide icon - REMOVED */}
-
-            {/* Messaging icon */}
-            <MessageSquare 
-              className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" 
-              onClick={() => navigate('/messages')}
-            />
-          </div>
-        </div>
-      </div>
-      
-      <main className={`flex-1 ${isMessagesPage ? '' : 'pb-24'} animate-fade-in`}>
-        {children}
-      </main>
-      
-      {shouldShowAddButton && !isMessagesPage && (
-        <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-40">
-          <Button 
-            className={`${useCircleButton 
-              ? 'bg-green-500 hover:bg-green-600 w-10 h-10 rounded-full shadow-xl p-0 flex items-center justify-center' 
-              : 'bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6'}`}
-            onClick={handleAddNewItem}
-          >
-            {useCircleButton ? (
-              <Plus className="w-6 h-6 text-white" />
-            ) : (
-              <>
-                <Plus className="w-5 h-5 mr-2" /> Add New Item
-              </>
-            )}
-          </Button>
-        </div>
+    <div className="flex flex-col md:flex-row h-screen bg-background text-foreground overflow-hidden">
+      {showNavigation && (
+        <>
+          <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+          <MobileNavbar toggleSidebar={toggleSidebar} />
+        </>
       )}
       
-      <MobileNavbar />
+      <main className={`flex-1 overflow-y-auto transition-all duration-300 ease-in-out ${showNavigation && isSidebarOpen ? 'md:ml-64' : 'md:ml-0'} ${showNavigation ? 'pt-16 md:pt-0' : ''}`}>
+        {!isOnline && <OfflineBanner />}
+        <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
+          <Outlet />
+        </Suspense>
+      </main>
     </div>
   );
 };
