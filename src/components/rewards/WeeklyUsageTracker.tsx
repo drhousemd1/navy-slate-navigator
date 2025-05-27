@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { getMondayBasedDay } from '@/lib/utils';
-import { logger } from '@/lib/logger'; // Added logger import
 
 interface WeeklyUsageTrackerProps {
   usageData: boolean[] | number[];
@@ -32,7 +31,7 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
     setTrackerData(cleanData);
     
     // Debug log to track data changes 
-    logger.log("WeeklyUsageTracker updated with data:", cleanData, "original:", usageData); // Replaced console.log
+    console.log("WeeklyUsageTracker updated with data:", cleanData, "original:", usageData);
   }, [usageData]);
   
   // Ensure we always have exactly 7 circles

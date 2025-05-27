@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,6 @@ import { Slider } from "@/components/ui/slider";
 import { Upload } from 'lucide-react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import ImageFocalPointControl from '@/components/encyclopedia/image/ImageFocalPointControl';
-import { logger } from '@/lib/logger';
 
 interface BackgroundImageSelectorProps {
   control: Control<any>;
@@ -59,16 +59,16 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
       
       // If we have a valid opacity value from the form, use it
       if (typeof formOpacity === 'number') {
-        logger.log("Setting opacity from form value:", formOpacity);
+        console.log("Setting opacity from form value:", formOpacity);
         setOpacity(formOpacity);
       } else if (imagePreview) {
         // Only set default if we have an image but no opacity value
-        logger.log("Setting default opacity for new image to 100");
+        console.log("Setting default opacity for new image to 100");
         setValue('background_opacity', 100);
         setOpacity(100);
       }
     } catch (error) {
-      logger.error("Error setting opacity:", error);
+      console.error("Error setting opacity:", error);
       // Fallback to default if there's an error
       setOpacity(100);
     }
@@ -129,7 +129,7 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
 
   const handleOpacityChange = (values: number[]) => {
     const opacityValue = values[0];
-    logger.log("Slider changing opacity to:", opacityValue);
+    console.log("Slider changing opacity to:", opacityValue);
     setOpacity(opacityValue);
     setValue('background_opacity', opacityValue);
   };
