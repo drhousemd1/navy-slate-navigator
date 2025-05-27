@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import PunishmentEditorForm from './punishments/PunishmentEditorForm';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
@@ -6,12 +5,12 @@ import { useCreatePunishment } from '@/data/punishments/mutations/useCreatePunis
 import { useUpdatePunishment } from '@/data/punishments/mutations/useUpdatePunishment';
 import { useDeletePunishment } from '@/data/punishments/mutations/useDeletePunishment';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { logger } from '@/lib/logger'; // Added logger
+import { logger } from '@/lib/logger';
 
 interface PunishmentEditorProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  punishmentData?: PunishmentData | null; // Allow null for clarity
+  punishmentData?: PunishmentData | null; 
   onSaveSuccess?: (savedPunishment: PunishmentData) => void;
   onDeleteSuccess?: (punishmentId: string) => void;
 }
@@ -71,7 +70,7 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
       onOpenChange(false); // Close dialog on success
       return savedPunishment;
     } catch (error) {
-      logger.error('Error saving punishment:', error); // Replaced console.error
+      logger.error('Error saving punishment:', error);
       // Error toast is handled by optimistic mutation hooks
       throw error; // Re-throw to be caught by the form's submit handler
     }
@@ -83,7 +82,7 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
       onDeleteSuccess?.(id);
       onOpenChange(false); // Close dialog on success
     } catch (error) {
-      logger.error(`Error deleting punishment ${id}:`, error); // Replaced console.error
+      logger.error(`Error deleting punishment ${id}:`, error);
       // Error toast handled by optimistic mutation hook
     }
   };

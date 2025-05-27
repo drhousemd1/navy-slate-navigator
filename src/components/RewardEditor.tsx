@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import RewardEditorForm from './rewards/RewardEditorForm';
-import { Reward, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/types';
-import { useCreateReward, useUpdateReward, useDeleteReward } from '@/data/rewards/mutations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { logger } from '@/lib/logger'; // Added logger
+import { logger } from '@/lib/logger';
+import RewardEditorForm from './rewards/RewardEditorForm';
+
+// Import the mutations from their individual files instead of from the index
+import { useCreateReward } from '@/data/rewards/mutations/useCreateReward';
+import { useUpdateReward } from '@/data/rewards/mutations/useUpdateReward';
+import { useDeleteReward } from '@/data/rewards/mutations/useDeleteReward';
 
 interface RewardEditorProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  rewardData?: Reward | null;
-  onSaveSuccess?: (savedReward: Reward) => void;
+  rewardData?: any | null;
+  onSaveSuccess?: (savedReward: any) => void;
   onDeleteSuccess?: (rewardId: string) => void;
   isDomReward?: boolean; // To set the default type for new rewards
 }
@@ -22,12 +25,8 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   onDeleteSuccess,
   isDomReward = false, // Default to sub reward if not specified
 }) => {
-  const createRewardMutation = useCreateReward();
-  const updateRewardMutation = useUpdateReward();
-  const deleteRewardMutation = useDeleteReward();
-
   // Internal state to manage the form's data, including whether it's a new reward
-  const [currentRewardData, setCurrentRewardData] = useState<Reward | CreateRewardVariables | undefined>(undefined);
+  const [currentRewardData, setCurrentRewardData] = useState<any | undefined>(undefined);
   const [isCreatingNew, setIsCreatingNew] = useState(true);
 
   useEffect(() => {
@@ -38,7 +37,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
         setIsCreatingNew(false);
       } else {
         // For new reward, set is_dom_reward based on prop
-        const newRewardBase: CreateRewardVariables = {
+        const newRewardBase = {
           title: '',
           cost: 10,
           is_dom_reward: isDomReward,
@@ -64,15 +63,14 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
     logger.log("Is Creating New Reward:", !initialData || !initialData.id);
   }, [isOpen, initialData, isDomReward]);
 
-
-  const handleSave = async (values: Partial<Reward>): Promise<Reward | null> => {
+  const handleSave = async (values: any): Promise<any | null> => {
     logger.log('RewardEditor handleSave data:', values);
     logger.log("Form values before save:", values);
     try {
-      let savedReward: Reward;
+      let savedReward;
       if (!isCreatingNew && currentRewardData && 'id' in currentRewardData && currentRewardData.id) {
         // Update existing reward
-        const updatePayload: UpdateRewardVariables = { 
+        const updatePayload = { 
           id: currentRewardData.id, 
           ...values 
         };
@@ -80,7 +78,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
       } else {
         // Create new reward
         // Ensure required fields are present for CreateRewardVariables
-        const createPayload: CreateRewardVariables = {
+        const createPayload = {
           title: values.title || 'Untitled Reward',
           cost: values.cost === undefined ? 10 : values.cost,
           is_dom_reward: values.is_dom_reward === undefined ? isDomReward : values.is_dom_reward,
@@ -131,10 +129,10 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   const editorTitle = isCreatingNew ? "Create New Reward" : "Edit Reward";
   const editorDescription = isCreatingNew
     ? "Configure the details for the new reward."
-    : `Editing "${(currentRewardData as Reward)?.title || 'reward'}". Make your changes below.`;
+    : `Editing "${currentRewardData?.title || 'reward'}". Make your changes below.`;
   
   // Key prop for RewardEditorForm to force re-initialization when switching between create/edit
-  const formKey = isCreatingNew ? 'create' : (currentRewardData as Reward)?.id || 'edit';
+  const formKey = isCreatingNew ? 'create' : (currentRewardData?.id || 'edit');
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -144,11 +142,11 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
           <DialogDescription>{editorDescription}</DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-2">
-          {currentRewardData && ( // Ensure currentRewardData is defined before rendering form
+          {currentRewardData && (
             <RewardEditorForm
               key={formKey} // Force re-render on data change
               rewardData={currentRewardData}
-              isDomRewardInitial={isCreatingNew ? isDomReward : (currentRewardData as Reward)?.is_dom_reward}
+              isDomRewardInitial={isCreatingNew ? isDomReward : currentRewardData?.is_dom_reward}
               onSave={handleSave}
               onCancel={handleCancel}
               onDelete={!isCreatingNew && currentRewardData && 'id' in currentRewardData ? handleDelete : undefined}

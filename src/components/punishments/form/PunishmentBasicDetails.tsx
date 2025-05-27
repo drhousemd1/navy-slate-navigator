@@ -9,11 +9,10 @@ import {
   Control,
   useController,
   UseFormSetValue,
+  Controller,
 } from 'react-hook-form';
 import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { logger } from '@/lib/logger'; // Added logger
+import { logger } from '@/lib/logger';
 
 export const punishmentFormSchema = z.object({
   title: z.string().min(2, {
@@ -133,7 +132,6 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
               onChange={(color) => handleColorChange('title_color', color)}
               suggestions={colorSuggestions.title_color}
             />
-            {logger.debug("colorSuggestions for title_color:", colorSuggestions.title_color)}
           </div>
           <div>
             <Label htmlFor="subtext_color" className="text-sm font-medium text-muted-foreground">Subtext Color</Label>
@@ -142,7 +140,6 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
               onChange={(color) => handleColorChange('subtext_color', color)}
               suggestions={colorSuggestions.subtext_color}
             />
-             {logger.debug("colorSuggestions for subtext_color:", colorSuggestions.subtext_color)}
           </div>
           <div>
             <Label htmlFor="icon_color" className="text-sm font-medium text-muted-foreground">Icon Color</Label>
@@ -151,7 +148,6 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({ control
               onChange={(color) => handleColorChange('icon_color', color)}
               suggestions={colorSuggestions.icon_color}
             />
-             {logger.debug("colorSuggestions for icon_color:", colorSuggestions.icon_color)}
           </div>
         </div>
 
