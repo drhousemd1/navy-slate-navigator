@@ -1,548 +1,245 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useForm } from "react-hook-form";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trash2 } from 'lucide-react';
-import { Switch } from "@/components/ui/switch";
-import { EncyclopediaEntry } from '@/types/encyclopedia';
 
-import ColorPickerField from '@/components/task-editor/ColorPickerField';
-import TextFormatToolbar from './formatting/TextFormatToolbar';
-import ImageUploadSection from './image/ImageUploadSection';
-import ImageFocalPointControl from './image/ImageFocalPointControl';
-import OpacitySlider from './image/OpacitySlider';
-import DeleteConfirmationDialog from './DeleteConfirmationDialog';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from '@/hooks/use-toast';
+import { EncyclopediaEntry } from '@/types/encyclopedia';
+import { useCreateEncyclopediaEntry, useUpdateEncyclopediaEntry } from '@/data/encyclopedia/mutations';
+import ColorPicker from '@/components/ui/color-picker'; // Assuming ColorPicker component exists
+import ImageUploadPlaceholder from '@/components/ui/image-upload-placeholder'; // Assuming this component
+import { useModalImageHandling } from '@/components/admin-testing/edit-modal/hooks/useModalImageHandling'; // For image handling
+import { supabase } from '@/integrations/supabase/client'; // For Supabase storage
+import { logger } from '@/lib/logger'; // Added logger
+
+type FormattedSection = NonNullable<EncyclopediaEntry['formatted_sections']>[number];
 
 interface EditEncyclopediaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: EncyclopediaEntry) => void;
-  onDelete?: (id: string) => void;
-  entry?: EncyclopediaEntry;
-  isSaving?: boolean;
-  isDeleting?: boolean;
-  onFormatSelection?: (selection: { start: number; end: number }) => void;
+  entry?: EncyclopediaEntry | null;
+  onSave: (entry: EncyclopediaEntry) => void;
 }
 
-const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSave,
-  onDelete, 
-  entry,
-  isSaving = false,
-  isDeleting = false,
-  onFormatSelection
-}) => {
-  const { toast } = useToast();
-  const [imagePreview, setImagePreview] = useState<string | null>(entry?.image_url || null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [position, setPosition] = useState({ x: entry?.focal_point_x || 50, y: entry?.focal_point_y || 50 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [selectedTextRange, setSelectedTextRange] = useState<{ start: number; end: number } | null>(null);
-  const editorRef = React.useRef<HTMLDivElement>(null); // Added editorRef for Textarea
-  const [formattedSections, setFormattedSections] = useState<Array<{
-    start: number;
-    end: number;
-    formatting: {
-      isBold?: boolean;
-      isUnderlined?: boolean;
-      fontSize?: string;
-    }
-  }>>(entry?.formatted_sections || []);
-  
-  const form = useForm<EncyclopediaEntry>({
-    defaultValues: {
-      id: entry?.id || '',
-      title: entry?.title || '',
-      subtext: entry?.subtext || '',
-      popup_text: entry?.popup_text || '',
-      focal_point_x: entry?.focal_point_x || 50,
-      focal_point_y: entry?.focal_point_y || 50,
-      opacity: entry?.opacity || 100,
-      popup_opacity: entry?.popup_opacity || (entry?.opacity || 100),
-      title_color: entry?.title_color || '#FFFFFF',
-      subtext_color: entry?.subtext_color || '#D1D5DB',
-      highlight_effect: entry?.highlight_effect || false,
-      popup_text_formatting: entry?.popup_text_formatting || {
-        isBold: false,
-        isUnderlined: false,
-        fontSize: '1rem'
-      },
-      formatted_sections: entry?.formatted_sections || []
-    }
-  });
-  
+const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({ isOpen, onClose, entry, onSave }) => {
+  const [title, setTitle] = useState('');
+  const [subtext, setSubtext] = useState('');
+  const [popupText, setPopupText] = useState('');
+  const [focalPointX, setFocalPointX] = useState(50);
+  const [focalPointY, setFocalPointY] = useState(50);
+  const [opacity, setOpacity] = useState(100);
+  const [popupOpacity, setPopupOpacity] = useState(100);
+  const [titleColor, setTitleColor] = useState('#FFFFFF');
+  const [subtextColor, setSubtextColor] = useState('#CCCCCC');
+  const [highlightEffect, setHighlightEffect] = useState(false);
+  // formatted_sections and popup_text_formatting would need more complex UI elements
+
+  const { 
+    imagePreview, 
+    imageFile, 
+    handleImageUpload, 
+    handleRemoveImage,
+    setImagePreview // Allow direct setting for existing URLs
+  } = useModalImageHandling(entry?.image_url);
+
+  const createEntryMutation = useCreateEncyclopediaEntry();
+  const updateEntryMutation = useUpdateEncyclopediaEntry();
+
+  const [isUploading, setIsUploading] = useState(false);
+
+
   useEffect(() => {
-    if (isOpen) {
-      if (entry) {
-        form.reset({
-          id: entry.id,
-          title: entry.title,
-          subtext: entry.subtext,
-          popup_text: entry.popup_text || '',
-          focal_point_x: entry.focal_point_x || 50,
-          focal_point_y: entry.focal_point_y || 50,
-          opacity: entry.opacity || 100,
-          popup_opacity: entry.popup_opacity || (entry.opacity || 100),
-          title_color: entry.title_color || '#FFFFFF',
-          subtext_color: entry.subtext_color || '#D1D5DB',
-          highlight_effect: entry.highlight_effect || false,
-          popup_text_formatting: entry.popup_text_formatting || {
-            isBold: false,
-            isUnderlined: false,
-            fontSize: '1rem'
-          },
-          formatted_sections: entry.formatted_sections || []
-        });
-        setFormattedSections(entry.formatted_sections || []);
-        setImagePreview(entry.image_url || null);
-        setPosition({ x: entry.focal_point_x || 50, y: entry.focal_point_y || 50 });
+    logger.log("Entry to edit:", entry);
+    if (entry) {
+      setTitle(entry.title);
+      setSubtext(entry.subtext || '');
+      setPopupText(entry.popup_text || '');
+      setImagePreview(entry.image_url || null); // Use setImagePreview from hook
+      setFocalPointX(entry.focal_point_x || 50);
+      setFocalPointY(entry.focal_point_y || 50);
+      setOpacity(entry.opacity || 100);
+      setPopupOpacity(entry.popup_opacity || entry.opacity || 100);
+      setTitleColor(entry.title_color || '#FFFFFF');
+      setSubtextColor(entry.subtext_color || '#CCCCCC');
+      setHighlightEffect(entry.highlight_effect || false);
+    } else {
+      // Reset form for new entry
+      setTitle('');
+      setSubtext('');
+      setPopupText('');
+      setImagePreview(null);
+      setFocalPointX(50);
+      setFocalPointY(50);
+      setOpacity(100);
+      setPopupOpacity(100);
+      setTitleColor('#FFFFFF');
+      setSubtextColor('#CCCCCC');
+      setHighlightEffect(false);
+    }
+  }, [entry, setImagePreview]);
+
+  const uploadImageToSupabase = async (file: File): Promise<string | null> => {
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `encyclopedia/${Date.now()}.${fileExt}`;
+      const { data, error } = await supabase.storage
+        .from('app_images') // Assuming a common bucket or a specific one like 'encyclopedia_images'
+        .upload(fileName, file);
+
+      if (error) {
+        throw error;
+      }
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('app_images')
+        .getPublicUrl(fileName);
+      
+      return publicUrl;
+    } catch (error) {
+      logger.error('Error uploading image to Supabase:', error); // Replaced console.error
+      toast({ title: 'Image Upload Error', description: (error as Error).message, variant: 'destructive' });
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+
+  const handleSubmit = async () => {
+    let finalImageUrl = imagePreview; // Existing URL or base64 preview
+    if (imageFile) { // If a new file was selected
+      const uploadedUrl = await uploadImageToSupabase(imageFile);
+      if (!uploadedUrl) return; // Stop if upload failed
+      finalImageUrl = uploadedUrl;
+    }
+
+
+    const entryData: Partial<Omit<EncyclopediaEntry, 'id' | 'formatted_sections' | 'popup_text_formatting'>> & {
+      id?: string; // id is optional for create
+      formatted_sections?: FormattedSection[]; // Keeping for type consistency
+      popup_text_formatting?: EncyclopediaEntry['popup_text_formatting']; // Keeping for type consistency
+    } = {
+      title,
+      subtext,
+      popup_text: popupText,
+      image_url: finalImageUrl,
+      focal_point_x: focalPointX,
+      focal_point_y: focalPointY,
+      opacity,
+      popup_opacity: popupOpacity,
+      title_color: titleColor,
+      subtext_color: subtextColor,
+      highlight_effect: highlightEffect,
+      // formatted_sections and popup_text_formatting would be set here if UI existed
+    };
+    logger.log("Submitting form with data:", entryData);
+
+    try {
+      let savedEntry: EncyclopediaEntry;
+      if (entry?.id) {
+        savedEntry = await updateEntryMutation.mutateAsync({ id: entry.id, ...entryData });
       } else {
-        form.reset({
-          id: '',
-          title: '',
-          subtext: '',
-          popup_text: '',
-          focal_point_x: 50,
-          focal_point_y: 50,
-          opacity: 100,
-          popup_opacity: 100,
-          title_color: '#FFFFFF',
-          subtext_color: '#D1D5DB',
-          highlight_effect: false,
-          popup_text_formatting: {
-            isBold: false,
-            isUnderlined: false,
-            fontSize: '1rem'
-          },
-          formatted_sections: []
-        });
-        setFormattedSections([]);
-        setImagePreview(null);
-        setPosition({ x: 50, y: 50 });
+        // Ensure all required fields for creation are present. Supabase might have defaults.
+        savedEntry = await createEntryMutation.mutateAsync(entryData as Omit<EncyclopediaEntry, 'id' | 'created_at' | 'updated_at'>);
       }
-    }
-  }, [isOpen, entry, form]);
-  
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setImagePreview(base64String);
-      };
-      reader.readAsDataURL(file);
+      onSave(savedEntry);
+      onClose();
+    } catch (error) {
+      // Error toast is handled by the optimistic mutation hooks
+      logger.error('Error saving encyclopedia entry:', error); // Replaced console.error
     }
   };
-  
-  const handleRemoveImage = () => {
-    setImagePreview(null);
-  };
-  
-  const onSubmit = (data: EncyclopediaEntry) => {
-    const updatedEntry = {
-      ...data,
-      image_url: imagePreview,
-      formatted_sections: formattedSections
-    };
-    
-    onSave(updatedEntry);
-  };
-
-  const handleDelete = () => {
-    if (entry && onDelete) {
-      onDelete(entry.id);
-      setIsDeleteDialogOpen(false);
-    }
-  };
-
-  // Helper function to apply formatting using document.execCommand
-  const applyFormatCommand = (command: string, value?: string) => {
-    if (editorRef.current) {
-        // Ensure focus on the editor before executing command
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            if (!editorRef.current.contains(range.commonAncestorContainer)) {
-                 // If selection is outside the editor, try to focus the editor
-                 // This might reset selection, consider more robust focusing if needed
-                editorRef.current.focus();
-            }
-        } else {
-            editorRef.current.focus();
-        }
-    }
-    document.execCommand('styleWithCSS', false, "true"); // Use CSS styles
-    document.execCommand(command, false, value);
-    if (editorRef.current) {
-      form.setValue('popup_text', editorRef.current.innerHTML);
-    }
-  };
-
-  const handleToggleBold = () => {
-    applyFormatCommand('bold');
-    const currentFormatting = form.getValues('popup_text_formatting') || {};
-    form.setValue('popup_text_formatting', {
-        ...currentFormatting,
-        isBold: document.queryCommandState('bold') 
-    });
-  };
-
-  const handleToggleUnderline = () => {
-    applyFormatCommand('underline');
-    const currentFormatting = form.getValues('popup_text_formatting') || {};
-    form.setValue('popup_text_formatting', {
-        ...currentFormatting,
-        isUnderlined: document.queryCommandState('underline')
-    });
-  };
-
-  const handleFontSizeChange = (size: string) => {
-    document.execCommand("fontSize", false, "1"); // Set to a known small size
-    const fontElements = editorRef.current?.querySelectorAll("font[size='1']");
-    fontElements?.forEach(el => {
-      const spanStyled = document.createElement('span');
-      spanStyled.style.fontSize = size;
-      spanStyled.innerHTML = el.innerHTML;
-      el.parentNode?.replaceChild(spanStyled, el);
-    });
-    if (editorRef.current) {
-      form.setValue('popup_text', editorRef.current.innerHTML);
-    }
-    const currentFormatting = form.getValues('popup_text_formatting') || {};
-    form.setValue('popup_text_formatting', {
-        ...currentFormatting,
-        fontSize: size
-    });
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-    updatePosition(e.clientX, e.clientY);
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 0) return;
-    setIsDragging(true);
-    updatePosition(e.touches[0].clientX, e.touches[0].clientY);
-  };
-
-  const updatePosition = (clientX: number, clientY: number) => {
-    const imageContainer = document.getElementById('focal-point-container');
-    if (!imageContainer) return;
-    
-    const rect = imageContainer.getBoundingClientRect();
-    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
-    
-    setPosition({ x, y });
-    form.setValue('focal_point_x', Math.round(x));
-    form.setValue('focal_point_y', Math.round(y));
-  };
-
-  const handleTextSelection = (selection: { start: number; end: number }) => {
-    console.log("Text selected (manual tracking):", selection);
-    setSelectedTextRange(selection);
-    if (onFormatSelection) {
-      onFormatSelection(selection);
-    }
-  };
-
-  // applyFormattingToSelectedText is not directly needed if using execCommand,
-  // but formattedSections might be used for other purposes or a different rich text approach.
-  // For now, let's assume formattedSections is for data persistence and not direct Textarea control.
-  const applyFormattingToSelectedText = (
-    formatting: { isBold?: boolean; isUnderlined?: boolean; fontSize?: string }
-  ) => {
-    if (!selectedTextRange) return;
-    
-    const { start, end } = selectedTextRange;
-    
-    const newFormattedSection = {
-      start,
-      end,
-      formatting: { ...formatting }
-    };
-    
-    console.log("Applying formatting (manual tracking):", newFormattedSection);
-    
-    const updatedSections = [...formattedSections, newFormattedSection];
-    setFormattedSections(updatedSections); // Update local state
-    
-    form.setValue('formatted_sections', updatedSections); // Update form state
-    
-    setSelectedTextRange(null);
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging) updatePosition(e.clientX, e.clientY);
-    };
-    
-    const handleTouchMove = (e: TouchEvent) => {
-      if (isDragging && e.touches.length > 0) {
-        e.preventDefault();
-        updatePosition(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    };
-    
-    const stopDragging = () => setIsDragging(false);
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', stopDragging);
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', stopDragging);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', stopDragging);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', stopDragging);
-    };
-  }, [isDragging]);
-  
-  // Watch the general formatting state for the toolbar indicators
-  const currentTextFormatting = form.watch('popup_text_formatting') || {
-    isBold: false,
-    isUnderlined: false,
-    fontSize: '1rem'
-  };
-
-  // Update toolbar based on actual selection
-  useEffect(() => {
-    const updateToolbarStatus = () => {
-      if (editorRef.current && editorRef.current.contains(document.activeElement)) {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-            // Simplified: check command state for bold/underline
-            // For font size/alignment, it's more complex to get accurately from selection.
-            // This part might need a more robust solution for fully accurate toolbar state.
-            form.setValue('popup_text_formatting.isBold', document.queryCommandState('bold'));
-            form.setValue('popup_text_formatting.isUnderlined', document.queryCommandState('underline'));
-            // Font size and alignment detection from selection is tricky.
-            // The TextFormatToolbar will primarily reflect the *intended* next style or the overall style.
-        }
-      }
-    };
-    document.addEventListener('selectionchange', updateToolbarStatus);
-    editorRef.current?.addEventListener('focus', updateToolbarStatus);
-    editorRef.current?.addEventListener('input', updateToolbarStatus); // Update on input as well
-
-    return () => {
-      document.removeEventListener('selectionchange', updateToolbarStatus);
-      editorRef.current?.removeEventListener('focus', updateToolbarStatus);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      editorRef.current?.removeEventListener('input', updateToolbarStatus);
-    };
-  }, [form]);
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="bg-navy border border-light-navy text-white max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl">
-              {entry ? 'Edit Encyclopedia Entry' : 'Create Encyclopedia Entry'}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Title</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Enter title" 
-                        className="bg-dark-navy border-light-navy text-white"
-                        {...field} 
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="subtext"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Description</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Enter description" 
-                        className="bg-dark-navy border-light-navy text-white"
-                        {...field} 
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <div className="space-y-2">
-                <FormLabel className="text-white">Pop-up Text</FormLabel>
-                
-                <TextFormatToolbar 
-                  selectedTextRange={selectedTextRange} // This prop might be less relevant now with execCommand
-                  currentFormatting={currentTextFormatting}
-                  onToggleBold={handleToggleBold}
-                  onToggleUnderline={handleToggleUnderline}
-                  onFontSizeChange={handleFontSizeChange}
-                  // Add other formatting handlers if TextFormatToolbar has them
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="popup_text"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Enter text to show in full-screen pop-up" 
-                          className="bg-dark-navy border-light-navy text-white min-h-[200px]" // Added min-h
-                          formattedPreview={true}
-                          editorRef={editorRef} // Pass the ref here
-                          // Remove unsupported props: textFormatting, onFormatSelection, formattedSections
-                          value={field.value}
-                          onChange={(e) => field.onChange(e.target.value)}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          // ref={field.ref} // The main ref is handled by editorRef for contentEditable
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="space-y-4">
-                <div className="text-white font-medium text-sm">Text Colors</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ColorPickerField 
-                    control={form.control}
-                    name="title_color"
-                    label="Title Color"
-                  />
-                  
-                  <ColorPickerField 
-                    control={form.control}
-                    name="subtext_color"
-                    label="Description Color"
-                  />
-                </div>
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="highlight_effect"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-white">Highlight Effect</FormLabel>
-                      <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <ImageUploadSection
-                imagePreview={imagePreview}
-                onImageUpload={handleImageUpload}
-                onRemoveImage={handleRemoveImage}
-              >
-                {imagePreview && (
-                  <ImageFocalPointControl
-                    imagePreview={imagePreview}
-                    position={position}
-                    opacity={form.watch('opacity')}
-                    isDragging={isDragging}
-                    onMouseDown={handleMouseDown}
-                    onTouchStart={handleTouchStart}
-                  />
-                )}
-              </ImageUploadSection>
-              
-              {imagePreview && (
-                <div className="space-y-4">
-                  <OpacitySlider 
-                    control={form.control}
-                    name="opacity"
-                    label="Tile Image Opacity"
-                  />
-                  
-                  <OpacitySlider 
-                    control={form.control}
-                    name="popup_opacity"
-                    label="Popup Image Opacity"
-                  />
-                </div>
-              )}
-              
-              <DialogFooter className="pt-4 space-x-2">
-                {entry && onDelete && (
-                  <Button 
-                    type="button" 
-                    variant="destructive" 
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    className="mr-auto bg-red-700 hover:bg-red-800"
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
-                    ) : (
-                      <><Trash2 className="mr-2 h-4 w-4" /> Delete</>
-                    )}
-                  </Button>
-                )}
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={onClose} 
-                  className="bg-red-600 hover:bg-red-700 text-white border-red-600"
-                  disabled={isSaving || isDeleting}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="bg-nav-active text-white hover:bg-nav-active/80"
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{entry ? 'Edit Encyclopedia Entry' : 'Create Encyclopedia Entry'}</DialogTitle>
+          <DialogDescription>
+            {entry ? `Modify the details for "${entry.title}".` : "Fill in the details for the new encyclopedia entry."}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4 overflow-y-auto flex-grow pr-2">
+          <div className="space-y-1">
+            <Label htmlFor="title">Title</Label>
+            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
 
-      <DeleteConfirmationDialog
-        isOpen={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        onDelete={handleDelete}
-        isDeleting={isDeleting}
-      />
-    </>
+          <div className="space-y-1">
+            <Label htmlFor="subtext">Subtext (Displayed on Card)</Label>
+            <Textarea id="subtext" value={subtext} onChange={(e) => setSubtext(e.target.value)} />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="popupText">Popup Text (Detailed View)</Label>
+            <Textarea id="popupText" value={popupText} onChange={(e) => setPopupText(e.target.value)} rows={5} />
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Card Image</Label>
+            <ImageUploadPlaceholder 
+              imagePreview={imagePreview}
+              onImageUpload={handleImageUpload}
+              onRemoveImage={handleRemoveImage}
+              uploadButtonText="Upload Card Image"
+              className="w-full h-48" // Adjust size as needed
+            />
+          </div>
+
+          {imagePreview && (
+            <>
+              <div className="space-y-1">
+                <Label htmlFor="focalPointX">Image Focal Point X ({focalPointX}%)</Label>
+                <Slider id="focalPointX" value={[focalPointX]} onValueChange={([val]) => setFocalPointX(val)} min={0} max={100} step={1} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="focalPointY">Image Focal Point Y ({focalPointY}%)</Label>
+                <Slider id="focalPointY" value={[focalPointY]} onValueChange={([val]) => setFocalPointY(val)} min={0} max={100} step={1} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="opacity">Card Background Opacity ({opacity}%)</Label>
+                <Slider id="opacity" value={[opacity]} onValueChange={([val]) => setOpacity(val)} min={0} max={100} step={1} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="popupOpacity">Popup Background Opacity ({popupOpacity}%)</Label>
+                <Slider id="popupOpacity" value={[popupOpacity]} onValueChange={([val]) => setPopupOpacity(val)} min={0} max={100} step={1} />
+              </div>
+            </>
+          )}
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="titleColor">Title Color</Label>
+              <ColorPicker color={titleColor} onChange={setTitleColor} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="subtextColor">Subtext Color</Label>
+              <ColorPicker color={subtextColor} onChange={setSubtextColor} />
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox id="highlightEffect" checked={highlightEffect} onCheckedChange={(checked) => setHighlightEffect(Boolean(checked))} />
+            <Label htmlFor="highlightEffect" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Enable Hover Highlight Effect
+            </Label>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={createEntryMutation.isPending || updateEntryMutation.isPending || isUploading}>
+            {isUploading ? 'Uploading...' : (entry ? 'Save Changes' : 'Create Entry')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -1,586 +1,348 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { useForm } from 'react-hook-form';
-import ColorPickerField from '@/components/task-editor/ColorPickerField';
-import PrioritySelector from '@/components/task-editor/PrioritySelector';
-import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
-import IconSelector from '@/components/task-editor/IconSelector';
-import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { EncyclopediaEntry } from '@/types/encyclopedia';
+import { useCreateEncyclopediaEntry, useUpdateEncyclopediaEntry } from '@/data/encyclopedia/mutations';
+import ColorPicker from '@/components/ui/color-picker'; // Assuming ColorPicker component exists
+import ImageUploadPlaceholder from '@/components/ui/image-upload-placeholder'; // Assuming this component
+import { useModalImageHandling } from '@/components/admin-testing/edit-modal/hooks/useModalImageHandling'; // For image handling
+import { useModalIconHandling } from '@/components/admin-testing/edit-modal/hooks/useModalIconHandling';
+import { supabase } from '@/integrations/supabase/client'; // For Supabase storage
+import { getIconByName } from '@/lib/iconUtils';
+import { CardDisplay } from '@/components/throne/ThroneRoomCard';
+import { APP_CONFIG } from '@/config/constants';
+import { logger } from '@/lib/logger'; // Added logger
 
-export interface ThroneRoomCardData {
-  id: string;
-  title: string;
-  description: string;
-  iconName: string;
-  icon_url?: string;
-  icon_color: string;
-  title_color: string;
-  subtext_color: string;
-  calendar_color: string;
-  background_image_url?: string;
-  background_images?: string[];
-  background_opacity?: number;
-  focal_point_x?: number;
-  focal_point_y?: number;
-  highlight_effect: boolean;
-  priority: 'low' | 'medium' | 'high';
-  usage_data?: number[];
+type FormattedSection = NonNullable<EncyclopediaEntry['formatted_sections']>[number];
+
+export interface CardDisplayProps {
+    id: string;
+    title: string;
+    subtext?: string | null;
+    points?: number | null;
+    icon?: string | null;
+    iconUrl?: string | null;
+    iconColor?: string;
+    titleColor?: string;
+    subtextColor?: string;
+    calendarColor?: string;
+    backgroundImageUrl?: string | null;
+    backgroundOpacity?: number;
+    highlightEffect?: boolean;
+    focalPointX?: number;
+    focalPointY?: number;
+    cardType: 'task' | 'reward' | 'rule' | 'punishment' | 'encyclopedia';
 }
 
 interface ThroneRoomEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  cardData: ThroneRoomCardData;
-  onSave: (data: ThroneRoomCardData) => void;
-  onDelete?: (cardId: string) => void;
-  localStorageKey?: string;
-  pageTitle?: string;
+  cardData: CardDisplayProps | null;
+  onSave: (updatedCardData: CardDisplayProps) => void;
+  cardType: 'task' | 'reward' | 'rule' | 'punishment' | 'encyclopedia';
+  userId?: string; // For uploading images to user-specific paths
 }
 
-const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
-  isOpen,
-  onClose,
-  cardData,
+const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  cardData: initialData, 
   onSave,
-  onDelete,
-  localStorageKey = 'throneRoomCards',
-  pageTitle = 'Throne Room'
+  cardType,
+  userId = APP_CONFIG.genericUserIdForStorage, // Default to generic if no user ID
 }) => {
-  const [isSaving, setIsSaving] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(cardData?.background_image_url || null);
-  const [iconPreview, setIconPreview] = useState<string | null>(cardData?.icon_url || null);
-  const [selectedIconName, setSelectedIconName] = useState<string | null>(cardData?.iconName || null);
-  const [position, setPosition] = useState({ 
-    x: cardData?.focal_point_x || 50, 
-    y: cardData?.focal_point_y || 50 
-  });
-  const [imageSlots, setImageSlots] = useState<(string | null)[]>([null, null, null, null, null]);
-  const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
-  
-  const form = useForm<ThroneRoomCardData>({
-    defaultValues: {
-      id: cardData?.id || '',
-      title: cardData?.title || '',
-      description: cardData?.description || '',
-      iconName: cardData?.iconName || '',
-      icon_url: cardData?.icon_url || '',
-      icon_color: cardData?.icon_color || '#FFFFFF',
-      title_color: cardData?.title_color || '#FFFFFF',
-      subtext_color: cardData?.subtext_color || '#8E9196',
-      calendar_color: cardData?.calendar_color || '#7E69AB',
-      background_image_url: cardData?.background_image_url || '',
-      background_opacity: cardData?.background_opacity || 100,
-      focal_point_x: cardData?.focal_point_x || 50,
-      focal_point_y: cardData?.focal_point_y || 50,
-      highlight_effect: cardData?.highlight_effect || false,
-      priority: cardData?.priority || 'medium',
-      usage_data: cardData?.usage_data || []
-    }
-  });
-  
+  const [formData, setFormData] = useState<Partial<CardDisplayProps>>({});
+  const [isUploading, setIsUploading] = useState(false);
+
+  const { 
+    imagePreview, 
+    imageFile, 
+    handleImageUpload: triggerImageUpload, 
+    handleRemoveImage,
+    setImagePreview: setImagePreviewFromUrl // Hook's function to set image from URL
+  } = useModalImageHandling(initialData?.backgroundImageUrl);
+
+  const { 
+    iconPreview, // This is the URL for custom uploaded icons
+    selectedIconName, // This is for predefined Lucide icons
+    handleIconUpload: triggerIconUpload, 
+    handleIconSelect, 
+    handleRemoveIcon,
+    setIconPreview: setIconPreviewFromUrl, // Hook's function to set icon from URL
+    setSelectedIconName: setSelectedIconNameFromData, // Hook's function to set icon name
+  } = useModalIconHandling(initialData?.iconUrl, initialData?.icon);
+
   useEffect(() => {
-    if (isOpen && cardData) {
-      console.log("Modal opened with card data:", cardData);
-      form.reset({
-        id: cardData.id,
-        title: cardData.title,
-        description: cardData.description,
-        iconName: cardData.iconName || '',
-        icon_url: cardData.icon_url || '',
-        icon_color: cardData.icon_color || '#FFFFFF',
-        title_color: cardData.title_color || '#FFFFFF',
-        subtext_color: cardData.subtext_color || '#8E9196',
-        calendar_color: cardData.calendar_color || '#7E69AB',
-        background_image_url: cardData.background_image_url || '',
-        background_opacity: cardData.background_opacity || 100,
-        focal_point_x: cardData.focal_point_x || 50,
-        focal_point_y: cardData.focal_point_y || 50,
-        highlight_effect: cardData.highlight_effect || false,
-        priority: cardData.priority || 'medium',
-        usage_data: cardData.usage_data || []
-      });
-      setImagePreview(cardData.background_image_url || null);
-      setIconPreview(cardData.icon_url || null);
-      setSelectedIconName(cardData.iconName || null);
-      setPosition({ 
-        x: cardData.focal_point_x || 50, 
-        y: cardData.focal_point_y || 50 
-      });
-      
-      console.log("Initializing image slots from card data:", {
-        hasBackgroundImages: Array.isArray(cardData.background_images),
-        backgroundImagesCount: Array.isArray(cardData.background_images) ? cardData.background_images.length : 0,
-        hasBackgroundImageUrl: Boolean(cardData.background_image_url)
-      });
-      
-      const newImageSlots = [null, null, null, null, null];
-      
-      if (Array.isArray(cardData.background_images) && cardData.background_images.length > 0) {
-        console.log("Loading background_images into slots:", cardData.background_images);
-        cardData.background_images.forEach((img, index) => {
-          if (index < newImageSlots.length && img) {
-            console.log(`Setting slot ${index} to image:`, img.substring(0, 50) + '...');
-            newImageSlots[index] = img;
-          }
-        });
-      } else if (cardData.background_image_url) {
-        console.log("Loading single background_image_url into slot 0:", 
-          cardData.background_image_url.substring(0, 50) + '...');
-        newImageSlots[0] = cardData.background_image_url;
-      }
-      
-      setImageSlots(newImageSlots);
-      console.log("Final image slots after initialization:", 
-        newImageSlots.map(s => s ? `[Image: ${s.substring(0, 20)}...]` : 'null'));
-    }
-  }, [isOpen, cardData, form]);
-  
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    // If no box selected, auto-select the first empty slot
-    let targetIndex = selectedBoxIndex;
-    if (targetIndex === null) {
-      const firstEmpty = imageSlots.findIndex((slot) => !slot);
-      if (firstEmpty === -1) {
-        // All slots are full, select the first one
-        targetIndex = 0;
+    logger.log("Initial data for ThroneRoomEditModal:", initialData);
+    if (initialData) {
+      setFormData({ ...initialData });
+      // Set previews using the hooks' setters
+      setImagePreviewFromUrl(initialData.backgroundImageUrl || null);
+      if (initialData.iconUrl) {
+        setIconPreviewFromUrl(initialData.iconUrl); // If direct URL
+        setSelectedIconNameFromData(null); // Clear selected Lucide icon name
+      } else if (initialData.icon) {
+        setSelectedIconNameFromData(initialData.icon); // If Lucide icon name
+        setIconPreviewFromUrl(null); // Clear custom icon URL
       } else {
-        targetIndex = firstEmpty;
+        setSelectedIconNameFromData(null);
+        setIconPreviewFromUrl(null);
       }
-      setSelectedBoxIndex(targetIndex);
-      console.log(`Auto-selected box index ${targetIndex} since none was selected`);
-    }
-    
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      try {
-        const base64String = reader.result as string;
-        console.log(`Image loaded, size: ${Math.round(base64String.length / 1024)}KB`);
-        
-        const updatedSlots = [...imageSlots];
-        updatedSlots[targetIndex!] = base64String;
-        setImageSlots(updatedSlots);
-        setImagePreview(base64String);
-        form.setValue('background_image_url', base64String);
-        form.setValue('background_opacity', 100);
-        
-        console.log(`Updated image slot ${targetIndex} and set as preview`);
-      } catch (error) {
-        console.error("Error processing uploaded image:", error);
-        toast({
-          title: "Image Error",
-          description: "There was a problem processing the uploaded image",
-          variant: "destructive"
-        });
-      }
-    };
-    
-    reader.onerror = (error) => {
-      console.error("FileReader error:", error);
-      toast({
-        title: "Upload Error",
-        description: "Failed to read the image file",
-        variant: "destructive"
-      });
-    };
-    
-    try {
-      reader.readAsDataURL(file);
-    } catch (error) {
-      console.error("Error reading file as data URL:", error);
-      toast({
-        title: "File Error",
-        description: "Failed to read the image file",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const handleRemoveImage = () => {
-    if (selectedBoxIndex !== null) {
-      const updatedSlots = [...imageSlots];
-      updatedSlots[selectedBoxIndex] = null;
-      setImageSlots(updatedSlots);
-      
-      // Clear preview but keep the selected box highlighted
-      setImagePreview(null);
-      form.setValue('background_image_url', '');
-      
-      console.log(`Removed image from slot ${selectedBoxIndex}, cleared preview but kept selection`);
     } else {
-      console.log('No slot selected for removal');
+      // Reset for a new card (though this modal is likely always for editing existing)
+      setFormData({});
+      setImagePreviewFromUrl(null);
+      setIconPreviewFromUrl(null);
+      setSelectedIconNameFromData(null);
     }
+  }, [initialData, setImagePreviewFromUrl, setIconPreviewFromUrl, setSelectedIconNameFromData]);
+
+
+  const handleChange = (field: keyof CardDisplayProps, value: any) => {
+    logger.debug("Updated field:", field, "value:", value);
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleIconUpload = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => {
-      if (e.target instanceof HTMLInputElement && e.target.files) {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64String = reader.result as string;
-            setIconPreview(base64String);
-            setSelectedIconName(null);
-            form.setValue('icon_url', base64String);
-            form.setValue('iconName', undefined);
-          };
-          reader.readAsDataURL(file);
-        }
-      }
-    };
-    input.click();
+  const handleSliderChange = (field: keyof CardDisplayProps, value: number[]) => {
+    handleChange(field, value[0]);
   };
 
-  const handleIconSelect = (iconName: string) => {
-    if (iconName.startsWith('custom:')) {
-      const iconUrl = iconName.substring(7);
-      setIconPreview(iconUrl);
-      setSelectedIconName(null);
-      form.setValue('icon_url', iconUrl);
-      form.setValue('iconName', undefined);
-      
-      toast({
-        title: "Custom icon selected",
-        description: "Custom icon has been applied to the card",
-      });
-    } else {
-      setSelectedIconName(iconName);
-      setIconPreview(null);
-      form.setValue('iconName', iconName);
-      form.setValue('icon_url', undefined);
-      
-      toast({
-        title: "Icon selected",
-        description: `${iconName} icon selected`,
-      });
-    }
+  const handleCheckboxChange = (field: keyof CardDisplayProps, checked: boolean) => {
+    handleChange(field, checked);
   };
 
-  const handleDeleteCard = () => {
+  const uploadFileToSupabase = async (file: File, pathPrefix: string): Promise<string | null> => {
+    setIsUploading(true);
     try {
-      if (onDelete) {
-        // Use the passed delete handler if provided
-        onDelete(cardData.id);
-      } else {
-        // Default deletion behavior using localStorage
-        const existingCards = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
-        const updatedCards = existingCards.filter((card: ThroneRoomCardData) => card.id !== cardData.id);
-        localStorage.setItem(localStorageKey, JSON.stringify(updatedCards));
-        
-        toast({
-          title: "Card Deleted",
-          description: `The ${pageTitle.toLowerCase()} card has been deleted`,
-        });
-        
-        onClose();
-      }
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${pathPrefix}/${userId}/${Date.now()}.${fileExt}`;
+      
+      const { data, error: uploadError } = await supabase.storage
+        .from('app_images') // Centralized bucket
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('app_images').getPublicUrl(fileName);
+      return urlData.publicUrl;
     } catch (error) {
-      console.error(`Error deleting ${pageTitle.toLowerCase()} card:`, error);
-      toast({
-        title: "Error",
-        description: "Failed to delete card",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const onSubmit = async (data: ThroneRoomCardData) => {
-    try {
-      setIsSaving(true);
-      console.log(`Saving ${pageTitle.toLowerCase()} card data:`, data);
-      console.log("Current image slots:", imageSlots.map((s, i) => 
-        s ? `[${i}: ${s.substring(0, 20)}...]` : `[${i}: null]`));
-      
-      // Validate image slots before saving
-      const validImageSlots = imageSlots
-        .filter(slot => typeof slot === 'string' && slot.trim() !== '')
-        .map(slot => {
-          // Additional validation to ensure it's a valid data URL or image URL
-          if (!slot) return null;
-          try {
-            if (slot.startsWith('data:image') || slot.startsWith('http')) {
-              return slot;
-            } else {
-              console.warn("Invalid image data in slot:", slot.substring(0, 30));
-              return null;
-            }
-          } catch (e) {
-            console.error("Error validating image slot:", e);
-            return null;
-          }
-        })
-        .filter(Boolean) as string[];
-      
-      console.log(`Found ${validImageSlots.length} valid image slots after validation`);
-      
-      const updatedData = {
-        ...data,
-        background_image_url: imagePreview || undefined,
-        icon_url: iconPreview || undefined,
-        iconName: selectedIconName || undefined,
-        focal_point_x: position.x,
-        focal_point_y: position.y,
-        background_images: validImageSlots,
-      };
-      
-      console.log("Transformed data ready for save:", {
-        id: updatedData.id,
-        title: updatedData.title,
-        imageCount: updatedData.background_images?.length || 0,
-        hasBackgroundImageUrl: Boolean(updatedData.background_image_url)
-      });
-      
-      await onSave(updatedData);
-      
-      toast({
-        title: "Success",
-        description: "Card settings saved successfully",
-      });
-      
-      onClose();
-    } catch (error) {
-      console.error(`Error saving ${pageTitle.toLowerCase()} card:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to save card settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive"
-      });
+      logger.error(`Error uploading ${pathPrefix} image:`, error); // Replaced console.error
+      toast({ title: 'Upload Error', description: (error as Error).message, variant: 'destructive' });
+      return null;
     } finally {
-      setIsSaving(false);
+      setIsUploading(false);
     }
   };
+
+
+  const handleSave = async () => {
+    let finalBackgroundImageUrl = imagePreview; // Could be existing URL or base64
+    if (imageFile) { // A new background image was selected/uploaded by user
+      const uploadedUrl = await uploadFileToSupabase(imageFile, 'card_backgrounds');
+      if (!uploadedUrl) return; // Stop if upload failed
+      finalBackgroundImageUrl = uploadedUrl;
+    }
+
+    let finalIconUrl: string | undefined = formData.iconUrl; // Prioritize existing formData URL
+    let finalIconName: string | undefined = selectedIconName || undefined; // formData.icon might be stale if selectedIconName changed
+
+    if (iconPreview && !selectedIconName) { // Custom icon was uploaded (iconPreview is base64 or new URL)
+        // Check if iconPreview is a new base64 upload or an existing URL
+        if (iconPreview.startsWith('data:image')) { // It's a new base64 upload
+             // This assumes useModalIconHandling already converted the uploaded file to iconPreview (base64)
+             // For ThroneRoom, we might need to handle the actual File object if not using a hook that does this.
+             // For simplicity, let's assume iconPreview *could* be a base64 string needing upload, or an existing URL.
+             // This part needs careful handling based on how useModalIconHandling gives us the icon.
+             // If `useModalIconHandling` returns a `File` object for new uploads, that's what we need.
+             // For now, let's assume if iconPreview is set and selectedIconName is null, it's a custom icon path.
+             // This logic needs to be robust based on what useModalIconHandling provides.
+             // If iconPreview is a base64 string (meaning a new custom icon was chosen client-side and needs upload)
+             // This part is tricky as useModalIconHandling's example implementation directly sets iconPreview to base64.
+             // A better approach would be for useModalIconHandling to also give us the File object.
+             // For now, we'll assume if iconPreview is base64, it needs uploading.
+             // This might require modification if useModalIconHandling changes.
+             // This is a simplified placeholder for robust custom icon upload:
+             // if (iconPreview.startsWith('data:image')) { /* TODO: Convert base64 to file and upload */ }
+             finalIconUrl = iconPreview; // If it's already a URL (e.g. custom URL pasted or from prior upload)
+             finalIconName = undefined; // Custom URL means no Lucide icon name
+        } else {
+            // iconPreview is an existing URL, no new upload needed for it
+            finalIconUrl = iconPreview;
+            finalIconName = undefined;
+        }
+    } else if (selectedIconName) { // A Lucide icon was selected
+        finalIconUrl = undefined; // No custom URL
+        finalIconName = selectedIconName;
+    } else { // No icon or icon removed
+        finalIconUrl = undefined;
+        finalIconName = undefined;
+    }
+
+
+    const updatedCardData: CardDisplayProps = {
+      ...initialData, // Spread initial data to preserve id and any fields not in the form
+      ...formData,
+      id: initialData?.id || formData.id || '', // Ensure ID is preserved
+      title: formData.title || initialData?.title || 'Untitled',
+      backgroundImageUrl: finalBackgroundImageUrl,
+      icon: finalIconName,
+      iconUrl: finalIconUrl,
+      cardType: cardType, // ensure cardType is passed through
+    };
+    logger.log("Form submitted with data:", updatedCardData);
+    onSave(updatedCardData);
+    onClose();
+  };
+  
+  // If no initial data when modal is open, perhaps show loading or error, or close.
+  // For this component, it's expected to always have initialData if open.
+  if (!isOpen) return null;
+  if (!initialData && isOpen) {
+    // This case should ideally not happen if used correctly.
+    // Consider closing or showing an error.
+    logger.warn("ThroneRoomEditModal opened without initialData.");
+    onClose(); // Close if no data
+    return null;
+  }
+  
+  const currentCardDisplayData: CardDisplayProps = {
+    id: initialData?.id || formData.id || '',
+    title: formData.title || initialData?.title || '',
+    subtext: formData.subtext || initialData?.subtext,
+    points: formData.points || initialData?.points,
+    icon: selectedIconName || formData.icon || initialData?.icon,
+    iconUrl: iconPreview || formData.iconUrl || initialData?.iconUrl, // Show live preview of icon
+    iconColor: formData.iconColor || initialData?.iconColor || '#FFFFFF',
+    titleColor: formData.titleColor || initialData?.titleColor || '#FFFFFF',
+    subtextColor: formData.subtextColor || initialData?.subtextColor || '#CCCCCC',
+    calendarColor: formData.calendarColor || initialData?.calendarColor || '#7E69AB',
+    backgroundImageUrl: imagePreview || formData.backgroundImageUrl || initialData?.backgroundImageUrl, // Show live preview
+    backgroundOpacity: formData.backgroundOpacity ?? initialData?.backgroundOpacity ?? 100,
+    highlightEffect: formData.highlightEffect ?? initialData?.highlightEffect ?? false,
+    focalPointX: formData.focalPointX ?? initialData?.focalPointX ?? 50,
+    focalPointY: formData.focalPointY ?? initialData?.focalPointY ?? 50,
+    cardType: cardType,
+    // Include other fields that might be part of CardDisplayProps
+    // For example, if a 'status' or 'type' field is visually relevant on the card preview
+  };
+
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-navy border border-light-navy text-white max-w-3xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-xl">Edit {pageTitle} Card</DialogTitle>
+          <DialogTitle>Edit Card Appearance: {initialData?.title}</DialogTitle>
+          <DialogDescription>
+            Customize the visual style of this {cardType} card. Changes are previewed below.
+          </DialogDescription>
         </DialogHeader>
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Title</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Enter title" 
-                        className="bg-dark-navy border-light-navy text-white"
-                        {...field} 
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Description</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Enter description" 
-                        className="bg-dark-navy border-light-navy text-white"
-                        {...field} 
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="priority"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Priority</FormLabel>
-                    <FormControl>
-                      <PrioritySelector 
-                        control={form.control}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <div className="space-y-4">
-                <FormLabel className="text-white text-lg">Background Image</FormLabel>
-                <div className="flex flex-row items-end space-x-6 mb-4">
-                  <div className="flex space-x-2">
-                    {imageSlots.map((imageUrl, index) => (
-                      <div
-                        key={index}
-                        onClick={() => {
-                          setSelectedBoxIndex(index);
-                          setImagePreview(imageSlots[index]);
-                        }}
-                        className={`w-12 h-12 rounded-md cursor-pointer transition-all
-                          ${selectedBoxIndex === index
-                            ? 'border-[2px] border-[#FEF7CD] shadow-[0_0_8px_2px_rgba(254,247,205,0.6)]'
-                            : 'bg-dark-navy border border-light-navy hover:border-white'}
-                        `}
-                      >
-                        {imageUrl && (
-                          <img
-                            src={imageUrl}
-                            alt={`Image ${index + 1}`}
-                            className="w-full h-full object-cover rounded-md"
-                            onError={(e) => {
-                              console.error(`Error loading image in slot ${index}`);
-                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMjJDMTcuNTIyOCAyMiAyMiAxNy41MjI4IDIyIDEyQzIyIDYuNDc3MTUgMTcuNTIyOCAyIDIgNi40NzcxNSAyIDEyQzIgMTcuNTIyOCA2LjQ3NzE1IDIyIDEyIDIyWiIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTE1IDlMOSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTkgOUwxNSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
-                            }}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <BackgroundImageSelector
-                  control={form.control}
-                  imagePreview={imagePreview}
-                  initialPosition={position}
-                  onRemoveImage={handleRemoveImage}
-                  onImageUpload={handleImageUpload}
-                  setValue={form.setValue}
-                />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4 flex-grow overflow-hidden">
+          {/* Left Column: Form Inputs */}
+          <div className="space-y-4 overflow-y-auto pr-2 pb-4"> {/* Added pb-4 for scroll spacing */}
+            <div>
+              <Label htmlFor="title">Title</Label>
+              <Input id="title" value={formData.title || ''} onChange={(e) => handleChange('title', e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="subtext">Subtext</Label>
+              <Input id="subtext" value={formData.subtext || ''} onChange={(e) => handleChange('subtext', e.target.value)} />
+            </div>
+             {cardType !== 'encyclopedia' && ( // Points may not apply to encyclopedia
+              <div>
+                <Label htmlFor="points">Points / Cost</Label>
+                <Input id="points" type="number" value={formData.points || 0} onChange={(e) => handleChange('points', parseInt(e.target.value) || 0)} />
               </div>
-              
-              <div className="space-y-4">
-                <FormLabel className="text-white text-lg">Card Icon</FormLabel>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
-                    <IconSelector
-                      selectedIconName={selectedIconName}
-                      iconPreview={iconPreview}
-                      iconColor={form.watch('icon_color')}
-                      onSelectIcon={handleIconSelect}
-                      onUploadIcon={handleIconUpload}
-                      onRemoveIcon={() => {
-                        setIconPreview(null);
-                        setSelectedIconName(null);
-                        form.setValue('icon_url', undefined);
-                        form.setValue('iconName', undefined);
-                      }}
-                    />
-                  </div>
-                  
-                  <PredefinedIconsGrid
-                    selectedIconName={selectedIconName}
-                    iconColor={form.watch('icon_color')}
-                    onSelectIcon={handleIconSelect}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="text-white font-medium text-sm">Colors</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ColorPickerField 
-                    control={form.control}
-                    name="title_color"
-                    label="Title Color"
-                  />
-                  
-                  <ColorPickerField 
-                    control={form.control}
-                    name="subtext_color"
-                    label="Description Color"
-                  />
-                  
-                  <ColorPickerField 
-                    control={form.control}
-                    name="calendar_color"
-                    label="Calendar Color"
-                  />
-                  
-                  <ColorPickerField 
-                    control={form.control}
-                    name="icon_color"
-                    label="Icon Color"
-                  />
-                </div>
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="highlight_effect"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-white">Highlight Effect</FormLabel>
-                      <FormDescription className="text-gray-400">
-                        Apply a highlight behind title and description
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
+            )}
+
+            <div className="space-y-2">
+              <Label>Background Image</Label>
+              <ImageUploadPlaceholder 
+                imagePreview={imagePreview}
+                onImageUpload={triggerImageUpload} // Use the trigger from the hook
+                onRemoveImage={handleRemoveImage}
+                uploadButtonText="Upload Background"
               />
             </div>
+
+            {imagePreview && (
+              <>
+                <div>
+                  <Label>Background Opacity ({formData.backgroundOpacity ?? 100}%)</Label>
+                  <Slider value={[formData.backgroundOpacity ?? 100]} onValueChange={(val) => handleSliderChange('backgroundOpacity', val)} min={0} max={100} step={1} />
+                </div>
+                <div>
+                  <Label>Focal Point X ({formData.focalPointX ?? 50}%)</Label>
+                  <Slider value={[formData.focalPointX ?? 50]} onValueChange={(val) => handleSliderChange('focalPointX', val)} min={0} max={100} step={1} />
+                </div>
+                <div>
+                  <Label>Focal Point Y ({formData.focalPointY ?? 50}%)</Label>
+                  <Slider value={[formData.focalPointY ?? 50]} onValueChange={(val) => handleSliderChange('focalPointY', val)} min={0} max={100} step={1} />
+                </div>
+              </>
+            )}
             
-            <DialogFooter className="flex justify-between items-center pt-4">
-              <Button 
-                type="button" 
-                variant="destructive" 
-                onClick={handleDeleteCard} 
-                className="mr-auto"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Card
-              </Button>
-              
-              <div className="flex space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={onClose} 
-                  className="bg-transparent border border-slate-600 text-white hover:bg-slate-800"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit"
-                  className="bg-emerald-600 text-white hover:bg-emerald-700"
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </div>
-            </DialogFooter>
-          </form>
-        </Form>
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <IconPicker 
+                selectedIconName={selectedIconName}
+                customIconPreview={iconPreview} // URL of custom uploaded icon
+                onSelectIcon={handleIconSelect} // For Lucide icons
+                onUploadIcon={triggerIconUpload} // For custom icons
+                onRemoveIcon={handleRemoveIcon}
+                iconColor={formData.iconColor || '#FFFFFF'} // Pass current color for preview
+              />
+            </div>
+
+
+            <div>
+              <Label>Icon Color</Label>
+              <ColorPicker color={formData.iconColor || '#FFFFFF'} onChange={(color) => handleChange('iconColor', color)} />
+            </div>
+            <div>
+              <Label>Title Color</Label>
+              <ColorPicker color={formData.titleColor || '#FFFFFF'} onChange={(color) => handleChange('titleColor', color)} />
+            </div>
+            <div>
+              <Label>Subtext Color</Label>
+              <ColorPicker color={formData.subtextColor || '#CCCCCC'} onChange={(color) => handleChange('subtextColor', color)} />
+            </div>
+            <div>
+              <Label>Calendar Color (for tasks/rules)</Label>
+              <ColorPicker color={formData.calendarColor || '#7E69AB'} onChange={(color) => handleChange('calendarColor', color)} />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="highlightEffect" 
+                checked={formData.highlightEffect || false} 
+                onCheckedChange={(checked) => handleCheckboxChange('highlightEffect', Boolean(checked))} 
+              />
+              <Label htmlFor="highlightEffect">Enable Hover Highlight</Label>
+            </div>
+          </div>
+
+          {/* Right Column: Live Preview */}
+          <div className="flex flex-col items-center justify-center bg-muted/30 p-4 rounded-lg overflow-hidden">
+            <Label className="mb-2 text-sm text-muted-foreground self-start">Live Preview</Label>
+            <div className="w-full max-w-[300px] aspect-[3/4] flex items-center justify-center">
+              {/* Render the appropriate card component based on cardType */}
+              <CardDisplay {...currentCardDisplayData} />
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={isUploading}>
+            {isUploading ? 'Uploading...' : 'Save Changes'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

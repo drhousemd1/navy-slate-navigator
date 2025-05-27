@@ -1,117 +1,85 @@
 import React, { useState } from 'react';
-import { Form } from '@/components/ui/form';
+import { Form, UseFormReturn } from '@/components/ui/form';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 import { toast } from '@/hooks/use-toast';
 import { PunishmentFormValues, punishmentFormSchema } from './PunishmentFormProvider';
+import { logger } from '@/lib/logger'; // Added logger
 
 interface PunishmentFormSubmitHandlerProps {
-  punishmentData?: PunishmentData;
-  form: any;
-  selectedIconName: string | null;
-  imagePreview: string | null;
-  iconPreview: string | null;
-  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData | null>;
-  onCancel: () => void;
   children: React.ReactNode;
+  punishmentData?: PunishmentData; // For context, e.g., if updating
+  form: UseFormReturn<PunishmentFormValues>;
+  selectedIconName: string | null;
+  imagePreview: string | null; // For background image
+  iconPreview: string | null;  // For icon image
+  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData | null>; // Updated return type
+  onCancel: () => void; // Added for completeness, though not directly used by this component's submit logic
 }
 
-const mapPunishmentDataToFormValues = (punishment: PunishmentData): PunishmentFormValues => {
-  return {
-    title: punishment.title,
-    description: punishment.description || '',
-    points: punishment.points,
-    dom_points: punishment.dom_points !== undefined && punishment.dom_points !== null 
-                ? punishment.dom_points 
-                : Math.ceil(punishment.points / 2),
-    dom_supply: punishment.dom_supply ?? 0,
-    icon_color: punishment.icon_color || '#ea384c',
-    title_color: punishment.title_color || '#FFFFFF',
-    subtext_color: punishment.subtext_color || '#8E9196',
-    calendar_color: punishment.calendar_color || '#ea384c',
-    highlight_effect: punishment.highlight_effect || false,
-    background_opacity: punishment.background_opacity || 50,
-    focal_point_x: punishment.focal_point_x || 50,
-    focal_point_y: punishment.focal_point_y || 50,
-  };
-};
-
 const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = ({
+  children,
   punishmentData,
   form,
   selectedIconName,
   imagePreview,
   iconPreview,
   onSave,
-  onCancel,
-  children
+  // onCancel is not used here, but kept for prop consistency if this component evolves
 }) => {
-  const [isSaving, setIsSaving] = useState(false);
+  const { handleSubmit, reset } = form;
 
-  const onSubmit = async (values: PunishmentFormValues) => {
-    if (isSaving) {
-      console.log("Form submission prevented - already saving");
-      return;
-    }
-    console.log("Form submitted with values:", values);
-    
-    const points = Number(values.points);
-    const dom_points = values.dom_points !== undefined 
-      ? Number(values.dom_points)
-      : Math.ceil(points / 2);
-    
+  const processAndSubmit = async (values: PunishmentFormValues) => {
+    logger.log("Form values before processing:", values);
+
     const dataToSave: Partial<PunishmentData> = {
       ...values,
-      points: points,
-      dom_points: dom_points,
+      points: Number(values.points) || 0,
+      background_image_url: imagePreview, // Use the state from usePunishmentBackground hook
       icon_name: selectedIconName,
-      background_image_url: imagePreview,
-      icon_url: iconPreview,
-      icon_color: values.icon_color || '#ea384c',
+      icon_url: iconPreview, // Use the state from usePunishmentIcon hook
+      // Ensure numeric fields are numbers
+      background_opacity: Number(values.background_opacity) || 100,
+      focal_point_x: Number(values.focal_point_x) || 50,
+      focal_point_y: Number(values.focal_point_y) || 50,
     };
-    
-    if (punishmentData?.id) {
-      dataToSave.id = punishmentData.id;
-    }
-    
-    console.log("Attempting to save punishment data:", dataToSave);
-    
+    logger.log("Data to save after processing:", dataToSave);
+
     try {
-      setIsSaving(true);
-      const savedPunishment = await onSave(dataToSave);
-      
-      if (savedPunishment) {
-        form.reset(mapPunishmentDataToFormValues(savedPunishment));
+      const savedData = await onSave(dataToSave);
+      if (savedData) {
         toast({
-          title: "Punishment Processed",
-          description: punishmentData?.id ? "Punishment updated." : "Punishment created.",
+          title: punishmentData?.id ? "Punishment Updated" : "Punishment Created",
+          description: `${savedData.title} has been successfully saved.`,
         });
+        // Reset form with potentially new data (e.g., new ID from creation)
+        // or updated data. This depends on how onSave updates the parent state.
+        // For simplicity, we can reset to the saved data.
+        // However, `reset` expects PunishmentFormValues. Need to map `savedData` back or rely on parent to re-key.
+        // A common pattern is for the parent component managing the dialog (PunishmentEditor)
+        // to close the dialog and refresh data, which implicitly "resets" the context for next open.
+        // If the form needs to stay open and reflect new state, `reset` would be used:
+        // reset(mapPunishmentDataToFormValues(savedData)); // Assuming mapPunishmentDataToFormValues exists
       } else {
-        toast({
-          title: "Save Incomplete",
-          description: "Punishment data might not have fully saved. Please check.",
-          variant: "default",
-        });
+        // Handle case where save operation completed but returned null (e.g., internal error in onSave)
+        // Toast for this case is likely handled within onSave or by optimistic mutation hooks
       }
     } catch (error) {
-      console.error("Error saving punishment in form handler:", error);
-    } finally {
-      setIsSaving(false);
+      logger.error("Error saving punishment:", error); // This is now primarily for client-side pre-save errors
+      // Server-side errors and their toasts are typically handled by the mutation hooks used in onSave.
+      // If onSave itself throws before calling mutation, this catch block is relevant.
+      // toast({
+      //   title: "Save Error",
+      //   description: "An unexpected error occurred while trying to save. Please check console for details.",
+      //   variant: "destructive",
+      // });
     }
   };
 
-  const childrenWithProps = React.Children.map(children, child => {
-    if (React.isValidElement(child)) {
-      return React.cloneElement(child as React.ReactElement<any>, { isSaving });
-    }
-    return child;
-  });
-
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {childrenWithProps}
-      </form>
-    </Form>
+    <form onSubmit={handleSubmit(processAndSubmit)} className="space-y-8">
+      {children}
+      {/* Actions (Save, Cancel, Delete buttons) are typically rendered by PunishmentFormActions within children */}
+    </form>
   );
 };
 

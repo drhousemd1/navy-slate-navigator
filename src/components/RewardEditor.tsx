@@ -1,135 +1,161 @@
-
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
-import { RewardEditorForm } from './reward-editor/RewardEditorForm';
-import { toast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
+import RewardEditorForm from './rewards/RewardEditorForm';
+import { Reward, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/types';
+import { useCreateReward, useUpdateReward, useDeleteReward } from '@/data/rewards/mutations';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { logger } from '@/lib/logger'; // Added logger
 
 interface RewardEditorProps {
   isOpen: boolean;
-  onClose: () => void;
-  rewardData?: any;
-  onSave: (rewardData: any) => Promise<any> | void; // Updated to allow any return type
-  onDelete?: (id: string) => void; // Changed from number to string
+  onOpenChange: (isOpen: boolean) => void;
+  rewardData?: Reward | null;
+  onSaveSuccess?: (savedReward: Reward) => void;
+  onDeleteSuccess?: (rewardId: string) => void;
+  isDomReward?: boolean; // To set the default type for new rewards
 }
 
-const RewardEditor: React.FC<RewardEditorProps> = ({ 
-  isOpen, 
-  onClose, 
-  rewardData, 
-  onSave,
-  onDelete
+const RewardEditor: React.FC<RewardEditorProps> = ({
+  isOpen,
+  onOpenChange,
+  rewardData: initialData, // Renamed for clarity
+  onSaveSuccess,
+  onDeleteSuccess,
+  isDomReward = false, // Default to sub reward if not specified
 }) => {
-  const isMobile = useIsMobile();
-  const [isSaving, setIsSaving] = useState(false);
-  
+  const createRewardMutation = useCreateReward();
+  const updateRewardMutation = useUpdateReward();
+  const deleteRewardMutation = useDeleteReward();
+
+  // Internal state to manage the form's data, including whether it's a new reward
+  const [currentRewardData, setCurrentRewardData] = useState<Reward | CreateRewardVariables | undefined>(undefined);
+  const [isCreatingNew, setIsCreatingNew] = useState(true);
+
   useEffect(() => {
-    if (rewardData) {
-      console.log("RewardEditor opened with data:", rewardData);
-      console.log("is_dom_reward value in RewardEditor useEffect:", rewardData.is_dom_reward);
+    if (isOpen) {
+      logger.log('RewardEditor initialData:', initialData);
+      if (initialData && initialData.id) {
+        setCurrentRewardData(initialData);
+        setIsCreatingNew(false);
+      } else {
+        // For new reward, set is_dom_reward based on prop
+        const newRewardBase: CreateRewardVariables = {
+          title: '',
+          cost: 10,
+          is_dom_reward: isDomReward,
+          // other fields will be defaulted by the form or are optional
+          supply: null, // Explicitly null for optional number
+          description: null,
+          background_image_url: null,
+          background_opacity: 100,
+          icon_name: null,
+          icon_url: null,
+          icon_color: '#9b87f5', // Default icon color
+          title_color: '#FFFFFF',
+          subtext_color: '#8E9196',
+          calendar_color: '#7E69AB',
+          highlight_effect: false,
+          focal_point_x: 50,
+          focal_point_y: 50,
+        };
+        setCurrentRewardData(newRewardBase);
+        setIsCreatingNew(true);
+      }
     }
-  }, [rewardData, isOpen]);
-  
-  const handleSave = async (formData: any) => {
-    console.log("RewardEditor handling save with form data:", formData);
-    console.log("is_dom_reward value in handleSave:", formData.is_dom_reward);
-    
+    logger.log("Is Creating New Reward:", !initialData || !initialData.id);
+  }, [isOpen, initialData, isDomReward]);
+
+
+  const handleSave = async (values: Partial<Reward>): Promise<Reward | null> => {
+    logger.log('RewardEditor handleSave data:', values);
+    logger.log("Form values before save:", values);
     try {
-      setIsSaving(true);
-      
-      const dataToSave = rewardData ? { 
-        ...formData, 
-        id: rewardData.id,
-        is_dom_reward: Boolean(formData.is_dom_reward) // Ensure proper boolean conversion
-      } : formData;
-      
-      console.log("Final data being sent to save:", dataToSave);
-      console.log("Final is_dom_reward value:", dataToSave.is_dom_reward);
-      
-      // Show optimistic toast immediately
-      toast({
-        title: "Saving",
-        description: "Your reward is being saved...",
-      });
-      
-      // Close the modal immediately to improve perceived performance
-      onClose();
-      
-      // Process the save in the background
-      setTimeout(async () => {
-        try {
-          // Use await instead of .then to properly handle the Promise
-          await onSave(dataToSave);
-          console.log("Save completed successfully");
-        } catch (error) {
-          console.error("Error in RewardEditor save handler:", error);
-          toast({
-            title: "Error",
-            description: "Failed to save reward. Please try again.",
-            variant: "destructive",
-          });
-        } finally {
-          setIsSaving(false);
-        }
-      }, 0);
+      let savedReward: Reward;
+      if (!isCreatingNew && currentRewardData && 'id' in currentRewardData && currentRewardData.id) {
+        // Update existing reward
+        const updatePayload: UpdateRewardVariables = { 
+          id: currentRewardData.id, 
+          ...values 
+        };
+        savedReward = await updateRewardMutation.mutateAsync(updatePayload);
+      } else {
+        // Create new reward
+        // Ensure required fields are present for CreateRewardVariables
+        const createPayload: CreateRewardVariables = {
+          title: values.title || 'Untitled Reward',
+          cost: values.cost === undefined ? 10 : values.cost,
+          is_dom_reward: values.is_dom_reward === undefined ? isDomReward : values.is_dom_reward,
+          supply: values.supply === undefined ? null : values.supply, // Explicitly null for optional number
+          description: values.description || null,
+          background_image_url: values.background_image_url || null,
+          background_opacity: values.background_opacity === undefined ? 100 : values.background_opacity,
+          icon_name: values.icon_name || null,
+          icon_url: values.icon_url || null,
+          icon_color: values.icon_color || '#9b87f5',
+          title_color: values.title_color || '#FFFFFF',
+          subtext_color: values.subtext_color || '#8E9196',
+          calendar_color: values.calendar_color || '#7E69AB',
+          highlight_effect: values.highlight_effect === undefined ? false : values.highlight_effect,
+          focal_point_x: values.focal_point_x === undefined ? 50 : values.focal_point_x,
+          focal_point_y: values.focal_point_y === undefined ? 50 : values.focal_point_y,
+        };
+        savedReward = await createRewardMutation.mutateAsync(createPayload);
+      }
+      logger.log('Reward saved successfully:', savedReward ? { ...savedReward, id: '[REWARD_ID]' } : null);
+      onSaveSuccess?.(savedReward);
+      onOpenChange(false); // Close dialog on success
+      return savedReward;
     } catch (error) {
-      console.error("Error in RewardEditor save handler:", error);
-      setIsSaving(false);
-      toast({
-        title: "Error",
-        description: "Failed to save reward. Please try again.",
-        variant: "destructive",
-      });
+      logger.error("Error saving reward:", error);
+      // Error toast is handled by optimistic mutation hooks
+      throw error; // Re-throw for form handling
     }
   };
 
-  if (isMobile) {
-    return (
-      <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent side="bottom" className="h-[100vh] bg-navy border-light-navy pt-10 px-0 overflow-y-auto">
-          <div className="px-4">
-            <SheetHeader className="text-center mb-6">
-              <SheetTitle className="text-2xl font-bold text-white">
-                {rewardData ? 'Edit Reward' : 'Create New Reward'}
-              </SheetTitle>
-              <SheetDescription className="text-light-navy">
-                {rewardData ? 'Modify the existing reward' : 'Create a new reward to redeem'}
-              </SheetDescription>
-            </SheetHeader>
-            
-            <RewardEditorForm
-              rewardData={rewardData}
-              onSave={handleSave}
-              onCancel={onClose}
-              onDelete={onDelete}
-              isSaving={isSaving}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-    );
-  }
+  const handleDelete = async (rewardId: string) => {
+    logger.log("Deleting reward ID:", rewardId);
+    try {
+      await deleteRewardMutation.mutateAsync(rewardId);
+      logger.log('Reward deleted successfully');
+      onDeleteSuccess?.(rewardId);
+      onOpenChange(false); // Close dialog on success
+    } catch (error) {
+      logger.error(`Error deleting reward ${rewardId}:`, error);
+      // Error toast handled by optimistic mutation hook
+    }
+  };
+
+  const handleCancel = () => {
+    onOpenChange(false);
+  };
+
+  const editorTitle = isCreatingNew ? "Create New Reward" : "Edit Reward";
+  const editorDescription = isCreatingNew
+    ? "Configure the details for the new reward."
+    : `Editing "${(currentRewardData as Reward)?.title || 'reward'}". Make your changes below.`;
+  
+  // Key prop for RewardEditorForm to force re-initialization when switching between create/edit
+  const formKey = isCreatingNew ? 'create' : (currentRewardData as Reward)?.id || 'edit';
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[90vw] max-h-[90vh] bg-navy border-light-navy text-white overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-white">
-            {rewardData ? 'Edit Reward' : 'Create New Reward'}
-          </DialogTitle>
-          <DialogDescription className="text-light-navy">
-            {rewardData ? 'Modify the existing reward' : 'Create a new reward to redeem'}
-          </DialogDescription>
+          <DialogTitle>{editorTitle}</DialogTitle>
+          <DialogDescription>{editorDescription}</DialogDescription>
         </DialogHeader>
-        
-        <RewardEditorForm
-          rewardData={rewardData}
-          onSave={handleSave}
-          onCancel={onClose}
-          onDelete={onDelete}
-          isSaving={isSaving}
-        />
+        <div className="flex-grow overflow-y-auto pr-2">
+          {currentRewardData && ( // Ensure currentRewardData is defined before rendering form
+            <RewardEditorForm
+              key={formKey} // Force re-render on data change
+              rewardData={currentRewardData}
+              isDomRewardInitial={isCreatingNew ? isDomReward : (currentRewardData as Reward)?.is_dom_reward}
+              onSave={handleSave}
+              onCancel={handleCancel}
+              onDelete={!isCreatingNew && currentRewardData && 'id' in currentRewardData ? handleDelete : undefined}
+              isCreatingNew={isCreatingNew}
+            />
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
