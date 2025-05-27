@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Camera, Trash2, LogOut } from 'lucide-react';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 import { DeleteAvatarDialog } from '@/components/profile/DeleteAvatarDialog';
+import { logger } from '@/lib/logger'; // Added logger import
 
 const Profile: React.FC = () => {
   const { 
@@ -35,16 +36,16 @@ const Profile: React.FC = () => {
   useEffect(() => {
     if (user) {
       const currentNickname = getNickname();
-      console.log('Profile Page: Current nickname from context:', currentNickname);
+      logger.debug('Profile Page: Current nickname from context:', currentNickname); // Replaced console.log
       setNickname(currentNickname || '');
       
       const currentImage = getProfileImage();
-      console.log('Profile Page: Current profile image from context:', currentImage);
+      logger.debug('Profile Page: Current profile image from context:', currentImage); // Replaced console.log
       setProfileImage(currentImage);
 
       const role = user.user_metadata?.role || 'Not Set';
       setCurrentRole(role);
-      console.log('Profile Page: Current user role from metadata:', role);
+      logger.debug('Profile Page: Current user role from metadata:', role); // Replaced console.log
     }
   }, [user, getNickname, getProfileImage]);
 
@@ -60,7 +61,7 @@ const Profile: React.FC = () => {
       await updateNickname(nickname.trim());
       toast({ title: 'Success', description: 'Nickname updated successfully.' });
     } catch (err: any) {
-      console.error('Error updating nickname:', err);
+      logger.error('Error updating nickname:', err); // Replaced console.error
       setError(err.message || 'Failed to update nickname.');
       toast({ title: 'Error', description: err.message || 'Failed to update nickname.', variant: 'destructive' });
     } finally {
@@ -93,16 +94,10 @@ const Profile: React.FC = () => {
         setNewProfileImageFile(null); 
         toast({ title: 'Success', description: 'Profile image updated successfully.' });
       } else {
-         // This case implies uploadProfileImageAndUpdateState can return null/undefined on failure,
-         // which is handled by the catch block. If it's expected to always return a URL on success,
-         // this 'else' branch might indicate a problem or be unnecessary.
-         // For now, assuming it returns string on success and throws error on failure.
-        console.warn('Profile Page: uploadProfileImageAndUpdateState did not return a new image URL as expected, but did not throw.');
-        // If newImageUrl can be null on success (e.g. after deletion, though this is upload path)
-        // toast({ title: 'Info', description: 'Profile image operation completed.' });
+        logger.warn('Profile Page: uploadProfileImageAndUpdateState did not return a new image URL as expected, but did not throw.'); // Replaced console.warn
       }
     } catch (err: any) {
-      console.error('Error uploading profile image:', err);
+      logger.error('Error uploading profile image:', err); // Replaced console.error
       setError(err.message || 'Failed to upload profile image.');
       toast({ title: 'Error', description: err.message || 'Failed to upload profile image.', variant: 'destructive' });
     } finally {
@@ -121,7 +116,7 @@ const Profile: React.FC = () => {
       setNewProfileImageFile(null); 
       toast({ title: 'Success', description: 'Profile image removed.' });
     } catch (err: any)      {
-      console.error('Error deleting profile image:', err);
+      logger.error('Error deleting profile image:', err); // Replaced console.error
       setError(err.message || 'Failed to delete profile image.');
       toast({ title: 'Error', description: err.message || 'Failed to delete profile image.', variant: 'destructive' });
     } finally {
@@ -132,7 +127,7 @@ const Profile: React.FC = () => {
 
   const handleLogout = async () => {
     await signOut();
-    console.log('Profile Page: User signed out. Cache purging handled by AuthContext.');
+    logger.debug('Profile Page: User signed out. Cache purging handled by AuthContext.'); // Replaced console.log
   };
 
   const handleDeleteAccount = async () => {
@@ -142,7 +137,7 @@ const Profile: React.FC = () => {
       toast({ title: "Account Deletion Initiated", description: "Your account is scheduled for deletion. You will be logged out." });
       // signOut is called within deleteAccount if successful, or handled by onAuthStateChange
     } catch (err: any) {
-      console.error('Error deleting account:', err);
+      logger.error('Error deleting account:', err); // Replaced console.error
       toast({ title: 'Error', description: err.message || 'Failed to delete account.', variant: 'destructive' });
     } finally {
       setIsDeleteAccountDialogOpen(false);
@@ -156,7 +151,7 @@ const Profile: React.FC = () => {
       setCurrentRole(newRole); // Update local state to reflect change immediately
       toast({ title: 'Success', description: `Role updated to ${newRole}.` });
     } catch (err: any) {
-      console.error('Error updating role:', err);
+      logger.error('Error updating role:', err); // Replaced console.error
       toast({ title: 'Error', description: err.message || 'Failed to update role.', variant: 'destructive' });
     }
   };

@@ -6,6 +6,7 @@ import { WEEKLY_METRICS_QUERY_KEY } from "@/data/queries/metrics/useWeeklyMetric
 import { MONTHLY_METRICS_QUERY_KEY } from "@/data/queries/metrics/useMonthlyMetrics";
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { USER_DOM_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserDomPointsQuery';
+import { logger } from '@/lib/logger';
 
 // Helper function to generate ISO week string (YYYY-Wxx format)
 // Consider moving to a shared util file.
@@ -65,7 +66,7 @@ export const useRedeemPunishment = () => {
       currentDomSupply,
       costPoints,
       domEarn,
-      profileId, // This is the ID of the user whose points are affected
+      profileId, 
       currentSubPoints,
       currentDomPoints,
     }) => {
@@ -101,17 +102,8 @@ export const useRedeemPunishment = () => {
         .update({ dom_supply: Math.max(0, currentDomSupply - 1), updated_at: new Date().toISOString() })
         .eq("id", id);
       if (punishmentUpdateError) throw punishmentUpdateError;
-
-      // Determine who gets the DOM points
-      // Assuming 'profileId' is the submissive, and we need to find the dominant.
-      // This logic might need to align with UserIdsContext approach.
-      // For now, assume profileId is the one whose sub_points change.
-      // And the one whose dom_points change could be profileId or their partner.
-      // This hook needs access to both sub_user_id and dom_user_id.
-      // Let's assume `profileId` in `RedeemPunishmentVariables` is the `subUserId`.
-      // We need to determine the `domUserId` to correctly update `dom_points`.
       
-      let actualDomUserId = profileId; // Default: sub user gets their own dom points
+      let actualDomUserId = profileId; 
       const { data: subUserProfile } = await supabase.from('profiles').select('linked_partner_id').eq('id', profileId).single();
       if (subUserProfile?.linked_partner_id) {
         actualDomUserId = subUserProfile.linked_partner_id;
@@ -125,11 +117,10 @@ export const useRedeemPunishment = () => {
           points: newSubPoints,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", profileId); // profileId is sub_user_id
+        .eq("id", profileId); 
       if (subProfileUpdateError) throw subProfileUpdateError;
 
       // Update dominant user's dom_points
-      // Fetch current dom_points for actualDomUserId first
       const { data: domUserProfile, error: domUserFetchError } = await supabase
         .from('profiles')
         .select('dom_points')
@@ -151,8 +142,8 @@ export const useRedeemPunishment = () => {
       return {
         success: true,
         punishmentId: id,
-        newSubPoints: newSubPoints, // sub's new points
-        newDomPoints: newActualDomPoints, // dom's new points (could be same user as sub if solo)
+        newSubPoints: newSubPoints, 
+        newDomPoints: newActualDomPoints, 
       };
     },
     onMutate: async (variables) => {
@@ -169,11 +160,6 @@ export const useRedeemPunishment = () => {
         );
       }
       
-      // Optimistic update for profile points (sub and dom)
-      // This is complex because optimistic update for points should also consider the linked partner logic.
-      // For simplicity, optimistic updates for points are skipped here; invalidation will handle it.
-      // Or, one could pass subUserId and domUserId into variables to target optimistic updates.
-
       return { previousPunishments, previousProfile: undefined /* previousProfile removed */ };
     },
     onSuccess: (data, variables) => {
@@ -186,8 +172,7 @@ export const useRedeemPunishment = () => {
       if (context?.previousPunishments) {
         queryClient.setQueryData<PunishmentData[]>(PUNISHMENTS_QUERY_KEY, context.previousPunishments);
       }
-      // No generic profile revert needed.
-      console.error('Error applying punishment:', error);
+      logger.error('Error applying punishment:', error);
       if (error.message !== "Punishment has no supply left") {
         toast({
           title: "Failed to Apply Punishment",
@@ -196,22 +181,21 @@ export const useRedeemPunishment = () => {
         });
       }
     },
-    onSettled: async (data, error, variables) => { // Added async
+    onSettled: async (data, error, variables) => { 
       queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
       if (variables?.id) {
         queryClient.invalidateQueries({ queryKey: ['punishments', variables.id] });
       }
 
-      // Determine subUserId and domUserId for invalidation
       const subUserId = variables.profileId;
-      let domUserId = subUserId; // Default if no partner
+      let domUserId = subUserId; 
       try {
         const { data: profileData } = await supabase.from('profiles').select('linked_partner_id').eq('id', subUserId).single();
         if (profileData?.linked_partner_id) {
           domUserId = profileData.linked_partner_id;
         }
       } catch (e) {
-        console.error("Error fetching profile for domUserId in onSettled:", e);
+        logger.error("Error fetching profile for domUserId in onSettled:", e);
       }
 
       queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });

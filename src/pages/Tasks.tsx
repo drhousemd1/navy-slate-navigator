@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -11,7 +10,8 @@ import { useTasksData } from '@/hooks/useTasksData';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
 import EmptyState from '@/components/common/EmptyState';
 import { ListChecks, LoaderCircle } from 'lucide-react';
-import { useToggleTaskCompletionMutation } from '../data/tasks/mutations/useToggleTaskCompletionMutation'; // New import
+import { useToggleTaskCompletionMutation } from '../data/tasks/mutations/useToggleTaskCompletionMutation';
+import { logger } from '@/lib/logger'; // Added logger import
 
 const TasksPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -22,25 +22,24 @@ const TasksPageContent: React.FC = () => {
     error, 
     saveTask, 
     deleteTask, 
-    // toggleTaskCompletion, // Removed from here
     refetch 
   } = useTasksData();
-  const { refreshPointsFromDatabase } = useRewards(); // Still used in useEffect
+  const { refreshPointsFromDatabase } = useRewards();
   
-  const toggleTaskCompletionMutation = useToggleTaskCompletionMutation(); // New mutation hook instance
+  const toggleTaskCompletionMutation = useToggleTaskCompletionMutation();
 
   const handleAddTask = () => {
-    console.log('handleAddTask called in TasksPageContent');
+    logger.debug('handleAddTask called in TasksPageContent');
     setCurrentTask(null);
     setIsEditorOpen(true);
   };
 
   React.useEffect(() => {
-    console.log('Setting up event listener for add-new-task');
+    logger.debug('Setting up event listener for add-new-task');
     const element = document.querySelector('.TasksContent'); 
     if (element) {
       const handleAddEvent = (event: Event) => { 
-        console.log('Received add-new-task event', event);
+        logger.debug('Received add-new-task event', event);
         handleAddTask();
       };
       element.addEventListener('add-new-task', handleAddEvent);
@@ -58,11 +57,10 @@ const TasksPageContent: React.FC = () => {
   const handleSaveTask = async (taskData: TaskWithId) => { 
     try {
       const savedTask = await saveTask(taskData);
-      if (savedTask && savedTask.id) {
-        // setCurrentTask(savedTask); 
-      }
+      // if (savedTask && savedTask.id) { // Logic removed in original, keeping it that way
+      // }
     } catch (err) {
-      console.error('Error saving task in UI:', err);
+      logger.error('Error saving task in UI:', err);
     }
   };
 
@@ -70,7 +68,7 @@ const TasksPageContent: React.FC = () => {
     try {
       await deleteTask(taskId);
     } catch (err) {
-      console.error('Error deleting task in UI:', err);
+      logger.error('Error deleting task in UI:', err);
     }
   };
 
@@ -78,22 +76,17 @@ const TasksPageContent: React.FC = () => {
     try {
       const task = tasks.find(t => t.id === taskId);
       if (!task) {
-        console.error(`Task with id ${taskId} not found.`);
+        logger.error(`Task with id ${taskId} not found.`);
         return;
       }
-      // Use the mutation hook
       toggleTaskCompletionMutation.mutate({ 
         taskId, 
         completed, 
         pointsValue: task.points || 0,
-        task // Pass the full task object for potential optimistic updates defined in the mutation
+        task
       });
-      // The refreshPointsFromDatabase call previously here is removed
-      // because useToggleTaskCompletionMutation handles query invalidations for points.
     } catch (err) {
-      // Error handling for calling mutate (e.g., if task not found)
-      // The mutation itself has more robust error handling for the async operation
-      console.error('Error preparing to toggle task completion in UI:', err);
+      logger.error('Error preparing to toggle task completion in UI:', err);
     }
   };
 
@@ -158,14 +151,14 @@ const TasksPageContent: React.FC = () => {
 
 const Tasks: React.FC = () => {
   const handleAddNewItem = () => {
-    console.log('AppLayout onAddNewItem called for Tasks');
+    logger.debug('AppLayout onAddNewItem called for Tasks');
     const content = document.querySelector('.TasksContent');
     if (content) {
-      console.log('Dispatching add-new-task event to .TasksContent');
+      logger.debug('Dispatching add-new-task event to .TasksContent');
       const event = new CustomEvent('add-new-task');
       content.dispatchEvent(event);
     } else {
-      console.warn('.TasksContent element not found for dispatching event. Ensure TasksPageContent renders a div with this class.');
+      logger.warn('.TasksContent element not found for dispatching event. Ensure TasksPageContent renders a div with this class.');
     }
   };
 

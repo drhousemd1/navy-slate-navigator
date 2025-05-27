@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const ResetPasswordView: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -19,12 +20,12 @@ export const ResetPasswordView: React.FC = () => {
 
   // Check for active session on component mount
   useEffect(() => {
-    console.log('ResetPasswordView mounted, checking for active session...');
+    logger.debug('ResetPasswordView mounted, checking for active session...');
     
     const checkSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        console.log('Session check result:', data?.session ? 'Active session found' : 'No active session');
+        logger.debug('Session check result:', data?.session ? 'Active session found' : 'No active session');
         
         if (data?.session) {
           setHasSession(true);
@@ -33,7 +34,7 @@ export const ResetPasswordView: React.FC = () => {
         }
         setCheckingSession(false);
       } catch (err) {
-        console.error('Error checking session:', err);
+        logger.error('Error checking session:', err);
         setError('Failed to verify authentication session. Please try again.');
         setCheckingSession(false);
       }
@@ -61,17 +62,17 @@ export const ResetPasswordView: React.FC = () => {
         throw new Error('Passwords do not match.');
       }
       
-      console.log('Attempting to update password...');
+      logger.debug('Attempting to update password...');
       
       // Update the user's password using our context function
-      const { error } = await updatePassword(newPassword);
+      const { error: updateError } = await updatePassword(newPassword);
       
-      if (error) {
-        console.error('Password update error:', error);
-        throw new Error(error.message);
+      if (updateError) {
+        logger.error('Password update error:', updateError);
+        throw new Error(updateError.message);
       }
       
-      console.log('Password updated successfully');
+      logger.debug('Password updated successfully');
       
       // Show success message and redirect
       setSuccess(true);
@@ -88,7 +89,7 @@ export const ResetPasswordView: React.FC = () => {
         navigate('/auth');
       }, 3000);
     } catch (error: any) {
-      console.error('Password reset error:', error);
+      logger.error('Password reset error:', error);
       setError(error.message || 'Failed to reset password. Please try again.');
     } finally {
       setLoading(false);

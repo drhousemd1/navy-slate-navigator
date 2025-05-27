@@ -3,6 +3,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessageArchive } from './useMessageArchive';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const useRealtimeMessages = (refetch: () => void, partnerId: string | undefined) => {
   const { user } = useAuth();
@@ -12,7 +13,7 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
 
   // Create a stable callback for refetching
   const handleNewMessage = useCallback(() => {
-    console.log('🔁 New message received via realtime, triggering refetch');
+    logger.debug('🔁 New message received via realtime, triggering refetch'); // Replaced console.log
     refetch();
   }, [refetch]);
 
@@ -21,7 +22,7 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
     // Wait until both user and partnerId are fully available and only subscribe once
     if (!user?.id || !partnerId || hasSubscribed.current) return;
     
-    console.log('📡 Setting up realtime messages subscription for user:', user.id, 'and partner:', partnerId);
+    logger.debug('📡 Setting up realtime messages subscription for user:', user.id, 'and partner:', partnerId); // Replaced console.log
     hasSubscribed.current = true;
     
     // Create unique channel name to prevent conflicts
@@ -29,7 +30,7 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
     
     // First clean up any existing subscription
     if (subscriptionRef.current) {
-      console.log('❌ Cleaning up previous subscription before creating new one');
+      logger.debug('❌ Cleaning up previous subscription before creating new one'); // Replaced console.log
       supabase.removeChannel(subscriptionRef.current);
       subscriptionRef.current = null;
     }
@@ -43,7 +44,7 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
         table: 'messages',
         filter: `sender_id=eq.${user.id},receiver_id=eq.${partnerId}`,
       }, (payload) => {
-        console.log('Realtime: caught outgoing message INSERT:', payload);
+        logger.debug('Realtime: caught outgoing message INSERT:', payload); // Replaced console.log
         handleNewMessage();
       })
       .on('postgres_changes', {
@@ -52,11 +53,11 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
         table: 'messages',
         filter: `sender_id=eq.${partnerId},receiver_id=eq.${user.id}`,
       }, (payload) => {
-        console.log('Realtime: caught incoming message INSERT:', payload);
+        logger.debug('Realtime: caught incoming message INSERT:', payload); // Replaced console.log
         handleNewMessage();
       })
       .subscribe((status) => {
-        console.log('✅ Realtime subscription status:', status);
+        logger.debug('✅ Realtime subscription status:', status); // Replaced console.log
         
         // If we're connected, archive old messages
         if (status === 'SUBSCRIBED') {
@@ -70,7 +71,7 @@ export const useRealtimeMessages = (refetch: () => void, partnerId: string | und
     // Cleanup function
     return () => {
       if (subscriptionRef.current) {
-        console.log('❌ Cleaning up realtime subscription');
+        logger.debug('❌ Cleaning up realtime subscription'); // Replaced console.log
         supabase.removeChannel(subscriptionRef.current);
         subscriptionRef.current = null;
         hasSubscribed.current = false;

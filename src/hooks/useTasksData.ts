@@ -6,7 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
 import { useDeleteTask } from '@/data/mutations/tasks/useDeleteTask';
-import { TaskPriority } from '@/lib/taskUtils'; // Import TaskPriority
+import { TaskPriority } from '@/lib/taskUtils'; 
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const useTasksData = () => {
   const { 
@@ -24,7 +25,7 @@ export const useTasksData = () => {
     try {
       if (taskData.id) {
         // Update existing task
-        const { error } = await supabase
+        const { error: updateError } = await supabase // aliased error
           .from("tasks")
           .update({
             title: taskData.title,
@@ -44,18 +45,17 @@ export const useTasksData = () => {
             highlight_effect: taskData.highlight_effect,
             focal_point_x: taskData.focal_point_x,
             focal_point_y: taskData.focal_point_y
-            // Don't include completed status in update to prevent overriding completion state
           })
           .eq("id", taskData.id);
 
-        if (error) {
-          console.error("Error updating task:", error);
+        if (updateError) {
+          logger.error("Error updating task:", updateError); // Replaced console.error
           toast({
             title: 'Error',
-            description: 'Failed to update task: ' + error.message,
+            description: 'Failed to update task: ' + updateError.message,
             variant: 'destructive',
           });
-          throw error;
+          throw updateError;
         }
 
         // Update the local cache optimistically
@@ -97,19 +97,19 @@ export const useTasksData = () => {
           usage_data: Array(7).fill(0) // Initialize with zeros for a week
         };
 
-        const { data: newTaskResponse, error } = await supabase
+        const { data: newTaskResponse, error: insertError } = await supabase // aliased error
           .from("tasks")
           .insert([newTaskData])
           .select();
 
-        if (error) {
-          console.error("Error creating task:", error);
+        if (insertError) {
+          logger.error("Error creating task:", insertError); // Replaced console.error
           toast({
             title: 'Error',
-            description: 'Failed to create task: ' + error.message,
+            description: 'Failed to create task: ' + insertError.message,
             variant: 'destructive',
           });
-          throw error;
+          throw insertError;
         }
 
         // Update the cache with the new task from the server
@@ -132,7 +132,7 @@ export const useTasksData = () => {
       await refetch(); // Refresh data to ensure UI is up to date
       return null;
     } catch (err) {
-      console.error("Error in saveTask:", err);
+      logger.error("Error in saveTask:", err); // Replaced console.error
       throw err;
     }
   };
@@ -154,13 +154,13 @@ export const useTasksData = () => {
       });
 
       // Then update the database
-      const { error } = await supabase
+      const { error: toggleError } = await supabase // aliased error
         .from("tasks")
         .update({ completed })
         .eq("id", taskId);
 
-      if (error) {
-        console.error("Error updating task completion:", error);
+      if (toggleError) {
+        logger.error("Error updating task completion:", toggleError); // Replaced console.error
         
         // Revert the optimistic update
         queryClient.setQueryData<TaskWithId[]>(["tasks"], oldTasks => {
@@ -174,10 +174,10 @@ export const useTasksData = () => {
         
         toast({
           title: 'Error',
-          description: 'Failed to update task completion status: ' + error.message,
+          description: 'Failed to update task completion status: ' + toggleError.message,
           variant: 'destructive',
         });
-        throw error;
+        throw toggleError;
       }
 
       // If the task was marked as completed, trigger the completion history recording and points update
@@ -209,7 +209,7 @@ export const useTasksData = () => {
             description: `You earned ${points} points!`,
           });
         } catch (err) {
-          console.error("Error recording task completion or updating points:", err);
+          logger.error("Error recording task completion or updating points:", err); // Replaced console.error
           // We don't need to revert the UI state here since the task is still marked complete
           // Just inform the user about points issue
           toast({
@@ -222,7 +222,7 @@ export const useTasksData = () => {
 
       return true;
     } catch (err) {
-      console.error("Error in toggleTaskCompletion:", err);
+      logger.error("Error in toggleTaskCompletion:", err); // Replaced console.error
       return false;
     }
   };

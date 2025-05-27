@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Message } from '../messages/types';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const useMessagesFetch = (partnerId?: string) => {
   const { user } = useAuth();
@@ -24,7 +25,7 @@ export const useMessagesFetch = (partnerId?: string) => {
         .single();
       
       if (error) {
-        console.error('Error getting partner ID:', error);
+        logger.error('Error getting partner ID:', error); // Replaced console.error
         // For testing without a partner, return the user's own ID
         return user.id;
       }
@@ -32,7 +33,7 @@ export const useMessagesFetch = (partnerId?: string) => {
       // If no partner is linked, use the user's own ID for testing
       return data.linked_partner_id || user.id;
     } catch (err) {
-      console.error('Error in getPartnerId:', err);
+      logger.error('Error in getPartnerId:', err); // Replaced console.error
       // Fallback to user's own ID for testing
       return user.id;
     }
@@ -47,28 +48,28 @@ export const useMessagesFetch = (partnerId?: string) => {
   } = useQuery({
     queryKey: ['messages', user?.id, partnerId],
     queryFn: async () => {
-      console.log('[QUERY] Refetching messages...');
+      logger.debug('[QUERY] Refetching messages...'); // Replaced console.log
       const partnerIdValue = await getPartnerId();
       if (!user || !partnerIdValue) {
         return [];
       }
 
-      console.log('[QUERY] Fetching messages between', user.id, 'and', partnerIdValue);
+      logger.debug('[QUERY] Fetching messages between', user.id, 'and', partnerIdValue); // Replaced console.log
       // Modified query to work with messages to self for testing
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase // aliased error
         .from('messages')
         .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerIdValue}),and(sender_id.eq.${partnerIdValue},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: false })
         .limit(25);
       
-      if (error) {
-        console.error('Error fetching messages:', error);
-        throw error;
+      if (fetchError) {
+        logger.error('Error fetching messages:', fetchError); // Replaced console.error
+        throw fetchError;
       }
       
-      console.log('[QUERY] Fetched messages count:', data?.length || 0);
-      console.log('[QUERY] fetched from Supabase:', data?.map(m => m.content));
+      logger.debug('[QUERY] Fetched messages count:', data?.length || 0); // Replaced console.log
+      logger.debug('[QUERY] fetched from Supabase:', data?.map(m => m.content)); // Replaced console.log
       
       // Return messages in ascending order for display (newest at bottom)
       return [...(data || [])].reverse();
@@ -77,7 +78,7 @@ export const useMessagesFetch = (partnerId?: string) => {
   });
 
   // Load older messages (for pagination)
-  const loadOlderMessages = async (oldestMessageDate: string): Promise<Message[]> => {
+  const loadOlderMessages = async (oldestMessageDateParam: string): Promise<Message[]> => { // Renamed oldestMessageDate to avoid conflict
     const partnerIdValue = await getPartnerId();
     if (!user || !partnerIdValue) {
       return [];
@@ -85,16 +86,16 @@ export const useMessagesFetch = (partnerId?: string) => {
 
     setLoadingOlder(true);
     try {
-      const { data, error } = await supabase
+      const { data, error: loadError } = await supabase // aliased error
         .from('messages')
         .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerIdValue}),and(sender_id.eq.${partnerIdValue},receiver_id.eq.${user.id})`)
-        .lt('created_at', oldestMessageDate)
+        .lt('created_at', oldestMessageDateParam)
         .order('created_at', { ascending: false })
         .limit(25);
       
-      if (error) {
-        console.error('Error loading older messages:', error);
+      if (loadError) {
+        logger.error('Error loading older messages:', loadError); // Replaced console.error
         return [];
       }
       
