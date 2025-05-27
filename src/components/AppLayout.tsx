@@ -2,12 +2,11 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Plus, MessageSquare } from 'lucide-react'; // Removed BookOpen import
+import { Plus, MessageSquare } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/contexts/auth';
 import AccountSheet from './AccountSheet';
-// import CacheMonitorPanel from './dev/CacheMonitorPanel'; // Removed import
-// Removed: import SyncStatusIndicator from './common/SyncStatusIndicator';
+import { logger } from '@/lib/logger';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -44,7 +43,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   useEffect(() => {
     const contextImage = getProfileImage();
     if (contextImage) {
-      console.log('Using profile image from context:', contextImage);
+      logger.debug('Using profile image from context:', contextImage);
       setProfileImage(contextImage);
     }
   }, [getProfileImage]);
@@ -72,7 +71,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
                   src={profileImage} 
                   alt={nickname ?? "User Avatar"}
                   onError={(e) => {
-                    console.error('Failed to load avatar image:', profileImage);
+                    logger.error('Failed to load avatar image:', profileImage);
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
@@ -91,7 +90,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
           
           <div className="flex items-center gap-3">
             {/* Sync Status Indicator Icon - REMOVED */}
-            {/* <SyncStatusIndicator /> */}
+            {/* <SyncStatusIndicator /> */
 
             {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />

@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { Upload } from 'lucide-react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import ImageFocalPointControl from '@/components/encyclopedia/image/ImageFocalPointControl';
+import { logger } from '@/lib/logger';
 
 interface BackgroundImageSelectorProps {
   control: Control<any>;
@@ -26,50 +26,41 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
 }) => {
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ 
-    x: initialPosition?.x ?? 50, 
-    y: initialPosition?.y ?? 50 
+  const [position, setPosition] = useState({
+    x: initialPosition?.x ?? 50,
+    y: initialPosition?.y ?? 50
   });
   
-  // Safely initialize opacity - default to 100 if no value is available
   const [opacity, setOpacity] = useState<number>(100);
 
-  // Initialize with defaults or existing values
   useEffect(() => {
     if (initialPosition) {
       setPosition(initialPosition);
     }
   }, [initialPosition]);
 
-  // This useEffect is modified to safely set the opacity value from the form
   useEffect(() => {
     try {
-      // Get background_opacity from form values safely
       let formOpacity: number | undefined;
       
-      // First check if we can access via _getWatch method
       if (control._getWatch && typeof control._getWatch === 'function') {
         formOpacity = control._getWatch('background_opacity');
       }
       
-      // Then try to access via _formValues if available
       if (formOpacity === undefined && control._formValues) {
         formOpacity = control._formValues.background_opacity;
       }
       
-      // If we have a valid opacity value from the form, use it
       if (typeof formOpacity === 'number') {
-        console.log("Setting opacity from form value:", formOpacity);
+        logger.debug("Setting opacity from form value:", formOpacity);
         setOpacity(formOpacity);
       } else if (imagePreview) {
-        // Only set default if we have an image but no opacity value
-        console.log("Setting default opacity for new image to 100");
+        logger.debug("Setting default opacity for new image to 100");
         setValue('background_opacity', 100);
         setOpacity(100);
       }
     } catch (error) {
-      console.error("Error setting opacity:", error);
-      // Fallback to default if there's an error
+      logger.error("Error setting opacity:", error);
       setOpacity(100);
     }
   }, [control, imagePreview, setValue]);
@@ -80,10 +71,8 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
     const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
     const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
     
-    // Update position state
     setPosition({ x, y });
     
-    // Also update form values immediately to persist changes
     setValue('focal_point_x', Math.round(x));
     setValue('focal_point_y', Math.round(y));
   };
@@ -125,11 +114,11 @@ const BackgroundImageSelector: React.FC<BackgroundImageSelectorProps> = ({
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', stopDragging);
     };
-  }, [isDragging, setValue]);
+  }, [isDragging, setValue, updatePosition]);
 
   const handleOpacityChange = (values: number[]) => {
     const opacityValue = values[0];
-    console.log("Slider changing opacity to:", opacityValue);
+    logger.debug("Slider changing opacity to:", opacityValue);
     setOpacity(opacityValue);
     setValue('background_opacity', opacityValue);
   };
