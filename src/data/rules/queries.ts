@@ -1,3 +1,4 @@
+
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -13,7 +14,7 @@ import {
   getLastSyncTimeForRules,
   setLastSyncTimeForRules
 } from "../indexedDB/useIndexedDB";
-// Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const RULES_QUERY_KEY = ['rules']; // Replaced CRITICAL_QUERY_KEYS.RULES
 
@@ -33,21 +34,21 @@ export function useRules() {
       }
 
       if (!shouldFetch && localData) {
-        console.log('[useRules queryFn] Using local data for rules.');
+        logger.log('[useRules queryFn] Using local data for rules.'); // Replaced console.log
         return localData;
       }
 
-      console.log('[useRules queryFn] Fetching rules from server.');
+      logger.log('[useRules queryFn] Fetching rules from server.'); // Replaced console.log
       const serverData: Rule[] = await fetchRulesFromServer();
 
       if (serverData) {
         await saveRulesToDB(serverData);
         await setLastSyncTimeForRules(new Date().toISOString());
-        console.log('[useRules queryFn] Saved server rules to DB and updated sync time.');
+        logger.log('[useRules queryFn] Saved server rules to DB and updated sync time.'); // Replaced console.log
         return serverData;
       }
       
-      console.log('[useRules queryFn] No server data, returning local data or empty array for rules.');
+      logger.log('[useRules queryFn] No server data, returning local data or empty array for rules.'); // Replaced console.log
       return localData || [];
     },
     staleTime: Infinity,
@@ -57,3 +58,4 @@ export function useRules() {
     gcTime: 1000 * 60 * 30, // 30 minutes
   });
 }
+

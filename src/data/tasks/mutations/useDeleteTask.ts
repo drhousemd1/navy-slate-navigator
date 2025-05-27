@@ -6,6 +6,7 @@ import { TaskWithId } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries'; // Corrected import
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger'; // Added logger import
 
 
 export const useDeleteTask = () => {
@@ -22,7 +23,7 @@ export const useDeleteTask = () => {
         .eq('task_id', taskId);
 
       if (historyError) {
-        console.warn(`Failed to delete task history for task ${taskId}:`, historyError.message);
+        logger.warn(`Failed to delete task history for task ${taskId}:`, historyError.message); // Replaced console.warn
       }
 
       const { error } = await supabase
@@ -35,17 +36,18 @@ export const useDeleteTask = () => {
     entityName: 'Task',
     idField: 'id',
     onSuccessCallback: async (deletedTaskId: string) => {
-      console.log('[useDeleteTask onSuccessCallback] Task deleted on server, updating IndexedDB for task ID:', deletedTaskId);
+      logger.log('[useDeleteTask onSuccessCallback] Task deleted on server, updating IndexedDB for task ID:', deletedTaskId); // Replaced console.log
       try {
         const localTasks = await loadTasksFromDB() || [];
         const updatedLocalTasks = localTasks.filter(t => t.id !== deletedTaskId);
         await saveTasksToDB(updatedLocalTasks);
         await setLastSyncTimeForTasks(new Date().toISOString());
-        console.log('[useDeleteTask onSuccessCallback] IndexedDB updated after deleting task.');
+        logger.log('[useDeleteTask onSuccessCallback] IndexedDB updated after deleting task.'); // Replaced console.log
       } catch (error) {
-        console.error('[useDeleteTask onSuccessCallback] Error updating IndexedDB:', error);
-        toast({ variant: "destructive", title: "Local Update Error", description: "Task deleted on server, but failed to update local data." });
+        logger.error('[useDeleteTask onSuccessCallback] Error updating IndexedDB:', error); // Replaced console.error
+        toast({ variant: "destructive", title: "Local UpdateError", description: "Task deleted on server, but failed to update local data." });
       }
     },
   });
 };
+
