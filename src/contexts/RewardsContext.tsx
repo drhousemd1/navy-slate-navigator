@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType, SaveRewardParams } from './rewards/rewardTypes'; // SaveRewardParams might not be needed here if handleSaveReward signature changes
 import { useRewardsData } from '@/data/RewardsDataHandler'; // Changed import path
@@ -6,6 +5,7 @@ import { Reward } from '@/data/rewards/types';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger'; // Added logger import
 // Specific mutation hooks like useBuySubReward are used within useRewardsData from RewardsDataHandler
 // So they are not directly needed here anymore if we rely on the handlers from useRewardsData.
 
@@ -76,14 +76,14 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   } = useRewardsData();
   
   useEffect(() => {
-    // console.log("RewardsProvider: Refreshing points from database on mount"); // Already in RewardsDataHandler
+    // logger.debug("RewardsProvider: Refreshing points from database on mount"); // Already in RewardsDataHandler
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
 
   // handleSaveReward now directly uses `saveReward` from `useRewardsData` (RewardsDataHandler)
   // which expects `SaveRewardParams` { rewardData, currentIndex }
   const handleSaveReward = async (rewardData: Partial<Reward>, index: number | null): Promise<string | null> => {
-    console.log("RewardsContext - handleSaveReward called with data:", rewardData, "index:", index);
+    logger.debug("RewardsContext - handleSaveReward called with data:", rewardData, "index:", index);
     try {
       const params: SaveRewardParams = { rewardData, currentIndex: index };
       if (rewardData.id && index !== null) { // For update, ensure ID is part of rewardData
@@ -95,7 +95,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const savedReward = await saveReward(params);
       return savedReward?.id || null;
     } catch (error) {
-      console.error("Error in RewardsContext handleSaveReward:", error);
+      logger.error("Error in RewardsContext handleSaveReward:", error);
       // Toasting is likely handled within `saveReward` or its underlying mutations
       return null;
     }
@@ -112,7 +112,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       return await deleteReward(rewardToDelete.id);
     } catch (error) {
-      console.error("Error in RewardsContext handleDeleteReward:", error);
+      logger.error("Error in RewardsContext handleDeleteReward:", error);
       return false;
     }
   };
@@ -130,7 +130,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         await buyReward({ rewardId: id, cost });
         // Toasting and state updates handled by buyReward from RewardsDataHandler
     } catch (error) {
-        console.error("Error in RewardsContext handleBuyRewardWrapper:", error);
+        logger.error("Error in RewardsContext handleBuyRewardWrapper:", error);
         // Error toast likely handled by the mutation hook within buyReward
     }
   };
@@ -147,7 +147,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         await useReward({ rewardId: id });
         // Toasting and state updates handled by useReward
     } catch (error) {
-        console.error("Error in RewardsContext handleUseRewardWrapper:", error);
+        logger.error("Error in RewardsContext handleUseRewardWrapper:", error);
     }
   };
   
@@ -155,7 +155,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       await updatePoints(points); // from RewardsDataHandler
     } catch (error) {
-      console.error("Error setting total points:", error);
+      logger.error("Error setting total points:", error);
       await refreshPointsFromDatabase(); 
     }
   };
@@ -164,11 +164,10 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       await updateDomPoints(points); // from RewardsDataHandler
     } catch (error) {
-      console.error("Error setting dom points:", error);
+      logger.error("Error setting dom points:", error);
       await refreshPointsFromDatabase();
     }
   };
-
 
   const value = useMemo(() => ({
     rewards,
