@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { startOfWeek, endOfWeek } from 'date-fns';
+import { logger } from '@/lib/logger'; // Added logger
 
 export const fetchCurrentWeekPunishmentHistory = async (): Promise<PunishmentHistoryItem[]> => {
   const now = new Date();
@@ -17,8 +18,9 @@ export const fetchCurrentWeekPunishmentHistory = async (): Promise<PunishmentHis
     .order('applied_date', { ascending: false });
   
   if (error) {
-    console.error('Error fetching punishment history:', error);
+    logger.error('Error fetching punishment history:', error);
     throw error;
   }
   return data || [];
 };
+

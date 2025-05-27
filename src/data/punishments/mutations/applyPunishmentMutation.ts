@@ -1,16 +1,16 @@
-
 import { QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { PUNISHMENT_HISTORY_QUERY_KEY } from '../queries';
+import { logger } from '@/lib/logger';
 
 /**
  * Applies a punishment and updates the cache optimistically
  */
 export const applyPunishmentMutation = (queryClient: QueryClient) => 
   async (punishment: { id: string; points: number }) => {
-    console.log("[applyPunishmentMutation] Applying punishment:", punishment);
+    logger.debug("[applyPunishmentMutation] Applying punishment:", punishment);
     const startTime = performance.now();
     
     try {
@@ -51,7 +51,7 @@ export const applyPunishmentMutation = (queryClient: QueryClient) =>
       );
       
       const endTime = performance.now();
-      console.log(`[applyPunishmentMutation] Operation completed in ${endTime - startTime}ms`);
+      logger.debug(`[applyPunishmentMutation] Operation completed in ${endTime - startTime}ms`);
       
       toast({
         title: "Success",
@@ -60,7 +60,7 @@ export const applyPunishmentMutation = (queryClient: QueryClient) =>
       
       return data;
     } catch (error) {
-      console.error("[applyPunishmentMutation] Error:", error);
+      logger.error("[applyPunishmentMutation] Error:", error);
       
       // Remove optimistic entry on error
       queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => 

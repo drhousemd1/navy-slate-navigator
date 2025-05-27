@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { PUNISHMENTS_QUERY_KEY, PUNISHMENT_HISTORY_QUERY_KEY } from '@/data/punishments/queries';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { USER_DOM_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserDomPointsQuery';
+import { logger } from '@/lib/logger';
 
 // Define necessary keys directly or ensure they are imported from a valid source
 // const PROFILE_QUERY_KEY = ['profile']; // Replaced by PROFILE_POINTS_QUERY_KEY for points display
@@ -49,7 +50,7 @@ export const useApplyPunishment = () => {
             .single();
 
         if (userProfileFetchError) {
-            console.error("Error fetching submissive's profile for partner check:", userProfileFetchError);
+            logger.error("Error fetching submissive's profile for partner check:", userProfileFetchError);
             throw new Error(`Failed to fetch user profile data: ${userProfileFetchError.message}`);
         }
 
@@ -65,7 +66,7 @@ export const useApplyPunishment = () => {
                 .single();
 
             if (partnerProfileError) {
-                console.error("Error fetching partner profile:", partnerProfileError);
+                logger.error("Error fetching partner profile:", partnerProfileError);
                 throw new Error(`Failed to fetch partner profile: ${partnerProfileError.message}`);
             }
             
@@ -77,7 +78,7 @@ export const useApplyPunishment = () => {
                     .update({ dom_points: newPartnerDomPoints, updated_at: new Date().toISOString() })
                     .eq('id', domPointTargetProfileId);
                 if (domProfileError) {
-                    console.error("Error updating dominant partner profile:", domProfileError);
+                    logger.error("Error updating dominant partner profile:", domProfileError);
                     throw new Error(`Failed to update dominant partner profile: ${domProfileError.message}`);
                 }
             }
@@ -95,7 +96,7 @@ export const useApplyPunishment = () => {
             .eq('id', profileId);
 
         if (subProfileError) {
-            console.error("Error updating submissive profile:", subProfileError);
+            logger.error("Error updating submissive profile:", subProfileError);
             throw new Error(`Failed to update submissive profile: ${subProfileError.message}`);
         }
 
@@ -108,7 +109,7 @@ export const useApplyPunishment = () => {
         };
         const { error: historyError } = await supabase.from('punishment_history').insert(historyEntry).select().single();
         if (historyError) {
-            console.error("Error recording punishment history:", historyError);
+            logger.error("Error recording punishment history:", historyError);
             throw new Error(`Failed to record punishment history: ${historyError.message}`);
         }
 
@@ -151,7 +152,7 @@ export const useApplyPunishment = () => {
         queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, context.previousHistory);
       }
       toast({ title: 'Error applying punishment', description: error.message, variant: 'destructive' });
-      console.error("useApplyPunishment onError:", error);
+      logger.error("useApplyPunishment onError:", error);
     },
     onSuccess: async (_data, args, context) => {
       toast({ title: 'Punishment applied successfully!' });
@@ -172,7 +173,7 @@ export const useApplyPunishment = () => {
       await queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
       await queryClient.invalidateQueries({ queryKey: MONTHLY_METRICS_QUERY_KEY });
       await queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_SUMMARY_QUERY_KEY });
-      console.log("useApplyPunishment onSuccess: User-specific points queries invalidated.");
+      logger.debug("useApplyPunishment onSuccess: User-specific points queries invalidated.");
     },
     onSettled: async (_data, _error, args, context) => {
       const subUserIdForInvalidation = context?.originalSubUserId || args.profileId;
@@ -191,7 +192,7 @@ export const useApplyPunishment = () => {
       queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: MONTHLY_METRICS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: WEEKLY_METRICS_SUMMARY_QUERY_KEY });
-      console.log("useApplyPunishment onSettled: User-specific points queries invalidated.");
+      logger.debug("useApplyPunishment onSettled: User-specific points queries invalidated.");
     }
   });
 };

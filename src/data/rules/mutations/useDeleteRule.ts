@@ -1,4 +1,3 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
@@ -6,6 +5,7 @@ import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
 import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/indexedDB/useIndexedDB';
 import { RULES_QUERY_KEY } from '../queries';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 export const useDeleteRule = () => {
   const queryClient = useQueryClient();
@@ -21,16 +21,16 @@ export const useDeleteRule = () => {
     entityName: 'Rule',
     idField: 'id',
     onSuccessCallback: async (ruleId: string) => { 
-      console.log('[useDeleteRule onSuccessCallback] Rule deleted on server, updating IndexedDB for rule ID:', ruleId);
+      logger.debug('[useDeleteRule onSuccessCallback] Rule deleted on server, updating IndexedDB for rule ID:', ruleId);
       try {
         const localRules = await loadRulesFromDB() || [];
         const updatedLocalRules = localRules.filter(r => r.id !== ruleId);
         await saveRulesToDB(updatedLocalRules);
         await setLastSyncTimeForRules(new Date().toISOString());
-        console.log('[useDeleteRule onSuccessCallback] IndexedDB updated after deleting rule.');
+        logger.debug('[useDeleteRule onSuccessCallback] IndexedDB updated after deleting rule.');
         // Generic success toast is handled by useDeleteOptimisticMutation
       } catch (error) {
-        console.error('[useDeleteRule onSuccessCallback] Error updating IndexedDB:', error);
+        logger.error('[useDeleteRule onSuccessCallback] Error updating IndexedDB:', error);
         toast({ variant: "destructive", title: "Local Update Error", description: "Rule deleted on server, but failed to update local data." });
       }
     },

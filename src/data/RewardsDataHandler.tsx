@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Reward, UpdateRewardVariables } from './rewards/types';
+import { logger } from '@/lib/logger'; // Added logger
 
 // Import specific mutation hooks directly
 import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables } from './rewards/mutations/useSaveReward';
@@ -113,7 +114,7 @@ export const useRewardsData = () => {
         return await createRewardMutation.mutateAsync(createVariables);
       }
     } catch (error) {
-      console.error("Error in saveReward:", error);
+      logger.error("Error in saveReward:", error);
       return null;
     }
   };
@@ -124,7 +125,7 @@ export const useRewardsData = () => {
       await deleteRewardMutation.mutateAsync(rewardId);
       return true;
     } catch (error) {
-      console.error("Error in deleteReward:", error);
+      logger.error("Error in deleteReward:", error);
       return false;
     }
   };
@@ -201,7 +202,7 @@ export const useRewardsData = () => {
       
       return true;
     } catch (error) {
-      console.error("Error in buyReward:", error);
+      logger.error("Error in buyReward:", error);
       return false;
     }
   };
@@ -252,7 +253,7 @@ export const useRewardsData = () => {
       queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
       return true;
     } catch (error) {
-      console.error("Error in useReward:", error);
+      logger.error("Error in useReward:", error);
       return false;
     }
   };
@@ -281,7 +282,7 @@ export const useRewardsData = () => {
       queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY });
       return true;
     } catch (error) {
-      console.error("Error in updatePoints:", error);
+      logger.error("Error in updatePoints:", error);
       return false;
     }
   };
@@ -310,7 +311,7 @@ export const useRewardsData = () => {
       queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY });
       return true;
     } catch (error) {
-      console.error("Error in updateDomPoints:", error);
+      logger.error("Error in updateDomPoints:", error);
       return false;
     }
   };
@@ -328,7 +329,7 @@ export const useRewardsData = () => {
         .single();
         
       if (error || !data) {
-          if(error) console.error("Error fetching profile for points refresh:", error);
+          if(error) logger.error("Error fetching profile for points refresh:", error);
           return;
       }
       
@@ -338,7 +339,7 @@ export const useRewardsData = () => {
       await savePointsToDB(data.points || 0);
       await saveDomPointsToDB(data.dom_points || 0);
     } catch (error) {
-      console.error("Error in refreshPointsFromDatabase:", error);
+      logger.error("Error in refreshPointsFromDatabase:", error);
     }
   };
 

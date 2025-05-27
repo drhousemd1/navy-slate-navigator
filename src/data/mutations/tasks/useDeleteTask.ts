@@ -1,9 +1,9 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
 import { Task } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 export function useDeleteTask() {
   const queryClient = useQueryClient();
@@ -45,11 +45,11 @@ export function useDeleteTask() {
       try {
         await saveTasksToDB(currentTasks);
       } catch (indexedDbError) {
-        console.error('Failed to save tasks to IndexedDB after deletion:', indexedDbError);
+        logger.error('Failed to save tasks to IndexedDB after deletion:', indexedDbError);
         toast({
           title: 'Local Cache Error',
           description: 'Task deleted from server, but failed to update local cache.',
-          variant: 'default', // Changed 'warning' to 'default'
+          variant: 'default', 
         });
       }
 
@@ -73,7 +73,7 @@ export function useDeleteTask() {
           variant: 'destructive',
         });
       }
-      console.error('Error deleting task (from onError):', error.message);
+      logger.error('Error deleting task (from onError):', error.message);
     },
     onSettled: (data, error, deletedTaskId, context) => {
       // Always refetch after error or success to ensure server state
@@ -81,4 +81,3 @@ export function useDeleteTask() {
     },
   });
 }
-

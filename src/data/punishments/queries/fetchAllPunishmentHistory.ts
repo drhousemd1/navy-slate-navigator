@@ -2,9 +2,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import { PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { logQueryPerformance } from '@/lib/react-query-config';
+import { logger } from '@/lib/logger'; // Added logger
 
 export const fetchAllPunishmentHistory = async (): Promise<PunishmentHistoryItem[]> => {
-  console.log("[fetchAllPunishmentHistory] Starting all history fetch");
+  logger.debug("[fetchAllPunishmentHistory] Starting all history fetch");
   const startTime = performance.now();
   
   try {
@@ -14,7 +15,7 @@ export const fetchAllPunishmentHistory = async (): Promise<PunishmentHistoryItem
       .order('applied_date', { ascending: false });
 
     if (error) {
-      console.error('[fetchAllPunishmentHistory] Supabase error:', error);
+      logger.error('[fetchAllPunishmentHistory] Supabase error:', error);
       throw error; // Rethrow for React Query
     }
     
@@ -22,7 +23,8 @@ export const fetchAllPunishmentHistory = async (): Promise<PunishmentHistoryItem
         
     return data || [];
   } catch (error) {
-    console.error('[fetchAllPunishmentHistory] Fetch operation failed:', error);
+    logger.error('[fetchAllPunishmentHistory] Fetch operation failed:', error);
     throw error; // Ensure error propagates for React Query to handle
   }
 };
+

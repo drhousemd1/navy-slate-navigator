@@ -1,4 +1,3 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
@@ -6,6 +5,7 @@ import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/indexedDB/useIndexedDB';
 import { RULES_QUERY_KEY } from '../queries';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 export type UpdateRuleVariables = { id: string } & Partial<Omit<Rule, 'id'>>;
 
@@ -30,16 +30,16 @@ export const useUpdateRule = () => {
     entityName: 'Rule',
     idField: 'id',
     onSuccessCallback: async (updatedRuleData) => {
-      console.log('[useUpdateRule onSuccessCallback] Rule updated on server, updating IndexedDB.', updatedRuleData);
+      logger.debug('[useUpdateRule onSuccessCallback] Rule updated on server, updating IndexedDB.', updatedRuleData);
       try {
         const localRules = await loadRulesFromDB() || [];
         const updatedLocalRules = localRules.map(r => r.id === updatedRuleData.id ? updatedRuleData : r);
         await saveRulesToDB(updatedLocalRules);
         await setLastSyncTimeForRules(new Date().toISOString());
-        console.log('[useUpdateRule onSuccessCallback] IndexedDB updated with updated rule.');
+        logger.debug('[useUpdateRule onSuccessCallback] IndexedDB updated with updated rule.');
         // Generic success toast is handled by useUpdateOptimisticMutation
       } catch (error) {
-        console.error('[useUpdateRule onSuccessCallback] Error updating IndexedDB:', error);
+        logger.error('[useUpdateRule onSuccessCallback] Error updating IndexedDB:', error);
         toast({ variant: "destructive", title: "Local Save Error", description: "Rule updated on server, but failed to save changes locally." });
       }
     },

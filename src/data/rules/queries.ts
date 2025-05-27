@@ -13,7 +13,7 @@ import {
   getLastSyncTimeForRules,
   setLastSyncTimeForRules
 } from "../indexedDB/useIndexedDB";
-// Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+import { logger } from '@/lib/logger'; // Added logger
 
 export const RULES_QUERY_KEY = ['rules']; // Replaced CRITICAL_QUERY_KEYS.RULES
 
@@ -33,21 +33,21 @@ export function useRules() {
       }
 
       if (!shouldFetch && localData) {
-        console.log('[useRules queryFn] Using local data for rules.');
+        logger.debug('[useRules queryFn] Using local data for rules.');
         return localData;
       }
 
-      console.log('[useRules queryFn] Fetching rules from server.');
+      logger.debug('[useRules queryFn] Fetching rules from server.');
       const serverData: Rule[] = await fetchRulesFromServer();
 
       if (serverData) {
         await saveRulesToDB(serverData);
         await setLastSyncTimeForRules(new Date().toISOString());
-        console.log('[useRules queryFn] Saved server rules to DB and updated sync time.');
+        logger.debug('[useRules queryFn] Saved server rules to DB and updated sync time.');
         return serverData;
       }
       
-      console.log('[useRules queryFn] No server data, returning local data or empty array for rules.');
+      logger.debug('[useRules queryFn] No server data, returning local data or empty array for rules.');
       return localData || [];
     },
     staleTime: Infinity,

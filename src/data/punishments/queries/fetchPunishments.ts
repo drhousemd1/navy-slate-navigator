@@ -7,8 +7,9 @@ import {
   getLastSyncTimeForPunishments,
   setLastSyncTimeForPunishments
 } from "@/data/indexedDB/useIndexedDB";
-import { withTimeout, DEFAULT_TIMEOUT_MS, selectWithTimeout } from '@/lib/supabaseUtils'; // Added selectWithTimeout
+import { withTimeout, DEFAULT_TIMEOUT_MS, selectWithTimeout } from '@/lib/supabaseUtils';
 import { PostgrestError } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger'; // Added logger
 
 export const fetchPunishments = async (): Promise<PunishmentData[]> => {
   const localData = await loadPunishmentsFromDB() as PunishmentData[] | null;
@@ -27,7 +28,7 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
   }
 
   if (!shouldFetchFromServer && localData) {
-    console.log('[fetchPunishments] Returning punishments from IndexedDB');
+    logger.debug('[fetchPunishments] Returning punishments from IndexedDB');
     return localData.map(p => ({
       ...p,
       // Ensure defaults for fields that might be missing in older cached data
@@ -44,7 +45,7 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
     }));
   }
 
-  console.log('[fetchPunishments] Fetching punishments from server');
+  logger.debug('[fetchPunishments] Fetching punishments from server');
   
   try {
     const { data, error } = await selectWithTimeout<PunishmentData>(
@@ -57,9 +58,9 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
     );
 
     if (error) {
-      console.error('[fetchPunishments] Supabase error fetching punishments:', error);
+      logger.error('[fetchPunishments] Supabase error fetching punishments:', error);
       if (localData) {
-        console.warn('[fetchPunishments] Server fetch failed, returning stale data from IndexedDB');
+        logger.warn('[fetchPunishments] Server fetch failed, returning stale data from IndexedDB');
         return localData.map(p => ({
           ...p,
           dom_supply: p.dom_supply ?? 0,
@@ -94,7 +95,7 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
       
       await savePunishmentsToDB(punishmentsFromServer);
       await setLastSyncTimeForPunishments(new Date().toISOString());
-      console.log('[fetchPunishments] Punishments fetched from server and saved to IndexedDB');
+      logger.debug('[fetchPunishments] Punishments fetched from server and saved to IndexedDB');
       return punishmentsFromServer;
     }
 
@@ -111,9 +112,9 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
       calendar_color: p.calendar_color ?? '#ea384c',
     })) : [];
   } catch (error) {
-    console.error('[fetchPunishments] Error fetching punishments:', error);
+    logger.error('[fetchPunishments] Error fetching punishments:', error);
     if (localData) {
-      console.warn('[fetchPunishments] Error fetching punishments, using cached data:', error);
+      logger.warn('[fetchPunishments] Error fetching punishments, using cached data:', error);
       return localData.map(p => ({
         ...p,
         dom_supply: p.dom_supply ?? 0,
@@ -130,3 +131,4 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
     throw error;
   }
 };
+
