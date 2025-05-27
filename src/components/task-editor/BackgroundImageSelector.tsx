@@ -3,15 +3,15 @@ import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/for
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Upload } from 'lucide-react';
-import { Control, UseFormSetValue, FieldValues, Path } from 'react-hook-form';
+import { Control, UseFormSetValue, FieldValues, Path, PathValue } from 'react-hook-form';
 import ImageFocalPointControl from '@/components/encyclopedia/image/ImageFocalPointControl';
 import { logger } from '@/lib/logger';
 
 // Define an interface for the fields required by this component from the form
 export interface BackgroundImageFormFields extends FieldValues {
-  background_opacity: number;
-  focal_point_x: number;
-  focal_point_y: number;
+  background_opacity?: number; // Made optional
+  focal_point_x?: number;      // Made optional
+  focal_point_y?: number;      // Made optional
 }
 
 interface BackgroundImageSelectorProps<TFormValues extends BackgroundImageFormFields> {
@@ -38,7 +38,12 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
     y: initialPosition?.y ?? 50
   });
   
-  const [opacity, setOpacity] = useState<number>(100);
+  const [opacity, setOpacity] = useState<number>(
+    // Initialize with form value if available, otherwise default to 100
+    typeof control._getWatch('background_opacity' as Path<TFormValues>) === 'number' 
+      ? control._getWatch('background_opacity' as Path<TFormValues>) as number 
+      : 100 
+  );
 
   useEffect(() => {
     if (initialPosition) {
@@ -48,33 +53,31 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
 
   useEffect(() => {
     try {
-      // Ensure Path<TFormValues> is used for type safety with _getWatch
       const watchedOpacity = control._getWatch('background_opacity' as Path<TFormValues>);
       let formOpacity: number | undefined = typeof watchedOpacity === 'number' ? watchedOpacity : undefined;
       
-      if (formOpacity === undefined && control._formValues) {
-        const formValueOpacity = control._formValues.background_opacity;
-        if (typeof formValueOpacity === 'number') {
-          formOpacity = formValueOpacity;
-        }
+      if (formOpacity === undefined && control._formValues && typeof control._formValues.background_opacity === 'number') {
+        formOpacity = control._formValues.background_opacity;
       }
       
       if (typeof formOpacity === 'number') {
         logger.debug("Setting opacity from form value:", formOpacity);
         setOpacity(formOpacity);
-      } else if (imagePreview) {
-        logger.debug("Setting default opacity for new image to 100");
-        // Use Path<TFormValues> for type safety with setValue
-        setValue('background_opacity' as Path<TFormValues>, 100 as any); // Cast 100 as any to satisfy PathValue
+      } else if (imagePreview && opacity !== 100) { // Only set default if opacity isn't already set or image changes
+        logger.debug("Setting default opacity for new image to 100, as form value is not set.");
+        setValue('background_opacity' as Path<TFormValues>, 100 as PathValue<TFormValues, Path<TFormValues>>);
         setOpacity(100);
+      } else if (!imagePreview) {
+        // Optionally reset or handle opacity when image is removed
+        // For now, we keep the current opacity or let the form control it.
       }
     } catch (error) {
       logger.error("Error setting opacity:", error);
       setOpacity(100); // Default to 100 on error
     }
-  }, [control, imagePreview, setValue]);
+  }, [control, imagePreview, setValue, opacity]);
 
-  const updatePosition = (clientX: number, clientY: number) => {
+  const updatePosition = React.useCallback((clientX: number, clientY: number) => {
     if (!imageContainerRef.current) return;
     const rect = imageContainerRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
@@ -82,10 +85,9 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
     
     setPosition({ x, y });
     
-    // Use Path<TFormValues> for type safety
-    setValue('focal_point_x' as Path<TFormValues>, Math.round(x) as any);
-    setValue('focal_point_y' as Path<TFormValues>, Math.round(y) as any);
-  };
+    setValue('focal_point_x' as Path<TFormValues>, Math.round(x) as PathValue<TFormValues, Path<TFormValues>>);
+    setValue('focal_point_y' as Path<TFormValues>, Math.round(y) as PathValue<TFormValues, Path<TFormValues>>);
+  }, [setValue]); // Added setValue to dependency array for useCallback
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -106,7 +108,7 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
     
     const handleTouchMove = (e: TouchEvent) => {
       if (isDragging && e.touches.length > 0) {
-        e.preventDefault(); // Important for touch devices
+        e.preventDefault(); 
         updatePosition(e.touches[0].clientX, e.touches[0].clientY);
       }
     };
@@ -115,7 +117,6 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', stopDragging);
-    // Ensure passive is false for touchmove if preventDefault is called
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', stopDragging);
 
@@ -125,16 +126,13 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', stopDragging);
     };
-  // updatePosition is a dependency because its definition might change if its own dependencies change,
-  // although in this specific case it's stable. Added it for completeness, but can be omitted if truly stable.
-  }, [isDragging, setValue, updatePosition]); 
+  }, [isDragging, updatePosition]); // updatePosition is now memoized with useCallback
 
   const handleOpacityChange = (values: number[]) => {
     const opacityValue = values[0];
     logger.debug("Slider changing opacity to:", opacityValue);
     setOpacity(opacityValue);
-    // Use Path<TFormValues> for type safety
-    setValue('background_opacity' as Path<TFormValues>, opacityValue as any);
+    setValue('background_opacity' as Path<TFormValues>, opacityValue as PathValue<TFormValues, Path<TFormValues>>);
   };
 
   return (
@@ -149,7 +147,7 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
               <ImageFocalPointControl
                 imagePreview={imagePreview}
                 position={position}
-                opacity={opacity}
+                opacity={opacity} // Use local state opacity for visual consistency
                 isDragging={isDragging}
                 onMouseDown={handleMouseDown}
                 onTouchStart={handleTouchStart}
@@ -180,20 +178,20 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
       {imagePreview && (
         <FormField
           control={control}
-          name={'background_opacity' as Path<TFormValues>} // Use Path for name
-          render={({ field }) => (
+          name={'background_opacity' as Path<TFormValues>}
+          render={({ field }) => ( // field here includes value, onChange, onBlur, ref, etc.
             <FormItem className="space-y-2">
-              <FormLabel className="text-white">Image Opacity ({opacity}%)</FormLabel>
+              <FormLabel className="text-white">Image Opacity ({Math.round(opacity)}%)</FormLabel>
               <FormControl>
                 <Slider
-                  // field.value might not be up-to-date if opacity state is managed separately
-                  // and form value is set via setValue. Using local opacity state for slider value.
+                  // Use the local 'opacity' state for the slider's value for immediate UI feedback.
+                  // The form value is updated via `handleOpacityChange` which calls `setValue`.
                   value={[opacity]} 
                   min={0}
                   max={100}
                   step={1}
-                  onValueChange={handleOpacityChange} // This already calls setValue
-                  // onBlur={field.onBlur} // Optional: if you need blur handling
+                  onValueChange={handleOpacityChange} 
+                  // field.onBlur can be added if blur-specific logic is needed
                 />
               </FormControl>
             </FormItem>
