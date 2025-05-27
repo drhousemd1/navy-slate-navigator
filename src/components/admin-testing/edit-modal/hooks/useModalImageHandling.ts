@@ -1,5 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const useModalImageHandling = (initialImageUrl?: string, initialBackgroundImages?: string[]) => {
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
@@ -15,7 +17,7 @@ export const useModalImageHandling = (initialImageUrl?: string, initialBackgroun
       const newImageSlots = [null, null, null, null, null];
       
       if (Array.isArray(initialBackgroundImages) && initialBackgroundImages.length > 0) {
-        console.log("Loading background_images into slots:", initialBackgroundImages);
+        logger.debug("Loading background_images into slots:", initialBackgroundImages); // Replaced console.log
         initialBackgroundImages.forEach((img, index) => {
           if (index < newImageSlots.length && img) {
             newImageSlots[index] = img;
@@ -57,9 +59,9 @@ export const useModalImageHandling = (initialImageUrl?: string, initialBackgroun
         setImageSlots(updatedSlots);
         setImagePreview(base64String);
         
-        console.log(`Updated image slot ${targetIndex} and set as preview`);
+        logger.debug(`Updated image slot ${targetIndex} and set as preview`); // Replaced console.log
       } catch (error) {
-        console.error("Error processing uploaded image:", error);
+        logger.error("Error processing uploaded image:", error); // Replaced console.error
         toast({
           title: "Image Error",
           description: "There was a problem processing the uploaded image",
@@ -69,7 +71,7 @@ export const useModalImageHandling = (initialImageUrl?: string, initialBackgroun
     };
     
     reader.onerror = (error) => {
-      console.error("FileReader error:", error);
+      logger.error("FileReader error:", error); // Replaced console.error
       toast({
         title: "Upload Error",
         description: "Failed to read the image file",
@@ -80,7 +82,7 @@ export const useModalImageHandling = (initialImageUrl?: string, initialBackgroun
     try {
       reader.readAsDataURL(file);
     } catch (error) {
-      console.error("Error reading file as data URL:", error);
+      logger.error("Error reading file as data URL:", error); // Replaced console.error
       toast({
         title: "File Error",
         description: "Failed to read the image file",
@@ -98,9 +100,9 @@ export const useModalImageHandling = (initialImageUrl?: string, initialBackgroun
       // Clear preview but keep the selected box highlighted
       setImagePreview(null);
       
-      console.log(`Removed image from slot ${selectedBoxIndex}, cleared preview but kept selection`);
+      logger.debug(`Removed image from slot ${selectedBoxIndex}, cleared preview but kept selection`); // Replaced console.log
     } else {
-      console.log('No slot selected for removal');
+      logger.debug('No slot selected for removal'); // Replaced console.log
     }
   };
 
@@ -121,11 +123,11 @@ export const useModalImageHandling = (initialImageUrl?: string, initialBackgroun
           if (slot.startsWith('data:image') || slot.startsWith('http')) {
             return slot;
           } else {
-            console.warn("Invalid image data in slot:", slot.substring(0, 30));
+            logger.warn("Invalid image data in slot:", slot.substring(0, 30)); // Replaced console.warn
             return null;
           }
         } catch (e) {
-          console.error("Error validating image slot:", e);
+          logger.error("Error validating image slot:", e); // Replaced console.error
           return null;
         }
       })
@@ -149,3 +151,4 @@ export const useModalImageHandling = (initialImageUrl?: string, initialBackgroun
     getProcessedImages
   };
 };
+

@@ -8,6 +8,7 @@ import RewardColorSettings from './RewardColorSettings';
 import RewardFormActions from './RewardFormActions';
 import DeleteRewardDialog from './DeleteRewardDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
+import { logger } from '@/lib/logger';
 
 interface RewardFormValues {
   title: string;
@@ -119,7 +120,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   };
 
   const handleUploadIcon = () => {
-    console.log('Custom icon upload not implemented for rewards yet');
+    logger.debug('Custom icon upload not implemented for rewards yet');
   };
 
   const handleRemoveIcon = () => {
@@ -150,7 +151,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       await onSave(data);
       await clearPersistedState();
     } catch (error) {
-      console.error("Error during onSave callback:", error);
+      logger.error("Error during onSave callback:", error);
     }
   };
 

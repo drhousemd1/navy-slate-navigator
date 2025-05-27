@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Trash2 } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { EncyclopediaEntry } from '@/types/encyclopedia';
+import { logger } from '@/lib/logger';
 
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import TextFormatToolbar from './formatting/TextFormatToolbar';
@@ -248,7 +249,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   };
 
   const handleTextSelection = (selection: { start: number; end: number }) => {
-    console.log("Text selected (manual tracking):", selection);
+    logger.debug("Text selected (manual tracking):", selection); // Replaced console.log
     setSelectedTextRange(selection);
     if (onFormatSelection) {
       onFormatSelection(selection);
@@ -271,7 +272,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       formatting: { ...formatting }
     };
     
-    console.log("Applying formatting (manual tracking):", newFormattedSection);
+    logger.debug("Applying formatting (manual tracking):", newFormattedSection); // Replaced console.log
     
     const updatedSections = [...formattedSections, newFormattedSection];
     setFormattedSections(updatedSections); // Update local state

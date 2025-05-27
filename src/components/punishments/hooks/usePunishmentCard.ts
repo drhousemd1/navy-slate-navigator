@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 // import { usePunishments } from '@/contexts/PunishmentsContext'; // No longer used for save/delete
 import { usePunishmentApply } from './usePunishmentApply'; // This uses useApplyPunishmentMutation
@@ -7,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { useUpdatePunishment, useDeletePunishment } from '@/data/punishments/mutations'; // Import mutation hooks
 import { useQueryClient } from '@tanstack/react-query';
 import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries';
+import { logger } from '@/lib/logger'; // Added logger import
 
 interface UsePunishmentCardProps {
   punishment: PunishmentData; 
@@ -30,7 +30,7 @@ export const usePunishmentCard = ({ punishment }: UsePunishmentCardProps) => {
 
   const handleSavePunishment = async (data: Partial<Omit<PunishmentData, 'id'>>): Promise<PunishmentData> => { 
     if (!punishment.id) {
-       console.error("usePunishmentCard: Punishment ID is missing for update.");
+       logger.error("usePunishmentCard: Punishment ID is missing for update.");
        toast({ title: "Error", description: "Punishment ID is missing.", variant: "destructive" });
        throw new Error("Punishment ID is missing for update.");
     }
@@ -44,7 +44,7 @@ export const usePunishmentCard = ({ punishment }: UsePunishmentCardProps) => {
       setIsEditorOpen(false); 
       return saved;
     } catch (error) {
-      console.error("Error saving punishment from card hook:", error);
+      logger.error("Error saving punishment from card hook:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to save punishment",
@@ -67,7 +67,7 @@ export const usePunishmentCard = ({ punishment }: UsePunishmentCardProps) => {
       });
       setIsEditorOpen(false); 
     } catch (error) {
-      console.error("Error deleting punishment:", error);
+      logger.error("Error deleting punishment:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete punishment",
