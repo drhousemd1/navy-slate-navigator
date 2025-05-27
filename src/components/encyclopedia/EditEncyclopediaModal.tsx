@@ -249,7 +249,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
   };
 
   const handleTextSelection = (selection: { start: number; end: number }) => {
-    logger.debug("Text selected (manual tracking):", selection); // Replaced console.log
+    logger.debug("Text selected (manual tracking):", selection);
     setSelectedTextRange(selection);
     if (onFormatSelection) {
       onFormatSelection(selection);
@@ -272,7 +272,7 @@ const EditEncyclopediaModal: React.FC<EditEncyclopediaModalProps> = ({
       formatting: { ...formatting }
     };
     
-    logger.debug("Applying formatting (manual tracking):", newFormattedSection); // Replaced console.log
+    logger.debug("Applying formatting (manual tracking):", newFormattedSection);
     
     const updatedSections = [...formattedSections, newFormattedSection];
     setFormattedSections(updatedSections); // Update local state
