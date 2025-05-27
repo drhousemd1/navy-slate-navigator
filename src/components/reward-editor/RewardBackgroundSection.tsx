@@ -2,7 +2,8 @@
 import React from 'react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import { RewardFormValues } from '@/data/rewards/types';
-import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
+// import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector'; // Old import
+import RewardBackgroundImageSelector from './RewardBackgroundImageSelector'; // New import
 import { FormLabel } from '@/components/ui/form';
 import { logger } from '@/lib/logger';
 
@@ -32,7 +33,7 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
       <p className="text-sm text-muted-foreground pb-2">
         Add a background image to make your reward more visually appealing.
       </p>
-      <BackgroundImageSelector<RewardFormValues>
+      <RewardBackgroundImageSelector
         control={control}
         imagePreview={imagePreview}
         initialPosition={initialPosition}

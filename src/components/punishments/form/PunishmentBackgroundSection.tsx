@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { FormLabel } from "@/components/ui/form";
-import BackgroundImageSelector from '../../task-editor/BackgroundImageSelector';
+// import BackgroundImageSelector from '../../task-editor/BackgroundImageSelector'; // Old import
+import PunishmentBackgroundImageSelector from './PunishmentBackgroundImageSelector'; // New import
 import { Control, UseFormSetValue } from 'react-hook-form';
 import { PunishmentFormValues } from './PunishmentFormProvider'; 
 
@@ -23,7 +24,7 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Image</FormLabel>
-      <BackgroundImageSelector<PunishmentFormValues> 
+      <PunishmentBackgroundImageSelector
         control={control}
         imagePreview={imagePreview}
         initialPosition={{
