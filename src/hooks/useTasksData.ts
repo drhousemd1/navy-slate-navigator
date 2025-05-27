@@ -1,14 +1,22 @@
-
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react'; // useEffect is not directly used here
 import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries';
-import { TaskWithId } from '@/data/tasks/types';
+import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables, Json } from '@/data/tasks/types'; // Import necessary types
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
-import { useDeleteTask } from '@/data/mutations/tasks/useDeleteTask';
-import { TaskPriority } from '@/lib/taskUtils'; 
+// useDeleteTask is imported from data/tasks/mutations now, not data/mutations/tasks
+import { useDeleteTask } from '@/data/tasks/mutations/useDeleteTask'; 
+// TaskPriority might not be needed if TaskFormValues.priority covers it
+// import { TaskPriority } from '@/lib/taskUtils'; 
 import { logger } from '@/lib/logger';
+import { useCreateTask } from '@/data/tasks/mutations/useCreateTask'; // Import useCreateTask
+import { useUpdateTask } from '@/data/tasks/mutations/useUpdateTask'; // Import useUpdateTask
+
+
+// Define a type for the data saveTask might receive
+type SaveTaskInput = (TaskFormValues & { id?: string }) | (TaskWithId & Partial<TaskFormValues>);
+
 
 export const useTasksData = () => {
   const { 
@@ -21,120 +29,76 @@ export const useTasksData = () => {
   
   const queryClient = useQueryClient();
   const deleteTaskMutation = useDeleteTask();
+  const createTaskMutation = useCreateTask();
+  const updateTaskMutation = useUpdateTask();
 
-  const saveTask = async (taskData: TaskWithId) => {
+  const saveTask = async (taskData: SaveTaskInput): Promise<TaskWithId | null> => {
     try {
       if (taskData.id) {
         // Update existing task
-        const { error: updateError } = await supabase
-          .from("tasks")
-          .update({
-            title: taskData.title,
-            description: taskData.description,
-            points: taskData.points,
-            frequency: taskData.frequency,
-            frequency_count: taskData.frequency_count,
-            background_image_url: taskData.background_image_url,
-            background_opacity: taskData.background_opacity,
-            icon_url: taskData.icon_url,
-            icon_name: taskData.icon_name,
-            priority: taskData.priority,
-            title_color: taskData.title_color,
-            subtext_color: taskData.subtext_color,
-            calendar_color: taskData.calendar_color,
-            icon_color: taskData.icon_color,
-            highlight_effect: taskData.highlight_effect,
-            focal_point_x: taskData.focal_point_x,
-            focal_point_y: taskData.focal_point_y
-          })
-          .eq("id", taskData.id);
+        // Map SaveTaskInput (which includes TaskFormValues fields) to UpdateTaskVariables
+        const { id, created_at, updated_at, completed, last_completed_date, usage_data, ...updatePayload } = taskData as TaskWithId & Partial<TaskFormValues>;
+        
+        const variables: UpdateTaskVariables = {
+          id,
+          title: updatePayload.title,
+          description: updatePayload.description,
+          points: updatePayload.points,
+          frequency: updatePayload.frequency,
+          frequency_count: updatePayload.frequency_count,
+          background_image_url: updatePayload.background_image_url,
+          background_opacity: updatePayload.background_opacity,
+          icon_url: updatePayload.icon_url,
+          icon_name: updatePayload.icon_name,
+          priority: updatePayload.priority,
+          title_color: updatePayload.title_color,
+          subtext_color: updatePayload.subtext_color,
+          calendar_color: updatePayload.calendar_color,
+          icon_color: updatePayload.icon_color,
+          highlight_effect: updatePayload.highlight_effect,
+          focal_point_x: updatePayload.focal_point_x,
+          focal_point_y: updatePayload.focal_point_y,
+          // background_images is not part of TaskFormValues, handle if it comes from TaskWithId
+          // background_images: 'background_images' in updatePayload ? updatePayload.background_images as Json | null : undefined,
+        };
+        // Filter out undefined values explicitly if mutation expects only defined fields for partial update
+        const definedVariables = Object.fromEntries(Object.entries(variables).filter(([_, v]) => v !== undefined)) as UpdateTaskVariables;
 
-        if (updateError) {
-          logger.error("Error updating task:", updateError);
-          toast({
-            title: 'Error',
-            description: 'Failed to update task: ' + updateError.message,
-            variant: 'destructive',
-          });
-          throw updateError;
-        }
+        return await updateTaskMutation.mutateAsync(definedVariables);
 
-        // Update the local cache optimistically
-        queryClient.setQueryData<TaskWithId[]>(["tasks"], (oldTasks) => {
-          if (!oldTasks) return [taskData];
-          const updatedTasks = oldTasks.map(t => 
-            t.id === taskData.id ? { ...t, ...taskData, completed: t.completed } : t
-          );
-          saveTasksToDB(updatedTasks); // Update IndexedDB
-          return updatedTasks;
-        });
-
-        toast({
-          title: 'Task Updated',
-          description: 'Your task has been updated successfully.',
-        });
-        return taskData;
       } else {
         // Create new task
-        const newTaskData = {
-          title: taskData.title,
-          description: taskData.description,
-          points: taskData.points,
-          completed: false,
-          frequency: taskData.frequency,
-          frequency_count: taskData.frequency_count,
-          background_image_url: taskData.background_image_url,
-          background_opacity: taskData.background_opacity,
-          icon_url: taskData.icon_url,
-          icon_name: taskData.icon_name,
-          priority: taskData.priority || 'medium' as TaskPriority,
-          title_color: taskData.title_color,
-          subtext_color: taskData.subtext_color,
-          calendar_color: taskData.calendar_color,
-          icon_color: taskData.icon_color,
-          highlight_effect: taskData.highlight_effect,
-          focal_point_x: taskData.focal_point_x,
-          focal_point_y: taskData.focal_point_y,
-          usage_data: Array(7).fill(0)
+        // Map TaskFormValues to CreateTaskVariables
+        const createPayload = taskData as TaskFormValues;
+        const variables: CreateTaskVariables = {
+          title: createPayload.title,
+          description: createPayload.description,
+          points: createPayload.points,
+          frequency: createPayload.frequency,
+          frequency_count: createPayload.frequency_count,
+          background_image_url: createPayload.background_image_url,
+          background_opacity: createPayload.background_opacity,
+          icon_url: createPayload.icon_url,
+          icon_name: createPayload.icon_name,
+          priority: createPayload.priority,
+          title_color: createPayload.title_color,
+          subtext_color: createPayload.subtext_color,
+          calendar_color: createPayload.calendar_color,
+          icon_color: createPayload.icon_color,
+          highlight_effect: createPayload.highlight_effect,
+          focal_point_x: createPayload.focal_point_x,
+          focal_point_y: createPayload.focal_point_y,
+          // background_images is not part of TaskFormValues, set to null or handle as needed
+          background_images: null, 
+          usage_data: Array(7).fill(0), // Default usage_data for new tasks
         };
-
-        const { data: newTaskResponse, error: insertError } = await supabase
-          .from("tasks")
-          .insert([newTaskData])
-          .select();
-
-        if (insertError) {
-          logger.error("Error creating task:", insertError);
-          toast({
-            title: 'Error',
-            description: 'Failed to create task: ' + insertError.message,
-            variant: 'destructive',
-          });
-          throw insertError;
-        }
-
-        // Update the cache with the new task from the server
-        if (newTaskResponse && newTaskResponse[0]) {
-          const createdTask = newTaskResponse[0] as TaskWithId;
-          queryClient.setQueryData<TaskWithId[]>(["tasks"], (oldTasks) => {
-            const newTasks = oldTasks ? [createdTask, ...oldTasks] : [createdTask];
-            saveTasksToDB(newTasks); // Update IndexedDB
-            return newTasks;
-          });
-
-          toast({
-            title: 'Task Created',
-            description: 'Your new task has been created successfully.',
-          });
-          return createdTask;
-        }
+        return await createTaskMutation.mutateAsync(variables);
       }
-      
-      await refetch();
-      return null;
     } catch (err) {
-      logger.error("Error in saveTask:", err);
-      throw err;
+      logger.error("Error in saveTask (useTasksData):", err);
+      // Toasting for errors is typically handled by the mutation hooks themselves (onErorr)
+      // or by the component calling saveTask if needed.
+      throw err; // Re-throw to be caught by the calling component if necessary
     }
   };
 
@@ -142,6 +106,9 @@ export const useTasksData = () => {
     return deleteTaskMutation.mutateAsync(taskId);
   };
 
+  // toggleTaskCompletion is handled by useToggleTaskCompletionMutation directly in Tasks.tsx
+  // So, it can be removed from here if not used elsewhere via this hook.
+  // For now, keeping it as it was in the original file.
   const toggleTaskCompletion = async (taskId: string, completed: boolean, points: number = 0) => {
     try {
       // Update the local cache optimistically first
@@ -157,17 +124,16 @@ export const useTasksData = () => {
       // Then update the database
       const { error: toggleError } = await supabase
         .from("tasks")
-        .update({ completed })
+        .update({ completed, last_completed_date: completed ? new Date().toISOString() : null })
         .eq("id", taskId);
 
       if (toggleError) {
         logger.error("Error updating task completion:", toggleError);
         
-        // Revert the optimistic update
         queryClient.setQueryData<TaskWithId[]>(["tasks"], oldTasks => {
           if (!oldTasks) return [];
           const revertedTasks = oldTasks.map(t => 
-            t.id === taskId ? { ...t, completed: !completed } : t
+            t.id === taskId ? { ...t, completed: !completed, last_completed_date: !completed ? new Date().toISOString() : null } : t
           );
           saveTasksToDB(revertedTasks);
           return revertedTasks;
@@ -181,28 +147,28 @@ export const useTasksData = () => {
         throw toggleError;
       }
 
-      // If the task was marked as completed, trigger the completion history recording and points update
       if (completed) {
-        // This async operation could happen in the background
         try {
+          const userResult = await supabase.auth.getUser();
+          const userId = userResult.data.user?.id;
+          if (!userId) throw new Error("User not authenticated for recording completion.");
+
           await supabase.rpc('record_task_completion', { 
             task_id_param: taskId,
-            user_id_param: (await supabase.auth.getUser()).data.user?.id 
+            user_id_param: userId 
           });
           
-          // Get the user's current points
           const { data: profile } = await supabase
             .from('profiles')
             .select('points')
-            .eq('id', (await supabase.auth.getUser()).data.user?.id)
+            .eq('id', userId)
             .single();
             
           if (profile) {
-            // Update the points
             await supabase
               .from('profiles')
-              .update({ points: profile.points + points })
-              .eq('id', (await supabase.auth.getUser()).data.user?.id);
+              .update({ points: (profile.points || 0) + points })
+              .eq('id', userId);
           }
           
           toast({
@@ -211,14 +177,18 @@ export const useTasksData = () => {
           });
         } catch (err) {
           logger.error("Error recording task completion or updating points:", err);
-          // We don't need to revert the UI state here since the task is still marked complete
-          // Just inform the user about points issue
           toast({
             title: 'Points Update Issue',
             description: 'Task marked complete, but there was an issue updating your points.',
             variant: 'default',
           });
         }
+      } else {
+         // Task marked as not completed, potentially remove points if that's the logic
+        toast({
+          title: 'Task Incomplete',
+          description: 'Task marked as not completed.',
+        });
       }
 
       return true;
@@ -228,6 +198,7 @@ export const useTasksData = () => {
     }
   };
 
+
   return {
     tasks,
     isLoading,
@@ -235,8 +206,7 @@ export const useTasksData = () => {
     isUsingCachedData,
     saveTask,
     deleteTask,
-    toggleTaskCompletion,
+    toggleTaskCompletion, // Keep if used, otherwise consider removing if direct mutation usage is preferred
     refetch
   };
 };
-

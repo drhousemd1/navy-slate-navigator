@@ -3,15 +3,15 @@ import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
 import TasksHeader from '../components/task/TasksHeader';
 import TasksList from '../components/task/TasksList';
-import { RewardsProvider, useRewards } from '@/contexts/RewardsContext'; // Keep useRewards for now for the useEffect
-import { TaskWithId } from '@/data/tasks/types';
+import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
+import { TaskWithId, TaskFormValues } from '@/data/tasks/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useTasksData } from '@/hooks/useTasksData';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
 import EmptyState from '@/components/common/EmptyState';
 import { ListChecks, LoaderCircle } from 'lucide-react';
 import { useToggleTaskCompletionMutation } from '../data/tasks/mutations/useToggleTaskCompletionMutation';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
 const TasksPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -54,11 +54,17 @@ const TasksPageContent: React.FC = () => {
     setIsEditorOpen(true);
   };
 
-  const handleSaveTask = async (taskData: TaskWithId) => { 
+  const handleSaveTask = async (formData: TaskFormValues) => { 
     try {
-      const savedTask = await saveTask(taskData);
-      // if (savedTask && savedTask.id) { // Logic removed in original, keeping it that way
-      // }
+      let taskToSave: any;
+      if (currentTask && currentTask.id) {
+        taskToSave = { ...currentTask, ...formData, id: currentTask.id };
+      } else {
+        taskToSave = { ...formData };
+      }
+      await saveTask(taskToSave);
+      setIsEditorOpen(false);
+      setCurrentTask(null);
     } catch (err) {
       logger.error('Error saving task in UI:', err);
     }
@@ -67,6 +73,8 @@ const TasksPageContent: React.FC = () => {
   const handleDeleteTask = async (taskId: string) => {
     try {
       await deleteTask(taskId);
+      setIsEditorOpen(false);
+      setCurrentTask(null);
     } catch (err) {
       logger.error('Error deleting task in UI:', err);
     }
@@ -91,8 +99,6 @@ const TasksPageContent: React.FC = () => {
   };
 
   useEffect(() => {
-    // This useEffect might be for initial load or other general refresh needs.
-    // The mutation hook specifically handles refresh *after* a task completion.
     refreshPointsFromDatabase(); 
   }, [refreshPointsFromDatabase]); 
 
@@ -117,13 +123,17 @@ const TasksPageContent: React.FC = () => {
         icon={ListChecks} 
         title="No Tasks Yet"
         description="You do not have any tasks yet, create one to get started."
+        actionButton={{
+          label: "Create New Task",
+          onClick: handleAddTask,
+        }}
       />
     );
   } else {
     content = (
       <TasksList
         tasks={tasks}
-        isLoading={false} // tasks prop implies data is loaded, or loading state is handled above
+        isLoading={false} 
         onEditTask={handleEditTask}
         onToggleCompletion={handleToggleCompletion}
         error={error} 
@@ -133,7 +143,7 @@ const TasksPageContent: React.FC = () => {
 
   return (
     <div className="p-4 pt-6 TasksContent">
-      <TasksHeader /> 
+      <TasksHeader onAddNewTask={handleAddTask} /> 
       {content}
       <TaskEditor
         isOpen={isEditorOpen}

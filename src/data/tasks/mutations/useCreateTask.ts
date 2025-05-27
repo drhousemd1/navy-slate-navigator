@@ -1,22 +1,19 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
-import { TaskWithId, CreateTaskVariables } from '@/data/tasks/types';
-import { TASKS_QUERY_KEY } from '../queries'; // Corrected import
+import { TaskWithId, CreateTaskVariables, Json } from '@/data/tasks/types';
+import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
 
   return useCreateOptimisticMutation<TaskWithId, Error, CreateTaskVariables>({
     queryClient,
-    queryKey: TASKS_QUERY_KEY, // Use the constant
+    queryKey: TASKS_QUERY_KEY,
     mutationFn: async (variables: CreateTaskVariables) => {
-      // Ensure all required fields for DB insertion are present,
-      // relying on DB defaults for fields not in CreateTaskVariables or Task interface.
       const taskToInsert = {
         title: variables.title,
         points: variables.points,
@@ -35,10 +32,8 @@ export const useCreateTask = () => {
         focal_point_x: variables.focal_point_x || 50,
         focal_point_y: variables.focal_point_y || 50,
         week_identifier: variables.week_identifier, 
-        background_images: variables.background_images,
+        background_images: variables.background_images as Json,
         icon_url: variables.icon_url,
-        // `completed` and `last_completed_date` will use DB defaults or be set by `toggleTaskCompletion`
-        // `created_at` and `updated_at` are handled by DB
       };
 
       const { data, error } = await supabase
@@ -60,7 +55,6 @@ export const useCreateTask = () => {
         updated_at: now,
         completed: false,
         last_completed_date: null,
-        // Default values from schema for fields not in variables
         title: variables.title,
         points: variables.points,
         description: variables.description || null,
@@ -79,9 +73,9 @@ export const useCreateTask = () => {
         focal_point_y: variables.focal_point_y || 50,
         week_identifier: variables.week_identifier || null,
         icon_url: variables.icon_url || null,
-        usage_data: variables.usage_data || Array(7).fill(0), // Default usage_data
-        background_images: variables.background_images || null,
-        ...variables, // Spread remaining variables
+        usage_data: variables.usage_data || Array(7).fill(0),
+        background_images: variables.background_images as Json || null,
+        ...variables,
       } as TaskWithId;
     },
     onSuccessCallback: async (newTaskData) => {
@@ -99,4 +93,3 @@ export const useCreateTask = () => {
     },
   });
 };
-
