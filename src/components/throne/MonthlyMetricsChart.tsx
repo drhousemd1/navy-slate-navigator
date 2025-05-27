@@ -10,6 +10,7 @@ import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 import MonthlyMetricsChartSkeleton from './MonthlyMetricsChartSkeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMonthlyMetrics, MonthlyMetricsData, MonthlyDataItem, MonthlyMetricsSummary } from '@/data/queries/metrics/useMonthlyMetrics'; // Import the new hook and types
+import { logger } from '@/lib/logger'; // Added logger import
 
 // Interface MonthlyMetricsSummary is now imported from the hook
 
@@ -63,7 +64,7 @@ const MonthlyMetricsChart: React.FC = () => {
 
   if (error) {
     // The hook already shows a toast on error.
-    console.error("Error in MonthlyMetricsChart:", error);
+    logger.error("Error in MonthlyMetricsChart:", error); // Replaced console.error
   }
 
   const hasContent = data.dataArray.some(d =>

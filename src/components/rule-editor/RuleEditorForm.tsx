@@ -15,6 +15,7 @@ import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
+import { logger } from '@/lib/logger'; // Logger is already imported
 
 interface RuleFormValues {
   title: string;
@@ -202,7 +203,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       await onSave(ruleToSave);
       await clearPersistedState();
     } catch (error) {
-      console.error('Error saving rule:', error);
+      logger.error('Error saving rule:', error);
       toast({
         title: "Error",
         description: "Failed to save rule. Please try again.",
