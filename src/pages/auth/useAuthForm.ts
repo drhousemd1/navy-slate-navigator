@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth'; 
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState } from './types';
-import { clearAuthState } from '@/integrations/supabase/client';
+// Removed: import { clearAuthState } from '@/integrations/supabase/client'; // Not used here
+import { logger } from '@/lib/logger';
 
 export function useAuthForm() {
   const [formState, setFormState] = useState<AuthFormState>({
@@ -16,7 +18,7 @@ export function useAuthForm() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log('Auth state in useAuthForm:', { 
+    logger.log('Auth state in useAuthForm:', { 
       isAuthenticated, 
       authLoading
     });
@@ -24,7 +26,7 @@ export function useAuthForm() {
 
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      console.log("User is authenticated, redirecting to home");
+      logger.log("User is authenticated, redirecting to home");
       navigate('/');
     }
   }, [isAuthenticated, authLoading, navigate]);
@@ -46,12 +48,12 @@ export function useAuthForm() {
         return;
       }
       
-      console.log("Login attempt with email:", formState.email);
+      logger.log("Login attempt with email:", formState.email);
       
       const { error } = await signIn(formState.email, formState.password);
       
       if (error) {
-        console.error("Login error:", error);
+        logger.error("Login error:", error);
         updateFormState({
           loginError: error.message || "Authentication failed. Please check your credentials.",
           loading: false
@@ -68,7 +70,7 @@ export function useAuthForm() {
         });
       }
     } catch (error: any) {
-      console.error("Authentication error:", error);
+      logger.error("Authentication error:", error);
       
       updateFormState({
         loginError: "An unexpected error occurred. Please try again.",
@@ -98,11 +100,11 @@ export function useAuthForm() {
         return null;
       }
       
-      console.log("Attempting to sign up with email:", formState.email);
+      logger.log("Attempting to sign up with email:", formState.email);
       const { error } = await signUp(formState.email, formState.password);
       
       if (error) {
-        console.error("Signup error:", error);
+        logger.error("Signup error:", error);
         updateFormState({
           loginError: error.message || "Error creating account. This email may already be in use.",
           loading: false
@@ -117,7 +119,7 @@ export function useAuthForm() {
         return "login";
       }
     } catch (error: any) {
-      console.error("Authentication error:", error);
+      logger.error("Authentication error:", error);
       updateFormState({
         loginError: "An unexpected error occurred. Please try again.",
         loading: false
@@ -135,3 +137,4 @@ export function useAuthForm() {
     handleSignupSubmit
   };
 }
+

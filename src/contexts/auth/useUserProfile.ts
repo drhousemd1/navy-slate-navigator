@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { uploadFile, deleteFiles } from '@/data/storageService';
+import { logger } from '@/lib/logger';
 
 export function useUserProfile(user: User | null, setUser: (user: User | null) => void) {
   // Update user nickname
@@ -76,7 +77,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
         });
         
         if (error) {
-          console.error('Error updating user role:', error);
+          logger.error('Error updating user role:', error);
           toast({
             title: 'Error updating role',
             description: error.message,
@@ -99,7 +100,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
           description: `Your role has been updated to ${role}`,
         });
       } catch (error: any) {
-        console.error('Exception during user role update:', error);
+        logger.error('Exception during user role update:', error);
         toast({
           title: 'Error updating role',
           description: error.message,
@@ -145,7 +146,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
       
       return publicUrl;
     } catch (error: any) {
-      console.error('Error uploading profile image:', error);
+      logger.error('Error uploading profile image:', error);
       toast({
         title: 'Error updating profile image',
         description: error.message,
@@ -163,7 +164,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
       const currentAvatarUrl = getProfileImage();
       
       if (!currentAvatarUrl) {
-        console.log('No avatar to delete');
+        logger.log('No avatar to delete');
         return;
       }
       
@@ -189,7 +190,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
       setProfileImageState(null);
       
     } catch (error: any) {
-      console.error('Error deleting profile image:', error);
+      logger.error('Error deleting profile image:', error);
       toast({
         title: 'Error deleting profile image',
         description: error.message,
@@ -209,3 +210,4 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
     deleteUserProfileImage
   };
 }
+
