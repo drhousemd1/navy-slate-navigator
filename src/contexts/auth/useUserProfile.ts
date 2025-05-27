@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { uploadFile, deleteFiles } from '@/data/storageService';
 import { logger } from '@/lib/logger'; // Ensure logger is imported
+import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
 
 export function useUserProfile(user: User | null, setUser: (user: User | null) => void) {
   // Update user nickname
@@ -80,7 +81,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
           logger.error('Error updating user role:', error);
           toast({
             title: 'Error updating role',
-            description: error.message,
+            description: error.message, // Supabase error has a message
             variant: 'destructive',
           });
           return;
@@ -99,11 +100,11 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
           title: 'Role updated',
           description: `Your role has been updated to ${role}`,
         });
-      } catch (error: any) {
+      } catch (error: unknown) { // Changed from any to unknown
         logger.error('Exception during user role update:', error);
         toast({
           title: 'Error updating role',
-          description: error.message,
+          description: getErrorMessage(error), // Use getErrorMessage
           variant: 'destructive',
         });
       }
@@ -131,25 +132,25 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
       }
       
       // Update user metadata with the new avatar URL
-      const { error } = await supabase.auth.updateUser({
+      const { error: updateUserError } = await supabase.auth.updateUser({ // Renamed error to avoid conflict
         data: { 
           avatar_url: publicUrl 
         }
       });
       
-      if (error) {
-        throw error;
+      if (updateUserError) { // Check renamed error
+        throw updateUserError;
       }
       
       // Update local state
       setProfileImageState(publicUrl);
       
       return publicUrl;
-    } catch (error: any) {
+    } catch (error: unknown) { // Changed from any to unknown
       logger.error('Error uploading profile image:', error);
       toast({
         title: 'Error updating profile image',
-        description: error.message,
+        description: getErrorMessage(error), // Use getErrorMessage
         variant: 'destructive',
       });
       return null;
@@ -170,30 +171,31 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
       
       // Extract the file path from the URL
       const urlParts = currentAvatarUrl.split('/');
-      const filePath = urlParts[urlParts.length - 2] + '/' + urlParts[urlParts.length - 1];
+      // Assuming the path is always the last two parts like "avatars/filename.ext"
+      const filePath = urlParts.slice(-2).join('/');
       
       // Delete the file from storage
       await deleteFiles('avatars', [filePath]);
       
       // Update user metadata to remove the avatar URL
-      const { error } = await supabase.auth.updateUser({
+      const { error: updateUserError } = await supabase.auth.updateUser({ // Renamed error
         data: { 
           avatar_url: null 
         }
       });
       
-      if (error) {
-        throw error;
+      if (updateUserError) { // Check renamed error
+        throw updateUserError;
       }
       
       // Update local state
       setProfileImageState(null);
       
-    } catch (error: any) {
+    } catch (error: unknown) { // Changed from any to unknown
       logger.error('Error deleting profile image:', error);
       toast({
         title: 'Error deleting profile image',
-        description: error.message,
+        description: getErrorMessage(error), // Use getErrorMessage
         variant: 'destructive',
       });
     }
@@ -210,4 +212,3 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
     deleteUserProfileImage
   };
 }
-

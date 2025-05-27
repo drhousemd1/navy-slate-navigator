@@ -24,7 +24,6 @@ const TasksPageContent: React.FC = () => {
     error, 
     saveTask, 
     deleteTask, 
-    // refetch 
   } = useTasksData();
   const { refreshPointsFromDatabase } = useRewards();
   
@@ -60,15 +59,26 @@ const TasksPageContent: React.FC = () => {
     try {
       let taskToSave: CreateTaskVariables | UpdateTaskVariables; 
       if (currentTask && currentTask.id) {
+        // Construct UpdateTaskVariables
+        // TaskFormValues provides the fields for the update.
+        // UpdateTaskVariables is { id: string } & Partial<Omit<TaskWithId, ... >>
+        // Spreading formData provides the partial update fields.
         taskToSave = { ...formData, id: currentTask.id };
       } else {
+        // Construct CreateTaskVariables
+        // TaskFormValues provides most fields.
+        // CreateTaskVariables = Partial<Omit<Task, ...>> & { title: string; points: number; ... }
+        // Add fields specific to CreateTaskVariables not in TaskFormValues.
         taskToSave = { 
           ...formData, 
-          usage_data: Array(7).fill(0), 
-          background_images: null 
+          // Default values for new tasks if not in formData or to override
+          usage_data: Array(7).fill(0), // Default for new tasks
+          background_images: null, // Default for new tasks
+          // Ensure all required fields for CreateTaskVariables are met by formData
+          // title and points are required and are in TaskFormValues.
         };
       }
-      await saveTask(taskToSave as any); // Cast to any as `saveTask` handles the precise mapping
+      await saveTask(taskToSave); // Removed 'as any' cast
       setIsEditorOpen(false);
       setCurrentTask(null);
     } catch (e: unknown) {
