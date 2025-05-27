@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -6,7 +7,7 @@ import { format, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import WeeklyMetricsChartSkeleton from './WeeklyMetricsChartSkeleton';
 import { useWeeklyMetrics, WeeklyDataItem } from '@/data/queries/metrics/useWeeklyMetrics'; 
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
 const WeeklyMetricsChart: React.FC = () => {
   const chartConfig = {
@@ -19,7 +20,7 @@ const WeeklyMetricsChart: React.FC = () => {
   const { data = [], isLoading, error } = useWeeklyMetrics();
 
   if (error) {
-    logger.error("Error in WeeklyMetricsChart:", error); // Replaced console.error
+    logger.error("Error in WeeklyMetricsChart:", error);
   }
   
   const hasData = data.some(d => 

@@ -15,7 +15,7 @@ import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
-import { logger } from '@/lib/logger'; // Logger is already imported
+import { logger } from '@/lib/logger';
 
 interface RuleFormValues {
   title: string;

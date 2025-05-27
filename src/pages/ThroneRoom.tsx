@@ -1,34 +1,29 @@
-
 import React, { useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '@/contexts/auth';
-import { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsSummary'; // Correct type import
+import { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsSummary'; 
 import MonthlyMetricsChart from '@/components/throne/MonthlyMetricsChart';
 import WeeklyMetricsChart from '@/components/throne/WeeklyMetricsChart';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-// Corrected import: Only import the hook from here
 import { useWeeklyMetricsSummary } from '@/data/queries/useWeeklyMetricsSummary'; 
 import { useWeeklyMetrics } from '@/data/queries/metrics/useWeeklyMetrics';
 import { useMonthlyMetrics } from '@/data/queries/metrics/useMonthlyMetrics';
-
-// Import extracted components
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
 import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
+import { logger } from '@/lib/logger'; // Added logger import
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin } = useAuth();
   const location = useLocation();
   const queryClient = useQueryClient();
   
-  // Enable the detailed metrics queries when this page is active
   useWeeklyMetrics({ enabled: true });
   useMonthlyMetrics({ enabled: true });
   
   const { data: metricsSummaryData, isLoading, error } = useWeeklyMetricsSummary();
 
-  // This will now correctly use the WeeklyMetricsSummary type imported from '@/components/throne/WeeklyMetricsSummary'
   const metricsSummary: WeeklyMetricsSummary = metricsSummaryData || { 
     tasksCompleted: 0, 
     rulesBroken: 0, 
@@ -39,8 +34,7 @@ const ThroneRoom: React.FC = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('fresh')) {
-      console.log('Fresh page load detected after reset, force updating metrics');
-      // Invalidate all relevant metrics queries
+      logger.debug('Fresh page load detected after reset, force updating metrics');
       queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
       queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
@@ -51,13 +45,10 @@ const ThroneRoom: React.FC = () => {
 
   if (isLoading) {
     // Placeholder for loading state
-    // The individual charts (WeeklyMetricsChart, MonthlyMetricsChart) have their own skeletons
-    // This isLoading is for the summary.
   }
 
   if (error) {
-    console.error("Error fetching weekly metrics summary:", error);
-    // Toasting for error is likely handled within useWeeklyMetricsSummary hook
+    logger.error("Error fetching weekly metrics summary:", error);
   }
 
   return (

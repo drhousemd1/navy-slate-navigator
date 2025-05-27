@@ -2,22 +2,20 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { format, getMonth, parseISO } from 'date-fns'; // Removed getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth
+import { format, getMonth, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
-// Removed supabase, toast, useQuery, useQueryClient as they are now in the hook or not needed
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 import MonthlyMetricsChartSkeleton from './MonthlyMetricsChartSkeleton';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useMonthlyMetrics, MonthlyMetricsData, MonthlyDataItem, MonthlyMetricsSummary } from '@/data/queries/metrics/useMonthlyMetrics'; // Import the new hook and types
-import { logger } from '@/lib/logger'; // Added logger import
+import { useMonthlyMetrics, MonthlyMetricsData, MonthlyDataItem, MonthlyMetricsSummary } from '@/data/queries/metrics/useMonthlyMetrics';
+import { logger } from '@/lib/logger';
 
 // Interface MonthlyMetricsSummary is now imported from the hook
 
 const MonthlyMetricsChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
-  // queryClient removed, not directly used here anymore
 
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -30,11 +28,6 @@ const MonthlyMetricsChart: React.FC = () => {
     punishments: { color: '#ea384c', label: 'Punishments' }
   };
 
-  // Removed useEffect for cache invalidation on mount. The hook handles its own data lifecycle.
-  // Removed generateMonthDays, formatDate, monthDates. formatDate can stay if needed for XAxis, let's check.
-  // monthDates used for chartWidth calculation. It will need to be derived from data.dataArray.length or a fixed reasonable estimate.
-  // For now, let's derive monthDates from data if available, or use a default for initial width calculation.
-
   const { 
     data = { 
       dataArray: [], 
@@ -42,13 +35,9 @@ const MonthlyMetricsChart: React.FC = () => {
     }, 
     isLoading, 
     error, 
-    refetch // Kept refetch in case it's needed for manual refresh scenarios, though primary refresh is via hook config
+    refetch 
   } = useMonthlyMetrics();
   
-  // The `useEffect` for 'fresh' URL param and periodic refresh is removed.
-  // The hook's `refetchInterval` and `refetchOnWindowFocus` should cover these.
-  // If specific 'fresh' param behavior is critical, it can be re-added by calling `refetch()` from here.
-
   const monthDates = useMemo(() => data.dataArray.map(d => d.date), [data.dataArray]);
   
   const BAR_WIDTH = 6;
@@ -58,13 +47,12 @@ const MonthlyMetricsChart: React.FC = () => {
   const CHART_PADDING = 20;
   
   const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
-  // Ensure monthDates.length is valid even if data is not yet loaded
   const chartWidth = Math.max((monthDates.length > 0 ? monthDates.length : 30) * dayWidth + CHART_PADDING * 2, 900);
 
 
   if (error) {
     // The hook already shows a toast on error.
-    logger.error("Error in MonthlyMetricsChart:", error); // Replaced console.error
+    logger.error("Error in MonthlyMetricsChart:", error);
   }
 
   const hasContent = data.dataArray.some(d =>
@@ -173,7 +161,7 @@ const MonthlyMetricsChart: React.FC = () => {
         </div>
       </ChartContainer>
     );
-  }, [data.dataArray, isDragging, getYAxisDomain, chartWidth, chartConfig, monthDates, BAR_GAP, GROUP_PADDING, CHART_PADDING, BAR_WIDTH, onMouseDown, onMouseMove, endDrag, handleBarClick]); // Added monthDates to dependency array for monthlyChart
+  }, [data.dataArray, isDragging, getYAxisDomain, chartWidth, chartConfig, monthDates, BAR_GAP, GROUP_PADDING, CHART_PADDING, BAR_WIDTH, onMouseDown, onMouseMove, endDrag, handleBarClick]);
 
   if (isLoading) {
     return (

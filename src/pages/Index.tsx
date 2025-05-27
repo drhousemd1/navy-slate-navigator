@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { APP_CONFIG } from '../config/constants';
+import { logger } from '@/lib/logger'; // Added logger import
 
 const Index: React.FC = () => {
   const [imageError, setImageError] = useState(false);
@@ -18,7 +19,7 @@ const Index: React.FC = () => {
                 alt="TaskMaster Logo" 
                 className="w-full h-auto object-contain"
                 onError={(e) => {
-                  console.error('Failed to load logo image');
+                  logger.error('Failed to load logo image', e);
                   setImageError(true);
                 }}
               />
