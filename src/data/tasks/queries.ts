@@ -6,17 +6,18 @@ import {
   getLastSyncTimeForTasks,
   setLastSyncTimeForTasks
 } from "@/data/indexedDB/useIndexedDB";
-import { Task, TaskPriority, processTasksWithRecurringLogic, processTaskFromDb } from '@/lib/taskUtils'; // Import processTaskFromDb
+import { Task, TaskPriority, processTasksWithRecurringLogic, processTaskFromDb } from '@/lib/taskUtils';
 import { withTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils';
 import { PostgrestError } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
-import { RawSupabaseTask } from '@/data/tasks/types'; // Import RawSupabaseTask
+import { RawSupabaseTask } from '@/data/tasks/types';
+import { isPostgrestError, isSupabaseAuthError, isAppError, createAppError, getErrorMessage, CaughtError } from '@/lib/errors';
 
 export const TASKS_QUERY_KEY = ["tasks"];
 export const TASK_QUERY_KEY = (taskId: string) => ["tasks", taskId];
 
 export const fetchTasks = async (): Promise<Task[]> => {
-  const localData = (await loadTasksFromDB()) as RawSupabaseTask[] | null; // Assume local data might be raw
+  const localData = (await loadTasksFromDB()) as RawSupabaseTask[] | null;
   const lastSync = await getLastSyncTimeForTasks();
   let shouldFetchFromServer = true;
 
@@ -31,7 +32,6 @@ export const fetchTasks = async (): Promise<Task[]> => {
 
   if (!shouldFetchFromServer && localData) {
     logger.debug('[fetchTasks] Returning tasks from IndexedDB');
-    // Process raw local data if it hasn't been processed yet
     return processTasksWithRecurringLogic(localData.map(task => task as RawSupabaseTask));
   }
 
@@ -39,7 +39,7 @@ export const fetchTasks = async (): Promise<Task[]> => {
   
   try {
     type RawTaskResponse = {
-      data: RawSupabaseTask[] | null; // Expect RawSupabaseTask array
+      data: RawSupabaseTask[] | null;
       error: PostgrestError | null;
     };
 
@@ -49,7 +49,6 @@ export const fetchTasks = async (): Promise<Task[]> => {
         .select('*')
         .order('created_at', { ascending: false })
         .abortSignal(signal);
-      // Cast to RawTaskResponse, Supabase client might return `any[]` in `data`
       return response as unknown as RawTaskResponse;
     }, DEFAULT_TIMEOUT_MS);
     
@@ -61,28 +60,27 @@ export const fetchTasks = async (): Promise<Task[]> => {
         logger.warn('[fetchTasks] Server fetch failed, returning stale data from IndexedDB');
         return processTasksWithRecurringLogic(localData.map(task => task as RawSupabaseTask));
       }
-      throw error;
+      throw error; // PostgrestError is an instance of Error
     }
 
     if (data) {
-      // Data is already RawSupabaseTask[], no need for tasksWithDefaults map here if process handles defaults
       const processedData = processTasksWithRecurringLogic(data);
-      // Save processed data to DB, or raw if that's the strategy
-      // Assuming saveTasksToDB expects processed Task[]
       await saveTasksToDB(processedData); 
       await setLastSyncTimeForTasks(new Date().toISOString());
       logger.debug('[fetchTasks] Tasks fetched from server and saved to IndexedDB');
       return processedData;
     }
-    // If server returns no data, but we have local data, use it.
     return localData ? processTasksWithRecurringLogic(localData.map(task => task as RawSupabaseTask)) : [];
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('[fetchTasks] Error fetching tasks:', error);
     if (localData) {
       logger.warn('[fetchTasks] Error fetching tasks, using cached data:', error);
       return processTasksWithRecurringLogic(localData.map(task => task as RawSupabaseTask));
     }
-    throw error;
+    if (isPostgrestError(error) || isSupabaseAuthError(error) || isAppError(error) || error instanceof Error) {
+      throw error;
+    }
+    throw createAppError(getErrorMessage(error), 'FETCH_TASKS_EXCEPTION');
   }
 };
 
@@ -117,14 +115,14 @@ export const useTasksQuery = () => {
 
 // For fetching a single task, modify the implementation to use the updated withTimeout
 export const useTaskQuery = (taskId: string | null) => {
-  return useQuery<Task | undefined, Error, Task | undefined, (string | null)[]>({
-    queryKey: taskId ? TASK_QUERY_KEY(taskId) : ['tasks', null], // Handle null taskId
+  return useQuery<Task | undefined, CaughtError, Task | undefined, (string | null)[]>({ // Use CaughtError for error type
+    queryKey: taskId ? TASK_QUERY_KEY(taskId) : ['tasks', null],
     queryFn: async () => {
       if (!taskId) return undefined;
       
       try {
         type RawSingleTaskResponse = {
-          data: RawSupabaseTask | null; // Expect single RawSupabaseTask or null
+          data: RawSupabaseTask | null;
           error: PostgrestError | null;
         };
 
@@ -140,17 +138,19 @@ export const useTaskQuery = (taskId: string | null) => {
         
         const { data, error } = result;
         
-        if (error) throw error;
+        if (error) throw error; // PostgrestError is an instance of Error
         if (!data) return undefined;
         
-        // Process the single raw task
         return processTaskFromDb(data); 
-      } catch (error) {
+      } catch (error: unknown) {
         logger.error(`[useTaskQuery] Error fetching task with ID ${taskId}:`, error);
-        throw error;
+        if (isPostgrestError(error) || isSupabaseAuthError(error) || isAppError(error) || error instanceof Error) {
+          throw error;
+        }
+        throw createAppError(getErrorMessage(error), 'FETCH_SINGLE_TASK_EXCEPTION');
       }
     },
-    enabled: !!taskId, // Only run if taskId is provided
+    enabled: !!taskId,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

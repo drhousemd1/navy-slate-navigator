@@ -1,4 +1,6 @@
 
+import { SupabaseAuthError, AppError } from '@/lib/errors'; // Import new error types
+
 export type UserRole = 'admin' | 'submissive' | 'user';
 
 export interface AuthUser {
@@ -11,8 +13,9 @@ export interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error?: Error | null }>;
-  signUp: (email: string, password: string) => Promise<{ error?: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error?: SupabaseAuthError | AppError | null }>;
+  signUp: (email: string, password: string) => Promise<{ error?: SupabaseAuthError | AppError | null }>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error?: Error | null }>;
+  resetPassword: (email: string) => Promise<{ error?: SupabaseAuthError | AppError | null }>;
 }
+

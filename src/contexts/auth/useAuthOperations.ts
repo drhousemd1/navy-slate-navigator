@@ -2,23 +2,22 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { isSupabaseAuthError, createAppError, getErrorMessage, SupabaseAuthError, AppError } from '@/lib/errors'; // Import error utilities
 
 export function useAuthOperations() {
   // Sign in with email and password
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<{ error?: SupabaseAuthError | AppError | null, user?: any, session?: any }> => {
     try {
       logger.debug('Starting sign in process for email:', email);
       
-      // Input validation - ensure values are properly trimmed
       const trimmedEmail = email.trim().toLowerCase();
       const trimmedPassword = password.trim();
       
       if (!trimmedEmail || !trimmedPassword) {
         logger.error('Sign in validation error: Missing email or password');
-        return { error: { message: 'Email and password are required' }, user: null };
+        return { error: createAppError('Email and password are required', 'VALIDATION_ERROR'), user: null };
       }
       
-      // Use the trimmed values for authentication
       logger.debug('Making authentication request with:', { email: trimmedEmail });
       const { data, error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
@@ -27,49 +26,48 @@ export function useAuthOperations() {
       
       if (error) {
         logger.error('Sign in error:', error);
-        
-        // More specific error messages
         let errorMsg = error.message;
         if (error.message.includes("invalid login")) {
           errorMsg = "Incorrect email or password. Please try again.";
         }
-        
-        return { error: { ...error, message: errorMsg }, user: null };
+        // Ensure the returned error is of type SupabaseAuthError
+        const authError: SupabaseAuthError = { ...error, message: errorMsg, name: error.name || 'AuthApiError', status: error.status || 0 };
+        return { error: authError, user: null };
       }
       
       logger.debug('Sign in successful:', data.user?.email);
       logger.debug('Session data:', data.session ? 'Session exists' : 'No session');
       
-      // Make sure we validate the session before confirming success
       if (!data.session) {
         logger.error('Sign in produced no session');
         return { 
-          error: { message: 'Authentication successful but no session was created. Please try again.' },
+          error: createAppError('Authentication successful but no session was created. Please try again.', 'AUTH_NO_SESSION'),
           user: data.user 
         };
       }
       
       return { error: null, user: data.user, session: data.session };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Exception during sign in:', error);
-      return { error, user: null };
+      if (isSupabaseAuthError(error)) {
+        return { error, user: null };
+      }
+      return { error: createAppError(getErrorMessage(error), 'SIGN_IN_EXCEPTION'), user: null };
     }
   };
 
   // Sign up with email and password - with improved error handling
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string): Promise<{ error?: SupabaseAuthError | AppError | null, data?: any }> => {
     try {
-      // Trim inputs before sending
       const trimmedEmail = email.trim().toLowerCase();
       const trimmedPassword = password.trim();
       
       if (!trimmedEmail || !trimmedPassword) {
-        return { error: { message: 'Email and password are required' }, data: null };
+        return { error: createAppError('Email and password are required', 'VALIDATION_ERROR'), data: null };
       }
       
-      // Check minimum password length
       if (trimmedPassword.length < 6) {
-        return { error: { message: 'Password must be at least 6 characters long' }, data: null };
+        return { error: createAppError('Password must be at least 6 characters long', 'VALIDATION_ERROR'), data: null };
       }
       
       const { data, error } = await supabase.auth.signUp({
@@ -92,24 +90,25 @@ export function useAuthOperations() {
       });
       
       return { error: null, data };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Exception during sign up:', error);
-      return { error, data: null };
+      if (isSupabaseAuthError(error)) {
+        return { error, data: null };
+      }
+      return { error: createAppError(getErrorMessage(error), 'SIGN_UP_EXCEPTION'), data: null };
     }
   };
 
   // Reset password with improved error messaging
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string): Promise<{ error?: SupabaseAuthError | AppError | null }> => {
     try {
       const trimmedEmail = email.trim().toLowerCase();
       
       if (!trimmedEmail) {
-        return { error: { message: 'Email is required' } };
+        return { error: createAppError('Email is required', 'VALIDATION_ERROR') };
       }
       
       logger.debug('Sending password reset to:', trimmedEmail);
-      
-      // Get the current origin for the redirect
       const siteUrl = window.location.origin;
       logger.debug('Using site URL for password reset:', siteUrl);
       
@@ -129,23 +128,26 @@ export function useAuthOperations() {
       });
       
       return { error: null };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Exception during password reset:', error);
-      return { error };
+      if (isSupabaseAuthError(error)) {
+        return { error };
+      }
+      return { error: createAppError(getErrorMessage(error), 'RESET_PASSWORD_EXCEPTION') };
     }
   };
 
   // Update password with improved validation
-  const updatePassword = async (newPassword: string) => {
+  const updatePassword = async (newPassword: string): Promise<{ error?: SupabaseAuthError | AppError | null }> => {
     try {
       const trimmedPassword = newPassword.trim();
       
       if (!trimmedPassword) {
-        return { error: { message: 'New password is required' } };
+        return { error: createAppError('New password is required', 'VALIDATION_ERROR') };
       }
       
       if (trimmedPassword.length < 6) {
-        return { error: { message: 'Password must be at least 6 characters long' } };
+        return { error: createAppError('Password must be at least 6 characters long', 'VALIDATION_ERROR') };
       }
       
       const { error } = await supabase.auth.updateUser({
@@ -164,26 +166,28 @@ export function useAuthOperations() {
       });
       
       return { error: null };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Exception during password update:', error);
-      return { error };
+      if (isSupabaseAuthError(error)) {
+        return { error };
+      }
+      return { error: createAppError(getErrorMessage(error), 'UPDATE_PASSWORD_EXCEPTION') };
     }
   };
 
   // Delete user account
-  const deleteAccount = async () => {
+  const deleteAccount = async (): Promise<{ error?: AppError | Error | null }> => { // Broader error type for RPC
     try {
-      // Use type assertion 'as any' to bypass TypeScript error due to potentially stale types
-      const { error } = await supabase.rpc('delete_user_account' as any);
+      const { error } = await supabase.rpc('delete_user_account' as any); // Cast for RPC
       
       if (error) {
         logger.error('Account deletion error:', error);
         toast({
           title: 'Error deleting account',
-          description: error.message,
+          description: (error as any).message || 'Could not delete account.',
           variant: 'destructive',
         });
-        return { error };
+        return { error: error as Error }; // Cast PostgrestError like from rpc to Error
       }
 
       logger.debug('Account deletion initiated successfully');
@@ -192,11 +196,10 @@ export function useAuthOperations() {
         description: 'Your account is scheduled for deletion. You will be logged out shortly.',
       });
       
-      // User will be logged out automatically by auth listener when account is deleted
       return { error: null };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Exception during account deletion:', error);
-      return { error };
+      return { error: createAppError(getErrorMessage(error), 'DELETE_ACCOUNT_EXCEPTION') };
     }
   };
 
