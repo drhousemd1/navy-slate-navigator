@@ -50,7 +50,8 @@ export const useCreateTask = () => {
     createOptimisticItem: (variables, optimisticId) => {
       const now = new Date().toISOString();
       return {
-        id: optimisticId,
+        id: optimisticId, // This is the server-generated ID for optimistic item before server response
+        optimisticId: optimisticId, // Explicitly keep track of the optimistic ID if needed
         created_at: now,
         updated_at: now,
         completed: false,
@@ -75,14 +76,22 @@ export const useCreateTask = () => {
         icon_url: variables.icon_url || null,
         usage_data: variables.usage_data || Array(7).fill(0),
         background_images: variables.background_images as Json || null,
-        ...variables,
+        // Spread remaining variables, ensuring they are part of TaskWithId
+        ...variables, 
       } as TaskWithId;
     },
     onSuccessCallback: async (newTaskData) => {
       logger.debug('[useCreateTask onSuccessCallback] New task created on server, updating IndexedDB.', newTaskData);
       try {
         const localTasks = await loadTasksFromDB() || [];
-        const updatedLocalTasks = [newTaskData, ...localTasks.filter(t => t.id !== newTaskData.id && t.id !== (newTaskData as any).optimisticId)];
+        // Filter out by optimisticId if present, then by actual id
+        const updatedLocalTasks = [
+            newTaskData, 
+            ...localTasks.filter(t => 
+                t.id !== newTaskData.id && 
+                (!newTaskData.optimisticId || t.id !== newTaskData.optimisticId)
+            )
+        ];
         await saveTasksToDB(updatedLocalTasks);
         await setLastSyncTimeForTasks(new Date().toISOString());
         logger.debug('[useCreateTask onSuccessCallback] IndexedDB updated with new task.');
@@ -92,7 +101,7 @@ export const useCreateTask = () => {
           errorMessage = e.message;
         }
         logger.error('[useCreateTask onSuccessCallback] Error updating IndexedDB:', errorMessage, e);
-        toast({ variant: "destructive", title: "Local Save Error", description: errorMessage });
+        toast({ variant: "destructive", title: "Local SaveError", description: errorMessage });
       }
     },
   });

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/data/rewards/types';
 import { withTimeout, DEFAULT_TIMEOUT_MS, selectWithTimeout } from '@/lib/supabaseUtils'; 
@@ -7,12 +8,35 @@ import { logger } from '@/lib/logger';
 import { processRewardData } from '@/data/rewards/queries'; 
 import { isPostgrestError, isSupabaseAuthError, isAppError, createAppError, getErrorMessage, CaughtError } from '@/lib/errors';
 
+// Define a type for the raw data structure from the 'rewards' table
+export interface RawSupabaseReward {
+  id: string; // uuid
+  created_at?: string | null; // timestamp with time zone
+  updated_at?: string | null; // timestamp with time zone
+  title: string; // text
+  description?: string | null; // text
+  cost: number; // integer
+  supply: number; // integer
+  is_dom_reward?: boolean | null; // boolean
+  title_color?: string | null; // text
+  subtext_color?: string | null; // text
+  calendar_color?: string | null; // text
+  icon_color?: string | null; // text
+  icon_name?: string | null; // text
+  background_image_url?: string | null; // text
+  background_opacity?: number | null; // integer
+  highlight_effect?: boolean | null; // boolean
+  focal_point_x?: number | null; // integer
+  focal_point_y?: number | null; // integer
+}
+
 
 export const fetchRewards = async (): Promise<Reward[]> => {
   logger.debug('[fetchRewards] Fetching rewards from server (lib/rewardUtils)');
   const startTime = performance.now();
   try {
-    const { data, error } = await selectWithTimeout<any>(
+    // Assuming selectWithTimeout fetches multiple rewards, so RawSupabaseReward[]
+    const { data, error } = await selectWithTimeout<RawSupabaseReward[]>(
       supabase,
       'rewards',
       {
@@ -33,8 +57,9 @@ export const fetchRewards = async (): Promise<Reward[]> => {
     }
 
     if (data) {
-      const rewardsFromServer = (Array.isArray(data) ? data : (data ? [data] : [])).map(
-        (item: any) => processRewardData(item as any)
+      // data is RawSupabaseReward[] here
+      const rewardsFromServer = data.map(
+        (item: RawSupabaseReward) => processRewardData(item) // processRewardData should accept RawSupabaseReward
       );
       logQueryPerformance('fetchRewards (server-success)', startTime, rewardsFromServer.length);
       return rewardsFromServer;

@@ -84,6 +84,7 @@ export type TaskWithId = Task & {
   last_completed_date?: string | null;
   points?: number;
   title?: string;
+  optimisticId?: string; // Added for optimistic updates
 };
 
 // Define variables for creating a task

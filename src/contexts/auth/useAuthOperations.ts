@@ -4,10 +4,11 @@ import { logger } from '@/lib/logger';
 // SupabaseAuthError will now be correctly imported from @/lib/errors
 // Added isAppError to the import
 import { isSupabaseAuthError, createAppError, getErrorMessage, SupabaseAuthError, AppError, CaughtError, PostgrestError, isPostgrestError, isAppError } from '@/lib/errors';
+import type { User, Session, AuthResponse } from '@supabase/supabase-js'; // Import User and Session
 
 export function useAuthOperations() {
   // Sign in with email and password
-  const signIn = async (email: string, password: string): Promise<{ error?: SupabaseAuthError | AppError | null, user?: any, session?: any }> => {
+  const signIn = async (email: string, password: string): Promise<{ error?: SupabaseAuthError | AppError | null, user?: User | null, session?: Session | null }> => {
     try {
       logger.debug('Starting sign in process for email:', email);
       
@@ -16,7 +17,7 @@ export function useAuthOperations() {
       
       if (!trimmedEmail || !trimmedPassword) {
         logger.error('Sign in validation error: Missing email or password');
-        return { error: createAppError('Email and password are required', 'VALIDATION_ERROR'), user: null };
+        return { error: createAppError('Email and password are required', 'VALIDATION_ERROR'), user: null, session: null };
       }
       
       logger.debug('Making authentication request with:', { email: trimmedEmail });
@@ -29,10 +30,10 @@ export function useAuthOperations() {
         logger.error('Sign in error:', error);
         // If the error message indicates invalid login, return a custom AppError with a friendlier message.
         if (error.message.includes("invalid login") || error.message.includes("Invalid login credentials")) {
-          return { error: createAppError("Incorrect email or password. Please try again.", "AUTH_INVALID_CREDENTIALS"), user: null };
+          return { error: createAppError("Incorrect email or password. Please try again.", "AUTH_INVALID_CREDENTIALS"), user: null, session: null };
         }
         // Otherwise, return the original Supabase error.
-        return { error, user: null };
+        return { error, user: null, session: null };
       }
       
       logger.debug('Sign in successful:', data.user?.email);
@@ -42,7 +43,8 @@ export function useAuthOperations() {
         logger.error('Sign in produced no session');
         return { 
           error: createAppError('Authentication successful but no session was created. Please try again.', 'AUTH_NO_SESSION'),
-          user: data.user 
+          user: data.user,
+          session: null
         };
       }
       
@@ -50,18 +52,18 @@ export function useAuthOperations() {
     } catch (error: unknown) {
       logger.error('Exception during sign in:', error);
       if (isSupabaseAuthError(error)) {
-        return { error, user: null };
+        return { error, user: null, session: null };
       }
       // Check if it's an AppError before creating a new one
       if (isAppError(error)) {
-        return { error, user: null };
+        return { error, user: null, session: null };
       }
-      return { error: createAppError(getErrorMessage(error), 'SIGN_IN_EXCEPTION'), user: null };
+      return { error: createAppError(getErrorMessage(error), 'SIGN_IN_EXCEPTION'), user: null, session: null };
     }
   };
 
   // Sign up with email and password - with improved error handling
-  const signUp = async (email: string, password: string): Promise<{ error?: SupabaseAuthError | AppError | null, data?: any }> => {
+  const signUp = async (email: string, password: string): Promise<{ error?: SupabaseAuthError | AppError | null, data?: AuthResponse['data'] | null }> => {
     try {
       const trimmedEmail = email.trim().toLowerCase();
       const trimmedPassword = password.trim();
@@ -95,7 +97,7 @@ export function useAuthOperations() {
         description: data.session ? 'You are now logged in.' : 'Please check your email to verify your account.',
       });
       
-      return { error: null, data };
+      return { error: null, data: data }; // data is AuthResponse['data']
     } catch (error: unknown) {
       logger.error('Exception during sign up:', error);
       if (isSupabaseAuthError(error)) {
