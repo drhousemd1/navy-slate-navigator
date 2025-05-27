@@ -1,13 +1,10 @@
 
 import React from 'react';
 import { Control, UseFormSetValue } from 'react-hook-form';
-import BackgroundImageSelector, { BackgroundImageFormFields } from '@/components/task-editor/BackgroundImageSelector';
+import BackgroundImageSelectorComponent, { BackgroundImageFormFields } from '@/components/task-editor/BackgroundImageSelector';
 import { PunishmentFormValues } from './PunishmentFormProvider';
 
 // Ensure PunishmentFormValues is compatible with BackgroundImageFormFields
-// This is implicitly true if PunishmentFormValues includes background_opacity, focal_point_x, focal_point_y
-// or if BackgroundImageSelector handles their potential absence gracefully.
-// Given the BackgroundImageFormFields interface, these fields are optional.
 
 interface PunishmentBackgroundImageSelectorProps {
   control: Control<PunishmentFormValues>;
@@ -18,8 +15,12 @@ interface PunishmentBackgroundImageSelectorProps {
   setValue: UseFormSetValue<PunishmentFormValues>;
 }
 
+// Assign the generic component with its type argument to a new constant
+const SpecificPunishmentBackgroundImageSelector = BackgroundImageSelectorComponent<PunishmentFormValues>;
+
 const PunishmentBackgroundImageSelector: React.FC<PunishmentBackgroundImageSelectorProps> = (props) => {
-  return <BackgroundImageSelector<PunishmentFormValues> {...props} />;
+  // Use the new constant in JSX, which does not have explicit generic syntax here
+  return <SpecificPunishmentBackgroundImageSelector {...props} />;
 };
 
 export default PunishmentBackgroundImageSelector;
