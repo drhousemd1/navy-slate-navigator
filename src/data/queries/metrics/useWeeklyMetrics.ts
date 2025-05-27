@@ -4,7 +4,6 @@ import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { generateMondayBasedWeekDates } from '@/lib/utils';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
-import { logger } from '@/lib/logger';
 
 export interface WeeklyDataItem {
   date: string;
@@ -17,7 +16,7 @@ export interface WeeklyDataItem {
 export const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
 
 const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
-  logger.log('[fetchWeeklyData] Fetching weekly chart data via useWeeklyMetrics hook at', new Date().toISOString());
+  console.log('Fetching weekly chart data via useWeeklyMetrics hook at', new Date().toISOString());
   try {
     const weekDays = generateMondayBasedWeekDates();
     const metricsMap = new Map<string, WeeklyDataItem>();
@@ -42,7 +41,7 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
       .gte('completed_at', start.toISOString())
       .lte('completed_at', end.toISOString());
 
-    if (taskError) logger.error('[fetchWeeklyData] Error fetching task completions:', taskError.message);
+    if (taskError) console.error('Error fetching task completions:', taskError);
     else if (taskCompletions) {
       const completionsByDate = new Map<string, Set<string>>();
       taskCompletions.forEach(entry => {
@@ -62,7 +61,7 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
       .gte('violation_date', start.toISOString())
       .lte('violation_date', end.toISOString());
 
-    if (ruleError) logger.error('[fetchWeeklyData] Error fetching rule violations:', ruleError.message);
+    if (ruleError) console.error('Error fetching rule violations:', ruleError);
     else if (ruleViolations) {
       ruleViolations.forEach(entry => {
         const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
@@ -77,7 +76,7 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
       .gte('created_at', start.toISOString())
       .lte('created_at', end.toISOString());
 
-    if (rewardError) logger.error('[fetchWeeklyData] Error fetching reward usages:', rewardError.message);
+    if (rewardError) console.error('Error fetching reward usages:', rewardError);
     else if (rewardUsages) {
       rewardUsages.forEach(entry => {
         const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
@@ -92,7 +91,7 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
       .gte('applied_date', start.toISOString())
       .lte('applied_date', end.toISOString());
 
-    if (punishmentError) logger.error('[fetchWeeklyData] Error fetching punishments:', punishmentError.message);
+    if (punishmentError) console.error('Error fetching punishments:', punishmentError);
     else if (punishmentsData) {
       punishmentsData.forEach(entry => {
         const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
@@ -101,10 +100,10 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
     }
 
     const result = Array.from(metricsMap.values()).sort((a, b) => a.date.localeCompare(b.date));
-    logger.log('[fetchWeeklyData] Weekly chart data prepared via hook:', { result });
+    console.log('Weekly chart data prepared via hook:', result);
     return result;
-  } catch (error: any) {
-    logger.error('[fetchWeeklyData] Error fetching weekly data in hook:', error.message);
+  } catch (error) {
+    console.error('Error fetching weekly data in hook:', error);
     toast({
       title: 'Error',
       description: 'Failed to fetch weekly activity data',

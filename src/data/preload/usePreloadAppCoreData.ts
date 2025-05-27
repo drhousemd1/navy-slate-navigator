@@ -6,7 +6,6 @@ import { RULES_QUERY_KEY } from '@/data/rules/queries';
 import { fetchRules } from '@/data/rules/fetchRules'; 
 import { fetchTasks } from '@/data/tasks/queries';
 import { fetchPunishments } from '@/data/punishments/queries/fetchPunishments';
-import { logger } from '@/lib/logger'; // Added logger import
 // Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
 // Define necessary keys directly or import from a central query key store if available
@@ -19,37 +18,37 @@ export const usePreloadAppCoreData = () => {
 
   useEffect(() => {
     const prefetchData = async () => {
-      logger.log('[PreloadAppCoreData] Pre-fetching core application data...'); // Replaced console.log
+      console.log('[PreloadAppCoreData] Pre-fetching core application data...');
       
       // Rewards
       await queryClient.prefetchQuery({
         queryKey: REWARDS_QUERY_KEY,
         queryFn: fetchRewards,
       });
-      logger.log('[PreloadAppCoreData] Rewards pre-fetched.'); // Replaced console.log
+      console.log('[PreloadAppCoreData] Rewards pre-fetched.');
 
       // Rules
       await queryClient.prefetchQuery({
         queryKey: RULES_QUERY_KEY,
         queryFn: fetchRules, 
       });
-      logger.log('[PreloadAppCoreData] Rules pre-fetched.'); // Replaced console.log
+      console.log('[PreloadAppCoreData] Rules pre-fetched.');
 
       // Tasks
       await queryClient.prefetchQuery({
         queryKey: TASKS_QUERY_KEY, // Replaced CRITICAL_QUERY_KEYS.TASKS
         queryFn: fetchTasks,
       });
-      logger.log('[PreloadAppCoreData] Tasks pre-fetched.'); // Replaced console.log
+      console.log('[PreloadAppCoreData] Tasks pre-fetched.');
 
       // Punishments
       await queryClient.prefetchQuery({
         queryKey: PUNISHMENTS_QUERY_KEY, // Replaced CRITICAL_QUERY_KEYS.PUNISHMENTS
         queryFn: fetchPunishments,
       });
-      logger.log('[PreloadAppCoreData] Punishments pre-fetched.'); // Replaced console.log
+      console.log('[PreloadAppCoreData] Punishments pre-fetched.');
 
-      logger.log('[PreloadAppCoreData] Core data pre-fetching complete.'); // Replaced console.log
+      console.log('[PreloadAppCoreData] Core data pre-fetching complete.');
     };
 
     if (
@@ -60,8 +59,7 @@ export const usePreloadAppCoreData = () => {
     ) {
       prefetchData();
     } else {
-      logger.log('[PreloadAppCoreData] Core data already in cache, skipping prefetch.'); // Replaced console.log
+      console.log('[PreloadAppCoreData] Core data already in cache, skipping prefetch.');
     }
   }, [queryClient]);
 };
-

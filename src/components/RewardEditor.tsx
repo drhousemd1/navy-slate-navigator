@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { RewardEditorForm } from './reward-editor/RewardEditorForm';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { logger } from '@/lib/logger';
 
 interface RewardEditorProps {
   isOpen: boolean;
@@ -26,14 +26,14 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   
   useEffect(() => {
     if (rewardData) {
-      logger.log("RewardEditor opened with data:", rewardData);
-      logger.log("is_dom_reward value in RewardEditor useEffect:", rewardData.is_dom_reward);
+      console.log("RewardEditor opened with data:", rewardData);
+      console.log("is_dom_reward value in RewardEditor useEffect:", rewardData.is_dom_reward);
     }
   }, [rewardData, isOpen]);
   
   const handleSave = async (formData: any) => {
-    logger.log("RewardEditor handling save with form data:", formData);
-    logger.log("is_dom_reward value in handleSave:", formData.is_dom_reward);
+    console.log("RewardEditor handling save with form data:", formData);
+    console.log("is_dom_reward value in handleSave:", formData.is_dom_reward);
     
     try {
       setIsSaving(true);
@@ -44,8 +44,8 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
         is_dom_reward: Boolean(formData.is_dom_reward) // Ensure proper boolean conversion
       } : formData;
       
-      logger.log("Final data being sent to save:", dataToSave);
-      logger.log("Final is_dom_reward value:", dataToSave.is_dom_reward);
+      console.log("Final data being sent to save:", dataToSave);
+      console.log("Final is_dom_reward value:", dataToSave.is_dom_reward);
       
       // Show optimistic toast immediately
       toast({
@@ -61,9 +61,9 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
         try {
           // Use await instead of .then to properly handle the Promise
           await onSave(dataToSave);
-          logger.log("Save completed successfully");
+          console.log("Save completed successfully");
         } catch (error) {
-          logger.error("Error in RewardEditor save handler:", error);
+          console.error("Error in RewardEditor save handler:", error);
           toast({
             title: "Error",
             description: "Failed to save reward. Please try again.",
@@ -74,7 +74,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
         }
       }, 0);
     } catch (error) {
-      logger.error("Error in RewardEditor save handler:", error);
+      console.error("Error in RewardEditor save handler:", error);
       setIsSaving(false);
       toast({
         title: "Error",

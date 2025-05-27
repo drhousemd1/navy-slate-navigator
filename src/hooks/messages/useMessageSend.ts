@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { logger } from '@/lib/logger';
 
 export const useMessageSend = () => {
   const { user } = useAuth();
@@ -28,13 +27,13 @@ export const useMessageSend = () => {
         .single();
       
       if (error) {
-        logger.error('Error sending message:', error);
+        console.error('Error sending message:', error);
         throw error;
       }
       
       return data.id;
     } catch (err) {
-      logger.error('Error in sendMessage:', err);
+      console.error('Error in sendMessage:', err);
       throw err;
     }
   };

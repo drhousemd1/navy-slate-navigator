@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { logger } from '@/lib/logger';
 
 export const useMessageArchive = () => {
   // Archive messages older than a certain date (e.g., 30 days)
@@ -13,8 +12,9 @@ export const useMessageArchive = () => {
       // 3. Or some other archival logic
       
       // For now, just log that we would archive messages
-      logger.log('Would archive old messages for conversation between', userId, 'and', partnerId);
+      console.log('Would archive old messages for conversation between', userId, 'and', partnerId);
       
+      // Example: Delete messages older than 30 days
       /*
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -26,13 +26,11 @@ export const useMessageArchive = () => {
         .lt('created_at', thirtyDaysAgo.toISOString());
       
       if (error) {
-        // This console.error was inside a comment block, so it remains as is unless activated.
-        // If it were active, it would become logger.error.
-        console.error('Error archiving old messages:', error); 
+        console.error('Error archiving old messages:', error);
       }
       */
     } catch (err) {
-      logger.error('Error in archiveOldMessages:', err);
+      console.error('Error in archiveOldMessages:', err);
     }
   };
 

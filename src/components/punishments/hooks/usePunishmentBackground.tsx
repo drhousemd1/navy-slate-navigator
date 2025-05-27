@@ -1,19 +1,18 @@
 
 import { useState } from 'react';
-import { logger } from '@/lib/logger'; // Added logger import
 
 export const usePunishmentBackground = (initialImageUrl?: string | null) => {
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    logger.log("handleImageUpload called"); // Replaced console.log
+    console.log("handleImageUpload called");
     const file = e.target.files?.[0];
     if (file) {
-      logger.log("File selected:", file.name); // Replaced console.log
+      console.log("File selected:", file.name);
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        logger.log("Image loaded as base64"); // Replaced console.log
+        console.log("Image loaded as base64");
         setImagePreview(base64String);
       };
       reader.readAsDataURL(file);
@@ -21,7 +20,7 @@ export const usePunishmentBackground = (initialImageUrl?: string | null) => {
   };
 
   const handleRemoveImage = () => {
-    logger.log("Removing image"); // Replaced console.log
+    console.log("Removing image");
     setImagePreview(null);
   };
 
@@ -32,4 +31,3 @@ export const usePunishmentBackground = (initialImageUrl?: string | null) => {
     setImagePreview
   };
 };
-

@@ -3,7 +3,6 @@ import { Form } from '@/components/ui/form';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 import { toast } from '@/hooks/use-toast';
 import { PunishmentFormValues, punishmentFormSchema } from './PunishmentFormProvider';
-import { logger } from '@/lib/logger';
 
 interface PunishmentFormSubmitHandlerProps {
   punishmentData?: PunishmentData;
@@ -50,10 +49,10 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
 
   const onSubmit = async (values: PunishmentFormValues) => {
     if (isSaving) {
-      logger.log("Form submission prevented - already saving");
+      console.log("Form submission prevented - already saving");
       return;
     }
-    logger.log("Form submitted with values:", values);
+    console.log("Form submitted with values:", values);
     
     const points = Number(values.points);
     const dom_points = values.dom_points !== undefined 
@@ -74,7 +73,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       dataToSave.id = punishmentData.id;
     }
     
-    logger.log("Attempting to save punishment data:", dataToSave);
+    console.log("Attempting to save punishment data:", dataToSave);
     
     try {
       setIsSaving(true);
@@ -94,7 +93,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
         });
       }
     } catch (error) {
-      logger.error("Error saving punishment in form handler:", error);
+      console.error("Error saving punishment in form handler:", error);
     } finally {
       setIsSaving(false);
     }

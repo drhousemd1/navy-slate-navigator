@@ -1,4 +1,3 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
@@ -6,7 +5,6 @@ import { TaskWithId, UpdateTaskVariables } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger'; // Added logger import
 
 export type { UpdateTaskVariables }; // Changed to export type
 
@@ -32,18 +30,17 @@ export const useUpdateTask = () => {
     entityName: 'Task',
     idField: 'id',
     onSuccessCallback: async (updatedTaskData) => {
-      logger.log('[useUpdateTask onSuccessCallback] Task updated on server, updating IndexedDB.', updatedTaskData); // Replaced console.log
+      console.log('[useUpdateTask onSuccessCallback] Task updated on server, updating IndexedDB.', updatedTaskData);
       try {
         const localTasks = await loadTasksFromDB() || [];
         const updatedLocalTasks = localTasks.map(t => t.id === updatedTaskData.id ? updatedTaskData : t);
         await saveTasksToDB(updatedLocalTasks);
         await setLastSyncTimeForTasks(new Date().toISOString());
-        logger.log('[useUpdateTask onSuccessCallback] IndexedDB updated with updated task.'); // Replaced console.log
+        console.log('[useUpdateTask onSuccessCallback] IndexedDB updated with updated task.');
       } catch (error) {
-        logger.error('[useUpdateTask onSuccessCallback] Error updating IndexedDB:', error); // Replaced console.error
+        console.error('[useUpdateTask onSuccessCallback] Error updating IndexedDB:', error);
         toast({ variant: "destructive", title: "Local Save Error", description: "Task updated on server, but failed to save changes locally." });
       }
     },
   });
 };
-

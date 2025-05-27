@@ -1,12 +1,10 @@
 
 import { useState, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
-// Rule import removed as it's not directly used in this revised snippet
-// import { Rule } from '@/data/interfaces/Rule'; 
+import { Rule } from '@/data/interfaces/Rule';
 import { useCreateRule } from '@/data/rules/mutations/useCreateRule';
 import { useUpdateRule } from '@/data/rules/mutations/useUpdateRule';
 import { useDeleteRule } from '@/data/rules/mutations/useDeleteRule';
-import { logger } from '@/lib/logger'; // Added logger import
 
 export const useRuleOperations = (initialRules = []) => {
   const [rules, setRules] = useState(initialRules);
@@ -15,7 +13,7 @@ export const useRuleOperations = (initialRules = []) => {
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
   
   // Create a new rule
-  const createRule = useCallback(async (ruleData: any) => { // Added type for ruleData for clarity
+  const createRule = useCallback(async (ruleData) => {
     try {
       const newRule = await createRuleMutation(ruleData);
       
@@ -27,7 +25,7 @@ export const useRuleOperations = (initialRules = []) => {
         return newRule;
       }
     } catch (error) {
-      logger.error('Error creating rule:', error); // Changed console.error to logger.error
+      console.error('Error creating rule:', error);
       toast({
         title: 'Error',
         description: 'Failed to create rule. Please try again.',
@@ -38,7 +36,7 @@ export const useRuleOperations = (initialRules = []) => {
   }, [createRuleMutation]);
   
   // Update an existing rule
-  const updateRule = useCallback(async (ruleId: string, updates: any) => { // Added types
+  const updateRule = useCallback(async (ruleId, updates) => {
     try {
       const updatedRule = await updateRuleMutation({ id: ruleId, ...updates });
       
@@ -50,7 +48,7 @@ export const useRuleOperations = (initialRules = []) => {
         return updatedRule;
       }
     } catch (error) {
-      logger.error('Error updating rule:', error); // Changed console.error to logger.error
+      console.error('Error updating rule:', error);
       toast({
         title: 'Error',
         description: 'Failed to update rule. Please try again.',
@@ -61,7 +59,7 @@ export const useRuleOperations = (initialRules = []) => {
   }, [updateRuleMutation]);
   
   // Delete a rule
-  const deleteRule = useCallback(async (ruleId: string) => { // Added type
+  const deleteRule = useCallback(async (ruleId) => {
     try {
       await deleteRuleMutation(ruleId);
       
@@ -71,7 +69,7 @@ export const useRuleOperations = (initialRules = []) => {
       });
       return true;
     } catch (error) {
-      logger.error('Error deleting rule:', error); // Changed console.error to logger.error
+      console.error('Error deleting rule:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete rule. Please try again.',

@@ -3,8 +3,7 @@ const isDevelopment = import.meta.env.DEV;
 
 /**
  * A simple logger utility that logs messages only in development mode.
- * All development logs are routed through console.debug to centralize console output
- * and avoid direct use of console.log, console.warn, console.error in application code.
+ * This helps keep the production console clean and avoids leaking sensitive information.
  */
 export const logger = {
   /**
@@ -17,39 +16,39 @@ export const logger = {
     }
   },
   /**
-   * Logs messages with an [INFO] prefix in development (via console.debug).
+   * Logs messages with an [INFO] prefix in development.
    * Use for general informational messages.
    */
   info: (...args: any[]): void => {
     if (isDevelopment) {
-      console.debug('[INFO]', ...args);
+      console.info('[INFO]', ...args);
     }
   },
   /**
-   * Logs messages with a [WARN] prefix in development (via console.debug).
+   * Logs messages with a [WARN] prefix in development.
    * Use for warnings that don't necessarily halt execution.
    */
   warn: (...args: any[]): void => {
     if (isDevelopment) {
-      console.debug('[WARN]', ...args);
+      console.warn('[WARN]', ...args);
     }
   },
   /**
-   * Logs messages with an [ERROR] prefix in development (via console.debug).
+   * Logs messages with an [ERROR] prefix in development.
    * Use for errors that have been caught or are being reported.
    */
   error: (...args: any[]): void => {
     if (isDevelopment) {
-      console.debug('[ERROR]', ...args);
+      console.error('[ERROR]', ...args);
     }
   },
   /**
-   * A generic log method, logs with a [LOG] prefix in development (via console.debug).
+   * A generic log method, similar to console.log, active only in development.
    * Use for general logging where a specific level (debug, info) isn't necessary.
    */
   log: (...args: any[]): void => {
     if (isDevelopment) {
-      console.debug('[LOG]', ...args);
+      console.log(...args);
     }
   },
 };

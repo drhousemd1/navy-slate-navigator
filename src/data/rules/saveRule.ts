@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
-import { logger } from '@/lib/logger'; // Added logger import
 
 export const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
   if (ruleData.id) {
@@ -32,55 +31,50 @@ export const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
       .single();
 
     if (error) {
-      logger.error('Error updating rule:', error); // Replaced console.error
+      console.error('Error updating rule:', error);
       throw error;
     }
 
     return data as Rule;
   } else {
     // Create new rule
-    const { id, ...ruleWithoutId } = ruleData; // id is unused here, good practice
+    const { id, ...ruleWithoutId } = ruleData;
 
     if (!ruleWithoutId.title) {
       throw new Error('Rule title is required');
     }
 
-    // Constructing the new rule object with defaults
-    const newRulePayload: Omit<Rule, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'usage_data'> & { user_id?: string; usage_data: number[]; created_at?: string; updated_at?: string; } = {
+    const newRule = {
       title: ruleWithoutId.title,
       priority: ruleWithoutId.priority || 'medium',
-      background_opacity: ruleWithoutId.background_opacity ?? 100, // Use ?? for explicit undefined check
+      background_opacity: ruleWithoutId.background_opacity || 100,
       icon_color: ruleWithoutId.icon_color || '#FFFFFF',
       title_color: ruleWithoutId.title_color || '#FFFFFF',
       subtext_color: ruleWithoutId.subtext_color || '#FFFFFF',
       calendar_color: ruleWithoutId.calendar_color || '#9c7abb',
       highlight_effect: ruleWithoutId.highlight_effect || false,
-      focal_point_x: ruleWithoutId.focal_point_x ?? 50,
-      focal_point_y: ruleWithoutId.focal_point_y ?? 50,
+      focal_point_x: ruleWithoutId.focal_point_x || 50,
+      focal_point_y: ruleWithoutId.focal_point_y || 50,
       frequency: ruleWithoutId.frequency || 'daily',
-      frequency_count: ruleWithoutId.frequency_count ?? 3,
-      usage_data: [0, 0, 0, 0, 0, 0, 0], // Default usage_data
-      description: ruleWithoutId.description || null, // Ensure null if undefined
-      background_image_url: ruleWithoutId.background_image_url || null,
-      icon_url: ruleWithoutId.icon_url || null,
-      icon_name: ruleWithoutId.icon_name || null,
-      // created_at and updated_at are handled by DB or set explicitly before insert
+      frequency_count: ruleWithoutId.frequency_count || 3,
+      usage_data: [0, 0, 0, 0, 0, 0, 0],
+      ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
+      ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
+      ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
+      ...(ruleWithoutId.icon_name && { icon_name: ruleWithoutId.icon_name }),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      user_id: (await supabase.auth.getUser()).data.user?.id,
     };
-    
-    const user = (await supabase.auth.getUser()).data.user;
-    if (user) {
-        newRulePayload.user_id = user.id;
-    }
-
 
     const { data, error } = await supabase
       .from('rules')
-      .insert(newRulePayload) // user_id is now part of newRulePayload
+      .insert(newRule)
       .select()
       .single();
 
     if (error) {
-      logger.error('Error creating rule:', error); // Replaced console.error
+      console.error('Error creating rule:', error);
       throw error;
     }
 

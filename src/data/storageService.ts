@@ -1,7 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FileOptions } from '@supabase/storage-js';
-import { logger } from '@/lib/logger'; // Added logger import
 
 /**
  * Uploads a file to the specified Supabase Storage bucket.
@@ -14,45 +12,41 @@ import { logger } from '@/lib/logger'; // Added logger import
  */
 export const uploadFile = async (
   bucketName: string,
-  filePath: string, // This filePath could be sensitive if it contains user-specific info
+  filePath: string,
   file: File,
   options?: FileOptions
 ): Promise<{ path: string; publicUrl: string }> => {
-  // Sanitize filePath for logging if it's deemed sensitive.
-  // For generic paths like 'avatars/image.png' it might be fine.
-  // If filePath could be 'user_documents/john_doe_passport.pdf', then sanitize.
-  // Assuming filePath might contain PII, so sanitizing.
-  logger.log(`[storageService] Uploading file to bucket '${bucketName}', path: [FILE_PATH]`); // Replaced console.log & sanitized
+  console.log(`[storageService] Uploading file '${filePath}' to bucket '${bucketName}'`);
   const { data, error } = await supabase.storage
     .from(bucketName)
     .upload(filePath, file, options);
 
   if (error) {
-    logger.error(`[storageService] Error uploading file to bucket '${bucketName}', path: [FILE_PATH]:`, error); // Replaced console.error & sanitized
+    console.error(`[storageService] Error uploading file '${filePath}' to bucket '${bucketName}':`, error);
     throw error;
   }
 
   if (!data || !data.path) {
-    logger.error(`[storageService] Error uploading file to bucket '${bucketName}': No path returned.`); // Replaced console.error
+    console.error(`[storageService] Error uploading file to bucket '${bucketName}': No path returned.`);
     throw new Error('File upload failed: No path returned from storage.');
   }
   
-  logger.log(`[storageService] File '${data.path}' uploaded successfully to bucket '${bucketName}'.`); // Replaced console.log
+  console.log(`[storageService] File '${data.path}' uploaded successfully to bucket '${bucketName}'.`);
 
   const { data: urlData } = supabase.storage
     .from(bucketName)
     .getPublicUrl(data.path);
 
   if (!urlData || !urlData.publicUrl) {
-    logger.error(`[storageService] Error getting public URL for '${data.path}' in bucket '${bucketName}'.`); // Replaced console.error
+    console.error(`[storageService] Error getting public URL for '${data.path}' in bucket '${bucketName}'.`);
+    // Note: The file is uploaded, but we couldn't get the public URL.
+    // Depending on requirements, you might want to handle this differently,
+    // e.g., by attempting to delete the uploaded file or returning a partial success.
+    // For now, we'll throw, as the public URL is usually critical.
     throw new Error('File uploaded, but failed to retrieve public URL.');
   }
   
-  logger.log(`[storageService] Public URL for '${data.path}': ${urlData.publicUrl}`); // Replaced console.log, publicUrl might be sensitive to log in full depending on context. Sanitizing to [IMAGE_URL] for general safety.
-  // Actually, publicUrl IS the point, so logging it is probably fine for debugging, but if it points to PII, that's an issue.
-  // The plan says "image URLs". This is a publicUrl but could be for any file.
-  // Let's log it as [PUBLIC_URL] to be safe but distinct.
-  logger.log(`[storageService] Public URL for '${data.path}': [PUBLIC_URL]`); // Replaced console.log & sanitized publicUrl
+  console.log(`[storageService] Public URL for '${data.path}': ${urlData.publicUrl}`);
   return { path: data.path, publicUrl: urlData.publicUrl };
 };
 
@@ -64,27 +58,23 @@ export const uploadFile = async (
  */
 export const deleteFiles = async (
   bucketName: string,
-  filePaths: string[] // Array of potentially sensitive paths
+  filePaths: string[]
 ): Promise<void> => {
   if (filePaths.length === 0) {
-    logger.log('[storageService] No files specified for deletion.'); // Replaced console.log
+    console.log('[storageService] No files specified for deletion.');
     return;
   }
-  // Sanitize filePaths for logging
-  const sanitizedFilePaths = filePaths.map(() => '[FILE_PATH]');
-  logger.log(`[storageService] Deleting files from bucket '${bucketName}':`, sanitizedFilePaths); // Replaced console.log & sanitized
+  console.log(`[storageService] Deleting files from bucket '${bucketName}':`, filePaths);
   const { data, error } = await supabase.storage
     .from(bucketName)
     .remove(filePaths);
 
   if (error) {
-    logger.error(`[storageService] Error deleting files from bucket '${bucketName}':`, error); // Replaced console.error
+    console.error(`[storageService] Error deleting files from bucket '${bucketName}':`, error);
     throw error;
   }
   
-  logger.log(`[storageService] Files deleted successfully from bucket '${bucketName}':`, data); // Replaced console.log. `data` here contains info about deleted files, could be sensitive.
-  // Let's log a generic success message or count.
-  logger.log(`[storageService] ${filePaths.length} file(s) deleted successfully from bucket '${bucketName}'.`);
+  console.log(`[storageService] Files deleted successfully from bucket '${bucketName}':`, data);
 };
 
 /**
@@ -96,19 +86,18 @@ export const deleteFiles = async (
  */
 export const getFilePublicUrl = (
   bucketName: string,
-  filePath: string // Potentially sensitive path
+  filePath: string
 ): string => {
-  logger.log(`[storageService] Getting public URL for file in bucket '${bucketName}', path: [FILE_PATH]`); // Replaced console.log & sanitized
+  console.log(`[storageService] Getting public URL for file '${filePath}' in bucket '${bucketName}'`);
   const { data } = supabase.storage
     .from(bucketName)
     .getPublicUrl(filePath);
 
   if (!data || !data.publicUrl) {
-    logger.error(`[storageService] Error retrieving public URL for path [FILE_PATH] in bucket '${bucketName}'.`); // Replaced console.error & sanitized
-    throw new Error(`Failed to get public URL for ${filePath}.`); // Original error message might be okay here.
+    console.error(`[storageService] Error retrieving public URL for '${filePath}' in bucket '${bucketName}'.`);
+    throw new Error(`Failed to get public URL for ${filePath}.`);
   }
   
-  logger.log(`[storageService] Retrieved public URL: [PUBLIC_URL]`); // Replaced console.log & sanitized
+  console.log(`[storageService] Retrieved public URL: ${data.publicUrl}`);
   return data.publicUrl;
 };
-

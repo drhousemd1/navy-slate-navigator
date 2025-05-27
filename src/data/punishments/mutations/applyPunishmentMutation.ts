@@ -4,14 +4,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { PUNISHMENT_HISTORY_QUERY_KEY } from '../queries';
-import { logger } from '@/lib/logger'; // Added logger import
 
 /**
  * Applies a punishment and updates the cache optimistically
  */
 export const applyPunishmentMutation = (queryClient: QueryClient) => 
   async (punishment: { id: string; points: number }) => {
-    logger.log("[applyPunishmentMutation] Applying punishment:", punishment); // Replaced console.log
+    console.log("[applyPunishmentMutation] Applying punishment:", punishment);
     const startTime = performance.now();
     
     try {
@@ -36,7 +35,6 @@ export const applyPunishmentMutation = (queryClient: QueryClient) =>
         punishment_id: punishment.id,
         points_deducted: punishment.points,
         day_of_week: today.getDay()
-        // applied_date is handled by DB default (timestamptz default now())
       };
       
       const { data, error } = await supabase
@@ -53,7 +51,7 @@ export const applyPunishmentMutation = (queryClient: QueryClient) =>
       );
       
       const endTime = performance.now();
-      logger.log(`[applyPunishmentMutation] Operation completed in ${endTime - startTime}ms`); // Replaced console.log
+      console.log(`[applyPunishmentMutation] Operation completed in ${endTime - startTime}ms`);
       
       toast({
         title: "Success",
@@ -62,7 +60,7 @@ export const applyPunishmentMutation = (queryClient: QueryClient) =>
       
       return data;
     } catch (error) {
-      logger.error("[applyPunishmentMutation] Error:", error); // Replaced console.error
+      console.error("[applyPunishmentMutation] Error:", error);
       
       // Remove optimistic entry on error
       queryClient.setQueryData<PunishmentHistoryItem[]>(PUNISHMENT_HISTORY_QUERY_KEY, (old = []) => 
@@ -78,4 +76,3 @@ export const applyPunishmentMutation = (queryClient: QueryClient) =>
       throw error;
     }
   };
-
