@@ -1,10 +1,15 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth'; 
 import { toast } from '@/hooks/use-toast';
-import { AuthFormState } from './types';
+import { AuthFormState, AuthError } from './types';
 import { clearAuthState } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+
+interface AuthResponse {
+  error?: AuthError | null;
+}
 
 export function useAuthForm() {
   const [formState, setFormState] = useState<AuthFormState>({
@@ -49,7 +54,7 @@ export function useAuthForm() {
       
       logger.debug("Login attempt with email:", formState.email);
       
-      const { error } = await signIn(formState.email, formState.password);
+      const { error } = await signIn(formState.email, formState.password) as AuthResponse;
       
       if (error) {
         logger.error("Login error:", error);
@@ -68,8 +73,9 @@ export function useAuthForm() {
           loading: false 
         });
       }
-    } catch (error: any) {
-      logger.error("Authentication error:", error);
+    } catch (error) {
+      const err = error as Error;
+      logger.error("Authentication error:", err);
       
       updateFormState({
         loginError: "An unexpected error occurred. Please try again.",
@@ -100,7 +106,7 @@ export function useAuthForm() {
       }
       
       logger.debug("Attempting to sign up with email:", formState.email);
-      const { error } = await signUp(formState.email, formState.password);
+      const { error } = await signUp(formState.email, formState.password) as AuthResponse;
       
       if (error) {
         logger.error("Signup error:", error);
@@ -117,8 +123,9 @@ export function useAuthForm() {
         updateFormState({ loading: false });
         return "login";
       }
-    } catch (error: any) {
-      logger.error("Authentication error:", error);
+    } catch (error) {
+      const err = error as Error;
+      logger.error("Authentication error:", err);
       updateFormState({
         loginError: "An unexpected error occurred. Please try again.",
         loading: false

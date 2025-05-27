@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { logger } from '@/lib/logger'; // Ensure logger is imported
+import { logger } from '@/lib/logger';
+import { PostgrestError } from '@supabase/supabase-js';
 
 export const deleteRuleFromDb = async (ruleId: string): Promise<boolean> => {
   const { error } = await supabase

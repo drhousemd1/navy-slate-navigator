@@ -1,6 +1,26 @@
 
 import { Task } from '@/lib/taskUtils'; // Assuming Task is well-defined here
 
+export interface TaskFormValues {
+  title: string;
+  description: string;
+  points: number;
+  frequency: 'daily' | 'weekly';
+  frequency_count: number;
+  background_image_url?: string;
+  background_opacity: number;
+  icon_url?: string;
+  icon_name?: string;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  icon_color: string;
+  highlight_effect: boolean;
+  focal_point_x: number;
+  focal_point_y: number;
+  priority: 'low' | 'medium' | 'high';
+}
+
 // Export this to fix the import error in mutation files
 export type TaskWithId = Task & { 
   id: string;
@@ -8,7 +28,7 @@ export type TaskWithId = Task & {
   // but might not be in the base 'Task' type from taskUtils.ts.
   // This makes TaskWithId a more complete representation of a task object.
   week_identifier?: string | null;
-  background_images?: any; // Ideally, replace 'any' with a more specific type e.g., JsonValue
+  background_images?: Record<string, unknown> | null; // Replace 'any' with a more specific type
   // Ensure all other fields from the 'tasks' table that are part of a "full" task object
   // are also optionally here if not guaranteed by the base 'Task' type.
   // For example, if 'Task' from lib/taskUtils doesn't include all fields from the DB:
@@ -41,7 +61,7 @@ export type CreateTaskVariables = Partial<Omit<Task, 'id' | 'created_at' | 'upda
   points: number;
   // Explicitly add fields that were causing type errors, ensuring they are optional
   week_identifier?: string | null;
-  background_images?: any; // Ideally, replace 'any' with a more specific type like JsonValue if available
+  background_images?: Record<string, unknown> | null; // Replaced 'any' with Record
   
   // Other optional fields explicitly listed for clarity
   description?: string;

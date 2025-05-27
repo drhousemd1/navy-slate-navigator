@@ -9,27 +9,11 @@ import RewardFormActions from './RewardFormActions';
 import DeleteRewardDialog from './DeleteRewardDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { logger } from '@/lib/logger';
-
-interface RewardFormValues {
-  title: string;
-  description: string;
-  cost: number;
-  is_dom_reward: boolean;
-  icon_name: string | null;
-  icon_color: string;
-  title_color: string;
-  subtext_color: string;
-  calendar_color: string;
-  highlight_effect: boolean;
-  background_image_url: string | null;
-  background_opacity: number;
-  focal_point_x: number;
-  focal_point_y: number;
-}
+import { Reward, RewardFormValues } from '@/data/rewards/types';
 
 interface RewardEditorFormProps {
-  rewardData?: any;
-  onSave: (formData: any) => Promise<void>;
+  rewardData?: Partial<Reward>;
+  onSave: (formData: RewardFormValues) => Promise<void>;
   onCancel: () => void;
   onDelete?: (id: string) => void;
   isSaving?: boolean;

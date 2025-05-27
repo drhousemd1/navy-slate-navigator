@@ -48,7 +48,7 @@ export interface PunishmentsContextType {
   applyPunishment: (args: ApplyPunishmentArgs) => Promise<void>;
   recentlyAppliedPunishments: PunishmentHistoryItem[];
   fetchRandomPunishment: () => PunishmentData | null;
-  refetchPunishments: () => Promise<any>;
+  refetchPunishments: () => Promise<unknown>;
   getPunishmentHistory: (id: string) => PunishmentHistoryItem[];
   historyLoading: boolean;
 }

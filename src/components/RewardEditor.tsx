@@ -5,13 +5,14 @@ import { RewardEditorForm } from './reward-editor/RewardEditorForm';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { logger } from '@/lib/logger';
+import { Reward, RewardFormValues } from '@/data/rewards/types';
 
 interface RewardEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  rewardData?: any;
-  onSave: (rewardData: any) => Promise<any> | void; // Updated to allow any return type
-  onDelete?: (id: string) => void; // Changed from number to string
+  rewardData?: Partial<Reward>;
+  onSave: (rewardData: RewardFormValues) => Promise<Reward>; 
+  onDelete?: (id: string) => void;
 }
 
 const RewardEditor: React.FC<RewardEditorProps> = ({ 
@@ -31,21 +32,12 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
     }
   }, [rewardData, isOpen]);
   
-  const handleSave = async (formData: any) => {
+  const handleSave = async (formData: RewardFormValues) => {
     logger.debug("RewardEditor handling save with form data:", formData);
     logger.debug("is_dom_reward value in handleSave:", formData.is_dom_reward);
     
     try {
       setIsSaving(true);
-      
-      const dataToSave = rewardData ? { 
-        ...formData, 
-        id: rewardData.id,
-        is_dom_reward: Boolean(formData.is_dom_reward) // Ensure proper boolean conversion
-      } : formData;
-      
-      logger.debug("Final data being sent to save:", dataToSave);
-      logger.debug("Final is_dom_reward value:", dataToSave.is_dom_reward);
       
       // Show optimistic toast immediately
       toast({
@@ -59,8 +51,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
       // Process the save in the background
       setTimeout(async () => {
         try {
-          // Use await instead of .then to properly handle the Promise
-          await onSave(dataToSave);
+          await onSave(formData);
           logger.debug("Save completed successfully");
         } catch (error) {
           logger.error("Error in RewardEditor save handler:", error);

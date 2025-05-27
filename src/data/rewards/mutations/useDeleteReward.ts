@@ -4,16 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
-// Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+import { PostgrestError } from '@supabase/supabase-js';
 
 const REWARDS_QUERY_KEY = ['rewards'];
 
 export const useDeleteReward = () => {
   const queryClient = useQueryClient();
 
-  return useDeleteOptimisticMutation<Reward, Error, string>({
+  return useDeleteOptimisticMutation<Reward, PostgrestError | Error, string>({
     queryClient,
-    queryKey: REWARDS_QUERY_KEY, // Replaced [...CRITICAL_QUERY_KEYS.REWARDS]
+    queryKey: REWARDS_QUERY_KEY,
     mutationFn: async (rewardId: string) => {
       const { error: usageError } = await supabase
         .from('reward_usage')

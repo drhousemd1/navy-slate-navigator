@@ -1,6 +1,10 @@
 
 export type AuthView = "login" | "signup" | "forgot-password" | "reset-password";
 
+export interface AuthError {
+  message: string;
+}
+
 export interface AuthFormState {
   email: string;
   password: string;

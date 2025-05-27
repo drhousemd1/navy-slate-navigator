@@ -2,6 +2,11 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
+import { PostgrestError } from '@supabase/supabase-js';
+
+interface MessageSendResult {
+  id: string;
+}
 
 export const useMessageSend = () => {
   const { user } = useAuth();
@@ -32,10 +37,11 @@ export const useMessageSend = () => {
         throw error;
       }
       
-      return data.id;
+      return (data as MessageSendResult).id;
     } catch (err) {
-      logger.error('Error in sendMessage:', err);
-      throw err;
+      const error = err as PostgrestError | Error;
+      logger.error('Error in sendMessage:', error);
+      throw error;
     }
   };
 

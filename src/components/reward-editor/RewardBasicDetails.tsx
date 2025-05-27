@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,9 +7,10 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Control } from 'react-hook-form';
 import { logger } from '@/lib/logger';
+import { RewardFormValues } from '@/data/rewards/types';
 
 interface RewardBasicDetailsProps {
-  control: Control<any>;
+  control: Control<RewardFormValues>;
   incrementCost: () => void;
   decrementCost: () => void;
 }

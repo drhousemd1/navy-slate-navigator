@@ -24,6 +24,24 @@ export interface Reward {
 // Used for optimistic updates
 export type RewardWithId = Reward & { id: string };
 
+// Define the form values interface for reward forms
+export interface RewardFormValues {
+  title: string;
+  description: string;
+  cost: number;
+  is_dom_reward: boolean;
+  icon_name: string | null;
+  icon_color: string;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  highlight_effect: boolean;
+  background_image_url: string | null;
+  background_opacity: number;
+  focal_point_x: number;
+  focal_point_y: number;
+}
+
 // Align this with the type in useSaveReward.ts by making all fields from Reward present and required
 export type CreateRewardVariables = {
   title: string;

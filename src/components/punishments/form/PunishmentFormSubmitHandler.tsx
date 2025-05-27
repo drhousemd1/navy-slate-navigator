@@ -1,13 +1,14 @@
+
 import React, { useState } from 'react';
 import { Form } from '@/components/ui/form';
-import { PunishmentData } from '@/contexts/PunishmentsContext';
+import { PunishmentData } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
 import { PunishmentFormValues, punishmentFormSchema } from './PunishmentFormProvider';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
 interface PunishmentFormSubmitHandlerProps {
   punishmentData?: PunishmentData;
-  form: any;
+  form: any; // Need to maintain this until we can refactor the entire component
   selectedIconName: string | null;
   imagePreview: string | null;
   iconPreview: string | null;

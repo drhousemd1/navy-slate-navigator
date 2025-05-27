@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { PostgrestError } from '@supabase/supabase-js';
 
 export const SUB_REWARD_TYPES_COUNT_QUERY_KEY = 'subRewardTypesCount';
 
@@ -19,7 +20,7 @@ const fetchSubRewardTypesCount = async (): Promise<number> => {
 };
 
 export const useSubRewardTypesCountQuery = () => {
-  return useQuery<number, Error>({
+  return useQuery<number, PostgrestError | Error>({
     queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY],
     queryFn: fetchSubRewardTypesCount,
     staleTime: Infinity,
