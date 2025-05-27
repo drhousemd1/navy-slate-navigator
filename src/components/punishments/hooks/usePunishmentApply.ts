@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ApplyPunishmentArgs, PunishmentData } from '@/contexts/punishments/types';
 import { useApplyPunishment } from '@/data/punishments/mutations/useApplyPunishment'; 
 import { toast } from '@/hooks/use-toast'; 
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger'; // Ensure logger is imported
 
 interface UsePunishmentApplyProps {
   punishment: PunishmentData;
@@ -41,7 +41,7 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
             description: 'Could not fetch user profile data.',
             variant: 'destructive',
           });
-          logger.error("Error fetching profile:", profileError); // Replaced console.error
+          logger.error("Error fetching profile:", profileError);
           return;
         }
           
@@ -73,7 +73,7 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
     } catch (error) {
       // Errors from mutateAsync will be caught by the mutation's onError handler,
       // which will show a toast. Logging here is still useful for debugging.
-      logger.error('Error initiating apply punishment process:', error); // Replaced console.error
+      logger.error('Error initiating apply punishment process:', error);
       // Avoid showing a duplicate toast if the mutation hook already showed one.
       // If the error is *before* calling mutateAsync (e.g., fetching user profile), this toast is fine.
       if (!applyPunishmentMutation.isError) { // Check if mutation itself errored
@@ -88,3 +88,4 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
   
   return { handlePunish, isLoading: applyPunishmentMutation.isPending }; // Expose loading state
 };
+

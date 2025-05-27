@@ -1,7 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth'; // Changed import path
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger'; // Ensure logger is imported
 
 interface UserIds {
   subUserId: string | null;
@@ -36,7 +37,7 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ childre
         .single();
 
       if (error) {
-        logger.error('Error fetching profile for UserIdsContext:', error); // Replaced console.error
+        logger.error('Error fetching profile for UserIdsContext:', error);
         setUserIds({ subUserId: user.id, domUserId: user.id }); // Fallback for solo user
         setIsLoadingUserIds(false);
         return;
@@ -88,7 +89,7 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ childre
         setUserIds({ subUserId: user.id, domUserId: user.id });
       }
     } catch (e) {
-      logger.error('Exception in initializeUserIds:', e); // Replaced console.error
+      logger.error('Exception in initializeUserIds:', e);
       setUserIds({ subUserId: user.id, domUserId: user.id }); // Fallback
     } finally {
       setIsLoadingUserIds(false);
@@ -113,3 +114,4 @@ export const useUserIds = () => {
   }
   return context;
 };
+
