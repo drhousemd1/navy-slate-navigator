@@ -1,10 +1,9 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/data/rewards/types';
-import { withTimeout, DEFAULT_TIMEOUT_MS, selectWithTimeout } from '@/lib/supabaseUtils'; // Added selectWithTimeout
+import { withTimeout, DEFAULT_TIMEOUT_MS, selectWithTimeout } from '@/lib/supabaseUtils'; 
 import { PostgrestError } from '@supabase/supabase-js';
 import { logQueryPerformance } from '@/lib/react-query-config';
-
+import { logger } from '@/lib/logger';
 
 // Helper to ensure reward data consistency
 const processRewardData = (reward: any): Reward => {
@@ -33,7 +32,7 @@ const processRewardData = (reward: any): Reward => {
 
 // This function is imported as fetchRewardsFromServer in useRewards.ts
 export const fetchRewards = async (): Promise<Reward[]> => {
-  console.log('[fetchRewards] Fetching rewards from server (lib/rewardUtils)');
+  logger.debug('[fetchRewards] Fetching rewards from server (lib/rewardUtils)');
   const startTime = performance.now();
   try {
     const { data, error } = await selectWithTimeout<Reward>(
@@ -46,7 +45,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
     );
 
     if (error) {
-      console.error('[fetchRewards] Supabase error fetching rewards:', error);
+      logger.error('[fetchRewards] Supabase error fetching rewards:', error);
       logQueryPerformance('fetchRewards (server-error)', startTime);
       throw error;
     }
@@ -59,7 +58,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
     logQueryPerformance('fetchRewards (server-empty)', startTime, 0);
     return [];
   } catch (error) {
-    console.error('[fetchRewards] Error in fetchRewards process:', error);
+    logger.error('[fetchRewards] Error in fetchRewards process:', error);
     logQueryPerformance('fetchRewards (fetch-exception)', startTime);
     throw error; // Rethrow to be handled by React Query, which might use cache
   }

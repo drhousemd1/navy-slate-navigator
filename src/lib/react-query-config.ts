@@ -1,6 +1,6 @@
-
 import { QueryClient, QueryKey, Query, Mutation, QueryCache, MutationCache } from '@tanstack/react-query';
 import localforage from "localforage";
+import { logger } from '@/lib/logger';
 
 // Version identifier for cache invalidation with the persister
 export const APP_CACHE_VERSION = '1.0.1'; // Incremented version
@@ -10,7 +10,7 @@ export const createQueryClient = () => {
   const queryClient = new QueryClient({
     queryCache: new QueryCache({
       onError: (error: Error, query: Query<unknown, Error, unknown, QueryKey>) => {
-        console.error(
+        logger.error(
           `[Query Cache Error] Query Key: ${JSON.stringify(query.queryKey)} \nError:`,
           error
         );
@@ -20,7 +20,7 @@ export const createQueryClient = () => {
     }),
     mutationCache: new MutationCache({
       onError: (error: Error, variables: unknown, context: unknown, mutation: Mutation<unknown, Error, unknown, unknown>) => {
-        console.error(
+        logger.error(
           `[Mutation Cache Error] Mutation Key: ${JSON.stringify(mutation.options.mutationKey || 'N/A')} \nVariables: ${JSON.stringify(variables)} \nError:`,
           error,
           "\nContext:", context
@@ -66,7 +66,7 @@ export const purgeQueryCache = async (queryClient: QueryClient) => {
   await localforage.removeItem('REACT_QUERY_OFFLINE_CACHE'); // Default key for react-query-persist-client
   // Or, if a custom persister key is used, clear that.
   // For a full clear if unsure about the key: await localforage.clear();
-  console.log('Query cache (in-memory and persisted via localforage) purged manually');
+  logger.debug('Query cache (in-memory and persisted via localforage) purged manually');
 };
 
 // Centralized helper for performance logging
@@ -78,13 +78,13 @@ export const logQueryPerformance = (
   const endTime = performance.now();
   const duration = endTime - startTime;
   
-  console.log(
+  logger.debug(
     `[${operationName}] Operation completed in ${duration.toFixed(2)}ms` + 
     (dataLength !== undefined ? `, returned ${dataLength} items` : '')
   );
   
   if (duration > 300) {
-    console.warn(`[${operationName}] Operation was slow: ${duration.toFixed(2)}ms`);
+    logger.warn(`[${operationName}] Operation was slow: ${duration.toFixed(2)}ms`);
   }
 };
 

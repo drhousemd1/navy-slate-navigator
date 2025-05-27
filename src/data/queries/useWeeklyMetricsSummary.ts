@@ -1,9 +1,9 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsSummary';
+import { logger } from '@/lib/logger';
 
 // This is the type definition from the read-only file: src/components/throne/WeeklyMetricsSummary.ts
 // export interface WeeklyMetricsSummary {
@@ -25,7 +25,7 @@ export const fetchWeeklyMetricsSummary = async (): Promise<WeeklyMetricsSummary>
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
 
-    console.log('Fetching weekly data from', weekStart.toISOString(), 'to', weekEnd.toISOString());
+    logger.debug('Fetching weekly data from', weekStart.toISOString(), 'to', weekEnd.toISOString());
 
     const { data: taskCompletions, error: taskError } = await supabase
       .from('task_completion_history')
@@ -68,7 +68,7 @@ export const fetchWeeklyMetricsSummary = async (): Promise<WeeklyMetricsSummary>
       punishments: punishments?.length || 0
     };
   } catch (err) {
-    console.error('Error fetching metrics summary data:', err);
+    logger.error('Error fetching metrics summary data:', err);
     // Return a default or rethrow, React Query will handle it as an error state
     // For consistency with original behavior, let's return default structure on error within fetch
     return {
@@ -87,4 +87,3 @@ export function useWeeklyMetricsSummary() {
     ...STANDARD_QUERY_CONFIG
   });
 }
-

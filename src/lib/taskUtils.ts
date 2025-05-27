@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getMondayBasedDay } from "./utils";
-import { queryClient } from "@/data/queryClient"; // queryClient is already imported
+import { queryClient } from "@/data/queryClient"; 
+import { logger } from '@/lib/logger';
 
 export interface Task {
   id: string;
@@ -78,7 +79,7 @@ export const fetchTasks = async (): Promise<Task[]> => {
       .order('created_at', { ascending: true });
     
     if (error) {
-      console.error('Error fetching tasks:', error);
+      logger.error('Error fetching tasks:', error);
       toast({
         title: 'Error fetching tasks',
         description: error.message,
@@ -109,7 +110,7 @@ export const fetchTasks = async (): Promise<Task[]> => {
     
     return processedTasks;
   } catch (err) {
-    console.error('Unexpected error fetching tasks:', err);
+    logger.error('Unexpected error fetching tasks:', err);
     toast({
       title: 'Error fetching tasks',
       description: 'Could not fetch tasks',
@@ -213,10 +214,10 @@ export const processTasksWithRecurringLogic = (rawTasks: any[]): Task[] => {
 
 export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
   try {
-    console.log('Saving task with highlight effect:', task.highlight_effect);
-    console.log('Saving task with icon name:', task.icon_name);
-    console.log('Saving task with icon color:', task.icon_color);
-    console.log('Saving task with usage_data:', task.usage_data);
+    logger.debug('Saving task with highlight effect:', task.highlight_effect);
+    logger.debug('Saving task with icon name:', task.icon_name);
+    logger.debug('Saving task with icon color:', task.icon_color);
+    logger.debug('Saving task with usage_data:', task.usage_data);
     
     const usage_data = task.usage_data || Array(7).fill(0);
     const now = new Date().toISOString();
@@ -287,7 +288,7 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
       return data as Task;
     }
   } catch (err: any) {
-    console.error('Error saving task:', err);
+    logger.error('Error saving task:', err);
     toast({
       title: 'Error saving task',
       description: err.message || 'Could not save task',
@@ -334,10 +335,10 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         }) as unknown as { error: Error | null }; // Casting to handle potential Supabase RPC typing
         
         if (historyError) {
-          console.error('Error recording task completion history:', historyError);
+          logger.error('Error recording task completion history:', historyError);
           // Not throwing, as main task update can still proceed
         } else {
-          console.log('Task completion recorded in history');
+          logger.debug('Task completion recorded in history');
         }
       }
     }
@@ -383,7 +384,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         const userId = authData.user?.id;
         
         if (!userId) {
-          console.log('No authenticated user, skipping points update');
+          logger.debug('No authenticated user, skipping points update');
           return true;
         }
         
@@ -395,14 +396,14 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         
         if (profileError) {
           if (profileError.code === 'PGRST116') { // Profile does not exist
-            console.log('No profile found, creating one with initial points:', taskPoints);
+            logger.debug('No profile found, creating one with initial points:', taskPoints);
             
             const { error: createError } = await supabase
               .from('profiles')
               .insert([{ id: userId, points: taskPoints, dom_points: 0, updated_at: new Date().toISOString() }]); // Ensure dom_points and updated_at
               
             if (createError) {
-              console.error('Error creating profile:', createError);
+              logger.error('Error creating profile:', createError);
               // Not returning false, as task completion itself was successful
               return true; 
             }
@@ -417,13 +418,13 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
             return true;
           }
           
-          console.error('Error fetching profile:', profileError);
+          logger.error('Error fetching profile:', profileError);
           return true; // Task completion was successful, points issue is secondary
         }
         
         const currentPoints = profileData?.points || 0;
         const newPoints = currentPoints + taskPoints;
-        console.log('Updating profile points from', currentPoints, 'to', newPoints);
+        logger.debug('Updating profile points from', currentPoints, 'to', newPoints);
         
         const { error: pointsError } = await supabase
           .from('profiles')
@@ -431,11 +432,11 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           .eq('id', userId);
           
         if (pointsError) {
-          console.error('Error updating points:', pointsError);
+          logger.error('Error updating points:', pointsError);
           return true; // Task completion successful
         }
         
-        console.log('Points updated successfully:', newPoints);
+        logger.debug('Points updated successfully:', newPoints);
         toast({
           title: 'Points Earned',
           description: `You earned ${taskPoints} points!`,
@@ -445,7 +446,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         queryClient.invalidateQueries({ queryKey: ['rewards-points'] });
 
       } catch (err) {
-        console.error('Error handling points:', err);
+        logger.error('Error handling points:', err);
         toast({
           title: 'Task Completed',
           description: 'Task was completed, but there was an issue updating points.',
@@ -456,7 +457,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     
     return true;
   } catch (err: any) {
-    console.error('Error updating task completion:', err);
+    logger.error('Error updating task completion:', err);
     toast({
       title: 'Error updating task',
       description: err.message || 'Could not update task completion status',
@@ -467,16 +468,16 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
 };
 
 export const deleteTask = async (taskId: string): Promise<boolean> => {
-  console.log(`[taskUtils] Deleting task with ID: ${taskId}`);
+  logger.debug(`[taskUtils] Deleting task with ID: ${taskId}`);
   const { error } = await supabase
     .from('tasks')
     .delete()
     .eq('id', taskId);
 
   if (error) {
-    console.error('[taskUtils] Error deleting task:', error);
+    logger.error('[taskUtils] Error deleting task:', error);
     return false; 
   }
-  console.log(`[taskUtils] Task ${taskId} deleted successfully.`);
+  logger.debug(`[taskUtils] Task ${taskId} deleted successfully.`);
   return true;
 };

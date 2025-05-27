@@ -1,8 +1,8 @@
-
 import { QueryClient } from '@tanstack/react-query';
 import localforage from 'localforage';
 import { queryClient as appQueryClient } from '@/data/queryClient';
 import { purgeQueryCache } from '@/lib/react-query-config'; // For clearing cache
+import { logger } from '@/lib/logger';
 
 // localforage is configured in App.tsx with:
 // name: 'kingdom-app-react-query', storeName: 'query_cache'
@@ -65,7 +65,7 @@ export const getPersistedReactQueryCacheInfo = async (includeData: boolean = fal
       ...(includeData && { data: persistedClientData }),
     };
   } catch (error) {
-    console.error("Error fetching persisted React Query cache info:", error);
+    logger.error("Error fetching persisted React Query cache info:", error);
     return {
       exists: false,
       sizeBytes: null,
@@ -84,7 +84,7 @@ export const listLocalForageKeysForReactQueryStore = async (): Promise<string[]>
     // This targets the 'kingdom-app-react-query/query_cache' IndexedDB store
     return await localforage.keys();
   } catch (error) {
-    console.error("Error listing localforage keys for React Query store:", error);
+    logger.error("Error listing localforage keys for React Query store:", error);
     return [];
   }
 };
@@ -105,7 +105,7 @@ export const getTotalSizeOfReactQueryLocalForageStore = async (): Promise<number
     }
     return totalSize;
   } catch (error) {
-    console.error("Error calculating total size of React Query localforage store:", error);
+    logger.error("Error calculating total size of React Query localforage store:", error);
     return 0;
   }
 };
@@ -116,7 +116,7 @@ export const getTotalSizeOfReactQueryLocalForageStore = async (): Promise<number
  */
 export const clearAllAppCache = async (): Promise<void> => {
   await purgeQueryCache(appQueryClient);
-  console.log('All app cache (in-memory and persisted) cleared via cacheDiagnostics.');
+  logger.debug('All app cache (in-memory and persisted) cleared via cacheDiagnostics.');
 };
 
 /**
@@ -125,6 +125,5 @@ export const clearAllAppCache = async (): Promise<void> => {
 export const clearInMemoryCache = (client: QueryClient = appQueryClient): void => {
   client.getQueryCache().clear(); // Clears all queries from the cache
   client.getMutationCache().clear(); // Clears all mutations from the cache
-  console.log('In-memory cache cleared.');
+  logger.debug('In-memory cache cleared.');
 };
-
