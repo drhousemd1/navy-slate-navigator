@@ -7,6 +7,7 @@ import { MONTHLY_METRICS_QUERY_KEY } from "@/data/queries/metrics/useMonthlyMetr
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { USER_DOM_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserDomPointsQuery';
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 // Helper function to generate ISO week string (YYYY-Wxx format)
 // Consider moving to a shared util file.
@@ -40,7 +41,6 @@ interface RedeemPunishmentSuccessData {
 interface ProfilePoints {
   points?: number;
   dom_points?: number;
-  [key: string]: any; // Allow other profile fields
 }
 
 interface RedeemPunishmentOptimisticContext {
@@ -194,8 +194,8 @@ export const useRedeemPunishment = () => {
         if (profileData?.linked_partner_id) {
           domUserId = profileData.linked_partner_id;
         }
-      } catch (e) {
-        logger.error("Error fetching profile for domUserId in onSettled:", e);
+      } catch (e: unknown) {
+        logger.error("Error fetching profile for domUserId in onSettled:", getErrorMessage(e));
       }
 
       queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });

@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT DUPLICATE OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -15,8 +14,31 @@ import {
 } from "../indexedDB/useIndexedDB";
 import { PunishmentData } from "@/contexts/punishments/types"; // Import PunishmentData type
 
-// The Punishment interface now directly uses PunishmentData from types.ts
-// interface Punishment { ... } // This can be removed if PunishmentData is used directly.
+// Interface for the raw item structure from Supabase before mapping
+interface SupabasePunishmentItem {
+  id: string;
+  title: string;
+  description?: string | null;
+  points: number;
+  dom_points?: number | null;
+  dom_supply?: number | null;
+  background_image_url?: string | null;
+  background_opacity?: number | null;
+  icon_name?: string | null;
+  title_color?: string | null;
+  subtext_color?: string | null;
+  calendar_color?: string | null;
+  icon_color?: string | null;
+  highlight_effect?: boolean | null;
+  focal_point_x?: number | null;
+  focal_point_y?: number | null;
+  created_at: string;
+  updated_at: string;
+  icon_url?: string | null; // This field is in the mapping logic but not in the DB schema for 'punishments' table.
+                           // Keeping it here to match existing mapping, assuming it might be populated
+                           // by view/join logic or is an oversight to be addressed separately.
+}
+
 
 export function usePunishments() {
   return useQuery<PunishmentData[], Error>({ // Use PunishmentData type
@@ -43,24 +65,24 @@ export function usePunishments() {
       if (data) {
         // Process data to ensure it matches PunishmentData, especially new non-nullable fields
         const punishmentsData = data.map(item => {
-          const typedItem = item as Record<string, any>; // Phase 2: Changed from 'as any'
+          const typedItem = item as SupabasePunishmentItem; // Changed from Record<string, any>
           return {
             id: typedItem.id,
             title: typedItem.title,
-            description: typedItem.description ?? '', // Ensure default if DB somehow returns null
+            description: typedItem.description ?? '', 
             points: typedItem.points,
-            dom_points: typedItem.dom_points ?? 0, // Ensure default
-            dom_supply: typedItem.dom_supply ?? 0, // Ensure default
+            dom_points: typedItem.dom_points ?? 0, 
+            dom_supply: typedItem.dom_supply ?? 0, 
             background_image_url: typedItem.background_image_url,
-            background_opacity: typedItem.background_opacity ?? 50, // Ensure default
+            background_opacity: typedItem.background_opacity ?? 50, 
             icon_name: typedItem.icon_name,
-            title_color: typedItem.title_color ?? '#FFFFFF', // Ensure default
-            subtext_color: typedItem.subtext_color ?? '#8E9196', // Ensure default
-            calendar_color: typedItem.calendar_color ?? '#ea384c', // Ensure default
-            icon_color: typedItem.icon_color ?? '#ea384c', // Ensure default
-            highlight_effect: typedItem.highlight_effect ?? false, // Ensure default
-            focal_point_x: typedItem.focal_point_x ?? 50, // Ensure default
-            focal_point_y: typedItem.focal_point_y ?? 50, // Ensure default
+            title_color: typedItem.title_color ?? '#FFFFFF', 
+            subtext_color: typedItem.subtext_color ?? '#8E9196', 
+            calendar_color: typedItem.calendar_color ?? '#ea384c', 
+            icon_color: typedItem.icon_color ?? '#ea384c', 
+            highlight_effect: typedItem.highlight_effect ?? false, 
+            focal_point_x: typedItem.focal_point_x ?? 50, 
+            focal_point_y: typedItem.focal_point_y ?? 50, 
             created_at: typedItem.created_at,
             updated_at: typedItem.updated_at,
             icon_url: typedItem.icon_url || null, 
