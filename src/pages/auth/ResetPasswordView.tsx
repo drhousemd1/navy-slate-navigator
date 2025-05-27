@@ -6,7 +6,6 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger'; // Added logger import
-import { getErrorMessage } from '@/lib/errors'; // Added getErrorMessage import
 
 export const ResetPasswordView: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -34,9 +33,9 @@ export const ResetPasswordView: React.FC = () => {
           setError('No active session found. The reset link may have expired. Please request a new password reset link.');
         }
         setCheckingSession(false);
-      } catch (err: unknown) {
+      } catch (err) {
         logger.error('Error checking session:', err);
-        setError(getErrorMessage(err));
+        setError('Failed to verify authentication session. Please try again.');
         setCheckingSession(false);
       }
     };
@@ -89,9 +88,9 @@ export const ResetPasswordView: React.FC = () => {
       setTimeout(() => {
         navigate('/auth');
       }, 3000);
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.error('Password reset error:', error);
-      setError(getErrorMessage(error));
+      setError(error.message || 'Failed to reset password. Please try again.');
     } finally {
       setLoading(false);
     }

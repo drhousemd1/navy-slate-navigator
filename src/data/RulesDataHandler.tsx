@@ -1,81 +1,101 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Rule } from '@/data/interfaces/Rule';
+import { QueryObserverResult, UseQueryResult } from '@tanstack/react-query';
+import { fetchRules } from '@/data/rules/fetchRules';
+import { 
+  useCreateRule, 
+  CreateRuleVariables,
+  useUpdateRule, 
+  useDeleteRule, 
+  useCreateRuleViolation 
+} from '@/data/rules/mutations';
+import { CreateRuleViolationVariables } from '@/data/rules/types';
 
-import React, { createContext, useContext, ReactNode } from 'react';
-import { useQuery, useMutation, useQueryClient, UseQueryResult, DefinedUseQueryResult } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Rule, CreateRuleVariables, UpdateRuleVariables, RuleFormValues } from './rules/types'; // Corrected import
-import { fetchRules, parseRuleData } from './rules/queries'; // Assuming parseRuleData is exported from queries
-import { useCreateRule, useUpdateRule, useDeleteRule } from './rules/mutations';
-// import { CreateRuleViolationVariables } from './rules/types'; // This type might not exist or is named differently. Let's assume it's not used for now or handled by a specific mutation.
-import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors';
-import { toast } from '@/hooks/use-toast';
-
-interface RulesContextType {
-  rules: Rule[];
+export type RulesQueryResult = {
+  rules: Rule[]; 
   isLoading: boolean;
   error: Error | null;
-  refetchRules: () => void;
-  addRule: (ruleData: CreateRuleVariables) => Promise<Rule | undefined>;
-  updateRule: (ruleData: UpdateRuleVariables) => Promise<Rule | undefined>;
+  saveRule: (ruleData: Partial<Rule>) => Promise<Rule>;
   deleteRule: (ruleId: string) => Promise<void>;
-  // recordRuleViolation?: (violationData: CreateRuleViolationVariables) => Promise<void>; // If this function is needed, its type needs to be defined.
-}
+  markRuleBroken: (rule: Rule) => Promise<void>;
+  refetchRules: () => Promise<QueryObserverResult<Rule[], Error>>;
+};
 
-const RulesContext = createContext<RulesContextType | undefined>(undefined);
-
-export const RulesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const useRulesData = (): RulesQueryResult => {
   const queryClient = useQueryClient();
-
-  const { data: rules = [], isLoading, error, refetch } = useQuery<Rule[], Error, Rule[]>({
+  
+  const { 
+    data: rules = [], 
+    isLoading,
+    error,
+    refetch
+  }: UseQueryResult<Rule[], Error> = useQuery<Rule[], Error>({
     queryKey: ['rules'],
-    queryFn: fetchRules, // fetchRules should return Promise<Rule[]>
+    queryFn: fetchRules,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 60, 
+    refetchOnWindowFocus: false, 
+    refetchOnReconnect: false,  
+    refetchOnMount: false,     
+    retry: 1, 
+    retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
   });
 
-  const createRuleMutation = useCreateRule();
   const updateRuleMutation = useUpdateRule();
+  const createRuleMutation = useCreateRule();
   const deleteRuleMutation = useDeleteRule();
+  const markRuleViolationMutation = useCreateRuleViolation();
 
-  const addRule = async (ruleData: CreateRuleVariables) => {
-    try {
-      return await createRuleMutation.mutateAsync(ruleData);
-    } catch (e: unknown) {
-      logger.error('Error adding rule:', getErrorMessage(e), e);
-      toast({ title: "Error", description: `Failed to add rule: ${getErrorMessage(e)}`, variant: "destructive" });
+  const saveRuleWrapper = async (ruleData: Partial<Rule>): Promise<Rule> => {
+    if (ruleData.id) {
+      return await updateRuleMutation.mutateAsync({
+        id: ruleData.id,
+        ...ruleData
+      });
+    } else {
+      if (!ruleData.title) {
+        throw new Error("Rule title is required for creation.");
+      }
+      const createVariables: CreateRuleVariables = {
+        title: ruleData.title, 
+        description: ruleData.description,
+        priority: ruleData.priority,
+        background_image_url: ruleData.background_image_url,
+        background_opacity: ruleData.background_opacity,
+        icon_url: ruleData.icon_url,
+        icon_name: ruleData.icon_name,
+        title_color: ruleData.title_color,
+        subtext_color: ruleData.subtext_color,
+        calendar_color: ruleData.calendar_color,
+        icon_color: ruleData.icon_color,
+        highlight_effect: ruleData.highlight_effect,
+        focal_point_x: ruleData.focal_point_x,
+        focal_point_y: ruleData.focal_point_y,
+        frequency: ruleData.frequency,
+        frequency_count: ruleData.frequency_count,
+      };
+      return await createRuleMutation.mutateAsync(createVariables);
     }
   };
 
-  const updateRule = async (ruleData: UpdateRuleVariables) => {
-     try {
-      return await updateRuleMutation.mutateAsync(ruleData);
-    } catch (e: unknown) {
-      logger.error('Error updating rule:', getErrorMessage(e), e);
-      toast({ title: "Error", description: `Failed to update rule: ${getErrorMessage(e)}`, variant: "destructive" });
-    }
+  const deleteRuleWrapper = async (ruleId: string): Promise<void> => {
+    await deleteRuleMutation.mutateAsync(ruleId);
   };
 
-  const deleteRuleFunc = async (ruleId: string) => { // Renamed to avoid conflict with deleteRule from useDeleteRule
-    try {
-      await deleteRuleMutation.mutateAsync(ruleId);
-    } catch (e: unknown) {
-      logger.error('Error deleting rule:', getErrorMessage(e), e);
-      toast({ title: "Error", description: `Failed to delete rule: ${getErrorMessage(e)}`, variant: "destructive" });
-    }
+  const markRuleViolationWrapper = async (rule: Rule): Promise<void> => {
+    const violationVariables: CreateRuleViolationVariables = {
+      rule_id: rule.id 
+    };
+    await markRuleViolationMutation.mutateAsync(violationVariables);
   };
-  
-  // recordRuleViolation implementation would go here if needed.
 
-  return (
-    <RulesContext.Provider value={{ rules, isLoading, error: error || null, refetchRules: refetch, addRule, updateRule, deleteRule: deleteRuleFunc }}>
-      {children}
-    </RulesContext.Provider>
-  );
+  return { 
+    rules, 
+    isLoading, 
+    error: error || null, 
+    saveRule: saveRuleWrapper,
+    deleteRule: deleteRuleWrapper,
+    markRuleBroken: markRuleViolationWrapper,
+    refetchRules: refetch
+  };
 };
-
-export const useRules = (): RulesContextType => {
-  const context = useContext(RulesContext);
-  if (context === undefined) {
-    throw new Error('useRules must be used within a RulesProvider');
-  }
-  return context;
-};
-

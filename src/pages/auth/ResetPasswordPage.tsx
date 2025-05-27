@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -5,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors';
+import { logger } from '@/lib/logger'; // Added logger import
 
 const ResetPasswordPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -27,7 +27,7 @@ const ResetPasswordPage: React.FC = () => {
     const token = params.get('access_token');
     
     if (token) {
-      logger.debug('Access token found in URL');
+      logger.debug('Access token found in URL'); // Replaced console.log
       setAccessToken(token);
       
       // Set up the session with the access token
@@ -44,14 +44,14 @@ const ResetPasswordPage: React.FC = () => {
         });
         
         if (error) {
-          logger.error('Error setting session:', error);
+          logger.error('Error setting session:', error); // Replaced console.error
           setError('Failed to validate your reset token. Please request a new password reset link.');
         }
       };
       
       setSession();
     } else {
-      logger.error('No access token found in URL');
+      logger.error('No access token found in URL'); // Replaced console.error
       setError('Invalid or missing reset token. Please request a new password reset link.');
     }
   }, [location]);
@@ -90,7 +90,7 @@ const ResetPasswordPage: React.FC = () => {
       });
       
       if (updateError) {
-        logger.error('Error updating password:', updateError);
+        logger.error('Error updating password:', updateError); // Replaced console.error
         setError(updateError.message || 'Failed to update password. Please try again.');
       } else {
         // Password reset successful
@@ -100,9 +100,9 @@ const ResetPasswordPage: React.FC = () => {
         });
         navigate('/auth', { replace: true });
       }
-    } catch (err: unknown) {
-      logger.error('Exception during password update:', err);
-      setError(getErrorMessage(err));
+    } catch (err: any) {
+      logger.error('Exception during password update:', err); // Replaced console.error
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -171,3 +171,4 @@ const ResetPasswordPage: React.FC = () => {
 };
 
 export default ResetPasswordPage;
+

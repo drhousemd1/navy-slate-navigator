@@ -1,255 +1,292 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/components/ui/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getErrorMessage } from '@/lib/errors';
-import { logger } from '@/lib/logger';
-import DeleteAccountDialog from '@/components/profile/DeleteAccountDialog';
-import DeleteAvatarDialog from '@/components/profile/DeleteAvatarDialog';
+import { toast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+import { Camera, Trash2, LogOut } from 'lucide-react';
+import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
+import { DeleteAvatarDialog } from '@/components/profile/DeleteAvatarDialog';
+import { logger } from '@/lib/logger'; // Added logger import
 
-const ProfilePage: React.FC = () => {
-  const { user, session } = useAuth(); // Removed methods that might not exist: , updateUserPassword, uploadAvatar, deleteAvatar, signOut, deleteUserAccount 
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [username, setUsername] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
-  const [isDeleteAvatarOpen, setIsDeleteAvatarOpen] = useState(false);
+const Profile: React.FC = () => {
+  const { 
+    user, 
+    getNickname, 
+    updateNickname, 
+    getProfileImage, 
+    uploadProfileImageAndUpdateState, 
+    deleteUserProfileImage, 
+    signOut,
+    updateUserRole,
+    deleteAccount 
+  } = useAuth();
+  const [nickname, setNickname] = useState<string>('');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [newProfileImageFile, setNewProfileImageFile] = useState<File | null>(null);
+  const [loadingNickname, setLoadingNickname] = useState(false);
+  const [loadingProfileImage, setLoadingProfileImage] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] = useState(false);
+  const [isDeleteAvatarDialogOpen, setIsDeleteAvatarDialogOpen] = useState(false);
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
-      setUsername(user.user_metadata?.username || user.email || '');
-      setAvatarUrl(user.user_metadata?.avatar_url || null);
-    }
-  }, [user]);
+      const currentNickname = getNickname();
+      logger.debug('Profile Page: Current nickname from context:', currentNickname); // Replaced console.log
+      setNickname(currentNickname || '');
+      
+      const currentImage = getProfileImage();
+      logger.debug('Profile Page: Current profile image from context:', currentImage); // Replaced console.log
+      setProfileImage(currentImage);
 
-  const handleUpdatePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      toast({ title: 'Error', description: 'Passwords do not match.', variant: 'destructive' });
+      const role = user.user_metadata?.role || 'Not Set';
+      setCurrentRole(role);
+      logger.debug('Profile Page: Current user role from metadata:', role); // Replaced console.log
+    }
+  }, [user, getNickname, getProfileImage]);
+
+  const handleNicknameChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !nickname.trim()) {
+      setError('Nickname cannot be empty.');
       return;
     }
-    if (!newPassword) {
-      toast({ title: 'Error', description: 'Password cannot be empty.', variant: 'destructive' });
-      return;
-    }
+    setLoadingNickname(true);
+    setError(null);
     try {
-      // if (updateUserPassword) {
-      //   await updateUserPassword(newPassword);
-      //   toast({ title: 'Success', description: 'Password updated successfully.' });
-      //   setNewPassword('');
-      //   setConfirmPassword('');
-      // } else {
-      //   toast({ title: 'Error', description: 'Password update feature not available.', variant: 'destructive'});
-      // }
-      // Placeholder for Supabase direct call if updateUserPassword from context is unavailable
-       const { error } = await supabase.auth.updateUser({ password: newPassword });
-       if (error) throw error;
-       toast({ title: 'Success', description: 'Password updated successfully.' });
-       setNewPassword('');
-       setConfirmPassword('');
-    } catch (error: unknown) {
-      toast({ title: 'Error updating password', description: getErrorMessage(error), variant: 'destructive' });
-      logger.error('Error updating password:', getErrorMessage(error), error);
+      await updateNickname(nickname.trim());
+      toast({ title: 'Success', description: 'Nickname updated successfully.' });
+    } catch (err: any) {
+      logger.error('Error updating nickname:', err); // Replaced console.error
+      setError(err.message || 'Failed to update nickname.');
+      toast({ title: 'Error', description: err.message || 'Failed to update nickname.', variant: 'destructive' });
+    } finally {
+      setLoadingNickname(false);
     }
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user) return;
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setNewProfileImageFile(file);
+      // Preview image
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-    setUploading(true);
+  const handleProfileImageUpload = async () => {
+    if (!user || !newProfileImageFile) return;
+    setLoadingProfileImage(true);
+    setError(null);
     try {
-      // if (uploadAvatar) {
-      //   const newAvatarUrl = await uploadAvatar(file);
-      //   setAvatarUrl(newAvatarUrl);
-      //   toast({ title: 'Success', description: 'Avatar updated successfully.' });
-      // } else {
-      //    toast({ title: 'Error', description: 'Avatar upload feature not available.', variant: 'destructive'});
-      // }
-      // Placeholder for direct Supabase storage interaction
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-      
-      let { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
-      if (uploadError) throw uploadError;
-
-      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      if (!publicUrlData) throw new Error("Could not get public URL for avatar.");
-      
-      const newAvatarPublicUrl = publicUrlData.publicUrl;
-
-      const { error: updateUserError } = await supabase.auth.updateUser({
-        data: { avatar_url: newAvatarPublicUrl }
-      });
-      if (updateUserError) throw updateUserError;
-      
-      setAvatarUrl(newAvatarPublicUrl);
-      toast({ title: 'Success', description: 'Avatar updated successfully.' });
-
-    } catch (error: unknown) {
-      toast({ title: 'Error uploading avatar', description: getErrorMessage(error), variant: 'destructive' });
-      logger.error('Error uploading avatar:', getErrorMessage(error), error);
+      // Use the new function for uploading
+      const newImageUrl = await uploadProfileImageAndUpdateState(newProfileImageFile);
+      if (newImageUrl) {
+        setProfileImage(newImageUrl); 
+        setNewProfileImageFile(null); 
+        toast({ title: 'Success', description: 'Profile image updated successfully.' });
+      } else {
+        logger.warn('Profile Page: uploadProfileImageAndUpdateState did not return a new image URL as expected, but did not throw.'); // Replaced console.warn
+      }
+    } catch (err: any) {
+      logger.error('Error uploading profile image:', err); // Replaced console.error
+      setError(err.message || 'Failed to upload profile image.');
+      toast({ title: 'Error', description: err.message || 'Failed to upload profile image.', variant: 'destructive' });
     } finally {
-      setUploading(false);
+      setLoadingProfileImage(false);
     }
   };
   
   const handleDeleteAvatar = async () => {
-    if (!user || !avatarUrl) return;
+    if (!user) return;
+    setLoadingProfileImage(true); 
+    setError(null);
     try {
-      // if (deleteAvatar) {
-      //   await deleteAvatar();
-      //   setAvatarUrl(null);
-      //   toast({ title: 'Success', description: 'Avatar removed successfully.' });
-      // } else {
-      //   toast({ title: 'Error', description: 'Avatar deletion feature not available.', variant: 'destructive'});
-      // }
-      // Placeholder for direct Supabase storage interaction
-      const fileName = avatarUrl.split('/').pop();
-      if (fileName) {
-        const { error: deleteStorageError } = await supabase.storage.from('avatars').remove([`avatars/${fileName}`]);
-        // Log error but proceed to update user metadata to remove link
-        if (deleteStorageError) logger.error('Error deleting avatar from storage:', getErrorMessage(deleteStorageError));
-      }
-
-      const { error: updateUserError } = await supabase.auth.updateUser({
-        data: { avatar_url: null }
-      });
-      if (updateUserError) throw updateUserError;
-
-      setAvatarUrl(null);
-      toast({ title: 'Success', description: 'Avatar removed successfully.' });
-      setIsDeleteAvatarOpen(false);
-    } catch (error: unknown) {
-      toast({ title: 'Error removing avatar', description: getErrorMessage(error), variant: 'destructive' });
-      logger.error('Error removing avatar:', getErrorMessage(error), error);
+      // Use the new function for deleting
+      await deleteUserProfileImage(); 
+      setProfileImage(null); 
+      setNewProfileImageFile(null); 
+      toast({ title: 'Success', description: 'Profile image removed.' });
+    } catch (err: any)      {
+      logger.error('Error deleting profile image:', err); // Replaced console.error
+      setError(err.message || 'Failed to delete profile image.');
+      toast({ title: 'Error', description: err.message || 'Failed to delete profile image.', variant: 'destructive' });
+    } finally {
+      setLoadingProfileImage(false);
+      setIsDeleteAvatarDialogOpen(false);
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      // if (signOut) {
-      //   await signOut();
-      //   toast({ title: 'Signed Out', description: 'You have been signed out.' });
-      //   // Navigation to login will be handled by AuthProvider or router
-      // } else {
-      //    toast({ title: 'Error', description: 'Sign out feature not available.', variant: 'destructive'});
-      // }
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      toast({ title: 'Signed Out', description: 'You have been signed out.' });
-
-    } catch (error: unknown) {
-      toast({ title: 'Error signing out', description: getErrorMessage(error), variant: 'destructive' });
-      logger.error('Error signing out:', getErrorMessage(error), error);
-    }
+  const handleLogout = async () => {
+    await signOut();
+    logger.debug('Profile Page: User signed out. Cache purging handled by AuthContext.'); // Replaced console.log
   };
 
   const handleDeleteAccount = async () => {
-    // This is a sensitive operation and should ideally be handled by a Supabase Edge Function
-    // to ensure all related user data is cleaned up properly.
-    // Direct client-side deletion might leave orphaned data.
-    // For now, assuming `deleteUserAccount` from context handles this server-side.
+    if (!user || !deleteAccount) return; // Check if deleteAccount is available
     try {
-        // if (deleteUserAccount) {
-        //   await deleteUserAccount();
-        //   toast({ title: 'Account Deleted', description: 'Your account has been scheduled for deletion.' });
-        //   // Navigation to login will be handled by AuthProvider or router
-        // } else {
-        //   toast({ title: 'Error', description: 'Account deletion feature not available.', variant: 'destructive'});
-        // }
-        // This is a placeholder. Actual user deletion should be a backend operation.
-        // supabase.auth.signOut() is called, but actual deletion needs more.
-        toast({ title: 'Account Deletion Requested', description: 'This functionality requires backend setup for full data removal. You will be signed out.', variant: 'default' });
-        await supabase.auth.signOut();
+      await deleteAccount();
+      toast({ title: "Account Deletion Initiated", description: "Your account is scheduled for deletion. You will be logged out." });
+      // signOut is called within deleteAccount if successful, or handled by onAuthStateChange
+    } catch (err: any) {
+      logger.error('Error deleting account:', err); // Replaced console.error
+      toast({ title: 'Error', description: err.message || 'Failed to delete account.', variant: 'destructive' });
+    } finally {
+      setIsDeleteAccountDialogOpen(false);
+    }
+  };
 
-        setIsDeleteAccountOpen(false);
-    } catch (error: unknown) {
-        toast({ title: 'Error Deleting Account', description: getErrorMessage(error), variant: 'destructive' });
-        logger.error('Error deleting account:', getErrorMessage(error), error);
+  const handleRoleChange = async (newRole: 'sub' | 'dom') => {
+    if (!user) return;
+    try {
+      await updateUserRole(newRole);
+      setCurrentRole(newRole); // Update local state to reflect change immediately
+      toast({ title: 'Success', description: `Role updated to ${newRole}.` });
+    } catch (err: any) {
+      logger.error('Error updating role:', err); // Replaced console.error
+      toast({ title: 'Error', description: err.message || 'Failed to update role.', variant: 'destructive' });
     }
   };
 
   if (!user) {
     return (
       <AppLayout>
-        <div className="p-4">Loading user profile...</div>
+        <div className="flex items-center justify-center h-full">
+          <p className="text-white">Loading user profile...</p>
+        </div>
       </AppLayout>
     );
   }
 
   return (
     <AppLayout>
-      <div className="container mx-auto p-4 md:p-8 max-w-2xl">
-        <h1 className="text-3xl font-bold mb-8 text-white">Profile</h1>
+      <div className="container mx-auto px-4 py-8 text-white">
+        <h1 className="text-3xl font-bold mb-8 text-center">Profile Settings</h1>
 
-        <Card className="mb-8 bg-gray-800 border-gray-700 text-white">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Avatar className="h-16 w-16 mr-4">
-                <AvatarImage src={avatarUrl || undefined} alt={username} />
-                <AvatarFallback>{username?.charAt(0).toUpperCase()}</AvatarFallback>
+        {error && (
+          <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded mb-6" role="alert">
+            <p>{error}</p>
+          </div>
+        )}
+
+        <div className="max-w-2xl mx-auto bg-dark-navy p-8 rounded-lg shadow-xl border border-light-navy">
+          
+          {/* Profile Image Section */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="relative group">
+              <Avatar className="w-32 h-32 text-4xl border-2 border-cyan-500">
+                {profileImage ? (
+                  <AvatarImage src={profileImage} alt={nickname || user.email || 'User'} />
+                ) : null }
+                <AvatarFallback className="bg-light-navy text-cyan-300">
+                  {nickname ? nickname.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U')}
+                </AvatarFallback>
               </Avatar>
-              {username}
-            </CardTitle>
-            <CardDescription className="text-gray-400">Manage your account settings and preferences.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label htmlFor="avatar" className="block text-sm font-medium text-gray-300 mb-1">Profile Picture</label>
-              <Input id="avatar" type="file" onChange={handleAvatarUpload} disabled={uploading} className="bg-gray-700 border-gray-600 placeholder-gray-500 text-white" />
-              {uploading && <p className="text-sm text-blue-400 mt-1">Uploading...</p>}
-               {avatarUrl && (
-                <Button variant="link" onClick={() => setIsDeleteAvatarOpen(true)} className="text-red-400 px-0 mt-1">
-                  Remove Avatar
-                </Button>
-              )}
+              <label htmlFor="profileImageInput" className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="w-8 h-8 text-white" />
+              </label>
+              <input
+                id="profileImageInput"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleProfileImageChange}
+              />
             </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="mb-8 bg-gray-800 border-gray-700 text-white">
-          <CardHeader>
-            <CardTitle>Change Password</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="bg-gray-700 border-gray-600 placeholder-gray-500" />
-            <Input type="password" placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="bg-gray-700 border-gray-600 placeholder-gray-500" />
-          </CardContent>
-          <CardFooter>
-            <Button onClick={handleUpdatePassword} className="bg-blue-600 hover:bg-blue-700">Update Password</Button>
-          </CardFooter>
-        </Card>
+            {newProfileImageFile && (
+              <Button onClick={handleProfileImageUpload} className="mt-4 bg-cyan-600 hover:bg-cyan-700" disabled={loadingProfileImage}>
+                {loadingProfileImage ? 'Uploading...' : 'Save New Image'}
+              </Button>
+            )}
+            {profileImage && !newProfileImageFile && (
+              <Button variant="ghost" onClick={() => setIsDeleteAvatarDialogOpen(true)} className="mt-2 text-red-400 hover:text-red-300">
+                <Trash2 className="w-4 h-4 mr-2" /> Remove Image
+              </Button>
+            )}
+          </div>
 
-        <Card className="bg-red-900/30 border-red-700 text-white">
-            <CardHeader>
-                <CardTitle className="text-red-400">Danger Zone</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                 <Button variant="outline" onClick={handleSignOut} className="w-full border-yellow-500 text-yellow-400 hover:bg-yellow-600 hover:text-white">Sign Out</Button>
-                <Button variant="destructive" onClick={() => setIsDeleteAccountOpen(true)} className="w-full bg-red-600 hover:bg-red-700">Delete Account</Button>
-            </CardContent>
-        </Card>
+          {/* Nickname Section */}
+          <form onSubmit={handleNicknameChange} className="space-y-6 mb-8">
+            <div>
+              <Label htmlFor="nickname" className="block text-sm font-medium text-gray-300 mb-1">
+                Nickname
+              </Label>
+              <Input
+                id="nickname"
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                className="bg-navy border-light-navy focus:ring-cyan-500 focus:border-cyan-500"
+                placeholder="Enter your nickname"
+              />
+            </div>
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loadingNickname}>
+              {loadingNickname ? 'Saving...' : 'Save Nickname'}
+            </Button>
+          </form>
+
+          {/* Email Section (Read-only) */}
+          <div className="mb-8">
+            <Label className="block text-sm font-medium text-gray-300 mb-1">Email</Label>
+            <p className="text-gray-400 bg-navy p-3 rounded border border-light-navy">{user.email}</p>
+          </div>
+
+          {/* Role Selection Section */}
+          <div className="mb-8">
+            <Label className="block text-sm font-medium text-gray-300 mb-1">Current Role</Label>
+            <p className="text-gray-400 bg-navy p-3 rounded border border-light-navy capitalize mb-2">
+              {currentRole || 'Not set'}
+            </p>
+            <div className="flex space-x-2">
+              <Button 
+                onClick={() => handleRoleChange('sub')} 
+                variant={currentRole === 'sub' ? "default" : "outline"}
+                className={currentRole === 'sub' ? "bg-cyan-600 hover:bg-cyan-700" : "border-cyan-500 text-cyan-400 hover:bg-cyan-900/50"}
+              >
+                Set as Submissive
+              </Button>
+              <Button 
+                onClick={() => handleRoleChange('dom')} 
+                variant={currentRole === 'dom' ? "default" : "outline"}
+                className={currentRole === 'dom' ? "bg-purple-600 hover:bg-purple-700" : "border-purple-500 text-purple-400 hover:bg-purple-900/50"}
+              >
+                Set as Dominant
+              </Button>
+            </div>
+          </div>
+          
+          {/* Actions Section */}
+          <div className="space-y-4 border-t border-light-navy pt-8 mt-8">
+            <Button onClick={handleLogout} variant="outline" className="w-full border-gray-600 hover:bg-gray-700 flex items-center">
+              <LogOut className="w-4 h-4 mr-2" /> Log Out
+            </Button>
+            <Button onClick={() => setIsDeleteAccountDialogOpen(true)} variant="destructive" className="w-full flex items-center" disabled={!deleteAccount}>
+              <Trash2 className="w-4 h-4 mr-2" /> Delete Account
+            </Button>
+          </div>
+        </div>
       </div>
       <DeleteAccountDialog
-        isOpen={isDeleteAccountOpen}
-        onClose={() => setIsDeleteAccountOpen(false)}
+        isOpen={isDeleteAccountDialogOpen}
+        onClose={() => setIsDeleteAccountDialogOpen(false)}
         onConfirm={handleDeleteAccount}
+        type="delete"
       />
       <DeleteAvatarDialog
-        isOpen={isDeleteAvatarOpen}
-        onClose={() => setIsDeleteAvatarOpen(false)}
+        isOpen={isDeleteAvatarDialogOpen}
+        onClose={() => setIsDeleteAvatarDialogOpen(false)}
         onConfirm={handleDeleteAvatar}
       />
     </AppLayout>
   );
 };
 
-export default ProfilePage;
+export default Profile;

@@ -10,7 +10,7 @@ import CompletionCounter from './task/CompletionCounter';
 import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
 import HighlightedText from './task/HighlightedText';
-import { getMondayBasedDay } from '@/lib/utils'; // Changed import
+import { getCurrentDayOfWeek } from '@/lib/taskUtils';
 
 interface TaskCardProps {
   title: string;
@@ -60,7 +60,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   calendar_color = '#7E69AB',
   icon_color = '#9b87f5'
 }) => {
-  const currentDayOfWeek = getMondayBasedDay(); // Renamed from getCurrentDayOfWeek
+  const currentDayOfWeek = getCurrentDayOfWeek();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
   const maxCompletions = frequency_count || 1;
   const isFullyCompleted = currentCompletions >= maxCompletions;
@@ -161,4 +161,3 @@ const TaskCard: React.FC<TaskCardProps> = ({
 };
 
 export default TaskCard;
-

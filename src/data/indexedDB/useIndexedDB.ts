@@ -3,8 +3,6 @@ import { Reward } from '@/data/rewards/types';
 import { PunishmentData as ContextPunishmentData, PunishmentHistoryItem as ContextPunishmentHistoryItem } from '@/contexts/punishments/types';
 import { Rule } from '@/data/interfaces/Rule';
 import { logger } from '@/lib/logger';
-import { TaskWithId } from '@/data/tasks/types';
-import { getErrorMessage } from '@/lib/errors';
 
 // Define types for other entities or import them if they exist elsewhere
 export interface Task { id: string; [key: string]: any; }
@@ -13,6 +11,7 @@ export interface Task { id: string; [key: string]: any; }
 // Use imported types for consistency
 export type PunishmentData = ContextPunishmentData;
 export type PunishmentHistory = ContextPunishmentHistoryItem;
+
 
 const DB_NAME = 'appData';
 const REWARDS_STORE_NAME = 'rewards';
@@ -24,8 +23,6 @@ const LAST_SYNC_STORE_NAME = 'lastSyncTimes';
 const POINTS_STORE_NAME = 'points'; // For general points
 const DOM_POINTS_STORE_NAME = 'domPoints'; // For dom points
 
-const TASKS_STORE_KEY = 'tasks_store';
-const LAST_SYNC_TIME_KEY = 'last_sync_time_tasks';
 
 // Configure localforage instance
 localforage.config({
@@ -79,23 +76,20 @@ export const setLastSyncTimeForRewards = async (time: string): Promise<void> => 
 };
 
 // Tasks specific functions
-export const loadTasksFromDB = async (): Promise<TaskWithId[] | null> => {
+export const loadTasksFromDB = async (): Promise<Task[] | null> => {
   try {
-    const storedTasks = await tasksStore.getItem<TaskWithId[]>('allTasks');
-    return storedTasks as TaskWithId[] | null; // Ensure casting is correct
+    return await tasksStore.getItem<Task[]>('allTasks');
   } catch (error) {
     logger.error('Error loading tasks from IndexedDB:', error);
     return null;
   }
 };
 
-export const saveTasksToDB = async (tasks: TaskWithId[]): Promise<void> => {
+export const saveTasksToDB = async (tasks: Task[]): Promise<void> => {
   try {
-    await localforage.setItem(TASKS_STORE_KEY, tasks);
-    logger.debug('[IndexedDB] Tasks saved successfully.');
-  } catch (error: unknown) {
-    logger.error('[IndexedDB] Error saving tasks:', getErrorMessage(error), error);
-    throw error; // Rethrow to be handled by caller
+    await tasksStore.setItem('allTasks', tasks);
+  } catch (error) {
+    logger.error('Error saving tasks to IndexedDB:', error);
   }
 };
 

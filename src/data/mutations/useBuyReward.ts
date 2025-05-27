@@ -1,89 +1,128 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from '@/integrations/supabase/client';
-import { Reward } from '@/data/rewards/types';
-import { useRewardOperations } from '@/contexts/rewards/useRewardOperations'; // Assuming this is the correct path
-import { useToast } from '@/components/ui/use-toast';
-import { getErrorMessage } from '@/lib/errors';
-import { logger } from '@/lib/logger';
-import { useAuth } from '@/contexts/AuthContext';
+import { Reward } from "@/data/rewards/types";
+import { saveRewardsToDB, savePointsToDB, saveDomPointsToDB } from "../indexedDB/useIndexedDB";
+import { toast } from "@/hooks/use-toast";
 
-export const REWARDS_QUERY_KEY = ['rewards']; // Define if not already globally available
+interface BuyRewardParams {
+  rewardId: string;
+  cost: number;
+  isDomReward?: boolean;
+  currentSupply: number; 
+  // profileId: string; 
+  // currentPoints: number; 
+}
+
+interface BuyRewardResult {
+    updatedReward: Reward;
+    newPointsBalance: number;
+}
+
+const buyReward = async ({ rewardId, cost, isDomReward = false, currentSupply }: BuyRewardParams): Promise<BuyRewardResult> => {
+  const queryClient = useQueryClient(); 
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData?.user?.id) {
+    throw new Error("User not authenticated");
+  }
+  const profileId = userData.user.id;
+
+  const { data: reward, error: fetchError } = await supabase
+    .from('rewards')
+    .select('*')
+    .eq('id', rewardId)
+    .single();
+    
+  if (fetchError) throw fetchError;
+  if (!reward) throw new Error("Reward not found to buy.");
+  
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('points, dom_points')
+    .eq('id', profileId)
+    .single();
+    
+  if (profileError) throw profileError;
+  if (!profileData) throw new Error("Profile not found.");
+
+  const userCurrentPoints = isDomReward ? (profileData.dom_points || 0) : (profileData.points || 0);
+  if (userCurrentPoints < cost) {
+    throw new Error(`Not enough ${isDomReward ? 'dom ' : ''}points to buy this reward. Current: ${userCurrentPoints}, Cost: ${cost}`);
+  }
+  
+  if (reward.supply !== -1 && currentSupply <= 0) {
+      throw new Error("Reward is out of stock.");
+  }
+
+  const newRewardSupply = reward.supply === -1 ? -1 : currentSupply - 1;
+
+  const { data: updatedRewardData, error: updateError } = await supabase
+    .from('rewards')
+    .update({ 
+      supply: newRewardSupply,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', rewardId)
+    .select()
+    .single();
+    
+  if (updateError) throw updateError;
+  if (!updatedRewardData) throw new Error("Failed to update reward after purchase.");
+  
+  const newPointsBalance = userCurrentPoints - cost;
+  const updateProfilePayload = isDomReward ? { dom_points: newPointsBalance } : { points: newPointsBalance };
+
+  const { error: pointsError } = await supabase
+    .from('profiles')
+    .update({ ...updateProfilePayload, updated_at: new Date().toISOString() })
+    .eq('id', profileId);
+    
+  if (pointsError) {
+    await supabase.from('rewards').update({ supply: currentSupply, updated_at: new Date().toISOString() }).eq('id', rewardId);
+    throw pointsError;
+  }
+  
+  const pointsQueryKeyString = isDomReward ? 'rewardsDomPoints' : 'rewardsPoints';
+  queryClient.setQueryData([pointsQueryKeyString], newPointsBalance); // Replaced CRITICAL_QUERY_KEYS
+  if (isDomReward) {
+    await saveDomPointsToDB(newPointsBalance);
+  } else {
+    await savePointsToDB(newPointsBalance);
+  }
+  
+  return { updatedReward: updatedRewardData as Reward, newPointsBalance };
+};
 
 export function useBuyReward() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const { recordRewardUsage, invalidateUserPoints } = useRewardOperations();
-  const { toast } = useToast();
-
-  return useMutation<Reward, Error, Reward, { previousRewards: Reward[] | undefined }>({
-    onMutate: async (boughtReward: Reward) => {
-      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
-      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
-      
-      // Optimistically update: This might be complex if supply needs to be tracked.
-      // For simplicity, if supply is handled server-side or not part of this optimistic update:
-      // queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldData) => 
-      //   oldData ? oldData.map(r => r.id === boughtReward.id ? { ...r, /* update if needed */ } : r) : []
-      // );
-      
-      return { previousRewards };
-    },
-    mutationFn: async (reward: Reward) => {
-      if (!user) throw new Error('User not authenticated');
-
-      const pointsToDeduct = reward.cost;
-      const currentPointsKey = reward.is_dom_reward ? 'dom_points' : 'points';
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select(currentPointsKey)
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) throw profileError;
-      if (!profileData) throw new Error('User profile not found.');
-      
-      const currentPointsValue = (profileData[currentPointsKey] as number) || 0;
-
-      if (currentPointsValue < pointsToDeduct) {
-        throw new Error(`Not enough ${reward.is_dom_reward ? 'DOM' : ''} points.`);
-      }
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ [currentPointsKey]: currentPointsValue - pointsToDeduct })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      await recordRewardUsage(reward.id, user.id, reward.cost, reward.is_dom_reward);
-      
-      return reward; 
-    },
-    onSuccess: (data, variables, context) => {
-      invalidateUserPoints(); // Invalidate points which includes DOM points
-      // No need to manually update REWARDS_QUERY_KEY if it's just a purchase,
-      // unless the reward item itself changes (e.g., supply limited).
-      // If rewards list needs refresh (e.g. to show updated supply if tracked on reward item):
-      // queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-
-      toast({ title: 'Reward Purchased!', description: `${data.title} has been successfully purchased.` });
-      logger.info(`Reward ${data.id} purchased by user ${user?.id}`);
-    },
-    onError: (error, variables, context) => {
-      if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
-      }
-      toast({
-        title: 'Purchase Failed',
-        description: getErrorMessage(error),
-        variant: 'destructive',
+  return useMutation<BuyRewardResult, Error, BuyRewardParams>({
+    mutationFn: buyReward,
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData<Reward[]>(['rewards'], (oldRewards = []) => { // Replaced CRITICAL_QUERY_KEYS.REWARDS
+        const updatedRewards = oldRewards.map(reward => 
+          reward.id === variables.rewardId ? data.updatedReward : reward
+        );
+        saveRewardsToDB(updatedRewards); 
+        return updatedRewards;
       });
-      logger.error('Error buying reward:', getErrorMessage(error));
+
+      queryClient.invalidateQueries({ queryKey: ['rewards'] }); // Replaced CRITICAL_QUERY_KEYS.REWARDS
+      const pointsQueryKeyString = variables.isDomReward ? 'rewardsDomPoints' : 'rewardsPoints';
+      queryClient.invalidateQueries({ queryKey: [pointsQueryKeyString] }); // Replaced CRITICAL_QUERY_KEYS
+
+      toast({
+        title: "Reward Purchased!",
+        description: `You bought ${data.updatedReward.title} for ${variables.cost} ${variables.isDomReward ? "DOM " : ""}points.`
+      });
     },
-    onSettled: () => {
-      // queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY }); // Already handled or not needed for this specific mutation
-      // User points are invalidated in onSuccess
-    },
+    onError: (error) => {
+      toast({
+        title: "Purchase Failed",
+        description: error.message || "Could not purchase reward.",
+        variant: "destructive",
+      });
+      queryClient.invalidateQueries({ queryKey: ['rewards'] }); // Replaced CRITICAL_QUERY_KEYS.REWARDS
+      queryClient.invalidateQueries({ queryKey: ['rewardsPoints'] }); // Replaced CRITICAL_QUERY_KEYS.REWARDS_POINTS
+      queryClient.invalidateQueries({ queryKey: ['rewardsDomPoints'] }); // Replaced CRITICAL_QUERY_KEYS.REWARDS_DOM_POINTS
+    }
   });
 }

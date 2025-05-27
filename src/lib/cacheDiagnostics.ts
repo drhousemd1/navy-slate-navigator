@@ -1,66 +1,129 @@
+import { QueryClient } from '@tanstack/react-query';
+import localforage from 'localforage';
+import { queryClient as appQueryClient } from '@/data/queryClient';
+import { purgeQueryCache } from '@/lib/react-query-config'; // For clearing cache
+import { logger } from '@/lib/logger';
 
-import { QueryClient, QueryCache, MutationCache, QueryCacheNotifyEvent } from '@tanstack/react-query'; // Added QueryCacheNotifyEvent
-import { logger } from './logger';
-import { getErrorMessage } from './errors';
+// localforage is configured in App.tsx with:
+// name: 'kingdom-app-react-query', storeName: 'query_cache'
+// This module will use that globally configured instance.
 
-interface CacheEntryData {
-  queryKey: unknown[];
-  data?: unknown;
-  // Add other relevant fields from Query or Mutation objects if needed
-  // For example, for mutations:
-  // mutationId?: number;
-  // state?: { data?: unknown; error?: unknown; status?: string; };
+const PERSISTED_CACHE_KEY = 'REACT_QUERY_OFFLINE_CACHE'; // Default key used by react-query-persist-client
+
+interface InMemoryCacheStatus {
+  totalQueries: number;
+  // We could add more details if QueryClient's API allows easy access,
+  // e.g., number of active queries, observers, etc.
 }
 
-// The following functions were referenced by CacheMonitorPanel.tsx but seem to have been removed or changed.
-// If they are needed, they would need to be re-implemented or restored.
-// For now, their absence will cause build errors if CacheMonitorPanel.tsx is not updated.
-/*
-export const getInMemoryCacheStatus = (queryClient: QueryClient) => { ... };
-export const getPersistedReactQueryCacheInfo = async () => { ... };
-export const listLocalForageKeysForReactQueryStore = async () => { ... };
-export const getTotalSizeOfReactQueryLocalForageStore = async () => { ... };
-export const clearAllAppCache = async (queryClient: QueryClient) => { ... };
-export const clearInMemoryCache = (queryClient: QueryClient) => { ... };
-*/
+/**
+ * Gets statistics about the in-memory React Query cache.
+ * @param client - The QueryClient instance (defaults to the app's global queryClient).
+ * @returns An object with in-memory cache statistics.
+ */
+export const getInMemoryCacheStatus = (client: QueryClient = appQueryClient): InMemoryCacheStatus => {
+  const cache = client.getQueryCache();
+  return {
+    totalQueries: cache.findAll().length,
+  };
+};
 
+interface PersistedCacheInfo {
+  exists: boolean;
+  sizeBytes: number | null;
+  lastPersistedTimestamp: number | null; // Timestamp from the persisted client state structure
+  data?: any; // Optionally include the raw persisted data for inspection
+}
 
-export const logCacheState = (queryClient: QueryClient) => {
+/**
+ * Gets information about the persisted React Query cache stored in localforage.
+ * It specifically looks for the 'REACT_QUERY_OFFLINE_CACHE' key.
+ * @param includeData - Whether to include the raw persisted data in the result.
+ * @returns A promise that resolves to an object with persisted cache information.
+ */
+export const getPersistedReactQueryCacheInfo = async (includeData: boolean = false): Promise<PersistedCacheInfo> => {
   try {
-    const queryCache = queryClient.getQueryCache();
-    const queries = queryCache.getAll().map(q => ({
-      queryKey: q.queryKey,
-      data: q.state.data,
-      // status: q.state.status,
-      // dataUpdatedAt: q.state.dataUpdatedAt,
-    })) as CacheEntryData[]; 
+    // localforage.getItem will use the instance configured in App.tsx
+    const persistedClientData = await localforage.getItem<any>(PERSISTED_CACHE_KEY);
 
-    logger.debug("Current Query Cache State:", queries);
+    if (!persistedClientData) {
+      return {
+        exists: false,
+        sizeBytes: null,
+        lastPersistedTimestamp: null,
+      };
+    }
 
-    const mutationCache = queryClient.getMutationCache();
-    const mutations = mutationCache.getAll().map(m => ({
-      mutationKey: m.options.mutationKey, 
-      // variables: m.state.variables,
-      // status: m.state.status,
-      // data: m.state.data,
-      // error: m.state.error,
-    })) as Partial<CacheEntryData>[]; 
-    logger.debug("Current Mutation Cache State:", mutations);
-  } catch (error: unknown) {
-    logger.error("Error logging cache state:", getErrorMessage(error), error);
+    const sizeBytes = new TextEncoder().encode(JSON.stringify(persistedClientData)).length;
+    // The persisted data typically has a structure like { timestamp: number, clientState: ... }
+    const lastPersistedTimestamp = persistedClientData?.timestamp || null;
+
+    return {
+      exists: true,
+      sizeBytes,
+      lastPersistedTimestamp,
+      ...(includeData && { data: persistedClientData }),
+    };
+  } catch (error) {
+    logger.error("Error fetching persisted React Query cache info:", error);
+    return {
+      exists: false,
+      sizeBytes: null,
+      lastPersistedTimestamp: null,
+    };
   }
 };
 
-// Example of subscribing to cache events (ensure QueryCacheNotifyEvent is imported)
-export const setupCacheEventLogging = (queryClient: QueryClient) => {
-  const queryCache = queryClient.getQueryCache();
-  queryCache.subscribe((event: QueryCacheNotifyEvent) => { // Typed event
-    logger.debug("Query Cache Event:", event);
-  });
-
-  const mutationCache = queryClient.getMutationCache();
-  mutationCache.subscribe((event: any) => { // TODO: Find the correct type for MutationCacheEvent if available
-    logger.debug("Mutation Cache Event:", event);
-  });
+/**
+ * Lists all keys within the localforage store configured for React Query.
+ * (As configured in App.tsx: name 'kingdom-app-react-query', storeName 'query_cache')
+ * @returns A promise that resolves to an array of keys.
+ */
+export const listLocalForageKeysForReactQueryStore = async (): Promise<string[]> => {
+  try {
+    // This targets the 'kingdom-app-react-query/query_cache' IndexedDB store
+    return await localforage.keys();
+  } catch (error) {
+    logger.error("Error listing localforage keys for React Query store:", error);
+    return [];
+  }
 };
 
+/**
+ * Calculates the total size of all items in the localforage store configured for React Query.
+ * @returns A promise that resolves to the total size in bytes.
+ */
+export const getTotalSizeOfReactQueryLocalForageStore = async (): Promise<number> => {
+  let totalSize = 0;
+  try {
+    const keys = await localforage.keys(); // Keys from 'kingdom-app-react-query/query_cache'
+    for (const key of keys) {
+      const item = await localforage.getItem(key);
+      if (item) {
+        totalSize += new TextEncoder().encode(JSON.stringify(item)).length;
+      }
+    }
+    return totalSize;
+  } catch (error) {
+    logger.error("Error calculating total size of React Query localforage store:", error);
+    return 0;
+  }
+};
+
+/**
+ * Clears all caches (in-memory and persisted React Query cache).
+ * This re-uses the function from react-query-config.
+ */
+export const clearAllAppCache = async (): Promise<void> => {
+  await purgeQueryCache(appQueryClient);
+  logger.debug('All app cache (in-memory and persisted) cleared via cacheDiagnostics.');
+};
+
+/**
+ * Clears only the in-memory React Query cache.
+ */
+export const clearInMemoryCache = (client: QueryClient = appQueryClient): void => {
+  client.getQueryCache().clear(); // Clears all queries from the cache
+  client.getMutationCache().clear(); // Clears all mutations from the cache
+  logger.debug('In-memory cache cleared.');
+};
