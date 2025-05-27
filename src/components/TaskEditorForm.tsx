@@ -18,6 +18,7 @@ import PredefinedIconsGrid from './task-editor/PredefinedIconsGrid';
 import DeleteTaskDialog from './task-editor/DeleteTaskDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
 
 interface TaskFormValues {
   title: string;
@@ -193,14 +194,11 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       await clearPersistedState(); 
       onCancel();
     } catch (e: unknown) {
-      let errorMessage = "Failed to save task. Please try again.";
-      if (e instanceof Error) {
-        errorMessage = e.message;
-      }
-      logger.error('Error saving task:', errorMessage, e);
+      const descriptiveMessage = getErrorMessage(e);
+      logger.error('Error saving task:', descriptiveMessage, e);
       toast({
-        title: "Error",
-        description: errorMessage,
+        title: "Error Saving Task",
+        description: descriptiveMessage,
         variant: "destructive",
       });
     } finally {

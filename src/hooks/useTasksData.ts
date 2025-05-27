@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries';
 import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables, Json } from '@/data/tasks/types';
@@ -9,6 +10,7 @@ import { useDeleteTask } from '@/data/tasks/mutations/useDeleteTask';
 import { logger } from '@/lib/logger';
 import { useCreateTask } from '@/data/tasks/mutations/useCreateTask';
 import { useUpdateTask } from '@/data/tasks/mutations/useUpdateTask';
+import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
 
 
 // Define a type for the data saveTask might receive
@@ -49,12 +51,9 @@ export const useTasksData = () => {
         return await createTaskMutation.mutateAsync(createPayload);
       }
     } catch (e: unknown) {
-      let errorMessage = "An error occurred while saving the task.";
-      if (e instanceof Error) {
-        errorMessage = e.message;
-      }
-      logger.error("Error in saveTask (useTasksData):", errorMessage, e);
-      toast({ title: "Save Error", description: errorMessage, variant: "destructive" });
+      const descriptiveMessage = getErrorMessage(e);
+      logger.error("Error in saveTask (useTasksData):", descriptiveMessage, e);
+      toast({ title: "Save Error", description: descriptiveMessage, variant: "destructive" });
       throw e; 
     }
   };
@@ -73,3 +72,4 @@ export const useTasksData = () => {
     refetch
   };
 };
+

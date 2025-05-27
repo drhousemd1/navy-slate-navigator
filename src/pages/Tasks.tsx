@@ -14,6 +14,7 @@ import { useToggleTaskCompletionMutation } from '../data/tasks/mutations/useTogg
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
 
 const TasksPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -59,35 +60,21 @@ const TasksPageContent: React.FC = () => {
     try {
       let taskToSave: CreateTaskVariables | UpdateTaskVariables; 
       if (currentTask && currentTask.id) {
-        // Construct UpdateTaskVariables
-        // TaskFormValues provides the fields for the update.
-        // UpdateTaskVariables is { id: string } & Partial<Omit<TaskWithId, ... >>
-        // Spreading formData provides the partial update fields.
         taskToSave = { ...formData, id: currentTask.id };
       } else {
-        // Construct CreateTaskVariables
-        // TaskFormValues provides most fields.
-        // CreateTaskVariables = Partial<Omit<Task, ...>> & { title: string; points: number; ... }
-        // Add fields specific to CreateTaskVariables not in TaskFormValues.
         taskToSave = { 
           ...formData, 
-          // Default values for new tasks if not in formData or to override
-          usage_data: Array(7).fill(0), // Default for new tasks
-          background_images: null, // Default for new tasks
-          // Ensure all required fields for CreateTaskVariables are met by formData
-          // title and points are required and are in TaskFormValues.
+          usage_data: Array(7).fill(0), 
+          background_images: null, 
         };
       }
-      await saveTask(taskToSave); // Removed 'as any' cast
+      await saveTask(taskToSave);
       setIsEditorOpen(false);
       setCurrentTask(null);
     } catch (e: unknown) {
-      let errorMessage = "Failed to save task.";
-      if (e instanceof Error) {
-        errorMessage = e.message;
-      }
-      logger.error('Error saving task in UI:', errorMessage, e);
-      toast({ title: "Save Error", description: errorMessage, variant: "destructive" });
+      const descriptiveMessage = getErrorMessage(e);
+      logger.error('Error saving task in UI:', descriptiveMessage, e);
+      toast({ title: "Save Error", description: descriptiveMessage, variant: "destructive" });
     }
   };
 
@@ -97,12 +84,9 @@ const TasksPageContent: React.FC = () => {
       setIsEditorOpen(false);
       setCurrentTask(null);
     } catch (e: unknown) {
-      let errorMessage = "Failed to delete task.";
-      if (e instanceof Error) {
-        errorMessage = e.message;
-      }
-      logger.error('Error deleting task in UI:', errorMessage, e);
-      toast({ title: "Delete Error", description: errorMessage, variant: "destructive" });
+      const descriptiveMessage = getErrorMessage(e);
+      logger.error('Error deleting task in UI:', descriptiveMessage, e);
+      toast({ title: "Delete Error", description: descriptiveMessage, variant: "destructive" });
     }
   };
 
@@ -121,12 +105,9 @@ const TasksPageContent: React.FC = () => {
         task 
       });
     } catch (e: unknown) {
-      let errorMessage = "Failed to toggle task completion.";
-      if (e instanceof Error) {
-        errorMessage = e.message;
-      }
-      logger.error('Error preparing to toggle task completion in UI:', errorMessage, e);
-      toast({ title: "Toggle Error", description: errorMessage, variant: "destructive" });
+      const descriptiveMessage = getErrorMessage(e);
+      logger.error('Error preparing to toggle task completion in UI:', descriptiveMessage, e);
+      toast({ title: "Toggle Error", description: descriptiveMessage, variant: "destructive" });
     }
   };
 
@@ -146,7 +127,7 @@ const TasksPageContent: React.FC = () => {
     content = (
       <ErrorDisplay
         title="Error Loading Tasks"
-        message={error.message || "Could not fetch tasks. Please check your connection or try again later."}
+        message={getErrorMessage(error) || "Could not fetch tasks. Please check your connection or try again later."}
       />
     );
   } else if (!isLoading && tasks.length === 0 && !error) {

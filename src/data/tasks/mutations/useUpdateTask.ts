@@ -6,6 +6,7 @@ import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 export type { UpdateTaskVariables }; // Changed to export type
 
@@ -48,12 +49,13 @@ export const useUpdateTask = () => {
         await setLastSyncTimeForTasks(new Date().toISOString());
         logger.debug('[useUpdateTask onSuccessCallback] IndexedDB updated with updated task.');
       } catch (e: unknown) {
-        let errorMessage = "Task updated on server, but failed to save changes locally.";
-        if (e instanceof Error) {
-          errorMessage = e.message;
-        }
-        logger.error('[useUpdateTask onSuccessCallback] Error updating IndexedDB:', errorMessage, e);
-        toast({ variant: "destructive", title: "Local Save Error", description: errorMessage });
+        const descriptiveMessage = getErrorMessage(e);
+        logger.error('[useUpdateTask onSuccessCallback] Error updating IndexedDB:', descriptiveMessage, e);
+        toast({ 
+            variant: "destructive", 
+            title: "Local Save Error", 
+            description: `Failed to save updated task locally: ${descriptiveMessage}` 
+        });
       }
     },
   });
