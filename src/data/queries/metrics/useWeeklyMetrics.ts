@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { generateMondayBasedWeekDates } from '@/lib/utils';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 export interface WeeklyDataItem {
   date: string;
@@ -103,11 +104,11 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
     const result = Array.from(metricsMap.values()).sort((a, b) => a.date.localeCompare(b.date));
     logger.debug('Weekly chart data prepared via hook:', result);
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error fetching weekly data in hook:', error);
     toast({
-      title: 'Error',
-      description: 'Failed to fetch weekly activity data',
+      title: 'Error Fetching Weekly Data',
+      description: getErrorMessage(error),
       variant: 'destructive'
     });
     return [];

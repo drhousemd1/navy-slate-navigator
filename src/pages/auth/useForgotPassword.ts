@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors'; // Added import
 
 export function useForgotPassword() {
   const [email, setEmail] = useState('');
@@ -18,7 +19,7 @@ export function useForgotPassword() {
     if (!email) {
       setError("Please enter your email address.");
       setLoading(false);
-      return;
+      return false; // Ensure boolean return for consistency
     }
     
     try {
@@ -27,17 +28,18 @@ export function useForgotPassword() {
       const { error: resetError } = await resetPassword(email);
       if (resetError) {
         logger.error("Password reset error:", resetError);
-        setError(resetError.message || "Failed to send password reset email. Please try again.");
+        setError(getErrorMessage(resetError)); // Used getErrorMessage
       } else {
         toast({
           title: "Password reset link sent",
           description: "Please check your email for instructions on how to reset your password.",
         });
+        setLoading(false); // Ensure loading is set to false on success
         return true;
       }
-    } catch (error) {
-      logger.error("Password reset error:", error);
-      setError("An unexpected error occurred. Please try again.");
+    } catch (error: unknown) { // Changed to error: unknown
+      logger.error("Password reset error (general catch):", error); // Added context to log
+      setError(getErrorMessage(error)); // Used getErrorMessage
     } finally {
       setLoading(false);
     }
