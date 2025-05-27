@@ -32,7 +32,7 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
       <p className="text-sm text-muted-foreground pb-2">
         Add a background image to make your reward more visually appealing.
       </p>
-      <BackgroundImageSelector<RewardFormValues>
+      <BackgroundImageSelector<RewardFormValues> {/* Added a space here */}
         control={control}
         imagePreview={imagePreview}
         initialPosition={initialPosition}
