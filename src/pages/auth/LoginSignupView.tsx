@@ -23,7 +23,8 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       
       logger.log("Attempting login with:", {
         email: formState.email,
-        passwordLength: formState.password?.length || 0
+        // Redact password for logging
+        passwordProvided: (formState.password?.length || 0) > 0 
       });
       
       // Direct call to Supabase auth
@@ -33,7 +34,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       });
       
       if (error) {
-        logger.error("Login error:", error);
+        logger.error("Login error:", { message: error.message, code: error.code });
         
         // Display a user-friendly error message
         let errorMessage = "Authentication failed. Please check your credentials.";
@@ -46,7 +47,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       }
       
       if (data && data.user) {
-        logger.log("Login successful:", data.user.email);
+        logger.log("Login successful, user email:", data.user.email ? '[EMAIL_REDACTED]' : 'N/A');
         toast({
           title: "Login successful",
           description: "You have been successfully logged in.",
@@ -56,9 +57,10 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
         updateFormState({ 
           loginError: "Login succeeded but no user data returned."
         });
+        logger.warn("Login succeeded but no user data returned.", { email: formState.email ? '[EMAIL_REDACTED]' : 'N/A' });
       }
     } catch (error: any) {
-      logger.error("Exception during login:", error);
+      logger.error("Exception during login:", { message: error?.message, error });
       updateFormState({ 
         loginError: error.message || "An unexpected error occurred. Please try again."
       });
@@ -73,6 +75,9 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
     if (currentView === "login") {
       directLogin();
     } else {
+      // Sanitize email before logging
+      const emailToLog = formState.email ? '[EMAIL_REDACTED]' : 'N/A';
+      logger.log("Attempting signup with email:", emailToLog);
       const result = await handleSignupSubmit(e);
       if (result === "login") {
         onViewChange("login");
@@ -146,11 +151,10 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
             </div>
           )}
           
-          {/* Debug information when debug mode is enabled */}
           {debugMode && (
             <div className="text-xs text-gray-400 p-2 border border-gray-700 rounded bg-gray-900/50 overflow-auto">
               <p>Debug mode enabled</p>
-              <p>Email: {formState.email}</p>
+              <p>Email: {formState.email ? '[EMAIL_REDACTED]' : 'N/A'}</p>
               <p>Password length: {formState.password?.length || 0}</p>
               <p>Auth view: {currentView}</p>
               <Button
@@ -159,12 +163,11 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 size="sm"
                 className="mt-2 text-xs"
                 onClick={() => {
-                  console.clear();
                   logger.log('Debug console cleared');
                 }}
               >
                 <RefreshCw className="w-3 h-3 mr-1" />
-                Clear Console
+                Clear Log Output Indication
               </Button>
             </div>
           )}
@@ -175,7 +178,9 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
             disabled={isLoggingIn || formState.loading}
           >
             <LogIn className="w-4 h-4 mr-2" />
-            {isLoggingIn || formState.loading ? 'Signing In...' : 'Sign In'}
+            {isLoggingIn || formState.loading 
+              ? (currentView === "login" ? 'Signing In...' : 'Creating Account...') 
+              : (currentView === "login" ? 'Sign In' : 'Sign Up')}
           </Button>
           
           {currentView === "login" && (
@@ -188,6 +193,19 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 onClick={() => onViewChange("signup")}
               >
                 Sign up
+              </Button>
+            </p>
+          )}
+          {currentView === "signup" && (
+             <p className="text-center text-sm text-gray-400 pt-2">
+              Already have an account?{" "}
+              <Button 
+                type="button" 
+                variant="link" 
+                className="text-blue-400 hover:text-blue-300 p-0"
+                onClick={() => onViewChange("login")}
+              >
+                Sign In
               </Button>
             </p>
           )}
