@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import RuleEditor from '../components/RuleEditor';
@@ -7,7 +6,8 @@ import RulesList from '../components/rule/RulesList';
 import { Rule } from '@/data/interfaces/Rule';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useRulesData, RulesQueryResult } from '@/data/RulesDataHandler';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 const RulesPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -49,8 +49,8 @@ const RulesPageContent: React.FC = () => {
       await saveRule(ruleData);
       setIsEditorOpen(false);
       setCurrentRule(null);
-    } catch (err) {
-      logger.error('Error saving rule:', err); // Replaced console.error
+    } catch (err: unknown) {
+      logger.error('Error saving rule:', getErrorMessage(err));
     }
   };
 
@@ -59,16 +59,16 @@ const RulesPageContent: React.FC = () => {
       await deleteRule(ruleId); 
       setCurrentRule(null);
       setIsEditorOpen(false);
-    } catch (err) {
-      logger.error('Error deleting rule:', err); // Replaced console.error
+    } catch (err: unknown) {
+      logger.error('Error deleting rule:', getErrorMessage(err));
     }
   };
 
   const handleRuleBroken = async (rule: Rule) => {
     try {
       await markRuleBroken(rule);
-    } catch (err) {
-      logger.error('Error marking rule as broken:', err); // Replaced console.error
+    } catch (err: unknown) {
+      logger.error('Error marking rule as broken:', getErrorMessage(err));
     }
   };
   

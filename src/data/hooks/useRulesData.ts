@@ -1,4 +1,3 @@
-
 import { QueryObserverResult } from '@tanstack/react-query';
 import { useRules } from '../rules/queries'; 
 import { Rule } from '@/data/interfaces/Rule';
@@ -7,6 +6,7 @@ import { useCreateRuleViolation } from '../rules/mutations/useCreateRuleViolatio
 import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { logger } from '@/lib/logger'; // Added import
+import { getErrorMessage } from '@/lib/errors'; // Ensure this is imported
 
 export interface RulesDataHook {
   rules: Rule[];
@@ -89,9 +89,9 @@ export const useRulesData = (): RulesDataHook => {
         };
         return createRuleMutation(createVariables);
       }
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred';
-      logger.error('[useRulesData] Error saving rule:', e); // Replaced console.error
+    } catch (e: unknown) { // Use unknown
+      const errorMessage = getErrorMessage(e); // Use getErrorMessage
+      logger.error('[useRulesData] Error saving rule:', errorMessage); 
       toast({
         title: 'Error Saving Rule',
         description: errorMessage,
@@ -105,9 +105,9 @@ export const useRulesData = (): RulesDataHook => {
     try {
       await deleteRuleMutation(ruleId);
       return true;
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred';
-      logger.error('[useRulesData] Error deleting rule:', e); // Replaced console.error
+    } catch (e: unknown) { // Use unknown
+      const errorMessage = getErrorMessage(e); // Use getErrorMessage
+      logger.error('[useRulesData] Error deleting rule:', errorMessage);
       toast({
         title: 'Error Deleting Rule',
         description: errorMessage,
@@ -135,11 +135,12 @@ export const useRulesData = (): RulesDataHook => {
         description: `${rule.title} marked as broken. Violation recorded and usage updated.`,
       });
 
-    } catch (e: any) {
-      logger.error('[useRulesData] Error marking rule broken:', e); // Replaced console.error
+    } catch (e: unknown) { // Use unknown
+      const errorMessage = getErrorMessage(e); // Use getErrorMessage
+      logger.error('[useRulesData] Error marking rule broken:', errorMessage);
       toast({
         title: 'Error',
-        description: `Failed to mark rule "${rule.title}" as broken: ${e.message}`,
+        description: `Failed to mark rule "${rule.title}" as broken: ${errorMessage}`,
         variant: 'destructive',
       });
       throw e;

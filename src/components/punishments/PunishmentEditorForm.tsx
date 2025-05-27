@@ -12,6 +12,7 @@ import { usePunishmentBackground } from './hooks/usePunishmentBackground';
 import { useDeleteDialog } from './hooks/useDeleteDialog';
 import { UseFormReturn } from 'react-hook-form';
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
@@ -76,10 +77,8 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
             const savedData = await onSave(dataFromFormSubmitHandler);
             await clearPersistedState();
             return savedData; 
-          } catch (error: unknown) { // Phase 1 and Phase 2 fix
-            logger.error("Error saving punishment within handleSaveWithClear:", error);
-            // Re-throw error to maintain Promise<PunishmentData> return type
-            // and allow upstream error handling (e.g., in Punishments.tsx)
+          } catch (error: unknown) { 
+            logger.error("Error saving punishment within handleSaveWithClear:", getErrorMessage(error));
             throw error; 
           }
         };

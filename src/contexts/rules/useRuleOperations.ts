@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule'; // This is for the state and return types
@@ -7,7 +6,7 @@ import { useCreateRule } from '@/data/rules/mutations/useCreateRule';
 import { useUpdateRule } from '@/data/rules/mutations/useUpdateRule';
 import { useDeleteRule } from '@/data/rules/mutations/useDeleteRule';
 import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
+import { getErrorMessage } from '@/lib/errors'; // Ensure this is imported
 
 export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type for initialRules and default value
   const [rules, setRules] = useState<Rule[]>(initialRules); // Explicitly type useState
@@ -33,7 +32,7 @@ export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type 
         return newRule;
       }
     } catch (error: unknown) { 
-      logger.error('Error creating rule:', error);
+      logger.error('Error creating rule:', getErrorMessage(error)); // Use getErrorMessage
       toast({
         title: 'Error',
         description: `Failed to create rule: ${getErrorMessage(error)}`,
@@ -60,7 +59,7 @@ export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type 
         return updatedRule;
       }
     } catch (error: unknown) { 
-      logger.error('Error updating rule:', error);
+      logger.error('Error updating rule:', getErrorMessage(error)); // Use getErrorMessage
       toast({
         title: 'Error',
         description: `Failed to update rule: ${getErrorMessage(error)}`,
@@ -84,7 +83,7 @@ export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type 
       // setRules(prevRules => prevRules.filter(r => r.id !== ruleId));
       return true;
     } catch (error: unknown) { 
-      logger.error('Error deleting rule:', error);
+      logger.error('Error deleting rule:', getErrorMessage(error)); // Use getErrorMessage
       toast({
         title: 'Error',
         description: `Failed to delete rule: ${getErrorMessage(error)}`,
@@ -105,4 +104,3 @@ export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type 
     // For now, it only manages operations.
   };
 };
-
