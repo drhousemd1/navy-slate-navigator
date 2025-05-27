@@ -1,9 +1,9 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 // SupabaseAuthError will now be correctly imported from @/lib/errors
-import { isSupabaseAuthError, createAppError, getErrorMessage, SupabaseAuthError, AppError, CaughtError, PostgrestError, isPostgrestError } from '@/lib/errors';
+// Added isAppError to the import
+import { isSupabaseAuthError, createAppError, getErrorMessage, SupabaseAuthError, AppError, CaughtError, PostgrestError, isPostgrestError, isAppError } from '@/lib/errors';
 
 export function useAuthOperations() {
   // Sign in with email and password
@@ -27,13 +27,12 @@ export function useAuthOperations() {
       
       if (error) {
         logger.error('Sign in error:', error);
-        let errorMsg = error.message;
-        if (error.message.includes("invalid login")) {
-          errorMsg = "Incorrect email or password. Please try again.";
+        // If the error message indicates invalid login, return a custom AppError with a friendlier message.
+        if (error.message.includes("invalid login") || error.message.includes("Invalid login credentials")) {
+          return { error: createAppError("Incorrect email or password. Please try again.", "AUTH_INVALID_CREDENTIALS"), user: null };
         }
-        // Ensure the returned error is of type SupabaseAuthError
-        const authError: SupabaseAuthError = { ...error, message: errorMsg, name: error.name || 'AuthApiError', status: error.status || 0 };
-        return { error: authError, user: null };
+        // Otherwise, return the original Supabase error.
+        return { error, user: null };
       }
       
       logger.debug('Sign in successful:', data.user?.email);
@@ -51,6 +50,10 @@ export function useAuthOperations() {
     } catch (error: unknown) {
       logger.error('Exception during sign in:', error);
       if (isSupabaseAuthError(error)) {
+        return { error, user: null };
+      }
+      // Check if it's an AppError before creating a new one
+      if (isAppError(error)) {
         return { error, user: null };
       }
       return { error: createAppError(getErrorMessage(error), 'SIGN_IN_EXCEPTION'), user: null };
@@ -81,6 +84,8 @@ export function useAuthOperations() {
       
       if (error) {
         logger.error('Sign up error:', error);
+        // Check if it's already a SupabaseAuthError, otherwise, it might need wrapping or specific handling.
+        // For now, returning it directly as Supabase errors are part of the expected return type.
         return { error, data: null };
       }
       
@@ -94,6 +99,9 @@ export function useAuthOperations() {
     } catch (error: unknown) {
       logger.error('Exception during sign up:', error);
       if (isSupabaseAuthError(error)) {
+        return { error, data: null };
+      }
+      if (isAppError(error)) {
         return { error, data: null };
       }
       return { error: createAppError(getErrorMessage(error), 'SIGN_UP_EXCEPTION'), data: null };
@@ -134,6 +142,9 @@ export function useAuthOperations() {
       if (isSupabaseAuthError(error)) {
         return { error };
       }
+      if (isAppError(error)) {
+        return { error };
+      }
       return { error: createAppError(getErrorMessage(error), 'RESET_PASSWORD_EXCEPTION') };
     }
   };
@@ -172,6 +183,9 @@ export function useAuthOperations() {
       if (isSupabaseAuthError(error)) {
         return { error };
       }
+      if (isAppError(error)) {
+        return { error };
+      }
       return { error: createAppError(getErrorMessage(error), 'UPDATE_PASSWORD_EXCEPTION') };
     }
   };
@@ -195,13 +209,10 @@ export function useAuthOperations() {
           description: descriptiveError.message,
           variant: 'destructive',
         });
-        // Check if rpcError is already a PostgrestError, otherwise wrap it.
-        // Since PostgrestError is part of CaughtError, we can return it if it is.
+        
         if (isPostgrestError(rpcError)) {
             return { error: rpcError };
         }
-        // If it's not a standard PostgrestError but has a message, wrap it.
-        // The cast to `Error` was problematic, it should be an AppError or PostgrestError.
         return { error: descriptiveError };
       }
 
@@ -215,6 +226,7 @@ export function useAuthOperations() {
     } catch (error: unknown) {
       logger.error('Exception during account deletion:', error);
       // Ensure the error thrown or returned conforms to CaughtError
+      // isAppError is now correctly imported and used here.
       if (isSupabaseAuthError(error) || isPostgrestError(error) || isAppError(error) || error instanceof Error) {
         return { error };
       }
@@ -230,4 +242,3 @@ export function useAuthOperations() {
     deleteAccount
   };
 }
-
