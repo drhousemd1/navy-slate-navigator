@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries';
 import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables, Json } from '@/data/tasks/types';
@@ -38,29 +37,15 @@ export const useTasksData = () => {
       if ('id' in taskData && taskData.id) {
         // This is UpdateTaskVariables
         const updatePayload: UpdateTaskVariables = taskData;
-        
-        // The mutation hook expects UpdateTaskVariables directly.
-        // Ensure all fields in taskData (which is TaskFormValues + id)
-        // are valid for UpdateTaskVariables.
-        // UpdateTaskVariables is { id: string } & Partial<Omit<TaskWithId, ...>>
-        // taskData here comes from { ...formData, id: currentTask.id } in Tasks.tsx
-        // formData is TaskFormValues.
-        // So, we are essentially passing { ...TaskFormValues, id: string }
-        // This needs to be compatible with UpdateTaskVariables structure.
-        // The useUpdateTask mutationFn maps this correctly.
-        
-        // We can cast to UpdateTaskVariables if we are sure about the structure from call site
-        // Or ensure the mapping logic in useUpdateTask handles the spread from TaskFormValues.
-        // For now, assume taskData structure is compatible or useUpdateTask handles it.
         return await updateTaskMutation.mutateAsync(updatePayload);
 
       } else {
-        // This is CreateTaskVariables
-        const createPayload: CreateTaskVariables = taskData;
-        // The mutation hook expects CreateTaskVariables directly.
-        // taskData here comes from { ...formData, usage_data: ..., background_images: ... }
-        // formData is TaskFormValues.
-        // This structure should be compatible with CreateTaskVariables.
+        // This is CreateTaskVariables.
+        // The incoming taskData, when 'id' is not present or falsy,
+        // is expected to conform to CreateTaskVariables based on how it's constructed
+        // (e.g., in Tasks.tsx from TaskFormValues).
+        // The 'as CreateTaskVariables' cast assures TypeScript of this specific shape.
+        const createPayload: CreateTaskVariables = taskData as CreateTaskVariables;
         return await createTaskMutation.mutateAsync(createPayload);
       }
     } catch (e: unknown) {
