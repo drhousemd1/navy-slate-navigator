@@ -22,6 +22,7 @@ import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { usePointsManager } from '@/data/points/usePointsManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger'; // Added logger import
 
 
 export const useRewardsData = () => {
@@ -67,7 +68,7 @@ export const useRewardsData = () => {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'rewards' }, 
         (payload) => {
-          console.log('Real-time rewards update:', payload);
+          logger.debug('Real-time rewards update:', payload); // Replaced console.log
           queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
           queryClient.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
         }
@@ -89,7 +90,7 @@ export const useRewardsData = () => {
         .on('postgres_changes', 
           { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, 
           (payload) => {
-            console.log('Real-time points/profile update for user:', userId, payload);
+            logger.debug('Real-time points/profile update for user:', userId, payload); // Replaced console.log
             queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY});
             queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY});
             queryClient.invalidateQueries({ queryKey: ['profile'] }); // Added to ensure profile data (like points) is re-fetched
