@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -6,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 interface CustomIconsModalProps {
   isOpen: boolean;
@@ -62,7 +62,7 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
       
       setCustomIcons(icons);
     } catch (error) {
-      console.error('Error fetching custom icons:', error);
+      logger.error('Error fetching custom icons:', error);
       toast({
         title: 'Error',
         description: 'Failed to load custom icons',
@@ -115,7 +115,7 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
       fetchCustomIcons();
       
     } catch (error) {
-      console.error('Error uploading icon:', error);
+      logger.error('Error uploading icon:', error);
       toast({
         title: 'Upload failed',
         description: 'Failed to upload custom icon',

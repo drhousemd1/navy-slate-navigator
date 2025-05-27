@@ -17,6 +17,7 @@ import IconSelector from './task-editor/IconSelector';
 import PredefinedIconsGrid from './task-editor/PredefinedIconsGrid';
 import DeleteTaskDialog from './task-editor/DeleteTaskDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
+import { logger } from '@/lib/logger';
 
 interface TaskFormValues {
   title: string;
@@ -202,7 +203,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       await clearPersistedState(); // Clear persisted state on successful save
       // onSave should handle closing the editor, so onCancel isn't called here.
     } catch (error) {
-      console.error('Error saving task:', error);
+      logger.error('Error saving task:', error);
       toast({
         title: "Error",
         description: "Failed to save task. Please try again.",
@@ -247,7 +248,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       form.setValue('frequency_count', currentCount - 1);
     }
   };
-
 
   return (
     <Form {...form}>

@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { PunishmentData } from '@/contexts/PunishmentsContext';
 import PunishmentBasicDetails from './form/PunishmentBasicDetails';
@@ -12,6 +11,7 @@ import { usePunishmentIcon } from './hooks/usePunishmentIcon';
 import { usePunishmentBackground } from './hooks/usePunishmentBackground';
 import { useDeleteDialog } from './hooks/useDeleteDialog';
 import { UseFormReturn } from 'react-hook-form';
+import { logger } from '@/lib/logger';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
@@ -80,7 +80,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
             await clearPersistedState();
             return savedData; // This makes the function return Promise<PunishmentData>
           } catch (error) {
-            console.error("Error saving punishment within handleSaveWithClear:", error);
+            logger.error("Error saving punishment within handleSaveWithClear:", error);
             // To match the expected Promise<PunishmentData | null>, return null on error.
             // The form submit handler will see null and might not reset the form with new data.
             return null; 

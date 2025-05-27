@@ -14,6 +14,7 @@ import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
 import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 export interface ThroneRoomCardData {
   id: string;
@@ -88,7 +89,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   
   useEffect(() => {
     if (isOpen && cardData) {
-      console.log("Modal opened with card data:", cardData);
+      logger.debug("Modal opened with card data:", cardData);
       form.reset({
         id: cardData.id,
         title: cardData.title,
@@ -115,7 +116,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         y: cardData.focal_point_y || 50 
       });
       
-      console.log("Initializing image slots from card data:", {
+      logger.debug("Initializing image slots from card data:", {
         hasBackgroundImages: Array.isArray(cardData.background_images),
         backgroundImagesCount: Array.isArray(cardData.background_images) ? cardData.background_images.length : 0,
         hasBackgroundImageUrl: Boolean(cardData.background_image_url)
@@ -124,21 +125,21 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       const newImageSlots = [null, null, null, null, null];
       
       if (Array.isArray(cardData.background_images) && cardData.background_images.length > 0) {
-        console.log("Loading background_images into slots:", cardData.background_images);
+        logger.debug("Loading background_images into slots:", cardData.background_images);
         cardData.background_images.forEach((img, index) => {
           if (index < newImageSlots.length && img) {
-            console.log(`Setting slot ${index} to image:`, img.substring(0, 50) + '...');
+            logger.debug(`Setting slot ${index} to image:`, img.substring(0, 50) + '...');
             newImageSlots[index] = img;
           }
         });
       } else if (cardData.background_image_url) {
-        console.log("Loading single background_image_url into slot 0:", 
+        logger.debug("Loading single background_image_url into slot 0:", 
           cardData.background_image_url.substring(0, 50) + '...');
         newImageSlots[0] = cardData.background_image_url;
       }
       
       setImageSlots(newImageSlots);
-      console.log("Final image slots after initialization:", 
+      logger.debug("Final image slots after initialization:", 
         newImageSlots.map(s => s ? `[Image: ${s.substring(0, 20)}...]` : 'null'));
     }
   }, [isOpen, cardData, form]);
@@ -158,14 +159,14 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         targetIndex = firstEmpty;
       }
       setSelectedBoxIndex(targetIndex);
-      console.log(`Auto-selected box index ${targetIndex} since none was selected`);
+      logger.debug(`Auto-selected box index ${targetIndex} since none was selected`);
     }
     
     const reader = new FileReader();
     reader.onloadend = () => {
       try {
         const base64String = reader.result as string;
-        console.log(`Image loaded, size: ${Math.round(base64String.length / 1024)}KB`);
+        logger.debug(`Image loaded, size: ${Math.round(base64String.length / 1024)}KB`);
         
         const updatedSlots = [...imageSlots];
         updatedSlots[targetIndex!] = base64String;
@@ -174,9 +175,9 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         form.setValue('background_image_url', base64String);
         form.setValue('background_opacity', 100);
         
-        console.log(`Updated image slot ${targetIndex} and set as preview`);
+        logger.debug(`Updated image slot ${targetIndex} and set as preview`);
       } catch (error) {
-        console.error("Error processing uploaded image:", error);
+        logger.error("Error processing uploaded image:", error);
         toast({
           title: "Image Error",
           description: "There was a problem processing the uploaded image",
@@ -186,7 +187,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     };
     
     reader.onerror = (error) => {
-      console.error("FileReader error:", error);
+      logger.error("FileReader error:", error);
       toast({
         title: "Upload Error",
         description: "Failed to read the image file",
@@ -197,7 +198,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
     try {
       reader.readAsDataURL(file);
     } catch (error) {
-      console.error("Error reading file as data URL:", error);
+      logger.error("Error reading file as data URL:", error);
       toast({
         title: "File Error",
         description: "Failed to read the image file",
@@ -216,9 +217,9 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       setImagePreview(null);
       form.setValue('background_image_url', '');
       
-      console.log(`Removed image from slot ${selectedBoxIndex}, cleared preview but kept selection`);
+      logger.debug(`Removed image from slot ${selectedBoxIndex}, cleared preview but kept selection`);
     } else {
-      console.log('No slot selected for removal');
+      logger.debug('No slot selected for removal');
     }
   };
 
@@ -289,7 +290,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         onClose();
       }
     } catch (error) {
-      console.error(`Error deleting ${pageTitle.toLowerCase()} card:`, error);
+      logger.error(`Error deleting ${pageTitle.toLowerCase()} card:`, error);
       toast({
         title: "Error",
         description: "Failed to delete card",
@@ -301,8 +302,8 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   const onSubmit = async (data: ThroneRoomCardData) => {
     try {
       setIsSaving(true);
-      console.log(`Saving ${pageTitle.toLowerCase()} card data:`, data);
-      console.log("Current image slots:", imageSlots.map((s, i) => 
+      logger.debug(`Saving ${pageTitle.toLowerCase()} card data:`, data);
+      logger.debug("Current image slots:", imageSlots.map((s, i) => 
         s ? `[${i}: ${s.substring(0, 20)}...]` : `[${i}: null]`));
       
       // Validate image slots before saving
@@ -315,17 +316,17 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
             if (slot.startsWith('data:image') || slot.startsWith('http')) {
               return slot;
             } else {
-              console.warn("Invalid image data in slot:", slot.substring(0, 30));
+              logger.warn("Invalid image data in slot:", slot.substring(0, 30));
               return null;
             }
           } catch (e) {
-            console.error("Error validating image slot:", e);
+            logger.error("Error validating image slot:", e);
             return null;
           }
         })
         .filter(Boolean) as string[];
       
-      console.log(`Found ${validImageSlots.length} valid image slots after validation`);
+      logger.debug(`Found ${validImageSlots.length} valid image slots after validation`);
       
       const updatedData = {
         ...data,
@@ -337,7 +338,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
         background_images: validImageSlots,
       };
       
-      console.log("Transformed data ready for save:", {
+      logger.debug("Transformed data ready for save:", {
         id: updatedData.id,
         title: updatedData.title,
         imageCount: updatedData.background_images?.length || 0,
@@ -353,7 +354,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       
       onClose();
     } catch (error) {
-      console.error(`Error saving ${pageTitle.toLowerCase()} card:`, error);
+      logger.error(`Error saving ${pageTitle.toLowerCase()} card:`, error);
       toast({
         title: "Error",
         description: `Failed to save card settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -446,7 +447,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
                             alt={`Image ${index + 1}`}
                             className="w-full h-full object-cover rounded-md"
                             onError={(e) => {
-                              console.error(`Error loading image in slot ${index}`);
+                              logger.error(`Error loading image in slot ${index}`);
                               e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMjJDMTcuNTIyOCAyMiAyMiAxNy41MjI4IDIyIDEyQzIyIDYuNDc3MTUgMTcuNTIyOCAyIDIgNi40NzcxNSAyIDEyQzIgMTcuNTIyOCA2LjQ3NzE1IDIyIDEyIDIyWiIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTE1IDlMOSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTkgOUwxNSAxNSIgc3Ryb2tlPSIjRjg3MTcxIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
                             }}
                           />
