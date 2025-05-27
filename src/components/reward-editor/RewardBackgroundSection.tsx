@@ -25,14 +25,14 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
 }) => {
   const currentOpacity = control._formValues?.background_opacity; 
   logger.debug("RewardBackgroundSection initializing with opacity:", currentOpacity);
-  // Removed a blank line that was here before the return statement.
+  
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Image</FormLabel>
       <p className="text-sm text-muted-foreground pb-2">
         Add a background image to make your reward more visually appealing.
       </p>
-      <BackgroundImageSelector<RewardFormValues> {/* Added a space here */}
+      <BackgroundImageSelector<RewardFormValues>
         control={control}
         imagePreview={imagePreview}
         initialPosition={initialPosition}
