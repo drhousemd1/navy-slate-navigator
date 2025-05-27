@@ -1,7 +1,9 @@
+
 import localforage from 'localforage';
 import { Reward } from '@/data/rewards/types';
 import { PunishmentData as ContextPunishmentData, PunishmentHistoryItem as ContextPunishmentHistoryItem } from '@/contexts/punishments/types';
 import { Rule } from '@/data/interfaces/Rule'; // Import the correct Rule interface
+import { logger } from '@/lib/logger'; // Added import
 
 // Define types for other entities or import them if they exist elsewhere
 export interface Task { id: string; [key: string]: any; }
@@ -44,7 +46,7 @@ export const loadRewardsFromDB = async (): Promise<Reward[] | null> => {
     const rewards = await rewardsStore.getItem<Reward[]>('allRewards');
     return rewards;
   } catch (error) {
-    console.error('Error loading rewards from IndexedDB:', error);
+    logger.error('Error loading rewards from IndexedDB:', error); // Replaced console.error
     return null;
   }
 };
@@ -53,7 +55,7 @@ export const saveRewardsToDB = async (rewards: Reward[]): Promise<void> => {
   try {
     await rewardsStore.setItem('allRewards', rewards);
   } catch (error) {
-    console.error('Error saving rewards to IndexedDB:', error);
+    logger.error('Error saving rewards to IndexedDB:', error); // Replaced console.error
   }
 };
 
@@ -61,7 +63,7 @@ export const getLastSyncTimeForRewards = async (): Promise<string | null> => {
   try {
     return await lastSyncStore.getItem<string>('rewardsLastSync');
   } catch (error) {
-    console.error('Error getting last sync time for rewards:', error);
+    logger.error('Error getting last sync time for rewards:', error); // Replaced console.error
     return null;
   }
 };
@@ -70,7 +72,7 @@ export const setLastSyncTimeForRewards = async (time: string): Promise<void> => 
   try {
     await lastSyncStore.setItem('rewardsLastSync', time);
   } catch (error) {
-    console.error('Error setting last sync time for rewards:', error);
+    logger.error('Error setting last sync time for rewards:', error); // Replaced console.error
   }
 };
 
@@ -79,7 +81,7 @@ export const loadTasksFromDB = async (): Promise<Task[] | null> => {
   try {
     return await tasksStore.getItem<Task[]>('allTasks');
   } catch (error) {
-    console.error('Error loading tasks from IndexedDB:', error);
+    logger.error('Error loading tasks from IndexedDB:', error); // Replaced console.error
     return null;
   }
 };
@@ -88,7 +90,7 @@ export const saveTasksToDB = async (tasks: Task[]): Promise<void> => {
   try {
     await tasksStore.setItem('allTasks', tasks);
   } catch (error) {
-    console.error('Error saving tasks to IndexedDB:', error);
+    logger.error('Error saving tasks to IndexedDB:', error); // Replaced console.error
   }
 };
 
@@ -96,7 +98,7 @@ export const getLastSyncTimeForTasks = async (): Promise<string | null> => {
   try {
     return await lastSyncStore.getItem<string>('tasksLastSync');
   } catch (error) {
-    console.error('Error getting last sync time for tasks:', error);
+    logger.error('Error getting last sync time for tasks:', error); // Replaced console.error
     return null;
   }
 };
@@ -105,7 +107,7 @@ export const setLastSyncTimeForTasks = async (time: string): Promise<void> => {
   try {
     await lastSyncStore.setItem('tasksLastSync', time);
   } catch (error) {
-    console.error('Error setting last sync time for tasks:', error);
+    logger.error('Error setting last sync time for tasks:', error); // Replaced console.error
   }
 };
 
@@ -115,7 +117,7 @@ export const loadRulesFromDB = async (): Promise<Rule[] | null> => {
     // Use the imported Rule interface here
     return await rulesStore.getItem<Rule[]>('allRules');
   } catch (error) {
-    console.error('Error loading rules from IndexedDB:', error);
+    logger.error('Error loading rules from IndexedDB:', error); // Replaced console.error
     return null;
   }
 };
@@ -125,7 +127,7 @@ export const saveRulesToDB = async (rules: Rule[]): Promise<void> => {
     // Use the imported Rule interface here
     await rulesStore.setItem('allRules', rules);
   } catch (error) {
-    console.error('Error saving rules to IndexedDB:', error);
+    logger.error('Error saving rules to IndexedDB:', error); // Replaced console.error
   }
 };
 
@@ -133,7 +135,7 @@ export const getLastSyncTimeForRules = async (): Promise<string | null> => {
   try {
     return await lastSyncStore.getItem<string>('rulesLastSync');
   } catch (error) {
-    console.error('Error getting last sync time for rules:', error);
+    logger.error('Error getting last sync time for rules:', error); // Replaced console.error
     return null;
   }
 };
@@ -142,7 +144,7 @@ export const setLastSyncTimeForRules = async (time: string): Promise<void> => {
   try {
     await lastSyncStore.setItem('rulesLastSync', time);
   } catch (error) {
-    console.error('Error setting last sync time for rules:', error);
+    logger.error('Error setting last sync time for rules:', error); // Replaced console.error
   }
 };
 
@@ -153,7 +155,7 @@ export const loadPunishmentsFromDB = async (): Promise<PunishmentData[] | null> 
     const punishments = await punishmentsStore.getItem<PunishmentData[]>('allPunishments');
     return punishments;
   } catch (error) {
-    console.error('Error loading punishments from IndexedDB:', error);
+    logger.error('Error loading punishments from IndexedDB:', error); // Replaced console.error
     return null;
   }
 };
@@ -164,7 +166,7 @@ export const savePunishmentsToDB = async (punishments: PunishmentData[]): Promis
     // Ensure items actually stored have IDs, or handle appropriately if needed
     await punishmentsStore.setItem('allPunishments', punishments.filter(p => p.id));
   } catch (error) {
-    console.error('Error saving punishments to IndexedDB:', error);
+    logger.error('Error saving punishments to IndexedDB:', error); // Replaced console.error
   }
 };
 
@@ -172,7 +174,7 @@ export const getLastSyncTimeForPunishments = async (): Promise<string | null> =>
   try {
     return await lastSyncStore.getItem<string>('punishmentsLastSync');
   } catch (error) {
-    console.error('Error getting last sync time for punishments:', error);
+    logger.error('Error getting last sync time for punishments:', error); // Replaced console.error
     return null;
   }
 };
@@ -181,7 +183,7 @@ export const setLastSyncTimeForPunishments = async (time: string): Promise<void>
   try {
     await lastSyncStore.setItem('punishmentsLastSync', time);
   } catch (error) {
-    console.error('Error setting last sync time for punishments:', error);
+    logger.error('Error setting last sync time for punishments:', error); // Replaced console.error
   }
 };
 
@@ -192,7 +194,7 @@ export const loadPunishmentHistoryFromDB = async (): Promise<PunishmentHistory[]
     const history = await punishmentHistoryStore.getItem<PunishmentHistory[]>('allPunishmentHistory');
     return history;
   } catch (error) {
-    console.error('Error loading punishment history from IndexedDB:', error);
+    logger.error('Error loading punishment history from IndexedDB:', error); // Replaced console.error
     return null;
   }
 };
@@ -201,7 +203,7 @@ export const savePunishmentHistoryToDB = async (history: PunishmentHistory[]): P
   try {
     await punishmentHistoryStore.setItem('allPunishmentHistory', history);
   } catch (error) {
-    console.error('Error saving punishment history to IndexedDB:', error);
+    logger.error('Error saving punishment history to IndexedDB:', error); // Replaced console.error
   }
 };
 
@@ -210,7 +212,7 @@ export const savePointsToDB = async (points: number): Promise<void> => {
   try {
     await pointsStore.setItem('userPoints', points);
   } catch (error) {
-    console.error('Error saving points to IndexedDB:', error);
+    logger.error('Error saving points to IndexedDB:', error); // Replaced console.error
   }
 };
 
@@ -218,7 +220,7 @@ export const loadPointsFromDB = async (): Promise<number | null> => {
   try {
     return await pointsStore.getItem<number>('userPoints');
   } catch (error) {
-    console.error('Error loading points from IndexedDB:', error);
+    logger.error('Error loading points from IndexedDB:', error); // Replaced console.error
     return null;
   }
 };
@@ -228,7 +230,7 @@ export const saveDomPointsToDB = async (points: number): Promise<void> => {
   try {
     await domPointsStore.setItem('userDomPoints', points);
   } catch (error) {
-    console.error('Error saving dom points to IndexedDB:', error);
+    logger.error('Error saving dom points to IndexedDB:', error); // Replaced console.error
   }
 };
 
@@ -236,7 +238,7 @@ export const loadDomPointsFromDB = async (): Promise<number | null> => {
   try {
     return await domPointsStore.getItem<number>('userDomPoints');
   } catch (error) {
-    console.error('Error loading dom points from IndexedDB:', error);
+    logger.error('Error loading dom points from IndexedDB:', error); // Replaced console.error
     return null;
   }
 };

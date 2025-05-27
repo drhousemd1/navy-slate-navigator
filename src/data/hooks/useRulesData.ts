@@ -6,6 +6,7 @@ import { useCreateRule, useUpdateRule, useDeleteRule, CreateRuleVariables, Updat
 import { useCreateRuleViolation } from '../rules/mutations/useCreateRuleViolation';
 import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger'; // Added import
 
 export interface RulesDataHook {
   rules: Rule[];
@@ -37,7 +38,7 @@ export const useRulesData = (): RulesDataHook => {
   useEffect(() => {
     if (error && retryCount < MAX_RETRIES) {
       const timer = setTimeout(() => {
-        console.log(`[useRulesData] Retrying after error (${retryCount + 1}/${MAX_RETRIES}):`, error);
+        logger.debug(`[useRulesData] Retrying after error (${retryCount + 1}/${MAX_RETRIES}):`, error); // Replaced console.log
         refetchRules();
         setRetryCount(prev => prev + 1);
       }, Math.min(2000 * Math.pow(2, retryCount), 20000)); // Exponential backoff with max of 20s
@@ -90,7 +91,7 @@ export const useRulesData = (): RulesDataHook => {
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred';
-      console.error('[useRulesData] Error saving rule:', e);
+      logger.error('[useRulesData] Error saving rule:', e); // Replaced console.error
       toast({
         title: 'Error Saving Rule',
         description: errorMessage,
@@ -106,7 +107,7 @@ export const useRulesData = (): RulesDataHook => {
       return true;
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred';
-      console.error('[useRulesData] Error deleting rule:', e);
+      logger.error('[useRulesData] Error deleting rule:', e); // Replaced console.error
       toast({
         title: 'Error Deleting Rule',
         description: errorMessage,
@@ -135,7 +136,7 @@ export const useRulesData = (): RulesDataHook => {
       });
 
     } catch (e: any) {
-      console.error('[useRulesData] Error marking rule broken:', e);
+      logger.error('[useRulesData] Error marking rule broken:', e); // Replaced console.error
       toast({
         title: 'Error',
         description: `Failed to mark rule "${rule.title}" as broken: ${e.message}`,

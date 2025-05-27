@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { REWARDS_QUERY_KEY, fetchRewards } from '@/data/rewards/queries';
@@ -11,6 +12,7 @@ import { useBuySubReward } from "@/data/rewards/mutations/useBuySubReward";
 import { useBuyDomReward } from "@/data/rewards/mutations/useBuyDomReward";
 import { useRedeemSubReward } from "@/data/rewards/mutations/useRedeemSubReward";
 import { useRedeemDomReward } from "@/data/rewards/mutations/useRedeemDomReward";
+import { logger } from '@/lib/logger'; // Added import
 
 export default function useRewardOperations() {
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -119,14 +121,14 @@ export default function useRewardOperations() {
       }
       return null;
     } catch (error) {
-      console.error('Error saving reward in useRewardOperations:', error);
+      logger.error('Error saving reward in useRewardOperations:', error); // Replaced console.error
       return null;
     }
   }, [rewards, queryClient, createRewardMutation, updateRewardMutation]);
 
   const handleDeleteReward = useCallback(async (index: number): Promise<boolean> => {
     if (index < 0 || index >= rewards.length) {
-      console.error('Invalid reward index:', index);
+      logger.error('Invalid reward index:', index); // Replaced console.error
       return false;
     }
     
@@ -136,7 +138,7 @@ export default function useRewardOperations() {
       await deleteRewardMutation.mutateAsync(rewardId);
       return true;
     } catch (error) {
-      console.error('Error deleting reward in useRewardOperations:', error);
+      logger.error('Error deleting reward in useRewardOperations:', error); // Replaced console.error
       return false;
     }
   }, [rewards, deleteRewardMutation]);
@@ -177,7 +179,7 @@ export default function useRewardOperations() {
         });
       }
     } catch (error: any) {
-      console.error('Error buying reward in useRewardOperations:', error);
+      logger.error('Error buying reward in useRewardOperations:', error); // Replaced console.error
       toast({
         title: 'Purchase Error',
         description: error.message || 'Failed to buy reward.',
@@ -215,7 +217,7 @@ export default function useRewardOperations() {
         });
       }
     } catch (error: any) {
-      console.error('Error using reward in useRewardOperations:', error);
+      logger.error('Error using reward in useRewardOperations:', error); // Replaced console.error
       toast({
         title: 'Usage Error',
         description: error.message || 'Failed to use reward.',

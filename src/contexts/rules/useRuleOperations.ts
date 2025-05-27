@@ -5,6 +5,7 @@ import { Rule } from '@/data/interfaces/Rule';
 import { useCreateRule } from '@/data/rules/mutations/useCreateRule';
 import { useUpdateRule } from '@/data/rules/mutations/useUpdateRule';
 import { useDeleteRule } from '@/data/rules/mutations/useDeleteRule';
+import { logger } from '@/lib/logger'; // Added import
 
 export const useRuleOperations = (initialRules = []) => {
   const [rules, setRules] = useState(initialRules);
@@ -13,7 +14,7 @@ export const useRuleOperations = (initialRules = []) => {
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
   
   // Create a new rule
-  const createRule = useCallback(async (ruleData) => {
+  const createRule = useCallback(async (ruleData: any) => { // Added type for ruleData
     try {
       const newRule = await createRuleMutation(ruleData);
       
@@ -25,7 +26,7 @@ export const useRuleOperations = (initialRules = []) => {
         return newRule;
       }
     } catch (error) {
-      console.error('Error creating rule:', error);
+      logger.error('Error creating rule:', error); // Replaced console.error
       toast({
         title: 'Error',
         description: 'Failed to create rule. Please try again.',
@@ -36,7 +37,7 @@ export const useRuleOperations = (initialRules = []) => {
   }, [createRuleMutation]);
   
   // Update an existing rule
-  const updateRule = useCallback(async (ruleId, updates) => {
+  const updateRule = useCallback(async (ruleId: string, updates: any) => { // Added types
     try {
       const updatedRule = await updateRuleMutation({ id: ruleId, ...updates });
       
@@ -48,7 +49,7 @@ export const useRuleOperations = (initialRules = []) => {
         return updatedRule;
       }
     } catch (error) {
-      console.error('Error updating rule:', error);
+      logger.error('Error updating rule:', error); // Replaced console.error
       toast({
         title: 'Error',
         description: 'Failed to update rule. Please try again.',
@@ -59,7 +60,7 @@ export const useRuleOperations = (initialRules = []) => {
   }, [updateRuleMutation]);
   
   // Delete a rule
-  const deleteRule = useCallback(async (ruleId) => {
+  const deleteRule = useCallback(async (ruleId: string) => { // Added type
     try {
       await deleteRuleMutation(ruleId);
       
@@ -69,7 +70,7 @@ export const useRuleOperations = (initialRules = []) => {
       });
       return true;
     } catch (error) {
-      console.error('Error deleting rule:', error);
+      logger.error('Error deleting rule:', error); // Replaced console.error
       toast({
         title: 'Error',
         description: 'Failed to delete rule. Please try again.',
