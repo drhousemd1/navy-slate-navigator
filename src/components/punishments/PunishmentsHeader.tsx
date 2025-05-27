@@ -4,7 +4,8 @@ import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
 import { Box, Coins, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
-import { usePunishments } from '@/contexts/PunishmentsContext'; // Still needed for RandomPunishmentSelections
+// import { usePunishments } from '@/contexts/PunishmentsContext'; // Old context
+import { usePunishmentsData } from '@/data/punishments/usePunishmentsData'; // New data hook
 import RandomPunishmentSelections from './RandomPunishmentSelections';
 
 import { useUserIds } from '@/contexts/UserIdsContext';
@@ -14,7 +15,7 @@ import { useSubRewardTypesCountQuery } from '@/data/rewards/queries/useSubReward
 import { useDomRewardTypesCountQuery } from '@/data/rewards/queries/useDomRewardTypesCountQuery';
 
 const PunishmentsHeader: React.FC = () => {
-  const { punishments } = usePunishments(); // For random selector disabling
+  const { punishments } = usePunishmentsData(); // Using new data hook
   const { subUserId, domUserId } = useUserIds();
 
   const { data: subPoints } = useUserPointsQuery(subUserId);

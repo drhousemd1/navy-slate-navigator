@@ -43,7 +43,7 @@ export function usePunishments() {
       if (data) {
         // Process data to ensure it matches PunishmentData, especially new non-nullable fields
         const punishmentsData = data.map(item => {
-          const typedItem = item as any; 
+          const typedItem = item as Record<string, any>; // Phase 2: Changed from 'as any'
           return {
             id: typedItem.id,
             title: typedItem.title,

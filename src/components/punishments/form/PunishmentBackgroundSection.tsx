@@ -28,8 +28,8 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
         control={control}
         imagePreview={imagePreview}
         initialPosition={{
-          x: control._getWatch('focal_point_x') || 50, 
-          y: control._getWatch('focal_point_y') || 50  
+          x: control.watch('focal_point_x') ?? 50, // Phase 2: Replaced _getWatch with watch
+          y: control.watch('focal_point_y') ?? 50  // Phase 2: Replaced _getWatch with watch
         }}
         onRemoveImage={onRemoveImage}
         onImageUpload={onImageUpload}

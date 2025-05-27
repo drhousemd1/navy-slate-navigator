@@ -71,14 +71,16 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
       persisterExclude={[]} 
     >
       {(form, clearPersistedState) => {
-        const handleSaveWithClear = async (dataFromFormSubmitHandler: Partial<PunishmentData>): Promise<PunishmentData | null> => {
+        const handleSaveWithClear = async (dataFromFormSubmitHandler: Partial<PunishmentData>): Promise<PunishmentData> => {
           try {
             const savedData = await onSave(dataFromFormSubmitHandler);
             await clearPersistedState();
             return savedData; 
-          } catch (error) {
+          } catch (error: unknown) { // Phase 1 and Phase 2 fix
             logger.error("Error saving punishment within handleSaveWithClear:", error);
-            return null; 
+            // Re-throw error to maintain Promise<PunishmentData> return type
+            // and allow upstream error handling (e.g., in Punishments.tsx)
+            throw error; 
           }
         };
 
