@@ -25,7 +25,7 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
 }) => {
   const currentOpacity = control._formValues?.background_opacity; 
   logger.debug("RewardBackgroundSection initializing with opacity:", currentOpacity);
-  
+  // Removed a blank line that was here before the return statement.
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Image</FormLabel>
@@ -45,3 +45,4 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
 };
 
 export default RewardBackgroundSection;
+
