@@ -4,7 +4,7 @@ import { FormLabel } from "@/components/ui/form";
 import IconSelector from '../../task-editor/IconSelector';
 import PredefinedIconsGrid from '../../task-editor/PredefinedIconsGrid';
 import TaskIcon from '@/components/task/TaskIcon';
-import { logger } from '@/lib/logger'; // keep existing import
+import { logger } from '@/lib/logger'; // Added logger import
 
 interface PunishmentIconSectionProps {
   selectedIconName: string | null;
@@ -61,3 +61,4 @@ const PunishmentIconSection: React.FC<PunishmentIconSectionProps> = ({
 };
 
 export default PunishmentIconSection;
+

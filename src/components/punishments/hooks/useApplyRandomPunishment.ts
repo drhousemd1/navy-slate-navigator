@@ -4,7 +4,6 @@ import { useRewards } from '@/contexts/RewardsContext';
 import { PunishmentData, ApplyPunishmentArgs } from '@/contexts/punishments/types'; // Ensure ApplyPunishmentArgs is imported
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { logger } from '@/lib/logger'; // Added logger import
 
 export const useApplyRandomPunishment = (onClose: () => void) => {
   const { applyPunishment } = usePunishments();
@@ -54,7 +53,7 @@ export const useApplyRandomPunishment = (onClose: () => void) => {
       
       onClose();
     } catch (error) {
-      logger.error("Error applying punishment:", error); // Replaced console.error
+      console.error("Error applying punishment:", error);
       setTotalPoints(totalPoints); // Revert optimistic update on error
       
       toast({

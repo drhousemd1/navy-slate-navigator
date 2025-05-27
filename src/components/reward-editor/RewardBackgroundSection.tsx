@@ -3,7 +3,7 @@ import React from 'react';
 import { FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Control, UseFormSetValue } from 'react-hook-form';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
-import { logger } from '@/lib/logger'; // keep existing import
+import { logger } from '@/lib/logger'; // Added logger import
 
 interface RewardBackgroundSectionProps {
   control: Control<any>;

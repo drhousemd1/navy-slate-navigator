@@ -6,7 +6,7 @@ import { TaskWithId } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries'; // Corrected import
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger'; // keep existing import
+import { logger } from '@/lib/logger'; // Added logger import
 
 
 export const useDeleteTask = () => {
@@ -50,3 +50,4 @@ export const useDeleteTask = () => {
     },
   });
 };
+

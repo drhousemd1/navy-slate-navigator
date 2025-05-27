@@ -6,7 +6,7 @@ import { TaskWithId, UpdateTaskVariables } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger'; // keep existing import
+import { logger } from '@/lib/logger'; // Added logger import
 
 export type { UpdateTaskVariables }; // Changed to export type
 
@@ -46,3 +46,4 @@ export const useUpdateTask = () => {
     },
   });
 };
+
