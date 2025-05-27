@@ -1,15 +1,16 @@
-
 import React from 'react';
 import { FormLabel } from "@/components/ui/form";
 import BackgroundImageSelector from '../../task-editor/BackgroundImageSelector';
 import { Control } from 'react-hook-form';
+import { PunishmentFormValues } from './PunishmentFormProvider';
+import { UseFormSetValue } from 'react-hook-form';
 
 interface PunishmentBackgroundSectionProps {
-  control: Control<any>;
+  control: Control<PunishmentFormValues>;
   imagePreview: string | null;
   onRemoveImage: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  setValue: any;
+  setValue: UseFormSetValue<PunishmentFormValues>;
 }
 
 const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = ({

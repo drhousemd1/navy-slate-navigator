@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Camera, Trash2, LogOut } from 'lucide-react';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 import { DeleteAvatarDialog } from '@/components/profile/DeleteAvatarDialog';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 const Profile: React.FC = () => {
   const { 
@@ -36,16 +37,16 @@ const Profile: React.FC = () => {
   useEffect(() => {
     if (user) {
       const currentNickname = getNickname();
-      logger.debug('Profile Page: Current nickname from context:', currentNickname); // Replaced console.log
+      logger.debug('Profile Page: Current nickname from context:', currentNickname);
       setNickname(currentNickname || '');
       
       const currentImage = getProfileImage();
-      logger.debug('Profile Page: Current profile image from context:', currentImage); // Replaced console.log
+      logger.debug('Profile Page: Current profile image from context:', currentImage);
       setProfileImage(currentImage);
 
       const role = user.user_metadata?.role || 'Not Set';
       setCurrentRole(role);
-      logger.debug('Profile Page: Current user role from metadata:', role); // Replaced console.log
+      logger.debug('Profile Page: Current user role from metadata:', role);
     }
   }, [user, getNickname, getProfileImage]);
 
@@ -60,10 +61,11 @@ const Profile: React.FC = () => {
     try {
       await updateNickname(nickname.trim());
       toast({ title: 'Success', description: 'Nickname updated successfully.' });
-    } catch (err: any) {
-      logger.error('Error updating nickname:', err); // Replaced console.error
-      setError(err.message || 'Failed to update nickname.');
-      toast({ title: 'Error', description: err.message || 'Failed to update nickname.', variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      logger.error('Error updating nickname:', message, err);
+      setError(message);
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setLoadingNickname(false);
     }
@@ -94,12 +96,13 @@ const Profile: React.FC = () => {
         setNewProfileImageFile(null); 
         toast({ title: 'Success', description: 'Profile image updated successfully.' });
       } else {
-        logger.warn('Profile Page: uploadProfileImageAndUpdateState did not return a new image URL as expected, but did not throw.'); // Replaced console.warn
+        logger.warn('Profile Page: uploadProfileImageAndUpdateState did not return a new image URL as expected, but did not throw.');
       }
-    } catch (err: any) {
-      logger.error('Error uploading profile image:', err); // Replaced console.error
-      setError(err.message || 'Failed to upload profile image.');
-      toast({ title: 'Error', description: err.message || 'Failed to upload profile image.', variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      logger.error('Error uploading profile image:', message, err);
+      setError(message);
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setLoadingProfileImage(false);
     }
@@ -115,10 +118,11 @@ const Profile: React.FC = () => {
       setProfileImage(null); 
       setNewProfileImageFile(null); 
       toast({ title: 'Success', description: 'Profile image removed.' });
-    } catch (err: any)      {
-      logger.error('Error deleting profile image:', err); // Replaced console.error
-      setError(err.message || 'Failed to delete profile image.');
-      toast({ title: 'Error', description: err.message || 'Failed to delete profile image.', variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      logger.error('Error deleting profile image:', message, err);
+      setError(message);
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setLoadingProfileImage(false);
       setIsDeleteAvatarDialogOpen(false);
@@ -127,18 +131,18 @@ const Profile: React.FC = () => {
 
   const handleLogout = async () => {
     await signOut();
-    logger.debug('Profile Page: User signed out. Cache purging handled by AuthContext.'); // Replaced console.log
+    logger.debug('Profile Page: User signed out. Cache purging handled by AuthContext.');
   };
 
   const handleDeleteAccount = async () => {
-    if (!user || !deleteAccount) return; // Check if deleteAccount is available
+    if (!user || !deleteAccount) return;
     try {
       await deleteAccount();
       toast({ title: "Account Deletion Initiated", description: "Your account is scheduled for deletion. You will be logged out." });
-      // signOut is called within deleteAccount if successful, or handled by onAuthStateChange
-    } catch (err: any) {
-      logger.error('Error deleting account:', err); // Replaced console.error
-      toast({ title: 'Error', description: err.message || 'Failed to delete account.', variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      logger.error('Error deleting account:', message, err);
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setIsDeleteAccountDialogOpen(false);
     }
@@ -148,11 +152,12 @@ const Profile: React.FC = () => {
     if (!user) return;
     try {
       await updateUserRole(newRole);
-      setCurrentRole(newRole); // Update local state to reflect change immediately
+      setCurrentRole(newRole);
       toast({ title: 'Success', description: `Role updated to ${newRole}.` });
-    } catch (err: any) {
-      logger.error('Error updating role:', err); // Replaced console.error
-      toast({ title: 'Error', description: err.message || 'Failed to update role.', variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      logger.error('Error updating role:', message, err);
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     }
   };
 

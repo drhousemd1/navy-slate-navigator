@@ -1,4 +1,3 @@
-
 import { QueryObserverResult } from '@tanstack/react-query';
 import { useRules } from '../rules/queries'; 
 import { Rule } from '@/data/interfaces/Rule';
@@ -7,13 +6,15 @@ import { useCreateRuleViolation } from '../rules/mutations/useCreateRuleViolatio
 import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { logger } from '@/lib/logger'; // Added import
+import { getErrorMessage } from '@/lib/errors';
+import { Rule, CreateRuleVariables, UpdateRuleVariables } from '@/data/rules/types'; // Import new types
 
 export interface RulesDataHook {
   rules: Rule[];
   isLoading: boolean;
   error: Error | null;
   isUsingCachedData: boolean;
-  saveRule: (ruleData: Partial<Rule>) => Promise<Rule>;
+  saveRule: (ruleData: CreateRuleVariables | UpdateRuleVariables) => Promise<Rule | null>;
   deleteRule: (ruleId: string) => Promise<boolean>;
   markRuleBroken: (rule: Rule) => Promise<void>;
   refetchRules: () => Promise<QueryObserverResult<Rule[], Error>>;
@@ -63,7 +64,7 @@ export const useRulesData = (): RulesDataHook => {
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
   const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation();
 
-  const saveRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
+  const saveRule = async (ruleData: CreateRuleVariables | UpdateRuleVariables): Promise<Rule | null> => {
     try {
       if (ruleData.id) {
         const { id, ...updates } = ruleData;
@@ -89,15 +90,11 @@ export const useRulesData = (): RulesDataHook => {
         };
         return createRuleMutation(createVariables);
       }
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred';
-      logger.error('[useRulesData] Error saving rule:', e); // Replaced console.error
-      toast({
-        title: 'Error Saving Rule',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      throw e;
+    } catch (e: unknown) {
+      const descriptiveMessage = getErrorMessage(e);
+      logger.error("Error in saveRule (useRulesData):", descriptiveMessage, e);
+      toast({ title: "Save Error", description: descriptiveMessage, variant: "destructive" });
+      return null;
     }
   };
 

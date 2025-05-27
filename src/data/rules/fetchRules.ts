@@ -1,130 +1,83 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { Rule } from '@/data/interfaces/Rule';
-import { logQueryPerformance } from '@/lib/react-query-config';
-import {
-  loadRulesFromDB,
-  saveRulesToDB,
-  getLastSyncTimeForRules,
-  setLastSyncTimeForRules
-} from "@/data/indexedDB/useIndexedDB";
-import { withTimeout, DEFAULT_TIMEOUT_MS, selectWithTimeout } from '@/lib/supabaseUtils';
+import { Rule, RawSupabaseRule } from './types'; // Import new types
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
 
-// Ensure Rule interface properties used for defaults are correctly defined
-const defaultRuleValues = {
-  priority: 'medium' as 'low' | 'medium' | 'high',
-  frequency: 'daily' as 'daily' | 'weekly',
-  frequency_count: 1,
-  usage_data: Array(7).fill(0),
-  background_opacity: 100,
-  highlight_effect: false,
-  focal_point_x: 50,
-  focal_point_y: 50,
-  title_color: '#FFFFFF',
-  subtext_color: '#FFFFFF', // Often different, e.g., #D1D5DB or #8E9196
-  calendar_color: '#9c7abb',
-  icon_color: '#FFFFFF',
-};
-
-const processRuleData = (rule: any): Rule => {
-  const priority = ['low', 'medium', 'high'].includes(rule.priority) 
-    ? (rule.priority as 'low' | 'medium' | 'high') 
-    : defaultRuleValues.priority;
-  
-  let usageData: number[];
-  if (Array.isArray(rule.usage_data)) {
-    usageData = rule.usage_data.map(item => typeof item === 'number' ? item : 0);
-    if (usageData.length !== 7) usageData = defaultRuleValues.usage_data; // Ensure 7 days
-  } else {
-    usageData = defaultRuleValues.usage_data;
+// Helper to safely parse JSON data, especially for usage_data
+function parseJsonDataForRules<T>(jsonData: unknown, defaultValue: T): T {
+  if (jsonData === null || jsonData === undefined) {
+    return defaultValue;
   }
+  try {
+    if (typeof jsonData === 'object') { // Already parsed by Supabase
+      return jsonData as T;
+    }
+    if (typeof jsonData === 'string') { // Needs parsing
+      return JSON.parse(jsonData) as T;
+    }
+    logger.warn('[parseJsonDataForRules] Unexpected data type for JSON parsing:', typeof jsonData, jsonData);
+    return defaultValue;
+  } catch (error: unknown) {
+    logger.error('[parseJsonDataForRules] Error parsing JSON data:', getErrorMessage(error), jsonData, error);
+    return defaultValue;
+  }
+}
 
+
+export const parseRuleData = (rawRule: RawSupabaseRule): Rule => {
   return {
-    id: rule.id,
-    title: rule.title,
-    description: rule.description,
-    priority: priority,
-    background_image_url: rule.background_image_url,
-    background_opacity: rule.background_opacity ?? defaultRuleValues.background_opacity,
-    icon_url: rule.icon_url,
-    icon_name: rule.icon_name,
-    title_color: rule.title_color ?? defaultRuleValues.title_color,
-    subtext_color: rule.subtext_color ?? defaultRuleValues.subtext_color,
-    calendar_color: rule.calendar_color ?? defaultRuleValues.calendar_color,
-    icon_color: rule.icon_color ?? defaultRuleValues.icon_color,
-    highlight_effect: rule.highlight_effect ?? defaultRuleValues.highlight_effect,
-    focal_point_x: rule.focal_point_x ?? defaultRuleValues.focal_point_x,
-    focal_point_y: rule.focal_point_y ?? defaultRuleValues.focal_point_y,
-    frequency: (rule.frequency as 'daily' | 'weekly') || defaultRuleValues.frequency,
-    frequency_count: rule.frequency_count ?? defaultRuleValues.frequency_count,
-    usage_data: usageData,
-    created_at: rule.created_at,
-    updated_at: rule.updated_at,
-    user_id: rule.user_id
+    id: rawRule.id,
+    user_id: rawRule.user_id,
+    title: rawRule.title,
+    description: rawRule.description ?? undefined,
+    priority: (rawRule.priority as 'low' | 'medium' | 'high') || 'medium',
+    frequency: (rawRule.frequency as 'daily' | 'weekly') || 'daily',
+    frequency_count: rawRule.frequency_count || 1,
+    icon_name: rawRule.icon_name ?? undefined,
+    icon_url: rawRule.icon_url ?? undefined,
+    icon_color: rawRule.icon_color || '#FFFFFF',
+    title_color: rawRule.title_color || '#FFFFFF',
+    subtext_color: rawRule.subtext_color || '#D1D5DB',
+    calendar_color: rawRule.calendar_color || '#9c7abb',
+    background_image_url: rawRule.background_image_url ?? undefined,
+    background_opacity: rawRule.background_opacity || 100,
+    highlight_effect: rawRule.highlight_effect || false,
+    focal_point_x: rawRule.focal_point_x || 50,
+    focal_point_y: rawRule.focal_point_y || 50,
+    usage_data: parseJsonDataForRules(rawRule.usage_data, []),
+    background_images: rawRule.background_images ?? null,
+    created_at: rawRule.created_at,
+    updated_at: rawRule.updated_at,
   };
 };
 
-
-export const fetchRules = async (): Promise<Rule[]> => {
-  const localData = await loadRulesFromDB() as Rule[] | null;
-  const lastSync = await getLastSyncTimeForRules();
-  let shouldFetchFromServer = true;
-  const startTime = performance.now();
-
-  if (lastSync) {
-    const timeDiff = Date.now() - new Date(lastSync as string).getTime();
-    if (timeDiff < 1000 * 60 * 30 && localData && localData.length > 0) { // 30 minutes
-      shouldFetchFromServer = false;
-    }
-  } else if (localData && localData.length > 0) {
-    shouldFetchFromServer = false;
+export const fetchRules = async (userId?: string): Promise<Rule[]> => {
+  if (!userId) {
+    logger.debug('fetchRules: No user ID provided, returning empty array.');
+    return [];
   }
 
-  if (!shouldFetchFromServer && localData) {
-    logger.debug('[fetchRules] Returning rules from IndexedDB');
-    logQueryPerformance('fetchRules (cache)', startTime, localData.length);
-    return localData.map(processRuleData);
-  }
-
-  logger.debug('[fetchRules] Fetching rules from server');
   try {
-    const { data, error } = await selectWithTimeout<Rule>(
-      supabase,
-      'rules',
-      {
-        order: ['created_at', { ascending: false }],
-        timeoutMs: DEFAULT_TIMEOUT_MS 
-      }
-    );
+    const { data, error } = await supabase
+      .from('rules')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
     if (error) {
-      logger.error('[fetchRules] Supabase error fetching rules:', error);
-      if (localData) {
-        logger.warn('[fetchRules] Server fetch failed, returning stale data from IndexedDB');
-        logQueryPerformance('fetchRules (error-cache)', startTime, localData.length);
-        return localData.map(processRuleData);
-      }
+      logger.error('Error fetching rules:', error.message);
       throw error;
     }
-
-    if (data) {
-      const rulesFromServer = (Array.isArray(data) ? data : (data ? [data] : [])).map(processRuleData);
-      await saveRulesToDB(rulesFromServer);
-      await setLastSyncTimeForRules(new Date().toISOString());
-      logger.debug('[fetchRules] Rules fetched from server and saved to IndexedDB');
-      logQueryPerformance('fetchRules (server)', startTime, rulesFromServer.length);
-      return rulesFromServer;
-    }
     
-    logQueryPerformance('fetchRules (empty-server)', startTime, 0);
-    return localData ? localData.map(processRuleData) : [];
-  } catch (error) {
-    logger.error('[fetchRules] Error fetching rules:', error);
-    logQueryPerformance('fetchRules (fetch-exception)', startTime);
-     if (localData) {
-      logger.warn('[fetchRules] Error fetching rules, using cached data:', error);
-      return localData.map(processRuleData);
-    }
-    throw error;
+    logger.debug('Fetched raw rules:', data);
+    const parsedRules = (data || []).map(rule => parseRuleData(rule as RawSupabaseRule));
+    logger.debug('Parsed rules:', parsedRules);
+    return parsedRules;
+
+  } catch (error: unknown) {
+    logger.error('Unexpected error in fetchRules:', getErrorMessage(error), error);
+    // Depending on how this is used, you might want to rethrow or return empty
+    throw error; // Or return [] and handle UI appropriately
   }
 };

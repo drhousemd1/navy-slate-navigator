@@ -1,13 +1,20 @@
-
 import { useMutation, UseMutationOptions, QueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
+import { getErrorMessage } from './errors'; // Import getErrorMessage
+import { logger } from './logger'; // Import logger
+
+// Define a more specific type for history data if possible, or keep it generic but typed
+export interface HistoryDataItem {
+  id: string | number; // Or whatever the ID field is for history items
+  [key: string]: any; // Keep it flexible if history items vary significantly
+}
 
 // Context for optimistic updates
 export interface OptimisticMutationContext<TItem> {
   previousData?: TItem[];
   optimisticId?: string; // For create operations
-  previousHistoryData?: any[]; // For related data like history in delete operations
+  previousHistoryData?: HistoryDataItem[]; // Typed history data
 }
 
 /**
@@ -65,7 +72,7 @@ export function useCreateOptimisticMutation<
       if (context?.previousData) {
         queryClient.setQueryData<TItem[]>(queryKey, context.previousData);
       }
-      toast({ title: `Error creating ${entityName}`, description: err.message, variant: 'destructive' });
+      toast({ title: `Error creating ${entityName}`, description: getErrorMessage(err), variant: 'destructive' });
     },
     onSuccess: (data, variables, context) => { // data is the actual item from server
       queryClient.setQueryData<TItem[]>(queryKey, (old = []) => {
@@ -131,7 +138,7 @@ export function useUpdateOptimisticMutation<
       if (context?.previousData) {
         queryClient.setQueryData<TItem[]>(queryKey, context.previousData);
       }
-      toast({ title: `Error updating ${entityName}`, description: err.message, variant: 'destructive' });
+      toast({ title: `Error updating ${entityName}`, description: getErrorMessage(err), variant: 'destructive' });
     },
     onSuccess: (data, variables, _context) => { // data is the actual item from server
       queryClient.setQueryData<TItem[]>(queryKey, (old = []) =>
@@ -193,12 +200,12 @@ export function useDeleteOptimisticMutation<
         old.filter(item => item[idField] !== idToDelete)
       );
 
-      let previousHistoryData: any[] | undefined;
+      let previousHistoryData: HistoryDataItem[] | undefined;
       if (relatedQueryKey && relatedIdField) {
         await queryClient.cancelQueries({queryKey: relatedQueryKey});
-        previousHistoryData = queryClient.getQueryData<any[]>(relatedQueryKey);
-        queryClient.setQueryData<any[]>(relatedQueryKey, (oldRelated = []) => 
-          oldRelated.filter(item => item[relatedIdField] !== idToDelete)
+        previousHistoryData = queryClient.getQueryData<HistoryDataItem[]>(relatedQueryKey);
+        queryClient.setQueryData<HistoryDataItem[]>(relatedQueryKey, (oldRelated = []) => 
+          oldRelated.filter(item => item[relatedIdField as keyof HistoryDataItem] !== idToDelete) // Ensure relatedIdField is a key of HistoryDataItem
         );
       }
       
@@ -209,9 +216,9 @@ export function useDeleteOptimisticMutation<
         queryClient.setQueryData<TItem[]>(queryKey, context.previousData);
       }
       if (context?.previousHistoryData && relatedQueryKey) {
-        queryClient.setQueryData<any[]>(relatedQueryKey, context.previousHistoryData);
+        queryClient.setQueryData<HistoryDataItem[]>(relatedQueryKey, context.previousHistoryData);
       }
-      toast({ title: `Error deleting ${entityName}`, description: err.message, variant: 'destructive' });
+      toast({ title: `Error deleting ${entityName}`, description: getErrorMessage(err), variant: 'destructive' });
     },
     onSuccess: (_data, idDeleted, _context) => {
       toast({ title: `${entityName} deleted successfully!` });
