@@ -35,8 +35,9 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   logger.debug('[fetchRewards] Fetching rewards from server (lib/rewardUtils)');
   const startTime = performance.now();
   try {
-    // Assuming selectWithTimeout fetches multiple rewards, so RawSupabaseReward[]
-    const { data, error } = await selectWithTimeout<RawSupabaseReward[]>(
+    // Corrected: RowType for selectWithTimeout should be RawSupabaseReward, not RawSupabaseReward[]
+    // This will make `data` be of type `RawSupabaseReward[] | null` when `single` is false.
+    const { data, error } = await selectWithTimeout<RawSupabaseReward>(
       supabase,
       'rewards',
       {
@@ -57,9 +58,9 @@ export const fetchRewards = async (): Promise<Reward[]> => {
     }
 
     if (data) {
-      // data is RawSupabaseReward[] here
+      // data is now RawSupabaseReward[] here, which is what .map expects
       const rewardsFromServer = data.map(
-        (item: RawSupabaseReward) => processRewardData(item) // processRewardData should accept RawSupabaseReward
+        (item: RawSupabaseReward) => processRewardData(item)
       );
       logQueryPerformance('fetchRewards (server-success)', startTime, rewardsFromServer.length);
       return rewardsFromServer;
@@ -76,3 +77,4 @@ export const fetchRewards = async (): Promise<Reward[]> => {
     throw createAppError(getErrorMessage(error), 'FETCH_REWARDS_EXCEPTION');
   }
 };
+
