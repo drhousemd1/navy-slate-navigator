@@ -1,4 +1,5 @@
 import { SupabaseClient, PostgrestError, PostgrestResponse, PostgrestSingleResponse } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger'; // Logger already imported
 
 export const DEFAULT_TIMEOUT_MS = 15000; // Increased from 8000 to 15 seconds
 
@@ -24,7 +25,7 @@ export async function withTimeout<T>(
     // Check if this was an abort error/timeout
     if (error instanceof DOMException && error.name === 'AbortError') {
       const timeoutError = new Error(`Database query timed out after ${timeoutMs}ms`);
-      console.error('[withTimeout] Query timeout:', timeoutError);
+      logger.error('[withTimeout] Query timeout:', timeoutError); // Replaced console.error
       throw timeoutError;
     }
     

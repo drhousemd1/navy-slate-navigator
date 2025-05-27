@@ -3,6 +3,7 @@
 // 1. Registers SW in every environment (dev & prod).
 // 2. The first time a brand-new build finishes installing, the page
 //    reloads itself so the user instantly sees the new version.
+import { logger } from '@/lib/logger'; // Added logger import
 
 export function registerSW() {
   if ("serviceWorker" in navigator) {
@@ -29,7 +30,7 @@ export function registerSW() {
           });
         });
       })
-      .catch((err) => console.error("SW registration failed:", err));
+      .catch((err) => logger.error("SW registration failed:", err)); // Replaced console.error
 
     // Optional: when the waiting worker becomes active, reload again (safety net)
     navigator.serviceWorker.addEventListener("controllerchange", () => {
@@ -37,3 +38,4 @@ export function registerSW() {
     });
   }
 }
+

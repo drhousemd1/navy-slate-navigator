@@ -1,6 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const DOM_REWARD_TYPES_COUNT_QUERY_KEY = 'domRewardTypesCount';
 
@@ -11,7 +12,7 @@ const fetchDomRewardTypesCount = async (): Promise<number> => {
     .eq('is_dom_reward', true);
 
   if (error) {
-    console.error('Error fetching dom reward types count:', error.message);
+    logger.error('Error fetching dom reward types count:', error.message); // Replaced console.error
     return 0;
   }
   return count ?? 0;
@@ -24,3 +25,4 @@ export const useDomRewardTypesCountQuery = () => {
     staleTime: Infinity,
   });
 };
+
