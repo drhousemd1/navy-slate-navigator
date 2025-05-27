@@ -3,13 +3,14 @@ import React from 'react';
 import { FormLabel } from "@/components/ui/form";
 import BackgroundImageSelector from '../../task-editor/BackgroundImageSelector';
 import { Control, UseFormSetValue } from 'react-hook-form';
+import { PunishmentFormValues } from './PunishmentFormProvider'; // Updated import
 
 interface PunishmentBackgroundSectionProps {
-  control: Control<any>;
+  control: Control<PunishmentFormValues>; // Changed from Control<any>
   imagePreview: string | null;
   onRemoveImage: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  setValue: UseFormSetValue<any>;
+  setValue: UseFormSetValue<PunishmentFormValues>; // Changed from UseFormSetValue<any>
 }
 
 const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = ({
@@ -26,8 +27,8 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
         control={control}
         imagePreview={imagePreview}
         initialPosition={{
-          x: control._getWatch('focal_point_x') || 50,
-          y: control._getWatch('focal_point_y') || 50
+          x: control._getWatch('focal_point_x') || 50, // Now type-checked
+          y: control._getWatch('focal_point_y') || 50  // Now type-checked
         }}
         onRemoveImage={onRemoveImage}
         onImageUpload={onImageUpload}
