@@ -1,10 +1,9 @@
-
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/hooks/use-toast';
 import { Reward } from '@/data/rewards/types';
 import { BuyRewardParams, SaveRewardParams } from '@/contexts/rewards/rewardTypes'; // Ensure these types are correctly defined and exported
-// import { saveRewardsToDB, savePointsToDB, saveDomPointsToDB } from "../indexedDB/useIndexedDB"; // IndexedDB usage seems to be removed or handled elsewhere
+import { logger } from '@/lib/logger'; // Added logger import
 
 // Define types for mutation variables and responses if not already clearly defined
 type CreateRewardVars = Omit<Reward, 'id' | 'created_at' | 'updated_at'>; // Ensure 'id' is omitted for creation
@@ -21,7 +20,7 @@ export const useCreateRewardMutation = () => {
         .single();
 
       if (error) {
-        console.error("Error creating reward:", error);
+        logger.error("Error creating reward:", error); // Replaced console.error
         throw new Error(error.message);
       }
       return data as Reward;
@@ -56,7 +55,7 @@ export const useUpdateRewardMutation = () => {
         .single();
 
       if (error) {
-        console.error("Error updating reward:", error);
+        logger.error("Error updating reward:", error); // Replaced console.error
         throw new Error(error.message);
       }
       return data as Reward;
@@ -88,7 +87,7 @@ export const useDeleteRewardMutation = () => {
         .eq('id', id);
 
       if (error) {
-        console.error("Error deleting reward:", error);
+        logger.error("Error deleting reward:", error); // Replaced console.error
         throw new Error(error.message);
       }
       return data; // data is null on successful delete with no .select()
@@ -298,4 +297,3 @@ export const useRedeemDomReward = () => {
     },
   });
 };
-

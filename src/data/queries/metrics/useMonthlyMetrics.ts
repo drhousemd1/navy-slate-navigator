@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config'; // Import standard config
+import { logger } from '@/lib/logger'; // Added logger import
 
 export interface MonthlyDataItem {
   date: string;
@@ -24,7 +25,6 @@ export interface MonthlyMetricsData {
   monthlyTotals: MonthlyMetricsSummary;
 }
 
-
 export const MONTHLY_METRICS_QUERY_KEY = ['monthly-metrics'];
 
 const generateMonthDays = (): string[] => {
@@ -35,7 +35,7 @@ const generateMonthDays = (): string[] => {
 };
 
 const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
-  console.log('Fetching monthly chart data via useMonthlyMetrics hook at', new Date().toISOString());
+  logger.debug('Fetching monthly chart data via useMonthlyMetrics hook at', new Date().toISOString());
   const defaultResponse: MonthlyMetricsData = {
     dataArray: [],
     monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 }
@@ -58,7 +58,7 @@ const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
       .select('task_id, completed_at')
       .gte('completed_at', start)
       .lte('completed_at', end);
-    if (taskError) console.error('Error loading task_completion_history for monthly hook', taskError);
+    if (taskError) logger.error('Error loading task_completion_history for monthly hook', taskError);
     else if (taskEntries) {
       const tasksByDate = new Map<string, Set<string>>();
       taskEntries.forEach(entry => {
@@ -77,7 +77,7 @@ const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
       .select('violation_date')
       .gte('violation_date', start)
       .lte('violation_date', end);
-    if (ruleError) console.error('Error loading rule_violations for monthly hook', ruleError);
+    if (ruleError) logger.error('Error loading rule_violations for monthly hook', ruleError);
     else if (ruleEntries) {
       ruleEntries.forEach(entry => {
         const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
@@ -91,7 +91,7 @@ const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
       .select('created_at')
       .gte('created_at', start)
       .lte('created_at', end);
-    if (rewardError) console.error('Error loading reward_usage for monthly hook', rewardError);
+    if (rewardError) logger.error('Error loading reward_usage for monthly hook', rewardError);
     else if (rewardEntries) {
       rewardEntries.forEach(entry => {
         const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
@@ -105,7 +105,7 @@ const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
       .select('applied_date')
       .gte('applied_date', start)
       .lte('applied_date', end);
-    if (punishmentError) console.error('Error loading punishment_history for monthly hook', punishmentError);
+    if (punishmentError) logger.error('Error loading punishment_history for monthly hook', punishmentError);
     else if (punishmentEntries) {
       punishmentEntries.forEach(entry => {
         const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
@@ -121,10 +121,10 @@ const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
       punishments: acc.punishments + item.punishments
     }), { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 });
     
-    console.log('Monthly chart data prepared via hook. Monthly totals:', monthlyTotals);
+    logger.debug('Monthly chart data prepared via hook. Monthly totals:', monthlyTotals);
     return { dataArray, monthlyTotals };
   } catch (err) {
-    console.error('Error in fetchMonthlyData in hook:', err);
+    logger.error('Error in fetchMonthlyData in hook:', err);
     toast({
       title: 'Error loading chart data',
       description: 'There was a problem loading the monthly metrics.',
