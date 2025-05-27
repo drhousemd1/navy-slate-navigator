@@ -1,23 +1,42 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/data/rewards/types';
-import {
-  loadRewardsFromDB,
-  saveRewardsToDB,
-  getLastSyncTimeForRewards,
-  setLastSyncTimeForRewards
-} from '../indexedDB/useIndexedDB'; // Import IndexedDB functions
 import { logQueryPerformance } from '@/lib/react-query-config';
-import { selectWithTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils'; // For fetching
-import { logger } from '@/lib/logger'; // Added logger import
+import { selectWithTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils';
+import { logger } from '@/lib/logger';
+import { Json } from '@/data/tasks/types';
+
+// Define RawSupabaseReward locally as src/data/rewards/types.ts is not in allowed-files
+interface RawSupabaseReward {
+  id: string;
+  title: string;
+  description?: string | null;
+  cost: number;
+  supply?: number | null;
+  is_dom_reward?: boolean | null;
+  background_image_url?: string | null;
+  background_opacity?: number | null;
+  icon_url?: string | null;
+  icon_name?: string | null;
+  title_color?: string | null;
+  subtext_color?: string | null;
+  calendar_color?: string | null;
+  icon_color?: string | null;
+  highlight_effect?: boolean | null;
+  focal_point_x?: number | null;
+  focal_point_y?: number | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export const REWARDS_QUERY_KEY = ['rewards'];
 export const REWARDS_POINTS_QUERY_KEY = ['rewards', 'points'];
 export const REWARDS_DOM_POINTS_QUERY_KEY = ['rewards', 'dom_points'];
 export const REWARDS_SUPPLY_QUERY_KEY = ['rewards', 'supply'];
 
-// Default values for processing, similar to fetchRules
+// Default values for processing
 const defaultRewardValues = {
+  cost: 10,
+  supply: 0,
   is_dom_reward: false,
   background_opacity: 100,
   icon_name: 'Award',
@@ -28,21 +47,20 @@ const defaultRewardValues = {
   highlight_effect: false,
   focal_point_x: 50,
   focal_point_y: 50,
-  supply: 0, // Default supply if not specified
-  cost: 10, // Default cost
 };
 
-const processRewardData = (reward: any): Reward => {
+// This is the consolidated processRewardData function
+export const processRewardData = (reward: RawSupabaseReward): Reward => {
   return {
     id: reward.id,
     title: reward.title,
-    description: reward.description,
+    description: reward.description ?? undefined,
     cost: reward.cost ?? defaultRewardValues.cost,
     supply: reward.supply ?? defaultRewardValues.supply,
     is_dom_reward: reward.is_dom_reward ?? defaultRewardValues.is_dom_reward,
-    background_image_url: reward.background_image_url,
+    background_image_url: reward.background_image_url ?? undefined,
     background_opacity: reward.background_opacity ?? defaultRewardValues.background_opacity,
-    icon_url: reward.icon_url,
+    icon_url: reward.icon_url ?? undefined,
     icon_name: reward.icon_name ?? defaultRewardValues.icon_name,
     title_color: reward.title_color ?? defaultRewardValues.title_color,
     subtext_color: reward.subtext_color ?? defaultRewardValues.subtext_color,
@@ -53,20 +71,15 @@ const processRewardData = (reward: any): Reward => {
     focal_point_y: reward.focal_point_y ?? defaultRewardValues.focal_point_y,
     created_at: reward.created_at,
     updated_at: reward.updated_at,
-    // Ensure all fields from Reward type are covered
   };
 };
 
 export const fetchRewards = async (): Promise<Reward[]> => {
   const startTime = performance.now();
-  // No longer using localStorage cache directly here; hook `useRewards` handles IndexedDB interaction.
-  // This function will now primarily be responsible for fetching from Supabase and processing.
-  // The hook `useRewards` will decide whether to call this based on its own IndexedDB cache status.
-
   logger.debug("[fetchRewards from queries.ts] Fetching rewards from Supabase server");
   
   try {
-    const { data, error } = await selectWithTimeout<Reward>(
+    const { data, error } = await selectWithTimeout<RawSupabaseReward>(
       supabase,
       'rewards',
       {
@@ -78,19 +91,19 @@ export const fetchRewards = async (): Promise<Reward[]> => {
     if (error) {
       logger.error('[fetchRewards from queries.ts] Supabase error:', error);
       logQueryPerformance('fetchRewards (server-error)', startTime);
-      throw error; // Let the calling hook (useRewards) handle fallback to its cache
+      throw error;
     }
     
-    const processedData = (Array.isArray(data) ? data : (data ? [data] : [])).map(processRewardData);
+    const rawRewards = (Array.isArray(data) ? data : (data ? [data] : [])) as RawSupabaseReward[];
+    const processedData = rawRewards.map(processRewardData);
     logQueryPerformance('fetchRewards (server-success)', startTime, processedData.length);
     
-    // The hook `useRewards` will handle saving to IndexedDB.
     return processedData;
 
   } catch (error) {
     logger.error('[fetchRewards from queries.ts] Fetch failed:', error);
     logQueryPerformance('fetchRewards (fetch-exception)', startTime);
-    throw error; // Rethrow for the calling hook to handle
+    throw error;
   }
 };
 
@@ -220,7 +233,7 @@ export const fetchTotalRewardsSupply = async (): Promise<number> => {
       throw error;
     }
     
-    const total = data?.reduce((totalSupply, reward) => totalSupply + reward.supply, 0) || 0;
+    const total = data?.reduce((totalSupply, reward) => totalSupply + (reward.supply || 0), 0) || 0;
     
     logQueryPerformance('fetchTotalRewardsSupply', startTime);
     

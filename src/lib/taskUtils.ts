@@ -3,6 +3,7 @@ import { toast } from "@/hooks/use-toast";
 import { getMondayBasedDay } from "./utils";
 import { queryClient } from "@/data/queryClient"; 
 import { logger } from '@/lib/logger';
+import { RawSupabaseTask, Json } from '@/data/tasks/types'; // Import RawSupabaseTask and Json
 
 export interface Task {
   id: string;
@@ -26,6 +27,7 @@ export interface Task {
   subtext_color?: string;
   calendar_color?: string;
   last_completed_date?: string; // YYYY-MM-DD
+  background_images?: Json | null; // Added for consistency
   created_at?: string;
   updated_at?: string;
 }
@@ -88,7 +90,9 @@ export const fetchTasks = async (): Promise<Task[]> => {
       return [];
     }
     
-    const processedTasks = (data || []).map(processTaskFromDb);
+    // Cast raw data to RawSupabaseTask[] before processing
+    const rawTasks = (data || []) as RawSupabaseTask[];
+    const processedTasks = rawTasks.map(processTaskFromDb);
     
     const tasksToReset = processedTasks.filter(task => 
       task.completed && 
@@ -169,37 +173,38 @@ export const resetTaskCompletions = async (
   }
 };
 
-export const processTaskFromDb = (task: any): Task => {
+export const processTaskFromDb = (task: RawSupabaseTask): Task => {
   return {
     id: task.id,
     title: task.title,
-    description: task.description,
+    description: task.description ?? undefined,
     points: task.points,
-    priority: (task.priority as string || 'medium') as 'low' | 'medium' | 'high',
+    priority: (task.priority || 'medium') as 'low' | 'medium' | 'high',
     completed: task.completed,
-    background_image_url: task.background_image_url,
-    background_opacity: task.background_opacity,
-    focal_point_x: task.focal_point_x,
-    focal_point_y: task.focal_point_y,
-    frequency: (task.frequency as string || 'daily') as 'daily' | 'weekly',
-    frequency_count: task.frequency_count || 1, // Ensure default frequency count is at least 1
+    background_image_url: task.background_image_url ?? undefined,
+    background_opacity: task.background_opacity ?? undefined,
+    focal_point_x: task.focal_point_x ?? undefined,
+    focal_point_y: task.focal_point_y ?? undefined,
+    frequency: (task.frequency || 'daily') as 'daily' | 'weekly',
+    frequency_count: task.frequency_count || 1,
     usage_data: Array.isArray(task.usage_data) && task.usage_data.length === 7 ? 
-      task.usage_data.map((val: any) => Number(val) || 0) : 
-      Array(7).fill(0), // Ensure it's a 7-element array of numbers
-    icon_url: task.icon_url,
-    icon_name: task.icon_name,
-    icon_color: task.icon_color,
-    highlight_effect: task.highlight_effect,
-    title_color: task.title_color,
-    subtext_color: task.subtext_color,
-    calendar_color: task.calendar_color,
-    last_completed_date: task.last_completed_date,
+      task.usage_data.map((val: any) => Number(val) || 0) : // Keep any here for robust parsing
+      Array(7).fill(0),
+    icon_url: task.icon_url ?? undefined,
+    icon_name: task.icon_name ?? undefined,
+    icon_color: task.icon_color ?? undefined,
+    highlight_effect: task.highlight_effect ?? false,
+    title_color: task.title_color ?? undefined,
+    subtext_color: task.subtext_color ?? undefined,
+    calendar_color: task.calendar_color ?? undefined,
+    last_completed_date: task.last_completed_date ?? undefined,
+    background_images: task.background_images ?? null,
     created_at: task.created_at,
     updated_at: task.updated_at
   };
 };
 
-export const processTasksWithRecurringLogic = (rawTasks: any[]): Task[] => {
+export const processTasksWithRecurringLogic = (rawTasks: RawSupabaseTask[]): Task[] => {
   if (!rawTasks) return [];
   const todayStr = getLocalDateString();
   return rawTasks.map(rawTask => {
@@ -222,8 +227,9 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     const usage_data = task.usage_data || Array(7).fill(0);
     const now = new Date().toISOString();
     
+    let supabaseResponse;
     if (task.id) {
-      const { data, error } = await supabase
+      supabaseResponse = await supabase
         .from('tasks')
         .update({
           title: task.title,
@@ -246,24 +252,22 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           icon_color: task.icon_color,
           last_completed_date: task.last_completed_date,
           usage_data: usage_data,
+          background_images: task.background_images, // ensure this is passed
           updated_at: now,
         })
         .eq('id', task.id)
         .select()
         .single();
-      
-      if (error) throw error;
-      return data as Task;
     } else {
-      const { data, error } = await supabase
+      supabaseResponse = await supabase
         .from('tasks')
         .insert({
           title: task.title,
           description: task.description,
           points: task.points,
-          completed: task.completed ?? false, // Ensure default
-          frequency: task.frequency ?? 'daily', // Ensure default
-          frequency_count: task.frequency_count ?? 1, // Ensure default
+          completed: task.completed ?? false,
+          frequency: task.frequency ?? 'daily',
+          frequency_count: task.frequency_count ?? 1,
           background_image_url: task.background_image_url,
           background_opacity: task.background_opacity,
           icon_url: task.icon_url,
@@ -274,19 +278,20 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
           highlight_effect: task.highlight_effect,
           focal_point_x: task.focal_point_x,
           focal_point_y: task.focal_point_y,
-          priority: task.priority ?? 'medium', // Ensure default
+          priority: task.priority ?? 'medium',
           icon_color: task.icon_color,
           last_completed_date: null,
           usage_data: usage_data,
+          background_images: task.background_images, // ensure this is passed
           created_at: now,
-          // updated_at will be set by default by db or trigger if configured
         })
         .select()
         .single();
-      
-      if (error) throw error;
-      return data as Task;
     }
+
+    const { data, error } = supabaseResponse;
+    if (error) throw error;
+    return processTaskFromDb(data as RawSupabaseTask); // Process the raw response
   } catch (err: any) {
     logger.error('Error saving task:', err);
     toast({
@@ -308,7 +313,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     
     if (taskError) throw taskError;
     
-    const task = processTaskFromDb(taskData); // Process to ensure type conformity
+    const task = processTaskFromDb(taskData as RawSupabaseTask); // Process to ensure type conformity
     
     if (completed && !canCompleteTask(task)) {
       toast({
@@ -347,7 +352,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     const dayOfWeek = getCurrentDayOfWeek();
     const isFullyCompletedToday = usage_data[dayOfWeek] >= (task.frequency_count || 1);
     
-    const updatePayload: Partial<Task> = {
+    const updatePayload: Partial<Task> & { updated_at: string } = { // Ensure updated_at is part of the payload type
       usage_data,
       updated_at: new Date().toISOString(),
     };
@@ -372,7 +377,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
 
     const { error } = await supabase
       .from('tasks')
-      .update(updatePayload)
+      .update(updatePayload) // Supabase types should handle Partial<Task> correctly
       .eq('id', id);
     
     if (error) throw error;

@@ -1,41 +1,29 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { Reward } from '@/data/rewards/types';
+import { Reward } from '@/data/rewards/types'; // Assuming this type is available
+// If Reward type is defined elsewhere (e.g. in queries.ts if types.ts not available) adjust import
 import { withTimeout, DEFAULT_TIMEOUT_MS, selectWithTimeout } from '@/lib/supabaseUtils'; 
 import { PostgrestError } from '@supabase/supabase-js';
 import { logQueryPerformance } from '@/lib/react-query-config';
 import { logger } from '@/lib/logger';
+// Import the consolidated processRewardData and its RawSupabaseReward type (or its definition if local)
+import { processRewardData } from '@/data/rewards/queries'; 
+// RawSupabaseReward is locally defined in queries.ts, so we don't import it here.
+// We'll cast the supabase response to 'any' then to RawSupabaseReward in the calling function.
+// Or, ideally, queries.ts would export RawSupabaseReward if it's locally defined there.
+// For now, fetchRewards below will expect `any` from selectWithTimeout then cast.
 
-// Helper to ensure reward data consistency
-const processRewardData = (reward: any): Reward => {
-  return {
-    id: reward.id,
-    title: reward.title,
-    description: reward.description,
-    cost: reward.cost ?? 10,
-    supply: reward.supply ?? 0,
-    is_dom_reward: reward.is_dom_reward ?? false,
-    background_image_url: reward.background_image_url,
-    background_opacity: reward.background_opacity ?? 100,
-    icon_name: reward.icon_name,
-    icon_url: reward.icon_url,
-    icon_color: reward.icon_color ?? '#9b87f5',
-    title_color: reward.title_color ?? '#FFFFFF',
-    subtext_color: reward.subtext_color ?? '#8E9196',
-    calendar_color: reward.calendar_color ?? '#7E69AB',
-    highlight_effect: reward.highlight_effect ?? false,
-    focal_point_x: reward.focal_point_x ?? 50,
-    focal_point_y: reward.focal_point_y ?? 50,
-    created_at: reward.created_at,
-    updated_at: reward.updated_at,
-  };
-};
+// Helper to ensure reward data consistency (REMOVED - consolidated into data/rewards/queries.ts)
+// const processRewardData = (reward: any): Reward => { ... };
 
 // This function is imported as fetchRewardsFromServer in useRewards.ts
 export const fetchRewards = async (): Promise<Reward[]> => {
   logger.debug('[fetchRewards] Fetching rewards from server (lib/rewardUtils)');
   const startTime = performance.now();
   try {
-    const { data, error } = await selectWithTimeout<Reward>(
+    // Since RawSupabaseReward is local to queries.ts, we'll fetch as 'any' and let processRewardData handle it
+    // Ideally, selectWithTimeout would be typed with RawSupabaseReward if it was exportable
+    const { data, error } = await selectWithTimeout<any>( // Temporarily 'any'
       supabase,
       'rewards',
       {
@@ -51,7 +39,11 @@ export const fetchRewards = async (): Promise<Reward[]> => {
     }
 
     if (data) {
-      const rewardsFromServer = (Array.isArray(data) ? data : (data ? [data] : [])).map(processRewardData);
+      // The processRewardData from queries.ts expects RawSupabaseReward.
+      // We cast 'data' items to 'any' first, then implicitly to RawSupabaseReward by the function call.
+      const rewardsFromServer = (Array.isArray(data) ? data : (data ? [data] : [])).map(
+        (item: any) => processRewardData(item as any) // Cast to any for processRewardData
+      );
       logQueryPerformance('fetchRewards (server-success)', startTime, rewardsFromServer.length);
       return rewardsFromServer;
     }

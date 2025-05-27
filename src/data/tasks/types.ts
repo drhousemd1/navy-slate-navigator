@@ -9,6 +9,35 @@ export type Json =
   | { [key: string]: Json }
   | Json[];
 
+export interface RawSupabaseTask {
+  id: string;
+  user_id?: string | null; // Assuming user_id might not always be selected or could be null
+  title: string;
+  description?: string | null;
+  points: number;
+  priority: string; // Raw from DB, processed into 'low' | 'medium' | 'high'
+  completed: boolean;
+  background_image_url?: string | null;
+  background_opacity?: number | null;
+  focal_point_x?: number | null;
+  focal_point_y?: number | null;
+  frequency: string; // Raw from DB, processed into 'daily' | 'weekly'
+  frequency_count?: number | null;
+  usage_data?: Json | null; // Stored as jsonb, could be an array or other JSON
+  icon_url?: string | null;
+  icon_name?: string | null;
+  icon_color?: string | null;
+  highlight_effect?: boolean | null;
+  title_color?: string | null;
+  subtext_color?: string | null;
+  calendar_color?: string | null;
+  last_completed_date?: string | null;
+  week_identifier?: string | null;
+  background_images?: Json | null; // Stored as jsonb
+  created_at: string; // Assuming string representation of timestamp
+  updated_at: string; // Assuming string representation of timestamp
+}
+
 export interface TaskFormValues {
   title: string;
   description: string;
