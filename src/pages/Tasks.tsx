@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
 import TasksHeader from '../components/task/TasksHeader';
 import TasksList from '../components/task/TasksList';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
-import { TaskWithId, TaskFormValues } from '@/data/tasks/types';
+import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useTasksData } from '@/hooks/useTasksData';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
@@ -58,19 +57,17 @@ const TasksPageContent: React.FC = () => {
 
   const handleSaveTask = async (formData: TaskFormValues) => { 
     try {
-      let taskToSave: CreateTaskVariables | UpdateTaskVariables; // Using specific types
+      let taskToSave: CreateTaskVariables | UpdateTaskVariables; 
       if (currentTask && currentTask.id) {
-        // For update, we need all fields from formData and the id from currentTask
-        // Map TaskFormValues to UpdateTaskVariables
         taskToSave = { ...formData, id: currentTask.id };
       } else {
-        // For create, map TaskFormValues to CreateTaskVariables
-        taskToSave = { ...formData, usage_data: Array(7).fill(0), background_images: null };
+        taskToSave = { 
+          ...formData, 
+          usage_data: Array(7).fill(0), 
+          background_images: null 
+        };
       }
-      // The saveTask in useTasksData expects a specific input type, let's ensure it matches
-      // The type SaveTaskInput in useTasksData is (TaskFormValues & { id?: string }) | (TaskWithId & Partial<TaskFormValues>)
-      // So, this should be fine.
-      await saveTask(taskToSave as any); // Cast to any temporarily if specific mapping is complex, will refine later
+      await saveTask(taskToSave as any); // Cast to any as `saveTask` handles the precise mapping
       setIsEditorOpen(false);
       setCurrentTask(null);
     } catch (err) {
@@ -131,7 +128,7 @@ const TasksPageContent: React.FC = () => {
         icon={ListChecks} 
         title="No Tasks Yet"
         description="You do not have any tasks yet, create one to get started."
-        action={ // Changed from actionButton to action
+        action={ 
           <Button onClick={handleAddTask} className="bg-primary text-primary-foreground hover:bg-primary/90">
             Create New Task
           </Button>
@@ -152,7 +149,6 @@ const TasksPageContent: React.FC = () => {
 
   return (
     <div className="p-4 pt-6 TasksContent">
-      {/* This TasksHeader now correctly receives onAddNewTask */}
       <TasksHeader onAddNewTask={handleAddTask} /> 
       {content}
       <TaskEditor
