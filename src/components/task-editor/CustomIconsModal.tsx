@@ -50,7 +50,6 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
         throw error;
       }
       
-      // Filter out folders and transform the data
       const icons = data
         .filter(file => !file.name.endsWith('/'))
         .map(file => ({
@@ -90,7 +89,6 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
     setIsUploading(true);
     
     try {
-      // Upload the file to Supabase Storage
       const { error: uploadError } = await supabase
         .storage
         .from('custom-icons')
@@ -100,7 +98,6 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
         throw uploadError;
       }
       
-      // Get the public URL
       const { data } = supabase
         .storage
         .from('custom-icons')
@@ -111,7 +108,6 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
         description: 'Custom icon has been uploaded successfully',
       });
       
-      // Refresh the list of icons
       fetchCustomIcons();
       
     } catch (error) {

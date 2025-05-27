@@ -15,7 +15,7 @@ import { logger } from '@/lib/logger';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
-  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData>; // Updated to always return PunishmentData
+  onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData>; 
   onCancel: () => void;
   onDelete?: (id: string) => void;
 }
@@ -71,18 +71,13 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
       persisterExclude={[]} 
     >
       {(form, clearPersistedState) => {
-        // This function is passed to PunishmentFormSubmitHandler's onSave prop,
-        // which expects: (data: Partial<PunishmentData>) => Promise<PunishmentData | null>
         const handleSaveWithClear = async (dataFromFormSubmitHandler: Partial<PunishmentData>): Promise<PunishmentData | null> => {
           try {
-            // The `onSave` prop of PunishmentEditorForm now takes Partial<PunishmentData> and returns Promise<PunishmentData>
             const savedData = await onSave(dataFromFormSubmitHandler);
             await clearPersistedState();
-            return savedData; // This makes the function return Promise<PunishmentData>
+            return savedData; 
           } catch (error) {
             logger.error("Error saving punishment within handleSaveWithClear:", error);
-            // To match the expected Promise<PunishmentData | null>, return null on error.
-            // The form submit handler will see null and might not reset the form with new data.
             return null; 
           }
         };
@@ -107,7 +102,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
             selectedIconName={selectedIconName}
             imagePreview={imagePreview}
             iconPreview={iconPreview}
-            onSave={handleSaveWithClear} // handleSaveWithClear now matches expected type
+            onSave={handleSaveWithClear} 
             onCancel={handleCancelWithClear} 
           >
             <PunishmentFormContent 
@@ -134,7 +129,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
 };
 
 interface PunishmentFormContentProps {
-  form: UseFormReturn<PunishmentFormValues>; // Use PunishmentFormValues
+  form: UseFormReturn<PunishmentFormValues>;
   selectedIconName: string | null;
   iconPreview: string | null;
   imagePreview: string | null;

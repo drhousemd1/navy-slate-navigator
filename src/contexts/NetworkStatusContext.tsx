@@ -3,6 +3,7 @@ import { queryClient } from '@/data/queryClient';
 import { toast } from '@/hooks/use-toast';
 import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries'; // Import points query keys
 import { QueryKey } from '@tanstack/react-query'; // Import QueryKey type
+import { logger } from '@/lib/logger'; // Added logger import
 
 interface NetworkStatusContextType {
   isOnline: boolean;
@@ -80,14 +81,14 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
           toast({ title: "Refreshing Data...", description: "Attempting to refresh your data." });
         }
         
-        console.log(`[NetworkStatusContext] forceSyncNow - Attempt ${attempt + 1}`);
+        logger.debug(`[NetworkStatusContext] forceSyncNow - Attempt ${attempt + 1}`); // Replaced console.log
         await queryClient.resumePausedMutations();
-        console.log(`[NetworkStatusContext] Paused mutations resumed (if any).`);
+        logger.debug(`[NetworkStatusContext] Paused mutations resumed (if any).`); // Replaced console.log
         
         // Use the defined CRITICAL_QUERY_KEYS_FOR_FORCESYNC
         const criticalQueriesToInvalidate = CRITICAL_QUERY_KEYS_FOR_FORCESYNC;
         
-        console.log('[NetworkStatusContext] Invalidating critical queries:', criticalQueriesToInvalidate.map(q => Array.isArray(q) ? q.join('/') : String(q)));
+        logger.debug('[NetworkStatusContext] Invalidating critical queries:', criticalQueriesToInvalidate.map(q => Array.isArray(q) ? q.join('/') : String(q))); // Replaced console.log
         await Promise.all(
           criticalQueriesToInvalidate.map(queryKey => 
             queryClient.invalidateQueries({queryKey})
@@ -102,7 +103,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
         setIsSyncing(false);
         return; 
       } catch (error) {
-        console.error(`[NetworkStatusContext] Error during forced sync/refresh (Attempt ${attempt + 1}):`, error);
+        logger.error(`[NetworkStatusContext] Error during forced sync/refresh (Attempt ${attempt + 1}):`, error); // Replaced console.error
         if (attempt < MAX_RETRIES) {
           toast({
             title: `Refresh Attempt ${attempt + 1} Failed`,
@@ -127,7 +128,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
 
   useEffect(() => {
     const handleOnline = () => {
-      console.log('[NetworkStatusContext] App is back online.');
+      logger.debug('[NetworkStatusContext] App is back online.'); // Replaced console.log
       setIsOnline(true);
       setReconnectTime(new Date());
       
@@ -142,11 +143,11 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
       queryClient.resumePausedMutations()
         .then(() => {
           const currentPendingCount = queryClient.getMutationCache().getAll().filter(m => m.state.status === 'pending').length;
-          console.log(`[NetworkStatusContext] Paused mutations resumed. Pending count now: ${currentPendingCount}`);
+          logger.debug(`[NetworkStatusContext] Paused mutations resumed. Pending count now: ${currentPendingCount}`); // Replaced console.log
           // Toasting for resumed mutations can be kept if desired, or removed for less noise
         })
         .catch(error => {
-          console.error('[NetworkStatusContext] Error resuming paused mutations on network online:', error);
+          logger.error('[NetworkStatusContext] Error resuming paused mutations on network online:', error); // Replaced console.error
           toast({
             title: 'Operation Error', // Generic error
             description: 'Could not resume all pending operations. Try manual refresh.',
@@ -156,7 +157,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
     };
 
     const handleOffline = () => {
-      console.log('[NetworkStatusContext] App is offline.');
+      logger.debug('[NetworkStatusContext] App is offline.'); // Replaced console.log
       setIsOnline(false);
       setLastOnlineTime(new Date()); 
       
@@ -178,7 +179,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
     const initialMutations = queryClient.getMutationCache().getAll();
     const initialPending = initialMutations.filter(m => m.state.status === 'pending').length;
     setPendingMutationsCount(initialPending);
-    console.log(`[NetworkStatusContext] Initial pending mutations: ${initialPending}`);
+    logger.debug(`[NetworkStatusContext] Initial pending mutations: ${initialPending}`); // Replaced console.log
 
     return () => {
       window.removeEventListener('online', handleOnline);

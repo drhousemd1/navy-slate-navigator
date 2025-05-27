@@ -41,7 +41,7 @@ interface TaskFormValues {
 
 interface TaskEditorFormProps {
   taskData?: Partial<Task>;
-  onSave: (taskData: any) => Promise<void>; // Changed from (taskData: any) => void to Promise<void> for async operations
+  onSave: (taskData: any) => Promise<void>; 
   onDelete?: (taskId: string) => void;
   onCancel: () => void;
 }
@@ -112,13 +112,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       setIconPreview(taskData.icon_url || null);
       setSelectedIconName(taskData.icon_name || null);
     } else {
-      // For new tasks, form persister will load if data exists, otherwise defaultValues are used.
-      // Explicit reset might override persisted new form state if not careful.
-      // Let persister handle initial load for 'new' form.
-      // If taskData is undefined, useFormStatePersister handles loading or defaults.
-      // However, imagePreview, iconPreview, selectedIconName are not part of form state directly managed by RHF.
-      // We need to ensure they are reset or loaded correctly based on persisted form values if applicable.
-      // For now, new form means fresh previews.
       setImagePreview(null);
       setIconPreview(null);
       setSelectedIconName(null);
@@ -132,7 +125,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       reader.onloadend = () => {
         const base64String = reader.result as string;
         setImagePreview(base64String);
-        // setValue('background_image_url', base64String); // This will be persisted if not excluded
       };
       reader.readAsDataURL(file);
     }
@@ -151,8 +143,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             const base64String = reader.result as string;
             setIconPreview(base64String);
             setSelectedIconName(null);
-            // setValue('icon_url', base64String); // This will be persisted if not excluded
-            // setValue('icon_name', undefined);
           };
           reader.readAsDataURL(file);
         }
@@ -177,7 +167,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       setSelectedIconName(iconName);
       setIconPreview(null);
       setValue('icon_name', iconName);
-      setValue('icon_url', undefined); // Ensure icon_url is cleared if a named icon is selected
+      setValue('icon_url', undefined); 
       
       toast({
         title: "Icon selected",
@@ -193,15 +183,12 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         ...values,
         id: taskData?.id,
         icon_name: selectedIconName || undefined,
-        // If icon_url and background_image_url are excluded from persistence,
-        // they should be explicitly read from their previews if needed here
-        icon_url: iconPreview || values.icon_url, // Prioritize live preview, fallback to form value
-        background_image_url: imagePreview || values.background_image_url, // Prioritize live preview
+        icon_url: iconPreview || values.icon_url, 
+        background_image_url: imagePreview || values.background_image_url, 
       };
       
       await onSave(taskToSave);
-      await clearPersistedState(); // Clear persisted state on successful save
-      // onSave should handle closing the editor, so onCancel isn't called here.
+      await clearPersistedState(); 
     } catch (error) {
       logger.error('Error saving task:', error);
       toast({
@@ -222,9 +209,9 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const handleDeleteWrapped = () => {
     if (taskData?.id && onDelete) {
       onDelete(taskData.id);
-      clearPersistedState(); // Clear persisted state on delete
+      clearPersistedState(); 
     }
-    setIsDeleteDialogOpen(false); // Close dialog regardless of onDelete outcome
+    setIsDeleteDialogOpen(false); 
   };
 
   const incrementPoints = () => {
@@ -316,17 +303,16 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
           <FormLabel className="text-white text-lg">Background Image</FormLabel>
           <BackgroundImageSelector
             control={control}
-            imagePreview={imagePreview} // This is the state variable
+            imagePreview={imagePreview} 
             initialPosition={{ 
               x: watch('focal_point_x') || 50, 
               y: watch('focal_point_y') || 50 
             }}
             onRemoveImage={() => {
               setImagePreview(null);
-              // setValue('background_image_url', undefined); // This will be persisted if not excluded
             }}
             onImageUpload={handleImageUpload}
-            setValue={setValue} // For focal_point_x, focal_point_y, background_opacity
+            setValue={setValue} 
           />
         </div>
         
@@ -335,16 +321,14 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
               <IconSelector
-                selectedIconName={selectedIconName} // This is the state variable
-                iconPreview={iconPreview} // This is the state variable
+                selectedIconName={selectedIconName} 
+                iconPreview={iconPreview} 
                 iconColor={watch('icon_color')}
                 onSelectIcon={handleIconSelect}
                 onUploadIcon={handleIconUpload}
                 onRemoveIcon={() => {
                   setIconPreview(null);
                   setSelectedIconName(null);
-                  // setValue('icon_url', undefined); // This will be persisted if not excluded
-                  // setValue('icon_name', undefined); // This will be persisted
                 }}
               />
             </div>
@@ -413,7 +397,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
           <Button 
             type="button" 
             variant="destructive" 
-            onClick={onCancel}
+            onClick={handleCancelWrapped} 
             className="bg-red-700 border-light-navy text-white hover:bg-red-600"
           >
             Cancel
