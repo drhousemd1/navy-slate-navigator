@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { UseFormReturn, FieldPathValue, Path, PathValue } from 'react-hook-form'; // Import PathValue
 import { debounce } from 'lodash';
+import { logger } from '@/lib/logger'; // Added logger import
 
 type FormValues = Record<string, any>;
 
@@ -43,10 +44,10 @@ export function useFormStatePersister<T extends FormValues>(
           }
         });
         
-        console.log(`[FormStatePersister] Loaded state for form: ${formId}`);
+        logger.debug(`[FormStatePersister] Loaded state for form: ${formId}`);
       }
     } catch (error) {
-      console.error(`[FormStatePersister] Failed to load state for form: ${formId}`, error);
+      logger.error(`[FormStatePersister] Failed to load state for form: ${formId}`, error);
     }
   }, [formId, form, exclude, storageKey]);
   
@@ -63,9 +64,9 @@ export function useFormStatePersister<T extends FormValues>(
         }, {} as Record<string, any>);
         
         localStorage.setItem(storageKey, JSON.stringify(filteredValues));
-        console.log(`[FormStatePersister] Saved state for form: ${formId}`);
+        logger.debug(`[FormStatePersister] Saved state for form: ${formId}`);
       } catch (error) {
-        console.error(`[FormStatePersister] Failed to save state for form: ${formId}`, error);
+        logger.error(`[FormStatePersister] Failed to save state for form: ${formId}`, error);
       }
     }, debounceMs);
     
@@ -83,10 +84,10 @@ export function useFormStatePersister<T extends FormValues>(
   const clearPersistedState = async (): Promise<boolean> => {
     try {
       localStorage.removeItem(storageKey);
-      console.log(`[FormStatePersister] Cleared state for form: ${formId}`);
+      logger.debug(`[FormStatePersister] Cleared state for form: ${formId}`);
       return true;
     } catch (error) {
-      console.error(`[FormStatePersister] Failed to clear state for form: ${formId}`, error);
+      logger.error(`[FormStatePersister] Failed to clear state for form: ${formId}`, error);
       return false;
     }
   };
@@ -95,3 +96,4 @@ export function useFormStatePersister<T extends FormValues>(
     clearPersistedState
   };
 }
+

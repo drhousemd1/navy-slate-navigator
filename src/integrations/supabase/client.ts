@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger'; // Added logger import
 
 const SUPABASE_URL = "https://ronqvzihpffgowyscgfm.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvbnF2emlocGZmZ293eXNjZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4NzM0NzIsImV4cCI6MjA1ODQ0OTQ3Mn0.28ftEjZYpnYOywnRdRbRRg5UKD31VPpuZ00mJH8IQtM";
@@ -23,7 +24,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 // Helper function to check if a session exists (for debugging)
 export const checkSession = async () => {
   const { data, error } = await supabase.auth.getSession();
-  console.log("Current session check:", data?.session ? "Session exists" : "No session", error);
+  logger.debug("Current session check:", data?.session ? "Session exists" : "No session", error);
   return data?.session;
 };
 
@@ -34,7 +35,7 @@ export const clearAuthState = async () => {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key?.includes('supabase') || key?.includes('auth')) {
-        console.log("Clearing potentially problematic storage item:", key);
+        logger.debug("Clearing potentially problematic storage item:", key);
         localStorage.removeItem(key);
       }
     }
@@ -43,8 +44,9 @@ export const clearAuthState = async () => {
   // Sign out completely to reset auth state
   const { error } = await supabase.auth.signOut({ scope: 'global' });
   if (error) {
-    console.error("Error clearing auth state:", error);
+    logger.error("Error clearing auth state:", error);
   } else {
-    console.log("Auth state successfully cleared");
+    logger.debug("Auth state successfully cleared");
   }
 };
+

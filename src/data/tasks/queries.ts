@@ -11,6 +11,7 @@ import { Task, TaskPriority } from '@/lib/taskUtils';
 import { processTasksWithRecurringLogic } from '@/lib/taskUtils';
 import { withTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils';
 import { PostgrestError } from '@supabase/supabase-js'; // Import PostgrestError
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const TASKS_QUERY_KEY = ["tasks"];
 export const TASK_QUERY_KEY = (taskId: string) => ["tasks", taskId];
@@ -32,11 +33,11 @@ export const fetchTasks = async (): Promise<Task[]> => {
   }
 
   if (!shouldFetchFromServer && localData) {
-    console.log('[fetchTasks] Returning tasks from IndexedDB');
+    logger.debug('[fetchTasks] Returning tasks from IndexedDB');
     return processTasksWithRecurringLogic(localData);
   }
 
-  console.log('[fetchTasks] Fetching tasks from server');
+  logger.debug('[fetchTasks] Fetching tasks from server');
   
   try {
     // Handle the raw response from Supabase and ensure correct typing
@@ -58,9 +59,9 @@ export const fetchTasks = async (): Promise<Task[]> => {
     const { data, error } = result;
 
     if (error) {
-      console.error('[fetchTasks] Supabase error fetching tasks:', error);
+      logger.error('[fetchTasks] Supabase error fetching tasks:', error);
       if (localData) {
-        console.warn('[fetchTasks] Server fetch failed, returning stale data from IndexedDB');
+        logger.warn('[fetchTasks] Server fetch failed, returning stale data from IndexedDB');
         return processTasksWithRecurringLogic(localData);
       }
       throw error;
@@ -81,17 +82,17 @@ export const fetchTasks = async (): Promise<Task[]> => {
       const processedData = processTasksWithRecurringLogic(tasksWithDefaults);
       await saveTasksToDB(processedData);
       await setLastSyncTimeForTasks(new Date().toISOString());
-      console.log('[fetchTasks] Tasks fetched from server and saved to IndexedDB');
+      logger.debug('[fetchTasks] Tasks fetched from server and saved to IndexedDB');
       return processedData;
     }
 
     return localData ? processTasksWithRecurringLogic(localData) : [];
   } catch (error) {
-    console.error('[fetchTasks] Error fetching tasks:', error);
+    logger.error('[fetchTasks] Error fetching tasks:', error);
     
     // If we have local data, return it as fallback
     if (localData) {
-      console.warn('[fetchTasks] Error fetching tasks, using cached data:', error);
+      logger.warn('[fetchTasks] Error fetching tasks, using cached data:', error);
       return processTasksWithRecurringLogic(localData);
     }
     
@@ -166,7 +167,7 @@ export const useTaskQuery = (taskId: string | null) => {
         
         return processTasksWithRecurringLogic([taskWithCorrectTypes])[0];
       } catch (error) {
-        console.error(`[useTaskQuery] Error fetching task with ID ${taskId}:`, error);
+        logger.error(`[useTaskQuery] Error fetching task with ID ${taskId}:`, error);
         throw error;
       }
     },
@@ -180,3 +181,4 @@ export const useTaskQuery = (taskId: string | null) => {
     retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 30000),
   });
 };
+

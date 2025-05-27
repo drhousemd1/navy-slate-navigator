@@ -1,3 +1,4 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
@@ -5,6 +6,7 @@ import { TaskWithId, CreateTaskVariables } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries'; // Corrected import
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
@@ -83,17 +85,18 @@ export const useCreateTask = () => {
       } as TaskWithId;
     },
     onSuccessCallback: async (newTaskData) => {
-      console.log('[useCreateTask onSuccessCallback] New task created on server, updating IndexedDB.', newTaskData);
+      logger.debug('[useCreateTask onSuccessCallback] New task created on server, updating IndexedDB.', newTaskData);
       try {
         const localTasks = await loadTasksFromDB() || [];
         const updatedLocalTasks = [newTaskData, ...localTasks.filter(t => t.id !== newTaskData.id && t.id !== (newTaskData as any).optimisticId)];
         await saveTasksToDB(updatedLocalTasks);
         await setLastSyncTimeForTasks(new Date().toISOString());
-        console.log('[useCreateTask onSuccessCallback] IndexedDB updated with new task.');
+        logger.debug('[useCreateTask onSuccessCallback] IndexedDB updated with new task.');
       } catch (error) {
-        console.error('[useCreateTask onSuccessCallback] Error updating IndexedDB:', error);
+        logger.error('[useCreateTask onSuccessCallback] Error updating IndexedDB:', error);
         toast({ variant: "destructive", title: "Local Save Error", description: "Task created on server, but failed to save locally." });
       }
     },
   });
 };
+

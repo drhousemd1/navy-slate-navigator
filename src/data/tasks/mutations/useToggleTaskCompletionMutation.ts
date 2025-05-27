@@ -8,6 +8,7 @@ import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/
 import { TaskWithId } from '@/data/tasks/types';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery'; // Added import
 import { useUserIds } from '@/contexts/UserIdsContext'; // Added import
+import { logger } from '@/lib/logger'; // Added logger import
 
 
 interface ToggleTaskCompletionVariables {
@@ -53,7 +54,7 @@ export function useToggleTaskCompletionMutation() {
             .insert({ task_id: taskId, user_id: userId });
 
           if (historyError) {
-            console.error('Error recording task completion history:', historyError);
+            logger.error('Error recording task completion history:', historyError);
             toast({ title: 'History Record Error', description: historyError.message, variant: 'destructive' });
             // Not throwing here to allow points update if possible, but logging it.
             // Or decide to throw: throw historyError;
@@ -66,7 +67,7 @@ export function useToggleTaskCompletionMutation() {
             .single();
 
           if (fetchProfileError) {
-            console.error('Error fetching profile for points update:', fetchProfileError);
+            logger.error('Error fetching profile for points update:', fetchProfileError);
             toast({ title: 'Profile Fetch Error', description: fetchProfileError.message, variant: 'destructive' });
             throw fetchProfileError;
           }
@@ -78,7 +79,7 @@ export function useToggleTaskCompletionMutation() {
             .eq('id', userId);
 
           if (updatePointsError) {
-            console.error('Error updating profile points:', updatePointsError);
+            logger.error('Error updating profile points:', updatePointsError);
             toast({ title: 'Points Update Error', description: updatePointsError.message, variant: 'destructive' });
             throw updatePointsError;
           }
@@ -160,9 +161,9 @@ export function useToggleTaskCompletionMutation() {
             });
             await saveTasksToDB(updatedLocalTasks as Task[]);
             await setLastSyncTimeForTasks(new Date().toISOString());
-            console.log('[useToggleTaskCompletionMutation onSuccessCallback] IndexedDB updated for task completion with usage_data.');
+            logger.debug('[useToggleTaskCompletionMutation onSuccessCallback] IndexedDB updated for task completion with usage_data.');
         } catch (error) {
-            console.error('[useToggleTaskCompletionMutation onSuccessCallback] Error updating IndexedDB:', error);
+            logger.error('[useToggleTaskCompletionMutation onSuccessCallback] Error updating IndexedDB:', error);
             toast({ variant: "destructive", title: "Local Sync Error", description: "Task status updated on server, but local sync failed." });
         }
       },
