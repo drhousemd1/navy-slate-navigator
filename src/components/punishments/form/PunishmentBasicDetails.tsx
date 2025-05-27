@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Control } from 'react-hook-form';
+import { Control, UseFormSetValue } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Minus, Plus } from 'lucide-react';
 import { PunishmentFormValues } from './PunishmentFormProvider';
@@ -10,7 +10,7 @@ import { logger } from '@/lib/logger';
 
 interface PunishmentBasicDetailsProps {
   control: Control<PunishmentFormValues>;
-  setValue: any;
+  setValue: UseFormSetValue<PunishmentFormValues>;
   isSaving?: boolean;
 }
 

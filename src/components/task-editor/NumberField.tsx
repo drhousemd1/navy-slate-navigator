@@ -1,28 +1,33 @@
-
 import React from 'react';
+import { Control, Controller, FieldValues, Path, UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Plus, Minus } from 'lucide-react';
-import { Control } from 'react-hook-form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Minus, Plus } from 'lucide-react';
 
-interface NumberFieldProps {
-  control: Control<any>;
-  name: string;
+interface NumberFieldProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
   label: string;
   onIncrement: () => void;
   onDecrement: () => void;
   minValue?: number;
+  maxValue?: number;
+  step?: number;
+  disabled?: boolean;
 }
 
-const NumberField: React.FC<NumberFieldProps> = ({ 
-  control, 
-  name, 
-  label, 
-  onIncrement, 
+const NumberField = <T extends FieldValues>({
+  control,
+  name,
+  label,
+  onIncrement,
   onDecrement,
-  minValue = 0
-}) => {
+  minValue = 0,
+  maxValue,
+  step = 1,
+  disabled = false,
+}: NumberFieldProps<T>) => {
   return (
     <FormField
       control={control}
@@ -31,35 +36,44 @@ const NumberField: React.FC<NumberFieldProps> = ({
         <FormItem>
           <FormLabel className="text-white">{label}</FormLabel>
           <div className="flex items-center space-x-2">
-            <Button 
+            <Button
               type="button"
-              variant="outline" 
-              size="icon" 
+              variant="outline"
+              size="icon"
               onClick={onDecrement}
-              disabled={typeof minValue === 'number' && field.value <= minValue}
-              className="border-light-navy bg-light-navy text-white hover:bg-navy"
+              className="bg-light-navy hover:bg-navy border-light-navy"
+              disabled={disabled || (minValue !== undefined && Number(field.value) <= minValue)}
             >
-              <Minus className="h-4 w-4" />
+              <Minus className="h-4 w-4 text-white" />
             </Button>
             <FormControl>
               <Input
                 type="number"
-                className="w-20 text-center bg-dark-navy border-light-navy text-white"
+                className="bg-dark-navy border-light-navy text-white text-center w-20"
                 {...field}
+                value={field.value || 0}
                 onChange={(e) => {
-                  const value = e.target.value === '' ? undefined : parseInt(e.target.value);
-                  field.onChange(value);
+                  let numValue = parseInt(e.target.value, 10);
+                  if (isNaN(numValue)) numValue = minValue !== undefined ? minValue : 0;
+                  if (minValue !== undefined) numValue = Math.max(minValue, numValue);
+                  if (maxValue !== undefined) numValue = Math.min(maxValue, numValue);
+                  field.onChange(numValue);
                 }}
+                step={step}
+                min={minValue}
+                max={maxValue}
+                disabled={disabled}
               />
             </FormControl>
-            <Button 
+            <Button
               type="button"
-              variant="outline" 
-              size="icon" 
+              variant="outline"
+              size="icon"
               onClick={onIncrement}
-              className="border-light-navy bg-light-navy text-white hover:bg-navy"
+              className="bg-light-navy hover:bg-navy border-light-navy"
+              disabled={disabled || (maxValue !== undefined && Number(field.value) >= maxValue)}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4 text-white" />
             </Button>
           </div>
         </FormItem>

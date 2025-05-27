@@ -1,12 +1,12 @@
-
 import React from 'react';
 import { Control } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import ColorPickerField from '../task-editor/ColorPickerField';
+import { PunishmentFormValues } from './form/PunishmentFormProvider';
 
 interface PunishmentColorSettingsProps {
-  control: Control<any>;
+  control: Control<PunishmentFormValues>;
 }
 
 const PunishmentColorSettings: React.FC<PunishmentColorSettingsProps> = ({ control }) => {

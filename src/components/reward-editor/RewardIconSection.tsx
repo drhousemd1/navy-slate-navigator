@@ -1,13 +1,13 @@
-
 import React from 'react';
 import { Control } from 'react-hook-form';
-import { FormLabel } from "@/components/ui/form";
-import IconSelector from '../task-editor/IconSelector';
-import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
-import TaskIcon from '@/components/task/TaskIcon';
+import { RewardFormValues } from '@/data/rewards/types';
+import IconSelector from '@/components/task-editor/IconSelector';
+import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
+import ColorPickerField from '@/components/task-editor/ColorPickerField';
+import { FormLabel } from '@/components/ui/form';
 
 interface RewardIconSectionProps {
-  control: Control<any>;
+  control: Control<RewardFormValues>;
   selectedIconName: string | null;
   iconPreview: string | null;
   iconColor: string;
@@ -16,20 +16,20 @@ interface RewardIconSectionProps {
   onRemoveIcon: () => void;
 }
 
-const RewardIconSection: React.FC<RewardIconSectionProps> = ({ 
-  control, 
-  selectedIconName, 
-  iconPreview, 
-  iconColor, 
-  onSelectIcon, 
-  onUploadIcon, 
-  onRemoveIcon 
+const RewardIconSection: React.FC<RewardIconSectionProps> = ({
+  control,
+  selectedIconName,
+  iconPreview,
+  iconColor,
+  onSelectIcon,
+  onUploadIcon,
+  onRemoveIcon,
 }) => {
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Reward Icon</FormLabel>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center h-full">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div className="md:col-span-1 border-2 border-dashed border-light-navy rounded-lg p-4 text-center min-h-[150px] flex flex-col justify-center">
           <IconSelector
             selectedIconName={selectedIconName}
             iconPreview={iconPreview}
@@ -37,22 +37,21 @@ const RewardIconSection: React.FC<RewardIconSectionProps> = ({
             onSelectIcon={onSelectIcon}
             onUploadIcon={onUploadIcon}
             onRemoveIcon={onRemoveIcon}
-            renderIcon={(iconName) => (
-              <TaskIcon 
-                icon_name={iconName} 
-                icon_color={iconColor}
-                className="h-6 w-6"
-              />
-            )}
           />
         </div>
-        
-        <PredefinedIconsGrid
-          selectedIconName={selectedIconName}
-          iconColor={iconColor}
-          onSelectIcon={onSelectIcon}
-        />
+        <div className="md:col-span-2">
+          <PredefinedIconsGrid
+            selectedIconName={selectedIconName}
+            iconColor={iconColor}
+            onSelectIcon={onSelectIcon}
+          />
+        </div>
       </div>
+      <ColorPickerField 
+        control={control} 
+        name="icon_color" 
+        label="Icon Color" 
+      />
     </div>
   );
 };
