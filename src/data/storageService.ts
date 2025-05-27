@@ -1,5 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { FileOptions } from '@supabase/storage-js';
+import { logger } from '@/lib/logger'; // Added logger import
 
 /**
  * Uploads a file to the specified Supabase Storage bucket.
@@ -16,29 +18,29 @@ export const uploadFile = async (
   file: File,
   options?: FileOptions
 ): Promise<{ path: string; publicUrl: string }> => {
-  console.log(`[storageService] Uploading file '${filePath}' to bucket '${bucketName}'`);
+  logger.debug(`[storageService] Uploading file '${filePath}' to bucket '${bucketName}'`);
   const { data, error } = await supabase.storage
     .from(bucketName)
     .upload(filePath, file, options);
 
   if (error) {
-    console.error(`[storageService] Error uploading file '${filePath}' to bucket '${bucketName}':`, error);
+    logger.error(`[storageService] Error uploading file '${filePath}' to bucket '${bucketName}':`, error);
     throw error;
   }
 
   if (!data || !data.path) {
-    console.error(`[storageService] Error uploading file to bucket '${bucketName}': No path returned.`);
+    logger.error(`[storageService] Error uploading file to bucket '${bucketName}': No path returned.`);
     throw new Error('File upload failed: No path returned from storage.');
   }
   
-  console.log(`[storageService] File '${data.path}' uploaded successfully to bucket '${bucketName}'.`);
+  logger.debug(`[storageService] File '${data.path}' uploaded successfully to bucket '${bucketName}'.`);
 
   const { data: urlData } = supabase.storage
     .from(bucketName)
     .getPublicUrl(data.path);
 
   if (!urlData || !urlData.publicUrl) {
-    console.error(`[storageService] Error getting public URL for '${data.path}' in bucket '${bucketName}'.`);
+    logger.error(`[storageService] Error getting public URL for '${data.path}' in bucket '${bucketName}'.`);
     // Note: The file is uploaded, but we couldn't get the public URL.
     // Depending on requirements, you might want to handle this differently,
     // e.g., by attempting to delete the uploaded file or returning a partial success.
@@ -46,7 +48,7 @@ export const uploadFile = async (
     throw new Error('File uploaded, but failed to retrieve public URL.');
   }
   
-  console.log(`[storageService] Public URL for '${data.path}': ${urlData.publicUrl}`);
+  logger.debug(`[storageService] Public URL for '${data.path}': ${urlData.publicUrl}`);
   return { path: data.path, publicUrl: urlData.publicUrl };
 };
 
@@ -61,20 +63,20 @@ export const deleteFiles = async (
   filePaths: string[]
 ): Promise<void> => {
   if (filePaths.length === 0) {
-    console.log('[storageService] No files specified for deletion.');
+    logger.debug('[storageService] No files specified for deletion.');
     return;
   }
-  console.log(`[storageService] Deleting files from bucket '${bucketName}':`, filePaths);
+  logger.debug(`[storageService] Deleting files from bucket '${bucketName}':`, filePaths);
   const { data, error } = await supabase.storage
     .from(bucketName)
     .remove(filePaths);
 
   if (error) {
-    console.error(`[storageService] Error deleting files from bucket '${bucketName}':`, error);
+    logger.error(`[storageService] Error deleting files from bucket '${bucketName}':`, error);
     throw error;
   }
   
-  console.log(`[storageService] Files deleted successfully from bucket '${bucketName}':`, data);
+  logger.debug(`[storageService] Files deleted successfully from bucket '${bucketName}':`, data);
 };
 
 /**
@@ -88,16 +90,16 @@ export const getFilePublicUrl = (
   bucketName: string,
   filePath: string
 ): string => {
-  console.log(`[storageService] Getting public URL for file '${filePath}' in bucket '${bucketName}'`);
+  logger.debug(`[storageService] Getting public URL for file '${filePath}' in bucket '${bucketName}'`);
   const { data } = supabase.storage
     .from(bucketName)
     .getPublicUrl(filePath);
 
   if (!data || !data.publicUrl) {
-    console.error(`[storageService] Error retrieving public URL for '${filePath}' in bucket '${bucketName}'.`);
+    logger.error(`[storageService] Error retrieving public URL for '${filePath}' in bucket '${bucketName}'.`);
     throw new Error(`Failed to get public URL for ${filePath}.`);
   }
   
-  console.log(`[storageService] Retrieved public URL: ${data.publicUrl}`);
+  logger.debug(`[storageService] Retrieved public URL: ${data.publicUrl}`);
   return data.publicUrl;
 };

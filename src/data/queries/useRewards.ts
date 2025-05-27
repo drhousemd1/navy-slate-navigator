@@ -14,6 +14,7 @@ import {
   getLastSyncTimeForRewards,
   setLastSyncTimeForRewards
 } from "../indexedDB/useIndexedDB";
+import { logger } from '@/lib/logger'; // Added logger import
 
 // Local Reward interface definition removed, as we are now importing it.
 
@@ -37,17 +38,17 @@ async function fetchRewardsWithCache(): Promise<Reward[]> {
 
 
   if (!shouldFetch && localData) {
-    console.log('[useRewards] Returning rewards from IndexedDB');
+    logger.debug('[useRewards] Returning rewards from IndexedDB');
     return localData;
   }
 
-  console.log('[useRewards] Fetching rewards from server');
+  logger.debug('[useRewards] Fetching rewards from server');
   const { data, error } = await supabase.from("rewards").select("*").order('created_at', { ascending: false });
 
   if (error) {
-    console.error('[useRewards] Supabase error fetching rewards:', error);
+    logger.error('[useRewards] Supabase error fetching rewards:', error);
     if (localData) {
-      console.warn('[useRewards] Server fetch failed, returning stale data from IndexedDB');
+      logger.warn('[useRewards] Server fetch failed, returning stale data from IndexedDB');
       return localData;
     }
     throw error;
@@ -98,4 +99,3 @@ export function useRewards(): RewardsQueryResult {
     retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
   });
 }
-

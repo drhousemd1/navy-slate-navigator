@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Rule } from '@/data/interfaces/Rule';
 import { getMondayBasedDay } from '@/lib/utils';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const recordRuleViolationInDb = async (rule: Rule): Promise<void> => {
   const today = new Date();
@@ -47,11 +48,11 @@ export const recordRuleViolationInDb = async (rule: Rule): Promise<void> => {
     const errors = results.filter(r => r.error).map(r => r.error);
     
     if (errors.length > 0) {
-      console.error('Errors recording rule violation:', errors);
+      logger.error('Errors recording rule violation:', errors);
       throw new Error('Failed to fully record rule violation');
     }
   } catch (error) {
-    console.error('Error recording rule violation:', error);
+    logger.error('Error recording rule violation:', error);
     throw error;
   }
 };
@@ -77,7 +78,7 @@ export const recordViolation = async (ruleId: string): Promise<void> => {
     
     await recordRuleViolationInDb(normalisedRule as Rule);
   } catch (error) {
-    console.error('Error in recordViolation:', error);
+    logger.error('Error in recordViolation:', error);
     throw error;
   }
 };

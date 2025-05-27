@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/data/rewards/types';
 import {
@@ -8,6 +9,7 @@ import {
 } from '../indexedDB/useIndexedDB'; // Import IndexedDB functions
 import { logQueryPerformance } from '@/lib/react-query-config';
 import { selectWithTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils'; // For fetching
+import { logger } from '@/lib/logger'; // Added logger import
 
 export const REWARDS_QUERY_KEY = ['rewards'];
 export const REWARDS_POINTS_QUERY_KEY = ['rewards', 'points'];
@@ -61,7 +63,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
   // This function will now primarily be responsible for fetching from Supabase and processing.
   // The hook `useRewards` will decide whether to call this based on its own IndexedDB cache status.
 
-  console.log("[fetchRewards from queries.ts] Fetching rewards from Supabase server");
+  logger.debug("[fetchRewards from queries.ts] Fetching rewards from Supabase server");
   
   try {
     const { data, error } = await selectWithTimeout<Reward>(
@@ -74,7 +76,7 @@ export const fetchRewards = async (): Promise<Reward[]> => {
     );
     
     if (error) {
-      console.error('[fetchRewards from queries.ts] Supabase error:', error);
+      logger.error('[fetchRewards from queries.ts] Supabase error:', error);
       logQueryPerformance('fetchRewards (server-error)', startTime);
       throw error; // Let the calling hook (useRewards) handle fallback to its cache
     }
@@ -86,14 +88,14 @@ export const fetchRewards = async (): Promise<Reward[]> => {
     return processedData;
 
   } catch (error) {
-    console.error('[fetchRewards from queries.ts] Fetch failed:', error);
+    logger.error('[fetchRewards from queries.ts] Fetch failed:', error);
     logQueryPerformance('fetchRewards (fetch-exception)', startTime);
     throw error; // Rethrow for the calling hook to handle
   }
 };
 
 export const fetchUserPoints = async (): Promise<number> => {
-  console.log("[fetchUserPoints] Starting points fetch");
+  logger.debug("[fetchUserPoints] Starting points fetch");
   const startTime = performance.now();
   
   const CACHE_KEY = 'kingdom-app-user-points';
@@ -103,7 +105,7 @@ export const fetchUserPoints = async (): Promise<number> => {
     const userId = userData.user?.id;
     
     if (!userId) {
-      console.log("[fetchUserPoints] No user ID found, returning 0 points");
+      logger.debug("[fetchUserPoints] No user ID found, returning 0 points");
       return 0;
     }
     
@@ -114,7 +116,7 @@ export const fetchUserPoints = async (): Promise<number> => {
       .single();
     
     if (error) {
-      console.error('[fetchUserPoints] Error:', error);
+      logger.error('[fetchUserPoints] Error:', error);
       throw error;
     }
     
@@ -124,22 +126,22 @@ export const fetchUserPoints = async (): Promise<number> => {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(data?.points || 0));
     } catch (e) {
-      console.warn('[fetchUserPoints] Could not cache points:', e);
+      logger.warn('[fetchUserPoints] Could not cache points:', e);
     }
     
-    console.log(`[fetchUserPoints] Retrieved ${data?.points || 0} points`);
+    logger.debug(`[fetchUserPoints] Retrieved ${data?.points || 0} points`);
     return data?.points || 0;
   } catch (error) {
-    console.error('[fetchUserPoints] Fetch failed:', error);
+    logger.error('[fetchUserPoints] Fetch failed:', error);
     
     // Try to get cached data
     const cachedPoints = localStorage.getItem(CACHE_KEY);
     if (cachedPoints) {
-      console.log('[fetchUserPoints] Using cached points data');
+      logger.debug('[fetchUserPoints] Using cached points data');
       try {
         return JSON.parse(cachedPoints);
       } catch (parseError) {
-        console.error('[fetchUserPoints] Error parsing cached points:', parseError);
+        logger.error('[fetchUserPoints] Error parsing cached points:', parseError);
       }
     }
     
@@ -148,7 +150,7 @@ export const fetchUserPoints = async (): Promise<number> => {
 };
 
 export const fetchUserDomPoints = async (): Promise<number> => {
-  console.log("[fetchUserDomPoints] Starting dom points fetch");
+  logger.debug("[fetchUserDomPoints] Starting dom points fetch");
   const startTime = performance.now();
   
   const CACHE_KEY = 'kingdom-app-user-dom-points';
@@ -158,7 +160,7 @@ export const fetchUserDomPoints = async (): Promise<number> => {
     const userId = userData.user?.id;
     
     if (!userId) {
-      console.log("[fetchUserDomPoints] No user ID found, returning 0 dom points");
+      logger.debug("[fetchUserDomPoints] No user ID found, returning 0 dom points");
       return 0;
     }
     
@@ -169,7 +171,7 @@ export const fetchUserDomPoints = async (): Promise<number> => {
       .single();
     
     if (error) {
-      console.error('[fetchUserDomPoints] Error:', error);
+      logger.error('[fetchUserDomPoints] Error:', error);
       throw error;
     }
     
@@ -179,22 +181,22 @@ export const fetchUserDomPoints = async (): Promise<number> => {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(data?.dom_points || 0));
     } catch (e) {
-      console.warn('[fetchUserDomPoints] Could not cache dom points:', e);
+      logger.warn('[fetchUserDomPoints] Could not cache dom points:', e);
     }
     
-    console.log(`[fetchUserDomPoints] Retrieved ${data?.dom_points || 0} dom points`);
+    logger.debug(`[fetchUserDomPoints] Retrieved ${data?.dom_points || 0} dom points`);
     return data?.dom_points || 0;
   } catch (error) {
-    console.error('[fetchUserDomPoints] Fetch failed:', error);
+    logger.error('[fetchUserDomPoints] Fetch failed:', error);
     
     // Try to get cached data
     const cachedDomPoints = localStorage.getItem(CACHE_KEY);
     if (cachedDomPoints) {
-      console.log('[fetchUserDomPoints] Using cached dom points data');
+      logger.debug('[fetchUserDomPoints] Using cached dom points data');
       try {
         return JSON.parse(cachedDomPoints);
       } catch (parseError) {
-        console.error('[fetchUserDomPoints] Error parsing cached dom points:', parseError);
+        logger.error('[fetchUserDomPoints] Error parsing cached dom points:', parseError);
       }
     }
     
@@ -203,7 +205,7 @@ export const fetchUserDomPoints = async (): Promise<number> => {
 };
 
 export const fetchTotalRewardsSupply = async (): Promise<number> => {
-  console.log("[fetchTotalRewardsSupply] Starting supply fetch");
+  logger.debug("[fetchTotalRewardsSupply] Starting supply fetch");
   const startTime = performance.now();
   
   const CACHE_KEY = 'kingdom-app-rewards-supply';
@@ -214,11 +216,11 @@ export const fetchTotalRewardsSupply = async (): Promise<number> => {
       .select('supply');
     
     if (error) {
-      console.error('[fetchTotalRewardsSupply] Error:', error);
+      logger.error('[fetchTotalRewardsSupply] Error:', error);
       throw error;
     }
     
-    const total = data?.reduce((total, reward) => total + reward.supply, 0) || 0;
+    const total = data?.reduce((totalSupply, reward) => totalSupply + reward.supply, 0) || 0;
     
     logQueryPerformance('fetchTotalRewardsSupply', startTime);
     
@@ -226,22 +228,22 @@ export const fetchTotalRewardsSupply = async (): Promise<number> => {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(total));
     } catch (e) {
-      console.warn('[fetchTotalRewardsSupply] Could not cache supply:', e);
+      logger.warn('[fetchTotalRewardsSupply] Could not cache supply:', e);
     }
     
-    console.log(`[fetchTotalRewardsSupply] Total supply: ${total}`);
+    logger.debug(`[fetchTotalRewardsSupply] Total supply: ${total}`);
     return total;
   } catch (error) {
-    console.error('[fetchTotalRewardsSupply] Fetch failed:', error);
+    logger.error('[fetchTotalRewardsSupply] Fetch failed:', error);
     
     // Try to get cached data
     const cachedSupply = localStorage.getItem(CACHE_KEY);
     if (cachedSupply) {
-      console.log('[fetchTotalRewardsSupply] Using cached supply data');
+      logger.debug('[fetchTotalRewardsSupply] Using cached supply data');
       try {
         return JSON.parse(cachedSupply);
       } catch (parseError) {
-        console.error('[fetchTotalRewardsSupply] Error parsing cached supply:', parseError);
+        logger.error('[fetchTotalRewardsSupply] Error parsing cached supply:', parseError);
       }
     }
     

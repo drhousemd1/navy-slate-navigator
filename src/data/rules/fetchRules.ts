@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
 import { logQueryPerformance } from '@/lib/react-query-config';
@@ -9,6 +8,7 @@ import {
   setLastSyncTimeForRules
 } from "@/data/indexedDB/useIndexedDB";
 import { withTimeout, DEFAULT_TIMEOUT_MS, selectWithTimeout } from '@/lib/supabaseUtils';
+import { logger } from '@/lib/logger';
 
 // Ensure Rule interface properties used for defaults are correctly defined
 const defaultRuleValues = {
@@ -73,7 +73,7 @@ export const fetchRules = async (): Promise<Rule[]> => {
 
   if (lastSync) {
     const timeDiff = Date.now() - new Date(lastSync as string).getTime();
-    if (timeDiff < 1000 * 60 * 30 && localData && localData.length > 0) {
+    if (timeDiff < 1000 * 60 * 30 && localData && localData.length > 0) { // 30 minutes
       shouldFetchFromServer = false;
     }
   } else if (localData && localData.length > 0) {
@@ -81,12 +81,12 @@ export const fetchRules = async (): Promise<Rule[]> => {
   }
 
   if (!shouldFetchFromServer && localData) {
-    console.log('[fetchRules] Returning rules from IndexedDB');
+    logger.debug('[fetchRules] Returning rules from IndexedDB');
     logQueryPerformance('fetchRules (cache)', startTime, localData.length);
     return localData.map(processRuleData);
   }
 
-  console.log('[fetchRules] Fetching rules from server');
+  logger.debug('[fetchRules] Fetching rules from server');
   try {
     const { data, error } = await selectWithTimeout<Rule>(
       supabase,
@@ -98,9 +98,9 @@ export const fetchRules = async (): Promise<Rule[]> => {
     );
 
     if (error) {
-      console.error('[fetchRules] Supabase error fetching rules:', error);
+      logger.error('[fetchRules] Supabase error fetching rules:', error);
       if (localData) {
-        console.warn('[fetchRules] Server fetch failed, returning stale data from IndexedDB');
+        logger.warn('[fetchRules] Server fetch failed, returning stale data from IndexedDB');
         logQueryPerformance('fetchRules (error-cache)', startTime, localData.length);
         return localData.map(processRuleData);
       }
@@ -111,7 +111,7 @@ export const fetchRules = async (): Promise<Rule[]> => {
       const rulesFromServer = (Array.isArray(data) ? data : (data ? [data] : [])).map(processRuleData);
       await saveRulesToDB(rulesFromServer);
       await setLastSyncTimeForRules(new Date().toISOString());
-      console.log('[fetchRules] Rules fetched from server and saved to IndexedDB');
+      logger.debug('[fetchRules] Rules fetched from server and saved to IndexedDB');
       logQueryPerformance('fetchRules (server)', startTime, rulesFromServer.length);
       return rulesFromServer;
     }
@@ -119,10 +119,10 @@ export const fetchRules = async (): Promise<Rule[]> => {
     logQueryPerformance('fetchRules (empty-server)', startTime, 0);
     return localData ? localData.map(processRuleData) : [];
   } catch (error) {
-    console.error('[fetchRules] Error fetching rules:', error);
+    logger.error('[fetchRules] Error fetching rules:', error);
     logQueryPerformance('fetchRules (fetch-exception)', startTime);
      if (localData) {
-      console.warn('[fetchRules] Error fetching rules, using cached data:', error);
+      logger.warn('[fetchRules] Error fetching rules, using cached data:', error);
       return localData.map(processRuleData);
     }
     throw error;
