@@ -2,7 +2,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { isSupabaseAuthError, createAppError, getErrorMessage, SupabaseAuthError, AppError } from '@/lib/errors'; // Import error utilities
+// SupabaseAuthError will now be correctly imported from @/lib/errors
+import { isSupabaseAuthError, createAppError, getErrorMessage, SupabaseAuthError, AppError, CaughtError, PostgrestError, isPostgrestError } from '@/lib/errors';
 
 export function useAuthOperations() {
   // Sign in with email and password
@@ -176,18 +177,32 @@ export function useAuthOperations() {
   };
 
   // Delete user account
-  const deleteAccount = async (): Promise<{ error?: AppError | Error | null }> => { // Broader error type for RPC
+  const deleteAccount = async (): Promise<{ error?: CaughtError | null }> => {
     try {
-      const { error } = await supabase.rpc('delete_user_account' as any); // Cast for RPC
+      // The RPC call might return a PostgrestError which is compatible with CaughtError
+      const { error: rpcError } = await supabase.rpc('delete_user_account' as any); 
       
-      if (error) {
-        logger.error('Account deletion error:', error);
+      if (rpcError) {
+        logger.error('Account deletion error from RPC:', rpcError);
+        // Ensure rpcError is treated as a PostgrestError or compatible type
+        const descriptiveError = createAppError(
+          (rpcError as any).message || 'Could not delete account via RPC.',
+          isPostgrestError(rpcError) ? rpcError.code : 'RPC_ERROR',
+          { details: (rpcError as any).details, hint: (rpcError as any).hint }
+        );
         toast({
           title: 'Error deleting account',
-          description: (error as any).message || 'Could not delete account.',
+          description: descriptiveError.message,
           variant: 'destructive',
         });
-        return { error: error as Error }; // Cast PostgrestError like from rpc to Error
+        // Check if rpcError is already a PostgrestError, otherwise wrap it.
+        // Since PostgrestError is part of CaughtError, we can return it if it is.
+        if (isPostgrestError(rpcError)) {
+            return { error: rpcError };
+        }
+        // If it's not a standard PostgrestError but has a message, wrap it.
+        // The cast to `Error` was problematic, it should be an AppError or PostgrestError.
+        return { error: descriptiveError };
       }
 
       logger.debug('Account deletion initiated successfully');
@@ -199,6 +214,10 @@ export function useAuthOperations() {
       return { error: null };
     } catch (error: unknown) {
       logger.error('Exception during account deletion:', error);
+      // Ensure the error thrown or returned conforms to CaughtError
+      if (isSupabaseAuthError(error) || isPostgrestError(error) || isAppError(error) || error instanceof Error) {
+        return { error };
+      }
       return { error: createAppError(getErrorMessage(error), 'DELETE_ACCOUNT_EXCEPTION') };
     }
   };

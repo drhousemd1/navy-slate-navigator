@@ -1,5 +1,7 @@
+import { AuthError as SupabaseAuthErrorOriginal, PostgrestError as PostgrestErrorOriginal } from '@supabase/supabase-js';
 
-import { AuthError as SupabaseAuthError, PostgrestError } from '@supabase/supabase-js';
+// Re-export Supabase types for easier import elsewhere
+export type { SupabaseAuthErrorOriginal as SupabaseAuthError, PostgrestErrorOriginal as PostgrestError };
 
 /**
  * Base interface for custom application errors.
@@ -10,26 +12,26 @@ export interface AppError extends Error {
 }
 
 // Type Guards
-export function isSupabaseAuthError(error: unknown): error is SupabaseAuthError {
+export function isSupabaseAuthError(error: unknown): error is SupabaseAuthErrorOriginal {
   return (
     typeof error === 'object' &&
     error !== null &&
     'status' in error &&
-    typeof (error as SupabaseAuthError).status === 'number' &&
+    typeof (error as SupabaseAuthErrorOriginal).status === 'number' &&
     'message' in error &&
-    typeof (error as SupabaseAuthError).message === 'string'
+    typeof (error as SupabaseAuthErrorOriginal).message === 'string'
   );
 }
 
-export function isPostgrestError(error: unknown): error is PostgrestError {
+export function isPostgrestError(error: unknown): error is PostgrestErrorOriginal {
   return (
     typeof error === 'object' &&
     error !== null &&
-    'code' in error && typeof (error as PostgrestError).code === 'string' &&
-    'message' in error && typeof (error as PostgrestError).message === 'string' &&
-    'details' in error && typeof (error as PostgrestError).details === 'string' &&
+    'code' in error && typeof (error as PostgrestErrorOriginal).code === 'string' &&
+    'message' in error && typeof (error as PostgrestErrorOriginal).message === 'string' &&
+    'details' in error && typeof (error as PostgrestErrorOriginal).details === 'string' &&
     'hint' in error && 
-    (typeof (error as PostgrestError).hint === 'string' || (error as PostgrestError).hint === null)
+    (typeof (error as PostgrestErrorOriginal).hint === 'string' || (error as PostgrestErrorOriginal).hint === null)
   );
 }
 
@@ -69,7 +71,7 @@ export function isValidationError(error: unknown): error is ValidationError {
  * A union type representing errors commonly caught within the application.
  * It can be expanded as more specific error types are identified.
  */
-export type CaughtError = SupabaseAuthError | PostgrestError | AppError | Error;
+export type CaughtError = SupabaseAuthErrorOriginal | PostgrestErrorOriginal | AppError | Error;
 
 /**
  * Extracts a user-friendly message from a caught error.
@@ -88,4 +90,3 @@ export function getErrorMessage(error: unknown): string {
   }
   return 'An unexpected error occurred. Please try again.';
 }
-
