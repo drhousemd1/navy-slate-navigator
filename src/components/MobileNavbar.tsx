@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -8,6 +7,7 @@ import {
   Skull, 
   Crown
 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface NavItem {
   name: string;
@@ -48,7 +48,7 @@ const MobileNavbar: React.FC = () => {
   const currentPath = location.pathname;
 
   // Add debugging log to verify current path
-  console.log('MobileNavbar currentPath:', currentPath);
+  logger.log('MobileNavbar currentPath:', currentPath);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50">
@@ -59,7 +59,7 @@ const MobileNavbar: React.FC = () => {
           
           // Add debug log for Throne Room specifically
           if (item.name === 'Throne Room') {
-            console.log(`Throne Room nav item - Path: ${item.path}, Current: ${currentPath}, isActive: ${isActive}`);
+            logger.log(`Throne Room nav item - Path: ${item.path}, Current: ${currentPath}, isActive: ${isActive}`);
           }
           
           return (

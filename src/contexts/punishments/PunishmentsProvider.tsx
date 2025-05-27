@@ -1,12 +1,12 @@
-
 import React, { createContext, useContext, ReactNode } from 'react';
 import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
 import { usePunishmentOperations } from './usePunishmentOperations';
 import { QueryObserverResult } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
 
 // Default values for the context, reflecting that CRUD ops are handled by mutation hooks
 const defaultApplyPunishmentPlaceholder = async (_args: ApplyPunishmentArgs): Promise<void> => {
-  console.warn("Default applyPunishment from context used. Ensure provider is set up.");
+  logger.warn("Default applyPunishment from context used. Ensure provider is set up.");
 };
 
 const PunishmentsContext = createContext<PunishmentsContextType>({

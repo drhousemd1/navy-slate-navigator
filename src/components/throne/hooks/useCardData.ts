@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { ThroneRoomCardData } from '@/components/throne/ThroneRoomEditModal';
+import { logger } from '@/lib/logger';
 
 interface UseCardDataProps {
   id: string;
@@ -44,7 +44,7 @@ export const useCardData = ({
     const savedCard = savedCards.find((card: ThroneRoomCardData) => card.id === id);
     
     if (savedCard) {
-      console.log("Loading saved card data for", id, savedCard);
+      logger.log("Loading saved card data for", id, savedCard);
       
       setCardData({
         ...savedCard,
@@ -68,7 +68,7 @@ export const useCardData = ({
   }, [id, title, description, priority]);
 
   const handleSaveCard = (updatedData: ThroneRoomCardData) => {
-    console.log("Saving updated card data:", updatedData);
+    logger.log("Saving updated card data:", updatedData);
     
     setCardData(updatedData);
     

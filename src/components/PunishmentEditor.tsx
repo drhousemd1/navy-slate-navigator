@@ -1,10 +1,10 @@
-
 import React, { useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import PunishmentEditorForm from './punishments/PunishmentEditorForm';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PunishmentData } from '@/contexts/punishments/types';
+import { logger } from '@/lib/logger';
 
 interface PunishmentEditorProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
 
   // Log state changes for debugging
   useEffect(() => {
-    console.log("PunishmentEditor isOpen changed:", isOpen);
+    logger.log("PunishmentEditor isOpen changed:", isOpen);
   }, [isOpen]);
 
   if (isMobile) {
