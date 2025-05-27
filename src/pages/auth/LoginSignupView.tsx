@@ -21,7 +21,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       setIsLoggingIn(true);
       updateFormState({ loginError: null });
       
-      logger.log("Attempting login with:", {
+      logger.debug("Attempting login with:", {
         email: formState.email,
         passwordLength: formState.password?.length || 0
       });
@@ -46,7 +46,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
       }
       
       if (data && data.user) {
-        logger.log("Login successful:", data.user.email);
+        logger.debug("Login successful:", data.user.email);
         toast({
           title: "Login successful",
           description: "You have been successfully logged in.",
@@ -160,7 +160,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 className="mt-2 text-xs"
                 onClick={() => {
                   console.clear();
-                  logger.log('Debug console cleared');
+                  logger.debug('Debug console cleared');
                 }}
               >
                 <RefreshCw className="w-3 h-3 mr-1" />

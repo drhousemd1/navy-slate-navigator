@@ -3,10 +3,10 @@
 // import { useRewards } from '@/contexts/RewardsContext'; // No longer needed
 // import { toast } from "@/hooks/use-toast"; // Toasts are handled by the mutation hook
 import { supabase } from '@/integrations/supabase/client';
-// import { useQueryClient } from '@tanstack/react-query'; // Not directly needed here now
 import { ApplyPunishmentArgs, PunishmentData } from '@/contexts/punishments/types';
-import { useApplyPunishment } from '@/data/punishments/mutations/useApplyPunishment'; // Import the actual mutation hook
-import { toast } from '@/hooks/use-toast'; // Keep for initial validation errors if any
+import { useApplyPunishment } from '@/data/punishments/mutations/useApplyPunishment'; 
+import { toast } from '@/hooks/use-toast'; 
+import { logger } from '@/lib/logger'; // Added logger import
 
 interface UsePunishmentApplyProps {
   punishment: PunishmentData;
@@ -41,7 +41,7 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
             description: 'Could not fetch user profile data.',
             variant: 'destructive',
           });
-          console.error("Error fetching profile:", profileError);
+          logger.error("Error fetching profile:", profileError); // Replaced console.error
           return;
         }
           
@@ -73,7 +73,7 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
     } catch (error) {
       // Errors from mutateAsync will be caught by the mutation's onError handler,
       // which will show a toast. Logging here is still useful for debugging.
-      console.error('Error initiating apply punishment process:', error);
+      logger.error('Error initiating apply punishment process:', error); // Replaced console.error
       // Avoid showing a duplicate toast if the mutation hook already showed one.
       // If the error is *before* calling mutateAsync (e.g., fetching user profile), this toast is fine.
       if (!applyPunishmentMutation.isError) { // Check if mutation itself errored

@@ -13,7 +13,7 @@ export function useDebugMode() {
       if (newCount >= 5) {
         // Enable debug mode after 5 clicks
         setDebugMode(true);
-        logger.log('Debug mode enabled'); // Replaced console.log
+        logger.debug('Debug mode enabled'); // Replaced console.log with logger.debug
         return 0; // Reset click counter
       }
       return newCount;
@@ -24,9 +24,9 @@ export function useDebugMode() {
     if (!debugMode) return;
     
     try {
-      logger.log('Manually clearing auth state'); // Replaced console.log
+      logger.debug('Manually clearing auth state'); // Replaced console.log with logger.debug
       await clearAuthState();
-      logger.log('Auth state cleared successfully'); // Replaced console.log
+      logger.debug('Auth state cleared successfully'); // Replaced console.log with logger.debug
       return true;
     } catch (error) {
       logger.error('Error clearing auth state:', error); // Replaced console.error
@@ -40,4 +40,3 @@ export function useDebugMode() {
     resetAuthState
   };
 }
-

@@ -30,11 +30,11 @@ const Messages: React.FC = () => {
   
   useEffect(() => {
     if (!isLoading && partnerId) {
-      logger.log('[Messages] Component mounted with partnerId:', partnerId, ', forcing refetch');
+      logger.debug('[Messages] Component mounted with partnerId:', partnerId, ', forcing refetch');
       refetch();
       
       const intervalId = setInterval(() => {
-        logger.log('[Messages] Scheduled refetch running');
+        logger.debug('[Messages] Scheduled refetch running');
         refetch();
       }, 5000);
       
@@ -55,30 +55,30 @@ const Messages: React.FC = () => {
       
       setMessage('');
       
-      logger.log(`[Messages] handleSendMessage (${currentMessageCount}): Starting message send process`);
+      logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Starting message send process`);
       let uploadedImageUrl = null;
       const hadImage = !!imageFile;
       
       if (imageFile) {
-        logger.log(`[Messages] handleSendMessage (${currentMessageCount}): Uploading image`);
+        logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Uploading image`);
         uploadedImageUrl = await uploadImage(imageFile);
         setImageFile(null);
-        logger.log(`[Messages] handleSendMessage (${currentMessageCount}): Image uploaded:`, uploadedImageUrl);
+        logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Image uploaded:`, uploadedImageUrl);
       }
       
-      logger.log(`[Messages] handleSendMessage (${currentMessageCount}): Sending message with content:`, currentMessage);
+      logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Sending message with content:`, currentMessage);
       await sendMessage(currentMessage, receiverId, uploadedImageUrl);
-      logger.log(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
+      logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
       
       // Initial refetch to ensure new messages appear
-      logger.log(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
+      logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
       await refetch();
       
       // If message included an image, add a short delay then call scrollToBottom
       if (hadImage) {
         setTimeout(() => {
           if (messageListRef.current) {
-            logger.log(`[Messages] handleSendMessage (${currentMessageCount}): Forced scroll after image message`);
+            logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Forced scroll after image message`);
             messageListRef.current.scrollToBottom('auto');
           }
         }, 300);
@@ -88,7 +88,7 @@ const Messages: React.FC = () => {
       const delayedRefetches = [50, 150, 300, 500, 1000, 2000];
       for (const delay of delayedRefetches) {
         setTimeout(async () => {
-          logger.log(`[Messages] handleSendMessage (${currentMessageCount}): Delayed refetch (${delay}ms)`);
+          logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Delayed refetch (${delay}ms)`);
           await refetch();
         }, delay);
       }
@@ -123,9 +123,9 @@ const Messages: React.FC = () => {
 
   useEffect(() => {
     if (messages.length > 0) {
-      logger.log(`[Messages] Currently have ${messages.length} messages`);
-      logger.log(`[Messages] Last message ID: ${messages[messages.length-1].id}`);
-      logger.log(`[Messages] Last message content: ${messages[messages.length-1].content}`);
+      logger.debug(`[Messages] Currently have ${messages.length} messages`);
+      logger.debug(`[Messages] Last message ID: ${messages[messages.length-1].id}`);
+      logger.debug(`[Messages] Last message content: ${messages[messages.length-1].content}`);
     }
   }, [messages]);
 

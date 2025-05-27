@@ -14,11 +14,10 @@ export function usePreloadRules() {
     const data = await loadRulesFromDB();
     if (data && Array.isArray(data) && data.length > 0) {
       queryClient.setQueryData(RULES_QUERY_KEY, data);
-      logger.log("[usePreloadRules] Rules data set to query cache:", data.length, "rules"); // Replaced console.log
+      logger.debug("[usePreloadRules] Rules data set to query cache:", data.length, "rules"); // Replaced console.log with logger.debug
     } else {
-      logger.log("[usePreloadRules] No rules data found in IndexedDB or data is invalid"); // Replaced console.log
+      logger.debug("[usePreloadRules] No rules data found in IndexedDB or data is invalid"); // Replaced console.log with logger.debug
     }
     return null;
   };
 }
-
