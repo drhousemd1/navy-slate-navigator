@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward } from '@/data/rewards/types';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 // Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
 const REWARDS_QUERY_KEY = ['rewards'];
@@ -21,7 +21,7 @@ export const useDeleteReward = () => {
         .eq('reward_id', rewardId);
 
       if (usageError) {
-        logger.warn(`Failed to delete reward usage history for reward ${rewardId}:`, usageError.message); // Replaced console.warn
+        logger.warn(`Failed to delete reward usage history for reward ${rewardId}:`, usageError.message);
       }
       
       const { error } = await supabase.from('rewards').delete().eq('id', rewardId);
@@ -31,4 +31,3 @@ export const useDeleteReward = () => {
     idField: 'id',
   });
 };
-

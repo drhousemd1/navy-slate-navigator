@@ -1,3 +1,4 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
@@ -37,9 +38,7 @@ export const useDeleteRule = () => {
     mutationOptions: { 
       // onError was here, it's removed as the optimistic hook handles it.
       // The generic error toast is handled by useDeleteOptimisticMutation.
-      // Specific console logging like:
-      // console.error('[useDeleteRule onError] Error deleting rule:', error, ruleId);
-      // is now omitted.
+      // Specific console logging is now omitted.
     }
   });
 };

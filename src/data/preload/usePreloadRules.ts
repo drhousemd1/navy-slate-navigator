@@ -3,7 +3,7 @@ import { currentWeekKey, resetTaskCompletions } from "@/lib/taskUtils";
 import { loadRulesFromDB } from "../indexedDB/useIndexedDB";
 import { queryClient } from "../queryClient";
 import { RULES_QUERY_KEY } from "../rules/queries";
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
 export function usePreloadRules() {
   return async () => {
@@ -14,9 +14,9 @@ export function usePreloadRules() {
     const data = await loadRulesFromDB();
     if (data && Array.isArray(data) && data.length > 0) {
       queryClient.setQueryData(RULES_QUERY_KEY, data);
-      logger.debug("[usePreloadRules] Rules data set to query cache:", data.length, "rules"); // Replaced console.log with logger.debug
+      logger.debug("[usePreloadRules] Rules data set to query cache:", data.length, "rules");
     } else {
-      logger.debug("[usePreloadRules] No rules data found in IndexedDB or data is invalid"); // Replaced console.log with logger.debug
+      logger.debug("[usePreloadRules] No rules data found in IndexedDB or data is invalid");
     }
     return null;
   };

@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/auth';
 import { AuthView } from './types';
 import { LoginSignupView } from './LoginSignupView';
 import { ForgotPasswordView } from './ForgotPasswordView';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
 const Auth: React.FC = () => {
   const [authView, setAuthView] = React.useState<AuthView>("login");
@@ -31,7 +31,7 @@ const Auth: React.FC = () => {
   }
 
   if (isAuthenticated) {
-    logger.debug('Auth page: User is authenticated, redirecting to home'); // Replaced console.log
+    logger.debug('Auth page: User is authenticated, redirecting to home');
     const from = location.state?.from?.pathname || "/";
     return <Navigate to={from} replace />;
   }
@@ -44,4 +44,3 @@ const Auth: React.FC = () => {
 };
 
 export default Auth;
-

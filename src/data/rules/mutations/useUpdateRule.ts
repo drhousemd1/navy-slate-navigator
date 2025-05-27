@@ -1,3 +1,4 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
@@ -46,9 +47,7 @@ export const useUpdateRule = () => {
     mutationOptions: { 
       // onError was here, it's removed as the optimistic hook handles it.
       // The generic error toast is handled by useUpdateOptimisticMutation.
-      // Specific console logging like:
-      // console.error('[useUpdateRule onError] Error updating rule:', error, variables);
-      // is now omitted.
+      // Specific console logging is now omitted.
     }
   });
 };

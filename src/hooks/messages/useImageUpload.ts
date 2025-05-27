@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
 export const useImageUpload = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -22,7 +22,7 @@ export const useImageUpload = () => {
         .upload(`${user.id}/${fileName}`, file);
       
       if (error) {
-        logger.error('Error uploading image:', error); // Replaced console.error
+        logger.error('Error uploading image:', error);
         throw error;
       }
       
@@ -32,7 +32,7 @@ export const useImageUpload = () => {
       
       return publicUrl;
     } catch (err) {
-      logger.error('Error in uploadImage:', err); // Replaced console.error
+      logger.error('Error in uploadImage:', err);
       return null;
     } finally {
       setIsUploading(false);

@@ -9,7 +9,7 @@ export const deleteRuleFromDb = async (ruleId: string): Promise<boolean> => {
     .eq('id', ruleId);
 
   if (error) {
-    logger.error('Error deleting rule:', error); // Replaced console.error
+    logger.error('Error deleting rule:', error);
     throw error;
   }
 
