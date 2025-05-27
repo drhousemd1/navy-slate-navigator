@@ -1,69 +1,136 @@
-
-import React, { useState, useEffect, Suspense } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
-import AccountSheet from './AccountSheet'; // Added import
-import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
-import AppUpdateNotification from '@/components/app/AppUpdateNotification';
-import { useNetworkStatus } // Using named import
-from '@/hooks/useNetworkStatus'; // Corrected path
-import SyncStatusIndicator from '@/components/app/SyncStatusIndicator';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { logger } from '@/lib/logger'; // Added logger
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Button } from './ui/button';
+import { Plus, MessageSquare } from 'lucide-react'; // Removed BookOpen import
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { useAuth } from '@/contexts/auth';
+import AccountSheet from './AccountSheet';
+// import CacheMonitorPanel from './dev/CacheMonitorPanel'; // Removed import
+// Removed: import SyncStatusIndicator from './common/SyncStatusIndicator';
 
-const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false);
+interface AppLayoutProps {
+  children: React.ReactNode;
+  onAddNewItem?: () => void;
+}
+
+const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const location = useLocation();
-  const { isOnline } = useNetworkStatus();
-  const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const { getNickname, getProfileImage, getUserRole } = useAuth();
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Additional effect logic can go here if needed
-  }, [location]);
+  // Only show "Add" button for specific routes
+  const shouldShowAddButton = 
+    location.pathname === '/tasks' || 
+    location.pathname === '/rules' || 
+    location.pathname === '/rewards' || 
+    location.pathname === '/punishments';
+    
+  // Don't add bottom padding on messages page
+  const isMessagesPage = location.pathname === '/messages';
 
-  const handleSyncStatusChange = (status: string) => {
-    // This function is a prop for SyncStatusIndicator.
-    // It could be used to update AppLayout's state or perform other actions based on sync status.
-    logger.log("Sync status changed:", status);
+  const handleAddNewItem = () => {
+    if (onAddNewItem) {
+      onAddNewItem();
+    }
   };
   
-  // Main content: Outlet for nested routes or children if provided
-  const mainContent = children || <Outlet />;
+  // Get profile image and nickname for the avatar directly from context
+  const nickname = getNickname();
+  const userRole = getUserRole();
+
+  // Get profile image from context - no direct Supabase calls
+  useEffect(() => {
+    const contextImage = getProfileImage();
+    if (contextImage) {
+      console.log('Using profile image from context:', contextImage);
+      setProfileImage(contextImage);
+    }
+  }, [getProfileImage]);
+
+  // Determine if we're on the rewards page, tasks page, punishments page, or rules page for special styling
+  const isRewardsPage = location.pathname === '/rewards';
+  const isTasksPage = location.pathname === '/tasks';
+  const isPunishmentsPage = location.pathname === '/punishments';
+  const isRulesPage = location.pathname === '/rules';
+  const useCircleButton = isRewardsPage || isTasksPage || isPunishmentsPage || isRulesPage;
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <header className="bg-background border-b border-border/40 p-3 flex justify-between items-center fixed top-0 left-0 right-0 z-50 h-[60px]">
-        <div className="flex items-center">
-          {/* Placeholder for a logo or app title if needed */}
-          <h1 className="text-xl font-semibold text-foreground">My App</h1>
+    <div className="flex flex-col min-h-screen bg-dark-navy">
+      {/* Top header section with account and settings icons */}
+      <div className="w-full bg-navy border-b border-light-navy py-2 px-4">
+        <div className="max-w-screen-lg mx-auto flex justify-between items-center">
+          <div className="flex items-center">
+            {/* Left side avatar */}
+            <Avatar 
+              className="h-7 w-7 cursor-pointer" 
+              onClick={() => navigate('/profile')}
+            >
+              {profileImage ? (
+                <AvatarImage 
+                  src={profileImage} 
+                  alt={nickname ?? "User Avatar"}
+                  onError={(e) => {
+                    console.error('Failed to load avatar image:', profileImage);
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : null}
+              <AvatarFallback className="bg-light-navy text-nav-active text-xs">
+                {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
+              </AvatarFallback>
+            </Avatar>
+            
+            {/* Username and role display */}
+            <div className="ml-2">
+              <p className="text-white text-sm font-medium leading-tight">{nickname}</p>
+              <p className="text-gray-400 text-xs leading-tight">{userRole}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {/* Sync Status Indicator Icon - REMOVED */}
+            {/* <SyncStatusIndicator /> */}
+
+            {/* Character icon for account/login using our new AccountSheet component */}
+            <AccountSheet />
+            
+            {/* App Guide icon - REMOVED */}
+
+            {/* Messaging icon */}
+            <MessageSquare 
+              className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" 
+              onClick={() => navigate('/messages')}
+            />
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <SyncStatusIndicator onStatusChange={handleSyncStatusChange} />
-          {!isOnline && (
-            <span className="text-xs text-destructive-foreground bg-destructive px-2 py-1 rounded">
-              Offline
-            </span>
-          )}
-          <Button variant="ghost" size="icon" onClick={() => setIsAccountSheetOpen(true)}>
-            <Menu className="h-5 w-5 text-foreground" />
+      </div>
+      
+      <main className={`flex-1 ${isMessagesPage ? '' : 'pb-24'} animate-fade-in`}>
+        {children}
+      </main>
+      
+      {shouldShowAddButton && !isMessagesPage && (
+        <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-40">
+          <Button 
+            className={`${useCircleButton 
+              ? 'bg-green-500 hover:bg-green-600 w-10 h-10 rounded-full shadow-xl p-0 flex items-center justify-center' 
+              : 'bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6'}`}
+            onClick={handleAddNewItem}
+          >
+            {useCircleButton ? (
+              <Plus className="w-6 h-6 text-white" />
+            ) : (
+              <>
+                <Plus className="w-5 h-5 mr-2" /> Add New Item
+              </>
+            )}
           </Button>
         </div>
-      </header>
-
-      {/* Add a spacer div to push content below the fixed header */}
-      <div className="h-[60px] w-full flex-shrink-0" /> 
-
-      <main className="flex-1 overflow-y-auto">
-        <Suspense fallback={<div className="p-4">Loading page...</div>}>
-          {mainContent}
-        </Suspense>
-      </main>
-
-      {isMobile && <MobileNavbar />}
+      )}
       
-      <AccountSheet isOpen={isAccountSheetOpen} onOpenChange={setIsAccountSheetOpen} />
-      <AppUpdateNotification />
+      <MobileNavbar />
     </div>
   );
 };

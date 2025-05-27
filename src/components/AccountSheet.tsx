@@ -1,189 +1,189 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle,
+  SheetTrigger
+} from '@/components/ui/sheet';
+import { UserCircle2, User, LogOut, BookOpen, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/contexts/auth'; // Changed import path
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/contexts/auth'; // Corrected import path
-import { useUserIds } from '@/contexts/UserIdsContext'; // Corrected import path
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger'; // Added logger
+import { useNavigate } from 'react-router-dom';
+// import { useQueryClient } from '@tanstack/react-query'; // No longer needed for purge
+// import { purgeQueryCache } from '@/lib/react-query-config'; // No longer needed here
 
-interface Profile {
-  id: string;
-  username: string | null;
-  full_name: string | null;
-  avatar_url: string | null;
-  partner_id: string | null;
-}
+const AccountSheet = () => {
+  const navigate = useNavigate();
+  const { user, getNickname, getProfileImage, getUserRole, signOut, isAdmin } = useAuth(); // Added isAdmin
+  const [showProfileOptions, setShowProfileOptions] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // const queryClient = useQueryClient(); // No longer needed
 
-const AccountSheet = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
-  const { user, loading: authLoading, partnerId, setPartnerIdGlobally } = useAuth();
-  const { partnerUserIds, isLoading: idsLoading } = useUserIds();
-  const [currentPartnerId, setCurrentPartnerId] = useState<string | null>(partnerId);
-  const [availablePartners, setAvailablePartners] = useState<Profile[]>([]);
-  const [isLoadingPartners, setIsLoadingPartners] = useState(false);
-  const [userData, setUserData] = useState<Profile | null>(null);
-
-  useEffect(() => {
-    setCurrentPartnerId(partnerId);
-  }, [partnerId]);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (user?.id) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('username, full_name, avatar_url, partner_id')
-          .eq('id', user.id)
-          .single();
-        if (error) {
-          logger.error('Error fetching user data:', error.message); // Replaced console.error
-        } else if (data) {
-          setUserData(data as Profile);
-          logger.log('User data for account sheet:', data);
-          if (data.partner_id && !partnerId) {
-            setPartnerIdGlobally(data.partner_id);
-            setCurrentPartnerId(data.partner_id);
-          }
-        }
-      }
-    };
-    if (user?.id) {
-      fetchUserData();
-    }
-  }, [user, partnerId, setPartnerIdGlobally]);
-  
-  useEffect(() => {
-    logger.log('AccountSheet: User object from useAuth:', user ? { ...user, email: user.email ? '[EMAIL_REDACTED]' : undefined } : null);
-    logger.log("Current partner ID:", currentPartnerId ? '[USER_ID]' : null);
-  }, [user, currentPartnerId]);
-
-  useEffect(() => {
-    const fetchAvailablePartners = async () => {
-      if (idsLoading || !partnerUserIds || partnerUserIds.length === 0) {
-        setAvailablePartners([]);
-        return;
-      }
-      setIsLoadingPartners(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, full_name, avatar_url')
-        .in('id', partnerUserIds);
-
-      if (error) {
-        logger.error('Error fetching available partners:', error.message); // Replaced console.error
-        setAvailablePartners([]);
-      } else {
-        logger.log("Available partners:", data ? data.map(p => ({ ...p, id: '[USER_ID]' })) : []);
-        setAvailablePartners(data || []);
-      }
-      setIsLoadingPartners(false);
-    };
-
-    fetchAvailablePartners();
-  }, [partnerUserIds, idsLoading]);
-
-  const handlePartnerChange = (newPartnerId: string) => {
-    setCurrentPartnerId(newPartnerId);
+  const toggleProfileOptions = () => {
+    setShowProfileOptions(!showProfileOptions);
   };
-
-  const handleSavePartner = async () => {
-    if (!user || !currentPartnerId) {
-      toast({ title: "Error", description: "User or partner not selected.", variant: "destructive" });
-      return;
-    }
-    const { error } = await supabase
-      .from('profiles')
-      .update({ partner_id: currentPartnerId })
-      .eq('id', user.id);
-
-    if (error) {
-      toast({ title: "Error", description: `Failed to update partner: ${error.message}`, variant: "destructive" });
-      logger.error('Error updating partner:', error.message); // Replaced console.error
-    } else {
-      setPartnerIdGlobally(currentPartnerId);
-      toast({ title: "Success", description: "Partner updated successfully." });
-      onOpenChange(false); // Close sheet on successful save
-    }
+  
+  const handleProfileClick = () => {
+    navigate('/profile');
+    setSheetOpen(false);
   };
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({ title: "Logout Error", description: error.message, variant: "destructive" });
-      logger.error('Error logging out:', error.message); // Replaced console.error
-    } else {
-      toast({ title: "Logged Out", description: "You have been successfully logged out." });
-      setPartnerIdGlobally(null); // Clear partner ID on logout
-      onOpenChange(false); // Close sheet
-      // User state will be cleared by AuthProvider, triggering navigation
-    }
+    await signOut();
+    // await purgeQueryCache(queryClient); // Removed: Cache clearing is handled by AuthContext on SIGNED_OUT
+    console.log('AccountSheet: User signed out. Cache purging handled by AuthContext.');
+    navigate('/auth'); // Navigate to auth page after sign out
+    setSheetOpen(false);
+  };
+  
+  const handleEncyclopediaClick = () => {
+    navigate('/encyclopedia');
+    setSheetOpen(false);
   };
 
-  if (authLoading) {
-    return (
-      <Sheet open={isOpen} onOpenChange={onOpenChange}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Account</SheetTitle>
-          </SheetHeader>
-          <div className="py-4">Loading account details...</div>
-        </SheetContent>
-      </Sheet>
-    );
-  }
+  const handleAdminPanelClick = () => {
+    navigate('/admin-panel'); // Example route, adjust as needed
+    setSheetOpen(false);
+  };
+  
+  const nickname = getNickname();
+  const userRole = getUserRole();
+  
+  useEffect(() => {
+    if (user) {
+      console.log('AccountSheet: Current user email:', user.email);
+      // console.log('AccountSheet: Is admin check result via email (example):', user.email?.toLowerCase() === 'towenhall@gmail.com'.toLowerCase());
+      console.log('AccountSheet: isAdmin from AuthContext:', isAdmin);
+    }
+  }, [user, isAdmin]);
 
+  useEffect(() => {
+    const contextImage = getProfileImage();
+    if (contextImage) {
+      console.log('AccountSheet: Using profile image from context:', contextImage);
+      setProfileImage(contextImage);
+    } else {
+      // Clear local state if context image is removed/null
+      setProfileImage(null); 
+    }
+  }, [getProfileImage, user]); // Added user dependency, as getProfileImage might change behavior based on user
+  
+  // const isAdminUser = () => { // This function is unused and was incorrect
+  //   return true;
+  // };
+  
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col">
+    <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+      <SheetTrigger asChild>
+        <UserCircle2 className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
+      </SheetTrigger>
+      <SheetContent 
+        side="left" 
+        className="w-[75vw] sm:w-[300px] bg-navy border-r border-light-navy text-white" // Added sm breakpoint for width
+      >
         <SheetHeader>
-          <SheetTitle>Account</SheetTitle>
-          {userData?.username && <SheetDescription>Manage your account settings, @{userData.username}.</SheetDescription>}
+          <SheetTitle className="text-white">Account</SheetTitle>
         </SheetHeader>
         
-        <div className="py-4 space-y-4 flex-grow">
-          {user && (
+        <div className="py-6">
+          <div className="flex items-center space-x-4 mb-6">
+            <Avatar className="h-12 w-12 border border-light-navy">
+              {profileImage ? (
+                <AvatarImage 
+                  src={profileImage} 
+                  alt={nickname || 'User'} 
+                  onError={(e) => {
+                    console.error('AccountSheet: Failed to load avatar image:', profileImage);
+                    (e.target as HTMLImageElement).style.display = 'none'; // Hide broken image
+                    // Optionally set a flag to show fallback or just let fallback render
+                  }}
+                />
+              ) : null}
+              <AvatarFallback className="bg-light-navy text-nav-active">
+                {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
+              </AvatarFallback>
+            </Avatar>
             <div>
-              <p className="text-sm text-muted-foreground">Logged in as:</p>
-              <p className="font-semibold">{user.email ? '[EMAIL_REDACTED]' : 'No email'}</p>
+              <p className="text-lg font-medium">
+                {user ? nickname : 'Guest'}
+              </p>
+              <p className="text-sm text-gray-400">
+                {user ? userRole : 'Not logged in'} {isAdmin && user ? <span className="text-cyan-400">(Admin)</span> : ""}
+              </p>
             </div>
-          )}
-
-          <div>
-            <Label htmlFor="partner-select">Select Partner</Label>
-            {isLoadingPartners || idsLoading ? (
-              <p>Loading partners...</p>
-            ) : availablePartners.length > 0 ? (
-              <Select value={currentPartnerId || ''} onValueChange={handlePartnerChange}>
-                <SelectTrigger id="partner-select">
-                  <SelectValue placeholder="Select a partner" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availablePartners.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.username || p.full_name || `User ${p.id.substring(0,6)}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <p className="text-sm text-muted-foreground">No partners available. Your partner needs to sign up first.</p>
+          </div>
+          
+          <div className="space-y-2 mt-6"> {/* Reduced space-y for tighter packing */}
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
+              onClick={toggleProfileOptions}
+            >
+              <User className="w-5 h-5 mr-3" /> {/* Increased mr for icon spacing */}
+              Account
+            </Button>
+            
+            {showProfileOptions && (
+              <div className="ml-8 space-y-1 animate-fade-in"> {/* Increased ml, reduced space-y */}
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-gray-300 hover:text-cyan-300 hover:bg-light-navy/70 py-1.5" // Adjusted padding
+                  onClick={handleProfileClick}
+                >
+                  Profile
+                </Button>
+              </div>
             )}
+            
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
+              onClick={handleEncyclopediaClick}
+            >
+              <BookOpen className="w-5 h-5 mr-3" />
+              Encyclopedia
+            </Button>
+
+            {isAdmin && user && ( // Show Admin Panel button if user is admin
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-cyan-500/50"
+                onClick={handleAdminPanelClick}
+              >
+                <ShieldCheck className="w-5 h-5 mr-3 text-cyan-400" />
+                Admin Panel
+              </Button>
+            )}
+            
+            {user && ( // Only show logout if user is logged in
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-800/50 border border-red-500/50 mt-4" // Added margin top
+                onClick={handleLogout}
+              >
+                <LogOut className="w-5 h-5 mr-3" />
+                Log Out
+              </Button>
+            )}
+            
+            {!user && ( // Show login if no user
+               <Button 
+                variant="ghost" 
+                className="w-full justify-start text-cyan-400 hover:text-cyan-300 hover:bg-cyan-800/50 border border-cyan-500/50 mt-4"
+                onClick={() => { navigate('/auth'); setSheetOpen(false); }}
+              >
+                <LogOut className="w-5 h-5 mr-3" /> {/* Or UserPlus icon */}
+                Log In / Sign Up
+              </Button>
+            )}
+
+            {/* <p className="text-xs text-gray-500 pt-4 text-center">More options will be added here</p> */}
           </div>
         </div>
-
-        <SheetFooter className="mt-auto">
-          <div className="flex flex-col space-y-2 w-full">
-            <Button onClick={handleSavePartner} disabled={!currentPartnerId || currentPartnerId === partnerId}>
-              Save Partner
-            </Button>
-            <Button variant="outline" onClick={handleLogout}>
-              Logout
-            </Button>
-          </div>
-        </SheetFooter>
       </SheetContent>
     </Sheet>
   );
