@@ -1,6 +1,6 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 export const SUB_REWARD_TYPES_COUNT_QUERY_KEY = 'subRewardTypesCount';
 
@@ -11,7 +11,7 @@ const fetchSubRewardTypesCount = async (): Promise<number> => {
     .eq('is_dom_reward', false);
 
   if (error) {
-    console.error('Error fetching sub reward types count:', error.message);
+    logger.error('Error fetching sub reward types count:', error.message);
     return 0;
   }
   return count ?? 0;

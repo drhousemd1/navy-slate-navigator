@@ -1,4 +1,3 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
@@ -6,6 +5,7 @@ import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/indexedDB/useIndexedDB';
 import { RULES_QUERY_KEY } from '../queries';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 export type CreateRuleVariables = Partial<Omit<Rule, 'id' | 'created_at' | 'updated_at' | 'usage_data'>> & {
   title: string;
@@ -21,7 +21,7 @@ export const useCreateRule = () => {
     mutationFn: async (variables: CreateRuleVariables) => {
       const { data, error } = await supabase
         .from('rules')
-        .insert({ ...variables })
+        .insert({ ...variables }) // Assumes variables are prepared with defaults by the caller or have DB defaults
         .select()
         .single();
       if (error) throw error;
@@ -35,8 +35,7 @@ export const useCreateRule = () => {
         id: optimisticId,
         created_at: now,
         updated_at: now,
-        usage_data: [], // Default for new rules
-        // Default values based on schema
+        usage_data: [], 
         title_color: '#FFFFFF',
         background_opacity: 100,
         highlight_effect: false,
@@ -52,27 +51,20 @@ export const useCreateRule = () => {
       } as Rule;
     },
     onSuccessCallback: async (newRuleData) => {
-      console.log('[useCreateRule onSuccessCallback] New rule created on server, updating IndexedDB.', newRuleData);
+      logger.log('[useCreateRule onSuccessCallback] New rule created on server, updating IndexedDB.', newRuleData);
       try {
         const localRules = await loadRulesFromDB() || [];
-        // Ensure no duplicate optimistic item if server returns faster than optimistic removal
         const updatedLocalRules = [newRuleData, ...localRules.filter(r => r.id !== newRuleData.id && r.id !== (newRuleData as any).optimisticId)];
         await saveRulesToDB(updatedLocalRules);
         await setLastSyncTimeForRules(new Date().toISOString());
-        console.log('[useCreateRule onSuccessCallback] IndexedDB updated with new rule.');
-        // Generic success toast is handled by useCreateOptimisticMutation, specific one can be here if needed
-        // toast({ title: "Rule Created", description: `Rule "${newRuleData.title}" has been successfully created and saved locally.` });
+        logger.log('[useCreateRule onSuccessCallback] IndexedDB updated with new rule.');
       } catch (error) {
-        console.error('[useCreateRule onSuccessCallback] Error updating IndexedDB:', error);
+        logger.error('[useCreateRule onSuccessCallback] Error updating IndexedDB:', error);
         toast({ variant: "destructive", title: "Local Save Error", description: "Rule created on server, but failed to save locally." });
       }
     },
     mutationOptions: { 
-      // onError was here, it's removed as the optimistic hook handles it.
-      // The generic error toast is handled by useCreateOptimisticMutation.
-      // Specific console logging like:
-      // console.error('[useCreateRule onError] Error creating rule:', error, variables);
-      // is now omitted. If this detailed logging is crucial, we can enhance the optimistic hook.
+      // onError removed
     }
   });
 };

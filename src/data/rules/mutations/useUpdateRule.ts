@@ -6,6 +6,7 @@ import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/indexedDB/useIndexedDB';
 import { RULES_QUERY_KEY } from '../queries';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger'; // Logger import should already be here or added if missing
 
 export type UpdateRuleVariables = { id: string } & Partial<Omit<Rule, 'id'>>;
 
@@ -30,25 +31,22 @@ export const useUpdateRule = () => {
     entityName: 'Rule',
     idField: 'id',
     onSuccessCallback: async (updatedRuleData) => {
-      console.log('[useUpdateRule onSuccessCallback] Rule updated on server, updating IndexedDB.', updatedRuleData);
+      logger.log('[useUpdateRule onSuccessCallback] Rule updated on server, updating IndexedDB.', updatedRuleData); // Replaced console.log
       try {
         const localRules = await loadRulesFromDB() || [];
         const updatedLocalRules = localRules.map(r => r.id === updatedRuleData.id ? updatedRuleData : r);
         await saveRulesToDB(updatedLocalRules);
         await setLastSyncTimeForRules(new Date().toISOString());
-        console.log('[useUpdateRule onSuccessCallback] IndexedDB updated with updated rule.');
+        logger.log('[useUpdateRule onSuccessCallback] IndexedDB updated with updated rule.'); // Replaced console.log
         // Generic success toast is handled by useUpdateOptimisticMutation
       } catch (error) {
-        console.error('[useUpdateRule onSuccessCallback] Error updating IndexedDB:', error);
+        logger.error('[useUpdateRule onSuccessCallback] Error updating IndexedDB:', error); // Replaced console.error
         toast({ variant: "destructive", title: "Local Save Error", description: "Rule updated on server, but failed to save changes locally." });
       }
     },
     mutationOptions: { 
       // onError was here, it's removed as the optimistic hook handles it.
-      // The generic error toast is handled by useUpdateOptimisticMutation.
-      // Specific console logging like:
-      // console.error('[useUpdateRule onError] Error updating rule:', error, variables);
-      // is now omitted.
     }
   });
 };
+
