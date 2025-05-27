@@ -1,4 +1,3 @@
-
 import React, { useCallback } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -7,6 +6,7 @@ import { Control } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Minus, Plus } from 'lucide-react';
 import { PunishmentFormValues } from './PunishmentFormProvider';
+import { logger } from '@/lib/logger';
 
 interface PunishmentBasicDetailsProps {
   control: Control<PunishmentFormValues>;
@@ -30,7 +30,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     
     // Get current value and ensure it's a number
     const currentPoints = control._formValues.points;
-    console.log('Current points before decrement:', currentPoints);
+    logger.debug('Current points before decrement:', currentPoints);
     
     const numericPoints = typeof currentPoints === 'number' 
       ? currentPoints 
@@ -38,7 +38,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     
     // Ensure we only subtract 1 and don't go below 0
     const newValue = Math.max(0, numericPoints - 1);
-    console.log('Setting points to:', newValue);
+    logger.debug('Setting points to:', newValue);
     
     // Use setValue with explicit options to ensure proper form update
     setValue('points', newValue, { 
@@ -58,7 +58,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     
     // Get current value and ensure it's a number
     const currentPoints = control._formValues.points;
-    console.log('Current points before increment:', currentPoints);
+    logger.debug('Current points before increment:', currentPoints);
     
     const numericPoints = typeof currentPoints === 'number' 
       ? currentPoints 
@@ -66,7 +66,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     
     // Ensure we only add 1
     const newValue = numericPoints + 1;
-    console.log('Setting points to:', newValue);
+    logger.debug('Setting points to:', newValue);
     
     // Use setValue with explicit options to ensure proper form update
     setValue('points', newValue, { 
@@ -86,7 +86,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     
     // Get current value and ensure it's a number
     const currentDomPoints = control._formValues.dom_points;
-    console.log('Current dom points before decrement:', currentDomPoints);
+    logger.debug('Current dom points before decrement:', currentDomPoints);
     
     const numericDomPoints = typeof currentDomPoints === 'number' 
       ? currentDomPoints 
@@ -94,7 +94,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     
     // Ensure we only subtract 1 and don't go below 0
     const newValue = Math.max(0, numericDomPoints - 1);
-    console.log('Setting dom_points to:', newValue);
+    logger.debug('Setting dom_points to:', newValue);
     
     // Use setValue with explicit options to ensure proper form update
     setValue('dom_points', newValue, { 
@@ -114,7 +114,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     
     // Get current value and ensure it's a number
     const currentDomPoints = control._formValues.dom_points;
-    console.log('Current dom points before increment:', currentDomPoints);
+    logger.debug('Current dom points before increment:', currentDomPoints);
     
     const numericDomPoints = typeof currentDomPoints === 'number' 
       ? currentDomPoints 
@@ -122,7 +122,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
     
     // Ensure we only add 1
     const newValue = numericDomPoints + 1;
-    console.log('Setting dom_points to:', newValue);
+    logger.debug('Setting dom_points to:', newValue);
     
     // Use setValue with explicit options to ensure proper form update
     setValue('dom_points', newValue, { 

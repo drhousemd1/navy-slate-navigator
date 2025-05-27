@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Control } from 'react-hook-form';
+import { logger } from '@/lib/logger';
 
 interface RewardBasicDetailsProps {
   control: Control<any>;
@@ -96,7 +97,7 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
           control={control}
           name="is_dom_reward"
           render={({ field }) => {
-            console.log("Rendering is_dom_reward switch with value:", field.value);
+            logger.debug("Rendering is_dom_reward switch with value:", field.value);
             return (
               <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-lg border border-light-navy p-4">
                 <div className="space-y-0.5">
@@ -109,7 +110,7 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
                   <Switch
                     checked={field.value}
                     onCheckedChange={(checked) => {
-                      console.log("Switch toggled to:", checked);
+                      logger.debug("Switch toggled to:", checked);
                       field.onChange(checked);
                     }}
                   />
@@ -124,3 +125,4 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
 };
 
 export default RewardBasicDetails;
+

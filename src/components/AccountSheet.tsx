@@ -9,15 +9,16 @@ import {
   SheetTrigger
 } from '@/components/ui/sheet';
 import { UserCircle2, User, LogOut, BookOpen, ShieldCheck } from 'lucide-react';
-import { useAuth } from '@/contexts/auth'; // Changed import path
+import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { logger } from '@/lib/logger';
 // import { useQueryClient } from '@tanstack/react-query'; // No longer needed for purge
 // import { purgeQueryCache } from '@/lib/react-query-config'; // No longer needed here
 
 const AccountSheet = () => {
   const navigate = useNavigate();
-  const { user, getNickname, getProfileImage, getUserRole, signOut, isAdmin } = useAuth(); // Added isAdmin
+  const { user, getNickname, getProfileImage, getUserRole, signOut, isAdmin } = useAuth();
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -35,7 +36,7 @@ const AccountSheet = () => {
   const handleLogout = async () => {
     await signOut();
     // await purgeQueryCache(queryClient); // Removed: Cache clearing is handled by AuthContext on SIGNED_OUT
-    console.log('AccountSheet: User signed out. Cache purging handled by AuthContext.');
+    logger.debug('AccountSheet: User signed out. Cache purging handled by AuthContext.');
     navigate('/auth'); // Navigate to auth page after sign out
     setSheetOpen(false);
   };
@@ -55,16 +56,16 @@ const AccountSheet = () => {
   
   useEffect(() => {
     if (user) {
-      console.log('AccountSheet: Current user email:', user.email);
-      // console.log('AccountSheet: Is admin check result via email (example):', user.email?.toLowerCase() === 'towenhall@gmail.com'.toLowerCase());
-      console.log('AccountSheet: isAdmin from AuthContext:', isAdmin);
+      logger.debug('AccountSheet: Current user email:', user.email);
+      // logger.debug('AccountSheet: Is admin check result via email (example):', user.email?.toLowerCase() === 'towenhall@gmail.com'.toLowerCase());
+      logger.debug('AccountSheet: isAdmin from AuthContext:', isAdmin);
     }
   }, [user, isAdmin]);
 
   useEffect(() => {
     const contextImage = getProfileImage();
     if (contextImage) {
-      console.log('AccountSheet: Using profile image from context:', contextImage);
+      logger.debug('AccountSheet: Using profile image from context:', contextImage);
       setProfileImage(contextImage);
     } else {
       // Clear local state if context image is removed/null
@@ -97,7 +98,7 @@ const AccountSheet = () => {
                   src={profileImage} 
                   alt={nickname || 'User'} 
                   onError={(e) => {
-                    console.error('AccountSheet: Failed to load avatar image:', profileImage);
+                    logger.error('AccountSheet: Failed to load avatar image:', profileImage);
                     (e.target as HTMLImageElement).style.display = 'none'; // Hide broken image
                     // Optionally set a flag to show fallback or just let fallback render
                   }}
@@ -190,3 +191,4 @@ const AccountSheet = () => {
 };
 
 export default AccountSheet;
+
