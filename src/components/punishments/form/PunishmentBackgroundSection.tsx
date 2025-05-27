@@ -23,7 +23,7 @@ const PunishmentBackgroundSection: React.FC<PunishmentBackgroundSectionProps> = 
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Background Image</FormLabel>
-      <BackgroundImageSelector<PunishmentFormValues>
+      <BackgroundImageSelector<PunishmentFormValues> 
         control={control}
         imagePreview={imagePreview}
         initialPosition={{

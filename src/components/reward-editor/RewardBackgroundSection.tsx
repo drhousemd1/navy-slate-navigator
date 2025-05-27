@@ -45,4 +45,3 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
 };
 
 export default RewardBackgroundSection;
-
