@@ -1,253 +1,436 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Form } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Task, TaskFrequency } from '@/lib/taskUtils';
-import BasicDetailsSection from './task-editor/BasicDetailsSection';
-import IconSection from './task-editor/IconSection';
-import ColorSchemeSection from './task-editor/ColorSchemeSection';
-import BackgroundImageSection from './task-editor/BackgroundImageSection';
-import FrequencySection from './task-editor/FrequencySection';
-import { useTaskFormImageHandling } from './task-editor/hooks/useTaskFormImageHandling';
-import { useTaskFormIconHandling } from './task-editor/hooks/useTaskFormIconHandling';
-import { useFormStatePersister } from '@/hooks/useFormStatePersister';
+import { Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Trash2, Save } from 'lucide-react';
-import DeleteTaskDialog from './task/DeleteTaskDialog'; // Make sure this component exists
-import { logger } from '@/lib/logger';
+import { Task } from '@/lib/taskUtils';
+import NumberField from './task-editor/NumberField';
+import ColorPickerField from './task-editor/ColorPickerField';
+import PrioritySelector from './task-editor/PrioritySelector';
+import FrequencySelector from './task-editor/FrequencySelector';
+import BackgroundImageSelector from './task-editor/BackgroundImageSelector';
+import IconSelector from './task-editor/IconSelector';
+import PredefinedIconsGrid from './task-editor/PredefinedIconsGrid';
+import DeleteTaskDialog from './task-editor/DeleteTaskDialog';
+import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 
-// ... keep existing code (schema definition)
-const taskFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  points: z.coerce.number().min(0, "Points must be 0 or greater"),
-  
-  icon_color: z.string().optional().default('#FFFFFF'),
-  title_color: z.string().optional().default('#FFFFFF'),
-  subtext_color: z.string().optional().default('#8E9196'),
-  calendar_color: z.string().optional().default('#4ADE80'), // Default to a green shade
-  highlight_effect: z.boolean().optional().default(false),
-
-  background_opacity: z.coerce.number().min(0).max(100).optional().default(50),
-  focal_point_x: z.coerce.number().min(0).max(100).optional().default(50),
-  focal_point_y: z.coerce.number().min(0).max(100).optional().default(50),
-  
-  frequency: z.nativeEnum(TaskFrequency).default(TaskFrequency.Daily),
-  frequency_count: z.coerce.number().min(1, "Count must be at least 1").optional().default(1),
-  is_random: z.boolean().optional().default(false),
-  is_sub_only: z.boolean().optional().default(false), // New field for sub-only tasks
-});
-
-export type TaskFormValues = z.infer<typeof taskFormSchema>;
-
-interface TaskEditorFormProps {
-  task?: Task;
-  onSave: (data: TaskFormValues, icon_name: string | null, icon_url: string | null, background_image_url: string | null) => Promise<Task | null | void>;
-  onDelete?: (taskId: string) => Promise<void>;
-  onCancel: () => void;
-  isLoading?: boolean; // For external loading state, e.g. during save
+interface TaskFormValues {
+  title: string;
+  description: string;
+  points: number;
+  frequency: 'daily' | 'weekly';
+  frequency_count: number;
+  background_image_url?: string;
+  background_opacity: number;
+  icon_url?: string;
+  icon_name?: string;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  icon_color: string;
+  highlight_effect: boolean;
+  focal_point_x: number;
+  focal_point_y: number;
+  priority: 'low' | 'medium' | 'high';
 }
 
-const TaskEditorForm: React.FC<TaskEditorFormProps> = ({ task, onSave, onDelete, onCancel, isLoading: isExternallyLoading = false }) => {
+interface TaskEditorFormProps {
+  taskData?: Partial<Task>;
+  onSave: (taskData: any) => Promise<void>; // Changed from (taskData: any) => void to Promise<void> for async operations
+  onDelete?: (taskId: string) => void;
+  onCancel: () => void;
+}
+
+const TaskEditorForm: React.FC<TaskEditorFormProps> = ({ 
+  taskData,
+  onSave,
+  onDelete,
+  onCancel
+}) => {
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
   const form = useForm<TaskFormValues>({
-    resolver: zodResolver(taskFormSchema),
     defaultValues: {
-      title: task?.title || '',
-      description: task?.description || '',
-      points: task?.points || 10,
-      icon_color: task?.icon_color || '#FFFFFF',
-      title_color: task?.title_color || '#FFFFFF',
-      subtext_color: task?.subtext_color || '#8E9196',
-      calendar_color: task?.calendar_color || '#4ADE80',
-      highlight_effect: task?.highlight_effect || false,
-      background_opacity: task?.background_opacity || 50,
-      focal_point_x: task?.focal_point_x || 50,
-      focal_point_y: task?.focal_point_y || 50,
-      frequency: task?.frequency || TaskFrequency.Daily,
-      frequency_count: task?.frequency_count || 1,
-      is_random: task?.is_random || false,
-      is_sub_only: task?.is_sub_only || false,
+      title: '',
+      description: '',
+      points: 5,
+      frequency: 'daily',
+      frequency_count: 1,
+      background_image_url: undefined,
+      background_opacity: 100,
+      icon_url: undefined,
+      icon_name: undefined,
+      title_color: '#FFFFFF',
+      subtext_color: '#8E9196',
+      calendar_color: '#7E69AB',
+      icon_color: '#9b87f5',
+      highlight_effect: false,
+      focal_point_x: 50,
+      focal_point_y: 50,
+      priority: 'medium',
     },
   });
 
-  const formId = `task-editor-${task?.id || 'new'}`;
-  const { clearPersistedState } = useFormStatePersister(formId, form, {
-    exclude: [] // No exclusions by default, persist all
+  const { reset, watch, setValue, control, handleSubmit: formHandleSubmit } = form;
+
+  const persisterFormId = `task-editor-${taskData?.id || 'new'}`;
+  const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
+    exclude: ['background_image_url', 'icon_url'] 
   });
 
-  const { imagePreview, handleImageUpload, handleRemoveImage, setImagePreview, initialPosition } = useTaskFormImageHandling(
-    task?.background_image_url,
-    { x: task?.focal_point_x || 50, y: task?.focal_point_y || 50 }
-  );
-  
-  const { selectedIconName, iconPreview, iconColor, handleSelectIcon, handleUploadIcon, handleRemoveIcon, setSelectedIconName, setIconPreview } = useTaskFormIconHandling(
-    task?.icon_name,
-    task?.icon_url,
-    form.watch('icon_color') || '#FFFFFF'
-  );
-
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // Internal saving state
-
-  // Sync external loading state with internal
   useEffect(() => {
-    setIsSaving(isExternallyLoading);
-  }, [isExternallyLoading]);
+    if (taskData) {
+      reset({
+        title: taskData.title || '',
+        description: taskData.description || '',
+        points: taskData.points || 5,
+        frequency: (taskData.frequency as 'daily' | 'weekly') || 'daily',
+        frequency_count: taskData.frequency_count || 1,
+        background_image_url: taskData.background_image_url || undefined,
+        background_opacity: taskData.background_opacity || 100,
+        icon_url: taskData.icon_url || undefined,
+        icon_name: taskData.icon_name || undefined,
+        title_color: taskData.title_color || '#FFFFFF',
+        subtext_color: taskData.subtext_color || '#8E9196',
+        calendar_color: taskData.calendar_color || '#7E69AB',
+        icon_color: taskData.icon_color || '#9b87f5',
+        highlight_effect: taskData.highlight_effect || false,
+        focal_point_x: taskData.focal_point_x || 50,
+        focal_point_y: taskData.focal_point_y || 50,
+        priority: taskData.priority || 'medium',
+      });
+      setImagePreview(taskData.background_image_url || null);
+      setIconPreview(taskData.icon_url || null);
+      setSelectedIconName(taskData.icon_name || null);
+    } else {
+      // For new tasks, form persister will load if data exists, otherwise defaultValues are used.
+      // Explicit reset might override persisted new form state if not careful.
+      // Let persister handle initial load for 'new' form.
+      // If taskData is undefined, useFormStatePersister handles loading or defaults.
+      // However, imagePreview, iconPreview, selectedIconName are not part of form state directly managed by RHF.
+      // We need to ensure they are reset or loaded correctly based on persisted form values if applicable.
+      // For now, new form means fresh previews.
+      setImagePreview(null);
+      setIconPreview(null);
+      setSelectedIconName(null);
+    }
+  }, [taskData, reset]);
 
-  useEffect(() => {
-    if (task?.background_image_url) setImagePreview(task.background_image_url);
-    if (task?.icon_name) setSelectedIconName(task.icon_name);
-    if (task?.icon_url) setIconPreview(task.icon_url);
-    // Reset form with task data when task prop changes (e.g., editing a different task)
-    form.reset({
-      title: task?.title || '',
-      description: task?.description || '',
-      points: task?.points || 10,
-      icon_color: task?.icon_color || '#FFFFFF',
-      title_color: task?.title_color || '#FFFFFF',
-      subtext_color: task?.subtext_color || '#8E9196',
-      calendar_color: task?.calendar_color || '#4ADE80',
-      highlight_effect: task?.highlight_effect || false,
-      background_opacity: task?.background_opacity || 50,
-      focal_point_x: task?.focal_point_x || 50,
-      focal_point_y: task?.focal_point_y || 50,
-      frequency: task?.frequency || TaskFrequency.Daily,
-      frequency_count: task?.frequency_count || 1,
-      is_random: task?.is_random || false,
-      is_sub_only: task?.is_sub_only || false,
-    });
-  }, [task, form, setImagePreview, setSelectedIconName, setIconPreview]);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setImagePreview(base64String);
+        // setValue('background_image_url', base64String); // This will be persisted if not excluded
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
+  const handleIconUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      if (e.target instanceof HTMLInputElement && e.target.files) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64String = reader.result as string;
+            setIconPreview(base64String);
+            setSelectedIconName(null);
+            // setValue('icon_url', base64String); // This will be persisted if not excluded
+            // setValue('icon_name', undefined);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    };
+    input.click();
+  };
 
-  const onSubmit = async (data: TaskFormValues) => {
-    if (isSaving) return; // Prevent double submission
-    setIsSaving(true);
-    logger.log('Task form submitted with data:', data);
-    logger.log('Icon name:', selectedIconName, 'Icon preview (URL/base64):', iconPreview);
-    logger.log('Background image (URL/base64):', imagePreview);
+  const handleIconSelect = (iconName: string) => {
+    if (iconName.startsWith('custom:')) {
+      const iconUrl = iconName.substring(7);
+      setIconPreview(iconUrl);
+      setSelectedIconName(null);
+      setValue('icon_url', iconUrl);
+      setValue('icon_name', undefined);
+      
+      toast({
+        title: "Custom icon selected",
+        description: "Custom icon has been applied to the task",
+      });
+    } else {
+      setSelectedIconName(iconName);
+      setIconPreview(null);
+      setValue('icon_name', iconName);
+      setValue('icon_url', undefined); // Ensure icon_url is cleared if a named icon is selected
+      
+      toast({
+        title: "Icon selected",
+        description: `${iconName} icon selected`,
+      });
+    }
+  };
 
+  const onSubmitWrapped = async (values: TaskFormValues) => {
+    setLoading(true);
     try {
-      const savedTask = await onSave(data, selectedIconName, iconPreview, imagePreview);
-      if (savedTask) { // onSave might return void if it handles its own success
-        toast({ title: task ? "Task Updated" : "Task Created", description: `${data.title} has been saved.` });
-        await clearPersistedState(); // Clear form state from storage on successful save
-        // onCancel(); // Close form on successful save - This is now handled by the parent component
-      }
-      // If onSave handles its own toasts, this might be redundant or for fallback.
+      const taskToSave: Partial<Task> = {
+        ...values,
+        id: taskData?.id,
+        icon_name: selectedIconName || undefined,
+        // If icon_url and background_image_url are excluded from persistence,
+        // they should be explicitly read from their previews if needed here
+        icon_url: iconPreview || values.icon_url, // Prioritize live preview, fallback to form value
+        background_image_url: imagePreview || values.background_image_url, // Prioritize live preview
+      };
+      
+      await onSave(taskToSave);
+      await clearPersistedState(); // Clear persisted state on successful save
+      // onSave should handle closing the editor, so onCancel isn't called here.
     } catch (error) {
-      logger.error('Error saving task:', error);
-      toast({ title: "Save Error", description: error instanceof Error ? error.message : "Could not save the task.", variant: "destructive" });
+      console.error('Error saving task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save task. Please try again.",
+        variant: "destructive",
+      });
     } finally {
-      setIsSaving(false);
-    }
-  };
-  
-  const handleDelete = async () => {
-    if (task?.id && onDelete) {
-      setIsSaving(true); // Use saving state for delete operation as well
-      try {
-        await onDelete(task.id);
-        toast({ title: "Task Deleted", description: `${task.title} has been deleted.` });
-        await clearPersistedState();
-        // onCancel(); // Close form after delete - handled by parent
-      } catch (error) {
-        logger.error('Error deleting task:', error);
-        toast({ title: "Delete Error", description: error instanceof Error ? error.message : "Could not delete the task.", variant: "destructive" });
-      } finally {
-        setIsSaving(false);
-        setIsDeleteDialogOpen(false);
-      }
+      setLoading(false);
     }
   };
 
-  const handleCancelAndClear = async () => {
-    await clearPersistedState();
+  const handleCancelWrapped = () => {
+    clearPersistedState();
     onCancel();
   };
 
+  const handleDeleteWrapped = () => {
+    if (taskData?.id && onDelete) {
+      onDelete(taskData.id);
+      clearPersistedState(); // Clear persisted state on delete
+    }
+    setIsDeleteDialogOpen(false); // Close dialog regardless of onDelete outcome
+  };
+
+  const incrementPoints = () => {
+    const currentPoints = form.getValues('points');
+    form.setValue('points', currentPoints + 1);
+  };
+
+  const decrementPoints = () => {
+    const currentPoints = form.getValues('points');
+    form.setValue('points', Math.max(0, currentPoints - 1));
+  };
+
+  const incrementFrequencyCount = () => {
+    const currentCount = form.getValues('frequency_count');
+    form.setValue('frequency_count', currentCount + 1);
+  };
+
+  const decrementFrequencyCount = () => {
+    const currentCount = form.getValues('frequency_count');
+    if (currentCount > 1) {
+      form.setValue('frequency_count', currentCount - 1);
+    }
+  };
+
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 p-4 md:p-6 bg-card text-card-foreground rounded-lg shadow-lg max-w-3xl mx-auto">
-        <BasicDetailsSection control={form.control} />
-        <hr className="border-border/50 my-6" />
-        <IconSection
-          control={form.control}
-          selectedIconName={selectedIconName}
-          iconPreview={iconPreview}
-          iconColor={iconColor} // This comes from useTaskFormIconHandling, which watches form's icon_color
-          onSelectIcon={handleSelectIcon}
-          onUploadIcon={handleUploadIcon}
-          onRemoveIcon={handleRemoveIcon}
+      <form onSubmit={formHandleSubmit(onSubmitWrapped)} className="space-y-6">
+        <FormField
+          control={control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-white">Title</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Task title" 
+                  className="bg-dark-navy border-light-navy text-white" 
+                  {...field} 
+                />
+              </FormControl>
+            </FormItem>
+          )}
         />
-        <hr className="border-border/50 my-6" />
-        <ColorSchemeSection control={form.control} />
-        <hr className="border-border/50 my-6" />
-        <BackgroundImageSection
-          control={form.control}
-          imagePreview={imagePreview}
-          initialPosition={initialPosition}
-          onRemoveImage={handleRemoveImage}
-          onImageUpload={handleImageUpload}
-          setValue={form.setValue}
+        
+        <FormField
+          control={control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-white">Description</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Task description" 
+                  className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
+                  {...field} 
+                />
+              </FormControl>
+            </FormItem>
+          )}
         />
-        <hr className="border-border/50 my-6" />
-        <FrequencySection control={form.control} frequency={form.watch('frequency')} />
-
-        <div className="flex flex-col space-y-4 mt-6 md:mt-8">
-            {/* Action Buttons */}
-            <div className="flex items-center justify-end space-x-3 pt-4">
-                {task && onDelete && (
-                    <Button 
-                        type="button" 
-                        variant="destructive" 
-                        onClick={() => setIsDeleteDialogOpen(true)}
-                        disabled={isSaving}
-                        className="bg-red-600 text-white hover:bg-red-700"
-                    >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                    </Button>
-                )}
-                <Button 
-                    type="button" 
-                    variant="outline" // Changed to outline for better visual hierarchy
-                    onClick={handleCancelAndClear} 
-                    disabled={isSaving}
-                    className="border-input hover:bg-muted"
-                >
-                    Cancel
-                </Button>
-                <Button 
-                    type="submit" 
-                    disabled={isSaving}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[120px]"
-                >
-                    {isSaving ? (
-                        <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving...
-                        </>
-                    ) : (
-                        <>
-                            <Save className="mr-2 h-4 w-4" />
-                            {task ? 'Save Changes' : 'Create Task'}
-                        </>
-                    )}
-                </Button>
-            </div>
-        </div>
-
-        {task && onDelete && (
-          <DeleteTaskDialog
-            isOpen={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-            onDelete={handleDelete}
-            taskName={task.title}
-            isDeleting={isSaving} // Pass saving state as isDeleting
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <PrioritySelector control={control} />
+          
+          <NumberField
+            control={control}
+            name="points"
+            label="Points"
+            onIncrement={incrementPoints}
+            onDecrement={decrementPoints}
+            minValue={0}
           />
-        )}
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FrequencySelector control={control} />
+          
+          <NumberField
+            control={control}
+            name="frequency_count"
+            label="Times per period"
+            onIncrement={incrementFrequencyCount}
+            onDecrement={decrementFrequencyCount}
+            minValue={1}
+          />
+        </div>
+        
+        <div className="space-y-4">
+          <FormLabel className="text-white text-lg">Background Image</FormLabel>
+          <BackgroundImageSelector
+            control={control}
+            imagePreview={imagePreview} // This is the state variable
+            initialPosition={{ 
+              x: watch('focal_point_x') || 50, 
+              y: watch('focal_point_y') || 50 
+            }}
+            onRemoveImage={() => {
+              setImagePreview(null);
+              // setValue('background_image_url', undefined); // This will be persisted if not excluded
+            }}
+            onImageUpload={handleImageUpload}
+            setValue={setValue} // For focal_point_x, focal_point_y, background_opacity
+          />
+        </div>
+        
+        <div className="space-y-4">
+          <FormLabel className="text-white text-lg">Task Icon</FormLabel>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
+              <IconSelector
+                selectedIconName={selectedIconName} // This is the state variable
+                iconPreview={iconPreview} // This is the state variable
+                iconColor={watch('icon_color')}
+                onSelectIcon={handleIconSelect}
+                onUploadIcon={handleIconUpload}
+                onRemoveIcon={() => {
+                  setIconPreview(null);
+                  setSelectedIconName(null);
+                  // setValue('icon_url', undefined); // This will be persisted if not excluded
+                  // setValue('icon_name', undefined); // This will be persisted
+                }}
+              />
+            </div>
+            
+            <PredefinedIconsGrid
+              selectedIconName={selectedIconName}
+              iconColor={watch('icon_color')}
+              onSelectIcon={handleIconSelect}
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <ColorPickerField 
+            control={control} 
+            name="title_color" 
+            label="Title Color" 
+          />
+          
+          <ColorPickerField 
+            control={control} 
+            name="subtext_color" 
+            label="Subtext Color" 
+          />
+          
+          <ColorPickerField 
+            control={control} 
+            name="calendar_color" 
+            label="Calendar Color" 
+          />
+          
+          <ColorPickerField 
+            control={control} 
+            name="icon_color" 
+            label="Icon Color" 
+          />
+        </div>
+        
+        <FormField
+          control={control}
+          name="highlight_effect"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between">
+              <div className="space-y-0.5">
+                <FormLabel className="text-white">Highlight Effect</FormLabel>
+                <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        
+        <div className="pt-4 w-full flex items-center justify-end gap-3">
+          {taskData?.id && onDelete && (
+            <DeleteTaskDialog
+              isOpen={isDeleteDialogOpen}
+              onOpenChange={setIsDeleteDialogOpen}
+              onDelete={handleDeleteWrapped}
+            />
+          )}
+          <Button 
+            type="button" 
+            variant="destructive" 
+            onClick={onCancel}
+            className="bg-red-700 border-light-navy text-white hover:bg-red-600"
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : (
+              <>
+                <Save className="h-4 w-4" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </div>
       </form>
     </Form>
   );

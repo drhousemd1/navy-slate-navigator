@@ -1,156 +1,211 @@
 
-import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthProviderState } from './types';
-import { SignInWithPasswordCredentials, SignUpWithPasswordCredentials } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'; // Added logger import
 
-export function useAuthOperations(
-  setUser: (user: any) => void,
-  setSession: (session: any) => void,
-  setAuthState: React.Dispatch<React.SetStateAction<AuthProviderState>>
-) {
-  const signIn = useCallback(async (credentials: SignInWithPasswordCredentials) => {
-    setAuthState(prev => ({ ...prev, loading: true }));
+export function useAuthOperations() {
+  // Sign in with email and password
+  const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword(credentials);
-      if (error) {
-        logger.error('Sign-in error:', error.message);
-        toast({ title: 'Sign-in Failed', description: error.message, variant: 'destructive' });
-        setAuthState(prev => ({ ...prev, loading: false, error: error.message }));
-        return { success: false, error: error.message };
+      logger.log('Starting sign in process for email:', email); // Replaced console.log
+      
+      // Input validation - ensure values are properly trimmed
+      const trimmedEmail = email.trim().toLowerCase();
+      const trimmedPassword = password.trim();
+      
+      if (!trimmedEmail || !trimmedPassword) {
+        logger.error('Sign in validation error: Missing email or password'); // Replaced console.error
+        return { error: { message: 'Email and password are required' }, user: null };
       }
-      if (data.session) {
-        setSession(data.session);
-        setUser(data.user);
-        setAuthState(prev => ({
-          ...prev,
-          userExists: !!data.user,
-          sessionExists: !!data.session,
-          isAuthenticated: true,
-          loading: false,
-          error: null,
-        }));
-        toast({ title: 'Signed In', description: 'Welcome back!' });
-        return { success: true };
-      }
-      // Handle case where no session/user but no error (should be rare)
-      setAuthState(prev => ({ ...prev, loading: false, error: 'Sign-in did not return a session.' }));
-      return { success: false, error: 'Sign-in did not return a session.' };
-    } catch (e: any) {
-      logger.error('Unexpected sign-in error:', e.message);
-      toast({ title: 'Sign-in Error', description: e.message || 'An unexpected error occurred.', variant: 'destructive' });
-      setAuthState(prev => ({ ...prev, loading: false, error: e.message || 'An unexpected error occurred.' }));
-      return { success: false, error: e.message || 'An unexpected error occurred.' };
-    }
-  }, [setUser, setSession, setAuthState]);
-
-  const signOut = useCallback(async () => {
-    setAuthState(prev => ({ ...prev, loading: true }));
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      logger.error('Sign-out error:', error);
-      toast({ title: 'Sign-out Error', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Signed Out', description: 'You have been signed out.' });
-    }
-    setUser(null);
-    setSession(null);
-    setAuthState({
-      userExists: false,
-      sessionExists: false,
-      isAuthenticated: false,
-      isAdmin: false,
-      loading: false,
-      error: error ? error.message : null,
-    });
-  }, [setUser, setSession, setAuthState]);
-
-  const signUp = useCallback(async (credentials: SignUpWithPasswordCredentials) => {
-    setAuthState(prev => ({ ...prev, loading: true }));
-    try {
-      const { data, error } = await supabase.auth.signUp(credentials);
-      if (error) {
-        logger.error('Sign-up error:', error.message);
-        toast({ title: 'Sign-up Failed', description: error.message, variant: 'destructive' });
-        setAuthState(prev => ({ ...prev, loading: false, error: error.message }));
-        return { success: false, error: error.message, user: null };
-      }
-      // Note: Supabase signUp might return a user & session if email confirmation is disabled,
-      // or just a user if email confirmation is required.
-      if (data.user) {
-        // If email verification is off, data.session might exist.
-        if (data.session) {
-            setSession(data.session);
-            setUser(data.user);
-            setAuthState(prev => ({
-                ...prev,
-                userExists: true,
-                sessionExists: true,
-                isAuthenticated: true,
-                loading: false,
-                error: null,
-            }));
-            toast({ title: 'Sign-up Successful!', description: 'Welcome! You are now signed in.' });
-        } else {
-            // Email verification likely required
-            setUser(data.user); // User object exists, but not yet authenticated session
-            setAuthState(prev => ({
-                ...prev,
-                userExists: true, // User record created
-                sessionExists: false,
-                isAuthenticated: false,
-                loading: false,
-                error: null,
-            }));
-            toast({ title: 'Sign-up Almost Complete!', description: 'Please check your email to verify your account.' });
-        }
-        return { success: true, user: data.user };
-      }
-      // Fallback if no user object is returned, though this implies an error usually.
-      setAuthState(prev => ({ ...prev, loading: false, error: 'Sign-up did not return user information.' }));
-      return { success: false, error: 'Sign-up did not return user information.', user: null };
-    } catch (e: any) {
-      logger.error('Unexpected sign-up error:', e.message);
-      toast({ title: 'Sign-up Error', description: e.message || 'An unexpected error occurred.', variant: 'destructive' });
-      setAuthState(prev => ({ ...prev, loading: false, error: e.message || 'An unexpected error occurred.' }));
-      return { success: false, error: e.message || 'An unexpected error occurred.', user: null };
-    }
-  }, [setUser, setSession, setAuthState]);
-
-  const deleteAccount = useCallback(async () => {
-    setAuthState(prev => ({ ...prev, loading: true }));
-    // First, call the Supabase Edge Function to delete user data
-    const { error: functionError } = await supabase.functions.invoke('delete-user-account');
-
-    if (functionError) {
-      logger.error('Error calling delete-user-account function:', functionError);
-      toast({
-        title: 'Account Deletion Failed',
-        description: `Could not delete associated data: ${functionError.message}. Please contact support.`,
-        variant: 'destructive',
+      
+      // Use the trimmed values for authentication
+      logger.log('Making authentication request with:', { email: trimmedEmail }); // Replaced console.log
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password: trimmedPassword,
       });
-      setAuthState(prev => ({ ...prev, loading: false, error: functionError.message }));
-      return { success: false, error: functionError.message };
+      
+      if (error) {
+        logger.error('Sign in error:', error); // Replaced console.error
+        
+        // More specific error messages
+        let errorMsg = error.message;
+        if (error.message.includes("invalid login")) {
+          errorMsg = "Incorrect email or password. Please try again.";
+        }
+        
+        return { error: { ...error, message: errorMsg }, user: null };
+      }
+      
+      logger.log('Sign in successful:', data.user?.email); // Replaced console.log
+      logger.log('Session data:', data.session ? 'Session exists' : 'No session'); // Replaced console.log
+      
+      // Make sure we validate the session before confirming success
+      if (!data.session) {
+        logger.error('Sign in produced no session'); // Replaced console.error
+        return { 
+          error: { message: 'Authentication successful but no session was created. Please try again.' },
+          user: data.user 
+        };
+      }
+      
+      return { error: null, user: data.user, session: data.session };
+    } catch (error: any) {
+      logger.error('Exception during sign in:', error); // Replaced console.error
+      return { error, user: null };
     }
+  };
 
-    // If function call is successful, then proceed to sign out and clear local state
-    // The actual deletion from auth.users is handled by the Edge Function for security.
-    // Here we just sign out and clear client state.
-    await signOut(); // signOut handles its own toasts and state updates for session/user
-    
-    toast({ title: 'Account Deletion Processed', description: 'Your account data has been processed for deletion.' });
-    // State is already cleared by signOut
-    return { success: true };
+  // Sign up with email and password - with improved error handling
+  const signUp = async (email: string, password: string) => {
+    try {
+      // Trim inputs before sending
+      const trimmedEmail = email.trim().toLowerCase();
+      const trimmedPassword = password.trim();
+      
+      if (!trimmedEmail || !trimmedPassword) {
+        return { error: { message: 'Email and password are required' }, data: null };
+      }
+      
+      // Check minimum password length
+      if (trimmedPassword.length < 6) {
+        return { error: { message: 'Password must be at least 6 characters long' }, data: null };
+      }
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password: trimmedPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth`
+        }
+      });
+      
+      if (error) {
+        logger.error('Sign up error:', error); // Replaced console.error
+        return { error, data: null };
+      }
+      
+      logger.log('Sign up successful:', data.user?.email); // Replaced console.log
+      toast({
+        title: 'Registration successful',
+        description: data.session ? 'You are now logged in.' : 'Please check your email to verify your account.',
+      });
+      
+      return { error: null, data };
+    } catch (error: any) {
+      logger.error('Exception during sign up:', error); // Replaced console.error
+      return { error, data: null };
+    }
+  };
 
-  }, [setAuthState, signOut]);
+  // Reset password with improved error messaging
+  const resetPassword = async (email: string) => {
+    try {
+      const trimmedEmail = email.trim().toLowerCase();
+      
+      if (!trimmedEmail) {
+        return { error: { message: 'Email is required' } };
+      }
+      
+      logger.log('Sending password reset to:', trimmedEmail); // Replaced console.log
+      
+      // Get the current origin for the redirect
+      const siteUrl = window.location.origin;
+      logger.log('Using site URL for password reset:', siteUrl); // Replaced console.log
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: `${siteUrl}/reset-password`,
+      });
+      
+      if (error) {
+        logger.error('Password reset error:', error); // Replaced console.error
+        return { error };
+      }
+      
+      logger.log('Password reset email sent to:', trimmedEmail); // Replaced console.log
+      toast({
+        title: 'Password reset email sent',
+        description: 'Check your email for the password reset link.',
+      });
+      
+      return { error: null };
+    } catch (error: any) {
+      logger.error('Exception during password reset:', error); // Replaced console.error
+      return { error };
+    }
+  };
 
+  // Update password with improved validation
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const trimmedPassword = newPassword.trim();
+      
+      if (!trimmedPassword) {
+        return { error: { message: 'New password is required' } };
+      }
+      
+      if (trimmedPassword.length < 6) {
+        return { error: { message: 'Password must be at least 6 characters long' } };
+      }
+      
+      const { error } = await supabase.auth.updateUser({
+        password: trimmedPassword
+      });
+      
+      if (error) {
+        logger.error('Password update error:', error); // Replaced console.error
+        return { error };
+      }
+      
+      logger.log('Password updated successfully'); // Replaced console.log
+      toast({
+        title: 'Password updated',
+        description: 'Your password has been successfully updated.',
+      });
+      
+      return { error: null };
+    } catch (error: any) {
+      logger.error('Exception during password update:', error); // Replaced console.error
+      return { error };
+    }
+  };
+
+  // Delete user account
+  const deleteAccount = async () => {
+    try {
+      // Use type assertion 'as any' to bypass TypeScript error due to potentially stale types
+      const { error } = await supabase.rpc('delete_user_account' as any);
+      
+      if (error) {
+        logger.error('Account deletion error:', error); // Replaced console.error
+        toast({
+          title: 'Error deleting account',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return { error };
+      }
+
+      logger.log('Account deletion initiated successfully'); // Replaced console.log
+      toast({
+        title: 'Account deletion initiated',
+        description: 'Your account is scheduled for deletion. You will be logged out shortly.',
+      });
+      
+      // User will be logged out automatically by auth listener when account is deleted
+      return { error: null };
+    } catch (error: any) {
+      logger.error('Exception during account deletion:', error); // Replaced console.error
+      return { error };
+    }
+  };
 
   return {
     signIn,
-    signOut,
     signUp,
-    deleteAccount,
+    resetPassword,
+    updatePassword,
+    deleteAccount
   };
 }
+

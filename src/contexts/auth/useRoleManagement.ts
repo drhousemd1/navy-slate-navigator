@@ -57,45 +57,23 @@ export function useRoleManagement(user: User | null) {
       }
       
       // If not admin, query for any assigned role
-      // This part might be redundant if the profile table's 'role' field is the source of truth
-      // and `user.user_metadata.role` is kept in sync.
-      // However, if `user_roles` table is a separate mechanism, this is fine.
-      // For now, let's assume `user.user_metadata.role` is the primary source for non-admin roles.
-      const metadataRole = user.user_metadata?.role as UserRole;
-      if (metadataRole && metadataRole !== 'admin') { // if admin, already handled
-        logger.log(`useRoleManagement: Role from user_metadata: ${metadataRole}`);
-        setUserRole(metadataRole);
-        setIsAdmin(false); // Explicitly false if not admin
-      } else if (!metadataRole) {
-         // Fallback to 'user_roles' table if metadata role is missing and not admin
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single(); // Assuming one role or primary role if multiple.
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
       
-        if (roleError && roleError.code !== 'PGRST116') { // PGRST116: "No rows found"
-          logger.error('Error fetching user role from user_roles table:', roleError);
-        }
-        
-        if (roleData) {
-          logger.log('useRoleManagement: User role found in user_roles table:', roleData.role);
-          setUserRole(roleData.role as UserRole);
-          setIsAdmin(roleData.role === 'admin'); // Should be caught by adminCheck already
-        } else {
-          logger.log('useRoleManagement: No specific role found (not admin, no metadata role, not in user_roles). Defaulting to "user".');
-          setUserRole('user'); // Default if no role found anywhere
-          setIsAdmin(false);
-        }
+      if (roleError && roleError.code !== 'PGRST116') { // Not found is ok
+        logger.error('Error fetching user role:', roleError);
+      }
+      
+      if (roleData) {
+        logger.log('useRoleManagement: User role found:', roleData.role);
+        setUserRole(roleData.role as UserRole);
+        setIsAdmin(roleData.role === 'admin');
       } else {
-        // User is not admin, but metadata role was 'admin' (should not happen if adminCheck is first)
-        // Or metadata role exists and is not 'admin' - already handled above.
-        // This path might indicate an edge case or redundant logic.
-        // For safety, if metadata role is 'admin' but adminCheck was false, log warning.
-        if (metadataRole === 'admin') {
-            logger.warn('useRoleManagement: Mismatch - user.user_metadata.role is admin, but has_role check was false. Prioritizing has_role.');
-        }
-        setUserRole(metadataRole || 'user'); // Use metadata if exists and not admin, else 'user'
+        logger.log('useRoleManagement: No role found, setting as user');
+        setUserRole('user');
         setIsAdmin(false);
       }
       
@@ -113,3 +91,4 @@ export function useRoleManagement(user: User | null) {
     checkUserRole
   };
 }
+
