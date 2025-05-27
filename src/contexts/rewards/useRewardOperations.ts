@@ -12,7 +12,8 @@ import { useBuySubReward } from "@/data/rewards/mutations/useBuySubReward";
 import { useBuyDomReward } from "@/data/rewards/mutations/useBuyDomReward";
 import { useRedeemSubReward } from "@/data/rewards/mutations/useRedeemSubReward";
 import { useRedeemDomReward } from "@/data/rewards/mutations/useRedeemDomReward";
-import { logger } from '@/lib/logger'; // Added import
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 export default function useRewardOperations() {
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -120,15 +121,15 @@ export default function useRewardOperations() {
         return savedRewardData.id;
       }
       return null;
-    } catch (error) {
-      logger.error('Error saving reward in useRewardOperations:', error); // Replaced console.error
+    } catch (error: unknown) {
+      logger.error('Error saving reward in useRewardOperations:', getErrorMessage(error));
       return null;
     }
   }, [rewards, queryClient, createRewardMutation, updateRewardMutation]);
 
   const handleDeleteReward = useCallback(async (index: number): Promise<boolean> => {
     if (index < 0 || index >= rewards.length) {
-      logger.error('Invalid reward index:', index); // Replaced console.error
+      logger.error('Invalid reward index:', index);
       return false;
     }
     
@@ -137,8 +138,8 @@ export default function useRewardOperations() {
     try {
       await deleteRewardMutation.mutateAsync(rewardId);
       return true;
-    } catch (error) {
-      logger.error('Error deleting reward in useRewardOperations:', error); // Replaced console.error
+    } catch (error: unknown) {
+      logger.error('Error deleting reward in useRewardOperations:', getErrorMessage(error));
       return false;
     }
   }, [rewards, deleteRewardMutation]);
@@ -178,11 +179,11 @@ export default function useRewardOperations() {
           currentPoints: totalPoints
         });
       }
-    } catch (error: any) {
-      logger.error('Error buying reward in useRewardOperations:', error); // Replaced console.error
+    } catch (error: unknown) {
+      logger.error('Error buying reward in useRewardOperations:', getErrorMessage(error));
       toast({
         title: 'Purchase Error',
-        description: error.message || 'Failed to buy reward.',
+        description: getErrorMessage(error) || 'Failed to buy reward.',
         variant: 'destructive',
       });
     }
@@ -216,11 +217,11 @@ export default function useRewardOperations() {
           currentSupply: rewardToUse.supply
         });
       }
-    } catch (error: any) {
-      logger.error('Error using reward in useRewardOperations:', error); // Replaced console.error
+    } catch (error: unknown) {
+      logger.error('Error using reward in useRewardOperations:', getErrorMessage(error));
       toast({
         title: 'Usage Error',
-        description: error.message || 'Failed to use reward.',
+        description: getErrorMessage(error) || 'Failed to use reward.',
         variant: 'destructive',
       });
     }

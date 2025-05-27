@@ -1,7 +1,10 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Reward } from '@/data/rewards/types';
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 /** Returns ISO-8601 week string like "2025-W20" **/
 function getISOWeekString(date: Date): string {
@@ -25,32 +28,36 @@ interface RedeemSubRewardOptimisticContext {
 
 export const useRedeemSubReward = () => {
   const queryClient = useQueryClient();
-  // Removed: const { syncKeys } = useSyncManager();
 
   return useMutation<Reward, Error, RedeemSubRewardArgs, RedeemSubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, currentSupply }) => {
-      if (currentSupply <= 0) {
-        throw new Error("Reward is out of stock, cannot use.");
+      try {
+        if (currentSupply <= 0) {
+          throw new Error("Reward is out of stock, cannot use.");
+        }
+        const newSupply = currentSupply - 1;
+
+        const { error: supplyError } = await supabase
+          .from('rewards')
+          .update({ supply: newSupply })
+          .eq('id', rewardId);
+
+        if (supplyError) throw supplyError;
+
+        const { data: updatedReward, error: fetchError } = await supabase
+          .from('rewards')
+          .select('*')
+          .eq('id', rewardId)
+          .single();
+
+        if (fetchError) throw fetchError;
+        if (!updatedReward) throw new Error('Failed to fetch updated reward after redeeming.');
+        
+        return updatedReward as Reward;
+      } catch (error: unknown) {
+        logger.error("Error redeeming SUB reward:", getErrorMessage(error));
+        throw new Error(getErrorMessage(error));
       }
-      const newSupply = currentSupply - 1;
-
-      const { error: supplyError } = await supabase
-        .from('rewards')
-        .update({ supply: newSupply })
-        .eq('id', rewardId);
-
-      if (supplyError) throw supplyError;
-
-      const { data: updatedReward, error: fetchError } = await supabase
-        .from('rewards')
-        .select('*')
-        .eq('id', rewardId)
-        .single();
-
-      if (fetchError) throw fetchError;
-      if (!updatedReward) throw new Error('Failed to fetch updated reward after redeeming.');
-      
-      return updatedReward as Reward;
     },
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: ['rewards'] });

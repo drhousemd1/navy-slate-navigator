@@ -8,7 +8,7 @@ import { CaughtError, getErrorMessage } from '@/lib/errors'; // Import error uti
 interface ErrorDisplayProps {
   title: string;
   message?: string; // Custom message overrides error.message
-  error?: CaughtError | null; // Use CaughtError type
+  error?: CaughtError | unknown; // Accept any type of error
   onRetry?: () => void;
   retryButtonText?: string;
   className?: string;
@@ -51,4 +51,3 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
 };
 
 export default ErrorDisplay;
-

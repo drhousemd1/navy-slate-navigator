@@ -1,9 +1,11 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
 import { Task } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 export function useDeleteTask() {
   const queryClient = useQueryClient();
@@ -26,17 +28,28 @@ export function useDeleteTask() {
       return { previousTasks };
     },
     mutationFn: async (taskId: string) => {
-      const { error } = await supabase.from('tasks').delete().eq('id', taskId);
-      if (error) {
-        // Toast for Supabase error is handled here, so UI doesn't show generic "Deletion Failed" immediately
+      try {
+        const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+        if (error) {
+          // Toast for Supabase error is handled here, so UI doesn't show generic "Deletion Failed" immediately
+          toast({
+            title: 'Error Deleting Task',
+            description: error.message,
+            variant: 'destructive',
+          });
+          throw error; // Propagate error to trigger onError
+        }
+        return taskId; // Return the deleted task ID on success
+      } catch (error: unknown) {
+        const errorMessage = getErrorMessage(error);
+        logger.error('Error deleting task:', errorMessage);
         toast({
           title: 'Error Deleting Task',
-          description: error.message,
+          description: errorMessage,
           variant: 'destructive',
         });
-        throw error; // Propagate error to trigger onError
+        throw new Error(errorMessage); // Rethrow for onError handler
       }
-      return taskId; // Return the deleted task ID on success
     },
     onSuccess: async (deletedTaskId, variables, context) => {
       // The optimistic update is already applied.
@@ -44,8 +57,8 @@ export function useDeleteTask() {
       const currentTasks = queryClient.getQueryData<Task[]>(['tasks']) || [];
       try {
         await saveTasksToDB(currentTasks);
-      } catch (indexedDbError) {
-        logger.error('Failed to save tasks to IndexedDB after deletion:', indexedDbError);
+      } catch (error: unknown) {
+        logger.error('Failed to save tasks to IndexedDB after deletion:', getErrorMessage(error));
         toast({
           title: 'Local Cache Error',
           description: 'Task deleted from server, but failed to update local cache.',

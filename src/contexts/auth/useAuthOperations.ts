@@ -1,8 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-// SupabaseAuthError will now be correctly imported from @/lib/errors
-// Added isAppError to the import
 import { isSupabaseAuthError, createAppError, getErrorMessage, SupabaseAuthError, AppError, CaughtError, PostgrestError, isPostgrestError, isAppError } from '@/lib/errors';
 import type { User, Session, AuthResponse } from '@supabase/supabase-js'; // Import User and Session
 
@@ -228,9 +226,8 @@ export function useAuthOperations() {
     } catch (error: unknown) {
       logger.error('Exception during account deletion:', error);
       // Ensure the error thrown or returned conforms to CaughtError
-      // isAppError is now correctly imported and used here.
       if (isSupabaseAuthError(error) || isPostgrestError(error) || isAppError(error) || error instanceof Error) {
-        return { error };
+        return { error: error as CaughtError };
       }
       return { error: createAppError(getErrorMessage(error), 'DELETE_ACCOUNT_EXCEPTION') };
     }

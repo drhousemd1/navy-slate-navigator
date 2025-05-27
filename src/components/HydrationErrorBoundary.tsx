@@ -1,5 +1,7 @@
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 interface Props {
   children: ReactNode;
@@ -28,6 +30,8 @@ class HydrationErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      const errorMessage = this.state.error ? getErrorMessage(this.state.error) : 'An unknown error occurred';
+      
       // You can render any custom fallback UI
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
@@ -39,7 +43,7 @@ class HydrationErrorBoundary extends Component<Props, State> {
             <details className="mt-2 text-sm text-muted-foreground">
               <summary>Error Details</summary>
               <pre className="mt-1 text-xs bg-muted p-2 rounded-md overflow-auto max-w-full">
-                {this.state.error.toString()}
+                {errorMessage}
                 {this.state.error.stack && `\n${this.state.error.stack}`}
               </pre>
             </details>

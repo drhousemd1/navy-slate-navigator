@@ -1,7 +1,9 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { loadDomPointsFromDB, saveDomPointsToDB } from '@/data/indexedDB/useIndexedDB';
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 export const USER_DOM_POINTS_QUERY_KEY_PREFIX = 'userDomPoints';
 
@@ -38,8 +40,8 @@ const fetchUserDomPoints = async (userId: string | null): Promise<number> => {
     const cachedDomPoints = await loadDomPointsFromDB();
     return cachedDomPoints ?? 0;
 
-  } catch (e: any) {
-    logger.error(`fetchUserDomPoints: Exception for user ${userId}: ${e.message}. Falling back to IndexedDB.`);
+  } catch (error: unknown) {
+    logger.error(`fetchUserDomPoints: Exception for user ${userId}: ${getErrorMessage(error)}. Falling back to IndexedDB.`);
     const cachedDomPoints = await loadDomPointsFromDB();
     logger.debug(`fetchUserDomPoints: Loaded ${cachedDomPoints ?? 0} DOM points from IndexedDB after exception.`);
     return cachedDomPoints ?? 0;

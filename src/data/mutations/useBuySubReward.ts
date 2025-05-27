@@ -1,7 +1,10 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Reward } from '@/data/rewards/types';
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 interface BuySubRewardArgs {
   rewardId: string;
@@ -21,43 +24,49 @@ export const useBuySubReward = () => {
 
   return useMutation<Reward, Error, BuySubRewardArgs, BuySubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, cost, currentSupply, profileId, currentPoints }) => {
-      if (currentSupply <= 0) {
-        throw new Error("Reward is out of stock.");
+      try {
+        if (currentSupply <= 0) {
+          throw new Error("Reward is out of stock.");
+        }
+        if (currentPoints < cost) {
+          throw new Error("Not enough points.");
+        }
+
+        const newSupply = currentSupply - 1; 
+        const newPoints = currentPoints - cost;
+
+        const { error: supplyError } = await supabase
+          .from('rewards')
+          .update({ supply: newSupply })
+          .eq('id', rewardId);
+
+        if (supplyError) throw supplyError;
+
+        const { error: pointsError } = await supabase
+          .from('profiles')
+          .update({ points: newPoints })
+          .eq('id', profileId);
+
+        if (pointsError) {
+          // Rollback the supply change if points update fails
+          await supabase.from('rewards').update({ supply: currentSupply }).eq('id', rewardId); 
+          throw pointsError;
+        }
+
+        const { data: updatedReward, error: fetchError } = await supabase
+          .from('rewards')
+          .select('*')
+          .eq('id', rewardId)
+          .single();
+
+        if (fetchError) throw fetchError;
+        if (!updatedReward) throw new Error('Failed to fetch updated reward after purchase.');
+
+        return updatedReward as Reward;
+      } catch (error: unknown) {
+        logger.error("Error buying sub reward:", getErrorMessage(error));
+        throw new Error(getErrorMessage(error));
       }
-      if (currentPoints < cost) {
-        throw new Error("Not enough points.");
-      }
-
-      const newSupply = currentSupply - 1; 
-      const newPoints = currentPoints - cost;
-
-      const { error: supplyError } = await supabase
-        .from('rewards')
-        .update({ supply: newSupply })
-        .eq('id', rewardId);
-
-      if (supplyError) throw supplyError;
-
-      const { error: pointsError } = await supabase
-        .from('profiles')
-        .update({ points: newPoints })
-        .eq('id', profileId);
-
-      if (pointsError) {
-        await supabase.from('rewards').update({ supply: currentSupply }).eq('id', rewardId); 
-        throw pointsError;
-      }
-
-      const { data: updatedReward, error: fetchError } = await supabase
-        .from('rewards')
-        .select('*')
-        .eq('id', rewardId)
-        .single();
-
-      if (fetchError) throw fetchError;
-      if (!updatedReward) throw new Error('Failed to fetch updated reward after purchase.');
-
-      return updatedReward as Reward;
     },
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: ['rewards'] });

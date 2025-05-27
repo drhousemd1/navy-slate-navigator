@@ -1,7 +1,10 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward, CreateRewardVariables } from '@/data/rewards/types';
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 const REWARDS_QUERY_KEY = ['rewards'];
 
@@ -12,14 +15,20 @@ export const useCreateReward = () => {
     queryClient,
     queryKey: REWARDS_QUERY_KEY,
     mutationFn: async (variables: CreateRewardVariables) => {
-      const { data, error } = await supabase
-        .from('rewards')
-        .insert({ ...variables }) 
-        .select()
-        .single();
-      if (error) throw error;
-      if (!data) throw new Error('Reward creation failed, no data returned.');
-      return data as Reward;
+      try {
+        const { data, error } = await supabase
+          .from('rewards')
+          .insert({ ...variables }) 
+          .select()
+          .single();
+        
+        if (error) throw error;
+        if (!data) throw new Error('Reward creation failed, no data returned.');
+        return data as Reward;
+      } catch (error: unknown) {
+        logger.error("Error creating reward:", getErrorMessage(error));
+        throw new Error(getErrorMessage(error));
+      }
     },
     entityName: 'Reward',
     createOptimisticItem: (variables, optimisticId) => {

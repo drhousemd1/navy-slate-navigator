@@ -1,6 +1,8 @@
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button'; // Using existing Button component
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 interface Props {
   children: ReactNode;
@@ -20,9 +22,9 @@ class ErrorBoundary extends Component<Props, State> {
     errorInfo: null,
   };
 
-  public static getDerivedStateFromError(_: Error): State {
+  public static getDerivedStateFromError(error: Error): State {
     // Update state so the next render will show the fallback UI.
-    return { hasError: true, error: _, errorInfo: null };
+    return { hasError: true, error, errorInfo: null };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -37,6 +39,8 @@ class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      const errorMessage = this.state.error ? getErrorMessage(this.state.error) : 'An unknown error occurred';
+      
       return (
         <div className="flex flex-col items-center justify-center h-screen bg-background text-foreground p-4">
           <h1 className="text-2xl font-semibold mb-4">
@@ -49,7 +53,7 @@ class ErrorBoundary extends Component<Props, State> {
             <details className="mb-4 p-2 bg-destructive/10 text-destructive rounded text-sm max-w-md overflow-auto">
               <summary>Error Details</summary>
               <pre className="mt-2 whitespace-pre-wrap break-all">
-                {this.state.error.toString()}
+                {errorMessage}
                 {this.state.errorInfo && `\nComponent Stack:\n${this.state.errorInfo.componentStack}`}
               </pre>
             </details>
