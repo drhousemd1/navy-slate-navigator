@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -90,7 +91,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
           
           <div className="flex items-center gap-3">
             {/* Sync Status Indicator Icon - REMOVED */}
-            {/* <SyncStatusIndicator /> */
+            {/* <SyncStatusIndicator /> */} {/* Corrected this line */}
 
             {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />
@@ -135,3 +136,4 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 };
 
 export default AppLayout;
+
