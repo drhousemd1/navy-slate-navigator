@@ -1,5 +1,5 @@
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { logger } from '@/lib/logger';
 
 interface Props {
   children: ReactNode;
@@ -22,7 +22,7 @@ class HydrationErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Hydration Error Boundary Caught:", error, errorInfo);
+    logger.error("Hydration Error Boundary Caught:", error, errorInfo);
     // You could log this to an error reporting service here
   }
 

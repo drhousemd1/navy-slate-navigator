@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { FormLabel } from "@/components/ui/form";
 import IconSelector from '../../task-editor/IconSelector';
 import PredefinedIconsGrid from '../../task-editor/PredefinedIconsGrid';
 import TaskIcon from '@/components/task/TaskIcon';
+import { logger } from '@/lib/logger';
 
 interface PunishmentIconSectionProps {
   selectedIconName: string | null;
@@ -25,7 +25,7 @@ const PunishmentIconSection: React.FC<PunishmentIconSectionProps> = ({
   // Ensure iconColor is never undefined
   const safeIconColor = iconColor || '#ea384c';
   
-  console.log('PunishmentIconSection rendering with iconColor:', safeIconColor);
+  logger.debug('PunishmentIconSection rendering with iconColor:', safeIconColor);
   
   return (
     <div className="space-y-4">

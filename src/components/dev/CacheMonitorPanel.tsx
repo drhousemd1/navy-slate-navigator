@@ -12,6 +12,7 @@ import {
   clearInMemoryCache
 } from '@/lib/cacheDiagnostics';
 import { Skeleton } from '@/components/ui/skeleton';
+import { logger } from '@/lib/logger';
 
 interface CacheStats {
   inMemory: { totalQueries: number } | null;
@@ -38,7 +39,7 @@ const CacheMonitorPanel: React.FC = () => {
         totalLocalForageSize,
       });
     } catch (error) {
-      console.error("Failed to fetch cache stats:", error);
+      logger.error("Failed to fetch cache stats:", error);
       setStats(null); // Or set an error state
     } finally {
       setIsLoading(false);

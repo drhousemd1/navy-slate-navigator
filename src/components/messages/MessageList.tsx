@@ -1,9 +1,9 @@
-
 import React, { useRef, useLayoutEffect, useImperativeHandle, forwardRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MessageItem from './MessageItem';
 import { Button } from '@/components/ui/button';
 import { Message } from '@/hooks/useMessages';
+import { logger } from '@/lib/logger';
 
 interface MessageListProps {
   messages: Message[];
@@ -29,7 +29,7 @@ const MessageList = forwardRef<
   useImperativeHandle(ref, () => ({
     scrollToBottom: (behavior: ScrollBehavior = 'auto') => {
       if (messageEndRef.current) {
-        console.log('[MessageList] Manual scrollToBottom called with behavior:', behavior);
+        logger.debug('[MessageList] Manual scrollToBottom called with behavior:', behavior);
         messageEndRef.current.scrollIntoView({ behavior, block: 'end' });
       }
     }

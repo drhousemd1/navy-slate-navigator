@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Calendar, CheckSquare, BookOpen, Coffee, Dumbbell, Star, Heart, Trophy, Target, 
@@ -8,6 +7,7 @@ import {
   Edit, Eye, Plus, Minus, Clock, Video, Image, Folder, Tag, Share, Link,
   Bookmark, Award, Flag, Info, AlertCircle, AlertTriangle, BellRing, Skull, Coins
 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface TaskIconProps {
   icon_url?: string;
@@ -22,7 +22,7 @@ const TaskIcon: React.FC<TaskIconProps> = ({
   icon_color = '#9b87f5',
   className = "w-6 h-6"
 }) => {
-  console.log('TaskIcon rendering with icon_color:', icon_color);
+  logger.debug('TaskIcon rendering with icon_color:', icon_color);
   
   if (icon_url) {
     return <img src={icon_url} alt="Task icon" className={className} />;
