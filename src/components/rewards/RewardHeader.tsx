@@ -3,6 +3,7 @@ import React from 'react';
 import { Badge } from '../ui/badge';
 import { Box, Ticket, Coins, Crown, Minus } from 'lucide-react';
 import { Button } from '../ui/button';
+import { logger } from '@/lib/logger'; // Added logger import
 
 interface RewardHeaderProps {
   title: string;
@@ -39,7 +40,7 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
   // Use Crown icon for dom rewards, Coins for sub rewards
   const CostIcon = isDomReward ? Crown : Coins;
   
-  console.log("RewardHeader rendered with isDomReward:", isDomReward);
+  logger.debug("RewardHeader rendered with isDomReward:", isDomReward); // Replaced console.log
 
   return (
     <div className="flex justify-between items-start mb-3">
@@ -90,3 +91,4 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
 };
 
 export default RewardHeader;
+
