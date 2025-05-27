@@ -3,6 +3,7 @@ import React from 'react';
 import { FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Control, UseFormSetValue } from 'react-hook-form';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
+import { logger } from '@/lib/logger'; // Added logger import
 
 interface RewardBackgroundSectionProps {
   control: Control<any>;
@@ -23,7 +24,7 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
 }) => {
   // Log the opacity value to verify it's being passed correctly
   const currentOpacity = control._formValues?.background_opacity;
-  console.log("RewardBackgroundSection initializing with opacity:", currentOpacity);
+  logger.log("RewardBackgroundSection initializing with opacity:", currentOpacity); // Replaced console.log
   
   return (
     <div className="space-y-4">
