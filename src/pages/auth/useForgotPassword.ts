@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger'; // Added logger import
 
 export function useForgotPassword() {
   const [email, setEmail] = useState('');
@@ -21,11 +22,11 @@ export function useForgotPassword() {
     }
     
     try {
-      console.log("Attempting to send password reset email to:", email);
+      logger.debug("Attempting to send password reset email to:", email); // Replaced console.log
       
       const { error: resetError } = await resetPassword(email);
       if (resetError) {
-        console.error("Password reset error:", resetError);
+        logger.error("Password reset error:", resetError); // Replaced console.error
         setError(resetError.message || "Failed to send password reset email. Please try again.");
       } else {
         toast({
@@ -35,7 +36,7 @@ export function useForgotPassword() {
         return true;
       }
     } catch (error) {
-      console.error("Password reset error:", error);
+      logger.error("Password reset error:", error); // Replaced console.error
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -51,3 +52,4 @@ export function useForgotPassword() {
     handleResetPassword
   };
 }
+
