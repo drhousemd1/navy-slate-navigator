@@ -1,265 +1,71 @@
-import { supabase } from '@/integrations/supabase/client';
-import { Reward } from '@/data/rewards/types';
-import { logQueryPerformance } from '@/lib/react-query-config';
-import { selectWithTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils';
-import { logger } from '@/lib/logger';
-import { Json } from '@/data/tasks/types';
 
-// Define RawSupabaseReward locally as src/data/rewards/types.ts is not in allowed-files
-interface RawSupabaseReward {
-  id: string;
-  title: string;
-  description?: string | null;
-  cost: number;
-  supply?: number | null;
-  is_dom_reward?: boolean | null;
-  background_image_url?: string | null;
-  background_opacity?: number | null;
-  icon_url?: string | null;
-  icon_name?: string | null;
-  title_color?: string | null;
-  subtext_color?: string | null;
-  calendar_color?: string | null;
-  icon_color?: string | null;
-  highlight_effect?: boolean | null;
-  focal_point_x?: number | null;
-  focal_point_y?: number | null;
-  created_at: string;
-  updated_at: string;
-}
+import { supabase } from '@/integrations/supabase/client';
+import { Reward, RawSupabaseReward } from './types'; // Reward type defined in types.ts
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 export const REWARDS_QUERY_KEY = ['rewards'];
-export const REWARDS_POINTS_QUERY_KEY = ['rewards', 'points'];
-export const REWARDS_DOM_POINTS_QUERY_KEY = ['rewards', 'dom_points'];
-export const REWARDS_SUPPLY_QUERY_KEY = ['rewards', 'supply'];
+export const REWARDS_POINTS_QUERY_KEY = 'userPoints'; // Example, align with actual usage
+export const REWARDS_DOM_POINTS_QUERY_KEY = 'userDomPoints'; // Example
 
-// Default values for processing
-const defaultRewardValues = {
-  cost: 10,
-  supply: 0,
-  is_dom_reward: false,
-  background_opacity: 100,
-  icon_name: 'Award',
-  icon_color: '#9b87f5',
-  title_color: '#FFFFFF',
-  subtext_color: '#8E9196',
-  calendar_color: '#7E69AB',
-  highlight_effect: false,
-  focal_point_x: 50,
-  focal_point_y: 50,
-};
 
-// This is the consolidated processRewardData function
-export const processRewardData = (reward: RawSupabaseReward): Reward => {
+export const parseRewardData = (rawReward: RawSupabaseReward): Reward => {
+  // Implement full parsing logic
   return {
-    id: reward.id,
-    title: reward.title,
-    description: reward.description ?? undefined,
-    cost: reward.cost ?? defaultRewardValues.cost,
-    supply: reward.supply ?? defaultRewardValues.supply,
-    is_dom_reward: reward.is_dom_reward ?? defaultRewardValues.is_dom_reward,
-    background_image_url: reward.background_image_url ?? undefined,
-    background_opacity: reward.background_opacity ?? defaultRewardValues.background_opacity,
-    icon_url: reward.icon_url ?? undefined,
-    icon_name: reward.icon_name ?? defaultRewardValues.icon_name,
-    title_color: reward.title_color ?? defaultRewardValues.title_color,
-    subtext_color: reward.subtext_color ?? defaultRewardValues.subtext_color,
-    calendar_color: reward.calendar_color ?? defaultRewardValues.calendar_color,
-    icon_color: reward.icon_color ?? defaultRewardValues.icon_color,
-    highlight_effect: reward.highlight_effect ?? defaultRewardValues.highlight_effect,
-    focal_point_x: reward.focal_point_x ?? defaultRewardValues.focal_point_x,
-    focal_point_y: reward.focal_point_y ?? defaultRewardValues.focal_point_y,
-    created_at: reward.created_at,
-    updated_at: reward.updated_at,
+    id: rawReward.id,
+    user_id: rawReward.user_id ?? null,
+    title: rawReward.title,
+    description: rawReward.description ?? null,
+    cost: rawReward.cost,
+    supply: rawReward.supply,
+    icon_name: rawReward.icon_name ?? null,
+    icon_url: rawReward.icon_url ?? null,
+    icon_color: rawReward.icon_color || '#FFFFFF', // Default
+    title_color: rawReward.title_color || '#FFFFFF', // Default
+    subtext_color: rawReward.subtext_color || '#8E9196', // Default
+    calendar_color: rawReward.calendar_color || '#7E69AB', // Default
+    background_image_url: rawReward.background_image_url ?? null,
+    background_opacity: rawReward.background_opacity ?? 100, // Default
+    highlight_effect: rawReward.highlight_effect ?? false, // Default
+    focal_point_x: rawReward.focal_point_x ?? 50, // Default
+    focal_point_y: rawReward.focal_point_y ?? 50, // Default
+    is_dom_reward: rawReward.is_dom_reward ?? false, // Default
+    background_images: rawReward.background_images ?? null,
+    created_at: rawReward.created_at,
+    updated_at: rawReward.updated_at,
   };
 };
 
+
 export const fetchRewards = async (): Promise<Reward[]> => {
-  const startTime = performance.now();
-  logger.debug("[fetchRewards from queries.ts] Fetching rewards from Supabase server");
-  
   try {
-    const { data, error } = await selectWithTimeout<RawSupabaseReward>(
-      supabase,
-      'rewards',
-      {
-        order: ['created_at', { ascending: false }],
-        timeoutMs: DEFAULT_TIMEOUT_MS 
-      }
-    );
-    
-    if (error) {
-      logger.error('[fetchRewards from queries.ts] Supabase error:', error);
-      logQueryPerformance('fetchRewards (server-error)', startTime);
-      throw error;
-    }
-    
-    const rawRewards = (Array.isArray(data) ? data : (data ? [data] : [])) as RawSupabaseReward[];
-    const processedData = rawRewards.map(processRewardData);
-    logQueryPerformance('fetchRewards (server-success)', startTime, processedData.length);
-    
-    return processedData;
-
-  } catch (error) {
-    logger.error('[fetchRewards from queries.ts] Fetch failed:', error);
-    logQueryPerformance('fetchRewards (fetch-exception)', startTime);
-    throw error;
+    const { data, error } = await supabase.from('rewards').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data?.map(parseRewardData) || [];
+  } catch (e: unknown) {
+    const message = getErrorMessage(e);
+    logger.error('Error fetching rewards:', message, e);
+    throw new Error(`Failed to fetch rewards: ${message}`);
   }
 };
 
-export const fetchUserPoints = async (): Promise<number> => {
-  logger.debug("[fetchUserPoints] Starting points fetch");
-  const startTime = performance.now();
-  
-  const CACHE_KEY = 'kingdom-app-user-points';
-  
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData.user?.id;
-    
-    if (!userId) {
-      logger.debug("[fetchUserPoints] No user ID found, returning 0 points");
-      return 0;
-    }
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('points')
-      .eq('id', userId)
-      .single();
-    
-    if (error) {
-      logger.error('[fetchUserPoints] Error:', error);
-      throw error;
-    }
-    
-    logQueryPerformance('fetchUserPoints', startTime);
-    
-    // Cache the points value
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data?.points || 0));
-    } catch (e) {
-      logger.warn('[fetchUserPoints] Could not cache points:', e);
-    }
-    
-    logger.debug(`[fetchUserPoints] Retrieved ${data?.points || 0} points`);
-    return data?.points || 0;
-  } catch (error) {
-    logger.error('[fetchUserPoints] Fetch failed:', error);
-    
-    // Try to get cached data
-    const cachedPoints = localStorage.getItem(CACHE_KEY);
-    if (cachedPoints) {
-      logger.debug('[fetchUserPoints] Using cached points data');
-      try {
-        return JSON.parse(cachedPoints);
-      } catch (parseError) {
-        logger.error('[fetchUserPoints] Error parsing cached points:', parseError);
-      }
-    }
-    
-    return 0;
-  }
-};
-
-export const fetchUserDomPoints = async (): Promise<number> => {
-  logger.debug("[fetchUserDomPoints] Starting dom points fetch");
-  const startTime = performance.now();
-  
-  const CACHE_KEY = 'kingdom-app-user-dom-points';
-  
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData.user?.id;
-    
-    if (!userId) {
-      logger.debug("[fetchUserDomPoints] No user ID found, returning 0 dom points");
-      return 0;
-    }
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('dom_points')
-      .eq('id', userId)
-      .single();
-    
-    if (error) {
-      logger.error('[fetchUserDomPoints] Error:', error);
-      throw error;
-    }
-    
-    logQueryPerformance('fetchUserDomPoints', startTime);
-    
-    // Cache the dom points value
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data?.dom_points || 0));
-    } catch (e) {
-      logger.warn('[fetchUserDomPoints] Could not cache dom points:', e);
-    }
-    
-    logger.debug(`[fetchUserDomPoints] Retrieved ${data?.dom_points || 0} dom points`);
-    return data?.dom_points || 0;
-  } catch (error) {
-    logger.error('[fetchUserDomPoints] Fetch failed:', error);
-    
-    // Try to get cached data
-    const cachedDomPoints = localStorage.getItem(CACHE_KEY);
-    if (cachedDomPoints) {
-      logger.debug('[fetchUserDomPoints] Using cached dom points data');
-      try {
-        return JSON.parse(cachedDomPoints);
-      } catch (parseError) {
-        logger.error('[fetchUserDomPoints] Error parsing cached dom points:', parseError);
-      }
-    }
-    
-    return 0;
-  }
-};
-
-export const fetchTotalRewardsSupply = async (): Promise<number> => {
-  logger.debug("[fetchTotalRewardsSupply] Starting supply fetch");
-  const startTime = performance.now();
-  
-  const CACHE_KEY = 'kingdom-app-rewards-supply';
-  
-  try {
+export const fetchRewardById = async (id: string): Promise<Reward | null> => {
+   try {
     const { data, error } = await supabase
       .from('rewards')
-      .select('supply');
-    
+      .select('*')
+      .eq('id', id)
+      .single();
     if (error) {
-      logger.error('[fetchTotalRewardsSupply] Error:', error);
+      if (error.code === 'PGRST116') { // Not found
+        return null;
+      }
       throw error;
     }
-    
-    const total = data?.reduce((totalSupply, reward) => totalSupply + (reward.supply || 0), 0) || 0;
-    
-    logQueryPerformance('fetchTotalRewardsSupply', startTime);
-    
-    // Cache the supply value
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(total));
-    } catch (e) {
-      logger.warn('[fetchTotalRewardsSupply] Could not cache supply:', e);
-    }
-    
-    logger.debug(`[fetchTotalRewardsSupply] Total supply: ${total}`);
-    return total;
-  } catch (error) {
-    logger.error('[fetchTotalRewardsSupply] Fetch failed:', error);
-    
-    // Try to get cached data
-    const cachedSupply = localStorage.getItem(CACHE_KEY);
-    if (cachedSupply) {
-      logger.debug('[fetchTotalRewardsSupply] Using cached supply data');
-      try {
-        return JSON.parse(cachedSupply);
-      } catch (parseError) {
-        logger.error('[fetchTotalRewardsSupply] Error parsing cached supply:', parseError);
-      }
-    }
-    
-    return 0;
+    return data ? parseRewardData(data) : null;
+  } catch (e: unknown) {
+    const message = getErrorMessage(e);
+    logger.error(`Error fetching reward by ID ${id}:`, message, e);
+    throw new Error(`Failed to fetch reward ${id}: ${message}`);
   }
 };

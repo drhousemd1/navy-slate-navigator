@@ -1,75 +1,86 @@
-
-import { useCallback } from 'react';
-import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries';
-import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables, Json } from '@/data/tasks/types';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
-import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
-import { useDeleteTask } from '@/data/tasks/mutations/useDeleteTask'; 
-import { logger } from '@/lib/logger';
+import { TaskWithId, RawSupabaseTask, CreateTaskVariables, UpdateTaskVariables, TaskFormValues } from '@/data/tasks/types';
+import { parseTaskData, getWeekIdentifier, DEFAULT_TASK_VALUES } from '@/lib/taskUtils';
 import { useCreateTask } from '@/data/tasks/mutations/useCreateTask';
 import { useUpdateTask } from '@/data/tasks/mutations/useUpdateTask';
-import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
+import { useDeleteTask as useDeleteTaskMutation } from '@/data/tasks/mutations/useDeleteTask'; // Renamed import
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
+import { toast } from './use-toast';
 
+export const TASKS_QUERY_KEY = ['tasks'];
 
-// Define a type for the data saveTask might receive
-// This will now be more specific: CreateTaskVariables or UpdateTaskVariables
-type SaveTaskInput = CreateTaskVariables | UpdateTaskVariables;
+async function fetchTasks(): Promise<TaskWithId[]> {
+  try {
+    const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data?.map(parseTaskData) || [];
+  } catch (error) {
+    logger.error('Error fetching tasks:', getErrorMessage(error));
+    // Do not toast here, let useQuery handle error state
+    throw error; // Re-throw for react-query to handle
+  }
+}
 
-
-export const useTasksData = () => {
-  const { 
-    data: tasks = [], 
-    isLoading, 
-    error, 
-    refetch,
-    isUsingCachedData
-  }: TasksQueryResult = useTasksQuery();
-  
+export function useTasksData() {
   const queryClient = useQueryClient();
-  const deleteTaskMutation = useDeleteTask();
+  const { data: tasks = [], isLoading, error, refetch } = useQuery<TaskWithId[], Error>({
+    queryKey: TASKS_QUERY_KEY,
+    queryFn: fetchTasks,
+  });
+
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTaskMutation();
 
-  const saveTask = async (taskData: SaveTaskInput): Promise<TaskWithId | null> => {
-    try {
-      // Discriminate between CreateTaskVariables and UpdateTaskVariables
-      // UpdateTaskVariables will have an 'id' property.
-      if ('id' in taskData && taskData.id) {
-        // This is UpdateTaskVariables
-        const updatePayload: UpdateTaskVariables = taskData;
-        return await updateTaskMutation.mutateAsync(updatePayload);
-
-      } else {
-        // This is CreateTaskVariables.
-        // The incoming taskData, when 'id' is not present or falsy,
-        // is expected to conform to CreateTaskVariables based on how it's constructed
-        // (e.g., in Tasks.tsx from TaskFormValues).
-        // The 'as CreateTaskVariables' cast assures TypeScript of this specific shape.
-        const createPayload: CreateTaskVariables = taskData as CreateTaskVariables;
-        return await createTaskMutation.mutateAsync(createPayload);
-      }
-    } catch (e: unknown) {
-      const descriptiveMessage = getErrorMessage(e);
-      logger.error("Error in saveTask (useTasksData):", descriptiveMessage, e);
-      toast({ title: "Save Error", description: descriptiveMessage, variant: "destructive" });
-      throw e; 
+  const saveTask = async (taskData: TaskFormValues | (TaskFormValues & { id: string })) => {
+    // Determine if it's an update or create
+    if ('id' in taskData && taskData.id) {
+      // This is an update
+      const updateData: UpdateTaskVariables = { id: taskData.id, ...taskData };
+      // Remove id from taskData if it's not part of TaskFormValues for update payload
+      const { id, ...restOfTaskData } = taskData;
+      const payload: UpdateTaskVariables = { id, ...restOfTaskData };
+      await updateTaskMutation.mutateAsync(payload);
+    } else {
+      // This is a create
+      const taskToCreate: CreateTaskVariables = {
+        ...DEFAULT_TASK_VALUES, // Apply defaults first
+        ...taskData, // Then user-provided data
+        // Ensure required fields for creation that are not in TaskFormValues are added
+        usage_data: Array(7).fill(0), // Default usage_data for new tasks
+        background_images: null, // Default
+        week_identifier: getWeekIdentifier(new Date()), // Set current week identifier
+        // Ensure all non-nullable fields in 'tasks' table have a value
+        title: taskData.title || 'Untitled Task',
+        points: taskData.points || 0,
+        priority: taskData.priority || 'medium',
+        frequency: taskData.frequency || 'daily',
+        frequency_count: taskData.frequency_count || 1,
+        icon_color: taskData.icon_color || DEFAULT_TASK_VALUES.icon_color!,
+        title_color: taskData.title_color || DEFAULT_TASK_VALUES.title_color!,
+        subtext_color: taskData.subtext_color || DEFAULT_TASK_VALUES.subtext_color!,
+        calendar_color: taskData.calendar_color || DEFAULT_TASK_VALUES.calendar_color!,
+        background_opacity: taskData.background_opacity ?? DEFAULT_TASK_VALUES.background_opacity!,
+        highlight_effect: taskData.highlight_effect ?? DEFAULT_TASK_VALUES.highlight_effect!,
+        focal_point_x: taskData.focal_point_x ?? DEFAULT_TASK_VALUES.focal_point_x!,
+        focal_point_y: taskData.focal_point_y ?? DEFAULT_TASK_VALUES.focal_point_y!,
+      };
+      await createTaskMutation.mutateAsync(taskToCreate);
     }
   };
 
   const deleteTask = async (taskId: string) => {
-    return deleteTaskMutation.mutateAsync(taskId);
+    await deleteTaskMutation.mutateAsync(taskId);
   };
-  
+
   return {
     tasks,
     isLoading,
     error,
-    isUsingCachedData,
+    refetchTasks: refetch,
     saveTask,
     deleteTask,
-    refetch
   };
-};
-
+}

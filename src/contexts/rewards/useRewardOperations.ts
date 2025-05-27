@@ -1,152 +1,106 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '../auth';
-import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger';
-import { REWARDS_QUERY_KEY, USER_POINTS_QUERY_KEY, USER_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries';
-import { Reward } from '@/data/rewards/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { Reward, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/types';
+import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
-export const useRewardOperations = () => {
-  const { user, refreshPoints, refreshDomPoints } = useAuth();
+// Query keys used by useUserPointsQuery and useUserDomPointsQuery
+const USER_POINTS_QUERY_KEY_BASE = 'userPoints';
+const USER_DOM_POINTS_QUERY_KEY_BASE = 'user-dom-points';
+
+
+export function useRewardOperations() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  const redeemReward = useCallback(async (reward: Reward) => {
+  const invalidateUserPoints = useCallback(() => {
+    if (user?.id) {
+      queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_BASE, user.id] });
+      queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_BASE, user.id] });
+      logger.debug('User points and DOM points queries invalidated and refresh triggered if available.');
+    }
+  }, [queryClient, user?.id]);
+
+  const recordRewardUsage = useCallback(async (rewardId: string, userId: string, cost: number, isDomReward?: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('reward_usage')
+        .insert({
+          reward_id: rewardId,
+          user_id: userId,
+          points_spent: cost,
+          is_dom_reward: !!isDomReward,
+        });
+      if (error) throw error;
+      logger.debug(`Reward usage recorded for reward ${rewardId}, user ${userId}`);
+    } catch (e: unknown) {
+      const message = getErrorMessage(e);
+      toast({
+        title: 'Error Recording Reward Usage',
+        description: message,
+        variant: 'destructive',
+      });
+      logger.error('Failed to record reward usage:', message, e);
+      throw e; // Re-throw to be caught by caller
+    }
+  }, [toast]);
+
+  const buyReward = useCallback(async (reward: Reward) => {
     if (!user) {
-      toast({
-        title: "Not authenticated",
-        description: "You must be logged in to redeem rewards.",
-        variant: "destructive",
-      });
+      toast({ title: 'Error', description: 'You must be logged in to buy rewards.', variant: 'destructive' });
       return;
     }
 
-    if (reward.cost > (user.user_metadata?.points || 0)) {
-      toast({
-        title: "Insufficient points",
-        description: "You do not have enough points to redeem this reward.",
-        variant: "destructive",
-      });
-      return;
-    }
+    const pointsToDeduct = reward.cost;
+    const currentPointsKey = reward.is_dom_reward ? 'dom_points' : 'points';
 
     try {
-      // Optimistically update points
-      const newPoints = (user.user_metadata?.points || 0) - reward.cost;
-      await queryClient.cancelQueries({ queryKey: [USER_POINTS_QUERY_KEY, user.id] });
-      queryClient.setQueryData([USER_POINTS_QUERY_KEY, user.id], newPoints);
-
-      // Optimistically update supply if it's a limited reward
-      if (reward.supply > 0) {
-        await queryClient.cancelQueries({ queryKey: [REWARDS_QUERY_KEY] });
-        queryClient.setQueryData([REWARDS_QUERY_KEY], (oldRewards: Reward[] | undefined) => {
-          if (!oldRewards) return [];
-          return oldRewards.map(r =>
-            r.id === reward.id ? { ...r, supply: Math.max(0, r.supply - 1) } : r
-          );
-        });
-      }
-
-      // Insert into reward_usage_history
-      const { data: usageData, error: usageError } = await supabase
-        .from('reward_usage_history')
-        .insert([{
-          user_id: user.id,
-          reward_id: reward.id,
-          points_deducted: reward.cost,
-        }])
-        .select()
+      // Fetch current points
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select(currentPointsKey)
+        .eq('id', user.id)
         .single();
 
-      if (usageError) throw usageError;
-
-      // Update user points in the database
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ points: newPoints })
-        .eq('id', user.id);
-
       if (profileError) throw profileError;
+      if (!profileData) throw new Error('User profile not found.');
 
-      // Refresh points from the database to ensure consistency
-      await refreshPoints();
-      await refreshDomPoints();
+      const currentPointsValue = profileData[currentPointsKey] as number || 0;
 
-      toast({
-        title: "Reward Redeemed",
-        description: `You have successfully redeemed ${reward.title}.`,
-      });
-    } catch (error: unknown) {
-      logger.error("Error redeeming reward:", getErrorMessage(error), error);
-      toast({
-        title: "Redemption Failed",
-        description: getErrorMessage(error),
-        variant: "destructive",
-      });
-    }
-  }, [queryClient, user, refreshPoints, supabase]);
-
-  const undoRedeemReward = useCallback(async (reward: Reward, usageEntryId?: string) => {
-    if (!user) {
-      toast({
-        title: "Not authenticated",
-        description: "You must be logged in to undo reward redemption.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Optimistically update points
-      const newPoints = (user.user_metadata?.points || 0) + reward.cost;
-      await queryClient.cancelQueries({ queryKey: [USER_POINTS_QUERY_KEY, user.id] });
-      queryClient.setQueryData([USER_POINTS_QUERY_KEY, user.id], newPoints);
-
-      // Optimistically update supply if it's a limited reward
-      if (reward.supply > 0) {
-        await queryClient.cancelQueries({ queryKey: [REWARDS_QUERY_KEY] });
-        queryClient.setQueryData([REWARDS_QUERY_KEY], (oldRewards: Reward[] | undefined) => {
-          if (!oldRewards) return [];
-          return oldRewards.map(r =>
-            r.id === reward.id ? { ...r, supply: r.supply + 1 } : r
-          );
-        });
+      if (currentPointsValue < pointsToDeduct) {
+        toast({ title: 'Not Enough Points', description: `You need ${pointsToDeduct} ${reward.is_dom_reward ? 'DOM' : ''} points to buy this reward.`, variant: 'warning' });
+        return;
       }
 
-      // Delete from reward_usage_history
-      const { error: usageError } = await supabase
-        .from('reward_usage_history')
-        .delete()
-        .eq('id', usageEntryId);
-
-      if (usageError) throw usageError;
-
-      // Update user points in the database
-      const { error: profileError } = await supabase
+      // Deduct points
+      const { error: updateError } = await supabase
         .from('profiles')
-        .update({ points: newPoints })
+        .update({ [currentPointsKey]: currentPointsValue - pointsToDeduct })
         .eq('id', user.id);
 
-      if (profileError) throw profileError;
+      if (updateError) throw updateError;
 
-      // Refresh points from the database to ensure consistency
-      await refreshPoints();
-      await refreshDomPoints();
+      await recordRewardUsage(reward.id, user.id, reward.cost, reward.is_dom_reward);
+      
+      invalidateUserPoints();
 
+      toast({ title: 'Reward Purchased!', description: `${reward.title} has been added to your inventory.` });
+      logger.info(`Reward ${reward.id} purchased by user ${user.id}`);
+
+    } catch (e: unknown) {
+      const message = getErrorMessage(e);
       toast({
-        title: "Undo Successful",
-        description: `You have successfully undone the redemption of ${reward.title}.`,
+        title: 'Purchase Failed',
+        description: message,
+        variant: 'destructive',
       });
-    } catch (error: unknown) {
-      logger.error("Error undoing reward redemption:", getErrorMessage(error), error);
-      toast({
-        title: "Undo Failed",
-        description: getErrorMessage(error),
-        variant: "destructive",
-      });
+      logger.error('Error buying reward:', message, e);
     }
-  }, [queryClient, user, refreshPoints, supabase]);
+  }, [user, toast, invalidateUserPoints, recordRewardUsage]);
 
-  return { redeemReward, undoRedeemReward };
-};
+  return { buyReward, recordRewardUsage, invalidateUserPoints };
+}

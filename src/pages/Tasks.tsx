@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
 import TasksHeader from '../components/task/TasksHeader';
 import TasksList from '../components/task/TasksList';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
-import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types';
+import { TaskWithId, TaskFormValues } from '@/data/tasks/types'; // Removed CreateTaskVariables, UpdateTaskVariables
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useTasksData } from '@/hooks/useTasksData';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
@@ -14,7 +15,7 @@ import { useToggleTaskCompletionMutation } from '../data/tasks/mutations/useTogg
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
+import { getErrorMessage } from '@/lib/errors'; 
 
 const TasksPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -58,17 +59,13 @@ const TasksPageContent: React.FC = () => {
 
   const handleSaveTask = async (formData: TaskFormValues) => { 
     try {
-      let taskToSave: CreateTaskVariables | UpdateTaskVariables; 
       if (currentTask && currentTask.id) {
-        taskToSave = { ...formData, id: currentTask.id };
+        // It's an update
+        await saveTask({ ...formData, id: currentTask.id });
       } else {
-        taskToSave = { 
-          ...formData, 
-          usage_data: Array(7).fill(0), 
-          background_images: null, 
-        };
+        // It's a creation
+        await saveTask(formData);
       }
-      await saveTask(taskToSave);
       setIsEditorOpen(false);
       setCurrentTask(null);
     } catch (e: unknown) {
@@ -112,7 +109,9 @@ const TasksPageContent: React.FC = () => {
   };
 
   useEffect(() => {
-    refreshPointsFromDatabase(); 
+    if (refreshPointsFromDatabase) { // Check if refreshPointsFromDatabase exists
+        refreshPointsFromDatabase(); 
+    }
   }, [refreshPointsFromDatabase]); 
 
   let content;
@@ -198,3 +197,4 @@ const Tasks: React.FC = () => {
 };
 
 export default Tasks;
+

@@ -1,221 +1,174 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
-import RewardsList from '../components/rewards/RewardsList';
-import RewardEditor from '../components/RewardEditor';
+import RewardEditor from '../components/RewardEditor'; 
 import RewardsHeader from '../components/rewards/RewardsHeader';
+import RewardsList from '../components/rewards/RewardsList';
+import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
+import { Reward, RewardFormValues } from '@/data/rewards/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
-
-import { useRewards as useRewardsQuery, RewardsQueryResult } from '@/data/queries/useRewards';
-import { Reward, RewardFormValues, CreateRewardVariables as RewardCreateVariables, UpdateRewardVariables as RewardUpdateVariables } from '@/data/rewards/types'; 
-import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
-import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
-import { toast } from '@/hooks/use-toast';
-
-import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
-import { useAuth } from '@/contexts/AuthContext';
-import { usePointsManager } from '@/data/points/usePointsManager';
+import { useRewardsData } from '@/data/rewards/useRewardsData'; 
+import ErrorDisplay from '@/components/common/ErrorDisplay';
+import EmptyState from '@/components/common/EmptyState';
+import { Gift, LoaderCircle } from 'lucide-react';
 import { logger } from '@/lib/logger';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/lib/errors';
 
-const RewardsContent: React.FC<{
-  contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
-}> = ({ contentRef }) => {
-  const { 
-    data: rewardsData, 
-    isLoading, 
-    error: queryError,
-  }: RewardsQueryResult = useRewardsQuery();
-  const rewards = Array.isArray(rewardsData) ? rewardsData : [];
-
+const RewardsPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [rewardBeingEdited, setRewardBeingEdited] = useState<Reward | undefined>(undefined);
+  const [currentReward, setCurrentReward] = useState<Reward | null>(null);
+  const { 
+    rewards, 
+    isLoading, 
+    error, 
+    saveReward, // This comes from useRewardsData
+    deleteReward, // This comes from useRewardsData
+    buyRewardContext // Assuming buyReward is on context if needed directly here
+  } = useRewardsData(); // Using the hook that provides save/delete
   
-  const createRewardMutation = useCreateRewardMutation();
-  const updateRewardMutation = useUpdateRewardMutation();
-  const deleteRewardMutation = useDeleteRewardMutation();
-  
-  const buySubRewardMutation = useBuySubReward();
-  const redeemSubRewardMutation = useRedeemSubReward();
-  const { user } = useAuth();
-  const { points: currentUserPoints } = usePointsManager();
+  const { refreshPointsFromDatabase } = useRewards(); // From context for points
 
-  const handleAddNewReward = () => {
-    setRewardBeingEdited(undefined);
+  const handleAddReward = () => {
+    setCurrentReward(null);
     setIsEditorOpen(true);
   };
-  
-  const handleEditReward = (rewardToEdit: Reward) => {
-    if (rewardToEdit) {
-      setRewardBeingEdited(rewardToEdit);
-      setIsEditorOpen(true);
-    } else {
-      toast({ title: "Error", description: "Could not find reward to edit.", variant: "destructive" });
+
+  React.useEffect(() => {
+    const element = document.querySelector('.RewardsContent');
+    if (element) {
+      const handleAddEvent = () => handleAddReward();
+      element.addEventListener('add-new-reward', handleAddEvent);
+      return () => element.removeEventListener('add-new-reward', handleAddEvent);
     }
+  }, []);
+
+  const handleEditReward = (reward: Reward) => {
+    setCurrentReward(reward);
+    setIsEditorOpen(true);
   };
 
-  const handleBuyRewardWrapper = async (rewardId: string, cost: number) => {
-    const rewardToBuy = rewards.find(r => r.id === rewardId);
-    if (!rewardToBuy) {
-      toast({ title: "Error", description: "Reward not found.", variant: "destructive" });
-      return;
-    }
-    if (!user || !user.id) {
-      toast({ title: "Error", description: "User profile not available. Please log in.", variant: "destructive" });
-      return;
-    }
-    if (rewardToBuy.is_dom_reward) {
-        toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward purchase not implemented on this button yet.", variant: "destructive" });
-        return;
-    }
-
+  const handleSaveReward = async (formData: RewardFormValues) => {
     try {
-      await buySubRewardMutation.mutateAsync({ 
-        rewardId, 
-        cost,
-        currentSupply: rewardToBuy.supply,
-        profileId: user.id,
-        currentPoints: currentUserPoints ?? 0
-      });
-    } catch (e) {
-      logger.error("Error buying reward from page:", e);
-    }
-  };
-
-  const handleUseRewardWrapper = async (rewardId: string) => {
-    const rewardToUse = rewards.find(r => r.id === rewardId);
-    if (!rewardToUse) {
-      toast({ title: "Error", description: "Reward not found.", variant: "destructive" });
-      return;
-    }
-     if (!user || !user.id) {
-      toast({ title: "Error", description: "User profile not available. Please log in.", variant: "destructive" });
-      return;
-    }
-     if (rewardToUse.is_dom_reward) {
-        toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward usage not implemented on this button yet.", variant: "destructive" });
-        return;
-    }
-
-    try {
-      await redeemSubRewardMutation.mutateAsync({
-        rewardId,
-        currentSupply: rewardToUse.supply,
-        profileId: user.id
-      });
-    } catch (e) {
-      logger.error("Error using reward from page:", e);
-    }
-  };
-  
-  useEffect(() => {
-    contentRef.current = { handleAddNewReward };
-    return () => { contentRef.current = {}; };
-  }, [contentRef]); 
-
-  const handleSaveRewardEditor = async (formData: RewardFormValues): Promise<Reward> => {
-    try {
-      if (rewardBeingEdited?.id) {
-        const updateVariables: RewardUpdateVariables = {
-          id: rewardBeingEdited.id,
-          ...formData, 
-        };
-        const updated = await updateRewardMutation.mutateAsync(updateVariables);
-        setIsEditorOpen(false);
-        setRewardBeingEdited(undefined);
-        return updated;
+      if (currentReward && currentReward.id) {
+        await saveReward({ ...formData, id: currentReward.id });
       } else {
-        if (!formData.title || typeof formData.cost !== 'number' || typeof formData.supply !== 'number' || typeof formData.is_dom_reward !== 'boolean') {
-          toast({ title: "Missing required fields", description: "Title, cost, supply, and DOM status are required.", variant: "destructive" });
-          throw new Error("Missing required fields for reward creation.");
-        }
-        const createVariables: RewardCreateVariables = {
-          title: formData.title,
-          cost: formData.cost,
-          supply: formData.supply,
-          is_dom_reward: formData.is_dom_reward,
-          description: formData.description || null,
-          background_image_url: formData.background_image_url || null,
-          background_opacity: formData.background_opacity ?? 100,
-          icon_name: formData.icon_name || 'Award',
-          icon_color: formData.icon_color || '#9b87f5',
-          title_color: formData.title_color || '#FFFFFF',
-          subtext_color: formData.subtext_color || '#8E9196',
-          calendar_color: formData.calendar_color || '#7E69AB',
-          highlight_effect: formData.highlight_effect ?? false,
-          focal_point_x: formData.focal_point_x ?? 50,
-          focal_point_y: formData.focal_point_y ?? 50,
-        };
-        const created = await createRewardMutation.mutateAsync(createVariables);
-        setIsEditorOpen(false);
-        setRewardBeingEdited(undefined);
-        return created;
+        await saveReward(formData); // saveReward from useRewardsData handles create/update logic
       }
-    } catch (e) {
-      logger.error("Error saving reward from page:", e);
-      if (!(e instanceof Error && e.message.includes("Missing required fields"))) {
-        toast({ title: "Save Error", description: e instanceof Error ? e.message : "Could not save reward.", variant: "destructive" });
-      }
-      throw e; 
+      setIsEditorOpen(false);
+      setCurrentReward(null);
+    } catch (e: unknown) {
+      const descriptiveMessage = getErrorMessage(e);
+      logger.error('Error saving reward in UI:', descriptiveMessage, e);
+      toast({ title: "Save Error", description: descriptiveMessage, variant: "destructive" });
     }
   };
 
-  const handleDeleteRewardEditor = async (idToDelete?: string) => {
-    const finalIdToDelete = idToDelete || rewardBeingEdited?.id;
-    if (!finalIdToDelete) {
-      toast({ title: "Error", description: "No reward ID specified for deletion.", variant: "destructive" });
-      return;
-    }
+  const handleDeleteReward = async (rewardId: string) => {
     try {
-      await deleteRewardMutation.mutateAsync(finalIdToDelete);
+      await deleteReward(rewardId);
       setIsEditorOpen(false);
-      setRewardBeingEdited(undefined);
-    } catch (e) {
-      logger.error("Error deleting reward from page:", e);
+      setCurrentReward(null);
+    } catch (e: unknown) {
+      const descriptiveMessage = getErrorMessage(e);
+      logger.error('Error deleting reward in UI:', descriptiveMessage, e);
+      toast({ title: "Delete Error", description: descriptiveMessage, variant: "destructive" });
     }
   };
   
-  return (
-    <div className="p-4 pt-6">
-      <RewardsHeader onAddNewReward={handleAddNewReward} /> 
-      <div className="mt-4">
-        <RewardsList 
-          rewards={rewards}
-          isLoading={isLoading}
-          onEdit={handleEditReward}
-          handleBuyReward={handleBuyRewardWrapper}
-          handleUseReward={handleUseRewardWrapper}
-          error={queryError}
-        />
+  const handleBuyReward = async (reward: Reward) => {
+    if (buyRewardContext) { // Check if buyRewardContext is available
+        try {
+            await buyRewardContext(reward);
+            // Toast for success/failure is handled within buyRewardContext or its underlying operations
+        } catch (e:unknown) {
+            const descriptiveMessage = getErrorMessage(e);
+            logger.error('Error buying reward from page:', descriptiveMessage, e);
+            // Toast might be redundant if already handled
+        }
+    } else {
+        toast({title: "Action Unavailable", description: "Buying rewards is currently not available.", variant: "default"})
+    }
+  };
+
+
+  useEffect(() => {
+    if (refreshPointsFromDatabase) refreshPointsFromDatabase();
+  }, [refreshPointsFromDatabase]);
+
+  let content;
+  if (isLoading && rewards.length === 0) {
+    content = (
+      <div className="flex flex-col items-center justify-center py-10 mt-4">
+        <LoaderCircle className="h-10 w-10 text-primary animate-spin mb-2" />
+        <p className="text-muted-foreground">Loading rewards...</p>
       </div>
+    );
+  } else if (error && rewards.length === 0) {
+    content = (
+      <ErrorDisplay
+        title="Error Loading Rewards"
+        message={getErrorMessage(error) || "Could not fetch rewards."}
+      />
+    );
+  } else if (!isLoading && rewards.length === 0 && !error) {
+    content = (
+      <EmptyState
+        icon={Gift}
+        title="No Rewards Yet"
+        description="Create some rewards for users to earn."
+        action={<Button onClick={handleAddReward}>Create New Reward</Button>}
+      />
+    );
+  } else {
+    content = (
+      <RewardsList
+        rewards={rewards}
+        isLoading={false}
+        onEditReward={handleEditReward}
+        onBuyReward={handleBuyReward} // Pass it down
+        error={error}
+      />
+    );
+  }
+
+  return (
+    <div className="p-4 pt-6 RewardsContent">
+      <RewardsHeader onAddNewReward={handleAddReward} />
+      {content}
       <RewardEditor
         isOpen={isEditorOpen}
         onClose={() => {
           setIsEditorOpen(false);
-          setRewardBeingEdited(undefined);
+          setCurrentReward(null);
         }}
-        rewardData={rewardBeingEdited}
-        onSave={handleSaveRewardEditor} 
-        onDelete={rewardBeingEdited?.id ? () => handleDeleteRewardEditor(rewardBeingEdited.id) : undefined}
+        rewardData={currentReward || undefined}
+        onSave={handleSaveReward}
+        onDelete={handleDeleteReward}
       />
     </div>
   );
 };
 
-const Rewards: React.FC = () => {
-  const contentRef = useRef<{ handleAddNewReward?: () => void }>({});
-  
-  const handleAddNewRewardFromLayout = () => {
-    if (contentRef.current.handleAddNewReward) {
-      contentRef.current.handleAddNewReward();
+const RewardsPage: React.FC = () => {
+    const handleAddNewItem = () => {
+    logger.debug('AppLayout onAddNewItem called for Rewards');
+    const contentElement = document.querySelector('.RewardsContent');
+    if (contentElement) {
+      logger.debug('Dispatching add-new-reward event to .RewardsContent');
+      const event = new CustomEvent('add-new-reward');
+      contentElement.dispatchEvent(event);
     }
   };
-
   return (
-    <AppLayout onAddNewItem={handleAddNewRewardFromLayout}>
-      <ErrorBoundary fallbackMessage="Could not load rewards. Please try reloading.">
-        <RewardsContent contentRef={contentRef} />
-      </ErrorBoundary>
+    <AppLayout onAddNewItem={handleAddNewItem}>
+      <RewardsProvider> {/* This provides refreshPointsFromDatabase, buyReward etc. */}
+        <ErrorBoundary fallbackMessage="Could not load rewards.">
+          <RewardsPageContent />
+        </ErrorBoundary>
+      </RewardsProvider>
     </AppLayout>
   );
 };
 
-export default Rewards;
+export default RewardsPage;

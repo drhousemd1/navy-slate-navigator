@@ -1,114 +1,74 @@
-import { useMutation } from '@tanstack/react-query';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+// Define ProfileUpdate if it's a specific structure, otherwise use Record<string, any>
+// For example: interface ProfileUpdate { points?: number; dom_points?: number; }
 
-export const PUNISHMENTS_QUERY_KEY = ['punishments'];
-export const USER_POINTS_QUERY_KEY = ['user', 'points'];
-export const USER_DOM_POINTS_QUERY_KEY = ['user', 'dom_points'];
-export const USER_PROFILE_QUERY_KEY = ['user', 'profile'];
-export const USER_PUNISHMENT_HISTORY_QUERY_KEY = ['user', 'punishment-history'];
-
-interface RedeemPunishmentVariables {
-  punishmentId: string;
-  pointsToDeduct: number;
-  userId: string;
-  // Add other relevant fields if needed for the punishment_history table
-}
-
-interface ProfileUpdateData {
-  points?: number;
-  dom_points?: number;
-  // Add other updatable profile fields if necessary
-}
-
-export const useRedeemPunishment = () => {
+export function useRedeemPunishment() {
   const queryClient = useQueryClient();
+  const { user } = useAuth(); // Ensure user is available and has an ID
 
-  return useMutation<void, Error, RedeemPunishmentVariables>(
-    async ({ punishmentId, pointsToDeduct, userId }) => {
-      try {
-        // Deduct points from user's profile
-        const { data: currentProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('points, dom_points')
-          .eq('id', userId)
-          .single();
+  return useMutation<
+    void, // onSuccess data type
+    Error, // onError error type
+    { punishmentId: string; pointsToModify: number; isDomPoints: boolean; userId: string }, // Variables type
+    unknown // Context type
+  >(async ({ punishmentId, pointsToModify, isDomPoints, userId: targetUserId }) => {
+    // const currentUserId = user?.id; // The user performing the action
+    // if (!currentUserId) {
+    //   toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive" });
+    //   throw new Error("User not authenticated");
+    // }
 
-        if (profileError) {
-          logger.error('Error fetching user profile:', profileError.message);
-          throw new Error(`Failed to fetch user profile: ${profileError.message}`);
-        }
-
-        if (!currentProfile) {
-          throw new Error('User profile not found.');
-        }
-
-        const newPoints = Math.max(0, (currentProfile.points || 0) - pointsToDeduct);
-
-        // Optimistically update the user's points
-        queryClient.setQueryData(USER_POINTS_QUERY_KEY, newPoints);
-
-        // Update the user's points in the database
-        const profileUpdate: ProfileUpdateData = { points: newPoints };
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update(profileUpdate)
-          .eq('id', userId);
-
-        if (updateError) {
-          logger.error('Error updating user profile:', updateError.message);
-          throw new Error(`Failed to update user profile: ${updateError.message}`);
-        }
-
-        // Insert record into punishment_history
-        const { error: historyError } = await supabase
-          .from('punishment_history')
-          .insert([{ user_id: userId, punishment_id: punishmentId, points_deducted: pointsToDeduct }]);
-
-        if (historyError) {
-          logger.warn('Failed to record punishment history:', historyError.message);
-          // Consider whether to throw an error or just log it
-        }
-
-        logger.debug(`User ${userId} redeemed punishment ${punishmentId}, deducting ${pointsToDeduct} points.`);
-      } catch (error: unknown) {
-        const descriptiveMessage = getErrorMessage(error);
-        logger.error('Error redeeming punishment:', descriptiveMessage, error);
-        toast({
-          title: 'Redemption Failed',
-          description: descriptiveMessage,
-          variant: 'destructive',
-        });
-        throw new Error(`Failed to redeem punishment: ${descriptiveMessage}`);
-      }
-    },
-    {
-      onSuccess: () => {
-        // Invalidate queries to update UI
-        queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
-        queryClient.invalidateQueries({ queryKey: USER_POINTS_QUERY_KEY });
-        queryClient.invalidateQueries({ queryKey: USER_DOM_POINTS_QUERY_KEY });
-        queryClient.invalidateQueries({ queryKey: USER_PROFILE_QUERY_KEY });
-        queryClient.invalidateQueries({ queryKey: USER_PUNISHMENT_HISTORY_QUERY_KEY });
-        toast({
-          title: 'Punishment Redeemed',
-          description: 'Points have been successfully deducted.',
-        });
-      },
-      onError: (error: Error) => {
-        logger.error('Redeem Punishment Mutation failed:', error.message);
-        toast({
-          title: 'Redemption Failed',
-          description: error.message,
-          variant: 'destructive',
-        });
-      },
-      onSettled: () => {
-        // Can perform cleanup or final actions here
-      },
+    if (!targetUserId) {
+        toast({ title: "Error", description: "Target user ID is missing.", variant: "destructive" });
+        throw new Error("Target user ID is missing");
     }
-  );
-};
+
+    try {
+      const pointsColumn = isDomPoints ? 'dom_points' : 'points';
+
+      // Fetch current points for the target user
+      const { data: profile, error: fetchError } = await supabase
+        .from('profiles')
+        .select(pointsColumn)
+        .eq('id', targetUserId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!profile) throw new Error(`Profile not found for user ${targetUserId}`);
+
+      const currentPoints = (profile[pointsColumn] as number) || 0;
+      const newPoints = Math.max(0, currentPoints + pointsToModify); // Ensure points don't go below 0
+
+      // Update points for the target user
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ [pointsColumn]: newPoints })
+        .eq('id', targetUserId);
+
+      if (updateError) throw updateError;
+
+      // Record punishment redemption or history (if applicable)
+      // Example:
+      // await supabase.from('punishment_redemptions').insert({ punishment_id: punishmentId, user_id: targetUserId, points_modified: pointsToModify });
+
+      toast({ title: 'Punishment Processed', description: `Points ${pointsToModify > 0 ? 'added' : 'deducted'}. New balance processed.` });
+      logger.info(`Punishment ${punishmentId} processed for user ${targetUserId}. Points modified by ${pointsToModify}.`);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['userPoints', targetUserId] });
+      queryClient.invalidateQueries({ queryKey: ['user-dom-points', targetUserId] });
+      // queryClient.invalidateQueries({ queryKey: ['punishments'] }); // If punishment state changes
+
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      toast({ title: 'Error Processing Punishment', description: message, variant: 'destructive' });
+      logger.error('Error processing punishment:', message, error);
+      throw error; // Re-throw for useMutation's onError
+    }
+  });
+}

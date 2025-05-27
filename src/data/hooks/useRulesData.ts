@@ -1,145 +1,82 @@
-import { QueryObserverResult } from '@tanstack/react-query';
-import { useRules } from '../rules/queries'; 
-import { Rule } from '@/data/interfaces/Rule';
-import { useCreateRule, useUpdateRule, useDeleteRule, CreateRuleVariables, UpdateRuleVariables } from '../rules/mutations';
-import { useCreateRuleViolation } from '../rules/mutations/useCreateRuleViolation';
-import { toast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
-import { logger } from '@/lib/logger'; // Added import
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Rule, CreateRuleVariables, UpdateRuleVariables, RuleFormValues } from '@/data/rules/types'; // Centralized types
+import { parseRuleData } from '@/data/rules/queries'; // Assuming parseRuleData is in queries
+import { useCreateRule } from '@/data/rules/mutations/useCreateRule';
+import { useUpdateRule } from '@/data/rules/mutations/useUpdateRule';
+import { useDeleteRule as useDeleteRuleMutation } from '@/data/rules/mutations/useDeleteRule';
+import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
-import { Rule, CreateRuleVariables, UpdateRuleVariables } from '@/data/rules/types'; // Import new types
+import { toast } from '@/hooks/use-toast';
 
-export interface RulesDataHook {
-  rules: Rule[];
-  isLoading: boolean;
-  error: Error | null;
-  isUsingCachedData: boolean;
-  saveRule: (ruleData: CreateRuleVariables | UpdateRuleVariables) => Promise<Rule | null>;
-  deleteRule: (ruleId: string) => Promise<boolean>;
-  markRuleBroken: (rule: Rule) => Promise<void>;
-  refetchRules: () => Promise<QueryObserverResult<Rule[], Error>>;
+export const RULES_QUERY_KEY = ['rules'];
+
+// Assuming fetchRules is defined in queries.ts or similar
+async function fetchRulesForHook(): Promise<Rule[]> {
+  try {
+    const { data, error } = await supabase.from('rules').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data?.map(parseRuleData) || []; // parseRuleData needs to handle RawSupabaseRule
+  } catch (error: unknown) {
+    logger.error('Error fetching rules:', getErrorMessage(error));
+    throw error; // Re-throw for react-query
+  }
 }
 
-export const useRulesData = (): RulesDataHook => {
-  const [isUsingCachedData, setIsUsingCachedData] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 3;
-  
-  const {
-    data: rules = [],
-    isLoading,
-    error,
-    refetch: refetchRules,
-    isStale,
-    dataUpdatedAt,
-    errorUpdateCount,
-  } = useRules(); 
+export function useRulesData() {
+  const queryClient = useQueryClient();
+  const { data: rules = [], isLoading, error, refetch } = useQuery<Rule[], Error>({
+    queryKey: RULES_QUERY_KEY,
+    queryFn: fetchRulesForHook, // Use the local fetch function
+  });
 
-  // Setup retry mechanism for errors
-  useEffect(() => {
-    if (error && retryCount < MAX_RETRIES) {
-      const timer = setTimeout(() => {
-        logger.debug(`[useRulesData] Retrying after error (${retryCount + 1}/${MAX_RETRIES}):`, error); // Replaced console.log
-        refetchRules();
-        setRetryCount(prev => prev + 1);
-      }, Math.min(2000 * Math.pow(2, retryCount), 20000)); // Exponential backoff with max of 20s
-      
-      return () => clearTimeout(timer);
+  const createRuleMutation = useCreateRule();
+  const updateRuleMutation = useUpdateRule();
+  const deleteRuleMutation = useDeleteRuleMutation();
+
+  const saveRule = async (ruleData: RuleFormValues | (RuleFormValues & { id: string })) => {
+    if ('id' in ruleData && ruleData.id) {
+      // Update
+      const { id, ...restOfRuleData } = ruleData;
+      const payload: UpdateRuleVariables = { id, ...restOfRuleData };
+      await updateRuleMutation.mutateAsync(payload);
+    } else {
+      // Create
+      const payload: CreateRuleVariables = {
+        ...ruleData,
+        // Ensure all non-nullable fields for 'rules' table are present
+        title: ruleData.title || 'Untitled Rule',
+        points_impact: ruleData.points_impact || 0,
+        category: ruleData.category || 'general',
+        // Add other defaults if necessary based on your 'rules' table schema
+      };
+      await createRuleMutation.mutateAsync(payload);
     }
-  }, [error, retryCount, refetchRules]);
-  
-  // Check if we're using cached data - this is determined by:
-  // 1. There was an error but we have rules data (from cache)
-  // 2. The data is stale but hasn't been refreshed successfully
-  useEffect(() => {
-    const usingCachedData = 
-      (!!error && rules.length > 0) || 
-      (isStale && errorUpdateCount > 0 && rules.length > 0);
-      
-    setIsUsingCachedData(usingCachedData);
-  }, [error, rules.length, isStale, errorUpdateCount, dataUpdatedAt]);
+  };
 
-  const { mutateAsync: createRuleMutation } = useCreateRule();
-  const { mutateAsync: updateRuleMutation } = useUpdateRule();
-  const { mutateAsync: deleteRuleMutation } = useDeleteRule();
-  const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation();
+  const deleteRule = async (ruleId: string) => {
+    await deleteRuleMutation.mutateAsync(ruleId);
+  };
 
-  const saveRule = async (ruleData: CreateRuleVariables | UpdateRuleVariables): Promise<Rule | null> => {
+  // recordRuleViolation might be better handled in a specific mutation hook or context
+  // For now, keeping it here if it's simple, but consider refactoring
+  const recordRuleViolation = async (ruleId: string, userId: string, notes?: string) => {
     try {
-      if (ruleData.id) {
-        const { id, ...updates } = ruleData;
-        return updateRuleMutation({ id, ...updates } as UpdateRuleVariables);
-      } else {
-        const createVariables: CreateRuleVariables = {
-          title: ruleData.title || 'Untitled Rule',
-          description: ruleData.description,
-          priority: ruleData.priority || 'medium',
-          frequency: ruleData.frequency || 'daily',
-          frequency_count: ruleData.frequency_count || 1,
-          icon_name: ruleData.icon_name,
-          icon_url: ruleData.icon_url,
-          icon_color: ruleData.icon_color || '#FFFFFF',
-          title_color: ruleData.title_color || '#FFFFFF', 
-          subtext_color: ruleData.subtext_color || '#FFFFFF',
-          calendar_color: ruleData.calendar_color || '#9c7abb',
-          background_image_url: ruleData.background_image_url,
-          background_opacity: ruleData.background_opacity === undefined ? 100 : ruleData.background_opacity,
-          highlight_effect: ruleData.highlight_effect === undefined ? false : ruleData.highlight_effect,
-          focal_point_x: ruleData.focal_point_x === undefined ? 50 : ruleData.focal_point_x,
-          focal_point_y: ruleData.focal_point_y === undefined ? 50 : ruleData.focal_point_y,
-        };
-        return createRuleMutation(createVariables);
-      }
+      const { error } = await supabase.from('rule_violations').insert({
+        rule_id: ruleId,
+        user_id: userId,
+        notes: notes,
+        violation_date: new Date().toISOString(),
+      });
+      if (error) throw error;
+      toast({ title: 'Violation Recorded', description: 'The rule violation has been logged.' });
+      // Optionally, invalidate queries that depend on violation data
+      queryClient.invalidateQueries({ queryKey: ['rule_violations', ruleId] }); // Example
+      queryClient.invalidateQueries({ queryKey: ['userPoints', userId] }); // If points change
     } catch (e: unknown) {
-      const descriptiveMessage = getErrorMessage(e);
-      logger.error("Error in saveRule (useRulesData):", descriptiveMessage, e);
-      toast({ title: "Save Error", description: descriptiveMessage, variant: "destructive" });
-      return null;
-    }
-  };
-
-  const deleteRule = async (ruleId: string): Promise<boolean> => {
-    try {
-      await deleteRuleMutation(ruleId);
-      return true;
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred';
-      logger.error('[useRulesData] Error deleting rule:', e); // Replaced console.error
-      toast({
-        title: 'Error Deleting Rule',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      return false;
-    }
-  };
-
-  const markRuleBroken = async (rule: Rule): Promise<void> => {
-    try {
-      await createRuleViolationMutation({ rule_id: rule.id });
-
-      const newUsageDataEntry = Date.now(); 
-      const currentUsageData = Array.isArray(rule.usage_data) ? rule.usage_data : [];
-      const newUsageData = [...currentUsageData, newUsageDataEntry] as number[] & {toJSON?: () => any};
-
-      await updateRuleMutation({
-        id: rule.id,
-        usage_data: newUsageData,
-      });
-
-      toast({
-        title: "Rule Marked Broken",
-        description: `${rule.title} marked as broken. Violation recorded and usage updated.`,
-      });
-
-    } catch (e: any) {
-      logger.error('[useRulesData] Error marking rule broken:', e); // Replaced console.error
-      toast({
-        title: 'Error',
-        description: `Failed to mark rule "${rule.title}" as broken: ${e.message}`,
-        variant: 'destructive',
-      });
-      throw e;
+      const message = getErrorMessage(e);
+      toast({ title: 'Error Recording Violation', description: message, variant: 'destructive' });
+      logger.error('Error recording rule violation:', message, e);
     }
   };
 
@@ -147,10 +84,9 @@ export const useRulesData = (): RulesDataHook => {
     rules,
     isLoading,
     error,
-    isUsingCachedData,
+    refetchRules: refetch,
     saveRule,
     deleteRule,
-    markRuleBroken,
-    refetchRules,
+    recordRuleViolation, // Export if needed by components
   };
-};
+}

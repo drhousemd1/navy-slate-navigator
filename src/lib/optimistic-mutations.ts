@@ -1,20 +1,29 @@
-import { useMutation, UseMutationOptions, QueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
-import { getErrorMessage } from './errors'; // Import getErrorMessage
-import { logger } from './logger'; // Import logger
+import { QueryClient, MutationFunction, InfiniteData } from '@tanstack/react-query';
+import { logger } from './logger';
+import { getErrorMessage } from './errors';
 
-// Define a more specific type for history data if possible, or keep it generic but typed
-export interface HistoryDataItem {
-  id: string | number; // Or whatever the ID field is for history items
-  [key: string]: any; // Keep it flexible if history items vary significantly
+// Define a generic HistoryEntry type or import if defined elsewhere
+export interface HistoryEntry {
+  id: string;
+  timestamp: string;
+  action: string;
+  details: unknown; 
 }
 
-// Context for optimistic updates
-export interface OptimisticMutationContext<TItem> {
-  previousData?: TItem[];
-  optimisticId?: string; // For create operations
-  previousHistoryData?: HistoryDataItem[]; // Typed history data
+// Define OptimisticUpdateConfig with the missing properties
+export interface OptimisticUpdateConfig<TData, TError, TVariables, TContext> {
+  queryKey: string[];
+  mutationFn: MutationFunction<TData, TVariables>;
+  onMutate?: (variables: TVariables) => Promise<TContext | undefined> | TContext | undefined;
+  onSuccess?: (data: TData, variables: TVariables, context: TContext | undefined, queryClient: QueryClient) => Promise<void> | void;
+  onError?: (error: TError, variables: TVariables, context: TContext | undefined, queryClient: QueryClient) => Promise<void> | void;
+  onSettled?: (data: TData | undefined, error: TError | null, variables: TVariables, context: TContext | undefined, queryClient: QueryClient) => Promise<void> | void;
+  updateCache?: (oldData: TData | undefined, variables: TVariables) => TData | undefined;
+  updateInfiniteCache?: (oldData: InfiniteData<TData, unknown> | undefined, variables: TVariables) => InfiniteData<TData, unknown> | undefined;
+  successMessage?: string;
+  errorMessage?: string;
+  createHistoryEntry?: (variables: TVariables, data?: TData) => HistoryEntry; // Added
+  mutationKey?: string; // Added, can be used for logging or specific invalidations
 }
 
 /**
@@ -33,7 +42,7 @@ export function useCreateOptimisticMutation<
   TItem extends Record<string, any> & { id: string | number }, // Item being created
   TError extends Error,
   TVariables, // Variables for mutationFn, usually Partial<TItem> without id
-  TContext extends OptimisticMutationContext<TItem> = OptimisticMutationContext<TItem>
+  TContext extends OptimisticUpdateConfig<TItem, TError, TVariables, TContext> = OptimisticUpdateConfig<TItem, TError, TVariables, TContext>
 >(options: {
   queryClient: QueryClient;
   queryKey: unknown[];
@@ -99,7 +108,7 @@ export function useUpdateOptimisticMutation<
   TItem extends Record<string, any> & { id: string | number },
   TError extends Error,
   TVariables extends { id: string | number } & Partial<Omit<TItem, 'id'>>, // TVariables must have an 'id' property with the ID value
-  TContext extends OptimisticMutationContext<TItem> = OptimisticMutationContext<TItem>
+  TContext extends OptimisticUpdateConfig<TItem, TError, TVariables, TContext> = OptimisticUpdateConfig<TItem, TError, TVariables, TContext>
 >(options: {
   queryClient: QueryClient;
   queryKey: unknown[];
@@ -166,7 +175,7 @@ export function useDeleteOptimisticMutation<
   TItem extends Record<string, any> & { id: string | number },
   TError extends Error,
   TVariables extends string | number, // ID of the item to delete
-  TContext extends OptimisticMutationContext<TItem> = OptimisticMutationContext<TItem>
+  TContext extends OptimisticUpdateConfig<TItem, TError, TVariables, TContext> = OptimisticUpdateConfig<TItem, TError, TVariables, TContext>
 >(options: {
   queryClient: QueryClient;
   queryKey: unknown[];
@@ -235,3 +244,14 @@ export function useDeleteOptimisticMutation<
     ...mutationOptions,
   });
 }
+
+export const logHistory = (entry: HistoryEntry) => {
+  logger.info(`History: [${entry.timestamp}] ${entry.action}`, entry.details);
+  // Potentially save to IndexedDB or send to a logging service
+};
+
+// Example of how createHistoryEntry might be used if it were part of handleOptimisticUpdate
+// if (config.createHistoryEntry && data) {
+//   const historyEntry = config.createHistoryEntry(variables, data);
+//   logHistory(historyEntry);
+// }
