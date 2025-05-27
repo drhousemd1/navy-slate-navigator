@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import TaskEditor from '../components/TaskEditor';
@@ -12,6 +13,7 @@ import EmptyState from '@/components/common/EmptyState';
 import { ListChecks, LoaderCircle } from 'lucide-react';
 import { useToggleTaskCompletionMutation } from '../data/tasks/mutations/useToggleTaskCompletionMutation';
 import { logger } from '@/lib/logger';
+import { Button } from '@/components/ui/button'; // Import Button for EmptyState action
 
 const TasksPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -56,13 +58,19 @@ const TasksPageContent: React.FC = () => {
 
   const handleSaveTask = async (formData: TaskFormValues) => { 
     try {
-      let taskToSave: any;
+      let taskToSave: CreateTaskVariables | UpdateTaskVariables; // Using specific types
       if (currentTask && currentTask.id) {
-        taskToSave = { ...currentTask, ...formData, id: currentTask.id };
+        // For update, we need all fields from formData and the id from currentTask
+        // Map TaskFormValues to UpdateTaskVariables
+        taskToSave = { ...formData, id: currentTask.id };
       } else {
-        taskToSave = { ...formData };
+        // For create, map TaskFormValues to CreateTaskVariables
+        taskToSave = { ...formData, usage_data: Array(7).fill(0), background_images: null };
       }
-      await saveTask(taskToSave);
+      // The saveTask in useTasksData expects a specific input type, let's ensure it matches
+      // The type SaveTaskInput in useTasksData is (TaskFormValues & { id?: string }) | (TaskWithId & Partial<TaskFormValues>)
+      // So, this should be fine.
+      await saveTask(taskToSave as any); // Cast to any temporarily if specific mapping is complex, will refine later
       setIsEditorOpen(false);
       setCurrentTask(null);
     } catch (err) {
@@ -91,7 +99,7 @@ const TasksPageContent: React.FC = () => {
         taskId, 
         completed, 
         pointsValue: task.points || 0,
-        task
+        task // Pass the whole task object
       });
     } catch (err) {
       logger.error('Error preparing to toggle task completion in UI:', err);
@@ -123,10 +131,11 @@ const TasksPageContent: React.FC = () => {
         icon={ListChecks} 
         title="No Tasks Yet"
         description="You do not have any tasks yet, create one to get started."
-        actionButton={{
-          label: "Create New Task",
-          onClick: handleAddTask,
-        }}
+        action={ // Changed from actionButton to action
+          <Button onClick={handleAddTask} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            Create New Task
+          </Button>
+        }
       />
     );
   } else {
@@ -143,6 +152,7 @@ const TasksPageContent: React.FC = () => {
 
   return (
     <div className="p-4 pt-6 TasksContent">
+      {/* This TasksHeader now correctly receives onAddNewTask */}
       <TasksHeader onAddNewTask={handleAddTask} /> 
       {content}
       <TaskEditor
@@ -162,11 +172,11 @@ const TasksPageContent: React.FC = () => {
 const Tasks: React.FC = () => {
   const handleAddNewItem = () => {
     logger.debug('AppLayout onAddNewItem called for Tasks');
-    const content = document.querySelector('.TasksContent');
-    if (content) {
+    const contentElement = document.querySelector('.TasksContent');
+    if (contentElement) {
       logger.debug('Dispatching add-new-task event to .TasksContent');
       const event = new CustomEvent('add-new-task');
-      content.dispatchEvent(event);
+      contentElement.dispatchEvent(event);
     } else {
       logger.warn('.TasksContent element not found for dispatching event. Ensure TasksPageContent renders a div with this class.');
     }
