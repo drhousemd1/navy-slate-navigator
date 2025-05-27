@@ -5,9 +5,9 @@ import {
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
-// Removed supabase, toast, generateMondayBasedWeekDates, useQuery as they are now in the hook
 import WeeklyMetricsChartSkeleton from './WeeklyMetricsChartSkeleton';
-import { useWeeklyMetrics, WeeklyDataItem } from '@/data/queries/metrics/useWeeklyMetrics'; // Import the new hook and type
+import { useWeeklyMetrics } from '@/data/queries/metrics/useWeeklyMetrics'; // WeeklyDataItem type removed as it is not directly used here
+import { logger } from '@/lib/logger'; // Added logger import
 
 const WeeklyMetricsChart: React.FC = () => {
   const chartConfig = {
@@ -19,13 +19,8 @@ const WeeklyMetricsChart: React.FC = () => {
 
   const { data = [], isLoading, error } = useWeeklyMetrics();
 
-  // Removed fetchWeeklyData function and the useEffect that called it / handled visibility changes.
-  // The useWeeklyMetrics hook now handles data fetching and refreshing.
-
   if (error) {
-    // Basic error display, could be enhanced with a dedicated error component
-    // The hook already shows a toast on error.
-    console.error("Error in WeeklyMetricsChart:", error);
+    logger.error("Error in WeeklyMetricsChart:", error); // Replaced console.error
   }
   
   const hasData = data.some(d => 
