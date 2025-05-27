@@ -192,11 +192,15 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       await onSave(taskToSave);
       await clearPersistedState(); 
       onCancel();
-    } catch (error) {
-      logger.error('Error saving task:', error);
+    } catch (e: unknown) {
+      let errorMessage = "Failed to save task. Please try again.";
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      }
+      logger.error('Error saving task:', errorMessage, e);
       toast({
         title: "Error",
-        description: "Failed to save task. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

@@ -86,9 +86,13 @@ export const useCreateTask = () => {
         await saveTasksToDB(updatedLocalTasks);
         await setLastSyncTimeForTasks(new Date().toISOString());
         logger.debug('[useCreateTask onSuccessCallback] IndexedDB updated with new task.');
-      } catch (error) {
-        logger.error('[useCreateTask onSuccessCallback] Error updating IndexedDB:', error);
-        toast({ variant: "destructive", title: "Local Save Error", description: "Task created on server, but failed to save locally." });
+      } catch (e: unknown) {
+        let errorMessage = "Task created on server, but failed to save locally.";
+        if (e instanceof Error) {
+          errorMessage = e.message;
+        }
+        logger.error('[useCreateTask onSuccessCallback] Error updating IndexedDB:', errorMessage, e);
+        toast({ variant: "destructive", title: "Local Save Error", description: errorMessage });
       }
     },
   });

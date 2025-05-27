@@ -2,9 +2,10 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Trash2, Save, Loader2 } from 'lucide-react';
+import { RewardWithId } from '@/data/rewards/types'; // Import RewardWithId
 
 interface RewardFormActionsProps {
-  rewardData?: any;
+  rewardData?: RewardWithId; // Typed rewardData
   isDeleteDialogOpen: boolean;
   setIsDeleteDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   onCancel: () => void;

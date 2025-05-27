@@ -6,21 +6,21 @@ import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { TaskWithId } from '@/data/tasks/types';
-import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery'; // Added import
-import { useUserIds } from '@/contexts/UserIdsContext'; // Added import
-import { logger } from '@/lib/logger'; // Added logger import
+import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery'; 
+import { useUserIds } from '@/contexts/UserIdsContext'; 
+import { logger } from '@/lib/logger'; 
 
 
 interface ToggleTaskCompletionVariables {
   taskId: string;
   completed: boolean;
   pointsValue: number;
-  task?: TaskWithId; // Optional: pass the full task for easier optimistic update
+  task?: TaskWithId; 
 }
 
 export function useToggleTaskCompletionMutation() {
   const queryClient = useQueryClient();
-  const { subUserId } = useUserIds(); // Get subUserId
+  const { subUserId } = useUserIds(); 
 
   return useMutation<void, Error, ToggleTaskCompletionVariables, { previousTasks?: TaskWithId[] }>(
     {
@@ -57,7 +57,6 @@ export function useToggleTaskCompletionMutation() {
             logger.error('Error recording task completion history:', historyError);
             toast({ title: 'History Record Error', description: historyError.message, variant: 'destructive' });
             // Not throwing here to allow points update if possible, but logging it.
-            // Or decide to throw: throw historyError;
           }
 
           const { data: currentProfile, error: fetchProfileError } = await supabase
@@ -99,23 +98,20 @@ export function useToggleTaskCompletionMutation() {
               const newUsageData = [...currentUsageData];
               const frequencyCount = task.frequency_count || 1;
 
-              if (completed) { // Marking as complete
+              if (completed) { 
                 newUsageData[dayOfWeek] = Math.min((newUsageData[dayOfWeek] || 0) + 1, frequencyCount);
-              } else { // Marking as incomplete
+              } else { 
                 newUsageData[dayOfWeek] = Math.max((newUsageData[dayOfWeek] || 0) - 1, 0);
               }
               
-              // The task's main `completed` status reflects if it's fully done for the day/period
-              // This is driven by whether the new usage count meets the frequency count
               const isNowFullyCompletedForDay = newUsageData[dayOfWeek] >= frequencyCount;
-              // If not a recurring task or no frequency, 'completed' follows the direct 'completed' variable
               const taskCompletedStatus = (task.frequency && task.frequency_count) ? isNowFullyCompletedForDay : completed;
 
 
               return { 
                 ...task, 
                 completed: taskCompletedStatus, 
-                last_completed_date: completed ? todayStr : (taskCompletedStatus ? task.last_completed_date : null), // Keep last_completed_date if still completed, else null
+                last_completed_date: completed ? todayStr : (taskCompletedStatus ? task.last_completed_date : null), 
                 usage_data: newUsageData,
               };
             }
@@ -141,9 +137,9 @@ export function useToggleTaskCompletionMutation() {
                 const newUsageData = [...currentUsageData];
                 const frequencyCount = t.frequency_count || 1;
 
-                if (variables.completed) { // Action was to mark as complete
+                if (variables.completed) { 
                   newUsageData[dayOfWeek] = Math.min((newUsageData[dayOfWeek] || 0) + 1, frequencyCount);
-                } else { // Action was to mark as incomplete
+                } else { 
                   newUsageData[dayOfWeek] = Math.max((newUsageData[dayOfWeek] || 0) - 1, 0);
                 }
                 
@@ -162,16 +158,19 @@ export function useToggleTaskCompletionMutation() {
             await saveTasksToDB(updatedLocalTasks as Task[]);
             await setLastSyncTimeForTasks(new Date().toISOString());
             logger.debug('[useToggleTaskCompletionMutation onSuccessCallback] IndexedDB updated for task completion with usage_data.');
-        } catch (error) {
-            logger.error('[useToggleTaskCompletionMutation onSuccessCallback] Error updating IndexedDB:', error);
-            toast({ variant: "destructive", title: "Local Sync Error", description: "Task status updated on server, but local sync failed." });
+        } catch (e: unknown) {
+            let errorMessage = "Task status updated on server, but local sync failed.";
+            if (e instanceof Error) {
+              errorMessage = e.message;
+            }
+            logger.error('[useToggleTaskCompletionMutation onSuccessCallback] Error updating IndexedDB:', errorMessage, e);
+            toast({ variant: "destructive", title: "Local Sync Error", description: errorMessage });
         }
       },
       onError: (error, variables, context) => {
         if (context?.previousTasks) {
           queryClient.setQueryData<TaskWithId[]>(TASKS_QUERY_KEY, context.previousTasks);
         }
-        // Generic toast unless specific ones were shown in mutationFn
          if (!error.message.includes('Error Updating Task') && 
              !error.message.includes('History Record Error') &&
              !error.message.includes('Profile Fetch Error') &&
@@ -182,13 +181,11 @@ export function useToggleTaskCompletionMutation() {
       },
       onSettled: (data, error, variables) => {
         queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-        // Invalidate profile, user-specific points, general rewards points, and weekly summary
-        // This ensures all related data is refetched whether a task is completed or uncompleted.
         queryClient.invalidateQueries({ queryKey: ['profile'] });
-        if (subUserId) { // Ensure subUserId is available before invalidating
+        if (subUserId) { 
             queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
         }
-        queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY }); // This seems to be a general key for points, keeping it.
+        queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY }); 
         queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
       },
     }

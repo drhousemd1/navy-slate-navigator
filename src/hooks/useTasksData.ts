@@ -1,6 +1,6 @@
 import { useCallback } from 'react'; // useEffect is not directly used here
 import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries';
-import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables, Json } from '@/data/tasks/types'; // Import necessary types
+import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types'; // Import necessary types
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -58,8 +58,6 @@ export const useTasksData = () => {
           highlight_effect: updatePayload.highlight_effect,
           focal_point_x: updatePayload.focal_point_x,
           focal_point_y: updatePayload.focal_point_y,
-          // background_images is not part of TaskFormValues, handle if it comes from TaskWithId
-          // background_images: 'background_images' in updatePayload ? updatePayload.background_images as Json | null : undefined,
         };
         // Filter out undefined values explicitly if mutation expects only defined fields for partial update
         const definedVariables = Object.fromEntries(Object.entries(variables).filter(([_, v]) => v !== undefined)) as UpdateTaskVariables;
@@ -94,110 +92,27 @@ export const useTasksData = () => {
         };
         return await createTaskMutation.mutateAsync(variables);
       }
-    } catch (err) {
-      logger.error("Error in saveTask (useTasksData):", err);
-      // Toasting for errors is typically handled by the mutation hooks themselves (onErorr)
-      // or by the component calling saveTask if needed.
-      throw err; // Re-throw to be caught by the calling component if necessary
+    } catch (e: unknown) { // Updated error handling
+      let errorMessage = "An error occurred while saving the task.";
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      }
+      logger.error("Error in saveTask (useTasksData):", errorMessage, e);
+      // Toasting for errors is typically handled by the mutation hooks themselves (onError)
+      // or by the component calling saveTask. Re-throwing allows parent to handle.
+      // To be consistent with other handlers, we can toast here too.
+      toast({ title: "Save Error", description: errorMessage, variant: "destructive" });
+      throw e; // Re-throw to be caught by the calling component if necessary
     }
   };
 
   const deleteTask = async (taskId: string) => {
+    // The mutation hook (useDeleteTask) will handle its own errors and toasting.
     return deleteTaskMutation.mutateAsync(taskId);
   };
-
-  // toggleTaskCompletion is handled by useToggleTaskCompletionMutation directly in Tasks.tsx
-  // So, it can be removed from here if not used elsewhere via this hook.
-  // For now, keeping it as it was in the original file.
-  const toggleTaskCompletion = async (taskId: string, completed: boolean, points: number = 0) => {
-    try {
-      // Update the local cache optimistically first
-      queryClient.setQueryData<TaskWithId[]>(["tasks"], oldTasks => {
-        if (!oldTasks) return [];
-        const updatedTasks = oldTasks.map(t => 
-          t.id === taskId ? { ...t, completed } : t
-        );
-        saveTasksToDB(updatedTasks); // Update IndexedDB
-        return updatedTasks;
-      });
-
-      // Then update the database
-      const { error: toggleError } = await supabase
-        .from("tasks")
-        .update({ completed, last_completed_date: completed ? new Date().toISOString() : null })
-        .eq("id", taskId);
-
-      if (toggleError) {
-        logger.error("Error updating task completion:", toggleError);
-        
-        queryClient.setQueryData<TaskWithId[]>(["tasks"], oldTasks => {
-          if (!oldTasks) return [];
-          const revertedTasks = oldTasks.map(t => 
-            t.id === taskId ? { ...t, completed: !completed, last_completed_date: !completed ? new Date().toISOString() : null } : t
-          );
-          saveTasksToDB(revertedTasks);
-          return revertedTasks;
-        });
-        
-        toast({
-          title: 'Error',
-          description: 'Failed to update task completion status: ' + toggleError.message,
-          variant: 'destructive',
-        });
-        throw toggleError;
-      }
-
-      if (completed) {
-        try {
-          const userResult = await supabase.auth.getUser();
-          const userId = userResult.data.user?.id;
-          if (!userId) throw new Error("User not authenticated for recording completion.");
-
-          await supabase.rpc('record_task_completion', { 
-            task_id_param: taskId,
-            user_id_param: userId 
-          });
-          
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('points')
-            .eq('id', userId)
-            .single();
-            
-          if (profile) {
-            await supabase
-              .from('profiles')
-              .update({ points: (profile.points || 0) + points })
-              .eq('id', userId);
-          }
-          
-          toast({
-            title: 'Task Completed',
-            description: `You earned ${points} points!`,
-          });
-        } catch (err) {
-          logger.error("Error recording task completion or updating points:", err);
-          toast({
-            title: 'Points Update Issue',
-            description: 'Task marked complete, but there was an issue updating your points.',
-            variant: 'default',
-          });
-        }
-      } else {
-         // Task marked as not completed, potentially remove points if that's the logic
-        toast({
-          title: 'Task Incomplete',
-          description: 'Task marked as not completed.',
-        });
-      }
-
-      return true;
-    } catch (err) {
-      logger.error("Error in toggleTaskCompletion:", err);
-      return false;
-    }
-  };
-
+  
+  // toggleTaskCompletion has been moved to its own mutation hook: useToggleTaskCompletionMutation
+  // and is called directly from Tasks.tsx. So it's removed from here.
 
   return {
     tasks,
@@ -206,7 +121,6 @@ export const useTasksData = () => {
     isUsingCachedData,
     saveTask,
     deleteTask,
-    toggleTaskCompletion, // Keep if used, otherwise consider removing if direct mutation usage is preferred
     refetch
   };
 };

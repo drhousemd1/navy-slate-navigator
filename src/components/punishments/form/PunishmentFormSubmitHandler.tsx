@@ -1,14 +1,14 @@
-
 import React, { useState } from 'react';
 import { Form } from '@/components/ui/form';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
-import { PunishmentFormValues, punishmentFormSchema } from './PunishmentFormProvider';
+import { PunishmentFormValues } from './PunishmentFormProvider';
 import { logger } from '@/lib/logger';
+import { UseFormReturn } from 'react-hook-form';
 
 interface PunishmentFormSubmitHandlerProps {
   punishmentData?: PunishmentData;
-  form: any; // Need to maintain this until we can refactor the entire component
+  form: UseFormReturn<PunishmentFormValues>;
   selectedIconName: string | null;
   imagePreview: string | null;
   iconPreview: string | null;
@@ -94,8 +94,17 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
           variant: "default",
         });
       }
-    } catch (error) {
-      logger.error("Error saving punishment in form handler:", error);
+    } catch (e: unknown) {
+      let errorMessage = "Failed to save punishment. Please try again.";
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      }
+      logger.error("Error saving punishment in form handler:", errorMessage, e);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }

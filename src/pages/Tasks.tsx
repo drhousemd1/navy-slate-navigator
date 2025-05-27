@@ -12,7 +12,8 @@ import EmptyState from '@/components/common/EmptyState';
 import { ListChecks, LoaderCircle } from 'lucide-react';
 import { useToggleTaskCompletionMutation } from '../data/tasks/mutations/useToggleTaskCompletionMutation';
 import { logger } from '@/lib/logger';
-import { Button } from '@/components/ui/button'; // Import Button for EmptyState action
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 
 const TasksPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -23,7 +24,7 @@ const TasksPageContent: React.FC = () => {
     error, 
     saveTask, 
     deleteTask, 
-    refetch 
+    // refetch 
   } = useTasksData();
   const { refreshPointsFromDatabase } = useRewards();
   
@@ -70,8 +71,13 @@ const TasksPageContent: React.FC = () => {
       await saveTask(taskToSave as any); // Cast to any as `saveTask` handles the precise mapping
       setIsEditorOpen(false);
       setCurrentTask(null);
-    } catch (err) {
-      logger.error('Error saving task in UI:', err);
+    } catch (e: unknown) {
+      let errorMessage = "Failed to save task.";
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      }
+      logger.error('Error saving task in UI:', errorMessage, e);
+      toast({ title: "Save Error", description: errorMessage, variant: "destructive" });
     }
   };
 
@@ -80,8 +86,13 @@ const TasksPageContent: React.FC = () => {
       await deleteTask(taskId);
       setIsEditorOpen(false);
       setCurrentTask(null);
-    } catch (err) {
-      logger.error('Error deleting task in UI:', err);
+    } catch (e: unknown) {
+      let errorMessage = "Failed to delete task.";
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      }
+      logger.error('Error deleting task in UI:', errorMessage, e);
+      toast({ title: "Delete Error", description: errorMessage, variant: "destructive" });
     }
   };
 
@@ -90,16 +101,22 @@ const TasksPageContent: React.FC = () => {
       const task = tasks.find(t => t.id === taskId);
       if (!task) {
         logger.error(`Task with id ${taskId} not found.`);
+        toast({ title: "Error", description: `Task with id ${taskId} not found.`, variant: "destructive" });
         return;
       }
       toggleTaskCompletionMutation.mutate({ 
         taskId, 
         completed, 
         pointsValue: task.points || 0,
-        task // Pass the whole task object
+        task 
       });
-    } catch (err) {
-      logger.error('Error preparing to toggle task completion in UI:', err);
+    } catch (e: unknown) {
+      let errorMessage = "Failed to toggle task completion.";
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      }
+      logger.error('Error preparing to toggle task completion in UI:', errorMessage, e);
+      toast({ title: "Toggle Error", description: errorMessage, variant: "destructive" });
     }
   };
 

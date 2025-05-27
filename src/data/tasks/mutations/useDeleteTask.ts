@@ -1,4 +1,3 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
@@ -7,7 +6,6 @@ import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-
 
 export const useDeleteTask = () => {
   const queryClient = useQueryClient();
@@ -43,9 +41,13 @@ export const useDeleteTask = () => {
         await saveTasksToDB(updatedLocalTasks);
         await setLastSyncTimeForTasks(new Date().toISOString());
         logger.debug('[useDeleteTask onSuccessCallback] IndexedDB updated after deleting task.');
-      } catch (error) {
-        logger.error('[useDeleteTask onSuccessCallback] Error updating IndexedDB:', error);
-        toast({ variant: "destructive", title: "Local Update Error", description: "Task deleted on server, but failed to update local data." });
+      } catch (e: unknown) {
+        let errorMessage = "Task deleted on server, but failed to update local data.";
+        if (e instanceof Error) {
+          errorMessage = e.message;
+        }
+        logger.error('[useDeleteTask onSuccessCallback] Error updating IndexedDB:', errorMessage, e);
+        toast({ variant: "destructive", title: "Local Update Error", description: errorMessage });
       }
     },
   });
