@@ -27,8 +27,9 @@ export type RewardWithId = Reward & { id: string };
 // Define the form values interface for reward forms
 export interface RewardFormValues {
   title: string;
-  description: string;
+  description: string; // Nullable in DB, but often a string in forms
   cost: number;
+  supply: number; // Added supply
   is_dom_reward: boolean;
   icon_name: string | null;
   icon_color: string;

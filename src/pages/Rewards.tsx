@@ -6,7 +6,7 @@ import RewardsHeader from '../components/rewards/RewardsHeader';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 import { useRewards as useRewardsQuery, RewardsQueryResult } from '@/data/queries/useRewards';
-import { Reward } from '@/data/rewards/types';
+import { Reward, RewardFormValues, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/types';
 import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables, UpdateRewardVariables } from '@/data/rewards/mutations/useSaveReward';
 import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
 import { toast } from '@/hooks/use-toast';
@@ -14,7 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePointsManager } from '@/data/points/usePointsManager';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
@@ -111,18 +111,21 @@ const RewardsContent: React.FC<{
     return () => { contentRef.current = {}; };
   }, [contentRef]); 
 
-  const handleSaveRewardEditor = async (formData: Partial<Reward>): Promise<Reward | void> => {
+  const handleSaveRewardEditor = async (formData: RewardFormValues): Promise<Reward> => {
     try {
       if (rewardBeingEdited?.id) {
         const updateVariables: UpdateRewardVariables = {
           id: rewardBeingEdited.id,
           ...formData, 
+          // Ensure all fields from RewardFormValues match Partial<Reward> structure for updates
+          // supply is now part of formData
         };
         const updated = await updateRewardMutation.mutateAsync(updateVariables);
         setIsEditorOpen(false);
         setRewardBeingEdited(undefined);
         return updated;
       } else {
+        // Check for required fields from RewardFormValues
         if (!formData.title || typeof formData.cost !== 'number' || typeof formData.supply !== 'number' || typeof formData.is_dom_reward !== 'boolean') {
           toast({ title: "Missing required fields", description: "Title, cost, supply, and DOM status are required.", variant: "destructive" });
           throw new Error("Missing required fields for reward creation.");
@@ -130,13 +133,13 @@ const RewardsContent: React.FC<{
         const createVariables: CreateRewardVariables = {
           title: formData.title,
           cost: formData.cost,
-          supply: formData.supply,
+          supply: formData.supply, // supply is now from formData
           is_dom_reward: formData.is_dom_reward,
           description: formData.description || null,
           background_image_url: formData.background_image_url || null,
           background_opacity: formData.background_opacity ?? 100,
-          icon_name: formData.icon_name || 'Award',
-          icon_url: formData.icon_url || null,
+          icon_name: formData.icon_name || 'Award', // Default if null
+          // icon_url is not in RewardFormValues, should it be? For now, let useSaveReward handle it.
           icon_color: formData.icon_color || '#9b87f5',
           title_color: formData.title_color || '#FFFFFF',
           subtext_color: formData.subtext_color || '#8E9196',
@@ -155,7 +158,7 @@ const RewardsContent: React.FC<{
       if (!(e instanceof Error && e.message.includes("Missing required fields"))) {
         toast({ title: "Save Error", description: e instanceof Error ? e.message : "Could not save reward.", variant: "destructive" });
       }
-      throw e;
+      throw e; // Re-throw to ensure Promise is rejected, satisfying Promise<Reward>
     }
   };
 
@@ -171,6 +174,7 @@ const RewardsContent: React.FC<{
       setRewardBeingEdited(undefined);
     } catch (e) {
       logger.error("Error deleting reward from page:", e);
+      // Consider re-throwing or handling if this needs to affect a Promise return type
     }
   };
   
@@ -194,7 +198,7 @@ const RewardsContent: React.FC<{
           setRewardBeingEdited(undefined);
         }}
         rewardData={rewardBeingEdited}
-        onSave={handleSaveRewardEditor}
+        onSave={handleSaveRewardEditor} // This now matches RewardEditor's expected onSave prop type
         onDelete={rewardBeingEdited?.id ? () => handleDeleteRewardEditor(rewardBeingEdited.id) : undefined}
       />
     </div>

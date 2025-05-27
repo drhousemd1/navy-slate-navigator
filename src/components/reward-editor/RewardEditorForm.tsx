@@ -33,6 +33,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       title: '',
       description: '',
       cost: 10,
+      supply: 1, // Added supply default
       is_dom_reward: false,
       icon_name: null,
       icon_color: '#9b87f5',
@@ -56,14 +57,14 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   useEffect(() => {
     if (rewardData) {
-      const isDomRewardValue = typeof rewardData.is_dom_reward === 'string' 
-        ? rewardData.is_dom_reward.toLowerCase() === 'true' 
-        : Boolean(rewardData.is_dom_reward);
+      // Fixed: Directly use boolean or default, removing string check
+      const isDomRewardValue = rewardData.is_dom_reward ?? false;
       
       reset({
         title: rewardData.title || '',
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
+        supply: rewardData.supply || 1, // Added supply
         is_dom_reward: isDomRewardValue,
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
@@ -78,7 +79,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       });
     } else {
       reset({
-        title: '', description: '', cost: 10, is_dom_reward: false, icon_name: null,
+        title: '', description: '', cost: 10, supply: 1, is_dom_reward: false, icon_name: null,
         icon_color: '#9b87f5', title_color: '#FFFFFF', subtext_color: '#8E9196',
         calendar_color: '#7E69AB', highlight_effect: false, background_image_url: null,
         background_opacity: 100, focal_point_x: 50, focal_point_y: 50,
@@ -122,6 +123,17 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
     }
   };
 
+  const incrementSupply = () => {
+    setValue('supply', (watch('supply') || 0) + 1);
+  };
+
+  const decrementSupply = () => {
+    const currentSupply = watch('supply') || 0;
+    if (currentSupply > 0) { // Or 1 if supply cannot be 0
+      setValue('supply', currentSupply - 1);
+    }
+  };
+
   const handleDeleteConfirmWrapped = () => {
     if (onDelete && rewardData?.id) {
       onDelete(rewardData.id);
@@ -132,7 +144,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   const onSubmitWrapped = async (data: RewardFormValues) => {
     try {
-      await onSave(data);
+      await onSave(data); // onSave now expects RewardFormValues
       await clearPersistedState();
     } catch (error) {
       logger.error("Error during onSave callback:", error);
@@ -151,15 +163,18 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           control={control}
           incrementCost={incrementCost}
           decrementCost={decrementCost}
+          incrementSupply={incrementSupply} // Added supply handlers
+          decrementSupply={decrementSupply} // Added supply handlers
+          watch={watch} // Pass watch for supply field
         />
         
         <RewardIconSection 
           control={control}
           selectedIconName={watch('icon_name')}
-          iconPreview={null}
+          iconPreview={null} // Assuming iconPreview comes from state or elsewhere if custom upload is used
           iconColor={watch('icon_color')}
           onSelectIcon={handleSelectIcon}
-          onUploadIcon={handleUploadIcon}
+          onUploadIcon={handleUploadIcon} // This should eventually set icon_url or preview
           onRemoveIcon={handleRemoveIcon}
         />
         
