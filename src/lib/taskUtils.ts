@@ -1,9 +1,10 @@
 
+
 import { format, startOfWeek } from 'date-fns';
 
 // Export the Task type and other required types
 export interface Task {
-  id?: string;
+  id: string; // Changed from optional to required since tasks from DB always have IDs
   title: string;
   description?: string;
   points?: number;
@@ -72,3 +73,4 @@ export const processTaskFromDb = (task: any): Task => {
 export const processTasksWithRecurringLogic = (tasks: any[]): Task[] => {
   return tasks.map(processTaskFromDb);
 };
+
