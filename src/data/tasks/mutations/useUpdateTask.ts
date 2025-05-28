@@ -48,13 +48,16 @@ export const useUpdateTask = () => {
         await saveTasksToDB(updatedLocalTasks);
         await setLastSyncTimeForTasks(new Date().toISOString());
         logger.debug('[useUpdateTask onSuccessCallback] IndexedDB updated with updated task.');
+        // Invalidate the tasks query to refetch and update the UI
+        await queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+        logger.debug('[useUpdateTask onSuccessCallback] Tasks query invalidated.');
       } catch (e: unknown) {
         const descriptiveMessage = getErrorMessage(e);
-        logger.error('[useUpdateTask onSuccessCallback] Error updating IndexedDB:', descriptiveMessage, e);
+        logger.error('[useUpdateTask onSuccessCallback] Error updating IndexedDB or invalidating query:', descriptiveMessage, e);
         toast({ 
             variant: "destructive", 
             title: "Local Save Error", 
-            description: `Failed to save updated task locally: ${descriptiveMessage}` 
+            description: `Failed to save updated task locally or refresh list: ${descriptiveMessage}` 
         });
       }
     },
