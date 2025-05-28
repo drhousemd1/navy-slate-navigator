@@ -111,9 +111,6 @@ export const useBuySubReward = () => {
         oldRewards.map(r => r.id === data.id ? data : r)
       );
       
-      // Force a fresh fetch to ensure all UI components show the same data
-      await queryClient.refetchQueries({ queryKey: REWARDS_QUERY_KEY });
-      
       // Invalidate all related queries to ensure fresh data
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId] }),
