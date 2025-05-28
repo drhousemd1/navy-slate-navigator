@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
 
 interface ProtectedRouteProps {
@@ -12,8 +12,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
+  // Only show loading if we're still determining authentication status
   if (loading) {
-    // You might want to render a more sophisticated loading spinner here
     return (
       <div className="flex items-center justify-center h-screen bg-navy text-white">
         Loading authentication status...

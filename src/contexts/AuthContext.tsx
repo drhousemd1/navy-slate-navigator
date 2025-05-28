@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, ReactNode, useRef } from 'react';
 import { Session, User, AuthChangeEvent, Subscription } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -50,6 +50,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     userExists: false,
     sessionExists: false,
   });
+  
+  // Add a ref to track ongoing admin role checks to prevent duplicate calls
+  const adminCheckInProgress = useRef(false);
 
   const authOperations = useAuthOperations();
   const wrappedSetUserForProfile = (updatedUser: User | null) => {
@@ -63,8 +66,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     logger.debug("AuthContext: Initializing, setting up listeners...");
+    let subscriptionCleanup: Subscription | null = null;
 
     const checkAdminRoleWithRetry = async (userId: string, context: string, attempt = 1): Promise<boolean | null> => {
+      if (adminCheckInProgress.current) {
+        logger.debug(`AuthContext: [${context}] Admin check already in progress, skipping duplicate call`);
+        return null;
+      }
+      
+      adminCheckInProgress.current = true;
+      
       try {
         logger.debug(`AuthContext: [${context}] User found, async checking admin role (Attempt ${attempt}) for ${userId}`);
         const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
@@ -77,177 +88,222 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (attempt < MAX_ADMIN_CHECK_RETRIES) {
             logger.info(`AuthContext: [${context}] Retrying admin role check (Attempt ${attempt + 1}) after delay.`);
             await new Promise(resolve => setTimeout(resolve, ADMIN_CHECK_RETRY_DELAY_MS));
+            adminCheckInProgress.current = false;
             return await checkAdminRoleWithRetry(userId, context, attempt + 1);
           }
+          adminCheckInProgress.current = false;
           return null;
         }
+        
         logger.debug(`AuthContext: [${context}] Async admin role check (Attempt ${attempt}) successful. Admin: ${!!hasAdminRole}`);
+        adminCheckInProgress.current = false;
         return !!hasAdminRole;
       } catch (e) {
         logger.error(`AuthContext: [${context}] Exception during async admin role check (Attempt ${attempt}):`, e);
         if (attempt < MAX_ADMIN_CHECK_RETRIES) {
           logger.info(`AuthContext: [${context}] Retrying admin role check (Attempt ${attempt + 1}) after exception and delay.`);
           await new Promise(resolve => setTimeout(resolve, ADMIN_CHECK_RETRY_DELAY_MS));
+          adminCheckInProgress.current = false;
           return await checkAdminRoleWithRetry(userId, context, attempt + 1);
         }
+        adminCheckInProgress.current = false;
         return null;
       }
     };
 
     const checkInitialSession = async () => {
       logger.debug("AuthContext: Checking initial session...");
-      const { data: { session: initialSupabaseSession }, error: sessionError } = await supabase.auth.getSession();
+      try {
+        const { data: { session: initialSupabaseSession }, error: sessionError } = await supabase.auth.getSession();
 
-      if (sessionError) {
-        logger.error("AuthContext: Error getting initial session:", sessionError);
-        setAuthState(prev => ({ ...prev, loading: false }));
-        return;
-      }
+        if (sessionError) {
+          logger.error("AuthContext: Error getting initial session:", sessionError);
+          setAuthState(prev => ({ ...prev, loading: false }));
+          return;
+        }
 
-      logger.debug("AuthContext: Initial session data from Supabase:", initialSupabaseSession ? { user_id: initialSupabaseSession.user.id, expires_at: initialSupabaseSession.expires_at } : null);
-      const user = initialSupabaseSession?.user ?? null;
-
-      setAuthState(prev => ({ // Use prev to ensure isAdmin isn't reset if already set by a rapid onAuthStateChange
-        ...prev,
-        user: user,
-        session: initialSupabaseSession,
-        // loading: false, // Loading will be set to false after admin check
-        isAuthenticated: !!initialSupabaseSession,
-        isAdmin: user ? prev.isAdmin : false, // Preserve isAdmin if user exists, otherwise false
-        userExists: !!user,
-        sessionExists: !!initialSupabaseSession,
-      }));
-      
-      if (user) {
-        const adminStatus = await checkAdminRoleWithRetry(user.id, "InitialSession");
-        if (adminStatus !== null) {
-          setAuthState(prev => ({ ...prev, isAdmin: adminStatus, loading: false }));
+        logger.debug("AuthContext: Initial session data from Supabase:", initialSupabaseSession ? { user_id: initialSupabaseSession.user.id, expires_at: initialSupabaseSession.expires_at } : null);
+        const user = initialSupabaseSession?.user ?? null;
+        
+        // Batch update state once with new session info
+        setAuthState(prev => ({
+          ...prev,
+          user: user,
+          session: initialSupabaseSession,
+          isAuthenticated: !!initialSupabaseSession,
+          userExists: !!user,
+          sessionExists: !!initialSupabaseSession,
+          // Keep loading true until admin check completes
+        }));
+        
+        if (user) {
+          const adminStatus = await checkAdminRoleWithRetry(user.id, "InitialSession");
+          // Final state update with admin status and loading false
+          setAuthState(prev => ({ 
+            ...prev, 
+            isAdmin: adminStatus !== null ? adminStatus : false, 
+            loading: false 
+          }));
           logger.debug(`AuthContext: Initial session - Final admin status after check/retry set to: ${adminStatus}. Loading false.`);
         } else {
-          logger.warn(`AuthContext: Initial session - Could not determine admin status. isAdmin remains as is or false. Loading false.`);
-          setAuthState(prev => ({ ...prev, loading: false }));
+          setAuthState(prev => ({ ...prev, loading: false, isAdmin: false }));
+          logger.debug("AuthContext: Initial session - No user. Loading false, isAdmin false.");
         }
-      } else {
-        setAuthState(prev => ({ ...prev, loading: false, isAdmin: false }));
-        logger.debug("AuthContext: Initial session - No user. Loading false, isAdmin false.");
+      } catch (e) {
+        logger.error("AuthContext: Exception during initial session check:", e);
+        setAuthState(prev => ({ ...prev, loading: false }));
       }
     };
 
-    checkInitialSession();
-
+    // Set up the auth state change listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event: AuthChangeEvent | 'USER_DELETED', newSessionState: Session | null) => {
         logger.debug(`AuthContext: Auth state change event: ${_event}`, "New Session State:", newSessionState ? { user_id: newSessionState.user.id, expires_at: newSessionState.expires_at, event: _event } : { event: _event });
         
-        const wasAuthenticated = authState.isAuthenticated; // Capture previous state BEFORE any updates from this event
+        // Capture previous state for comparison
+        const wasAuthenticated = authState.isAuthenticated;
 
         if (newSessionState) {
           const user = newSessionState.user;
+          
+          // Batch update state once with new session info
           setAuthState(prev => ({
             ...prev,
             user: user,
             session: newSessionState,
-            loading: true, // Set loading true for potential admin check
             isAuthenticated: true,
-            isAdmin: user ? prev.isAdmin : false, // Preserve previous admin state if user exists, else false
             userExists: !!user,
             sessionExists: true,
+            // Preserve loading state until admin check completes
           }));
+          
           logger.debug("AuthContext: State updated for new session. Current state (before admin check):", {
-              userExists: !!user,
-              sessionExists: true,
-              isAuthenticated: true,
-              isAdmin: user ? authState.isAdmin : false, // Log based on current authState for prev.isAdmin
-              loading: true,
+            userExists: !!user,
+            sessionExists: true,
+            isAuthenticated: true,
+            loading: true,
           });
 
           if (user) {
-            const adminStatus = await checkAdminRoleWithRetry(user.id, `AuthStateChange-${_event}`);
-            if (adminStatus !== null) {
-              setAuthState(prev => ({ ...prev, isAdmin: adminStatus, loading: false }));
+            // Perform admin check asynchronously but don't block UI
+            setTimeout(async () => {
+              const adminStatus = await checkAdminRoleWithRetry(user.id, `AuthStateChange-${_event}`);
+              // Final state update with admin status and loading false
+              setAuthState(prev => ({
+                ...prev,
+                isAdmin: adminStatus !== null ? adminStatus : false,
+                loading: false
+              }));
               logger.debug(`AuthContext: AuthStateChange-${_event} - Admin status updated to: ${adminStatus}. Loading false.`);
-            } else {
-              logger.warn(`AuthContext: AuthStateChange-${_event} - Could not determine admin status. isAdmin remains as is. Loading false.`);
-              setAuthState(prev => ({ ...prev, loading: false })); // Ensure loading is false
-            }
+            }, 0);
           } else {
-             // Should not happen if newSessionState is truthy, but as a safeguard
             setAuthState(prev => ({ ...prev, isAdmin: false, loading: false }));
           }
         } else { // newSessionState is null
-          logger.debug("AuthContext: Session became null.", { event: _event, wasAuthenticated, currentLoading: authState.loading });
-          setAuthState(prev => ({
-            ...prev,
-            user: null,
-            session: null,
-            isAuthenticated: false,
-            isAdmin: false,
-            userExists: false,
-            sessionExists: false,
-            // loading: true, // Tentatively set loading if recovery is attempted
-          }));
-
+          logger.debug("AuthContext: Session became null.", { event: _event, wasAuthenticated });
+          
+          // For sign out or user deletion, clear everything immediately
           if (_event === 'SIGNED_OUT' || _event === 'USER_DELETED') {
             logger.info(`AuthContext: Explicit ${_event}. Clearing caches and finalizing.`);
+            // First update state to reflect logout
+            setAuthState({
+              user: null,
+              session: null,
+              loading: true, // Stay loading until cache clear completes
+              isAuthenticated: false,
+              isAdmin: false,
+              userExists: false,
+              sessionExists: false,
+            });
+            
+            // Then clear caches asynchronously
             await clearAllCaches();
-            setAuthState(prev => ({ ...prev, loading: false, isAdmin: false }));
-          } else if (wasAuthenticated && !authState.loading) { // Session became null unexpectedly
+            
+            // Final update to stop loading
+            setAuthState(prev => ({ ...prev, loading: false }));
+          } else if (wasAuthenticated) { // Session became null unexpectedly
             logger.warn("AuthContext: Session unexpectedly became null. Attempting recovery...");
-            setAuthState(prev => ({ ...prev, loading: true })); // Set loading for recovery attempt
             
             try {
               const { data: { session: recoveredSession }, error: recoveryError } = await supabase.auth.getSession();
               
               if (recoveryError) {
                 logger.error("AuthContext: Session recovery - supabase.auth.getSession() error:", recoveryError);
-                setAuthState(prev => ({ ...prev, loading: false, isAdmin: false })); // Recovery failed
+                setAuthState({
+                  user: null,
+                  session: null,
+                  loading: false,
+                  isAuthenticated: false,
+                  isAdmin: false,
+                  userExists: false,
+                  sessionExists: false,
+                });
               } else if (recoveredSession) {
-                logger.info("AuthContext: Session recovery - Session recovered successfully. Re-validating.", { user_id: recoveredSession.user.id });
-                // This will effectively trigger another onAuthStateChange with the recoveredSession,
-                // or we can manually set the state here.
-                // Forcing a re-evaluation by onAuthStateChange by setting the session and user.
-                // The event 'TOKEN_REFRESHED' or 'SIGNED_IN' might be more appropriate if manually dispatching.
-                // However, the simplest is to let the natural flow of onAuthStateChange handle it if it's re-triggered
-                // by Supabase internals after getSession, or manually set it here.
-                // Let's manually set and re-check admin role to avoid complex re-trigger logic.
+                logger.info("AuthContext: Session recovery - Session recovered successfully.", { user_id: recoveredSession.user.id });
                 const recoveredUser = recoveredSession.user;
-                setAuthState(prev => ({
-                  ...prev,
+                
+                // Batch update with recovered session
+                setAuthState({
                   user: recoveredUser,
                   session: recoveredSession,
+                  loading: true,
                   isAuthenticated: true,
+                  isAdmin: false, // Will update after admin check
                   userExists: !!recoveredUser,
                   sessionExists: true,
-                  // loading: true, // Keep loading true for admin check
-                }));
+                });
                 
+                // Check admin status and update final state
                 if (recoveredUser) {
-                    const adminStatus = await checkAdminRoleWithRetry(recoveredUser.id, "SessionRecovery");
-                    if (adminStatus !== null) {
-                        setAuthState(prev => ({ ...prev, isAdmin: adminStatus, loading: false }));
-                        logger.debug(`AuthContext: SessionRecovery - Admin status for recovered user: ${adminStatus}. Loading false.`);
-                    } else {
-                        logger.warn(`AuthContext: SessionRecovery - Could not determine admin status. isAdmin remains false. Loading false.`);
-                        setAuthState(prev => ({ ...prev, loading: false })); // isAdmin already false
-                    }
+                  const adminStatus = await checkAdminRoleWithRetry(recoveredUser.id, "SessionRecovery");
+                  setAuthState(prev => ({ 
+                    ...prev, 
+                    isAdmin: adminStatus !== null ? adminStatus : false,
+                    loading: false 
+                  }));
+                  logger.debug(`AuthContext: SessionRecovery - Admin status for recovered user: ${adminStatus}. Loading false.`);
                 } else {
-                     setAuthState(prev => ({ ...prev, loading: false, isAdmin: false }));
+                  setAuthState(prev => ({ ...prev, loading: false }));
                 }
               } else {
                 logger.warn("AuthContext: Session recovery - supabase.auth.getSession() returned null. User remains logged out.");
-                setAuthState(prev => ({ ...prev, loading: false, isAdmin: false })); // Recovery failed, no session
+                setAuthState({
+                  user: null,
+                  session: null,
+                  loading: false,
+                  isAuthenticated: false,
+                  isAdmin: false,
+                  userExists: false,
+                  sessionExists: false,
+                });
               }
             } catch (e) {
               logger.error("AuthContext: Session recovery - Exception during supabase.auth.getSession():", e);
-              setAuthState(prev => ({ ...prev, loading: false, isAdmin: false })); // Recovery failed
+              setAuthState({
+                user: null,
+                session: null,
+                loading: false,
+                isAuthenticated: false,
+                isAdmin: false,
+                userExists: false,
+                sessionExists: false,
+              });
             }
           } else {
-            logger.debug("AuthContext: Session is null, but not an unexpected scenario for recovery or already loading. Finalizing state.");
-            setAuthState(prev => ({ ...prev, loading: false, isAdmin: false }));
+            logger.debug("AuthContext: Session is null, but not an unexpected scenario for recovery. Finalizing state.");
+            setAuthState({
+              user: null,
+              session: null,
+              loading: false,
+              isAuthenticated: false,
+              isAdmin: false,
+              userExists: false,
+              sessionExists: false,
+            });
           }
         }
         
-        // Logging specific events after state has been handled by the main logic
+        // Logging specific events
         switch (_event) {
           case 'SIGNED_IN':
             logger.info("AuthContext: Event SIGNED_IN processed. User authenticated and admin status checked.");
@@ -277,13 +333,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
     );
+    
+    subscriptionCleanup = subscription;
+
+    // Then check for existing session
+    checkInitialSession();
 
     return () => {
       logger.debug("AuthContext: Cleaning up auth subscription.");
-      subscription?.unsubscribe();
+      subscriptionCleanup?.unsubscribe();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authState.isAuthenticated, authState.loading]); // Added dependencies to re-evaluate if recovery conditions change
+  }, []); // Remove dependencies that cause re-initialization
 
   const clearAllCaches = async () => {
     try {
