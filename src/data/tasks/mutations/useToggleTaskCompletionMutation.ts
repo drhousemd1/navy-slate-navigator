@@ -222,7 +222,6 @@ export function useToggleTaskCompletionMutation() {
         }
       },
       onSettled: (data, error, variables) => {
-        queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
         queryClient.invalidateQueries({ queryKey: ['profile'] });
         if (subUserId) { 
             queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
