@@ -6,7 +6,6 @@ import RewardContent from './rewards/RewardContent';
 import RewardFooter from './rewards/RewardFooter';
 import { useToast } from '../hooks/use-toast';
 import { Reward } from '@/data/rewards/types';
-import { useRewardUsageQuery } from '@/data/rewards/queries/useRewardUsageQuery';
 
 interface RewardCardProps {
   reward: Reward;
@@ -22,9 +21,6 @@ const RewardCard: React.FC<RewardCardProps> = ({
   handleUseReward
 }) => {
   const { toast } = useToast();
-  
-  // Fetch usage data for this reward
-  const { data: usageData = Array(7).fill(false) } = useRewardUsageQuery(reward.id);
   
   // Extract all properties from reward object
   const {
@@ -46,6 +42,8 @@ const RewardCard: React.FC<RewardCardProps> = ({
     subtext_color = '#8E9196',
     calendar_color = '#7E69AB',
   } = reward;
+
+  const usageData = Array(7).fill(false); // Default usage data if not provided
 
   const handleBuy = () => {
     if (handleBuyReward && id) {
@@ -109,7 +107,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
         <RewardFooter
           usageData={usageData}
           calendarColor={calendar_color}
-          onEdit={onEdit || (() => {})}
+          onEdit={onEdit}
         />
       </div>
     </Card>

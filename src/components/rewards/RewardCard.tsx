@@ -2,14 +2,12 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Reward } from '@/data/rewards/types'; 
+import { Reward } from '@/data/rewards/types'; // Changed import path
 import { Badge } from '@/components/ui/badge';
 import { useRewards } from '@/contexts/RewardsContext';
 import { cn } from '@/lib/utils';
 import { Crown, Coins, Box, Loader2 } from 'lucide-react';
-import { logger } from '@/lib/logger';
-import { useRewardUsageQuery } from '@/data/rewards/queries/useRewardUsageQuery';
-import WeeklyUsageTracker from './WeeklyUsageTracker';
+import { logger } from '@/lib/logger'; // Ensure logger is imported
 
 interface RewardCardProps {
   reward: Reward;
@@ -20,9 +18,6 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
   const { handleBuyReward, handleUseReward, totalPoints, domPoints } = useRewards();
   const [buying, setBuying] = React.useState(false);
   const [using, setUsing] = React.useState(false);
-  
-  // Fetch usage data for this reward
-  const { data: usageData = Array(7).fill(false) } = useRewardUsageQuery(reward.id);
   
   // Explicitly enforce boolean type for is_dom_reward
   const isDomReward = Boolean(reward.is_dom_reward);
@@ -200,17 +195,10 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
             </Button>
           </div>
         </div>
-
-        {/* Weekly Usage Tracker */}
-        <div className="mt-4">
-          <WeeklyUsageTracker 
-            usageData={usageData}
-            calendarColor={reward.calendar_color || '#7E69AB'}
-          />
-        </div>
       </div>
     </Card>
   );
 };
 
 export default RewardCard;
+
