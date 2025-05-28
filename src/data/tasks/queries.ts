@@ -6,12 +6,13 @@ import {
   getLastSyncTimeForTasks,
   setLastSyncTimeForTasks
 } from "@/data/indexedDB/useIndexedDB";
-import { Task, TaskPriority, processTasksWithRecurringLogic, processTaskFromDb } from '@/lib/taskUtils';
+import { Task, processTaskFromDb, getLocalDateString } from '@/lib/taskUtils';
 import { withTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils';
 import { PostgrestError } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { RawSupabaseTask } from '@/data/tasks/types';
 import { isPostgrestError, isSupabaseAuthError, isAppError, createAppError, getErrorMessage, CaughtError } from '@/lib/errors';
+import { queryClient } from '@/data/queryClient'; // Ensure queryClient is imported
 
 export const TASKS_QUERY_KEY = ["tasks"];
 export const TASK_QUERY_KEY = (taskId: string) => ["tasks", taskId];
@@ -115,11 +116,22 @@ export const useTasksQuery = () => {
 
 // For fetching a single task, modify the implementation to use the updated withTimeout
 export const useTaskQuery = (taskId: string | null) => {
-  return useQuery<Task | undefined, CaughtError, Task | undefined, (string | null)[]>({ // Use CaughtError for error type
+  return useQuery<Task | undefined, CaughtError, Task | undefined, (string | null)[]>({
     queryKey: taskId ? TASK_QUERY_KEY(taskId) : ['tasks', null],
     queryFn: async () => {
       if (!taskId) return undefined;
       
+      // Try to load from React Query cache first (which might be from IndexedDB via fetchTasks)
+      const tasks = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY); // queryClient is used here
+      if (tasks) {
+        const taskFromCache = tasks.find(t => t.id === taskId);
+        if (taskFromCache) {
+           logger.debug(`[useTaskQuery] Returning task ${taskId} from React Query cache.`);
+           return taskFromCache;
+        }
+      }
+      
+      logger.debug(`[useTaskQuery] Task ${taskId} not in global cache, fetching specifically.`);
       try {
         type RawSingleTaskResponse = {
           data: RawSupabaseTask | null;
@@ -138,7 +150,7 @@ export const useTaskQuery = (taskId: string | null) => {
         
         const { data, error } = result;
         
-        if (error) throw error; // PostgrestError is an instance of Error
+        if (error) throw error; 
         if (!data) return undefined;
         
         return processTaskFromDb(data); 
@@ -150,13 +162,20 @@ export const useTaskQuery = (taskId: string | null) => {
         throw createAppError(getErrorMessage(error), 'FETCH_SINGLE_TASK_EXCEPTION');
       }
     },
+    select: (task) => {
+      if (!task) return undefined;
+      const todayStr = getLocalDateString();
+      if (task.frequency === 'daily' && task.completed && task.last_completed_date !== todayStr) {
+        return { ...task, completed: false };
+      }
+      return task;
+    },
     enabled: !!taskId,
-    staleTime: Infinity,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 60,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    refetchOnMount: false,
-    gcTime: 1000 * 60 * 60,
-    retry: 3,
-    retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 30000),
+    refetchOnMount: true,
+    retry: 1,
   });
 };

@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, getCurrentDayOfWeek } from '@/lib/taskUtils';
+import { getCurrentDayOfWeek, Task as TaskUtilsType } from '@/lib/taskUtils'; // Task type from taskUtils
 import { toast } from '@/hooks/use-toast';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { TASKS_QUERY_KEY } from '../queries';
-import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
+import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks, Task as IDBTaskType } from '@/data/indexedDB/useIndexedDB'; // Restore IndexedDB imports
 import { TaskWithId } from '@/data/tasks/types';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { useUserIds } from '@/contexts/UserIdsContext';
@@ -12,9 +12,9 @@ import { logger } from '@/lib/logger';
 
 interface TaskCompletionVariables {
   taskId: string;
-  isCompleting: boolean; // true if adding a completion, false if removing one
+  isCompleting: boolean; 
   pointsValue: number;
-  task: TaskWithId; // The current task object from cache, passed by the caller
+  task: TaskWithId; 
 }
 
 export function useTaskCompletionMutation() {
@@ -29,10 +29,7 @@ export function useTaskCompletionMutation() {
         throw new Error("User not authenticated.");
       }
       const userId = authUser.user.id;
-
-      // Use the task data passed in from variables (reflects current cache state)
       const currentTask = taskFromVariables;
-
       const dayOfWeek = getCurrentDayOfWeek();
       const currentUsageData = Array.isArray(currentTask.usage_data) ? currentTask.usage_data : Array(7).fill(0);
       const newUsageData = [...currentUsageData];
@@ -45,10 +42,9 @@ export function useTaskCompletionMutation() {
       }
 
       const isNowFullyCompletedForDay = newUsageData[dayOfWeek] >= frequencyCount;
-      // Determine overall task 'completed' status for the DB based on daily/frequency logic
       const taskCompletedStatusForDb = (currentTask.frequency && currentTask.frequency_count && currentTask.frequency_count > 0)
         ? isNowFullyCompletedForDay
-        : isCompleting; // For non-frequency tasks, 'completed' mirrors the action
+        : isCompleting;
 
       const todayStr = new Date().toISOString().split('T')[0];
       const taskFieldsToUpdate: {
@@ -81,7 +77,6 @@ export function useTaskCompletionMutation() {
         throw updateError;
       }
 
-      // Handle points and history logging only if an instance was completed (isCompleting is true)
       if (isCompleting) {
         const { error: historyError } = await supabase
           .from('task_completion_history')
@@ -89,7 +84,6 @@ export function useTaskCompletionMutation() {
 
         if (historyError) {
           logger.error('Error recording task completion history:', historyError);
-          // Non-critical, log and toast but don't necessarily throw to stop points
           toast({ title: 'History Record Error', description: historyError.message, variant: 'destructive' });
         }
 
@@ -102,7 +96,7 @@ export function useTaskCompletionMutation() {
         if (fetchProfileError) {
           logger.error('Error fetching profile for points update:', fetchProfileError);
           toast({ title: 'Profile Fetch Error', description: fetchProfileError.message, variant: 'destructive' });
-          throw fetchProfileError; // Critical for points
+          throw fetchProfileError;
         }
 
         const newPoints = (currentProfile?.points || 0) + pointsValue;
@@ -114,7 +108,7 @@ export function useTaskCompletionMutation() {
         if (updatePointsError) {
           logger.error('Error updating profile points:', updatePointsError);
           toast({ title: 'Points Update Error', description: updatePointsError.message, variant: 'destructive' });
-          throw updatePointsError; // Critical
+          throw updatePointsError;
         }
       }
     },
@@ -128,8 +122,7 @@ export function useTaskCompletionMutation() {
 
         return oldTasks.map(task => {
           if (task.id === taskId) {
-            // Use taskFromVariables or task found in oldTasks for optimistic update base
-            const baseTaskForOptimistic = task; // taskFromVariables might be more "current" if passed correctly
+            const baseTaskForOptimistic = task; 
             const currentUsageData = baseTaskForOptimistic.usage_data || Array(7).fill(0);
             const newUsageData = [...currentUsageData];
             const frequencyCount = baseTaskForOptimistic.frequency_count || 1;
@@ -173,17 +166,19 @@ export function useTaskCompletionMutation() {
         description: variables.isCompleting ? 'Points and history have been updated if applicable.' : 'Task status updated.' 
       });
 
-      // Keep IndexedDB update logic for now (Phase 1)
+      // Restore IndexedDB update logic
       try {
-          const localTasks = await loadTasksFromDB() || [];
+          const localTasks = (await loadTasksFromDB()) as IDBTaskType[] || []; // Use IDBTaskType
           const todayStr = new Date().toISOString().split('T')[0];
           const dayOfWeek = getCurrentDayOfWeek();
 
           const updatedLocalTasks = localTasks.map(t => {
             if (t.id === variables.taskId) {
-              const currentUsageData = t.usage_data || Array(7).fill(0);
+              // Make sure t (IDBTaskType) has the necessary fields or cast appropriately
+              const taskAsUtilsType = t as unknown as TaskUtilsType; // Cast to use TaskUtilsType structure
+              const currentUsageData = taskAsUtilsType.usage_data || Array(7).fill(0);
               const newUsageData = [...currentUsageData];
-              const frequencyCount = t.frequency_count || 1;
+              const frequencyCount = taskAsUtilsType.frequency_count || 1;
 
               if (variables.isCompleting) { 
                 newUsageData[dayOfWeek] = Math.min((newUsageData[dayOfWeek] || 0) + 1, frequencyCount);
@@ -192,18 +187,18 @@ export function useTaskCompletionMutation() {
               }
               
               const isNowFullyCompletedForDay = newUsageData[dayOfWeek] >= frequencyCount;
-              const taskCompletedStatus = (t.frequency && t.frequency_count && t.frequency_count > 0) ? isNowFullyCompletedForDay : variables.isCompleting;
+              const taskCompletedStatus = (taskAsUtilsType.frequency && taskAsUtilsType.frequency_count && taskAsUtilsType.frequency_count > 0) ? isNowFullyCompletedForDay : variables.isCompleting;
 
               return { 
                 ...t, 
                 completed: taskCompletedStatus, 
-                last_completed_date: variables.isCompleting ? todayStr : (taskCompletedStatus ? t.last_completed_date : null),
+                last_completed_date: variables.isCompleting ? todayStr : (taskCompletedStatus ? taskAsUtilsType.last_completed_date : null),
                 usage_data: newUsageData 
               };
             }
             return t;
           });
-          await saveTasksToDB(updatedLocalTasks as Task[]);
+          await saveTasksToDB(updatedLocalTasks as IDBTaskType[]); // Save as IDBTaskType[]
           await setLastSyncTimeForTasks(new Date().toISOString());
           logger.debug('[useTaskCompletionMutation onSuccess] IndexedDB updated.');
       } catch (e: unknown) {
@@ -219,7 +214,6 @@ export function useTaskCompletionMutation() {
       if (context?.previousTasks) {
         queryClient.setQueryData<TaskWithId[]>(TASKS_QUERY_KEY, context.previousTasks);
       }
-      // Avoid redundant toasts if already handled by specific errors in mutationFn
        if (!error.message.includes('Error Updating Task') && 
            !error.message.includes('History Record Error') &&
            !error.message.includes('Profile Fetch Error') &&
@@ -230,9 +224,6 @@ export function useTaskCompletionMutation() {
       }
     },
     onSettled: (data, error, variables) => {
-      // Do NOT invalidate TASKS_QUERY_KEY here to preserve optimistic updates
-      // and avoid refetching stale data from server immediately after our update.
-      // Related data that might change due to points updates should be invalidated.
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       if (subUserId) { 
           queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
