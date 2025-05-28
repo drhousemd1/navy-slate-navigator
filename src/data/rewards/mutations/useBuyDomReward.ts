@@ -144,9 +144,8 @@ export const useBuyDomReward = () => {
       });
     },
     onSettled: async (data, error, variables) => {
-      // Final invalidation to ensure consistency
+      // Final invalidation to ensure consistency - DON'T invalidate REWARDS_QUERY_KEY to prevent rollback
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId] }),
         queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] })
       ]);
