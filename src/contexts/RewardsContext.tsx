@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType, SaveRewardParams } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
@@ -102,8 +101,8 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return false;
     }
     try {
-      const result = await deleteReward(rewardToDelete.id);
-      return result;
+      await deleteReward(rewardToDelete.id);
+      return true;
     } catch (error) {
       logger.error("Error in RewardsContext handleDeleteReward:", error);
       return false;
