@@ -57,7 +57,7 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
   return (
     <>
       {/* CachedDataBanner removed */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+      <div className="space-y-4 mt-4"> {/* Updated class here */}
         {punishments.map((punishment) => (
           <PunishmentCard
             key={punishment.id}

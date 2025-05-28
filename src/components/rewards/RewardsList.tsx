@@ -61,7 +61,7 @@ const RewardsList: React.FC<RewardsListProps> = ({
   return (
     <>
       {/* CachedDataBanner removed */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+      <div className="space-y-4 mt-4"> {/* Updated class here */}
         {rewards.map((reward) => (
           <RewardCard
             key={reward.id}
