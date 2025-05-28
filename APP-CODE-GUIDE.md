@@ -1,7 +1,7 @@
 
 # App Code Guide
 
-## ⚠️ CRITICAL: READ BEFO
+## ⚠️ CRITICAL: READ BEFORE MAKING ANY CHANGES
 /**
  * OVERVIEW
  *
