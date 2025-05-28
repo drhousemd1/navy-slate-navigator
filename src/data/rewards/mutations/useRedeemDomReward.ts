@@ -84,7 +84,7 @@ export const useRedeemDomReward = () => {
     },
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
-      await queryClient.cancelateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
+      await queryClient.cancelQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
 
       const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
       const previousDomCount = queryClient.getQueryData<number>([DOM_REWARD_TYPES_COUNT_QUERY_KEY]);
