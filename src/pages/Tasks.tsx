@@ -10,11 +10,11 @@ import { useTasksData } from '@/hooks/useTasksData';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
 import EmptyState from '@/components/common/EmptyState';
 import { ListChecks, LoaderCircle } from 'lucide-react';
-import { useToggleTaskCompletionMutation } from '../data/tasks/mutations/useToggleTaskCompletionMutation';
+import { useTaskCompletionMutation } from '../data/tasks/mutations/useTaskCompletionMutation';
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
+import { getErrorMessage } from '@/lib/errors';
 
 const TasksPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -28,7 +28,7 @@ const TasksPageContent: React.FC = () => {
   } = useTasksData();
   const { refreshPointsFromDatabase } = useRewards();
   
-  const toggleTaskCompletionMutation = useToggleTaskCompletionMutation();
+  const taskCompletionMutation = useTaskCompletionMutation();
 
   const handleAddTask = () => {
     logger.debug('handleAddTask called in TasksPageContent');
@@ -90,7 +90,7 @@ const TasksPageContent: React.FC = () => {
     }
   };
 
-  const handleToggleCompletion = async (taskId: string, completed: boolean) => {
+  const handleToggleCompletion = async (taskId: string, isCompletingInstance: boolean) => {
     try {
       const task = tasks.find(t => t.id === taskId);
       if (!task) {
@@ -98,9 +98,9 @@ const TasksPageContent: React.FC = () => {
         toast({ title: "Error", description: `Task with id ${taskId} not found.`, variant: "destructive" });
         return;
       }
-      toggleTaskCompletionMutation.mutate({ 
+      taskCompletionMutation.mutate({ 
         taskId, 
-        completed, 
+        isCompleting: isCompletingInstance, 
         pointsValue: task.points || 0,
         task 
       });
