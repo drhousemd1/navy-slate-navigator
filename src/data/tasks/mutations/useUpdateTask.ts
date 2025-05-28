@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { TaskWithId, UpdateTaskVariables, Json } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries';
-import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks, Task as IDBTaskType } from '@/data/indexedDB/useIndexedDB';
+import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
@@ -43,17 +43,14 @@ export const useUpdateTask = () => {
     onSuccessCallback: async (updatedTaskData) => {
       logger.debug('[useUpdateTask onSuccessCallback] Task updated on server, updating IndexedDB.', updatedTaskData);
       try {
-        const localTasks = (await loadTasksFromDB()) as IDBTaskType[] || [];
-        // Ensure updatedTaskData is compatible with IDBTaskType or cast
-        const updatedLocalTasks = localTasks.map(t => t.id === updatedTaskData.id ? (updatedTaskData as unknown as IDBTaskType) : t);
+        const localTasks = await loadTasksFromDB() || [];
+        const updatedLocalTasks = localTasks.map(t => t.id === updatedTaskData.id ? updatedTaskData : t);
         await saveTasksToDB(updatedLocalTasks);
         await setLastSyncTimeForTasks(new Date().toISOString());
         logger.debug('[useUpdateTask onSuccessCallback] IndexedDB updated with updated task.');
-        
-        // Invalidate queries to refetch. This was previously here and is generally good practice after updates.
+        // Invalidate the tasks query to refetch and update the UI
         await queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
         logger.debug('[useUpdateTask onSuccessCallback] Tasks query invalidated.');
-
       } catch (e: unknown) {
         const descriptiveMessage = getErrorMessage(e);
         logger.error('[useUpdateTask onSuccessCallback] Error updating IndexedDB or invalidating query:', descriptiveMessage, e);

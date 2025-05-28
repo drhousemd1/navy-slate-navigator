@@ -4,10 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
 import { TaskWithId } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries'; 
-import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks, Task as IDBTaskType } from '@/data/indexedDB/useIndexedDB'; // Restore IndexedDB imports
+import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
 
 export const useDeleteTask = () => {
   const queryClient = useQueryClient();
@@ -38,7 +38,7 @@ export const useDeleteTask = () => {
     onSuccessCallback: async (deletedTaskId: string) => {
       logger.debug('[useDeleteTask onSuccessCallback] Task deleted on server, updating IndexedDB for task ID:', deletedTaskId);
       try {
-        const localTasks = (await loadTasksFromDB()) as IDBTaskType[] || [];
+        const localTasks = await loadTasksFromDB() || [];
         const updatedLocalTasks = localTasks.filter(t => t.id !== deletedTaskId);
         await saveTasksToDB(updatedLocalTasks);
         await setLastSyncTimeForTasks(new Date().toISOString());

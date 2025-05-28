@@ -5,7 +5,8 @@ import { Rule } from '@/data/interfaces/Rule';
 import { logger } from '@/lib/logger';
 
 // Define types for other entities or import them if they exist elsewhere
-export interface Task { id: string; [key: string]: any; } // Restoring Task interface for these functions
+export interface Task { id: string; [key: string]: any; }
+// export interface Rule { id: string; [key: string]: any; } // REMOVED: Local, generic Rule interface
 
 // Use imported types for consistency
 export type PunishmentData = ContextPunishmentData;
@@ -14,7 +15,7 @@ export type PunishmentHistory = ContextPunishmentHistoryItem;
 
 const DB_NAME = 'appData';
 const REWARDS_STORE_NAME = 'rewards';
-const TASKS_STORE_NAME = 'tasks'; // Restore tasks store name
+const TASKS_STORE_NAME = 'tasks';
 const RULES_STORE_NAME = 'rules';
 const PUNISHMENTS_STORE_NAME = 'punishments';
 const PUNISHMENT_HISTORY_STORE_NAME = 'punishmentHistory';
@@ -30,7 +31,7 @@ localforage.config({
 });
 
 const rewardsStore = localforage.createInstance({ name: DB_NAME, storeName: REWARDS_STORE_NAME });
-const tasksStore = localforage.createInstance({ name: DB_NAME, storeName: TASKS_STORE_NAME }); // Restore tasksStore instance
+const tasksStore = localforage.createInstance({ name: DB_NAME, storeName: TASKS_STORE_NAME });
 const rulesStore = localforage.createInstance({ name: DB_NAME, storeName: RULES_STORE_NAME });
 const punishmentsStore = localforage.createInstance({ name: DB_NAME, storeName: PUNISHMENTS_STORE_NAME });
 const punishmentHistoryStore = localforage.createInstance({ name: DB_NAME, storeName: PUNISHMENT_HISTORY_STORE_NAME });
@@ -74,7 +75,7 @@ export const setLastSyncTimeForRewards = async (time: string): Promise<void> => 
   }
 };
 
-// Tasks specific functions - RESTORED
+// Tasks specific functions
 export const loadTasksFromDB = async (): Promise<Task[] | null> => {
   try {
     return await tasksStore.getItem<Task[]>('allTasks');

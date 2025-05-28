@@ -3,10 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { TaskWithId, CreateTaskVariables, Json } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries';
-import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks, Task as IDBTaskType } from '@/data/indexedDB/useIndexedDB';
+import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
@@ -47,11 +47,12 @@ export const useCreateTask = () => {
       if (!data) throw new Error('Task creation failed: No data returned.');
       return data as TaskWithId;
     },
+    entityName: 'Task',
     createOptimisticItem: (variables, optimisticId) => {
       const now = new Date().toISOString();
       return {
-        id: optimisticId, 
-        optimisticId: optimisticId, 
+        id: optimisticId, // This is the server-generated ID for optimistic item before server response
+        optimisticId: optimisticId, // Explicitly keep track of the optimistic ID if needed
         created_at: now,
         updated_at: now,
         completed: false,
@@ -76,15 +77,17 @@ export const useCreateTask = () => {
         icon_url: variables.icon_url || null,
         usage_data: variables.usage_data || Array(7).fill(0),
         background_images: variables.background_images as Json || null,
+        // Spread remaining variables, ensuring they are part of TaskWithId
         ...variables, 
       } as TaskWithId;
     },
     onSuccessCallback: async (newTaskData) => {
       logger.debug('[useCreateTask onSuccessCallback] New task created on server, updating IndexedDB.', newTaskData);
       try {
-        const localTasks = (await loadTasksFromDB()) as IDBTaskType[] || [];
+        const localTasks = await loadTasksFromDB() || [];
+        // Filter out by optimisticId if present, then by actual id
         const updatedLocalTasks = [
-            newTaskData as unknown as IDBTaskType, 
+            newTaskData, 
             ...localTasks.filter(t => 
                 t.id !== newTaskData.id && 
                 (!newTaskData.optimisticId || t.id !== newTaskData.optimisticId)
