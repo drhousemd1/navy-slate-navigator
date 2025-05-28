@@ -15,7 +15,7 @@ interface ToggleTaskCompletionVariables {
   taskId: string;
   completed: boolean; // This 'completed' now means "an instance of completion occurred"
   pointsValue: number;
-  task?: TaskWithId; // Optional, as we will fetch fresh task data
+  task: TaskWithId; // Changed to non-optional, as it's crucial and provided by the caller
 }
 
 export function useToggleTaskCompletionMutation() {
@@ -24,7 +24,7 @@ export function useToggleTaskCompletionMutation() {
 
   return useMutation<void, Error, ToggleTaskCompletionVariables, { previousTasks?: TaskWithId[] }>(
     {
-      mutationFn: async ({ taskId, completed: instanceCompleted, pointsValue }) => {
+      mutationFn: async ({ taskId, completed: instanceCompleted, pointsValue, task: taskFromVariables }) => {
         const { data: authUser } = await supabase.auth.getUser();
         if (!authUser?.user?.id) {
           toast({ title: 'Authentication Error', description: "User not authenticated.", variant: 'destructive' });
@@ -32,25 +32,20 @@ export function useToggleTaskCompletionMutation() {
         }
         const userId = authUser.user.id;
 
-        // Fetch the current task state from DB for accuracy
-        const { data: taskData, error: fetchTaskError } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('id', taskId)
-          .single();
-
-        if (fetchTaskError) {
-          logger.error('Error fetching task for completion toggle:', fetchTaskError);
-          toast({ title: 'Error Fetching Task', description: fetchTaskError.message, variant: 'destructive' });
-          throw fetchTaskError;
+        // Use the task data passed in from variables (reflects current cache state)
+        // No need to fetch from DB here, as that was causing staleness issues.
+        if (!taskFromVariables) {
+          // This check is more of a safeguard; the type now makes `task` required.
+          // The calling code in Tasks.tsx already ensures a task is found and passed.
+          toast({ title: 'Internal Error', description: "Task data was not provided to the mutation.", variant: 'destructive' });
+          throw new Error(`Task data for ID ${taskId} not provided.`);
         }
-        if (!taskData) {
-          throw new Error(`Task with ID ${taskId} not found.`);
-        }
+        
+        const currentTask = taskFromVariables; // Already processed by useTasksQuery
 
-        const currentTask = processTaskFromDb(taskData as RawSupabaseTask);
         const dayOfWeek = getCurrentDayOfWeek();
-        const currentUsageData = currentTask.usage_data || Array(7).fill(0);
+        // Ensure usage_data is an array, defaulting if somehow null/undefined despite processing
+        const currentUsageData = Array.isArray(currentTask.usage_data) ? currentTask.usage_data : Array(7).fill(0);
         const newUsageData = [...currentUsageData];
         const frequencyCount = currentTask.frequency_count || 1;
 
@@ -61,10 +56,7 @@ export function useToggleTaskCompletionMutation() {
         }
 
         const isNowFullyCompletedForDay = newUsageData[dayOfWeek] >= frequencyCount;
-        // Determine the task's overall completed status for the DB
-        // If it has frequency/count, completion depends on usage_data meeting frequency_count.
-        // Otherwise (e.g. one-off tasks), it depends on the 'instanceCompleted' flag.
-        const taskCompletedStatusForDb = (currentTask.frequency && currentTask.frequency_count > 0)
+        const taskCompletedStatusForDb = (currentTask.frequency && currentTask.frequency_count && currentTask.frequency_count > 0)
           ? isNowFullyCompletedForDay
           : instanceCompleted;
 
@@ -128,7 +120,7 @@ export function useToggleTaskCompletionMutation() {
           }
         }
       },
-      onMutate: async ({ taskId, completed, task: taskFromVariables }) => {
+      onMutate: async ({ taskId, completed, task: taskFromVariables }) => { // taskFromVariables is available here too
         await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
         const previousTasks = queryClient.getQueryData<TaskWithId[]>(TASKS_QUERY_KEY);
         
@@ -138,9 +130,11 @@ export function useToggleTaskCompletionMutation() {
 
           return oldTasks.map(task => {
             if (task.id === taskId) {
-              const currentUsageData = task.usage_data || Array(7).fill(0);
+              // Use taskFromVariables for consistency if needed, but oldTask should be fine for optimistic
+              const baseTaskForOptimistic = task; // Or taskFromVariables if more reliable
+              const currentUsageData = baseTaskForOptimistic.usage_data || Array(7).fill(0);
               const newUsageData = [...currentUsageData];
-              const frequencyCount = task.frequency_count || 1;
+              const frequencyCount = baseTaskForOptimistic.frequency_count || 1;
 
               if (completed) { 
                 newUsageData[dayOfWeek] = Math.min((newUsageData[dayOfWeek] || 0) + 1, frequencyCount);
@@ -149,7 +143,9 @@ export function useToggleTaskCompletionMutation() {
               }
               
               const isNowFullyCompletedForDay = newUsageData[dayOfWeek] >= frequencyCount;
-              const taskCompletedStatus = (task.frequency && task.frequency_count) ? isNowFullyCompletedForDay : completed;
+              const taskCompletedStatus = (baseTaskForOptimistic.frequency && baseTaskForOptimistic.frequency_count && baseTaskForOptimistic.frequency_count > 0) 
+                                          ? isNowFullyCompletedForDay 
+                                          : completed;
 
 
               return { 
@@ -177,18 +173,19 @@ export function useToggleTaskCompletionMutation() {
 
             const updatedLocalTasks = localTasks.map(t => {
               if (t.id === variables.taskId) {
+                // Logic here should mirror onMutate and mutationFn for consistency
                 const currentUsageData = t.usage_data || Array(7).fill(0);
                 const newUsageData = [...currentUsageData];
                 const frequencyCount = t.frequency_count || 1;
 
-                if (variables.completed) { // variables.completed here means an instance of completion
+                if (variables.completed) { 
                   newUsageData[dayOfWeek] = Math.min((newUsageData[dayOfWeek] || 0) + 1, frequencyCount);
                 } else { 
                   newUsageData[dayOfWeek] = Math.max((newUsageData[dayOfWeek] || 0) - 1, 0);
                 }
                 
                 const isNowFullyCompletedForDay = newUsageData[dayOfWeek] >= frequencyCount;
-                const taskCompletedStatus = (t.frequency && t.frequency_count) ? isNowFullyCompletedForDay : variables.completed;
+                const taskCompletedStatus = (t.frequency && t.frequency_count && t.frequency_count > 0) ? isNowFullyCompletedForDay : variables.completed;
 
                 return { 
                   ...t, 
@@ -219,7 +216,8 @@ export function useToggleTaskCompletionMutation() {
              !error.message.includes('History Record Error') &&
              !error.message.includes('Profile Fetch Error') &&
              !error.message.includes('Points Update Error') &&
-             !error.message.includes('User not authenticated')) {
+             !error.message.includes('User not authenticated') &&
+             !error.message.includes('Task data was not provided')) { // Added this condition
              toast({ title: 'Task Status Update Failed', description: error.message, variant: 'destructive' });
         }
       },
