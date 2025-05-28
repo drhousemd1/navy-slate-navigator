@@ -10,31 +10,59 @@ import ThroneRoom from './pages/ThroneRoom';
 import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Encyclopedia from './pages/Encyclopedia';
-// import AppGuide from './pages/AppGuide'; // Removed AppGuide import
-import Auth from './pages/auth'; // Import the main Auth component
+import Auth from './pages/auth'; 
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import ProtectedRoute from '@/components/auth/ProtectedRoute'; // Import ProtectedRoute
 
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<ErrorBoundary><Index /></ErrorBoundary>} />
-      <Route path="/rewards" element={<ErrorBoundary><Rewards /></ErrorBoundary>} />
-      <Route path="/tasks" element={<ErrorBoundary><Tasks /></ErrorBoundary>} />
-      <Route path="/rules" element={<ErrorBoundary><Rules /></ErrorBoundary>} />
-      <Route path="/punishments" element={<ErrorBoundary><Punishments /></ErrorBoundary>} />
-      <Route path="/throne-room" element={<ErrorBoundary><ThroneRoom /></ErrorBoundary>} />
-      <Route path="/profile" element={<ErrorBoundary><Profile /></ErrorBoundary>} />
-      <Route path="/messages" element={<ErrorBoundary><Messages /></ErrorBoundary>} />
-      <Route path="/encyclopedia" element={<ErrorBoundary><Encyclopedia /></ErrorBoundary>} />
-      {/* <Route path="/app-guide" element={<ErrorBoundary><AppGuide /></ErrorBoundary>} /> // Removed AppGuide route */}
-      
-      {/* Auth routes now use the main Auth component */}
+      {/* Public routes */}
       <Route path="/auth" element={<ErrorBoundary><Auth /></ErrorBoundary>} />
       <Route path="/forgot-password" element={<ErrorBoundary><Auth /></ErrorBoundary>} /> 
-      
       <Route path="/reset-password" element={<ErrorBoundary><ResetPasswordPage /></ErrorBoundary>} />
+      
+      {/* Protected routes */}
+      <Route 
+        path="/" 
+        element={<ProtectedRoute><ErrorBoundary><Index /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/rewards" 
+        element={<ProtectedRoute><ErrorBoundary><Rewards /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/tasks" 
+        element={<ProtectedRoute><ErrorBoundary><Tasks /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/rules" 
+        element={<ProtectedRoute><ErrorBoundary><Rules /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/punishments" 
+        element={<ProtectedRoute><ErrorBoundary><Punishments /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/throne-room" 
+        element={<ProtectedRoute><ErrorBoundary><ThroneRoom /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/profile" 
+        element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/messages" 
+        element={<ProtectedRoute><ErrorBoundary><Messages /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/encyclopedia" 
+        element={<ProtectedRoute><ErrorBoundary><Encyclopedia /></ErrorBoundary></ProtectedRoute>} 
+      />
+      
+      {/* Catch-all for not found routes */}
       <Route path="*" element={<ErrorBoundary><NotFound /></ErrorBoundary>} />
     </Routes>
   );
