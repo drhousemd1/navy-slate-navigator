@@ -1,15 +1,12 @@
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
-import { RewardsContextType, SaveRewardParams } from './rewards/rewardTypes'; // SaveRewardParams might not be needed here if handleSaveReward signature changes
-import { useRewardsData } from '@/data/RewardsDataHandler'; // Changed import path
+import { RewardsContextType, SaveRewardParams } from './rewards/rewardTypes';
+import { useRewardsData } from '@/data/rewards/useRewardsData';
 import { Reward } from '@/data/rewards/types';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { logger } from '@/lib/logger'; // Added logger import
-// Specific mutation hooks like useBuySubReward are used within useRewardsData from RewardsDataHandler
-// So they are not directly needed here anymore if we rely on the handlers from useRewardsData.
+import { logger } from '@/lib/logger';
 
-// Create a complete mock observer result that satisfies the QueryObserverResult type
 const mockQueryResult: QueryObserverResult<Reward[], Error> = {
   data: [],
   error: null,
@@ -35,7 +32,7 @@ const mockQueryResult: QueryObserverResult<Reward[], Error> = {
   isInitialLoading: false,
   isPaused: false,
   refetch: async () => mockQueryResult,
-  promise: Promise.resolve([] as Reward[]) // Corrected promise type
+  promise: Promise.resolve([] as Reward[])
 };
 
 const RewardsContext = createContext<RewardsContextType>({
@@ -44,8 +41,8 @@ const RewardsContext = createContext<RewardsContextType>({
   totalRewardsSupply: 0,
   totalDomRewardsSupply: 0,
   domPoints: 0,
-  setTotalPoints: async () => {}, // Adjusted to Promise<void>
-  setDomPoints: async () => {}, // Adjusted to Promise<void>
+  setTotalPoints: async () => {},
+  setDomPoints: async () => {},
   isLoading: true,
   refetchRewards: async () => mockQueryResult,
   handleSaveReward: async () => null,
@@ -62,47 +59,41 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     rewards,
     totalPoints,
     totalRewardsSupply,
-    domPoints = 0, // domPoints is directly available from RewardsDataHandler
+    domPoints = 0,
     isLoading,
-    saveReward, // from RewardsDataHandler
-    deleteReward, // from RewardsDataHandler
-    buyReward,    // from RewardsDataHandler
-    useReward,    // from RewardsDataHandler
-    updatePoints, // from RewardsDataHandler (renamed from setTotalPoints)
-    updateDomPoints, // from RewardsDataHandler (renamed from setDomPoints)
+    saveReward,
+    deleteReward,
+    buyReward,
+    useReward,
+    updatePoints,
+    updateDomPoints,
     refetchRewards,
     refreshPointsFromDatabase,
-    totalDomRewardsSupply, // from RewardsDataHandler
+    totalDomRewardsSupply,
   } = useRewardsData();
   
   useEffect(() => {
-    // logger.debug("RewardsProvider: Refreshing points from database on mount"); // Already in RewardsDataHandler
     refreshPointsFromDatabase();
   }, [refreshPointsFromDatabase]);
 
-  // handleSaveReward now directly uses `saveReward` from `useRewardsData` (RewardsDataHandler)
-  // which expects `SaveRewardParams` { rewardData, currentIndex }
   const handleSaveReward = async (rewardData: Partial<Reward>, index: number | null): Promise<string | null> => {
     logger.debug("RewardsContext - handleSaveReward called with data:", rewardData, "index:", index);
     try {
       const params: SaveRewardParams = { rewardData, currentIndex: index };
-      if (rewardData.id && index !== null) { // For update, ensure ID is part of rewardData
+      if (rewardData.id && index !== null) {
          params.rewardData = { ...rewardData, id: rewardData.id };
-      } else if (!rewardData.id && index === null) { // For create
-        // ID is not needed for creation in `saveReward` from `RewardsDataHandler`
+      } else if (!rewardData.id && index === null) {
+        // ID is not needed for creation
       }
 
       const savedReward = await saveReward(params);
       return savedReward?.id || null;
     } catch (error) {
       logger.error("Error in RewardsContext handleSaveReward:", error);
-      // Toasting is likely handled within `saveReward` or its underlying mutations
       return null;
     }
   };
 
-  // handleDeleteReward now directly uses `deleteReward` from `useRewardsData` (RewardsDataHandler)
-  // which expects a rewardId string.
   const handleDeleteReward = async (index: number): Promise<boolean> => {
     const rewardToDelete = rewards[index];
     if (!rewardToDelete?.id) {
@@ -117,35 +108,31 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // handleBuyReward now directly uses `buyReward` from `useRewardsData` (RewardsDataHandler)
-  const handleBuyRewardWrapper = async (id: string, cost: number, isDomRewardGiven?: boolean) => {
+  const handleBuyRewardWrapper = async (id: string, cost: number) => {
     const reward = rewards.find(r => r.id === id);
     if (!reward) {
         toast({ title: "Reward not found", description: "Cannot buy a non-existent reward.", variant: "destructive" });
         return;
     }
-    // buyReward in RewardsDataHandler infers isDomReward from the reward object itself.
-    // It expects { rewardId: string, cost: number }
+    
     try {
+        logger.debug("RewardsContext - buying reward:", { id, cost, isDom: reward.is_dom_reward });
         await buyReward({ rewardId: id, cost });
-        // Toasting and state updates handled by buyReward from RewardsDataHandler
     } catch (error) {
         logger.error("Error in RewardsContext handleBuyRewardWrapper:", error);
-        // Error toast likely handled by the mutation hook within buyReward
     }
   };
 
-  // handleUseReward now directly uses `useReward` from `useRewardsData` (RewardsDataHandler)
   const handleUseRewardWrapper = async (id: string) => {
      const reward = rewards.find(r => r.id === id);
     if (!reward) {
         toast({ title: "Reward not found", description: "Cannot use a non-existent reward.", variant: "destructive" });
         return;
     }
-    // useReward in RewardsDataHandler expects { rewardId: string }
+    
     try {
+        logger.debug("RewardsContext - using reward:", { id, isDom: reward.is_dom_reward });
         await useReward({ rewardId: id });
-        // Toasting and state updates handled by useReward
     } catch (error) {
         logger.error("Error in RewardsContext handleUseRewardWrapper:", error);
     }
@@ -153,7 +140,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   
   const setTotalPointsWrapper = async (points: number) => {
     try {
-      await updatePoints(points); // from RewardsDataHandler
+      await updatePoints(points);
     } catch (error) {
       logger.error("Error setting total points:", error);
       await refreshPointsFromDatabase(); 
@@ -162,7 +149,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const setDomPointsWrapper = async (points: number) => {
     try {
-      await updateDomPoints(points); // from RewardsDataHandler
+      await updateDomPoints(points);
     } catch (error) {
       logger.error("Error setting dom points:", error);
       await refreshPointsFromDatabase();
@@ -191,12 +178,9 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     totalDomRewardsSupply, 
     domPoints, 
     isLoading, 
-    // Wrap functions from useRewardsData in useCallback within useRewardsData if they cause re-renders,
-    // or ensure they are stable. For context, direct usage or simple wrappers are fine.
-    // Functions from useRewardsData are generally stable due to useMutation/useQuery.
     refetchRewards, 
     refreshPointsFromDatabase,
-    saveReward, // Add dependencies from useRewardsData if they are not stable
+    saveReward,
     deleteReward,
     buyReward,
     useReward,

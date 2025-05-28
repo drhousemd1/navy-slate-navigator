@@ -160,12 +160,14 @@ export const useRewardsData = () => {
     const profileId = userData.user.id;
         
     if (reward.is_dom_reward) {
-      // Ensure currentDomPoints is fetched or available
-      const currentDomPoints = queryClient.getQueryData<number>(REWARDS_DOM_POINTS_QUERY_KEY) ?? domPointsFromManager; // Use nullish coalescing
+      // Use DOM points and call DOM mutation
+      const currentDomPoints = domPointsFromManager;
+      logger.debug("Buying DOM reward:", { rewardId, cost, currentDomPoints, profileId });
       return buyDom({ rewardId, cost, currentSupply: reward.supply, profileId, currentDomPoints });
     } else {
-      // Ensure currentPoints is fetched or available
-      const currentPoints = queryClient.getQueryData<number>(REWARDS_POINTS_QUERY_KEY) ?? totalPointsFromManager; // Use nullish coalescing
+      // Use regular points and call Sub mutation
+      const currentPoints = totalPointsFromManager;
+      logger.debug("Buying Sub reward:", { rewardId, cost, currentPoints, profileId });
       return buySub({ rewardId, cost, currentSupply: reward.supply, profileId, currentPoints });
     }
   };
@@ -179,8 +181,10 @@ export const useRewardsData = () => {
     const profileId = userData.user.id;
 
     if (reward.is_dom_reward) {
+      logger.debug("Using DOM reward:", { rewardId, profileId });
       return redeemDom({ rewardId, currentSupply: reward.supply, profileId });
     } else {
+      logger.debug("Using Sub reward:", { rewardId, profileId });
       return redeemSub({ rewardId, currentSupply: reward.supply, profileId });
     }
   };

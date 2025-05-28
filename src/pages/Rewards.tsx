@@ -11,9 +11,7 @@ import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards
 import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
 import { toast } from '@/hooks/use-toast';
 
-import { useBuySubReward, useRedeemSubReward } from '@/data/rewards/mutations';
-import { useAuth } from '@/contexts/AuthContext';
-import { usePointsManager } from '@/data/points/usePointsManager';
+import { useRewards } from '@/contexts/RewardsContext';
 import { logger } from '@/lib/logger';
 
 const RewardsContent: React.FC<{
@@ -33,10 +31,8 @@ const RewardsContent: React.FC<{
   const updateRewardMutation = useUpdateRewardMutation();
   const deleteRewardMutation = useDeleteRewardMutation();
   
-  const buySubRewardMutation = useBuySubReward();
-  const redeemSubRewardMutation = useRedeemSubReward();
-  const { user } = useAuth();
-  const { points: currentUserPoints } = usePointsManager();
+  // Use context functions instead of direct mutations
+  const { handleBuyReward, handleUseReward } = useRewards();
 
   const handleAddNewReward = () => {
     setRewardBeingEdited(undefined);
@@ -52,55 +48,18 @@ const RewardsContent: React.FC<{
     }
   };
 
+  // Use context functions directly - no more blocking or wrapper logic
   const handleBuyRewardWrapper = async (rewardId: string, cost: number) => {
-    const rewardToBuy = rewards.find(r => r.id === rewardId);
-    if (!rewardToBuy) {
-      toast({ title: "Error", description: "Reward not found.", variant: "destructive" });
-      return;
-    }
-    if (!user || !user.id) {
-      toast({ title: "Error", description: "User profile not available. Please log in.", variant: "destructive" });
-      return;
-    }
-    if (rewardToBuy.is_dom_reward) {
-        toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward purchase not implemented on this button yet.", variant: "destructive" });
-        return;
-    }
-
     try {
-      await buySubRewardMutation.mutateAsync({ 
-        rewardId, 
-        cost,
-        currentSupply: rewardToBuy.supply,
-        profileId: user.id,
-        currentPoints: currentUserPoints ?? 0
-      });
+      await handleBuyReward(rewardId, cost);
     } catch (e) {
       logger.error("Error buying reward from page:", e);
     }
   };
 
   const handleUseRewardWrapper = async (rewardId: string) => {
-    const rewardToUse = rewards.find(r => r.id === rewardId);
-    if (!rewardToUse) {
-      toast({ title: "Error", description: "Reward not found.", variant: "destructive" });
-      return;
-    }
-     if (!user || !user.id) {
-      toast({ title: "Error", description: "User profile not available. Please log in.", variant: "destructive" });
-      return;
-    }
-     if (rewardToUse.is_dom_reward) {
-        toast({ title: "Action not supported", description: "This action is for non-DOM rewards. DOM reward usage not implemented on this button yet.", variant: "destructive" });
-        return;
-    }
-
     try {
-      await redeemSubRewardMutation.mutateAsync({
-        rewardId,
-        currentSupply: rewardToUse.supply,
-        profileId: user.id
-      });
+      await handleUseReward(rewardId);
     } catch (e) {
       logger.error("Error using reward from page:", e);
     }
