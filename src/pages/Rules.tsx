@@ -1,17 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import RuleEditor from '../components/RuleEditor';
 import RulesHeader from '../components/rule/RulesHeader';
 import RulesList from '../components/rule/RulesList';
 import { Rule } from '@/data/interfaces/Rule';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { useRulesData, RulesQueryResult } from '@/data/RulesDataHandler';
+import { useRulesData } from '@/data/hooks/useRulesData';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+
+interface RulesQueryResult {
+  rules: Rule[];
+  isLoading: boolean;
+  error: Error | null;
+  saveRule: (ruleData: Partial<Rule>) => Promise<Rule>;
+  deleteRule: (ruleId: string) => Promise<boolean>;
+  markRuleBroken: (rule: Rule) => Promise<void>;
+  refetchRules: () => Promise<any>;
+  isUsingCachedData: boolean;
+}
 
 const RulesPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
+  const navigate = useNavigate();
+
   const { 
     rules, 
     isLoading, 
@@ -29,7 +43,7 @@ const RulesPageContent: React.FC = () => {
   useEffect(() => {
     const element = document.querySelector('.RulesContent'); 
     if (element) {
-      const handleAddEvent = (_event: Event) => { // event param can be ignored if not used
+      const handleAddEvent = (_event: Event) => {
         handleAddRule();
       };
       element.addEventListener('add-new-rule', handleAddEvent);
@@ -67,6 +81,7 @@ const RulesPageContent: React.FC = () => {
   const handleRuleBroken = async (rule: Rule) => {
     try {
       await markRuleBroken(rule);
+      navigate('/punishments');
     } catch (err: unknown) {
       logger.error('Error marking rule as broken:', getErrorMessage(err));
     }
