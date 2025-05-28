@@ -1,30 +1,30 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, getCurrentDayOfWeek } from '@/lib/taskUtils';
+import { Task, getCurrentDayOfWeek, processTaskFromDb } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
-import { TaskWithId } from '@/data/tasks/types';
-import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery'; 
-import { useUserIds } from '@/contexts/UserIdsContext'; 
-import { logger } from '@/lib/logger'; 
+import { TaskWithId, RawSupabaseTask } from '@/data/tasks/types';
+import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
+import { useUserIds } from '@/contexts/UserIdsContext';
+import { logger } from '@/lib/logger';
 
 
 interface ToggleTaskCompletionVariables {
   taskId: string;
-  completed: boolean;
+  completed: boolean; // This 'completed' now means "an instance of completion occurred"
   pointsValue: number;
-  task?: TaskWithId; 
+  task?: TaskWithId; // Optional, as we will fetch fresh task data
 }
 
 export function useToggleTaskCompletionMutation() {
   const queryClient = useQueryClient();
-  const { subUserId } = useUserIds(); 
+  const { subUserId } = useUserIds();
 
   return useMutation<void, Error, ToggleTaskCompletionVariables, { previousTasks?: TaskWithId[] }>(
     {
-      mutationFn: async ({ taskId, completed, pointsValue }) => {
+      mutationFn: async ({ taskId, completed: instanceCompleted, pointsValue }) => {
         const { data: authUser } = await supabase.auth.getUser();
         if (!authUser?.user?.id) {
           toast({ title: 'Authentication Error', description: "User not authenticated.", variant: 'destructive' });
@@ -32,10 +32,53 @@ export function useToggleTaskCompletionMutation() {
         }
         const userId = authUser.user.id;
 
+        // Fetch the current task state from DB for accuracy
+        const { data: taskData, error: fetchTaskError } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('id', taskId)
+          .single();
+
+        if (fetchTaskError) {
+          logger.error('Error fetching task for completion toggle:', fetchTaskError);
+          toast({ title: 'Error Fetching Task', description: fetchTaskError.message, variant: 'destructive' });
+          throw fetchTaskError;
+        }
+        if (!taskData) {
+          throw new Error(`Task with ID ${taskId} not found.`);
+        }
+
+        const currentTask = processTaskFromDb(taskData as RawSupabaseTask);
+        const dayOfWeek = getCurrentDayOfWeek();
+        const currentUsageData = currentTask.usage_data || Array(7).fill(0);
+        const newUsageData = [...currentUsageData];
+        const frequencyCount = currentTask.frequency_count || 1;
+
+        if (instanceCompleted) {
+          newUsageData[dayOfWeek] = Math.min((newUsageData[dayOfWeek] || 0) + 1, frequencyCount);
+        } else {
+          newUsageData[dayOfWeek] = Math.max((newUsageData[dayOfWeek] || 0) - 1, 0);
+        }
+
+        const isNowFullyCompletedForDay = newUsageData[dayOfWeek] >= frequencyCount;
+        // Determine the task's overall completed status for the DB
+        // If it has frequency/count, completion depends on usage_data meeting frequency_count.
+        // Otherwise (e.g. one-off tasks), it depends on the 'instanceCompleted' flag.
+        const taskCompletedStatusForDb = (currentTask.frequency && currentTask.frequency_count > 0)
+          ? isNowFullyCompletedForDay
+          : instanceCompleted;
+
         const todayStr = new Date().toISOString().split('T')[0];
-        const taskFieldsToUpdate: { completed: boolean; last_completed_date: string | null } = {
-          completed,
-          last_completed_date: completed ? todayStr : null,
+        const taskFieldsToUpdate: {
+          completed: boolean;
+          last_completed_date: string | null;
+          usage_data: number[];
+          updated_at: string;
+        } = {
+          completed: taskCompletedStatusForDb,
+          last_completed_date: instanceCompleted ? todayStr : (taskCompletedStatusForDb ? currentTask.last_completed_date : null),
+          usage_data: newUsageData,
+          updated_at: new Date().toISOString(),
         };
 
         const { error: updateError } = await supabase
@@ -48,10 +91,11 @@ export function useToggleTaskCompletionMutation() {
           throw updateError;
         }
 
-        if (completed) {
+        // Handle points and history logging only if an instance was completed
+        if (instanceCompleted) {
           const { error: historyError } = await supabase
             .from('task_completion_history')
-            .insert({ task_id: taskId, user_id: userId });
+            .insert({ task_id: taskId, user_id: userId, completed_at: new Date().toISOString() });
 
           if (historyError) {
             logger.error('Error recording task completion history:', historyError);
@@ -74,7 +118,7 @@ export function useToggleTaskCompletionMutation() {
           const newPoints = (currentProfile?.points || 0) + pointsValue;
           const { error: updatePointsError } = await supabase
             .from('profiles')
-            .update({ points: newPoints })
+            .update({ points: newPoints, updated_at: new Date().toISOString() })
             .eq('id', userId);
 
           if (updatePointsError) {
@@ -137,7 +181,7 @@ export function useToggleTaskCompletionMutation() {
                 const newUsageData = [...currentUsageData];
                 const frequencyCount = t.frequency_count || 1;
 
-                if (variables.completed) { 
+                if (variables.completed) { // variables.completed here means an instance of completion
                   newUsageData[dayOfWeek] = Math.min((newUsageData[dayOfWeek] || 0) + 1, frequencyCount);
                 } else { 
                   newUsageData[dayOfWeek] = Math.max((newUsageData[dayOfWeek] || 0) - 1, 0);
