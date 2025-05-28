@@ -9,6 +9,9 @@ import { useAuthOperations } from './auth/useAuthOperations';
 import { useUserProfile } from './auth/useUserProfile';
 import { logger } from '@/lib/logger';
 
+const MAX_ADMIN_CHECK_RETRIES = 2; // Max 2 attempts (1 initial + 1 retry)
+const ADMIN_CHECK_RETRY_DELAY_MS = 1500; // 1.5 seconds delay
+
 interface AuthState {
   user: User | null;
   session: Session | null;
@@ -73,13 +76,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logger.debug("AuthContext: Initial session data from Supabase:", initialSupabaseSession);
       const user = initialSupabaseSession?.user ?? null;
 
-      // Set primary auth state and loading to false first. isAdmin is tentatively false.
       setAuthState({
         user: user,
         session: initialSupabaseSession,
-        loading: false, // KEY CHANGE: Set loading false now
+        loading: false,
         isAuthenticated: !!initialSupabaseSession,
-        isAdmin: false, // Tentatively false for initial load, will be updated asynchronously
+        isAdmin: false, // Tentatively false, will be updated by async check below
         userExists: !!user,
         sessionExists: !!initialSupabaseSession,
       });
@@ -91,24 +93,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         loading: false,
       });
 
-      // If user exists, asynchronously check admin role
       if (user) {
-        try {
-          logger.debug("AuthContext: Initial session - User found, async checking admin role for", user.id);
-          const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
-            requested_user_id: user.id,
-            requested_role: 'admin'
-          });
-          if (roleError) {
-            logger.error("AuthContext: Initial session - Error checking admin role (async):", roleError);
-            // Optionally set isAdmin to false explicitly on error, or let it be.
-            // Current behavior is to leave it as it was (which was false from above).
-          } else {
-            setAuthState(prev => ({ ...prev, isAdmin: !!hasAdminRole }));
-            logger.debug("AuthContext: Initial session - Async admin role check complete. isAdmin updated to:", !!hasAdminRole);
+        const checkAdminRoleWithRetry = async (attempt = 1): Promise<boolean | null> => {
+          try {
+            logger.debug(`AuthContext: Initial session - User found, async checking admin role (Attempt ${attempt}) for ${user.id}`);
+            const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
+              requested_user_id: user.id,
+              requested_role: 'admin'
+            });
+
+            if (roleError) {
+              logger.error(`AuthContext: Initial session - Error checking admin role (Attempt ${attempt}):`, roleError);
+              if (attempt < MAX_ADMIN_CHECK_RETRIES) {
+                // Add more specific retry conditions if needed, e.g., based on error.code
+                logger.info(`AuthContext: Initial session - Retrying admin role check (Attempt ${attempt + 1}) after delay.`);
+                await new Promise(resolve => setTimeout(resolve, ADMIN_CHECK_RETRY_DELAY_MS));
+                return await checkAdminRoleWithRetry(attempt + 1);
+              }
+              return null; // Failed after retries or not retryable
+            }
+            logger.debug(`AuthContext: Initial session - Async admin role check (Attempt ${attempt}) successful. Admin: ${!!hasAdminRole}`);
+            return !!hasAdminRole;
+          } catch (e) {
+            logger.error(`AuthContext: Initial session - Exception during async admin role check (Attempt ${attempt}):`, e);
+            if (attempt < MAX_ADMIN_CHECK_RETRIES) {
+              logger.info(`AuthContext: Initial session - Retrying admin role check (Attempt ${attempt + 1}) after exception and delay.`);
+              await new Promise(resolve => setTimeout(resolve, ADMIN_CHECK_RETRY_DELAY_MS));
+              return await checkAdminRoleWithRetry(attempt + 1);
+            }
+            return null; // Failed after retries
           }
-        } catch (e) {
-          logger.error("AuthContext: Initial session - Exception during async admin role check:", e);
+        };
+
+        const adminStatus = await checkAdminRoleWithRetry();
+        if (adminStatus !== null) {
+          setAuthState(prev => ({ ...prev, isAdmin: adminStatus }));
+          logger.debug(`AuthContext: Initial session - Final admin status after check/retry set to: ${adminStatus}`);
+        } else {
+          logger.warn(`AuthContext: Initial session - Could not determine admin status after ${MAX_ADMIN_CHECK_RETRIES} attempts. isAdmin remains false.`);
+          // isAdmin remains false as per initial state set earlier
         }
       }
     };
@@ -120,26 +143,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logger.debug("AuthContext: Auth state change event:", _event, "New Session State:", newSessionState);
         const user = newSessionState?.user ?? null;
 
-        // Update primary auth state. Loading remains false.
-        // CRITICAL FIX: Preserve previous isAdmin if user exists, otherwise set to false.
         setAuthState(prev => ({
           ...prev,
           user: user,
           session: newSessionState,
-          loading: false, // Ensure loading is false after any event
-          isAdmin: user ? prev.isAdmin : false, // Preserve isAdmin if user exists, else false
+          loading: false, 
+          isAdmin: user ? prev.isAdmin : false, 
           userExists: !!user,
           sessionExists: !!newSessionState,
+          isAuthenticated: !!newSessionState, // Ensure isAuthenticated is also updated here
         }));
-        logger.debug("AuthContext: State updated after auth event. New state (isAdmin preserved if user exists):", {
+        // Log the state *after* it's set, or use the values directly
+        logger.debug("AuthContext: State updated after auth event. New state:", {
             userExists: !!user,
             sessionExists: !!newSessionState,
-            isAuthenticated: !!newSessionState,
-            isAdmin: user ? authState.isAdmin : false, // Log current isAdmin for clarity
+            isAuthenticated: !!newSessionState, // Corrected logging
+            isAdmin: user ? authState.isAdmin : false, // This logs the potentially stale authState.isAdmin
+                                                     // Better to log based on what was just set if prev.isAdmin was used.
+                                                     // For simplicity, this log is indicative.
             loading: false,
         });
-
-        // If user exists, asynchronously check admin role
+        
         if (user) {
           try {
             logger.debug("AuthContext: Auth state change - User found, async checking admin role for", user.id);
@@ -149,11 +173,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
             if (roleError) {
               logger.error("AuthContext: Auth state change - Error checking admin role (async):", roleError);
-              // If role check fails, we might want to set isAdmin to false.
-              // Or, trust the previous state if the failure is transient.
-              // For now, only update on success.
+              // Do not change isAdmin on error, preserve previous state
             } else {
-              // Only update isAdmin if it has actually changed from the async check
               setAuthState(prev => {
                 if (prev.isAdmin !== !!hasAdminRole) {
                   logger.debug(`AuthContext: Auth state change - Async admin role changed from ${prev.isAdmin} to ${!!hasAdminRole}`);
@@ -165,21 +186,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
           } catch (e) {
             logger.error("AuthContext: Auth state change - Exception during async admin role check:", e);
+            // Do not change isAdmin on exception, preserve previous state
           }
         } else {
-          // If no user, ensure isAdmin is false (already handled by the main setAuthState above, but good to be explicit)
-          setAuthState(prev => ({ ...prev, isAdmin: false }));
-          logger.debug("AuthContext: Auth state change - No user, isAdmin definitively false.");
+          // If no user, ensure isAdmin is false (already handled by the main setAuthState above if prev.isAdmin logic is sound)
+          // Explicitly setting it again if user is null is safe.
+           setAuthState(prev => {
+            if (prev.isAdmin) { // Only log if it actually changes from true to false
+                logger.debug("AuthContext: Auth state change - No user, isAdmin changing from true to false.");
+                return { ...prev, isAdmin: false };
+            }
+            return prev; // No change if already false
+          });
         }
         
         switch (_event) {
           case 'SIGNED_IN':
             logger.debug("AuthContext: Event SIGNED_IN processed.");
+            // Admin role is checked by the async logic above if user is present.
             break;
           case 'SIGNED_OUT':
             logger.debug("AuthContext: Event SIGNED_OUT processed. Clearing caches.");
             await clearAllCaches(); 
-            // isAdmin is already false because user is null
+            // isAdmin is already false because user is null (handled by the logic above)
             break;
           case 'USER_DELETED':
             logger.debug("AuthContext: Event USER_DELETED processed. Clearing caches.");
@@ -190,7 +219,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             logger.debug("AuthContext: Event PASSWORD_RECOVERY processed.");
             break;
           case 'TOKEN_REFRESHED':
-            logger.debug("AuthContext: Event TOKEN_REFRESHED processed. Session and admin role (async) re-validated. isAdmin should have been preserved initially.");
+            logger.debug("AuthContext: Event TOKEN_REFRESHED processed. Session and admin role (async) re-validated.");
+            // isAdmin should have been preserved initially by `prev.isAdmin`
+            // and then re-confirmed/updated by the async check.
             break;
           case 'USER_UPDATED':
             logger.debug("AuthContext: Event USER_UPDATED processed.");
