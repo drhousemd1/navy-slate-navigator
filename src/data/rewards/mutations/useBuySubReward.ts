@@ -106,14 +106,16 @@ export const useBuySubReward = () => {
       return { previousRewards, previousPoints, previousSubCount };
     },
     onSuccess: async (data, variables) => {
-      // Force immediate cache updates
+      // Immediately update the cache with the actual data from the server
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => 
         oldRewards.map(r => r.id === data.id ? data : r)
       );
       
+      // Force a fresh fetch to ensure all UI components show the same data
+      await queryClient.refetchQueries({ queryKey: REWARDS_QUERY_KEY });
+      
       // Invalidate all related queries to ensure fresh data
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId] }),
         queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] }),
         queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] })

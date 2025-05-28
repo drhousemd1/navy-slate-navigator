@@ -16,6 +16,10 @@ export function useRewards(): RewardsQueryResult {
   return useQuery<Reward[], Error>({
     queryKey: REWARDS_QUERY_KEY,
     queryFn: fetchRewards,
-    ...STANDARD_QUERY_CONFIG
+    ...STANDARD_QUERY_CONFIG,
+    // Override staleTime to ensure immediate refetch when needed
+    staleTime: 0,
+    // Enable refetch on focus for this critical data
+    refetchOnWindowFocus: true
   });
 }
