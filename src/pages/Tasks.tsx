@@ -14,7 +14,7 @@ import { useToggleTaskCompletionMutation } from '../data/tasks/mutations/useTogg
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
+import { getErrorMessage } from '@/lib/errors';
 
 const TasksPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -98,11 +98,19 @@ const TasksPageContent: React.FC = () => {
         toast({ title: "Error", description: `Task with id ${taskId} not found.`, variant: "destructive" });
         return;
       }
+      
+      // Convert Task to TaskWithId to ensure compatibility
+      const taskWithId: TaskWithId = {
+        ...task,
+        id: task.id!,
+        frequency: (task.frequency === 'daily' || task.frequency === 'weekly') ? task.frequency : 'daily',
+      };
+      
       toggleTaskCompletionMutation.mutate({ 
         taskId, 
         completed, 
         pointsValue: task.points || 0,
-        task 
+        task: taskWithId 
       });
     } catch (e: unknown) {
       const descriptiveMessage = getErrorMessage(e);
@@ -115,22 +123,31 @@ const TasksPageContent: React.FC = () => {
     refreshPointsFromDatabase(); 
   }, [refreshPointsFromDatabase]); 
 
+  // Convert tasks to TaskWithId format for compatibility
+  const tasksWithId: TaskWithId[] = tasks
+    .filter(task => task.id) // Only include tasks with IDs
+    .map(task => ({
+      ...task,
+      id: task.id!,
+      frequency: (task.frequency === 'daily' || task.frequency === 'weekly') ? task.frequency : 'daily',
+    }));
+
   let content;
-  if (isLoading && tasks.length === 0) {
+  if (isLoading && tasksWithId.length === 0) {
     content = (
       <div className="flex flex-col items-center justify-center py-10 mt-4">
         <LoaderCircle className="h-10 w-10 text-primary animate-spin mb-2" />
         <p className="text-muted-foreground">Loading tasks...</p>
       </div>
     );
-  } else if (error && tasks.length === 0) {
+  } else if (error && tasksWithId.length === 0) {
     content = (
       <ErrorDisplay
         title="Error Loading Tasks"
         message={getErrorMessage(error) || "Could not fetch tasks. Please check your connection or try again later."}
       />
     );
-  } else if (!isLoading && tasks.length === 0 && !error) {
+  } else if (!isLoading && tasksWithId.length === 0 && !error) {
     content = (
       <EmptyState
         icon={ListChecks} 
@@ -146,7 +163,7 @@ const TasksPageContent: React.FC = () => {
   } else {
     content = (
       <TasksList
-        tasks={tasks}
+        tasks={tasksWithId}
         isLoading={false} 
         onEditTask={handleEditTask}
         onToggleCompletion={handleToggleCompletion}

@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Reward } from '../types';
 
-const REWARDS_QUERY_KEY = ['rewards']; // Standardized query key
+const REWARDS_QUERY_KEY = ['rewards'];
 
 interface RedeemSubRewardVariables {
   rewardId: string;
@@ -16,15 +16,32 @@ interface RedeemSubRewardOptimisticContext {
   previousRewards?: Reward[];
 }
 
+const recordRewardUsage = async (rewardId: string) => {
+  const now = new Date();
+  const dayOfWeek = (now.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0 format
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay() + 1);
+  const weekNumber = `${startOfWeek.getFullYear()}-W${Math.ceil(startOfWeek.getDate() / 7)}`;
+
+  await supabase
+    .from('reward_usage')
+    .insert({
+      reward_id: rewardId,
+      day_of_week: dayOfWeek,
+      week_number: weekNumber,
+      used: true
+    });
+};
+
 export const useRedeemSubReward = () => {
   const queryClient = useQueryClient();
 
   return useMutation<Reward, Error, RedeemSubRewardVariables, RedeemSubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, currentSupply }) => {
-      if (currentSupply <= 0 && currentSupply !== -1) { // Allow -1 for infinite supply
+      if (currentSupply <= 0 && currentSupply !== -1) {
         throw new Error("Reward is out of stock, cannot use.");
       }
-      // For infinite supply (-1), supply remains -1. Otherwise, decrement.
+      
       const newSupply = currentSupply === -1 ? -1 : currentSupply - 1;
 
       const { error: supplyError } = await supabase
@@ -33,6 +50,9 @@ export const useRedeemSubReward = () => {
         .eq('id', rewardId);
 
       if (supplyError) throw supplyError;
+
+      // Record usage in reward_usage table
+      await recordRewardUsage(rewardId);
 
       const { data: updatedReward, error: fetchError } = await supabase
         .from('rewards')
@@ -46,10 +66,10 @@ export const useRedeemSubReward = () => {
       return updatedReward as Reward;
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY }); // Use standardized key
-      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY); // Use standardized key
+      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
 
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => // Use standardized key
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
             ? { ...reward, supply: reward.supply === -1 ? -1 : reward.supply - 1 }
@@ -60,7 +80,7 @@ export const useRedeemSubReward = () => {
     },
     onError: (err, variables, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards); // Use standardized key
+        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
       }
       toast({ 
         title: "Failed to Use Reward", 
@@ -69,16 +89,18 @@ export const useRedeemSubReward = () => {
       });
     },
     onSuccess: (data, variables) => {
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => { // Use standardized key
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
+      
+      // Invalidate usage query to refresh the tracker
+      queryClient.invalidateQueries({ queryKey: ['reward-usage', variables.rewardId] });
+      
       toast({ title: "Reward Used!", description: `You used ${data.title}.` });
     },
-    onSettled: (_data, _error, variables) => { 
-      // Invalidating the entire list is usually sufficient and simpler.
-      // If specific item invalidation is ever critical, can use:
-      // queryClient.invalidateQueries({ queryKey: [...REWARDS_QUERY_KEY, variables.rewardId] });
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY }); // Use standardized key and simplify
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['reward-usage'] });
     },
   });
 };

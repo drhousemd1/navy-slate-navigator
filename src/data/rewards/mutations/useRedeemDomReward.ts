@@ -1,8 +1,8 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Reward } from '../types'; 
-// Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
 
 const REWARDS_QUERY_KEY = ['rewards'];
 
@@ -15,6 +15,23 @@ interface RedeemDomRewardVariables {
 interface RedeemDomRewardOptimisticContext {
   previousRewards?: Reward[];
 }
+
+const recordRewardUsage = async (rewardId: string) => {
+  const now = new Date();
+  const dayOfWeek = (now.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0 format
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay() + 1);
+  const weekNumber = `${startOfWeek.getFullYear()}-W${Math.ceil(startOfWeek.getDate() / 7)}`;
+
+  await supabase
+    .from('reward_usage')
+    .insert({
+      reward_id: rewardId,
+      day_of_week: dayOfWeek,
+      week_number: weekNumber,
+      used: true
+    });
+};
 
 export const useRedeemDomReward = () => {
   const queryClient = useQueryClient();
@@ -33,6 +50,9 @@ export const useRedeemDomReward = () => {
 
       if (supplyError) throw supplyError;
 
+      // Record usage in reward_usage table
+      await recordRewardUsage(rewardId);
+
       const { data: updatedReward, error: fetchError } = await supabase
         .from('rewards')
         .select('*')
@@ -45,10 +65,10 @@ export const useRedeemDomReward = () => {
       return updatedReward as Reward;
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS
-      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY); // Replaced CRITICAL_QUERY_KEYS.REWARDS
+      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
+      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
 
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) => // Replaced CRITICAL_QUERY_KEYS.REWARDS
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
             ? { ...reward, supply: reward.supply - 1 }
@@ -59,7 +79,7 @@ export const useRedeemDomReward = () => {
     },
     onError: (err, variables, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards); // Replaced CRITICAL_QUERY_KEYS.REWARDS
+        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
       }
       toast({ 
         title: "Failed to Use Reward", 
@@ -68,13 +88,18 @@ export const useRedeemDomReward = () => {
       });
     },
     onSuccess: (data, variables) => {
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => { // Replaced CRITICAL_QUERY_KEYS.REWARDS
+      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
+      
+      // Invalidate usage query to refresh the tracker
+      queryClient.invalidateQueries({ queryKey: ['reward-usage', variables.rewardId] });
+      
       toast({ title: "Reward Used!", description: `You used ${data.title}.` });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY }); // Replaced CRITICAL_QUERY_KEYS.REWARDS
+      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['reward-usage'] });
     },
   });
 };

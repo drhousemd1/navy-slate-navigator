@@ -7,7 +7,7 @@ import WeeklyUsageTracker from './WeeklyUsageTracker';
 interface RewardFooterProps {
   usageData: boolean[];
   calendarColor: string;
-  onEdit: () => void;
+  onEdit?: () => void;
 }
 
 const RewardFooter: React.FC<RewardFooterProps> = ({
@@ -22,16 +22,18 @@ const RewardFooter: React.FC<RewardFooterProps> = ({
         calendarColor={calendarColor}
       />
       
-      <div className="flex space-x-2 ml-auto">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
-          onClick={onEdit}
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-      </div>
+      {onEdit && (
+        <div className="flex space-x-2 ml-auto">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
+            onClick={onEdit}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
