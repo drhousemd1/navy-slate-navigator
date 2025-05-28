@@ -1,8 +1,122 @@
 
 # App Code Guide
 
-## ⚠️ CRITICAL: READ BEFORE MAKING ANY CHANGES
-
+## ⚠️ CRITICAL: READ BEFO
+/**
+ * OVERVIEW
+ *
+ * This app connects a Dominant and Submissive user in a structured behavior-tracking dynamic.
+ * It enables:
+ *  - Persistent RULES set by the Dominant with infraction tracking
+ *  - One-time or recurring TASKS assigned to the Submissive with completion tracking
+ *  - Configurable REWARDS earned/spent by the Submissive (and Dominant)
+ *  - PUNISHMENTS assigned by the Dominant when rules are broken or tasks missed
+ *  - THRONE ROOM dashboard for real-time oversight and metrics
+ *
+ * A shared architecture ensures:
+ *  - Instant display via IndexedDB caching (src/data/indexedDB/useIndexedDB.ts)
+ *  - Periodic sync (every 30 minutes) with Supabase via React Query
+ *  - Unified mutation layer for create/update/delete actions (src/data/mutations)
+ *  - Consistent UI layout with <AppLayout> and global counters
+ *  - Robust error handling via <ErrorBoundary>
+ *
+ * GLOBAL LAYOUT & PROVIDERS
+ * --------------------------
+ * - src/components/app/AppProviders.tsx
+ *    • Wraps BrowserRouter, React Query (QueryClientProvider), IndexedDB hydration, and preloads core data (usePreloadTasks, usePreloadRules, etc.)
+ * - src/components/AppLayout.tsx
+ *    • Renders universal header: Submissive Points, Submissive Supply, DOM Points, DOM Supply
+ *    • Includes <MobileNavbar>, <OfflineBanner>, and global <ErrorBoundary>
+ * - src/data/indexedDB/useIndexedDB.ts
+ *    • Generic IndexedDB API: getItem, setItem, clearItem, getLastSyncTime, setLastSyncTime
+ * - src/data/preload/usePreload*.ts
+ *    • Fired on app startup to seed IndexedDB with cached Tasks, Rules, Rewards, Punishments
+ *
+ * RULES PAGE (src/pages/Rules.tsx)
+ * -------------------------------
+ * • Data Hook: useRulesData (src/data/hooks/useRulesData.ts)
+ *    – loadRulesFromDB(), getLastSyncTime(‘rules’)
+ *    – fetchRules() via RulesDataHandler (src/data/RulesDataHandler.tsx)
+ *    – saveRulesToDB(), setLastSyncTime
+ *    – React Query key: ['rules'], config: staleTime=Infinity, refetchOnMount/Focus/Reconn=false, gcTime=30m, retry=3, exponential backoff
+ * • Card Component: src/components/RuleCard.tsx
+ *    – Displays title, subtext, icon badge, priority badge, background image
+ *    – “Rule Broken” button → triggers useCreateRuleViolation mutation, dispatches ‘add-new-punishment’ event
+ *    – Calendar tracker (Mon–Sun) shows infraction days
+ * • Editor Modal: src/components/RuleEditor.tsx
+ *    – Form fields for title, subtext, priority, icon, bg image (focal point, opacity), color pickers, highlighter toggle
+ *    – Buttons: Save (floppy icon), Cancel, Delete (trash icon)
+ *
+ * TASKS PAGE (src/pages/Tasks.tsx)
+ * -------------------------------
+ * • Data Hook: useTasksData (src/data/hooks/useTasksData.ts)
+ *    – IndexedDB + lastSyncTime('tasks') logic, fetchTasks via TasksDataHandler
+ *    – React Query key: ['tasks'], staleTime=Infinity, gcTime=1h, retry=3
+ * • Card Component: src/components/TaskCard.tsx
+ *    – Title, subtext, icon badge, priority badge, bg image
+ *    – Calendar tracker, Complete button (green) – triggers useToggleTaskCompletionMutation; updates points via usePointsManager
+ *    – Badges: points earned badge, times-per-period (e.g., 2/5)
+ * • Editor Modal: src/components/TaskEditor.tsx + TaskEditorForm.tsx
+ *    – Fields: title, subtext, priority, points (+/–), frequency, max per period, icon, bg image, colors, highlighter
+ *    – Save/Cancel/Delete controls
+ *
+ * REWARDS PAGE (src/pages/Rewards.tsx)
+ * ----------------------------------
+ * • Data Hook: useRewards (src/data/queries/useRewards.ts)
+ *    – IndexedDB + lastSyncTime('rewards'), fetchRewards via RewardsDataHandler
+ *    – React Query key: ['rewards'], staleTime=Infinity, gcTime=30m, retry=1
+ * • Card Component: src/components/RewardCard.tsx
+ *    – Title, subtext, icon, bg image, cost badge, supply badge, calendar tracker
+ *    – “Buy” button (blue/red) → useBuySubReward mutation; deduct Submissive points via usePointsManager; inc supply
+ *    – “Use” icon when supply>0 → useRedeemReward mutation; fill calendar
+ *    – Border color: Submissive (#00F0FF) or Dominant (#FF0000)
+ * • Editor Modal: src/components/RewardEditor.tsx
+ *    – Fields: title, subtext, cost (+/–), type toggle, icon, bg image, colors, highlighter
+ *    – Save/Cancel/Delete controls
+ *
+ * PUNISHMENTS PAGE (src/pages/Punishments.tsx)
+ * -----------------------------------------
+ * • Data Hook: usePunishmentsQuery (src/data/punishments/queries/usePunishmentsQuery.ts)
+ *    – IndexedDB + lastSyncTime('punishments'), fetchPunishments
+ *    – React Query key: ['punishments'], staleTime=Infinity, gcTime=1h, retry=1
+ * • Card Component: src/components/PunishmentCard.tsx
+ *    – Title, subtext, icon, bg image, calendar tracker
+ *    – “Punish” button (red) → applyPunishmentMutation; updates DOM/Sub points via usePointsManager
+ *    – Badges: DOM points earned, Sub points lost
+ * • Editor Modal: src/components/PunishmentEditor.tsx
+ *    – Fields: title, subtext, DOM points (+/–), Sub points (+/–), icon, bg image, colors, highlighter
+ *    – Save/Cancel/Delete controls
+ * • Random Punishment Feature:
+ *    – src/components/Punishments.tsx hooks into <RandomPunishmentModal>
+ *    – Reroll, Confirm actions generate/apply punishment
+ *
+ * THRONE ROOM PAGE (src/pages/ThroneRoom.tsx)
+ * -----------------------------------------
+ * • Hook: useCardData (src/components/throne/hooks/useCardData.ts)
+ *    – Aggregates metrics (tasks completed, rules broken, rewards used, punishments applied)
+ * • Summary Tiles: 
+ *    – WeeklyMetricsSummaryTiles.tsx, MonthlyMetricsSummaryTiles.tsx
+ * • Charts:
+ *    – WeeklyMetricsChart.tsx / MonthlyMetricsChart.tsx
+ * • Admin Settings: AdminSettingsCard.tsx
+ * • Editors: ThroneRoomEditModal.tsx
+ *
+ * COMMON COMPONENTS
+ * -----------------
+ * - src/components/common/EmptyState.tsx
+ * - src/components/common/ErrorDisplay.tsx
+ * - src/components/common/CachedDataBanner.tsx
+ * - src/components/Hydrate.tsx & HydrationErrorBoundary.tsx
+ *
+ * CUSTOM EVENTS & INTEGRATIONS
+ * ----------------------------
+ * - 'add-new-rule', 'add-new-task', 'add-new-reward', 'add-new-punishment'
+ * - usePointsManager (src/data/points/usePointsManager.ts)
+ * - React Query invalidation on each mutation
+ *
+ * This documentation is the single source of truth for refactoring.
+ */
+export default {};
 This application follows strict architectural patterns that have been carefully designed and tested. **DO NOT** modify the core data flow patterns without understanding the full system architecture.
 
 ## Architecture Contract
