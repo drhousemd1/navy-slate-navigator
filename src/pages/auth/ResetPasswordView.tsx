@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors'; // Added import
 
 export const ResetPasswordView: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -33,9 +35,9 @@ export const ResetPasswordView: React.FC = () => {
           setError('No active session found. The reset link may have expired. Please request a new password reset link.');
         }
         setCheckingSession(false);
-      } catch (err) {
+      } catch (err: unknown) { // Changed from any to unknown
         logger.error('Error checking session:', err);
-        setError('Failed to verify authentication session. Please try again.');
+        setError(getErrorMessage(err) || 'Failed to verify authentication session. Please try again.'); // Used getErrorMessage
         setCheckingSession(false);
       }
     };
@@ -51,14 +53,18 @@ export const ResetPasswordView: React.FC = () => {
     try {
       // Validate passwords
       if (!newPassword) {
+        // This specific error can be thrown directly
+        setError('Please enter a new password.');
         throw new Error('Please enter a new password.');
       }
       
       if (newPassword.length < 6) {
+        setError('Password must be at least 6 characters long.');
         throw new Error('Password must be at least 6 characters long.');
       }
       
       if (newPassword !== confirmPassword) {
+        setError('Passwords do not match.');
         throw new Error('Passwords do not match.');
       }
       
@@ -69,7 +75,9 @@ export const ResetPasswordView: React.FC = () => {
       
       if (updateError) {
         logger.error('Password update error:', updateError);
-        throw new Error(updateError.message);
+        // updateError is already an AppError or SupabaseAuthError, so its message is fine
+        setError(updateError.message); 
+        throw new Error(updateError.message); // Re-throw to be caught by generic catch
       }
       
       logger.debug('Password updated successfully');
@@ -88,9 +96,12 @@ export const ResetPasswordView: React.FC = () => {
       setTimeout(() => {
         navigate('/auth');
       }, 3000);
-    } catch (error: any) {
-      logger.error('Password reset error:', error);
-      setError(error.message || 'Failed to reset password. Please try again.');
+    } catch (err: unknown) { // Changed from any to unknown
+      logger.error('Password reset error:', err);
+      // If setError was already called with a specific message, use that, otherwise use getErrorMessage
+      if (!error) { // only set error if it wasn't set by specific validation
+        setError(getErrorMessage(err) || 'Failed to reset password. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -175,3 +186,4 @@ export const ResetPasswordView: React.FC = () => {
     </div>
   );
 };
+

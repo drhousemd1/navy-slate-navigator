@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { useDebugMode } from './useDebugMode';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors'; // Added import
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
   const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
@@ -53,10 +55,10 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
           loginError: "Login succeeded but no user data returned."
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) { // Changed from any to unknown
       logger.error("Exception during login:", error);
       updateFormState({ 
-        loginError: error.message || "An unexpected error occurred. Please try again."
+        loginError: getErrorMessage(error) || "An unexpected error occurred. Please try again." // Used getErrorMessage
       });
     } finally {
       setIsLoggingIn(false);
@@ -190,3 +192,4 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
     </div>
   );
 }
+

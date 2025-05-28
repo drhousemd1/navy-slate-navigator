@@ -1,3 +1,4 @@
+
 import { Task } from '@/lib/taskUtils'; // Assuming Task is well-defined here
 
 // Define a robust Json type
@@ -128,3 +129,37 @@ export interface TaskIndexedDB extends Task {
   // is_dirty?: boolean;
   // _id?: string; // If IndexedDB uses a different primary key name
 }
+
+/**
+ * Represents the data structure for a Recharts bar click event payload.
+ */
+export interface ChartBarData {
+  payload?: Record<string, any>; // The actual data point associated with the bar
+  // Recharts might include other properties in the event object
+  // Adding a generic key signature for flexibility if needed, though often payload is the main part
+  [key: string]: any; 
+}
+
+/**
+ * Represents a single entry in the cache data.
+ */
+export interface CacheEntry {
+  queryKey: string[]; // Or (string | number)[] depending on your query keys
+  data?: unknown; // The actual cached data
+  state?: {
+    dataUpdateCount: number;
+    errorUpdateCount: number;
+    fetchFailureCount: number;
+    status: 'pending' | 'success' | 'error'; // Tanstack Query statuses
+    isFetching: boolean;
+    isInvalidated: boolean;
+    // Add other relevant state properties from Tanstack Query's QueryState
+  };
+  lastUpdated?: number; // Timestamp of the last update
+}
+
+/**
+ * Represents the overall structure of cache data, typically an array of cache entries.
+ */
+export type CacheData = CacheEntry[];
+
