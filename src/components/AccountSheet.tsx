@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -68,7 +67,6 @@ const AccountSheet = () => {
       logger.debug('AccountSheet: Using profile image from context:', contextImage);
       setProfileImage(contextImage);
     } else {
-      // Clear local state if context image is removed/null
       setProfileImage(null); 
     }
   }, [getProfileImage, user]); // Added user dependency, as getProfileImage might change behavior based on user
@@ -93,28 +91,40 @@ const AccountSheet = () => {
         <div className="py-6">
           <div className="flex items-center space-x-4 mb-6">
             <Avatar className="h-12 w-12 border border-light-navy">
-              {profileImage ? (
+              {user && profileImage ? (
                 <AvatarImage 
                   src={profileImage} 
-                  alt={nickname || 'User'} 
+                  alt={nickname || 'User Avatar'} 
                   onError={(e) => {
                     logger.error('AccountSheet: Failed to load avatar image:', profileImage);
-                    (e.target as HTMLImageElement).style.display = 'none'; // Hide broken image
-                    // Optionally set a flag to show fallback or just let fallback render
+                    (e.target as HTMLImageElement).style.display = 'none'; 
                   }}
                 />
               ) : null}
-              <AvatarFallback className="bg-light-navy text-nav-active">
-                {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
+              <AvatarFallback className="bg-light-navy text-nav-active flex items-center justify-center">
+                {user && nickname ? (
+                  nickname.charAt(0).toUpperCase()
+                ) : (
+                  <UserCircle2 className="w-3/4 h-3/4" /> // Use UserCircle2 icon as fallback
+                )}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-lg font-medium">
-                {user ? nickname : 'Guest'}
-              </p>
-              <p className="text-sm text-gray-400">
-                {user ? userRole : 'Not logged in'} {isAdmin && user ? <span className="text-cyan-400">(Admin)</span> : ""}
-              </p>
+              {user ? (
+                <>
+                  <p className="text-lg font-medium">
+                    {nickname} {/* nickname will be 'User', actual name, or email prefix if user exists */}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {userRole} {isAdmin && <span className="text-cyan-400">(Admin)</span>}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-medium">Not Logged In</p>
+                  <p className="text-sm text-gray-400">Please log in or sign up</p>
+                </>
+              )}
             </div>
           </div>
           
@@ -123,12 +133,13 @@ const AccountSheet = () => {
               variant="ghost" 
               className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
               onClick={toggleProfileOptions}
+              disabled={!user} // Disable if no user
             >
               <User className="w-5 h-5 mr-3" /> {/* Increased mr for icon spacing */}
               Account
             </Button>
             
-            {showProfileOptions && (
+            {showProfileOptions && user && ( // Only show if user exists
               <div className="ml-8 space-y-1 animate-fade-in"> {/* Increased ml, reduced space-y */}
                 <Button 
                   variant="ghost" 
@@ -191,4 +202,3 @@ const AccountSheet = () => {
 };
 
 export default AccountSheet;
-

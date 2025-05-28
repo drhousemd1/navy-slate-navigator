@@ -1,4 +1,3 @@
-
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -36,18 +35,20 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
   };
 
   // Get user nickname
-  const getNickname = (): string => {
-    if (!user) return 'Guest';
+  const getNickname = (): string | null => { // Changed return type to string | null
+    if (!user) return null; // Changed from 'Guest' to null
     
     if (user.user_metadata?.nickname) {
       return user.user_metadata.nickname;
     }
     
     if (user.email) {
-      return user.email.split('@')[0];
+      const emailPrefix = user.email.split('@')[0];
+      // Ensure emailPrefix is not empty, otherwise fall back to 'User'
+      return emailPrefix.length > 0 ? emailPrefix : 'User'; 
     }
     
-    return 'User';
+    return 'User'; // Fallback if user exists but no nickname or email
   };
 
   // Get user profile image
