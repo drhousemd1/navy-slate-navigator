@@ -1,7 +1,6 @@
-
-import { useState, useEffect } from 'react'; // Added useEffect for potential future use
-import { usePunishments } from '@/contexts/PunishmentsContext'; // Corrected: This should be from the new provider path
-import { PunishmentHistoryItem } from '@/contexts/punishments/types'; // Corrected: This should be from the new provider path
+import { useState, useEffect } from 'react';
+import { usePunishments } from '@/contexts/punishments/PunishmentsProvider';
+import { PunishmentHistoryItem } from '@/contexts/punishments/types';
 import { convertToMondayBasedIndex } from '@/lib/utils';
 
 interface UsePunishmentHistoryProps {

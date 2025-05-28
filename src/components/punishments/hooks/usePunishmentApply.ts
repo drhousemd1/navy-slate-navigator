@@ -1,12 +1,11 @@
-
-// import { usePunishments } from '@/contexts/PunishmentsContext'; // No longer needed
-// import { useRewards } from '@/contexts/RewardsContext'; // No longer needed
-// import { toast } from "@/hooks/use-toast"; // Toasts are handled by the mutation hook
+// import { usePunishments } from '@/contexts/PunishmentsContext'; // No longer needed - REMOVED
+// import { useRewards } from '@/contexts/RewardsContext'; // No longer needed - REMOVED
+// import { toast } from "@/hooks/use-toast"; // Toasts are handled by the mutation hook - REMOVED
 import { supabase } from '@/integrations/supabase/client';
 import { ApplyPunishmentArgs, PunishmentData } from '@/contexts/punishments/types';
 import { useApplyPunishment } from '@/data/punishments/mutations/useApplyPunishment'; 
 import { toast } from '@/hooks/use-toast'; 
-import { logger } from '@/lib/logger'; // Ensure logger is imported
+import { logger } from '@/lib/logger';
 
 interface UsePunishmentApplyProps {
   punishment: PunishmentData;
@@ -88,4 +87,3 @@ export const usePunishmentApply = ({ punishment }: UsePunishmentApplyProps) => {
   
   return { handlePunish, isLoading: applyPunishmentMutation.isPending }; // Expose loading state
 };
-

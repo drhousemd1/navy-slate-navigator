@@ -1,5 +1,4 @@
-
-import { usePunishments } from '@/contexts/PunishmentsContext';
+import { usePunishments } from '@/contexts/punishments/PunishmentsProvider';
 import { useRewards } from '@/contexts/RewardsContext';
 import { PunishmentData, ApplyPunishmentArgs } from '@/contexts/punishments/types';
 import { toast } from '@/hooks/use-toast';
@@ -67,4 +66,3 @@ export const useApplyRandomPunishment = (onClose: () => void) => {
   
   return { handlePunish };
 };
-

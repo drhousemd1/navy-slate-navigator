@@ -1,6 +1,5 @@
-
 import React from 'react';
-// import { usePunishments } from '@/contexts/PunishmentsContext'; // Old context
+// import { usePunishments } from '@/contexts/PunishmentsContext'; // Old context - REMOVED
 import { usePunishmentsData } from '@/data/punishments/usePunishmentsData'; // New data hook
 import { useRandomPunishmentSelection } from './hooks/useRandomPunishmentSelection';
 import { useApplyRandomPunishment } from './hooks/useApplyRandomPunishment';

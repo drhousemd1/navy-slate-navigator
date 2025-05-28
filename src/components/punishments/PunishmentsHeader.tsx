@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
 import { Box, Coins, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
-// import { usePunishments } from '@/contexts/PunishmentsContext'; // Old context
+// import { usePunishments } from '@/contexts/PunishmentsContext'; // Old context - REMOVED
 import { usePunishmentsData } from '@/data/punishments/usePunishmentsData'; // New data hook
 import RandomPunishmentSelections from './RandomPunishmentSelections';
 

@@ -1,12 +1,13 @@
 import { useState } from 'react';
-// import { usePunishments } from '@/contexts/PunishmentsContext'; // No longer used for save/delete
-import { usePunishmentApply } from './usePunishmentApply'; // This uses useApplyPunishmentMutation
+// import { usePunishments } from '@/contexts/PunishmentsContext'; // No longer used for save/delete - REMOVED
+import { usePunishmentApply } from './usePunishmentApply';
 import { PunishmentData } from '@/contexts/punishments/types'; 
 import { toast } from '@/hooks/use-toast';
-import { useUpdatePunishment, useDeletePunishment } from '@/data/punishments/mutations'; // Import mutation hooks
+import { useUpdatePunishment, useDeletePunishment } from '@/data/punishments/mutations';
 import { useQueryClient } from '@tanstack/react-query';
-import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries';
-import { logger } from '@/lib/logger'; // Added logger import
+// PUNISHMENTS_QUERY_KEY import was not used and can be removed if not added back. For now, keeping other imports.
+// import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries'; 
+import { logger } from '@/lib/logger';
 
 interface UsePunishmentCardProps {
   punishment: PunishmentData; 
@@ -15,13 +16,12 @@ interface UsePunishmentCardProps {
 export const usePunishmentCard = ({ punishment }: UsePunishmentCardProps) => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const { handlePunish } = usePunishmentApply({ punishment }); 
-  // const { savePunishment, deletePunishment: deletePunishmentFromContext } = usePunishments(); // Removed
 
   const queryClient = useQueryClient();
   const updatePunishmentMutation = useUpdatePunishment();
   const deletePunishmentMutation = useDeletePunishment();
   
-  const weekData = punishment?.usage_data || []; // This might need re-evaluation if usage_data comes from history
+  const weekData = punishment?.usage_data || []; 
   const frequencyCount = punishment?.frequency_count || 1;
 
   const handleEdit = () => {
