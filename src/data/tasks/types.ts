@@ -116,3 +116,15 @@ export type CreateTaskVariables = Partial<Omit<Task, 'id' | 'created_at' | 'upda
 export type UpdateTaskVariables = { id: string } & Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at' | 'background_images'>> & {
   background_images?: Json | null; // Ensure background_images here also uses the Json type
 };
+
+/**
+ * Represents a Task object as it might be stored or retrieved from IndexedDB.
+ * It extends the base Task interface and can include additional properties relevant to local storage,
+ * such as synchronization status or local modification timestamps.
+ */
+export interface TaskIndexedDB extends Task {
+  // Example additional properties for IndexedDB context:
+  // last_synced_at?: string;
+  // is_dirty?: boolean;
+  // _id?: string; // If IndexedDB uses a different primary key name
+}

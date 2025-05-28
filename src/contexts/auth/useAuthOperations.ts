@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -194,15 +195,15 @@ export function useAuthOperations() {
   const deleteAccount = async (): Promise<{ error?: CaughtError | null }> => {
     try {
       // The RPC call might return a PostgrestError which is compatible with CaughtError
-      const { error: rpcError } = await supabase.rpc('delete_user_account' as any); 
+      const { error: rpcError } = await supabase.rpc('delete_user_account'); // Removed 'as any'
       
       if (rpcError) {
         logger.error('Account deletion error from RPC:', rpcError);
-        // Ensure rpcError is treated as a PostgrestError or compatible type
+        // rpcError is PostgrestError | null. If not null, its properties are directly accessible.
         const descriptiveError = createAppError(
-          (rpcError as any).message || 'Could not delete account via RPC.',
-          isPostgrestError(rpcError) ? rpcError.code : 'RPC_ERROR',
-          { details: (rpcError as any).details, hint: (rpcError as any).hint }
+          rpcError.message || 'Could not delete account via RPC.',
+          rpcError.code || 'RPC_ERROR', // Use rpcError.code
+          { details: rpcError.details, hint: rpcError.hint } // Use rpcError.details and rpcError.hint
         );
         toast({
           title: 'Error deleting account',
@@ -210,10 +211,8 @@ export function useAuthOperations() {
           variant: 'destructive',
         });
         
-        if (isPostgrestError(rpcError)) {
-            return { error: rpcError };
-        }
-        return { error: descriptiveError };
+        // isPostgrestError check is redundant here as rpcError is already known to be PostgrestError if not null.
+        return { error: rpcError }; 
       }
 
       logger.debug('Account deletion initiated successfully');
@@ -241,3 +240,4 @@ export function useAuthOperations() {
     deleteAccount
   };
 }
+

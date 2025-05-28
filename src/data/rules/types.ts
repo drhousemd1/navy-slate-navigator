@@ -1,4 +1,6 @@
 
+import { Json } from '@/data/tasks/types'; // Assuming Json type is available from tasks/types or define it if not
+
 export interface Rule {
   id: string;
   title: string;
@@ -52,3 +54,34 @@ export interface RuleFormValues {
 export type CreateRuleViolationVariables = {
   rule_id: string;
 };
+
+/**
+ * Represents the raw data structure of a rule as fetched directly from the Supabase 'rules' table.
+ * This interface should match the table schema columns before any client-side processing or mapping.
+ */
+export interface RawSupabaseRule {
+  id: string; // uuid
+  user_id?: string | null; // uuid
+  title: string; // text
+  description?: string | null; // text
+  priority: string; // text, e.g., 'low', 'medium', 'high' (unlike processed Rule which might use an enum)
+  background_image_url?: string | null; // text
+  background_image_path?: string | null; // text
+  background_opacity: number; // integer
+  icon_url?: string | null; // text
+  icon_name?: string | null; // text
+  title_color: string; // text
+  subtext_color: string; // text
+  calendar_color: string; // text
+  icon_color: string; // text
+  highlight_effect: boolean; // boolean
+  focal_point_x: number; // integer
+  focal_point_y: number; // integer
+  frequency: string; // text, e.g., 'daily', 'weekly' (unlike processed Rule)
+  frequency_count: number; // integer
+  usage_data?: Json | null; // jsonb (can be an array or other JSON structure)
+  background_images?: Json | null; // jsonb
+  created_at: string; // timestamp with time zone
+  updated_at: string; // timestamp with time zone
+}
+
