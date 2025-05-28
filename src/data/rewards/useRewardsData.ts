@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward, CreateRewardVariables } from '@/data/rewards/types';
@@ -12,7 +13,7 @@ import {
 
 // Import types from the central types file
 import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
-import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward'; // Corrected import and aliased
+import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
 import { useBuySubReward } from '@/data/rewards/mutations/useBuySubReward';
 import { useBuyDomReward } from '@/data/rewards/mutations/useBuyDomReward';
 import { useRedeemSubReward } from '@/data/rewards/mutations/useRedeemSubReward';
@@ -22,18 +23,19 @@ import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { usePointsManager } from '@/data/points/usePointsManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger'; // Added logger import
-
+import { logger } from '@/lib/logger';
+import { saveRewardsToDB } from '../indexedDB/useIndexedDB';
 
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
+  
   // Use the new usePointsManager hook
   const { 
-    points: totalPointsFromManager,      // Alias to avoid conflict if this file fetches points separately
-    domPoints: domPointsFromManager,        // Alias
-    setTotalPoints: updatePointsInDatabase, // Alias for consistency with its previous usage
-    setDomPoints: updateDomPointsInDatabase,   // Alias
-    refreshPoints: refreshPointsFromDatabase // Alias
+    points: totalPointsFromManager,
+    domPoints: domPointsFromManager,
+    setTotalPoints: updatePointsInDatabase,
+    setDomPoints: updateDomPointsInDatabase,
+    refreshPoints: refreshPointsFromDatabase
   } = usePointsManager();
 
   const {
@@ -58,17 +60,18 @@ export const useRewardsData = () => {
   
   const totalDomRewardsSupply = React.useMemo(() => {
     return rewards.reduce((total, reward) => { 
-      return total + (reward.is_dom_reward && reward.supply !== -1 ? reward.supply : 0); // Handle infinite supply
+      return total + (reward.is_dom_reward && reward.supply !== -1 ? reward.supply : 0);
     }, 0);
   }, [rewards]);
 
+  // Real-time subscriptions with proper cleanup
   useEffect(() => {
     const rewardsChannel = supabase
       .channel('rewards-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'rewards' }, 
         (payload) => {
-          logger.debug('Real-time rewards update:', payload); // Replaced console.log
+          logger.debug('Real-time rewards update:', payload);
           queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
           queryClient.invalidateQueries({ queryKey: REWARDS_SUPPLY_QUERY_KEY });
         }
@@ -85,18 +88,20 @@ export const useRewardsData = () => {
     sessionData.then(({ data }) => {
       const userId = data?.session?.user.id;
       if (!userId) return;
+      
       const pointsChannel = supabase
-        .channel(`profiles-changes-${userId}`) // Unique channel name per user
+        .channel(`profiles-changes-${userId}`)
         .on('postgres_changes', 
           { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, 
           (payload) => {
-            logger.debug('Real-time points/profile update for user:', userId, payload); // Replaced console.log
+            logger.debug('Real-time points/profile update for user:', userId, payload);
             queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY});
             queryClient.invalidateQueries({ queryKey: REWARDS_DOM_POINTS_QUERY_KEY});
-            queryClient.invalidateQueries({ queryKey: ['profile'] }); // Added to ensure profile data (like points) is re-fetched
+            queryClient.invalidateQueries({ queryKey: ['profile'] });
           }
         )
         .subscribe();
+        
       return () => {
         supabase.removeChannel(pointsChannel);
       };
@@ -105,14 +110,16 @@ export const useRewardsData = () => {
 
   const createRewardMutation = useCreateRewardMutation();
   const updateRewardMutation = useUpdateRewardMutation();
-  const deleteRewardMut = useDeleteRewardMutation(); // Usage remains the same due to alias
+  const deleteRewardMut = useDeleteRewardMutation();
 
   const saveReward = async (saveParams: { rewardData: Partial<Reward> & { id?: string } } ) => {
     const { rewardData } = saveParams;
+    
+    let result;
     if (rewardData.id) { 
       const { id, ...updateData } = rewardData;
-      const updateVariables = { id, ...updateData }; // Ensure this matches UpdateRewardVariables
-      return updateRewardMutation.mutateAsync(updateVariables);
+      const updateVariables = { id, ...updateData };
+      result = await updateRewardMutation.mutateAsync(updateVariables);
     } else { 
       // Ensure all required fields for CreateRewardVariables are present
       if (rewardData.title === undefined || rewardData.cost === undefined || rewardData.supply === undefined || rewardData.is_dom_reward === undefined) {
@@ -125,7 +132,7 @@ export const useRewardsData = () => {
         cost: rewardData.cost,
         supply: rewardData.supply,
         is_dom_reward: rewardData.is_dom_reward,
-        description: rewardData.description || null, // Ensure this matches the type, changed from ''
+        description: rewardData.description || null,
         background_image_url: rewardData.background_image_url || null,
         background_opacity: rewardData.background_opacity ?? 100,
         icon_name: rewardData.icon_name || 'Award',
@@ -138,12 +145,24 @@ export const useRewardsData = () => {
         focal_point_x: rewardData.focal_point_x ?? 50,
         focal_point_y: rewardData.focal_point_y ?? 50,
       };
-      return createRewardMutation.mutateAsync(createVariables);
+      result = await createRewardMutation.mutateAsync(createVariables);
     }
+    
+    // Update IndexedDB cache after successful save
+    const updatedRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
+    await saveRewardsToDB(updatedRewards);
+    
+    return result;
   };
 
   const deleteReward = async (rewardId: string) => {
-    return deleteRewardMut.mutateAsync(rewardId); // Usage remains the same
+    const result = await deleteRewardMut.mutateAsync(rewardId);
+    
+    // Update IndexedDB cache after successful delete
+    const updatedRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
+    await saveRewardsToDB(updatedRewards);
+    
+    return result;
   };
 
   const { mutateAsync: buySub } = useBuySubReward();
@@ -159,17 +178,22 @@ export const useRewardsData = () => {
     if (!userData?.user?.id) throw new Error("User not authenticated for buying reward");
     const profileId = userData.user.id;
         
+    let result;
     if (reward.is_dom_reward) {
-      // Use DOM points and call DOM mutation
       const currentDomPoints = domPointsFromManager;
       logger.debug("Buying DOM reward:", { rewardId, cost, currentDomPoints, profileId });
-      return buyDom({ rewardId, cost, currentSupply: reward.supply, profileId, currentDomPoints });
+      result = await buyDom({ rewardId, cost, currentSupply: reward.supply, profileId, currentDomPoints });
     } else {
-      // Use regular points and call Sub mutation
       const currentPoints = totalPointsFromManager;
       logger.debug("Buying Sub reward:", { rewardId, cost, currentPoints, profileId });
-      return buySub({ rewardId, cost, currentSupply: reward.supply, profileId, currentPoints });
+      result = await buySub({ rewardId, cost, currentSupply: reward.supply, profileId, currentPoints });
     }
+    
+    // Update IndexedDB cache after successful purchase
+    const updatedRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
+    await saveRewardsToDB(updatedRewards);
+    
+    return result;
   };
 
   const useReward = async ({ rewardId }: { rewardId: string }) => { 
@@ -180,13 +204,20 @@ export const useRewardsData = () => {
     if (!userData?.user?.id) throw new Error("User not authenticated for using reward");
     const profileId = userData.user.id;
 
+    let result;
     if (reward.is_dom_reward) {
       logger.debug("Using DOM reward:", { rewardId, profileId });
-      return redeemDom({ rewardId, currentSupply: reward.supply, profileId });
+      result = await redeemDom({ rewardId, currentSupply: reward.supply, profileId });
     } else {
       logger.debug("Using Sub reward:", { rewardId, profileId });
-      return redeemSub({ rewardId, currentSupply: reward.supply, profileId });
+      result = await redeemSub({ rewardId, currentSupply: reward.supply, profileId });
     }
+    
+    // Update IndexedDB cache after successful redemption
+    const updatedRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY) || [];
+    await saveRewardsToDB(updatedRewards);
+    
+    return result;
   };
   
   const refetchRewardsTyped = (options?: RefetchOptions) => {
@@ -195,19 +226,19 @@ export const useRewardsData = () => {
 
   return {
     rewards,
-    totalPoints: totalPointsFromManager, // Use points from usePointsManager
+    totalPoints: totalPointsFromManager,
     totalRewardsSupply,
     totalDomRewardsSupply,
-    domPoints: domPointsFromManager, // Use domPoints from usePointsManager
-    isLoading: rewardsLoading, // This isLoading is specific to rewards query
+    domPoints: domPointsFromManager,
+    isLoading: rewardsLoading,
     error: rewardsError,
     saveReward,
     deleteReward,
     buyReward,
     useReward, 
-    updatePoints: updatePointsInDatabase, // Exporting the function from usePointsManager
-    updateDomPoints: updateDomPointsInDatabase, // Exporting the function from usePointsManager
+    updatePoints: updatePointsInDatabase,
+    updateDomPoints: updateDomPointsInDatabase,
     refetchRewards: refetchRewardsTyped,
-    refreshPointsFromDatabase, // Exporting the function from usePointsManager
+    refreshPointsFromDatabase,
   };
 };

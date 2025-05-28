@@ -1,9 +1,14 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/data/rewards/types';
-import { logQueryPerformance } from '@/lib/react-query-config';
+import { logQueryPerformance, STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { selectWithTimeout, DEFAULT_TIMEOUT_MS } from '@/lib/supabaseUtils';
 import { logger } from '@/lib/logger';
-import { Json } from '@/data/tasks/types';
+import {
+  loadRewardsFromDB,
+  saveRewardsToDB,
+  getLastSyncTimeForRewards,
+  setLastSyncTimeForRewards
+} from '../indexedDB/useIndexedDB';
 
 // Define RawSupabaseReward locally as src/data/rewards/types.ts is not in allowed-files
 interface RawSupabaseReward {
@@ -76,9 +81,33 @@ export const processRewardData = (reward: RawSupabaseReward): Reward => {
 
 export const fetchRewards = async (): Promise<Reward[]> => {
   const startTime = performance.now();
-  logger.debug("[fetchRewards from queries.ts] Fetching rewards from Supabase server");
+  logger.debug("[fetchRewards] Starting fetch process");
   
   try {
+    // Step 1: Check IndexedDB cache first
+    const localData = await loadRewardsFromDB();
+    const lastSync = await getLastSyncTimeForRewards();
+    let shouldFetchFromServer = true;
+
+    // Step 2: Check if we can use cached data (30 min threshold)
+    if (lastSync) {
+      const timeDiff = Date.now() - new Date(lastSync).getTime();
+      if (timeDiff < 1000 * 60 * 30 && localData && localData.length > 0) {
+        shouldFetchFromServer = false;
+      }
+    } else if (localData && localData.length > 0) {
+      shouldFetchFromServer = false;
+    }
+
+    if (!shouldFetchFromServer && localData) {
+      logger.debug("[fetchRewards] Using cached data from IndexedDB");
+      logQueryPerformance('fetchRewards (cache-hit)', startTime, localData.length);
+      return localData;
+    }
+
+    // Step 3: Fetch from server
+    logger.debug("[fetchRewards] Fetching rewards from Supabase server");
+    
     const { data, error } = await selectWithTimeout<RawSupabaseReward>(
       supabase,
       'rewards',
@@ -89,20 +118,45 @@ export const fetchRewards = async (): Promise<Reward[]> => {
     );
     
     if (error) {
-      logger.error('[fetchRewards from queries.ts] Supabase error:', error);
+      logger.error('[fetchRewards] Supabase error:', error);
       logQueryPerformance('fetchRewards (server-error)', startTime);
+      
+      // Step 4: Fallback to cached data on error
+      if (localData) {
+        logger.warn('[fetchRewards] Server fetch failed, returning cached data');
+        return localData;
+      }
       throw error;
     }
     
+    // Step 5: Process and cache the data
     const rawRewards = (Array.isArray(data) ? data : (data ? [data] : [])) as RawSupabaseReward[];
     const processedData = rawRewards.map(processRewardData);
+    
+    // Step 6: Save to IndexedDB and update sync time
+    await saveRewardsToDB(processedData);
+    await setLastSyncTimeForRewards(new Date().toISOString());
+    
     logQueryPerformance('fetchRewards (server-success)', startTime, processedData.length);
+    logger.debug(`[fetchRewards] Successfully fetched ${processedData.length} rewards from server`);
     
     return processedData;
 
   } catch (error) {
-    logger.error('[fetchRewards from queries.ts] Fetch failed:', error);
+    logger.error('[fetchRewards] Fetch failed:', error);
     logQueryPerformance('fetchRewards (fetch-exception)', startTime);
+    
+    // Final fallback to cached data
+    try {
+      const fallbackData = await loadRewardsFromDB();
+      if (fallbackData) {
+        logger.warn('[fetchRewards] Using fallback cached data due to fetch error');
+        return fallbackData;
+      }
+    } catch (cacheError) {
+      logger.error('[fetchRewards] Cache fallback also failed:', cacheError);
+    }
+    
     throw error;
   }
 };

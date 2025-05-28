@@ -1,13 +1,12 @@
-
 import { currentWeekKey, resetTaskCompletions } from "@/lib/taskUtils";
 import { queryClient } from "../queryClient";
-import { loadRewardsFromDB, saveRewardsToDB } from "../indexedDB/useIndexedDB";
+import { loadRewardsFromDB, saveRewardsToDB, getLastSyncTimeForRewards, setLastSyncTimeForRewards } from "../indexedDB/useIndexedDB";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/lib/errors";
-import { Reward } from '@/data/rewards/types'; // Added import for Reward type
+import { Reward } from '@/data/rewards/types';
+import { fetchRewards, REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 
 // Define an interface for the raw reward data from IndexedDB before migration
-// This assumes the structure is largely similar to Reward but has is_dominant instead of is_dom_reward
 type RawRewardFromDBBeforeMigration = Omit<Reward, 'is_dom_reward'> & {
   is_dominant?: boolean;
 };
@@ -15,38 +14,64 @@ type RawRewardFromDBBeforeMigration = Omit<Reward, 'is_dom_reward'> & {
 export function usePreloadRewards() {
   return async () => {
     try {
+      // Reset weekly task completions if needed
       if (localStorage.getItem("lastWeek") !== currentWeekKey()) {
         await resetTaskCompletions("weekly");
         localStorage.setItem("lastWeek", currentWeekKey());
       }
       
-      // loadRewardsFromDB likely returns RawRewardFromDBBeforeMigration[] or a less structured array
+      // Check if we have cached data and if it's fresh (30 minute sync strategy)
       const dataFromDB = await loadRewardsFromDB(); 
+      const lastSync = await getLastSyncTimeForRewards();
+      let shouldFetch = true;
+
+      if (lastSync) {
+        const timeDiff = Date.now() - new Date(lastSync).getTime();
+        if (timeDiff < 1000 * 60 * 30 && dataFromDB && dataFromDB.length > 0) {
+          shouldFetch = false;
+        }
+      } else if (dataFromDB && dataFromDB.length > 0) {
+        shouldFetch = false;
+      }
 
       if (dataFromDB && Array.isArray(dataFromDB) && dataFromDB.length > 0) {
-        // Explicitly type 'data' if loadRewardsFromDB doesn't return a strongly typed array
+        // Explicitly type 'data' and migrate if needed
         const rewardsToMigrate = dataFromDB as RawRewardFromDBBeforeMigration[];
 
         // Migrate the rewards data to ensure is_dom_reward flag exists on every row
         const migratedRewards: Reward[] = rewardsToMigrate.map((r: RawRewardFromDBBeforeMigration): Reward => {
-          // Create a new object that conforms to the Reward interface
           const { is_dominant, ...restOfReward } = r;
           return {
-            ...restOfReward, // Spread the rest of the properties from r
-            is_dom_reward: is_dominant ?? false, // Set is_dom_reward based on is_dominant
-            // Ensure all required Reward fields are present, or provide defaults if necessary.
-            // Example: if created_at or updated_at might be missing from RawRewardFromDBBeforeMigration
-            // created_at: r.created_at || new Date().toISOString(), 
-            // updated_at: r.updated_at || new Date().toISOString(),
-          } as Reward; // Asserting as Reward after transformation
+            ...restOfReward,
+            is_dom_reward: is_dominant ?? false,
+          } as Reward;
         });
         
         // Update the cache with migrated data
-        queryClient.setQueryData(["rewards"], migratedRewards);
+        queryClient.setQueryData(REWARDS_QUERY_KEY, migratedRewards);
         
-        // Persist the migrated data back to IndexedDB for future boots
+        // If we should not fetch (data is fresh), return early
+        if (!shouldFetch) {
+          logger.debug("[usePreloadRewards] Using fresh cached data");
+          return null;
+        }
+        
+        // Persist the migrated data back to IndexedDB
         await saveRewardsToDB(migratedRewards);
       }
+
+      // If we should fetch fresh data or have no cached data
+      if (shouldFetch) {
+        logger.debug("[usePreloadRewards] Fetching fresh data from server");
+        try {
+          const freshData = await fetchRewards();
+          queryClient.setQueryData(REWARDS_QUERY_KEY, freshData);
+        } catch (error) {
+          logger.error("[usePreloadRewards] Failed to fetch fresh data:", error);
+          // Keep using cached data if available
+        }
+      }
+
       return null;
     } catch (error: unknown) {
       logger.error("Error preloading rewards:", getErrorMessage(error));
