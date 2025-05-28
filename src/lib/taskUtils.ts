@@ -90,7 +90,6 @@ export const fetchTasks = async (): Promise<Task[]> => {
       return [];
     }
     
-    // Cast raw data to RawSupabaseTask[] before processing
     const rawTasks = (data || []) as RawSupabaseTask[];
     const processedTasks = rawTasks.map(processTaskFromDb);
     
@@ -113,11 +112,11 @@ export const fetchTasks = async (): Promise<Task[]> => {
     }
     
     return processedTasks;
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error('Unexpected error fetching tasks:', err);
     toast({
       title: 'Error fetching tasks',
-      description: 'Could not fetch tasks',
+      description: getErrorMessage(err) || 'Could not fetch tasks',
       variant: 'destructive',
     });
     return [];
@@ -188,7 +187,7 @@ export const processTaskFromDb = (task: RawSupabaseTask): Task => {
     frequency: (task.frequency || 'daily') as 'daily' | 'weekly',
     frequency_count: task.frequency_count || 1,
     usage_data: Array.isArray(task.usage_data) && task.usage_data.length === 7 ? 
-      task.usage_data.map((val: any) => Number(val) || 0) : // Keep any here for robust parsing
+      task.usage_data.map((val: any) => Number(val) || 0) : 
       Array(7).fill(0),
     icon_url: task.icon_url ?? undefined,
     icon_name: task.icon_name ?? undefined,
@@ -292,11 +291,11 @@ export const saveTask = async (task: Partial<Task>): Promise<Task | null> => {
     const { data, error } = supabaseResponse;
     if (error) throw error;
     return processTaskFromDb(data as RawSupabaseTask); // Process the raw response
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.error('Error saving task:', err);
     toast({
       title: 'Error saving task',
-      description: err.message || 'Could not save task',
+      description: getErrorMessage(err) || 'Could not save task',
       variant: 'destructive',
     });
     return null;
@@ -313,7 +312,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
     
     if (taskError) throw taskError;
     
-    const task = processTaskFromDb(taskData as RawSupabaseTask); // Process to ensure type conformity
+    const task = processTaskFromDb(taskData as RawSupabaseTask); 
     
     if (completed && !canCompleteTask(task)) {
       toast({
@@ -324,10 +323,10 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
       return false;
     }
     
-    const usage_data = [...task.usage_data]; // Create a mutable copy
+    const usage_data = [...task.usage_data]; 
     
     if (completed) {
-      const dayOfWeek = getCurrentDayOfWeek(); // 0 for Monday, 6 for Sunday
+      const dayOfWeek = getCurrentDayOfWeek(); 
       usage_data[dayOfWeek] = (usage_data[dayOfWeek] || 0) + 1;
       
       const { data: authData } = await supabase.auth.getUser();
@@ -337,52 +336,43 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         const { error: historyError } = await supabase.rpc('record_task_completion', {
           task_id_param: id,
           user_id_param: userId
-        }) as unknown as { error: Error | null }; // Casting to handle potential Supabase RPC typing
+        }) as unknown as { error: Error | null }; 
         
         if (historyError) {
           logger.error('Error recording task completion history:', historyError);
-          // Not throwing, as main task update can still proceed
         } else {
           logger.debug('Task completion recorded in history');
         }
       }
     }
     
-    // Determine if task is fully completed for the day/period based on its own frequency_count
     const dayOfWeek = getCurrentDayOfWeek();
     const isFullyCompletedToday = usage_data[dayOfWeek] >= (task.frequency_count || 1);
     
-    const updatePayload: Partial<Task> & { updated_at: string } = { // Ensure updated_at is part of the payload type
+    const updatePayload: Partial<Task> & { updated_at: string } = { 
       usage_data,
       updated_at: new Date().toISOString(),
     };
 
     if (task.frequency === 'daily') {
       updatePayload.completed = isFullyCompletedToday;
-      if (completed) { // Only update last_completed_date if actually marking as completed
+      if (completed) { 
          updatePayload.last_completed_date = getLocalDateString();
       }
     } else if (task.frequency === 'weekly') {
-      // For weekly tasks, 'completed' might represent if all occurrences for the week are done.
-      // This part can be complex. For now, let's assume 'completed' flag is less critical for weekly
-      // and usage_data is the primary tracker. If 'completed' should reflect full weekly completion:
-      // updatePayload.completed = usage_data.reduce((sum, count) => sum + count, 0) >= (task.frequency_count * 7); // Or similar logic
-      // For simplicity, let's not change 'completed' for weekly based on single completion.
-      // Or, if 'completed' means "at least one done this week":
       if (completed) {
-         updatePayload.last_completed_date = getLocalDateString(); // Mark when last used
+         updatePayload.last_completed_date = getLocalDateString(); 
       }
     }
 
-
     const { error } = await supabase
       .from('tasks')
-      .update(updatePayload) // Supabase types should handle Partial<Task> correctly
+      .update(updatePayload) 
       .eq('id', id);
     
     if (error) throw error;
     
-    if (completed) { // Points logic only if a completion happened
+    if (completed) { 
       try {
         const taskPoints = task.points || 0;
         const { data: authData } = await supabase.auth.getUser();
@@ -400,16 +390,15 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           .single();
         
         if (profileError) {
-          if (profileError.code === 'PGRST116') { // Profile does not exist
+          if (profileError.code === 'PGRST116') { 
             logger.debug('No profile found, creating one with initial points:', taskPoints);
             
             const { error: createError } = await supabase
               .from('profiles')
-              .insert([{ id: userId, points: taskPoints, dom_points: 0, updated_at: new Date().toISOString() }]); // Ensure dom_points and updated_at
+              .insert([{ id: userId, points: taskPoints, dom_points: 0, updated_at: new Date().toISOString() }]); 
               
             if (createError) {
               logger.error('Error creating profile:', createError);
-              // Not returning false, as task completion itself was successful
               return true; 
             }
             
@@ -424,7 +413,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           }
           
           logger.error('Error fetching profile:', profileError);
-          return true; // Task completion was successful, points issue is secondary
+          return true; 
         }
         
         const currentPoints = profileData?.points || 0;
@@ -438,7 +427,7 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
           
         if (pointsError) {
           logger.error('Error updating points:', pointsError);
-          return true; // Task completion successful
+          return true; 
         }
         
         logger.debug('Points updated successfully:', newPoints);
@@ -450,22 +439,22 @@ export const updateTaskCompletion = async (id: string, completed: boolean): Prom
         queryClient.invalidateQueries({ queryKey: ['profile'] });
         queryClient.invalidateQueries({ queryKey: ['rewards-points'] });
 
-      } catch (err) {
+      } catch (err: unknown) {
         logger.error('Error handling points:', err);
         toast({
           title: 'Task Completed',
-          description: 'Task was completed, but there was an issue updating points.',
+          description: getErrorMessage(err) || 'Task was completed, but there was an issue updating points.',
           variant: 'default',
         });
       }
     }
     
     return true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.error('Error updating task completion:', err);
     toast({
       title: 'Error updating task',
-      description: err.message || 'Could not update task completion status',
+      description: getErrorMessage(err) || 'Could not update task completion status',
       variant: 'destructive',
     });
     return false;
@@ -486,3 +475,10 @@ export const deleteTask = async (taskId: string): Promise<boolean> => {
   logger.debug(`[taskUtils] Task ${taskId} deleted successfully.`);
   return true;
 };
+
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return String(err);
+}

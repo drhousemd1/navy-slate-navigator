@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -6,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
 
 const ResetPasswordPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -17,23 +17,17 @@ const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Extract access token from URL on component mount
   useEffect(() => {
-    // Get access_token from URL hash or query params (Supabase might use either)
-    const hash = location.hash.substring(1); // Remove the # symbol
+    const hash = location.hash.substring(1); 
     const params = new URLSearchParams(hash || location.search);
-    
-    // Check for access_token in hash fragment or query params
     const token = params.get('access_token');
     
     if (token) {
-      logger.debug('Access token found in URL'); // Replaced console.log
+      logger.debug('Access token found in URL'); 
       setAccessToken(token);
       
-      // Set up the session with the access token
       const setSession = async () => {
         if (!params.get('refresh_token')) {
-          // If there's no refresh token, exit early — Supabase won't set session without it
           setError('Reset link is invalid or expired. Please request a new one.');
           return;
         }
@@ -44,14 +38,14 @@ const ResetPasswordPage: React.FC = () => {
         });
         
         if (error) {
-          logger.error('Error setting session:', error); // Replaced console.error
+          logger.error('Error setting session:', error); 
           setError('Failed to validate your reset token. Please request a new password reset link.');
         }
       };
       
       setSession();
     } else {
-      logger.error('No access token found in URL'); // Replaced console.error
+      logger.error('No access token found in URL'); 
       setError('Invalid or missing reset token. Please request a new password reset link.');
     }
   }, [location]);
@@ -60,7 +54,6 @@ const ResetPasswordPage: React.FC = () => {
     e.preventDefault();
     setError(null);
 
-    // Validate passwords
     if (!newPassword || !confirmPassword) {
       setError('Please enter and confirm your new password.');
       return;
@@ -84,25 +77,23 @@ const ResetPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Update the password using Supabase directly
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
       
       if (updateError) {
-        logger.error('Error updating password:', updateError); // Replaced console.error
+        logger.error('Error updating password:', updateError); 
         setError(updateError.message || 'Failed to update password. Please try again.');
       } else {
-        // Password reset successful
         toast({
           title: 'Password updated',
           description: 'Your password has been successfully reset. You can now log in with your new password.',
         });
         navigate('/auth', { replace: true });
       }
-    } catch (err: any) {
-      logger.error('Exception during password update:', err); // Replaced console.error
-      setError('An unexpected error occurred. Please try again.');
+    } catch (err: unknown) {
+      logger.error('Exception during password update:', err);
+      setError(getErrorMessage(err) || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -171,4 +162,3 @@ const ResetPasswordPage: React.FC = () => {
 };
 
 export default ResetPasswordPage;
-
