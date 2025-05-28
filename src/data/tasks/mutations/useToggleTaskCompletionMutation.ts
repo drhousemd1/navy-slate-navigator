@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, getCurrentDayOfWeek, processTaskFromDb } from '@/lib/taskUtils';
@@ -32,16 +33,15 @@ export function useToggleTaskCompletionMutation() {
         }
         const userId = authUser.user.id;
 
-        // Use the task data passed in from variables (reflects current cache state)
-        // No need to fetch from DB here, as that was causing staleness issues.
+        // IMPORTANT CHANGE: Use the task data passed in from variables
+        // Don't fetch task from database to avoid race conditions with stale data
         if (!taskFromVariables) {
-          // This check is more of a safeguard; the type now makes `task` required.
-          // The calling code in Tasks.tsx already ensures a task is found and passed.
           toast({ title: 'Internal Error', description: "Task data was not provided to the mutation.", variant: 'destructive' });
           throw new Error(`Task data for ID ${taskId} not provided.`);
         }
         
-        const currentTask = taskFromVariables; // Already processed by useTasksQuery
+        // Use the cached task data directly
+        const currentTask = taskFromVariables;
 
         const dayOfWeek = getCurrentDayOfWeek();
         // Ensure usage_data is an array, defaulting if somehow null/undefined despite processing
@@ -72,6 +72,15 @@ export function useToggleTaskCompletionMutation() {
           usage_data: newUsageData,
           updated_at: new Date().toISOString(),
         };
+
+        // Log the update we're about to make for debugging
+        logger.debug('[useToggleTaskCompletionMutation] Updating task with data:', { 
+          taskId, 
+          taskFieldsToUpdate,
+          currentCompletions: currentUsageData[dayOfWeek],
+          newCompletions: newUsageData[dayOfWeek],
+          frequencyCount
+        });
 
         const { error: updateError } = await supabase
           .from('tasks')
@@ -120,18 +129,19 @@ export function useToggleTaskCompletionMutation() {
           }
         }
       },
-      onMutate: async ({ taskId, completed, task: taskFromVariables }) => { // taskFromVariables is available here too
+      onMutate: async ({ taskId, completed, task: taskFromVariables }) => {
+        // Cancel any outgoing refetches to avoid race conditions
         await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
         const previousTasks = queryClient.getQueryData<TaskWithId[]>(TASKS_QUERY_KEY);
         
+        // Apply optimistic update to the UI
         queryClient.setQueryData<TaskWithId[]>(TASKS_QUERY_KEY, (oldTasks = []) => {
           const todayStr = new Date().toISOString().split('T')[0];
           const dayOfWeek = getCurrentDayOfWeek();
 
           return oldTasks.map(task => {
             if (task.id === taskId) {
-              // Use taskFromVariables for consistency if needed, but oldTask should be fine for optimistic
-              const baseTaskForOptimistic = task; // Or taskFromVariables if more reliable
+              const baseTaskForOptimistic = task;
               const currentUsageData = baseTaskForOptimistic.usage_data || Array(7).fill(0);
               const newUsageData = [...currentUsageData];
               const frequencyCount = baseTaskForOptimistic.frequency_count || 1;
@@ -147,6 +157,14 @@ export function useToggleTaskCompletionMutation() {
                                           ? isNowFullyCompletedForDay 
                                           : completed;
 
+              // Log the optimistic update for debugging
+              logger.debug('[useToggleTaskCompletionMutation onMutate] Optimistic update:', {
+                taskId,
+                currentCompletions: currentUsageData[dayOfWeek],
+                newCompletions: newUsageData[dayOfWeek],
+                frequencyCount,
+                isNowFullyCompletedForDay
+              });
 
               return { 
                 ...task, 
@@ -217,11 +235,15 @@ export function useToggleTaskCompletionMutation() {
              !error.message.includes('Profile Fetch Error') &&
              !error.message.includes('Points Update Error') &&
              !error.message.includes('User not authenticated') &&
-             !error.message.includes('Task data was not provided')) { // Added this condition
+             !error.message.includes('Task data was not provided')) { 
              toast({ title: 'Task Status Update Failed', description: error.message, variant: 'destructive' });
         }
       },
       onSettled: (data, error, variables) => {
+        // We're NOT invalidating the tasks query as that would cause refetching
+        // and potentially override our optimistic and server updates
+        
+        // Only invalidate related data that needs refreshing
         queryClient.invalidateQueries({ queryKey: ['profile'] });
         if (subUserId) { 
             queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
