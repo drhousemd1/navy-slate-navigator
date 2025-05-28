@@ -23,6 +23,7 @@ interface BuySubRewardVars {
 interface BuySubRewardOptimisticContext {
   previousRewards?: Reward[];
   previousPoints?: number;
+  previousSubCount?: number;
 }
 
 export const useBuySubReward = () => {
@@ -79,9 +80,11 @@ export const useBuySubReward = () => {
       await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
       const userPointsQueryKey = [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId];
       await queryClient.cancelQueries({ queryKey: userPointsQueryKey });
+      await queryClient.cancelQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] });
 
       const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
       const previousPoints = queryClient.getQueryData<number>(userPointsQueryKey);
+      const previousSubCount = queryClient.getQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY]);
 
       // Optimistically increase supply when buying
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
@@ -96,31 +99,43 @@ export const useBuySubReward = () => {
       queryClient.setQueryData<number>(userPointsQueryKey, (oldUserPoints = 0) =>
         (oldUserPoints || 0) - variables.cost
       );
+
+      // Optimistically update sub reward count
+      queryClient.setQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY], (old = 0) => old + 1);
       
-      return { previousRewards, previousPoints };
+      return { previousRewards, previousPoints, previousSubCount };
     },
     onSuccess: async (data, variables) => {
+      // Force immediate cache updates
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => 
         oldRewards.map(r => r.id === data.id ? data : r)
       );
       
-      await queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId] });
-      await queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] });
-      await queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
+      // Invalidate all related queries to ensure fresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId] }),
+        queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] }),
+        queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] })
+      ]);
       
+      // Always show toast on successful purchase
       toast({
         title: "Reward Purchased",
         description: `You bought ${data.title}!`,
       });
     },
     onError: (error: Error, variables, context) => {
+      // Restore previous state on error
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
       }
       if (context?.previousPoints !== undefined) {
         const userPointsQueryKey = [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId];
         queryClient.setQueryData<number>(userPointsQueryKey, context.previousPoints);
+      }
+      if (context?.previousSubCount !== undefined) {
+        queryClient.setQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY], context.previousSubCount);
       }
 
       toast({
@@ -130,8 +145,12 @@ export const useBuySubReward = () => {
       });
     },
     onSettled: async (data, error, variables) => {
-      await queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId] });
+      // Final invalidation to ensure consistency
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId] }),
+        queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] })
+      ]);
     }
   });
 };

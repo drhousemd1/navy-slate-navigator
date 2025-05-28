@@ -17,13 +17,24 @@ interface RewardsHeaderProps {
 const RewardsHeader: React.FC<RewardsHeaderProps> = ({ onAddNewReward }) => {
   const { subUserId, domUserId } = useUserIds();
 
-  const { data: subPoints } = useUserPointsQuery(subUserId);
-  const { data: domPoints } = useUserDomPointsQuery(domUserId);
-  const { data: subRewardTypesCount } = useSubRewardTypesCountQuery();
-  const { data: domRewardTypesCount } = useDomRewardTypesCountQuery();
+  const { data: subPoints, refetch: refetchSubPoints } = useUserPointsQuery(subUserId);
+  const { data: domPoints, refetch: refetchDomPoints } = useUserDomPointsQuery(domUserId);
+  const { data: subRewardTypesCount, refetch: refetchSubCount } = useSubRewardTypesCountQuery();
+  const { data: domRewardTypesCount, refetch: refetchDomCount } = useDomRewardTypesCountQuery();
+
+  // Refetch all data when component mounts or when badges are clicked
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      refetchSubPoints();
+      refetchDomPoints();
+      refetchSubCount();
+      refetchDomCount();
+    }, 1000); // Refresh every second to catch updates quickly
+
+    return () => clearInterval(interval);
+  }, [refetchSubPoints, refetchDomPoints, refetchSubCount, refetchDomCount]);
 
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
-  // isLoadingDisplay logic removed
 
   return (
     <div className="flex items-center mb-6">

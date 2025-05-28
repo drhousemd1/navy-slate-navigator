@@ -23,6 +23,7 @@ interface BuyDomRewardVars {
 interface BuyDomRewardOptimisticContext {
   previousRewards?: Reward[];
   previousDomPoints?: number;
+  previousDomCount?: number;
 }
 
 export const useBuyDomReward = () => {
@@ -79,9 +80,11 @@ export const useBuyDomReward = () => {
       await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
       const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId];
       await queryClient.cancelQueries({ queryKey: userDomPointsQueryKey });
+      await queryClient.cancelQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
 
       const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
       const previousDomPoints = queryClient.getQueryData<number>(userDomPointsQueryKey);
+      const previousDomCount = queryClient.getQueryData<number>([DOM_REWARD_TYPES_COUNT_QUERY_KEY]);
 
       // Optimistically increase supply when buying
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
@@ -96,31 +99,43 @@ export const useBuyDomReward = () => {
       queryClient.setQueryData<number>(userDomPointsQueryKey, (oldUserDomPoints = 0) =>
         (oldUserDomPoints || 0) - variables.cost
       );
+
+      // Optimistically update DOM reward count
+      queryClient.setQueryData<number>([DOM_REWARD_TYPES_COUNT_QUERY_KEY], (old = 0) => old + 1);
       
-      return { previousRewards, previousDomPoints };
+      return { previousRewards, previousDomPoints, previousDomCount };
     },
     onSuccess: async (data, variables) => {
+      // Force immediate cache updates
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => 
         oldRewards.map(r => r.id === data.id ? data : r)
       );
 
-      await queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId] });
-      await queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] });
-      await queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
+      // Invalidate all related queries to ensure fresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId] }),
+        queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] }),
+        queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] })
+      ]);
       
+      // Always show toast on successful purchase
       toast({
         title: "DOM Reward Purchased",
         description: `You bought ${data.title}!`,
       });
     },
     onError: (error: Error, variables, context) => {
+      // Restore previous state on error
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
       }
       if (context?.previousDomPoints !== undefined) {
         const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId];
         queryClient.setQueryData<number>(userDomPointsQueryKey, context.previousDomPoints);
+      }
+      if (context?.previousDomCount !== undefined) {
+        queryClient.setQueryData<number>([DOM_REWARD_TYPES_COUNT_QUERY_KEY], context.previousDomCount);
       }
 
       toast({
@@ -130,8 +145,12 @@ export const useBuyDomReward = () => {
       });
     },
     onSettled: async (data, error, variables) => {
-      await queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId] });
+      // Final invalidation to ensure consistency
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId] }),
+        queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] })
+      ]);
     }
   });
 };
