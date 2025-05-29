@@ -13,7 +13,7 @@ export const usePunishmentApply = () => {
   const { data: currentPoints = 0 } = usePoints();
   const { subUserId } = useUserIds();
 
-  const applyPunishment = async (punishment: PunishmentData) => {
+  const handlePunish = async (punishment: PunishmentData) => {
     if (!subUserId) {
       toast({
         title: "Error",
@@ -58,7 +58,7 @@ export const usePunishmentApply = () => {
   };
 
   return {
-    applyPunishment,
+    handlePunish,
     isApplying,
   };
 };

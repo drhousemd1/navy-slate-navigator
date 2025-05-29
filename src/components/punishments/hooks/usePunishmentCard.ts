@@ -1,12 +1,10 @@
+
 import { useState } from 'react';
-// import { usePunishments } from '@/contexts/PunishmentsContext'; // No longer used for save/delete - REMOVED
 import { usePunishmentApply } from './usePunishmentApply';
 import { PunishmentData } from '@/contexts/punishments/types'; 
 import { toast } from '@/hooks/use-toast';
 import { useUpdatePunishment, useDeletePunishment } from '@/data/punishments/mutations';
 import { useQueryClient } from '@tanstack/react-query';
-// PUNISHMENTS_QUERY_KEY import was not used and can be removed if not added back. For now, keeping other imports.
-// import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries'; 
 import { logger } from '@/lib/logger';
 
 interface UsePunishmentCardProps {
@@ -15,7 +13,7 @@ interface UsePunishmentCardProps {
 
 export const usePunishmentCard = ({ punishment }: UsePunishmentCardProps) => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const { handlePunish } = usePunishmentApply({ punishment }); 
+  const { handlePunish } = usePunishmentApply(); 
 
   const queryClient = useQueryClient();
   const updatePunishmentMutation = useUpdatePunishment();
@@ -26,6 +24,10 @@ export const usePunishmentCard = ({ punishment }: UsePunishmentCardProps) => {
 
   const handleEdit = () => {
     setIsEditorOpen(true);
+  };
+
+  const handlePunishAction = () => {
+    handlePunish(punishment);
   };
 
   const handleSavePunishment = async (data: Partial<Omit<PunishmentData, 'id'>>): Promise<PunishmentData> => { 
@@ -73,7 +75,7 @@ export const usePunishmentCard = ({ punishment }: UsePunishmentCardProps) => {
         description: error instanceof Error ? error.message : "Failed to delete punishment",
         variant: "destructive"
       });
-      throw error; // Re-throw so UI can react if needed
+      throw error;
     }
   };
 
@@ -83,7 +85,7 @@ export const usePunishmentCard = ({ punishment }: UsePunishmentCardProps) => {
     weekData,
     frequencyCount,
     punishment, 
-    handlePunish,
+    handlePunish: handlePunishAction,
     handleEdit,
     handleSavePunishment,
     handleDeletePunishment

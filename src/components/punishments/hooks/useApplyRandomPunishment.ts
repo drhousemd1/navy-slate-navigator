@@ -7,13 +7,13 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 
-export const useApplyRandomPunishment = () => {
+export const useApplyRandomPunishment = (onClose?: () => void) => {
   const [isApplying, setIsApplying] = useState(false);
   const applyPunishmentMutation = useApplyPunishment();
   const { data: currentPoints = 0 } = usePoints();
   const { subUserId } = useUserIds();
 
-  const applyRandomPunishment = useCallback(async (punishment: PunishmentData) => {
+  const handlePunish = useCallback(async (punishment: PunishmentData) => {
     if (!subUserId) {
       toast({
         title: "Error",
@@ -45,6 +45,10 @@ export const useApplyRandomPunishment = () => {
         title: "Punishment Applied",
         description: `${punishment.title} has been applied.`
       });
+
+      if (onClose) {
+        onClose();
+      }
     } catch (error) {
       logger.error('Error applying random punishment:', error);
       toast({
@@ -55,10 +59,10 @@ export const useApplyRandomPunishment = () => {
     } finally {
       setIsApplying(false);
     }
-  }, [applyPunishmentMutation, currentPoints, subUserId]);
+  }, [applyPunishmentMutation, currentPoints, subUserId, onClose]);
 
   return {
-    applyRandomPunishment,
+    handlePunish,
     isApplying,
   };
 };

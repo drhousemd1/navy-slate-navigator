@@ -14,8 +14,8 @@ import { RewardsContext } from './RewardsContext';
 export const useRewardOperations = () => {
   const { data: rewards = [] } = useRewardsQuery();
   const { subUserId, domUserId } = useUserIds();
-  const { data: points = 0 } = usePoints();
-  const { data: domPoints = 0 } = useDomPoints();
+  const { data: points = 0 } = usePoints(subUserId);
+  const { data: domPoints = 0 } = useDomPoints(domUserId);
   const buySubRewardMutation = useBuySubReward();
   const buyDomRewardMutation = useBuyDomReward();
   const redeemSubRewardMutation = useRedeemSubReward();

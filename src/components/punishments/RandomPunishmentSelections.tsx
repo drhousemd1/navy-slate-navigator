@@ -1,6 +1,6 @@
+
 import React from 'react';
-// import { usePunishments } from '@/contexts/PunishmentsContext'; // Old context - REMOVED
-import { usePunishmentsData } from '@/data/punishments/usePunishmentsData'; // New data hook
+import { usePunishmentsData } from '@/data/punishments/usePunishmentsData';
 import { useRandomPunishmentSelection } from './hooks/useRandomPunishmentSelection';
 import { useApplyRandomPunishment } from './hooks/useApplyRandomPunishment';
 import RandomPunishmentSelector from './RandomPunishmentSelector';
@@ -14,23 +14,21 @@ const RandomPunishmentSelections: React.FC<RandomPunishmentSelectionsProps> = ({
   isOpen,
   onClose
 }) => {
-  const { punishments } = usePunishmentsData(); // Using new data hook
+  const { punishments } = usePunishmentsData();
   
   const {
     selectedPunishment,
     isSelecting,
     getCurrentPunishment,
     handleReroll
-  } = useRandomPunishmentSelection(punishments, isOpen); // punishments here are PunishmentData[] with usage_data
+  } = useRandomPunishmentSelection(punishments, isOpen);
   
   const { handlePunish } = useApplyRandomPunishment(onClose);
   
   const currentPunishment = getCurrentPunishment();
   
   const onPunishClick = () => {
-    // handlePunish expects selectedPunishment to be PunishmentData | null
-    // selectedPunishment from useRandomPunishmentSelection is of this type.
-    if (selectedPunishment) { // Ensure selectedPunishment is not null
+    if (selectedPunishment) {
       handlePunish(selectedPunishment);
     }
   };
