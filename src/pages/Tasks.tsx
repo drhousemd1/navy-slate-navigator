@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TaskEditor from '@/components/TaskEditor';
 import TasksList from '@/components/task/TasksList';
 import { useTasksData } from '@/hooks/useTasksData';
@@ -9,11 +9,13 @@ import { getErrorMessage } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import TasksHeader from '@/components/task/TasksHeader';
 import { useAuth } from '@/contexts/auth';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
 const Tasks: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskWithId | null>(null);
   const { user } = useAuth();
+  const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
   
   const {
     tasks,
@@ -23,6 +25,19 @@ const Tasks: React.FC = () => {
     saveTask,
     deleteTask
   } = useTasksData();
+
+  // Debug logging for development
+  useEffect(() => {
+    logger.debug('[Tasks] Component state:', {
+      user: user?.id,
+      subUserId,
+      domUserId,
+      isLoadingUserIds,
+      tasksCount: tasks?.length || 0,
+      isLoading,
+      error: error?.message
+    });
+  }, [user, subUserId, domUserId, isLoadingUserIds, tasks, isLoading, error]);
 
   const handleCreateTask = () => {
     setEditingTask(null);
@@ -143,6 +158,28 @@ const Tasks: React.FC = () => {
       priority: task.priority as 'low' | 'medium' | 'high'
     };
   };
+
+  // Show loading state while user IDs are being resolved
+  if (isLoadingUserIds) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
+        <div className="flex items-center justify-center py-10">
+          <p className="text-muted-foreground">Loading user session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication requirement if no user
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
+        <div className="flex items-center justify-center py-10">
+          <p className="text-muted-foreground">Please log in to view your tasks.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">

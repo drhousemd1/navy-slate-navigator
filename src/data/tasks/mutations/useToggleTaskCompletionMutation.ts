@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentDayOfWeek } from '@/lib/taskUtils';
@@ -19,24 +20,40 @@ interface ToggleTaskCompletionVariables {
 
 export function useToggleTaskCompletionMutation() {
   const queryClient = useQueryClient();
-  const { subUserId } = useUserIds();
+  const { subUserId, domUserId } = useUserIds();
 
   return useMutation<void, Error, ToggleTaskCompletionVariables, { previousTasks?: TaskWithId[] }>(
     {
       mutationFn: async ({ taskId, completed: instanceCompleted, pointsValue, task: taskFromVariables }) => {
+        logger.debug('[useToggleTaskCompletionMutation] Starting mutation:', {
+          taskId,
+          instanceCompleted,
+          pointsValue,
+          currentUserIds: { subUserId, domUserId }
+        });
+
         const { data: authUser } = await supabase.auth.getUser();
         if (!authUser?.user?.id) {
+          logger.error('[useToggleTaskCompletionMutation] User not authenticated');
           toast({ title: 'Authentication Error', description: "User not authenticated.", variant: 'destructive' });
           throw new Error("User not authenticated.");
         }
         const userId = authUser.user.id;
 
+        logger.debug('[useToggleTaskCompletionMutation] Authenticated user:', userId);
+
         if (!taskFromVariables) {
+          logger.error('[useToggleTaskCompletionMutation] Task data not provided');
           toast({ title: 'Internal Error', description: "Task data was not provided to the mutation.", variant: 'destructive' });
           throw new Error(`Task data for ID ${taskId} not provided.`);
         }
         
         const currentTask = taskFromVariables;
+        logger.debug('[useToggleTaskCompletionMutation] Processing task:', {
+          taskId: currentTask.id,
+          taskUserId: currentTask.user_id,
+          currentUserId: userId
+        });
 
         const dayOfWeek = getCurrentDayOfWeek();
         const currentUsageData = Array.isArray(currentTask.usage_data) ? currentTask.usage_data as number[] : Array(7).fill(0);
@@ -81,11 +98,15 @@ export function useToggleTaskCompletionMutation() {
           .eq('id', taskId);
 
         if (updateError) {
+          logger.error('[useToggleTaskCompletionMutation] Error updating task:', updateError);
           toast({ title: 'Error Updating Task', description: updateError.message, variant: 'destructive' });
           throw updateError;
         }
 
+        logger.debug('[useToggleTaskCompletionMutation] Task updated successfully');
+
         if (instanceCompleted) {
+          logger.debug('[useToggleTaskCompletionMutation] Recording completion history');
           const { error: historyError } = await supabase
             .from('task_completion_history')
             .insert({ task_id: taskId, user_id: userId, completed_at: new Date().toISOString() });
@@ -95,6 +116,7 @@ export function useToggleTaskCompletionMutation() {
             toast({ title: 'History Record Error', description: historyError.message, variant: 'destructive' });
           }
 
+          logger.debug('[useToggleTaskCompletionMutation] Updating user points');
           const { data: currentProfile, error: fetchProfileError } = await supabase
             .from('profiles')
             .select('points')
@@ -118,13 +140,16 @@ export function useToggleTaskCompletionMutation() {
             toast({ title: 'Points Update Error', description: updatePointsError.message, variant: 'destructive' });
             throw updatePointsError;
           }
+
+          logger.debug('[useToggleTaskCompletionMutation] Points updated successfully');
         }
       },
       onMutate: async ({ taskId, completed, task: taskFromVariables }) => {
-        await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
-        const previousTasks = queryClient.getQueryData<TaskWithId[]>(TASKS_QUERY_KEY);
+        logger.debug('[useToggleTaskCompletionMutation] onMutate optimistic update');
+        await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, subUserId, domUserId] });
+        const previousTasks = queryClient.getQueryData<TaskWithId[]>([...TASKS_QUERY_KEY, subUserId, domUserId]);
         
-        queryClient.setQueryData<TaskWithId[]>(TASKS_QUERY_KEY, (oldTasks = []) => {
+        queryClient.setQueryData<TaskWithId[]>([...TASKS_QUERY_KEY, subUserId, domUserId], (oldTasks = []) => {
           const todayStr = new Date().toISOString().split('T')[0];
           const dayOfWeek = getCurrentDayOfWeek();
 
@@ -167,6 +192,7 @@ export function useToggleTaskCompletionMutation() {
         return { previousTasks };
       },
       onSuccess: async (data, variables) => {
+        logger.debug('[useToggleTaskCompletionMutation] onSuccess callback');
         toast({ 
           title: `Task ${variables.completed ? 'Activity Logged' : 'Activity Reversed'}`, 
           description: variables.completed ? 'Points and history have been updated if applicable.' : 'Task status updated.' 
@@ -203,19 +229,20 @@ export function useToggleTaskCompletionMutation() {
             });
             await saveTasksToDB(updatedLocalTasks as Task[]);
             await setLastSyncTimeForTasks(new Date().toISOString());
-            logger.debug('[useToggleTaskCompletionMutation onSuccessCallback] IndexedDB updated for task completion with usage_data.');
+            logger.debug('[useToggleTaskCompletionMutation onSuccess] IndexedDB updated for task completion with usage_data.');
         } catch (e: unknown) {
             let errorMessage = "Task status updated on server, but local sync failed.";
             if (e instanceof Error) {
               errorMessage = e.message;
             }
-            logger.error('[useToggleTaskCompletionMutation onSuccessCallback] Error updating IndexedDB:', errorMessage, e);
+            logger.error('[useToggleTaskCompletionMutation onSuccess] Error updating IndexedDB:', errorMessage, e);
             toast({ variant: "destructive", title: "Local Sync Error", description: errorMessage });
         }
       },
       onError: (error, variables, context) => {
+        logger.error('[useToggleTaskCompletionMutation] onError:', error);
         if (context?.previousTasks) {
-          queryClient.setQueryData<TaskWithId[]>(TASKS_QUERY_KEY, context.previousTasks);
+          queryClient.setQueryData<TaskWithId[]>([...TASKS_QUERY_KEY, subUserId, domUserId], context.previousTasks);
         }
          if (!error.message.includes('Error Updating Task') && 
              !error.message.includes('History Record Error') &&
@@ -227,6 +254,7 @@ export function useToggleTaskCompletionMutation() {
         }
       },
       onSettled: (data, error, variables) => {
+        logger.debug('[useToggleTaskCompletionMutation] onSettled - invalidating queries');
         queryClient.invalidateQueries({ queryKey: ['profile'] });
         if (subUserId) { 
             queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });

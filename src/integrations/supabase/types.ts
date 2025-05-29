@@ -558,7 +558,7 @@ export type Database = {
           title_color: string
           updated_at: string
           usage_data: Json | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           background_image_path?: string | null
@@ -583,7 +583,7 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           background_image_path?: string | null
@@ -608,7 +608,7 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -667,7 +667,7 @@ export type Database = {
           title_color: string
           updated_at: string
           usage_data: Json | null
-          user_id: string | null
+          user_id: string
           week_identifier: string | null
         }
         Insert: {
@@ -695,7 +695,7 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
-          user_id?: string | null
+          user_id: string
           week_identifier?: string | null
         }
         Update: {
@@ -723,7 +723,7 @@ export type Database = {
           title_color?: string
           updated_at?: string
           usage_data?: Json | null
-          user_id?: string | null
+          user_id?: string
           week_identifier?: string | null
         }
         Relationships: [
