@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { loadPointsFromDB, savePointsToDB } from '@/data/indexedDB/useIndexedDB';
@@ -58,3 +57,6 @@ export const useUserPointsQuery = (userId: string | null) => {
     // Consider gcTime if you want to keep it longer in cache even when not used
   });
 };
+
+// Export alias for backwards compatibility
+export const usePoints = useUserPointsQuery;

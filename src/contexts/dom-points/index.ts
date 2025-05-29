@@ -1,2 +1,2 @@
 
-export { useDomPoints } from '@/data/points/useUserDomPointsQuery';
+export { useUserDomPointsQuery as useDomPoints } from '@/data/points/useUserDomPointsQuery';

@@ -1,6 +1,6 @@
 
 // Export all mutation hooks from this index file
-export { useCreateReward } from './useCreateReward';
+export { useCreateRewardMutation as useCreateReward } from './useCreateReward';
 export { useUpdateReward } from './useUpdateReward';
 export { useCreateRewardMutation, useUpdateRewardMutation } from './useSaveReward'; // Keep aliases for backwards compatibility
 export * from './useDeleteReward';

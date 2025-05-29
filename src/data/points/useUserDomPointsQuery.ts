@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { loadDomPointsFromDB, saveDomPointsToDB } from '@/data/indexedDB/useIndexedDB';
@@ -56,3 +55,6 @@ export const useUserDomPointsQuery = (userId: string | null) => {
     staleTime: 1000 * 60 * 5, // Keep data fresh for 5 minutes, then refetch on next access
   });
 };
+
+// Export alias for backwards compatibility
+export const useDomPoints = useUserDomPointsQuery;

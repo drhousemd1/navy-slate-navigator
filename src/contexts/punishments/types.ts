@@ -1,3 +1,4 @@
+
 // Types for the Punishments feature
 export interface PunishmentData {
   id?: string; // Made optional to reflect that new punishments won't have an ID until saved
@@ -21,6 +22,7 @@ export interface PunishmentData {
   frequency_count?: number;
   created_at?: string;
   updated_at?: string;
+  user_id?: string; // Added user_id to match database schema
 }
 
 export interface PunishmentHistoryItem {
@@ -29,6 +31,7 @@ export interface PunishmentHistoryItem {
   applied_date: string;
   points_deducted: number;
   day_of_week: number;
+  user_id?: string; // Added user_id to match database schema
 }
 
 export interface ApplyPunishmentArgs {

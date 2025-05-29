@@ -1,2 +1,2 @@
 
-export { usePoints } from '@/data/points/useUserPointsQuery';
+export { useUserPointsQuery as usePoints } from '@/data/points/useUserPointsQuery';

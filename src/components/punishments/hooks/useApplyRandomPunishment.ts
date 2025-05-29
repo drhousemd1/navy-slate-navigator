@@ -1,68 +1,64 @@
-import { usePunishments } from '@/contexts/punishments/PunishmentsProvider';
-import { useRewards } from '@/contexts/RewardsContext';
-import { PunishmentData, ApplyPunishmentArgs } from '@/contexts/punishments/types';
+
+import { useState, useCallback } from 'react';
+import { useApplyPunishment } from '@/data/punishments/mutations/useApplyPunishment';
+import { PunishmentData } from '@/contexts/punishments/types';
+import { usePoints } from '@/data/points/useUserPointsQuery';
+import { useUserIds } from '@/contexts/UserIdsContext';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 
-export const useApplyRandomPunishment = (onClose: () => void) => {
-  const { applyPunishment } = usePunishments();
-  const { totalPoints, setTotalPoints, domPoints } = useRewards();
-  
-  const handlePunish = async (selectedPunishment: PunishmentData | null) => {
-    if (!selectedPunishment || !selectedPunishment.id) {
+export const useApplyRandomPunishment = () => {
+  const [isApplying, setIsApplying] = useState(false);
+  const applyPunishmentMutation = useApplyPunishment();
+  const { data: currentPoints = 0 } = usePoints();
+  const { subUserId } = useUserIds();
+
+  const applyRandomPunishment = useCallback(async (punishment: PunishmentData) => {
+    if (!subUserId) {
       toast({
         title: "Error",
-        description: "No punishment selected or punishment ID is missing.",
+        description: "User not authenticated",
         variant: "destructive",
       });
       return;
     }
-    
+
+    if (!punishment.id) {
+      toast({
+        title: "Error", 
+        description: "Invalid punishment data",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsApplying(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: "Error",
-          description: "User not authenticated",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const newTotal = totalPoints - selectedPunishment.points;
-      setTotalPoints(newTotal); // Optimistic UI update
-      
-      const args: ApplyPunishmentArgs = {
-        id: selectedPunishment.id,
-        costPoints: selectedPunishment.points,
-        domEarn: Math.ceil(selectedPunishment.points / 2), // Default domEarn logic
-        profileId: user.id,
-        subPoints: totalPoints, // Pass current points before deduction for backend calculation
-        domPoints: domPoints || 0
-      };
-      
-      await applyPunishment(args);
+      await applyPunishmentMutation.mutateAsync({
+        punishmentId: punishment.id,
+        pointsDeducted: punishment.points,
+        dayOfWeek: new Date().getDay(),
+        currentPoints: currentPoints
+      });
       
       toast({
         title: "Punishment Applied",
-        description: `${selectedPunishment.points} points deducted.`,
-        variant: "destructive",
+        description: `${punishment.title} has been applied.`
       });
-      
-      onClose();
     } catch (error) {
-      logger.error("Error applying punishment:", error);
-      setTotalPoints(totalPoints); // Revert optimistic update on error
-      
+      logger.error('Error applying random punishment:', error);
       toast({
         title: "Error",
-        description: "Failed to apply punishment. Please try again.",
+        description: "Failed to apply punishment",
         variant: "destructive",
       });
+    } finally {
+      setIsApplying(false);
     }
+  }, [applyPunishmentMutation, currentPoints, subUserId]);
+
+  return {
+    applyRandomPunishment,
+    isApplying,
   };
-  
-  return { handlePunish };
 };
