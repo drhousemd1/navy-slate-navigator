@@ -1,12 +1,11 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, getCurrentDayOfWeek, processTaskFromDb } from '@/lib/taskUtils';
+import { getCurrentDayOfWeek } from '@/lib/taskUtils';
 import { toast } from '@/hooks/use-toast';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
-import { TaskWithId, RawSupabaseTask } from '@/data/tasks/types';
+import { TaskWithId } from '@/data/tasks/types';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
@@ -45,7 +44,7 @@ export function useToggleTaskCompletionMutation() {
 
         const dayOfWeek = getCurrentDayOfWeek();
         // Ensure usage_data is an array, defaulting if somehow null/undefined despite processing
-        const currentUsageData = Array.isArray(currentTask.usage_data) ? currentTask.usage_data : Array(7).fill(0);
+        const currentUsageData = Array.isArray(currentTask.usage_data) ? currentTask.usage_data as number[] : Array(7).fill(0);
         const newUsageData = [...currentUsageData];
         const frequencyCount = currentTask.frequency_count || 1;
 
@@ -142,7 +141,7 @@ export function useToggleTaskCompletionMutation() {
           return oldTasks.map(task => {
             if (task.id === taskId) {
               const baseTaskForOptimistic = task;
-              const currentUsageData = baseTaskForOptimistic.usage_data || Array(7).fill(0);
+              const currentUsageData = Array.isArray(baseTaskForOptimistic.usage_data) ? baseTaskForOptimistic.usage_data as number[] : Array(7).fill(0);
               const newUsageData = [...currentUsageData];
               const frequencyCount = baseTaskForOptimistic.frequency_count || 1;
 
@@ -157,7 +156,6 @@ export function useToggleTaskCompletionMutation() {
                                           ? isNowFullyCompletedForDay 
                                           : completed;
 
-              // Log the optimistic update for debugging
               logger.debug('[useToggleTaskCompletionMutation onMutate] Optimistic update:', {
                 taskId,
                 currentCompletions: currentUsageData[dayOfWeek],
@@ -192,7 +190,7 @@ export function useToggleTaskCompletionMutation() {
             const updatedLocalTasks = localTasks.map(t => {
               if (t.id === variables.taskId) {
                 // Logic here should mirror onMutate and mutationFn for consistency
-                const currentUsageData = t.usage_data || Array(7).fill(0);
+                const currentUsageData = Array.isArray(t.usage_data) ? t.usage_data as number[] : Array(7).fill(0);
                 const newUsageData = [...currentUsageData];
                 const frequencyCount = t.frequency_count || 1;
 

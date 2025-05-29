@@ -1,3 +1,4 @@
+
 import { currentWeekKey, resetTaskCompletions } from "@/lib/taskUtils";
 import { queryClient } from "../queryClient";
 import { loadRewardsFromDB, saveRewardsToDB, getLastSyncTimeForRewards, setLastSyncTimeForRewards } from "../indexedDB/useIndexedDB";
@@ -5,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/lib/errors";
 import { Reward } from '@/data/rewards/types';
 import { fetchRewards, REWARDS_QUERY_KEY } from '@/data/rewards/queries';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
 // Define an interface for the raw reward data from IndexedDB before migration
 type RawRewardFromDBBeforeMigration = Omit<Reward, 'is_dom_reward'> & {
@@ -12,6 +14,8 @@ type RawRewardFromDBBeforeMigration = Omit<Reward, 'is_dom_reward'> & {
 };
 
 export function usePreloadRewards() {
+  const { subUserId, domUserId } = useUserIds();
+  
   return async () => {
     try {
       // Reset weekly task completions if needed
@@ -48,7 +52,7 @@ export function usePreloadRewards() {
         });
         
         // Update the cache with migrated data
-        queryClient.setQueryData(REWARDS_QUERY_KEY, migratedRewards);
+        queryClient.setQueryData([...REWARDS_QUERY_KEY, subUserId, domUserId], migratedRewards);
         
         // If we should not fetch (data is fresh), return early
         if (!shouldFetch) {
@@ -64,8 +68,8 @@ export function usePreloadRewards() {
       if (shouldFetch) {
         logger.debug("[usePreloadRewards] Fetching fresh data from server");
         try {
-          const freshData = await fetchRewards();
-          queryClient.setQueryData(REWARDS_QUERY_KEY, freshData);
+          const freshData = await fetchRewards(subUserId, domUserId);
+          queryClient.setQueryData([...REWARDS_QUERY_KEY, subUserId, domUserId], freshData);
         } catch (error) {
           logger.error("[usePreloadRewards] Failed to fetch fresh data:", error);
           // Keep using cached data if available

@@ -78,7 +78,7 @@ export function useTasksQuery(): TasksQueryResult {
         return [];
       }
 
-      const localData: Task[] | null = await loadTasksFromDB();
+      const localData = await loadTasksFromDB();
       const lastSync = await getLastSyncTimeForTasks();
       let shouldFetch = true;
 

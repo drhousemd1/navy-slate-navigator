@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Reward, UpdateRewardVariables } from './rewards/types';
-import { logger } from '@/lib/logger'; // Added logger
+import { logger } from '@/lib/logger';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
 // Import specific mutation hooks directly
 import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables } from './rewards/mutations/useSaveReward';
-import { useDeleteReward as useDeleteRewardMutation } from './rewards/mutations/useDeleteReward'; // Corrected import and aliased
+import { useDeleteReward as useDeleteRewardMutation } from './rewards/mutations/useDeleteReward';
 
 import { fetchRewards, fetchUserPoints, fetchUserDomPoints, fetchTotalRewardsSupply } from './rewards/queries';
 import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY } from './rewards/queries';
@@ -19,6 +20,7 @@ export interface SaveRewardParams {
 
 export const useRewardsData = () => {
   const queryClient = useQueryClient();
+  const { subUserId, domUserId } = useUserIds();
   
   // Query hooks
   const { 
@@ -26,9 +28,10 @@ export const useRewardsData = () => {
     isLoading: isRewardsLoading,
     refetch: refetchRewards
   } = useQuery<Reward[]>({
-    queryKey: REWARDS_QUERY_KEY,
-    queryFn: fetchRewards,
+    queryKey: [...REWARDS_QUERY_KEY, subUserId, domUserId],
+    queryFn: () => fetchRewards(subUserId, domUserId),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: !!(subUserId || domUserId),
   });
 
   const { 
@@ -64,9 +67,9 @@ export const useRewardsData = () => {
   const deleteRewardMutation = useDeleteRewardMutation();
 
   // Calculate total dom rewards supply
-  const totalDomRewardsSupply = rewards
+  const totalDomRewardsSupply = Array.isArray(rewards) ? rewards
     .filter(reward => reward.is_dom_reward)
-    .reduce((total, reward) => total + reward.supply, 0);
+    .reduce((total, reward) => total + reward.supply, 0) : 0;
 
   // Derived loading state
   const isLoading = isRewardsLoading || isPointsLoading || isDomPointsLoading || isSupplyLoading;
@@ -133,7 +136,7 @@ export const useRewardsData = () => {
   // Buy reward function
   const buyReward = async ({ rewardId, cost }: { rewardId: string; cost: number }): Promise<boolean> => {
     try {
-      const reward = rewards.find(r => r.id === rewardId);
+      const reward = Array.isArray(rewards) ? rewards.find(r => r.id === rewardId) : undefined;
       if (!reward) {
         toast({ title: "Error", description: "Reward not found", variant: "destructive" });
         return false;
@@ -189,7 +192,7 @@ export const useRewardsData = () => {
         await savePointsToDB(newPoints);
       }
       
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => {
+      queryClient.setQueryData<Reward[]>([...REWARDS_QUERY_KEY, subUserId, domUserId], (oldRewards = []) => {
         const updatedRewards = oldRewards.map(r => 
           r.id === rewardId ? { ...r, supply: r.supply + 1 } : r 
         );
@@ -210,7 +213,7 @@ export const useRewardsData = () => {
   // Use reward function
   const useReward = async ({ rewardId }: { rewardId: string }): Promise<boolean> => {
     try {
-      const reward = rewards.find(r => r.id === rewardId);
+      const reward = Array.isArray(rewards) ? rewards.find(r => r.id === rewardId) : undefined;
       if (!reward) {
         toast({ title: "Error", description: "Reward not found", variant: "destructive" });
         return false;
@@ -242,7 +245,7 @@ export const useRewardsData = () => {
         return false;
       }
       
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => {
+      queryClient.setQueryData<Reward[]>([...REWARDS_QUERY_KEY, subUserId, domUserId], (oldRewards = []) => {
         const updatedRewards = oldRewards.map(r => 
           r.id === rewardId ? { ...r, supply: newSupply } : r
         );
@@ -360,7 +363,7 @@ export const useRewardsData = () => {
   };
 
   return {
-    rewards,
+    rewards: Array.isArray(rewards) ? rewards : [],
     totalPoints,
     domPoints,
     totalRewardsSupply,
@@ -370,12 +373,12 @@ export const useRewardsData = () => {
     deleteReward,
     buyReward,
     useReward,
-    updatePoints,
-    updateDomPoints,
+    // updatePoints,
+    // updateDomPoints,
     refetchRewards,
-    refreshPointsFromDatabase,
-    setRewardsOptimistically,
-    setPointsOptimistically,
-    setDomPointsOptimistically
+    // refreshPointsFromDatabase,
+    // setRewardsOptimistically,
+    // setPointsOptimistically,
+    // setDomPointsOptimistically
   };
 };

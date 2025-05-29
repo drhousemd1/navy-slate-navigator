@@ -1,7 +1,7 @@
 
-import { Json } from "@/integrations/supabase/types";
+import type { Json } from "@/integrations/supabase/types";
 
-export { Json } from "@/integrations/supabase/types";
+export type { Json } from "@/integrations/supabase/types";
 
 export interface Task {
   id: string;
@@ -73,4 +73,6 @@ export interface UpdateTaskVariables extends Partial<TaskFormValues> {
   user_id?: string;
   week_identifier?: string;
   usage_data?: Json;
+  completed?: boolean;
+  last_completed_date?: string;
 }

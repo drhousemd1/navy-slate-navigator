@@ -3,11 +3,11 @@ import React, { useState } from 'react';
 import TaskEditor from '@/components/TaskEditor';
 import TasksList from '@/components/task/TasksList';
 import { useTasksData } from '@/hooks/useTasksData';
-import { TaskWithId, TaskFormValues, CreateTaskVariables } from '@/data/tasks/types';
+import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/errors';
 import { logger } from '@/lib/logger';
-import { TasksHeader } from '@/components/task/TasksHeader';
+import TasksHeader from '@/components/task/TasksHeader';
 import { useAuth } from '@/contexts/auth';
 
 const Tasks: React.FC = () => {
@@ -45,16 +45,16 @@ const Tasks: React.FC = () => {
         return;
       }
 
-      let payload: CreateTaskVariables | TaskWithId;
+      let payload: CreateTaskVariables | UpdateTaskVariables;
       
       if (editingTask?.id) {
         // Updating existing task
         payload = {
-          ...editingTask,
           ...taskData,
+          id: editingTask.id,
           user_id: user.id,
           usage_data: editingTask.usage_data || Array(7).fill(0),
-        } as TaskWithId;
+        } as UpdateTaskVariables;
       } else {
         // Creating new task
         payload = {
@@ -110,11 +110,14 @@ const Tasks: React.FC = () => {
     if (!task) return;
 
     try {
-      await saveTask({
+      const updatePayload: UpdateTaskVariables = {
         ...task,
+        id: taskId,
         completed,
         last_completed_date: completed ? new Date().toISOString() : undefined,
-      });
+      };
+      
+      await saveTask(updatePayload);
       
       toast({
         title: completed ? "Task Completed!" : "Task Marked Incomplete",

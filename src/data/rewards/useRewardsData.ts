@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward, CreateRewardVariables } from '@/data/rewards/types';
@@ -6,7 +7,7 @@ import {
   REWARDS_POINTS_QUERY_KEY,
   REWARDS_DOM_POINTS_QUERY_KEY,
   REWARDS_SUPPLY_QUERY_KEY,
-  fetchRewards, 
+  useRewardsQuery, 
   fetchTotalRewardsSupply
 } from './queries'; 
 
@@ -42,11 +43,7 @@ export const useRewardsData = () => {
     isLoading: rewardsLoading,
     error: rewardsError,
     refetch: refetchRewardsQuery
-  } = useQuery<Reward[]>({ 
-    queryKey: REWARDS_QUERY_KEY,
-    queryFn: fetchRewards, 
-    ...STANDARD_QUERY_CONFIG
-  });
+  } = useRewardsQuery();
 
   const {
     data: totalRewardsSupply = 0,
@@ -58,9 +55,9 @@ export const useRewardsData = () => {
   });
   
   const totalDomRewardsSupply = React.useMemo(() => {
-    return rewards.reduce((total, reward) => { 
+    return Array.isArray(rewards) ? rewards.reduce((total, reward) => { 
       return total + (reward.is_dom_reward && reward.supply !== -1 ? reward.supply : 0);
-    }, 0);
+    }, 0) : 0;
   }, [rewards]);
 
   // Real-time subscriptions with proper cleanup
@@ -170,7 +167,7 @@ export const useRewardsData = () => {
   const { mutateAsync: redeemDom } = useRedeemDomReward();
 
   const buyReward = async ({ rewardId, cost }: { rewardId: string; cost: number }) => {
-    const reward = rewards.find(r => r.id === rewardId);
+    const reward = Array.isArray(rewards) ? rewards.find(r => r.id === rewardId) : undefined;
     if (!reward) throw new Error("Reward not found for buying");
     
     const { data: userData } = await supabase.auth.getUser();
@@ -195,7 +192,7 @@ export const useRewardsData = () => {
   };
 
   const useReward = async ({ rewardId }: { rewardId: string }) => { 
-    const reward = rewards.find(r => r.id === rewardId);
+    const reward = Array.isArray(rewards) ? rewards.find(r => r.id === rewardId) : undefined;
     if (!reward) throw new Error("Reward not found for using");
 
     const { data: userData } = await supabase.auth.getUser();
@@ -223,7 +220,7 @@ export const useRewardsData = () => {
   };
 
   return {
-    rewards,
+    rewards: Array.isArray(rewards) ? rewards : [],
     totalPoints: totalPointsFromManager,
     totalRewardsSupply,
     totalDomRewardsSupply,

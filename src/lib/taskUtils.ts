@@ -1,9 +1,9 @@
 
-import { Task, RawSupabaseTask, Json } from '@/data/tasks/types';
+import { Task as TaskType, RawSupabaseTask, Json } from '@/data/tasks/types';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from './logger';
 
-export { Task, RawSupabaseTask, Json };
+export type { TaskType as Task, RawSupabaseTask, Json };
 
 export const todayKey = () => {
   const today = new Date();
@@ -23,6 +23,10 @@ export const currentWeekIdentifier = () => {
   const pastDaysOfYear = (today.getTime() - firstDayOfYear.getTime()) / 86400000;
   const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
   return `${year}-W${weekNumber.toString().padStart(2, '0')}`;
+};
+
+export const getCurrentDayOfWeek = (): number => {
+  return new Date().getDay();
 };
 
 export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
@@ -65,7 +69,7 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
   }
 };
 
-export const isTaskDueToday = (task: Task): boolean => {
+export const isTaskDueToday = (task: TaskType): boolean => {
   if (task.frequency === 'daily') return true;
   
   if (task.frequency === 'weekly') {
@@ -81,10 +85,10 @@ export const isTaskDueToday = (task: Task): boolean => {
   return false;
 };
 
-export const calculateTaskProgress = (task: Task): number => {
+export const calculateTaskProgress = (task: TaskType): number => {
   if (!Array.isArray(task.usage_data)) return 0;
   
-  const completedDays = task.usage_data.filter(day => day > 0).length;
+  const completedDays = task.usage_data.filter((day: Json) => typeof day === 'number' && day > 0).length;
   const totalDays = task.frequency === 'daily' ? 7 : task.frequency_count || 1;
   
   return Math.min(100, (completedDays / totalDays) * 100);
@@ -103,7 +107,7 @@ export const getTaskPriorityColor = (priority: 'low' | 'medium' | 'high'): strin
   }
 };
 
-export const transformSupabaseTask = (rawTask: RawSupabaseTask): Task => {
+export const transformSupabaseTask = (rawTask: RawSupabaseTask): TaskType => {
   return {
     ...rawTask,
     priority: (rawTask.priority === 'low' || rawTask.priority === 'medium' || rawTask.priority === 'high') 
