@@ -1,4 +1,3 @@
-
 # App Code Guide
 
 ## ⚠️ CRITICAL: READ BEFORE MAKING ANY CHANGES
@@ -35,7 +34,7 @@
  * RULES PAGE (src/pages/Rules.tsx)
  * -------------------------------
  * • Data Hook: useRulesData (src/data/hooks/useRulesData.ts)
- *    – loadRulesFromDB(), getLastSyncTime(‘rules’)
+ *    – loadRulesFromDB(), getLastSyncTime('rules')
  *    – fetchRules() via RulesDataHandler (src/data/RulesDataHandler.tsx)
  *    – saveRulesToDB(), setLastSyncTime
  *    – React Query key: ['rules'], config: staleTime=Infinity, refetchOnMount/Focus/Reconn=false, gcTime=30m, retry=3, exponential backoff
@@ -117,6 +116,91 @@
  * This documentation is the single source of truth for refactoring.
  */
 export default {};
+
+// ==================================================
+// GOLDEN RULE: USER DATA PRIVACY & SECURITY ENFORCEMENT
+// ==================================================
+//
+// 🔒 CORE PRINCIPLE:
+// All data within the application MUST be strictly scoped to either:
+//   - The current authenticated user (auth.uid())
+//   - Their explicitly linked partner (linked_partner_id)
+//
+// Under no circumstances should data be visible, accessible, or queryable by
+// any other user outside of that direct Dom/Sub pairing.
+//
+// There is NO SUCH THING as global/public/shared data across unrelated users.
+//
+// ✅ ENFORCEMENT REQUIREMENTS:
+//
+// 1. DATABASE-LEVEL SECURITY
+// --------------------------
+// • Row Level Security (RLS) MUST be enabled on ALL user-related tables.
+// • Every user-facing table MUST contain a valid `user_id` UUID column.
+// • RLS policies MUST permit access ONLY when:
+//     auth.uid() = user_id
+//     OR auth.uid() = (SELECT linked_partner_id FROM profiles WHERE id = user_id)
+//
+// 2. FRONTEND QUERY STRUCTURE
+// ---------------------------
+// • All Supabase queries MUST include filtering logic scoped to:
+//     .eq('user_id', currentUserId)
+//     OR .eq('user_id', linkedPartnerId)
+//
+// • All create/update/delete mutations MUST set the correct `user_id` value.
+// • Fetching full tables (i.e. no filter) is STRICTLY PROHIBITED.
+// • If a partner is linked, treat their user ID as fully interchangeable.
+//
+// 3. USER CONTEXT RELIABILITY
+// ---------------------------
+// • All components must access user ID and linked partner ID via `useUserIds()`.
+// • The context must ALWAYS resolve both IDs prior to executing any data query.
+// • Partner-linking logic MUST be respected across all features.
+//
+// 4. ISOLATION IS UNIVERSAL
+// -------------------------
+// • There is NO exception for any feature, table, or page.
+// • All user-generated content (tasks, rewards, punishments, rules, completions, history, etc.)
+//   MUST be private and ONLY visible to:
+//     - The user who created it
+//     - Their linked partner (if applicable)
+//
+// • Even if a table has no sensitive data, DO NOT make it global unless approved.
+//
+// 5. FAIL-SAFE BEHAVIOR
+// ----------------------
+// • If context fails to load user or partner ID, block queries.
+// • Never fallback to an unsafe default like "show everything" or "assume public".
+// • Log all auth errors, context failures, or ID mismatches immediately.
+//
+// 6. TESTING + FUTURE MIGRATIONS
+// -------------------------------
+// • Every new table must include a `user_id` column by default.
+// • No new feature may launch without tested RLS and filter logic.
+// • Before merging changes, validate behavior as:
+//     - Solo user
+//     - Linked pair
+//     - Unlinked unrelated users
+//
+// ================================
+// PERMANENT NON-NEGOTIABLE RULE:
+// ================================
+//
+// 🔐 IF A QUERY DOES NOT FILTER BY `user_id` OR `linked_partner_id`, IT IS A SECURITY BUG.
+// 🔐 IF A TABLE HAS NO RLS, IT IS A SECURITY BUG.
+// 🔐 IF A PAGE SHOWS DATA TO A NON-LINKED ACCOUNT, IT IS A SECURITY BUG.
+//
+// These rules are not flexible. If functionality ever appears to work without respecting
+// this security model, the behavior is broken — even if it seems functional.
+//
+// ====================================
+// ALWAYS:
+// ====================================
+// • Verify context returns both user and partner IDs
+// • Confirm Supabase policies are active and correct
+// • Check that every query includes proper `.eq('user_id', ...)` logic
+// • Enforce this as part of every code review, every refactor, every feature
+
 This application follows strict architectural patterns that have been carefully designed and tested. **DO NOT** modify the core data flow patterns without understanding the full system architecture.
 
 ## Architecture Contract
