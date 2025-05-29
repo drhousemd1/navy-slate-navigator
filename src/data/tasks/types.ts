@@ -1,6 +1,8 @@
 
 import { Json } from "@/integrations/supabase/types";
 
+export { Json } from "@/integrations/supabase/types";
+
 export interface Task {
   id: string;
   title: string;
@@ -8,7 +10,7 @@ export interface Task {
   frequency: string;
   frequency_count: number;
   points: number;
-  priority: string;
+  priority: 'low' | 'medium' | 'high';
   icon_name?: string;
   icon_color: string;
   icon_url?: string;
@@ -32,6 +34,11 @@ export interface Task {
 
 export interface TaskWithId extends Task {
   id: string;
+  optimisticId?: string;
+}
+
+export interface RawSupabaseTask extends Omit<Task, 'priority'> {
+  priority: string;
 }
 
 export interface TaskFormValues {
@@ -40,7 +47,7 @@ export interface TaskFormValues {
   frequency: string;
   frequency_count: number;
   points: number;
-  priority: string;
+  priority: 'low' | 'medium' | 'high';
   icon_name?: string;
   icon_color: string;
   icon_url?: string;
@@ -57,9 +64,13 @@ export interface TaskFormValues {
 
 export interface CreateTaskVariables extends TaskFormValues {
   user_id: string;
+  week_identifier?: string;
+  usage_data?: Json;
 }
 
 export interface UpdateTaskVariables extends Partial<TaskFormValues> {
   id: string;
   user_id?: string;
+  week_identifier?: string;
+  usage_data?: Json;
 }

@@ -81,6 +81,7 @@ const TasksList: React.FC<TasksListProps> = ({
       <div className="space-y-4">
         {tasks.map((task) => {
           const frequency = task.frequency as 'daily' | 'weekly';
+          const usageDataArray = Array.isArray(task.usage_data) ? task.usage_data : Array(7).fill(0);
           return (
             <TaskCard
               key={task.id}
@@ -94,7 +95,7 @@ const TasksList: React.FC<TasksListProps> = ({
               focalPointY={task.focal_point_y}
               frequency={frequency}
               frequency_count={task.frequency_count}
-              usage_data={task.usage_data || []} // Ensure usage_data is an array
+              usage_data={usageDataArray}
               icon_url={task.icon_url}
               icon_name={task.icon_name}
               priority={task.priority}

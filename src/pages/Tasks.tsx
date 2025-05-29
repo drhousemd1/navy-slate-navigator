@@ -1,80 +1,85 @@
-import React, { useState, useEffect } from 'react';
-import AppLayout from '../components/AppLayout';
-import TaskEditor from '../components/TaskEditor';
-import TasksHeader from '../components/task/TasksHeader';
-import TasksList from '../components/task/TasksList';
-import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
-import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types';
-import ErrorBoundary from '@/components/ErrorBoundary';
+
+import React, { useState } from 'react';
+import TaskEditor from '@/components/TaskEditor';
+import TasksList from '@/components/task/TasksList';
 import { useTasksData } from '@/hooks/useTasksData';
-import ErrorDisplay from '@/components/common/ErrorDisplay';
-import EmptyState from '@/components/common/EmptyState';
-import { ListChecks, LoaderCircle } from 'lucide-react';
-import { useToggleTaskCompletionMutation } from '../data/tasks/mutations/useToggleTaskCompletionMutation';
-import { logger } from '@/lib/logger';
-import { Button } from '@/components/ui/button';
+import { TaskWithId, TaskFormValues, CreateTaskVariables } from '@/data/tasks/types';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { TasksHeader } from '@/components/task/TasksHeader';
+import { useAuth } from '@/contexts/auth';
 
-const TasksPageContent: React.FC = () => {
+const Tasks: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [currentTask, setCurrentTask] = useState<TaskWithId | null>(null);
-  const { 
-    tasks, 
-    isLoading, 
-    error, 
-    saveTask, 
-    deleteTask, 
-  } = useTasksData();
-  const { refreshPointsFromDatabase } = useRewards();
+  const [editingTask, setEditingTask] = useState<TaskWithId | null>(null);
+  const { user } = useAuth();
   
-  const toggleTaskCompletionMutation = useToggleTaskCompletionMutation();
+  const {
+    tasks,
+    isLoading,
+    error,
+    isUsingCachedData,
+    saveTask,
+    deleteTask
+  } = useTasksData();
 
-  const handleAddTask = () => {
-    logger.debug('handleAddTask called in TasksPageContent');
-    setCurrentTask(null);
+  const handleCreateTask = () => {
+    setEditingTask(null);
     setIsEditorOpen(true);
   };
-
-  React.useEffect(() => {
-    logger.debug('Setting up event listener for add-new-task');
-    const element = document.querySelector('.TasksContent'); 
-    if (element) {
-      const handleAddEvent = (event: Event) => { 
-        logger.debug('Received add-new-task event', event);
-        handleAddTask();
-      };
-      element.addEventListener('add-new-task', handleAddEvent);
-      return () => {
-        element.removeEventListener('add-new-task', handleAddEvent);
-      };
-    }
-  }, []); 
 
   const handleEditTask = (task: TaskWithId) => {
-    setCurrentTask(task);
+    setEditingTask(task);
     setIsEditorOpen(true);
   };
 
-  const handleSaveTask = async (formData: TaskFormValues) => { 
+  const handleSaveTask = async (taskData: TaskFormValues) => {
     try {
-      let taskToSave: CreateTaskVariables | UpdateTaskVariables; 
-      if (currentTask && currentTask.id) {
-        taskToSave = { ...formData, id: currentTask.id };
-      } else {
-        taskToSave = { 
-          ...formData, 
-          usage_data: Array(7).fill(0), 
-          background_images: null, 
-        };
+      if (!user?.id) {
+        toast({
+          title: "Authentication Error",
+          description: "You must be logged in to save tasks.",
+          variant: "destructive",
+        });
+        return;
       }
-      await saveTask(taskToSave);
+
+      let payload: CreateTaskVariables | TaskWithId;
+      
+      if (editingTask?.id) {
+        // Updating existing task
+        payload = {
+          ...editingTask,
+          ...taskData,
+          user_id: user.id,
+          usage_data: editingTask.usage_data || Array(7).fill(0),
+        } as TaskWithId;
+      } else {
+        // Creating new task
+        payload = {
+          ...taskData,
+          user_id: user.id,
+        } as CreateTaskVariables;
+      }
+
+      await saveTask(payload);
       setIsEditorOpen(false);
-      setCurrentTask(null);
-    } catch (e: unknown) {
-      const descriptiveMessage = getErrorMessage(e);
-      logger.error('Error saving task in UI:', descriptiveMessage, e);
-      toast({ title: "Save Error", description: descriptiveMessage, variant: "destructive" });
+      setEditingTask(null);
+      
+      toast({
+        title: "Success",
+        description: editingTask ? "Task updated successfully!" : "Task created successfully!",
+        variant: "default",
+      });
+    } catch (error: unknown) {
+      const descriptiveMessage = getErrorMessage(error);
+      logger.error("Error saving task:", descriptiveMessage, error);
+      toast({
+        title: "Save Error",
+        description: descriptiveMessage,
+        variant: "destructive",
+      });
     }
   };
 
@@ -82,135 +87,84 @@ const TasksPageContent: React.FC = () => {
     try {
       await deleteTask(taskId);
       setIsEditorOpen(false);
-      setCurrentTask(null);
-    } catch (e: unknown) {
-      const descriptiveMessage = getErrorMessage(e);
-      logger.error('Error deleting task in UI:', descriptiveMessage, e);
-      toast({ title: "Delete Error", description: descriptiveMessage, variant: "destructive" });
-    }
-  };
-
-  const handleToggleCompletion = async (taskId: string, completed: boolean) => {
-    try {
-      const task = tasks.find(t => t.id === taskId);
-      if (!task) {
-        logger.error(`Task with id ${taskId} not found.`);
-        toast({ title: "Error", description: `Task with id ${taskId} not found.`, variant: "destructive" });
-        return;
-      }
+      setEditingTask(null);
       
-      // Convert Task to TaskWithId to ensure compatibility
-      const taskWithId: TaskWithId = {
-        ...task,
-        id: task.id!,
-        frequency: (task.frequency === 'daily' || task.frequency === 'weekly') ? task.frequency : 'daily',
-      };
-      
-      toggleTaskCompletionMutation.mutate({ 
-        taskId, 
-        completed, 
-        pointsValue: task.points || 0,
-        task: taskWithId 
+      toast({
+        title: "Success",
+        description: "Task deleted successfully!",
+        variant: "default",
       });
-    } catch (e: unknown) {
-      const descriptiveMessage = getErrorMessage(e);
-      logger.error('Error preparing to toggle task completion in UI:', descriptiveMessage, e);
-      toast({ title: "Toggle Error", description: descriptiveMessage, variant: "destructive" });
+    } catch (error: unknown) {
+      const descriptiveMessage = getErrorMessage(error);
+      logger.error("Error deleting task:", descriptiveMessage, error);
+      toast({
+        title: "Delete Error", 
+        description: descriptiveMessage,
+        variant: "destructive",
+      });
     }
   };
 
-  useEffect(() => {
-    refreshPointsFromDatabase(); 
-  }, [refreshPointsFromDatabase]); 
+  const handleToggleTaskCompletion = async (taskId: string, completed: boolean) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
 
-  // Convert tasks to TaskWithId format for compatibility
-  const tasksWithId: TaskWithId[] = tasks
-    .filter(task => task.id) // Only include tasks with IDs
-    .map(task => ({
-      ...task,
-      id: task.id!,
-      frequency: (task.frequency === 'daily' || task.frequency === 'weekly') ? task.frequency : 'daily',
-    }));
+    try {
+      await saveTask({
+        ...task,
+        completed,
+        last_completed_date: completed ? new Date().toISOString() : undefined,
+      });
+      
+      toast({
+        title: completed ? "Task Completed!" : "Task Marked Incomplete",
+        description: completed ? `You earned ${task.points} points!` : "Task status updated.",
+        variant: "default",
+      });
+    } catch (error: unknown) {
+      const descriptiveMessage = getErrorMessage(error);
+      logger.error("Error toggling task completion:", descriptiveMessage, error);
+      toast({
+        title: "Update Error",
+        description: descriptiveMessage,
+        variant: "destructive",
+      });
+    }
+  };
 
-  let content;
-  if (isLoading && tasksWithId.length === 0) {
-    content = (
-      <div className="flex flex-col items-center justify-center py-10 mt-4">
-        <LoaderCircle className="h-10 w-10 text-primary animate-spin mb-2" />
-        <p className="text-muted-foreground">Loading tasks...</p>
-      </div>
-    );
-  } else if (error && tasksWithId.length === 0) {
-    content = (
-      <ErrorDisplay
-        title="Error Loading Tasks"
-        message={getErrorMessage(error) || "Could not fetch tasks. Please check your connection or try again later."}
-      />
-    );
-  } else if (!isLoading && tasksWithId.length === 0 && !error) {
-    content = (
-      <EmptyState
-        icon={ListChecks} 
-        title="No Tasks Yet"
-        description="You do not have any tasks yet, create one to get started."
-        action={ 
-          <Button onClick={handleAddTask} className="bg-primary text-primary-foreground hover:bg-primary/90">
-            Create New Task
-          </Button>
-        }
-      />
-    );
-  } else {
-    content = (
-      <TasksList
-        tasks={tasksWithId}
-        isLoading={false} 
-        onEditTask={handleEditTask}
-        onToggleCompletion={handleToggleCompletion}
-        error={error} 
-      />
-    );
-  }
+  const convertTaskToPartial = (task: TaskWithId) => {
+    const { id, created_at, updated_at, user_id, ...taskFormData } = task;
+    return {
+      ...taskFormData,
+      id,
+      priority: task.priority as 'low' | 'medium' | 'high'
+    };
+  };
 
   return (
-    <div className="p-4 pt-6 TasksContent">
-      <TasksHeader onAddNewTask={handleAddTask} /> 
-      {content}
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <TasksHeader onCreateTask={handleCreateTask} />
+      
+      <TasksList
+        tasks={tasks}
+        isLoading={isLoading}
+        error={error}
+        isUsingCachedData={isUsingCachedData}
+        onEditTask={handleEditTask}
+        onToggleCompletion={handleToggleTaskCompletion}
+      />
+
       <TaskEditor
         isOpen={isEditorOpen}
         onClose={() => {
           setIsEditorOpen(false);
-          setCurrentTask(null);
+          setEditingTask(null);
         }}
-        taskData={currentTask || undefined} 
+        taskData={editingTask ? convertTaskToPartial(editingTask) : undefined}
         onSave={handleSaveTask}
-        onDelete={handleDeleteTask}
+        onDelete={editingTask ? () => handleDeleteTask(editingTask.id) : undefined}
       />
     </div>
-  );
-};
-
-const Tasks: React.FC = () => {
-  const handleAddNewItem = () => {
-    logger.debug('AppLayout onAddNewItem called for Tasks');
-    const contentElement = document.querySelector('.TasksContent');
-    if (contentElement) {
-      logger.debug('Dispatching add-new-task event to .TasksContent');
-      const event = new CustomEvent('add-new-task');
-      contentElement.dispatchEvent(event);
-    } else {
-      logger.warn('.TasksContent element not found for dispatching event. Ensure TasksPageContent renders a div with this class.');
-    }
-  };
-
-  return (
-    <AppLayout onAddNewItem={handleAddNewItem}>
-      <RewardsProvider>
-        <ErrorBoundary fallbackMessage="Could not load tasks. Please try reloading.">
-          <TasksPageContent />
-        </ErrorBoundary>
-      </RewardsProvider>
-    </AppLayout>
   );
 };
 

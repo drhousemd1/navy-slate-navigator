@@ -1,8 +1,7 @@
-
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { queryClient } from '@/data/queryClient';
 import { toast } from '@/hooks/use-toast';
-import { REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries'; // Import points query keys
+import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY } from '@/data/rewards/queries'; // Import points query keys
 import { QueryKey } from '@tanstack/react-query'; // Import QueryKey type
 import { logger } from '@/lib/logger'; // Added logger import
 
@@ -24,14 +23,13 @@ interface NetworkStatusProviderProps {
 // Define critical query keys here
 const CRITICAL_QUERY_KEYS_FOR_FORCESYNC: QueryKey[] = [
   ['tasks'],
-  ['rewards'],
+  REWARDS_QUERY_KEY,
   REWARDS_POINTS_QUERY_KEY,
   REWARDS_DOM_POINTS_QUERY_KEY,
   ['punishments'],
   ['rules'],
   ['profile'],
 ];
-
 
 export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ children }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -201,4 +199,3 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({ ch
     </NetworkStatusContext.Provider>
   );
 };
-

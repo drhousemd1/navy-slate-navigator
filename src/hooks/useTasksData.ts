@@ -10,7 +10,7 @@ import { useDeleteTask } from '@/data/tasks/mutations/useDeleteTask';
 import { logger } from '@/lib/logger';
 import { useCreateTask } from '@/data/tasks/mutations/useCreateTask';
 import { useUpdateTask } from '@/data/tasks/mutations/useUpdateTask';
-import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
+import { getErrorMessage } from '@/lib/errors';
 
 // Define a type for the data saveTask might receive
 // This will now be more specific: CreateTaskVariables or UpdateTaskVariables
@@ -22,7 +22,7 @@ export const useTasksData = () => {
     isLoading, 
     error, 
     refetch,
-    isUsingCachedData
+    isUsingCachedData = false
   }: TasksQueryResult = useTasksQuery();
   
   const queryClient = useQueryClient();

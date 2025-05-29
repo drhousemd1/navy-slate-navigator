@@ -6,7 +6,7 @@
  */
 
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
-import { Task } from "./types";
+import { Task, RawSupabaseTask } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import {
   loadTasksFromDB,
@@ -19,7 +19,18 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 
 export const TASKS_QUERY_KEY = ['tasks'];
 
-export type TasksQueryResult = UseQueryResult<Task[], Error>;
+export type TasksQueryResult = UseQueryResult<Task[], Error> & {
+  isUsingCachedData?: boolean;
+};
+
+const transformSupabaseTask = (rawTask: RawSupabaseTask): Task => {
+  return {
+    ...rawTask,
+    priority: (rawTask.priority === 'low' || rawTask.priority === 'medium' || rawTask.priority === 'high') 
+      ? rawTask.priority 
+      : 'medium' as const
+  };
+};
 
 export const fetchTasks = async (subUserId: string | null, domUserId: string | null): Promise<Task[]> => {
   if (!subUserId && !domUserId) {
@@ -49,7 +60,7 @@ export const fetchTasks = async (subUserId: string | null, domUserId: string | n
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(transformSupabaseTask);
   } catch (error) {
     logger.error('[fetchTasks] Error fetching tasks:', error);
     throw error;
@@ -59,7 +70,7 @@ export const fetchTasks = async (subUserId: string | null, domUserId: string | n
 export function useTasksQuery(): TasksQueryResult {
   const { subUserId, domUserId } = useUserIds();
   
-  return useQuery<Task[], Error>({ 
+  const queryResult = useQuery<Task[], Error>({ 
     queryKey: [...TASKS_QUERY_KEY, subUserId, domUserId],
     queryFn: async (): Promise<Task[]> => { 
       if (!subUserId && !domUserId) {
@@ -80,7 +91,12 @@ export function useTasksQuery(): TasksQueryResult {
 
       if (!shouldFetch && localData) {
         logger.debug('[useTasksQuery queryFn] Using local data for tasks.');
-        return localData;
+        return localData.map(task => ({
+          ...task,
+          priority: (task.priority === 'low' || task.priority === 'medium' || task.priority === 'high') 
+            ? task.priority 
+            : 'medium' as const
+        }));
       }
 
       logger.debug('[useTasksQuery queryFn] Fetching tasks from server.');
@@ -94,7 +110,12 @@ export function useTasksQuery(): TasksQueryResult {
       }
       
       logger.debug('[useTasksQuery queryFn] No server data, returning local data or empty array for tasks.');
-      return localData || [];
+      return localData ? localData.map(task => ({
+        ...task,
+        priority: (task.priority === 'low' || task.priority === 'medium' || task.priority === 'high') 
+          ? task.priority 
+          : 'medium' as const
+      })) : [];
     },
     staleTime: Infinity,
     refetchOnWindowFocus: false,
@@ -103,4 +124,9 @@ export function useTasksQuery(): TasksQueryResult {
     gcTime: 1000 * 60 * 60, // 1 hour
     enabled: !!(subUserId || domUserId), // Only run if we have at least one user ID
   });
+
+  return {
+    ...queryResult,
+    isUsingCachedData: false
+  };
 }
