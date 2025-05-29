@@ -89,10 +89,12 @@ export function useRewardsQuery() {
     queryKey: [...REWARDS_QUERY_KEY, subUserId, domUserId],
     queryFn: () => fetchRewards(subUserId, domUserId),
     ...STANDARD_QUERY_CONFIG,
-    // Override staleTime to ensure immediate refetch when needed
-    staleTime: 0,
-    // Enable refetch on focus for this critical data
-    refetchOnWindowFocus: true,
+    // Use proper caching strategy as per APP CODE GUIDE
+    staleTime: 1000 * 60 * 30, // 30 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
     enabled: !!(subUserId || domUserId), // Only run if we have at least one user ID
   });
 }
