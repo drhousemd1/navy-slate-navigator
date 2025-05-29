@@ -1,3 +1,4 @@
+
 import { QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -8,7 +9,7 @@ import { logger } from '@/lib/logger';
 /**
  * Applies a punishment and updates the cache optimistically
  */
-export const applyPunishmentMutation = (queryClient: QueryClient) => 
+export const applyPunishmentMutation = (queryClient: QueryClient, userId: string) => 
   async (punishment: { id: string; points: number }) => {
     logger.debug("[applyPunishmentMutation] Applying punishment:", punishment);
     const startTime = performance.now();
@@ -22,7 +23,8 @@ export const applyPunishmentMutation = (queryClient: QueryClient) =>
         punishment_id: punishment.id,
         points_deducted: punishment.points,
         day_of_week: today.getDay(),
-        applied_date: today.toISOString()
+        applied_date: today.toISOString(),
+        user_id: userId
       };
       
       // Update cache immediately
@@ -34,7 +36,8 @@ export const applyPunishmentMutation = (queryClient: QueryClient) =>
       const historyEntry = {
         punishment_id: punishment.id,
         points_deducted: punishment.points,
-        day_of_week: today.getDay()
+        day_of_week: today.getDay(),
+        user_id: userId
       };
       
       const { data, error } = await supabase
