@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { Reward } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { SUB_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useSubRewardTypesCountQuery';
@@ -16,7 +17,6 @@ interface BuySubRewardVars {
   rewardId: string; 
   cost: number; 
   currentSupply: number; 
-  profileId: string;
   currentPoints: number 
 }
 
@@ -28,10 +28,15 @@ interface BuySubRewardOptimisticContext {
 
 export const useBuySubReward = () => {
   const queryClient = useQueryClient();
+  const { subUserId } = useUserIds();
 
   return useMutation<Reward, Error, BuySubRewardVars, BuySubRewardOptimisticContext>({
-    mutationFn: async ({ rewardId, cost, currentSupply, profileId, currentPoints }) => {
+    mutationFn: async ({ rewardId, cost, currentSupply, currentPoints }) => {
       try {
+        if (!subUserId) {
+          throw new Error("User not authenticated");
+        }
+
         if (currentPoints < cost) {
           throw new Error("Not enough points to purchase this reward.");
         }
@@ -43,7 +48,9 @@ export const useBuySubReward = () => {
         const { error: supplyError } = await supabase
           .from('rewards')
           .update({ supply: newSupply })
-          .eq('id', rewardId);
+          .eq('id', rewardId)
+          .eq('user_id', subUserId); // Ensure we only update user's own reward
+
         if (supplyError) throw supplyError;
 
         // Update profile points
@@ -51,11 +58,11 @@ export const useBuySubReward = () => {
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ points: newPoints })
-          .eq('id', profileId);
+          .eq('id', subUserId);
         
         if (profileError) {
           // Rollback supply update if points update fails
-          await supabase.from('rewards').update({ supply: currentSupply }).eq('id', rewardId);
+          await supabase.from('rewards').update({ supply: currentSupply }).eq('id', rewardId).eq('user_id', subUserId);
           throw profileError;
         }
 
@@ -64,6 +71,7 @@ export const useBuySubReward = () => {
           .from('rewards')
           .select('*')
           .eq('id', rewardId)
+          .eq('user_id', subUserId)
           .single();
 
         if (fetchError) throw fetchError;
@@ -78,7 +86,7 @@ export const useBuySubReward = () => {
     },
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
-      const userPointsQueryKey = [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId];
+      const userPointsQueryKey = [USER_POINTS_QUERY_KEY_PREFIX, subUserId];
       await queryClient.cancelQueries({ queryKey: userPointsQueryKey });
       await queryClient.cancelQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] });
 
@@ -113,7 +121,7 @@ export const useBuySubReward = () => {
       
       // Invalidate all related queries to ensure fresh data
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId] }),
+        queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] }),
         queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] }),
         queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] })
       ]);
@@ -130,7 +138,7 @@ export const useBuySubReward = () => {
         queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
       }
       if (context?.previousPoints !== undefined) {
-        const userPointsQueryKey = [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId];
+        const userPointsQueryKey = [USER_POINTS_QUERY_KEY_PREFIX, subUserId];
         queryClient.setQueryData<number>(userPointsQueryKey, context.previousPoints);
       }
       if (context?.previousSubCount !== undefined) {
@@ -146,7 +154,7 @@ export const useBuySubReward = () => {
     onSettled: async (data, error, variables) => {
       // Final invalidation to ensure consistency - DON'T invalidate REWARDS_QUERY_KEY to prevent rollback
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, variables.profileId] }),
+        queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] }),
         queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] })
       ]);
     }

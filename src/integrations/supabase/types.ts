@@ -261,6 +261,7 @@ export type Database = {
           id: string
           points_deducted: number
           punishment_id: string | null
+          user_id: string
         }
         Insert: {
           applied_date?: string | null
@@ -268,6 +269,7 @@ export type Database = {
           id?: string
           points_deducted: number
           punishment_id?: string | null
+          user_id: string
         }
         Update: {
           applied_date?: string | null
@@ -275,6 +277,7 @@ export type Database = {
           id?: string
           points_deducted?: number
           punishment_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -282,6 +285,13 @@ export type Database = {
             columns: ["punishment_id"]
             isOneToOne: false
             referencedRelation: "punishments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "punishment_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -307,6 +317,7 @@ export type Database = {
           title: string
           title_color: string
           updated_at: string | null
+          user_id: string
         }
         Insert: {
           background_image_url?: string | null
@@ -328,6 +339,7 @@ export type Database = {
           title: string
           title_color?: string
           updated_at?: string | null
+          user_id: string
         }
         Update: {
           background_image_url?: string | null
@@ -349,8 +361,17 @@ export type Database = {
           title?: string
           title_color?: string
           updated_at?: string | null
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "punishments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reward_usage: {
         Row: {
@@ -359,6 +380,7 @@ export type Database = {
           id: string
           reward_id: string | null
           used: boolean | null
+          user_id: string
           week_number: string
         }
         Insert: {
@@ -367,6 +389,7 @@ export type Database = {
           id?: string
           reward_id?: string | null
           used?: boolean | null
+          user_id: string
           week_number: string
         }
         Update: {
@@ -375,6 +398,7 @@ export type Database = {
           id?: string
           reward_id?: string | null
           used?: boolean | null
+          user_id?: string
           week_number?: string
         }
         Relationships: [
@@ -383,6 +407,13 @@ export type Database = {
             columns: ["reward_id"]
             isOneToOne: false
             referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -407,6 +438,7 @@ export type Database = {
           title: string
           title_color: string | null
           updated_at: string | null
+          user_id: string
         }
         Insert: {
           background_image_url?: string | null
@@ -427,6 +459,7 @@ export type Database = {
           title: string
           title_color?: string | null
           updated_at?: string | null
+          user_id: string
         }
         Update: {
           background_image_url?: string | null
@@ -447,14 +480,24 @@ export type Database = {
           title?: string
           title_color?: string | null
           updated_at?: string | null
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rewards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rule_violations: {
         Row: {
           day_of_week: number
           id: string
           rule_id: string | null
+          user_id: string
           violation_date: string
           week_number: string
         }
@@ -462,6 +505,7 @@ export type Database = {
           day_of_week: number
           id?: string
           rule_id?: string | null
+          user_id: string
           violation_date?: string
           week_number: string
         }
@@ -469,6 +513,7 @@ export type Database = {
           day_of_week?: number
           id?: string
           rule_id?: string | null
+          user_id?: string
           violation_date?: string
           week_number?: string
         }
@@ -478,6 +523,13 @@ export type Database = {
             columns: ["rule_id"]
             isOneToOne: false
             referencedRelation: "rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_violations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

@@ -1,8 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/auth'; // Changed import path
-import { logger } from '@/lib/logger'; // Ensure logger is imported
+import { useAuth } from '@/contexts/auth';
+import { logger } from '@/lib/logger';
 
 interface UserIds {
   subUserId: string | null;
@@ -19,7 +19,7 @@ const UserIdsContext = createContext<UserIdsContextType | undefined>(undefined);
 export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [userIds, setUserIds] = useState<UserIds>({ subUserId: null, domUserId: null });
   const [isLoadingUserIds, setIsLoadingUserIds] = useState(true);
-  const { user } = useAuth(); // Get the current authenticated user
+  const { user } = useAuth();
 
   const initializeUserIds = useCallback(async () => {
     if (!user) {
@@ -38,59 +38,35 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ childre
 
       if (error) {
         logger.error('Error fetching profile for UserIdsContext:', error);
-        setUserIds({ subUserId: user.id, domUserId: user.id }); // Fallback for solo user
+        setUserIds({ subUserId: user.id, domUserId: user.id });
         setIsLoadingUserIds(false);
         return;
       }
 
       if (profile) {
+        // For data isolation: current user is always the primary user
+        // If they have a linked partner, both users share the same data pool
+        // The subUserId and domUserId represent the data ownership perspective
         if (profile.linked_partner_id) {
-          // Assuming the current user `profile.id` is the submissive one if a partner is linked.
-          // This logic might need adjustment based on how primary role is determined.
-          // For now, let's assume current user is 'sub' if linked, partner is 'dom'.
-          // If the app has a clearer role definition (e.g. a 'role' field in profile), that should be used.
-          // One common pattern: if user A links to user B, user A might be sub, user B dom.
-          // Or, it could be that `user.id` is always one role, and `linked_partner_id` is the other.
-          // For this implementation, we'll make a simple assumption:
-          // User logs in. If they have a linked partner, their ID is subId, partner's is domId.
-          // If no partner, their ID is used for both.
-          // This needs to be robust. A common pattern is to have a 'primary_role' field.
-          // Lacking that, this is an educated guess.
-          
-          // Let's assume a simple scenario: the logged-in user is considered primary.
-          // If they have a linked partner, we need to decide who is sub and who is dom.
-          // For now: logged-in user is sub, partner is dom. This is a placeholder assumption.
-          // A more robust system would involve fetching both profiles if linked_partner_id exists
-          // and determining roles, or having a 'role' field on the profile.
-          
-          // Simplified: current user is always sub for their view, partner (if any) is dom.
-          // If current user is dom, then their ID is domId, partner is subId.
-          // This context needs a way to know the logged-in user's "perspective" or primary role.
-
-          // Let's refine: If user A is logged in.
-          // subUserId = userA.id
-          // domUserId = userA.linked_partner_id ?? userA.id
-          // This means the "submissive" view is always the logged-in user's direct points/supply.
-          // The "dominant" view is their partner's points/supply, or their own if solo.
-          // This seems a reasonable interpretation for now.
+          // Both users in a linked pair can access the same data
+          // The data is owned by either user in the pair
           setUserIds({
             subUserId: profile.id,
-            domUserId: profile.linked_partner_id || profile.id,
+            domUserId: profile.linked_partner_id,
           });
         } else {
-          // Solo user, their ID is used for both roles
+          // Solo user - they are both sub and dom for their own data
           setUserIds({
             subUserId: profile.id,
             domUserId: profile.id,
           });
         }
       } else {
-         // Should not happen if user is authenticated, but as a fallback
         setUserIds({ subUserId: user.id, domUserId: user.id });
       }
     } catch (e) {
       logger.error('Exception in initializeUserIds:', e);
-      setUserIds({ subUserId: user.id, domUserId: user.id }); // Fallback
+      setUserIds({ subUserId: user.id, domUserId: user.id });
     } finally {
       setIsLoadingUserIds(false);
     }
@@ -114,4 +90,3 @@ export const useUserIds = () => {
   }
   return context;
 };
-

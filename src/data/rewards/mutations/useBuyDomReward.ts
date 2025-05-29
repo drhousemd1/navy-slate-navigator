@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { Reward } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
 import { USER_DOM_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserDomPointsQuery';
 import { SUB_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useSubRewardTypesCountQuery';
@@ -16,7 +17,6 @@ interface BuyDomRewardVars {
   rewardId: string; 
   cost: number; 
   currentSupply: number; 
-  profileId: string;
   currentDomPoints: number 
 }
 
@@ -28,10 +28,15 @@ interface BuyDomRewardOptimisticContext {
 
 export const useBuyDomReward = () => {
   const queryClient = useQueryClient();
+  const { domUserId } = useUserIds();
 
   return useMutation<Reward, Error, BuyDomRewardVars, BuyDomRewardOptimisticContext>({
-    mutationFn: async ({ rewardId, cost, currentSupply, profileId, currentDomPoints }) => {
+    mutationFn: async ({ rewardId, cost, currentSupply, currentDomPoints }) => {
       try {
+        if (!domUserId) {
+          throw new Error("User not authenticated");
+        }
+
         if (currentDomPoints < cost) {
           throw new Error("Not enough DOM points to purchase this reward.");
         }
@@ -43,7 +48,9 @@ export const useBuyDomReward = () => {
         const { error: supplyError } = await supabase
           .from('rewards')
           .update({ supply: newSupply })
-          .eq('id', rewardId);
+          .eq('id', rewardId)
+          .eq('user_id', domUserId); // Ensure we only update user's own reward
+
         if (supplyError) throw supplyError;
 
         // Update profile DOM points
@@ -51,11 +58,11 @@ export const useBuyDomReward = () => {
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ dom_points: newPoints })
-          .eq('id', profileId);
+          .eq('id', domUserId);
 
         if (profileError) {
           // Rollback supply update if points update fails
-          await supabase.from('rewards').update({ supply: currentSupply }).eq('id', rewardId);
+          await supabase.from('rewards').update({ supply: currentSupply }).eq('id', rewardId).eq('user_id', domUserId);
           throw profileError;
         }
         
@@ -64,6 +71,7 @@ export const useBuyDomReward = () => {
           .from('rewards')
           .select('*')
           .eq('id', rewardId)
+          .eq('user_id', domUserId)
           .single();
 
         if (fetchError) throw fetchError;
@@ -78,7 +86,7 @@ export const useBuyDomReward = () => {
     },
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
-      const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId];
+      const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId];
       await queryClient.cancelQueries({ queryKey: userDomPointsQueryKey });
       await queryClient.cancelQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
 
@@ -113,7 +121,7 @@ export const useBuyDomReward = () => {
 
       // Invalidate all related queries to ensure fresh data
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId] }),
+        queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] }),
         queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] }),
         queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] })
       ]);
@@ -130,7 +138,7 @@ export const useBuyDomReward = () => {
         queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
       }
       if (context?.previousDomPoints !== undefined) {
-        const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId];
+        const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId];
         queryClient.setQueryData<number>(userDomPointsQueryKey, context.previousDomPoints);
       }
       if (context?.previousDomCount !== undefined) {
@@ -146,7 +154,7 @@ export const useBuyDomReward = () => {
     onSettled: async (data, error, variables) => {
       // Final invalidation to ensure consistency - DON'T invalidate REWARDS_QUERY_KEY to prevent rollback
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, variables.profileId] }),
+        queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] }),
         queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] })
       ]);
     }
