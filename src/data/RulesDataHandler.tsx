@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Rule } from '@/data/interfaces/Rule';
 import { QueryObserverResult, UseQueryResult } from '@tanstack/react-query';
@@ -10,6 +11,7 @@ import {
   useCreateRuleViolation 
 } from '@/data/rules/mutations';
 import { CreateRuleViolationVariables } from '@/data/rules/types';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
 export type RulesQueryResult = {
   rules: Rule[]; 
@@ -23,6 +25,7 @@ export type RulesQueryResult = {
 
 export const useRulesData = (): RulesQueryResult => {
   const queryClient = useQueryClient();
+  const { subUserId, domUserId } = useUserIds();
   
   const { 
     data: rules = [], 
@@ -30,8 +33,8 @@ export const useRulesData = (): RulesQueryResult => {
     error,
     refetch
   }: UseQueryResult<Rule[], Error> = useQuery<Rule[], Error>({
-    queryKey: ['rules'],
-    queryFn: fetchRules,
+    queryKey: ['rules', subUserId, domUserId],
+    queryFn: () => fetchRules(subUserId, domUserId),
     staleTime: Infinity,
     gcTime: 1000 * 60 * 60, 
     refetchOnWindowFocus: false, 
@@ -39,6 +42,7 @@ export const useRulesData = (): RulesQueryResult => {
     refetchOnMount: false,     
     retry: 1, 
     retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 10000),
+    enabled: !!(subUserId || domUserId), // Only run if we have at least one user ID
   });
 
   const updateRuleMutation = useUpdateRule();

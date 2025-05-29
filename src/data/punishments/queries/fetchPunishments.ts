@@ -9,9 +9,14 @@ import {
 } from "@/data/indexedDB/useIndexedDB";
 import { withTimeout, DEFAULT_TIMEOUT_MS, selectWithTimeout } from '@/lib/supabaseUtils';
 import { PostgrestError } from '@supabase/supabase-js';
-import { logger } from '@/lib/logger'; // Added logger
+import { logger } from '@/lib/logger';
 
-export const fetchPunishments = async (): Promise<PunishmentData[]> => {
+export const fetchPunishments = async (subUserId: string | null, domUserId: string | null): Promise<PunishmentData[]> => {
+  if (!subUserId && !domUserId) {
+    logger.debug('[fetchPunishments] No user IDs provided, returning empty array');
+    return [];
+  }
+
   const localData = await loadPunishmentsFromDB() as PunishmentData[] | null;
   const lastSync = await getLastSyncTimeForPunishments();
   let shouldFetchFromServer = true;
@@ -32,7 +37,6 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
     return localData.map(p => ({
       ...p,
       // Ensure defaults for fields that might be missing in older cached data
-      // These defaults should match the table structure or application logic
       dom_supply: p.dom_supply ?? 0,
       background_opacity: p.background_opacity ?? 50,
       highlight_effect: p.highlight_effect ?? false,
@@ -45,17 +49,22 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
     }));
   }
 
-  logger.debug('[fetchPunishments] Fetching punishments from server');
+  logger.debug('[fetchPunishments] Fetching punishments from server with user filtering');
   
   try {
-    const { data, error } = await selectWithTimeout<PunishmentData>(
-      supabase,
-      'punishments',
-      {
-        order: ['created_at', { ascending: false }],
-        timeoutMs: DEFAULT_TIMEOUT_MS
-      }
-    );
+    // Build user filter - include both sub and dom user IDs for partner sharing
+    const userIds = [subUserId, domUserId].filter(Boolean);
+    
+    if (userIds.length === 0) {
+      logger.warn('[fetchPunishments] No valid user IDs for filtering');
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('punishments')
+      .select('*')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false });
 
     if (error) {
       logger.error('[fetchPunishments] Supabase error fetching punishments:', error);
@@ -78,8 +87,7 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
     }
 
     if (data) {
-      // The selectWithTimeout already returns RowType[] if single is false (default)
-      const punishmentsFromServer = (Array.isArray(data) ? data : (data ? [data] : [])).map(p => ({
+      const punishmentsFromServer = data.map(p => ({
         ...p,
         // Ensure defaults after fetching from server as well
         dom_supply: p.dom_supply ?? 0,
@@ -131,4 +139,3 @@ export const fetchPunishments = async (): Promise<PunishmentData[]> => {
     throw error;
   }
 };
-

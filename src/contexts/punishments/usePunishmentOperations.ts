@@ -6,11 +6,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchPunishments as fetchPunishmentsData } from '@/data/punishments/queries/fetchPunishments';
 import { fetchAllPunishmentHistory } from '@/data/punishments/queries/fetchAllPunishmentHistory';
 import { PUNISHMENTS_QUERY_KEY, PUNISHMENT_HISTORY_QUERY_KEY } from '@/data/punishments/queries';
-import { logger } from '@/lib/logger'; // Added logger import
+import { useUserIds } from '@/contexts/UserIdsContext';
+import { logger } from '@/lib/logger';
 
 // This hook will now focus on providing derived data or specific operations not covered by generic mutations/queries
 export const usePunishmentOperations = () => {
   const queryClient = useQueryClient();
+  const { subUserId, domUserId } = useUserIds();
   
   // Fetching punishments and history remains relevant for providing data through context if needed
   const { 
@@ -19,8 +21,9 @@ export const usePunishmentOperations = () => {
     error: errorPunishments,
     refetch: refetchPunishments
   } = useQuery<PunishmentData[], Error>({
-    queryKey: PUNISHMENTS_QUERY_KEY,
-    queryFn: fetchPunishmentsData,
+    queryKey: [...PUNISHMENTS_QUERY_KEY, subUserId, domUserId],
+    queryFn: () => fetchPunishmentsData(subUserId, domUserId),
+    enabled: !!(subUserId || domUserId),
   });
 
   const { 
@@ -29,8 +32,9 @@ export const usePunishmentOperations = () => {
     error: errorHistory,
     refetch: refetchHistory
   } = useQuery<PunishmentHistoryItem[], Error>({
-    queryKey: PUNISHMENT_HISTORY_QUERY_KEY,
-    queryFn: fetchAllPunishmentHistory,
+    queryKey: [...PUNISHMENT_HISTORY_QUERY_KEY, subUserId, domUserId],
+    queryFn: () => fetchAllPunishmentHistory(subUserId, domUserId),
+    enabled: !!(subUserId || domUserId),
   });
 
   const totalPointsDeducted = useMemo(() => {
@@ -39,7 +43,7 @@ export const usePunishmentOperations = () => {
 
   // Updated applyPunishment signature and placeholder implementation
   const applyPunishment = async (args: ApplyPunishmentArgs): Promise<void> => {
-    logger.warn("applyPunishment in usePunishmentOperations called. This is a placeholder and does not perform the actual mutation. Ensure components use the dedicated mutation hook.", args); // Replaced console.warn
+    logger.warn("applyPunishment in usePunishmentOperations called. This is a placeholder and does not perform the actual mutation. Ensure components use the dedicated mutation hook.", args);
     // This is a placeholder. Actual application should use useApplyPunishment mutation hook directly.
     // The toast that was here has been removed as it was redundant and causing overlap.
     // The actual mutation hook (useApplyPunishment) handles success/error toasts.

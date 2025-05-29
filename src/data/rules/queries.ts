@@ -1,3 +1,4 @@
+
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -13,14 +14,22 @@ import {
   getLastSyncTimeForRules,
   setLastSyncTimeForRules
 } from "../indexedDB/useIndexedDB";
-import { logger } from '@/lib/logger'; // Added logger
+import { logger } from '@/lib/logger';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
-export const RULES_QUERY_KEY = ['rules']; // Replaced CRITICAL_QUERY_KEYS.RULES
+export const RULES_QUERY_KEY = ['rules'];
 
 export function useRules() {
+  const { subUserId, domUserId } = useUserIds();
+  
   return useQuery<Rule[], Error, Rule[]>({ 
-    queryKey: RULES_QUERY_KEY,
+    queryKey: [...RULES_QUERY_KEY, subUserId, domUserId],
     queryFn: async (): Promise<Rule[]> => { 
+      if (!subUserId && !domUserId) {
+        logger.debug('[useRules queryFn] No user IDs provided, returning empty array');
+        return [];
+      }
+
       const localData: Rule[] | null = await loadRulesFromDB();
       const lastSync = await getLastSyncTimeForRules();
       let shouldFetch = true;
@@ -38,7 +47,7 @@ export function useRules() {
       }
 
       logger.debug('[useRules queryFn] Fetching rules from server.');
-      const serverData: Rule[] = await fetchRulesFromServer();
+      const serverData: Rule[] = await fetchRulesFromServer(subUserId, domUserId);
 
       if (serverData) {
         await saveRulesToDB(serverData);
@@ -55,5 +64,6 @@ export function useRules() {
     refetchOnReconnect: false,
     refetchOnMount: false,
     gcTime: 1000 * 60 * 30, // 30 minutes
+    enabled: !!(subUserId || domUserId), // Only run if we have at least one user ID
   });
 }
