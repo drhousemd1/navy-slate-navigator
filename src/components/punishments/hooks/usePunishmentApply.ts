@@ -10,8 +10,8 @@ import { logger } from '@/lib/logger';
 export const usePunishmentApply = () => {
   const [isApplying, setIsApplying] = useState(false);
   const applyPunishmentMutation = useApplyPunishment();
-  const { data: currentPoints = 0 } = usePoints();
   const { subUserId } = useUserIds();
+  const { data: currentPoints = 0 } = usePoints(subUserId);
 
   const handlePunish = async (punishment: PunishmentData) => {
     if (!subUserId) {
