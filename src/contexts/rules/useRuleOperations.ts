@@ -7,18 +7,27 @@ import { useUpdateRule } from '@/data/rules/mutations/useUpdateRule';
 import { useDeleteRule } from '@/data/rules/mutations/useDeleteRule';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors'; // Ensure this is imported
+import { useAuth } from '@/contexts/auth';
 
 export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type for initialRules and default value
   const [rules, setRules] = useState<Rule[]>(initialRules); // Explicitly type useState
   const { mutateAsync: createRuleMutation } = useCreateRule();
   const { mutateAsync: updateRuleMutation } = useUpdateRule();
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
+  const { user } = useAuth();
   
   // Create a new rule
   const createRule = useCallback(async (ruleData: RuleFormValues): Promise<Rule | undefined> => {
     try {
+      if (!user?.id) {
+        throw new Error('User must be authenticated to create rules');
+      }
+
       // Assuming createRuleMutation returns the created Rule matching the 'Rule' interface
-      const newRule: Rule = await createRuleMutation(ruleData); 
+      const newRule: Rule = await createRuleMutation({
+        ...ruleData,
+        user_id: user.id // Add the required user_id field
+      }); 
       
       // newRule might be undefined if mutation doesn't return on success or type is different
       // For now, we assume it returns Rule. If not, the return type of createRule needs adjustment.
@@ -41,7 +50,7 @@ export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type 
       // throw error; // Re-throwing might be desired depending on caller's needs
     }
     return undefined; // Explicitly return undefined if creation fails or no new rule
-  }, [createRuleMutation]);
+  }, [createRuleMutation, user]);
   
   // Update an existing rule
   const updateRule = useCallback(async (ruleId: string, updates: Partial<RuleFormValues>): Promise<Rule | undefined> => {

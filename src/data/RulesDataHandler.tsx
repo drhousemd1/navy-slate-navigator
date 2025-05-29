@@ -12,6 +12,7 @@ import {
 } from '@/data/rules/mutations';
 import { CreateRuleViolationVariables } from '@/data/rules/types';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { useAuth } from '@/contexts/auth';
 
 export type RulesQueryResult = {
   rules: Rule[]; 
@@ -26,6 +27,7 @@ export type RulesQueryResult = {
 export const useRulesData = (): RulesQueryResult => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
+  const { user } = useAuth();
   
   const { 
     data: rules = [], 
@@ -60,8 +62,13 @@ export const useRulesData = (): RulesQueryResult => {
       if (!ruleData.title) {
         throw new Error("Rule title is required for creation.");
       }
+      if (!user?.id) {
+        throw new Error('User must be authenticated to create rules');
+      }
+
       const createVariables: CreateRuleVariables = {
         title: ruleData.title, 
+        user_id: user.id, // Add the required user_id field
         description: ruleData.description,
         priority: ruleData.priority,
         background_image_url: ruleData.background_image_url,

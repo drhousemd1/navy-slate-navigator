@@ -1,3 +1,4 @@
+
 import { QueryObserverResult } from '@tanstack/react-query';
 import { useRules } from '../rules/queries'; 
 import { Rule } from '@/data/interfaces/Rule';
@@ -7,6 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { logger } from '@/lib/logger'; // Added import
 import { getErrorMessage } from '@/lib/errors'; // Ensure this is imported
+import { useAuth } from '@/contexts/auth';
 
 export interface RulesDataHook {
   rules: Rule[];
@@ -23,6 +25,7 @@ export const useRulesData = (): RulesDataHook => {
   const [isUsingCachedData, setIsUsingCachedData] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 3;
+  const { user } = useAuth();
   
   const {
     data: rules = [],
@@ -69,8 +72,13 @@ export const useRulesData = (): RulesDataHook => {
         const { id, ...updates } = ruleData;
         return updateRuleMutation({ id, ...updates } as UpdateRuleVariables);
       } else {
+        if (!user?.id) {
+          throw new Error('User must be authenticated to create rules');
+        }
+
         const createVariables: CreateRuleVariables = {
           title: ruleData.title || 'Untitled Rule',
+          user_id: user.id, // Add the required user_id field
           description: ruleData.description,
           priority: ruleData.priority || 'medium',
           frequency: ruleData.frequency || 'daily',
