@@ -1,3 +1,4 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
@@ -5,25 +6,39 @@ import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/indexedDB/useIndexedDB';
 import { RULES_QUERY_KEY } from '../queries';
 import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger'; // Added logger
+import { logger } from '@/lib/logger';
+import { useAuth } from '@/contexts/auth';
 
-export type CreateRuleVariables = Partial<Omit<Rule, 'id' | 'created_at' | 'updated_at' | 'usage_data'>> & {
+export type CreateRuleVariables = Partial<Omit<Rule, 'id' | 'created_at' | 'updated_at' | 'usage_data' | 'user_id'>> & {
   title: string;
-  // Add other non-optional fields from Rule if not already covered
+  user_id: string; // Make user_id required
 };
 
 export const useCreateRule = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useCreateOptimisticMutation<Rule, Error, CreateRuleVariables>({
     queryClient,
-    queryKey: [...RULES_QUERY_KEY], // Ensure mutable array
+    queryKey: [...RULES_QUERY_KEY],
     mutationFn: async (variables: CreateRuleVariables) => {
+      // Ensure user is authenticated
+      if (!user?.id) {
+        throw new Error('User must be authenticated to create rules');
+      }
+
+      // Ensure user_id is set to current authenticated user
+      const ruleData = {
+        ...variables,
+        user_id: user.id, // Always use current authenticated user
+      };
+
       const { data, error } = await supabase
         .from('rules')
-        .insert({ ...variables })
+        .insert(ruleData)
         .select()
         .single();
+      
       if (error) throw error;
       if (!data) throw new Error('Rule creation failed, no data returned.');
       return data as Rule;
@@ -35,7 +50,7 @@ export const useCreateRule = () => {
         id: optimisticId,
         created_at: now,
         updated_at: now,
-        usage_data: [], // Default for new rules
+        usage_data: [],
         // Default values based on schema
         title_color: '#FFFFFF',
         background_opacity: 100,
@@ -48,6 +63,7 @@ export const useCreateRule = () => {
         icon_color: '#FFFFFF',
         frequency: 'daily',
         priority: 'medium',
+        user_id: user?.id || '',
         ...variables,
       } as Rule;
     },
@@ -55,24 +71,15 @@ export const useCreateRule = () => {
       logger.debug('[useCreateRule onSuccessCallback] New rule created on server, updating IndexedDB.', newRuleData);
       try {
         const localRules = await loadRulesFromDB() || [];
-        // Ensure no duplicate optimistic item if server returns faster than optimistic removal
         const updatedLocalRules = [newRuleData, ...localRules.filter(r => r.id !== newRuleData.id && r.id !== (newRuleData as any).optimisticId)];
         await saveRulesToDB(updatedLocalRules);
         await setLastSyncTimeForRules(new Date().toISOString());
         logger.debug('[useCreateRule onSuccessCallback] IndexedDB updated with new rule.');
-        // Generic success toast is handled by useCreateOptimisticMutation, specific one can be here if needed
-        // toast({ title: "Rule Created", description: `Rule "${newRuleData.title}" has been successfully created and saved locally.` });
       } catch (error) {
         logger.error('[useCreateRule onSuccessCallback] Error updating IndexedDB:', error);
         toast({ variant: "destructive", title: "Local Save Error", description: "Rule created on server, but failed to save locally." });
       }
     },
-    mutationOptions: { 
-      // onError was here, it's removed as the optimistic hook handles it.
-      // The generic error toast is handled by useCreateOptimisticMutation.
-      // Specific console logging like:
-      // console.error('[useCreateRule onError] Error creating rule:', error, variables);
-      // is now omitted. If this detailed logging is crucial, we can enhance the optimistic hook.
-    }
+    mutationOptions: {}
   });
 };

@@ -1,3 +1,4 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
@@ -6,15 +7,22 @@ import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
+import { getErrorMessage } from '@/lib/errors';
+import { useAuth } from '@/contexts/auth';
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useCreateOptimisticMutation<TaskWithId, Error, CreateTaskVariables>({
     queryClient,
     queryKey: TASKS_QUERY_KEY,
     mutationFn: async (variables: CreateTaskVariables) => {
+      // Ensure user is authenticated
+      if (!user?.id) {
+        throw new Error('User must be authenticated to create tasks');
+      }
+
       const taskToInsert = {
         title: variables.title,
         points: variables.points,
@@ -35,6 +43,7 @@ export const useCreateTask = () => {
         week_identifier: variables.week_identifier, 
         background_images: variables.background_images as Json,
         icon_url: variables.icon_url,
+        user_id: user.id, // Always use current authenticated user
       };
 
       const { data, error } = await supabase
@@ -51,8 +60,8 @@ export const useCreateTask = () => {
     createOptimisticItem: (variables, optimisticId) => {
       const now = new Date().toISOString();
       return {
-        id: optimisticId, // This is the server-generated ID for optimistic item before server response
-        optimisticId: optimisticId, // Explicitly keep track of the optimistic ID if needed
+        id: optimisticId,
+        optimisticId: optimisticId,
         created_at: now,
         updated_at: now,
         completed: false,
@@ -77,7 +86,7 @@ export const useCreateTask = () => {
         icon_url: variables.icon_url || null,
         usage_data: variables.usage_data || Array(7).fill(0),
         background_images: variables.background_images as Json || null,
-        // Spread remaining variables, ensuring they are part of TaskWithId
+        user_id: user?.id || '',
         ...variables, 
       } as TaskWithId;
     },
@@ -85,7 +94,6 @@ export const useCreateTask = () => {
       logger.debug('[useCreateTask onSuccessCallback] New task created on server, updating IndexedDB.', newTaskData);
       try {
         const localTasks = await loadTasksFromDB() || [];
-        // Filter out by optimisticId if present, then by actual id
         const updatedLocalTasks = [
             newTaskData, 
             ...localTasks.filter(t => 
