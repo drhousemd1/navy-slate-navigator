@@ -5,7 +5,7 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { Task } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -18,6 +18,8 @@ import { logger } from '@/lib/logger';
 import { useUserIds } from '@/contexts/UserIdsContext';
 
 export const TASKS_QUERY_KEY = ['tasks'];
+
+export type TasksQueryResult = UseQueryResult<Task[], Error>;
 
 export const fetchTasks = async (subUserId: string | null, domUserId: string | null): Promise<Task[]> => {
   if (!subUserId && !domUserId) {
@@ -54,10 +56,10 @@ export const fetchTasks = async (subUserId: string | null, domUserId: string | n
   }
 };
 
-export function useTasksQuery() {
+export function useTasksQuery(): TasksQueryResult {
   const { subUserId, domUserId } = useUserIds();
   
-  return useQuery<Task[], Error, Task[]>({ 
+  return useQuery<Task[], Error>({ 
     queryKey: [...TASKS_QUERY_KEY, subUserId, domUserId],
     queryFn: async (): Promise<Task[]> => { 
       if (!subUserId && !domUserId) {

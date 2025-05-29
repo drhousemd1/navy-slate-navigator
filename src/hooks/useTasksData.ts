@@ -12,11 +12,9 @@ import { useCreateTask } from '@/data/tasks/mutations/useCreateTask';
 import { useUpdateTask } from '@/data/tasks/mutations/useUpdateTask';
 import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
 
-
 // Define a type for the data saveTask might receive
 // This will now be more specific: CreateTaskVariables or UpdateTaskVariables
 type SaveTaskInput = CreateTaskVariables | UpdateTaskVariables;
-
 
 export const useTasksData = () => {
   const { 
@@ -72,4 +70,3 @@ export const useTasksData = () => {
     refetch
   };
 };
-

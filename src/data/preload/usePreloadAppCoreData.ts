@@ -1,16 +1,16 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { REWARDS_QUERY_KEY, fetchRewards } from '@/data/rewards/queries';
+import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
+import { fetchRewards } from '@/data/rewards/queries/fetchRewards';
 import { RULES_QUERY_KEY } from '@/data/rules/queries'; 
 import { fetchRules } from '@/data/rules/fetchRules'; 
-import { fetchTasks } from '@/data/tasks/queries';
+import { fetchTasks, TASKS_QUERY_KEY } from '@/data/tasks/queries';
 import { fetchPunishments } from '@/data/punishments/queries/fetchPunishments';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
 
 // Define necessary keys directly or import from a central query key store if available
-const TASKS_QUERY_KEY = ['tasks'];
 const PUNISHMENTS_QUERY_KEY = ['punishments'];
 
 export const usePreloadAppCoreData = () => {
