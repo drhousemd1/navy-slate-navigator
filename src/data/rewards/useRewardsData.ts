@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward, CreateRewardVariables } from '@/data/rewards/types';
@@ -176,17 +175,16 @@ export const useRewardsData = () => {
     
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user?.id) throw new Error("User not authenticated for buying reward");
-    const profileId = userData.user.id;
         
     let result;
     if (reward.is_dom_reward) {
       const currentDomPoints = domPointsFromManager;
-      logger.debug("Buying DOM reward:", { rewardId, cost, currentDomPoints, profileId });
-      result = await buyDom({ rewardId, cost, currentSupply: reward.supply, profileId, currentDomPoints });
+      logger.debug("Buying DOM reward:", { rewardId, cost, currentDomPoints });
+      result = await buyDom({ rewardId, cost, currentSupply: reward.supply, currentDomPoints });
     } else {
       const currentPoints = totalPointsFromManager;
-      logger.debug("Buying Sub reward:", { rewardId, cost, currentPoints, profileId });
-      result = await buySub({ rewardId, cost, currentSupply: reward.supply, profileId, currentPoints });
+      logger.debug("Buying Sub reward:", { rewardId, cost, currentPoints });
+      result = await buySub({ rewardId, cost, currentSupply: reward.supply, currentPoints });
     }
     
     // Update IndexedDB cache after successful purchase

@@ -1,4 +1,3 @@
-
 // Types for the Punishments feature
 export interface PunishmentData {
   id?: string; // Made optional to reflect that new punishments won't have an ID until saved
@@ -33,12 +32,10 @@ export interface PunishmentHistoryItem {
 }
 
 export interface ApplyPunishmentArgs {
-  id: string; // Punishment ID is required
-  costPoints: number;
-  domEarn: number;
-  profileId: string; // User's profile ID
-  subPoints: number; // Current submissive points of the user
-  domPoints: number; // Current dominant points of the user
+  punishmentId: string;
+  pointsDeducted: number;
+  dayOfWeek?: number;
+  currentPoints?: number;
 }
 
 export interface PunishmentsContextType {

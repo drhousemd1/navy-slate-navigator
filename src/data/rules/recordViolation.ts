@@ -2,9 +2,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Rule } from '@/data/interfaces/Rule';
 import { getMondayBasedDay } from '@/lib/utils';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
-export const recordRuleViolationInDb = async (rule: Rule): Promise<void> => {
+export const recordRuleViolationInDb = async (rule: Rule, userId: string): Promise<void> => {
   const today = new Date();
   const jsDayOfWeek = today.getDay();
   const weekNumber = `${today.getFullYear()}-${Math.floor(today.getDate() / 7)}`;
@@ -36,7 +36,8 @@ export const recordRuleViolationInDb = async (rule: Rule): Promise<void> => {
         rule_id: rule.id,
         violation_date: today.toISOString(),
         day_of_week: jsDayOfWeek,
-        week_number: weekNumber
+        week_number: weekNumber,
+        user_id: userId
       });
       
     batch.push(violationRecordPromise);
@@ -60,6 +61,11 @@ export const recordRuleViolationInDb = async (rule: Rule): Promise<void> => {
 // Export the simple version that is called by the RulesDataHandler
 export const recordViolation = async (ruleId: string): Promise<void> => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     const { data: rawRule, error } = await supabase
       .from('rules')
       .select('*')
@@ -76,7 +82,7 @@ export const recordViolation = async (ruleId: string): Promise<void> => {
       priority: (rawRule.priority as "low" | "medium" | "high") ?? "medium"
     };
     
-    await recordRuleViolationInDb(normalisedRule as Rule);
+    await recordRuleViolationInDb(normalisedRule as Rule, user.id);
   } catch (error) {
     logger.error('Error in recordViolation:', error);
     throw error;

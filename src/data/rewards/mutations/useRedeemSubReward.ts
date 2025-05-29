@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Reward } from '../types';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
 const REWARDS_QUERY_KEY = ['rewards'];
 
@@ -16,7 +17,7 @@ interface RedeemSubRewardOptimisticContext {
   previousRewards?: Reward[];
 }
 
-const recordRewardUsage = async (rewardId: string) => {
+const recordRewardUsage = async (rewardId: string, userId: string) => {
   const now = new Date();
   const dayOfWeek = (now.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0 format
   const startOfWeek = new Date(now);
@@ -29,15 +30,21 @@ const recordRewardUsage = async (rewardId: string) => {
       reward_id: rewardId,
       day_of_week: dayOfWeek,
       week_number: weekNumber,
-      used: true
+      used: true,
+      user_id: userId
     });
 };
 
 export const useRedeemSubReward = () => {
   const queryClient = useQueryClient();
+  const { subUserId } = useUserIds();
 
   return useMutation<Reward, Error, RedeemSubRewardVariables, RedeemSubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, currentSupply }) => {
+      if (!subUserId) {
+        throw new Error("User not authenticated");
+      }
+
       if (currentSupply <= 0 && currentSupply !== -1) {
         throw new Error("Reward is out of stock, cannot use.");
       }
@@ -52,7 +59,7 @@ export const useRedeemSubReward = () => {
       if (supplyError) throw supplyError;
 
       // Record usage in reward_usage table
-      await recordRewardUsage(rewardId);
+      await recordRewardUsage(rewardId, subUserId);
 
       const { data: updatedReward, error: fetchError } = await supabase
         .from('rewards')

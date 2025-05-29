@@ -4,7 +4,7 @@
 // useCreateRewardMutation or useUpdateRewardMutation from this file
 // will now use the optimistic versions.
 
-import { useCreateReward } from './useCreateReward'; // Importing the optimistic hook
+import { useCreateRewardMutation as useCreateRewardMutationOriginal } from './useCreateReward'; // Importing the optimistic hook
 import { useUpdateReward } from './useUpdateReward'; // Importing the optimistic hook
 import { CreateRewardVariables as ActualCreateRewardVariables, UpdateRewardVariables as ActualUpdateRewardVariables } from '@/data/rewards/types';
 
@@ -12,13 +12,12 @@ import { CreateRewardVariables as ActualCreateRewardVariables, UpdateRewardVaria
 export type CreateRewardVariables = ActualCreateRewardVariables;
 export type UpdateRewardVariables = ActualUpdateRewardVariables;
 
-
 // Export the optimistic hook, potentially renaming for backward compatibility if needed,
 // but using the new names directly is cleaner if possible.
 // For simplicity, we'll assume direct usage of useCreateReward and useUpdateReward is preferred.
 
 // If old names `useCreateRewardMutation` and `useUpdateRewardMutation` must be kept:
-export const useCreateRewardMutation = useCreateReward;
+export const useCreateRewardMutation = useCreateRewardMutationOriginal;
 export const useUpdateRewardMutation = useUpdateReward;
 
 // It's generally better practice to directly import useCreateReward and useUpdateReward

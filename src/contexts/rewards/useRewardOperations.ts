@@ -1,3 +1,4 @@
+
 import { useCallback, useContext } from 'react';
 import { useRewards as useRewardsQuery } from '@/data/queries/useRewards';
 import { useBuySubReward } from '@/data/rewards/mutations/useBuySubReward';
@@ -6,15 +7,15 @@ import { useRedeemSubReward } from '@/data/rewards/mutations/useRedeemSubReward'
 import { useRedeemDomReward } from '@/data/rewards/mutations/useRedeemDomReward';
 import { Reward } from '@/data/rewards/types';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { usePoints } from '@/contexts/points';
-import { useDomPoints } from '@/contexts/dom-points';
+import { usePoints } from '@/data/points/useUserPointsQuery';
+import { useDomPoints } from '@/data/points/useUserDomPointsQuery';
 import { RewardsContext } from './RewardsContext';
 
 export const useRewardOperations = () => {
-  const { rewards } = useRewardsQuery();
+  const { data: rewards = [] } = useRewardsQuery();
   const { subUserId, domUserId } = useUserIds();
-  const { points } = usePoints();
-  const { domPoints } = useDomPoints();
+  const { data: points = 0 } = usePoints();
+  const { data: domPoints = 0 } = useDomPoints();
   const buySubRewardMutation = useBuySubReward();
   const buyDomRewardMutation = useBuyDomReward();
   const redeemSubRewardMutation = useRedeemSubReward();

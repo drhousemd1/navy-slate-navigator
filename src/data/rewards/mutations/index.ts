@@ -1,8 +1,8 @@
 
 // Export all mutation hooks from this index file
-export * from './useCreateReward';
-export * from './useUpdateReward';
-export * from './useSaveReward'; // Keeps existing exports of aliased create/update
+export { useCreateReward } from './useCreateReward';
+export { useUpdateReward } from './useUpdateReward';
+export { useCreateRewardMutation, useUpdateRewardMutation } from './useSaveReward'; // Keep aliases for backwards compatibility
 export * from './useDeleteReward';
 
 // Consolidated Buy/Redeem hooks:
