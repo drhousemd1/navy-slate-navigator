@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import AppLayout from '@/components/AppLayout';
 import TaskEditor from '@/components/TaskEditor';
 import TasksList from '@/components/task/TasksList';
 import { useTasksData } from '@/hooks/useTasksData';
@@ -182,29 +182,31 @@ const Tasks: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      <TasksHeader onCreateTask={handleCreateTask} />
-      
-      <TasksList
-        tasks={tasks}
-        isLoading={isLoading}
-        error={error}
-        isUsingCachedData={isUsingCachedData}
-        onEditTask={handleEditTask}
-        onToggleCompletion={handleToggleTaskCompletion}
-      />
+    <AppLayout onAddNewItem={handleCreateTask}>
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
+        <TasksHeader onCreateTask={handleCreateTask} />
+        
+        <TasksList
+          tasks={tasks}
+          isLoading={isLoading}
+          error={error}
+          isUsingCachedData={isUsingCachedData}
+          onEditTask={handleEditTask}
+          onToggleCompletion={handleToggleTaskCompletion}
+        />
 
-      <TaskEditor
-        isOpen={isEditorOpen}
-        onClose={() => {
-          setIsEditorOpen(false);
-          setEditingTask(null);
-        }}
-        taskData={editingTask ? convertTaskToPartial(editingTask) : undefined}
-        onSave={handleSaveTask}
-        onDelete={editingTask ? () => handleDeleteTask(editingTask.id) : undefined}
-      />
-    </div>
+        <TaskEditor
+          isOpen={isEditorOpen}
+          onClose={() => {
+            setIsEditorOpen(false);
+            setEditingTask(null);
+          }}
+          taskData={editingTask ? convertTaskToPartial(editingTask) : undefined}
+          onSave={handleSaveTask}
+          onDelete={editingTask ? () => handleDeleteTask(editingTask.id) : undefined}
+        />
+      </div>
+    </AppLayout>
   );
 };
 
