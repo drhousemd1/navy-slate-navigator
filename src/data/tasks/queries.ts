@@ -91,12 +91,7 @@ export function useTasksQuery(): TasksQueryResult {
 
       if (!shouldFetch && localData) {
         logger.debug('[useTasksQuery queryFn] Using local data for tasks.');
-        return localData.map(task => ({
-          ...task,
-          priority: (task.priority === 'low' || task.priority === 'medium' || task.priority === 'high') 
-            ? task.priority 
-            : 'medium' as const
-        }));
+        return localData.map(task => transformSupabaseTask(task as RawSupabaseTask));
       }
 
       logger.debug('[useTasksQuery queryFn] Fetching tasks from server.');
@@ -110,12 +105,7 @@ export function useTasksQuery(): TasksQueryResult {
       }
       
       logger.debug('[useTasksQuery queryFn] No server data, returning local data or empty array for tasks.');
-      return localData ? localData.map(task => ({
-        ...task,
-        priority: (task.priority === 'low' || task.priority === 'medium' || task.priority === 'high') 
-          ? task.priority 
-          : 'medium' as const
-      })) : [];
+      return localData ? localData.map(task => transformSupabaseTask(task as RawSupabaseTask)) : [];
     },
     staleTime: Infinity,
     refetchOnWindowFocus: false,

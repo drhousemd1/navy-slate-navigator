@@ -5,11 +5,10 @@ import { toast } from '@/hooks/use-toast';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
-import { TaskWithId } from '@/data/tasks/types';
+import { TaskWithId, Task } from '@/data/tasks/types';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
-
 
 interface ToggleTaskCompletionVariables {
   taskId: string;
@@ -32,18 +31,14 @@ export function useToggleTaskCompletionMutation() {
         }
         const userId = authUser.user.id;
 
-        // IMPORTANT CHANGE: Use the task data passed in from variables
-        // Don't fetch task from database to avoid race conditions with stale data
         if (!taskFromVariables) {
           toast({ title: 'Internal Error', description: "Task data was not provided to the mutation.", variant: 'destructive' });
           throw new Error(`Task data for ID ${taskId} not provided.`);
         }
         
-        // Use the cached task data directly
         const currentTask = taskFromVariables;
 
         const dayOfWeek = getCurrentDayOfWeek();
-        // Ensure usage_data is an array, defaulting if somehow null/undefined despite processing
         const currentUsageData = Array.isArray(currentTask.usage_data) ? currentTask.usage_data as number[] : Array(7).fill(0);
         const newUsageData = [...currentUsageData];
         const frequencyCount = currentTask.frequency_count || 1;
@@ -72,7 +67,6 @@ export function useToggleTaskCompletionMutation() {
           updated_at: new Date().toISOString(),
         };
 
-        // Log the update we're about to make for debugging
         logger.debug('[useToggleTaskCompletionMutation] Updating task with data:', { 
           taskId, 
           taskFieldsToUpdate,
@@ -91,7 +85,6 @@ export function useToggleTaskCompletionMutation() {
           throw updateError;
         }
 
-        // Handle points and history logging only if an instance was completed
         if (instanceCompleted) {
           const { error: historyError } = await supabase
             .from('task_completion_history')
@@ -100,7 +93,6 @@ export function useToggleTaskCompletionMutation() {
           if (historyError) {
             logger.error('Error recording task completion history:', historyError);
             toast({ title: 'History Record Error', description: historyError.message, variant: 'destructive' });
-            // Not throwing here to allow points update if possible, but logging it.
           }
 
           const { data: currentProfile, error: fetchProfileError } = await supabase
@@ -129,11 +121,9 @@ export function useToggleTaskCompletionMutation() {
         }
       },
       onMutate: async ({ taskId, completed, task: taskFromVariables }) => {
-        // Cancel any outgoing refetches to avoid race conditions
         await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
         const previousTasks = queryClient.getQueryData<TaskWithId[]>(TASKS_QUERY_KEY);
         
-        // Apply optimistic update to the UI
         queryClient.setQueryData<TaskWithId[]>(TASKS_QUERY_KEY, (oldTasks = []) => {
           const todayStr = new Date().toISOString().split('T')[0];
           const dayOfWeek = getCurrentDayOfWeek();
@@ -189,7 +179,6 @@ export function useToggleTaskCompletionMutation() {
 
             const updatedLocalTasks = localTasks.map(t => {
               if (t.id === variables.taskId) {
-                // Logic here should mirror onMutate and mutationFn for consistency
                 const currentUsageData = Array.isArray(t.usage_data) ? t.usage_data as number[] : Array(7).fill(0);
                 const newUsageData = [...currentUsageData];
                 const frequencyCount = t.frequency_count || 1;
@@ -238,10 +227,6 @@ export function useToggleTaskCompletionMutation() {
         }
       },
       onSettled: (data, error, variables) => {
-        // We're NOT invalidating the tasks query as that would cause refetching
-        // and potentially override our optimistic and server updates
-        
-        // Only invalidate related data that needs refreshing
         queryClient.invalidateQueries({ queryKey: ['profile'] });
         if (subUserId) { 
             queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
