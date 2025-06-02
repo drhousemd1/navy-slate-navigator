@@ -31,11 +31,11 @@ const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({
       // Check if this specific day has usage data
       let isUsed = false;
       
-      if (usage_data && Array.isArray(usage_data) && usage_data.length > 0) {
-        // If we have specific usage_data, use that to determine if the day is used
+      if (Array.isArray(usage_data)) {
+        // If usage_data is an array (even if empty []), use that to determine if the day is used
         isUsed = i < usage_data.length ? usage_data[i] > 0 : false;
       } else {
-        // Fallback logic when usage_data is empty/cleared or not available
+        // Fallback logic when usage_data is undefined/null (not provided at all)
         if (frequency === 'daily') {
           // For daily tasks without usage data, show based on frequency count
           isUsed = i < frequency_count;
