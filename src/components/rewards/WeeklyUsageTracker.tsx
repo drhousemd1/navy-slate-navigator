@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { getMondayBasedDay } from '@/lib/utils';
@@ -22,10 +23,18 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
   
   // Update trackerData when usageData changes, with explicit conversion to boolean values
   useEffect(() => {
-    // Important: Force clean up any potential stale data and always convert values to boolean
-    const cleanData = Array.isArray(usageData) && usageData.length > 0 
-      ? [...usageData].map(val => Boolean(val)) // Explicitly convert any value to boolean
-      : [false, false, false, false, false, false, false];
+    // Handle cleared/empty usage data arrays properly
+    if (!Array.isArray(usageData) || usageData.length === 0) {
+      // Data was cleared/reset, show all empty
+      setTrackerData([false, false, false, false, false, false, false]);
+      logger.debug("WeeklyUsageTracker: Usage data cleared/empty, showing empty state");
+      return;
+    }
+    
+    // Convert any value to boolean and ensure we have exactly 7 days
+    const cleanData = Array.from({ length: 7 }, (_, i) => 
+      i < usageData.length ? Boolean(usageData[i]) : false
+    );
       
     // Create a new array reference to ensure rendering
     setTrackerData(cleanData);

@@ -5,12 +5,13 @@ import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables, J
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
-import { saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
+import { saveTasksToDB, loadTasksFromDB } from '@/data/indexedDB/useIndexedDB';
 import { useDeleteTask } from '@/data/tasks/mutations/useDeleteTask'; 
 import { logger } from '@/lib/logger';
 import { useCreateTask } from '@/data/tasks/mutations/useCreateTask';
 import { useUpdateTask } from '@/data/tasks/mutations/useUpdateTask';
 import { getErrorMessage } from '@/lib/errors';
+import { checkAndPerformTaskResets } from '@/lib/taskUtils';
 
 // Define a type for the data saveTask might receive
 // This will now be more specific: CreateTaskVariables or UpdateTaskVariables
@@ -30,8 +31,35 @@ export const useTasksData = () => {
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
 
+  // Enhanced task loading with reset check
+  const checkAndReloadTasks = useCallback(async () => {
+    try {
+      logger.debug('[useTasksData] Checking for task resets');
+      
+      const resetPerformed = await checkAndPerformTaskResets();
+      
+      if (resetPerformed) {
+        logger.debug('[useTasksData] Resets performed, reloading from IndexedDB');
+        
+        // Reload fresh data from IndexedDB after resets
+        const freshData = await loadTasksFromDB();
+        
+        if (freshData && Array.isArray(freshData)) {
+          // Update React Query cache with fresh data
+          queryClient.setQueryData(['tasks'], freshData);
+          logger.debug('[useTasksData] Updated cache with fresh reset data');
+        }
+      }
+    } catch (error) {
+      logger.error('[useTasksData] Error during reset check:', error);
+    }
+  }, [queryClient]);
+
   const saveTask = async (taskData: SaveTaskInput): Promise<TaskWithId | null> => {
     try {
+      // Check for resets before saving
+      await checkAndReloadTasks();
+      
       // Discriminate between CreateTaskVariables and UpdateTaskVariables
       // UpdateTaskVariables will have an 'id' property.
       if ('id' in taskData && taskData.id) {
@@ -67,6 +95,7 @@ export const useTasksData = () => {
     isUsingCachedData,
     saveTask,
     deleteTask,
-    refetch
+    refetch,
+    checkAndReloadTasks
   };
 };
