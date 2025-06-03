@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -21,6 +20,10 @@ export default {
 		extend: {
 			fontSize: {
 				'xxs': '0.625rem', // Add extra small text size
+			},
+			spacing: {
+				'safe-top': 'env(safe-area-inset-top)',
+				'safe-bottom': 'env(safe-area-inset-bottom)',
 			},
 			colors: {
 				border: 'hsl(var(--border))',
