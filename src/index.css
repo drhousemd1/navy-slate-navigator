@@ -91,48 +91,21 @@
     @apply border-border;
   }
 
-  html {
-    height: 100%;
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
-    touch-action: manipulation;
-    -webkit-text-size-adjust: 100%;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-
   body {
-    @apply bg-dark-navy text-foreground antialiased;
+    @apply bg-dark-navy text-foreground antialiased overflow-x-hidden min-h-screen;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
-    height: 100%;
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
-    margin: 0;
-    padding: 0;
-    position: fixed;
-    width: 100%;
-    touch-action: manipulation;
-    overscroll-behavior: none;
+    /* Prevent mobile browser UI from appearing on scroll */
+    overscroll-behavior-y: none;
+    touch-action: pan-y;
+    /* Prevent pull-to-refresh and other mobile browser behaviors */
     -webkit-overflow-scrolling: touch;
-    -webkit-user-select: none;
-    user-select: none;
   }
 
   #root {
-    @apply flex flex-col w-full;
-    height: 100%;
-    height: 100vh;
-    height: 100dvh;
-    max-width: none;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    position: relative;
-    touch-action: manipulation;
-    overscroll-behavior: none;
+    @apply flex flex-col min-h-screen max-w-none m-0 p-0 w-full;
+    /* Apply overscroll prevention to root as well */
+    overscroll-behavior-y: none;
+    touch-action: pan-y;
   }
 }
 
@@ -226,39 +199,19 @@
     display: none; /* Chrome, Safari, Opera */
   }
 
-  /* Enhanced mobile browser UI prevention utilities */
+  /* Mobile browser UI prevention utilities */
   .prevent-overscroll {
-    overscroll-behavior: none;
-    touch-action: manipulation;
-    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+    touch-action: pan-y;
   }
 
   .prevent-mobile-scroll {
-    touch-action: manipulation;
+    touch-action: none;
     overscroll-behavior: none;
-    position: relative;
-    height: 100%;
   }
 
   .allow-scroll-y {
     touch-action: pan-y;
-    overscroll-behavior-y: auto;
-    overscroll-behavior-x: none;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* App container that fills viewport without triggering browser UI */
-  .app-container {
-    height: 100vh;
-    height: 100dvh;
-    width: 100vw;
-    position: fixed;
-    top: 0;
-    left: 0;
-    overflow: hidden;
-    touch-action: manipulation;
-    overscroll-behavior: none;
+    overscroll-behavior-y: none;
   }
 }
