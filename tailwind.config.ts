@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -71,12 +72,6 @@ export default {
 				"light-navy": "#233554",
 				"nav-active": "#00B8D9",
 				"nav-inactive": "#8892B0",
-			},
-			spacing: {
-				'safe-top': 'env(safe-area-inset-top)',
-				'safe-bottom': 'env(safe-area-inset-bottom)',
-				'safe-left': 'env(safe-area-inset-left)',
-				'safe-right': 'env(safe-area-inset-right)',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -162,13 +157,5 @@ export default {
 	plugins: [
 		require("tailwindcss-animate"),
 		require('@tailwindcss/typography'),
-		function ({ addUtilities }: { addUtilities: any }) {
-			addUtilities({
-				'.pt-safe-top': { paddingTop: 'env(safe-area-inset-top)' },
-				'.pb-safe-bottom': { paddingBottom: 'env(safe-area-inset-bottom)' },
-				'.pl-safe-left': { paddingLeft: 'env(safe-area-inset-left)' },
-				'.pr-safe-right': { paddingRight: 'env(safe-area-inset-right)' },
-			});
-		}
 	],
 } satisfies Config;
