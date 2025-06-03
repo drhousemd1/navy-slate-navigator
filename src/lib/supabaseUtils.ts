@@ -1,6 +1,6 @@
 
 import { SupabaseClient, PostgrestError, PostgrestResponse, PostgrestSingleResponse } from '@supabase/supabase-js';
-import { logger } from '@/lib/logger'; // Logger already imported
+import { logger } from '@/lib/logger';
 
 export const DEFAULT_TIMEOUT_MS = 15000; // Increased from 8000 to 15 seconds
 
@@ -36,6 +36,7 @@ export async function withTimeout<T>(
 
 /**
  * Enhanced Supabase select with timeout and proper user scoping
+ * Now works with simplified RLS policies
  * @param supabase - Supabase client
  * @param table - Table name
  * @param options - Additional options like timeout
@@ -49,7 +50,7 @@ export async function selectWithTimeout<RowType = any>(
     order?: [string, { ascending: boolean }],
     single?: boolean,
     timeoutMs?: number,
-    userId?: string // Added for proper user scoping
+    userId?: string // Still available but RLS handles filtering automatically now
   } = {}
 ): Promise<{ data: RowType[] | RowType | null, error: PostgrestError | null }> { 
   const { columns = '*', eq, order, single = false, timeoutMs = DEFAULT_TIMEOUT_MS, userId } = options;
@@ -60,8 +61,8 @@ export async function selectWithTimeout<RowType = any>(
       .select<string, RowType>(columns)
       .abortSignal(signal);
       
-    // Always filter by user_id if provided (critical for security)
-    if (userId) {
+    // Only add explicit user filtering if specified (RLS now handles most cases automatically)
+    if (userId && table !== 'encyclopedia_entries') {
       queryBuilder = queryBuilder.eq('user_id', userId);
     }
       
@@ -75,10 +76,8 @@ export async function selectWithTimeout<RowType = any>(
     
     let result;
     if (single) {
-      // Use the `as unknown as` type conversion to properly handle the single response type
       result = await (queryBuilder.single() as unknown as Promise<PostgrestSingleResponse<RowType>>);
     } else {
-      // Use the `as unknown as` type conversion for the standard response type
       result = await (queryBuilder as unknown as Promise<PostgrestResponse<RowType>>);
     }
 

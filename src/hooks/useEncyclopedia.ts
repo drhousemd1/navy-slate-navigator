@@ -6,10 +6,12 @@ import { EncyclopediaEntry } from '@/types/encyclopedia';
 import { logger } from '@/lib/logger';
 
 export const useEncyclopedia = () => {
-  // Fetch all encyclopedia entries
+  // Fetch all encyclopedia entries with simplified query
   const { data: entries = [], isLoading, error } = useQuery({
     queryKey: ['encyclopedia-entries'],
     queryFn: async () => {
+      logger.debug('Fetching encyclopedia entries with new RLS policies');
+      
       const { data, error } = await supabase
         .from('encyclopedia_entries')
         .select('*')
@@ -19,6 +21,8 @@ export const useEncyclopedia = () => {
         logger.error('Error fetching encyclopedia entries:', error);
         throw error;
       }
+      
+      logger.debug(`Successfully fetched ${data?.length || 0} encyclopedia entries`);
       
       // Transform the data to match our expected types
       return (data || []).map(item => {

@@ -691,6 +691,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_linked_partner_id: {
+        Args: { user_id_param: string }
+        Returns: string
+      }
       get_task_completions_for_week: {
         Args: { week_start: string }
         Returns: {
