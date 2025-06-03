@@ -95,6 +95,9 @@
     margin: 0;
     padding: 0;
     overflow: hidden; /* Prevent body from ever scrolling */
+    overflow-x: hidden; /* Explicitly prevent horizontal scrolling */
+    width: 100%;
+    max-width: 100vw; /* Respect viewport width */
   }
 
   * {
@@ -104,6 +107,9 @@
   body {
     @apply bg-dark-navy text-foreground antialiased;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+    overflow-x: hidden; /* Prevent horizontal scrolling on body */
+    width: 100%;
+    max-width: 100vw;
   }
 }
 
@@ -201,15 +207,25 @@
   .prevent-overscroll {
     overscroll-behavior-y: none;
     touch-action: pan-y;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
   }
 
   .prevent-mobile-scroll {
     touch-action: none;
     overscroll-behavior: none;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
   }
 
   .allow-scroll-y {
     touch-action: pan-y;
     overscroll-behavior-y: none;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+  }
+
+  /* Global horizontal scroll prevention */
+  .no-horizontal-scroll {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
   }
 }

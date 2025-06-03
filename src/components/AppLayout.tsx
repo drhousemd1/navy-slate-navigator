@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -57,10 +58,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const useCircleButton = isRewardsPage || isTasksPage || isPunishmentsPage || isRulesPage;
 
   return (
-    <div className="flex flex-col h-full bg-dark-navy prevent-overscroll">
+    <div className="flex flex-col h-full bg-dark-navy prevent-overscroll overflow-x-hidden">
       {/* Top header section with account and settings icons - NOW WITH SAFE AREA */}
-      <div className="fixed top-0 left-0 right-0 w-full bg-navy border-b border-light-navy pt-safe-top py-2 px-4 z-50 prevent-mobile-scroll">
-        <div className="max-w-screen-lg mx-auto flex justify-between items-center">
+      <div className="fixed top-0 left-0 right-0 w-full bg-navy border-b border-light-navy pt-safe-top py-2 px-4 z-50 prevent-mobile-scroll overflow-x-hidden">
+        <div className="max-w-screen-lg mx-auto flex justify-between items-center w-full">
           <div className="flex items-center">
             {/* Left side avatar */}
             <Avatar 
@@ -84,8 +85,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             
             {/* Username and role display */}
             <div className="ml-2">
-              <p className="text-white text-sm font-medium leading-tight">{nickname}</p>
-              <p className="text-gray-400 text-xs leading-tight">{userRole}</p>
+              <p className="text-white text-sm font-medium leading-tight break-words">{nickname}</p>
+              <p className="text-gray-400 text-xs leading-tight break-words">{userRole}</p>
             </div>
           </div>
           
@@ -111,8 +112,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       </div>
       
       {/* Main content with adjusted padding to account for safe area header */}
-      <main className={`flex-1 pt-[calc(4rem+env(safe-area-inset-top))] ${isMessagesPage ? 'pb-0' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'} overflow-y-auto animate-fade-in allow-scroll-y`}>
-        {children}
+      <main className={`flex-1 pt-[calc(4rem+env(safe-area-inset-top))] ${isMessagesPage ? 'pb-0' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'} overflow-y-auto overflow-x-hidden animate-fade-in allow-scroll-y w-full max-w-full`}>
+        <div className="w-full max-w-full overflow-x-hidden">
+          {children}
+        </div>
       </main>
       
       {shouldShowAddButton && !isMessagesPage && (

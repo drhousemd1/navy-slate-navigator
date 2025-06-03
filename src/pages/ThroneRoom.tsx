@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '@/contexts/auth';
@@ -54,15 +55,17 @@ const ThroneRoom: React.FC = () => {
   return (
     <AppLayout>
       <RewardsProvider>
-        <div className="p-6 space-y-6 animate-fade-in">
-          <p className="text-nav-inactive">
+        <div className="p-6 space-y-6 animate-fade-in overflow-x-hidden w-full max-w-full">
+          <p className="text-nav-inactive break-words">
             Welcome to your command center where you can track activities and manage your domain
           </p>
           
-          <div className="space-y-6">
-            <WeeklyMetricsChart /> {/* This will use the now-controlled useWeeklyMetrics */}
+          <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+            <div className="w-full max-w-full overflow-x-hidden">
+              <WeeklyMetricsChart />
+            </div>
             
-            <div className="space-y-2">
+            <div className="space-y-2 w-full max-w-full overflow-x-hidden">
               <WeeklyMetricsSummaryTiles 
                 tasksCompleted={metricsSummary.tasksCompleted}
                 rulesBroken={metricsSummary.rulesBroken}
@@ -71,9 +74,13 @@ const ThroneRoom: React.FC = () => {
               />
             </div>
             
-            <MonthlyMetricsChart /> {/* This will use the now-controlled useMonthlyMetrics */}
+            <div className="w-full max-w-full overflow-x-hidden">
+              <MonthlyMetricsChart />
+            </div>
             
-            <AdminSettingsCard />
+            <div className="w-full max-w-full overflow-x-hidden">
+              <AdminSettingsCard />
+            </div>
           </div>
         </div>
       </RewardsProvider>
