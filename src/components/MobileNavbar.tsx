@@ -1,11 +1,11 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   BookOpenCheck,
   CheckSquare,
   Gift,
-  Skull,
-  Crown
+  Skull
 } from 'lucide-react';
 import { logger } from '@/lib/logger';
 
@@ -36,11 +36,6 @@ const navItems: NavItem[] = [
     path: '/punishments',
     icon: <Skull className="w-5 h-5" />,
   },
-  {
-    name: 'Throne Room',
-    path: '/throne-room',
-    icon: <Crown className="w-5 h-5" />,
-  },
 ];
 
 const MobileNavbar: React.FC = () => {
@@ -51,13 +46,9 @@ const MobileNavbar: React.FC = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50">
-      <div className="grid grid-cols-5 h-16 px-4">
+      <div className="grid grid-cols-4 h-16 px-4">
         {navItems.map((item) => {
           const isActive = currentPath === item.path;
-          
-          if (item.name === 'Throne Room') {
-            logger.debug(`Throne Room nav item - Path: ${item.path}, Current: ${currentPath}, isActive: ${isActive}`);
-          }
           
           return (
             <Link

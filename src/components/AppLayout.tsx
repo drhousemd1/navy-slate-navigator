@@ -3,7 +3,7 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Plus, MessageSquare } from 'lucide-react';
+import { Plus, MessageSquare, Crown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/contexts/auth';
 import AccountSheet from './AccountSheet';
@@ -54,6 +54,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const isTasksPage = location.pathname === '/tasks';
   const isPunishmentsPage = location.pathname === '/punishments';
   const isRulesPage = location.pathname === '/rules';
+  const isThroneRoomPage = location.pathname === '/throne-room';
   const useCircleButton = isRewardsPage || isTasksPage || isPunishmentsPage || isRulesPage;
 
   return (
@@ -90,13 +91,16 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Sync Status Indicator Icon - REMOVED */}
-            {/* <SyncStatusIndicator /> */} {/* Corrected this line */}
-
             {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />
             
-            {/* App Guide icon - REMOVED */}
+            {/* Throne Room icon */}
+            <Crown 
+              className={`w-5 h-5 cursor-pointer transition-colors ${
+                isThroneRoomPage ? 'text-[#00FFF7] neon-icon' : 'text-gray-300 hover:text-cyan-500'
+              }`}
+              onClick={() => navigate('/throne-room')}
+            />
 
             {/* Messaging icon */}
             <MessageSquare 
@@ -136,4 +140,3 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 };
 
 export default AppLayout;
-
