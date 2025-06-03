@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -57,66 +58,79 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const useCircleButton = isRewardsPage || isTasksPage || isPunishmentsPage || isRulesPage;
 
   return (
-    <div className="flex flex-col h-full bg-dark-navy prevent-overscroll">
-      {/* Top header section with account and settings icons - NOW FIXED */}
-      <div className="fixed top-0 left-0 right-0 w-full bg-navy border-b border-light-navy py-2 px-4 z-50 prevent-mobile-scroll">
-        <div className="max-w-screen-lg mx-auto flex justify-between items-center">
-          <div className="flex items-center">
-            {/* Left side avatar */}
-            <Avatar 
-              className="h-7 w-7 cursor-pointer" 
-              onClick={() => navigate('/profile')}
-            >
-              {profileImage ? (
-                <AvatarImage 
-                  src={profileImage} 
-                  alt={nickname ?? "User Avatar"}
-                  onError={(e) => {
-                    logger.error('Failed to load avatar image:', profileImage);
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              ) : null}
-              <AvatarFallback className="bg-light-navy text-nav-active text-xs">
-                {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
-              </AvatarFallback>
-            </Avatar>
+    <div className="relative h-full bg-dark-navy prevent-overscroll">
+      {/* Top header section with safe area padding */}
+      <header className="fixed inset-x-0 top-0 h-16 pt-safe-top bg-navy border-b border-light-navy z-50 prevent-mobile-scroll">
+        <div className="h-full px-4 flex items-center">
+          <div className="max-w-screen-lg mx-auto w-full flex justify-between items-center">
+            <div className="flex items-center">
+              {/* Left side avatar */}
+              <Avatar 
+                className="h-7 w-7 cursor-pointer" 
+                onClick={() => navigate('/profile')}
+              >
+                {profileImage ? (
+                  <AvatarImage 
+                    src={profileImage} 
+                    alt={nickname ?? "User Avatar"}
+                    onError={(e) => {
+                      logger.error('Failed to load avatar image:', profileImage);
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : null}
+                <AvatarFallback className="bg-light-navy text-nav-active text-xs">
+                  {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
+                </AvatarFallback>
+              </Avatar>
+              
+              {/* Username and role display */}
+              <div className="ml-2">
+                <p className="text-white text-sm font-medium leading-tight">{nickname}</p>
+                <p className="text-gray-400 text-xs leading-tight">{userRole}</p>
+              </div>
+            </div>
             
-            {/* Username and role display */}
-            <div className="ml-2">
-              <p className="text-white text-sm font-medium leading-tight">{nickname}</p>
-              <p className="text-gray-400 text-xs leading-tight">{userRole}</p>
+            <div className="flex items-center gap-3">
+              {/* Character icon for account/login using our new AccountSheet component */}
+              <AccountSheet />
+              
+              {/* Throne Room icon */}
+              <Crown 
+                className={`w-5 h-5 cursor-pointer transition-colors ${
+                  isThroneRoomPage ? 'text-[#00FFF7] neon-icon' : 'text-gray-300 hover:text-cyan-500'
+                }`}
+                onClick={() => navigate('/throne-room')}
+              />
+
+              {/* Messaging icon */}
+              <MessageSquare 
+                className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" 
+                onClick={() => navigate('/messages')}
+              />
             </div>
           </div>
-          
-          <div className="flex items-center gap-3">
-            {/* Character icon for account/login using our new AccountSheet component */}
-            <AccountSheet />
-            
-            {/* Throne Room icon */}
-            <Crown 
-              className={`w-5 h-5 cursor-pointer transition-colors ${
-                isThroneRoomPage ? 'text-[#00FFF7] neon-icon' : 'text-gray-300 hover:text-cyan-500'
-              }`}
-              onClick={() => navigate('/throne-room')}
-            />
-
-            {/* Messaging icon */}
-            <MessageSquare 
-              className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" 
-              onClick={() => navigate('/messages')}
-            />
-          </div>
         </div>
-      </div>
+      </header>
       
-      {/* Main content with top padding to account for fixed header - NOW THE ONLY SCROLLABLE AREA */}
-      <main className={`flex-1 pt-16 ${isMessagesPage ? '' : 'pb-24'} overflow-y-auto animate-fade-in allow-scroll-y`}>
+      {/* Main content positioned between header and footer with safe area calculations */}
+      <main 
+        className="absolute inset-x-0 overflow-y-auto animate-fade-in allow-scroll-y"
+        style={{
+          top: 'calc(4rem + env(safe-area-inset-top))',
+          bottom: isMessagesPage ? '0px' : 'calc(4rem + env(safe-area-inset-bottom))'
+        }}
+      >
         {children}
       </main>
       
       {shouldShowAddButton && !isMessagesPage && (
-        <div className="fixed bottom-16 left-0 right-0 flex justify-center py-2 z-40">
+        <div 
+          className="fixed left-0 right-0 flex justify-center py-2 z-40"
+          style={{
+            bottom: 'calc(4.5rem + env(safe-area-inset-bottom))'
+          }}
+        >
           <Button 
             className={`${useCircleButton 
               ? 'bg-green-500 hover:bg-green-600 w-10 h-10 rounded-full shadow-xl p-0 flex items-center justify-center' 
@@ -134,7 +148,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
         </div>
       )}
       
-      <MobileNavbar />
+      {/* Bottom navbar with safe area padding */}
+      <footer className="fixed inset-x-0 bottom-0 h-16 pb-safe-bottom bg-navy border-t border-light-navy backdrop-blur-lg z-50 prevent-mobile-scroll">
+        <MobileNavbar />
+      </footer>
     </div>
   );
 };
