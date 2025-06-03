@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -110,13 +111,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
         </div>
       </div>
       
-      {/* Main content with adjusted padding to account for safe area header */}
-      <main className={`flex-1 pt-[calc(4rem+env(safe-area-inset-top))] ${isMessagesPage ? 'pb-0' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'} overflow-y-auto animate-fade-in allow-scroll-y`}>
+      {/* Main content with simplified padding */}
+      <main className={`flex-1 pt-[calc(4rem+env(safe-area-inset-top))] ${isMessagesPage ? 'pb-0' : 'pb-24'} overflow-y-auto animate-fade-in allow-scroll-y`}>
         {children}
       </main>
       
       {shouldShowAddButton && !isMessagesPage && (
-        <div className={`fixed left-0 right-0 flex justify-center py-2 z-40`} style={{bottom: `calc(4rem + env(safe-area-inset-bottom))`}}>
+        <div className="fixed left-0 right-0 flex justify-center py-2 z-40" style={{ bottom: `calc(4rem + env(safe-area-inset-bottom))` }}>
           <Button 
             className={`${useCircleButton 
               ? 'bg-green-500 hover:bg-green-600 w-10 h-10 rounded-full shadow-xl p-0 flex items-center justify-center' 

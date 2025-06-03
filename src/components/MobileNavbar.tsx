@@ -45,7 +45,7 @@ const MobileNavbar: React.FC = () => {
   logger.debug('MobileNavbar currentPath:', currentPath);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50 prevent-mobile-scroll">
+    <nav className="fixed left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50 prevent-mobile-scroll" style={{ bottom: 'env(safe-area-inset-bottom)' }}>
       <div className="grid grid-cols-4 h-16 px-4">
         {navItems.map((item) => {
           const isActive = currentPath === item.path;
