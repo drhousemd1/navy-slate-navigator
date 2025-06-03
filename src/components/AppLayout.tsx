@@ -59,9 +59,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 
   return (
     <div className="relative h-full bg-dark-navy prevent-overscroll">
-      {/* Top header section with safe area padding */}
-      <header className="fixed inset-x-0 top-0 h-16 pt-safe-top bg-navy border-b border-light-navy z-50 prevent-mobile-scroll">
-        <div className="h-full px-4 flex items-center">
+      {/* Top header section with safe area background extension */}
+      <header 
+        className="fixed inset-x-0 top-0 bg-navy border-b border-light-navy z-50 prevent-mobile-scroll"
+        style={{ 
+          paddingTop: 'env(safe-area-inset-top)',
+          minHeight: 'calc(4rem + env(safe-area-inset-top))'
+        }}
+      >
+        <div className="h-16 px-4 flex items-center">
           <div className="max-w-screen-lg mx-auto w-full flex justify-between items-center">
             <div className="flex items-center">
               {/* Left side avatar */}
@@ -118,7 +124,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
         className="absolute inset-x-0 overflow-y-auto animate-fade-in allow-scroll-y"
         style={{
           top: 'calc(4rem + env(safe-area-inset-top))',
-          bottom: isMessagesPage ? '0px' : 'calc(4rem + env(safe-area-inset-bottom))'
+          bottom: isMessagesPage ? 'env(safe-area-inset-bottom)' : 'calc(4rem + env(safe-area-inset-bottom))'
         }}
       >
         {children}
@@ -148,9 +154,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
         </div>
       )}
       
-      {/* Bottom navbar with safe area padding */}
-      <footer className="fixed inset-x-0 bottom-0 h-16 pb-safe-bottom bg-navy border-t border-light-navy backdrop-blur-lg z-50 prevent-mobile-scroll">
-        <MobileNavbar />
+      {/* Bottom navbar with safe area background extension */}
+      <footer 
+        className="fixed inset-x-0 bottom-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50 prevent-mobile-scroll"
+        style={{ 
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          minHeight: 'calc(4rem + env(safe-area-inset-bottom))'
+        }}
+      >
+        <div className="h-16">
+          <MobileNavbar />
+        </div>
       </footer>
     </div>
   );
