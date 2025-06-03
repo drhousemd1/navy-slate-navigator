@@ -5,6 +5,7 @@ import App from './App';
 import './index.css';
 import { AppProviders } from '@/components/app/AppProviders';
 import { BrowserRouter } from 'react-router-dom';
+import { registerSW } from './serviceWorkerRegistration';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
@@ -15,3 +16,6 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+// Register service worker for PWA functionality
+registerSW();
