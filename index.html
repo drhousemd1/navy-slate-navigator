@@ -1,22 +1,31 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="height: 100%; overflow: hidden;">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, minimal-ui" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, minimal-ui, maximum-scale=1.0" />
     <title>navy-slate-navigator</title>
     <meta name="description" content="Lovable Generated Project" />
     <meta name="author" content="Lovable" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
 
     <!-- Web App Meta Tags to prevent mobile browser UI -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
     
     <!-- Theme colors to match app -->
     <meta name="theme-color" content="#1e293b" />
     <meta name="msapplication-navbutton-color" content="#1e293b" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Additional mobile optimizations -->
+    <meta name="apple-touch-fullscreen" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="NavySlate" />
 
     <meta property="og:title" content="Lovable Generated Project" />
     <meta property="og:description" content="Lovable Generated Project" />
@@ -28,10 +37,42 @@
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
   </head>
 
-  <body>
-    <div id="root"></div>
+  <body style="height: 100%; overflow: hidden; touch-action: manipulation;">
+    <div id="root" style="height: 100vh; height: 100dvh; overflow: hidden;"></div>
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Mobile browser UI prevention script -->
+    <script>
+      // Prevent scrolling on the document to avoid browser UI
+      document.addEventListener('touchmove', function(e) {
+        if (e.target === document.body || e.target === document.documentElement) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      // Prevent zoom on double tap
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', function(e) {
+        const now = new Date().getTime();
+        if (now - lastTouchEnd <= 300) {
+          e.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, false);
+
+      // Prevent pull-to-refresh
+      document.body.addEventListener('touchstart', e => {
+        if (e.touches.length !== 1) { return; }
+        const startY = e.touches[0].clientY;
+        if (startY < 10 || startY > window.innerHeight - 10) return;
+      });
+
+      document.body.addEventListener('touchmove', e => {
+        if (e.touches.length !== 1) { return; }
+        e.preventDefault();
+      }, { passive: false });
+    </script>
   </body>
 </html>

@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useEffect, useState } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -57,7 +58,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const useCircleButton = isRewardsPage || isTasksPage || isPunishmentsPage || isRulesPage;
 
   return (
-    <div className="flex flex-col min-h-screen bg-dark-navy prevent-overscroll">
+    <div className="app-container bg-dark-navy">
       {/* Top header section with account and settings icons - NOW FIXED */}
       <div className="fixed top-0 left-0 right-0 w-full bg-navy border-b border-light-navy py-2 px-4 z-50 prevent-mobile-scroll">
         <div className="max-w-screen-lg mx-auto flex justify-between items-center">
