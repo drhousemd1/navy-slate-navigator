@@ -262,6 +262,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
                 <Input
                   placeholder="Rule title (e.g., No swearing)"
                   className="bg-dark-navy border-light-navy text-white"
+                  autoFocus={false}
                   {...field}
                 />
               </FormControl>

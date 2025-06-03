@@ -143,6 +143,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
             <FormControl>
               <Input 
                 className="bg-dark-navy border-light-navy text-white" 
+                autoFocus={false}
                 {...field} 
                 disabled={isSaving}
               />

@@ -255,6 +255,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                 <Input 
                   placeholder="Task title" 
                   className="bg-dark-navy border-light-navy text-white" 
+                  autoFocus={false}
                   {...field} 
                 />
               </FormControl>

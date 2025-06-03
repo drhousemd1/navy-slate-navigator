@@ -35,7 +35,12 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
           <FormItem>
             <FormLabel className="text-white">Title</FormLabel>
             <FormControl>
-              <Input placeholder="Reward title" className="bg-dark-navy border-light-navy text-white" {...field} />
+              <Input 
+                placeholder="Reward title" 
+                className="bg-dark-navy border-light-navy text-white" 
+                autoFocus={false}
+                {...field} 
+              />
             </FormControl>
           </FormItem>
         )}
