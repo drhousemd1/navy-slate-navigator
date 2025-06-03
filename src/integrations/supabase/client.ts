@@ -49,4 +49,3 @@ export const clearAuthState = async () => {
     logger.debug("Auth state successfully cleared");
   }
 };
-

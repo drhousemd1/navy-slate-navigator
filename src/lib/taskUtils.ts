@@ -45,11 +45,19 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
   try {
     logger.debug(`[resetTaskCompletions] Starting ${frequency} task reset`);
     
+    // Get current user session to ensure proper filtering
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      logger.debug('[resetTaskCompletions] No authenticated user, skipping reset');
+      return;
+    }
+
     const { data: tasks, error } = await supabase
       .from('tasks')
       .select('*')
       .eq('frequency', frequency)
-      .eq('completed', true);
+      .eq('completed', true)
+      .eq('user_id', session.user.id); // Ensure user-scoped query
 
     if (error) {
       logger.error(`[resetTaskCompletions] Error fetching ${frequency} tasks:`, error);
@@ -72,6 +80,7 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
         usage_data: [] // Clear the usage tracking data
       })
       .in('id', tasks.map(task => task.id))
+      .eq('user_id', session.user.id) // Ensure user-scoped update
       .select('*');
 
     if (updateError) {

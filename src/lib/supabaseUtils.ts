@@ -35,7 +35,7 @@ export async function withTimeout<T>(
 }
 
 /**
- * Enhanced Supabase select with timeout
+ * Enhanced Supabase select with timeout and proper user scoping
  * @param supabase - Supabase client
  * @param table - Table name
  * @param options - Additional options like timeout
@@ -48,16 +48,22 @@ export async function selectWithTimeout<RowType = any>(
     eq?: [string, any],
     order?: [string, { ascending: boolean }],
     single?: boolean,
-    timeoutMs?: number
+    timeoutMs?: number,
+    userId?: string // Added for proper user scoping
   } = {}
 ): Promise<{ data: RowType[] | RowType | null, error: PostgrestError | null }> { 
-  const { columns = '*', eq, order, single = false, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
+  const { columns = '*', eq, order, single = false, timeoutMs = DEFAULT_TIMEOUT_MS, userId } = options;
   
   return withTimeout(async (signal) => {
     let queryBuilder = supabase
       .from(table)
       .select<string, RowType>(columns)
       .abortSignal(signal);
+      
+    // Always filter by user_id if provided (critical for security)
+    if (userId) {
+      queryBuilder = queryBuilder.eq('user_id', userId);
+    }
       
     if (eq) {
       queryBuilder = queryBuilder.eq(eq[0], eq[1]);

@@ -5,4 +5,3 @@ export { AuthProvider, useAuth } from '../AuthContext'; // Updated path
 export * from './useAuthOperations';
 export * from './useRoleManagement';
 export * from './useUserProfile';
-

@@ -21,7 +21,7 @@ export function useRoleManagement(user: User | null) {
     try {
       logger.debug('useRoleManagement: Checking user role for', user.email);
       
-      // First check if user has an admin role
+      // First check if user has an admin role using the database function
       const { data: adminCheck, error: adminError } = await supabase
         .rpc('has_role', {
           requested_user_id: user.id,
@@ -38,16 +38,6 @@ export function useRoleManagement(user: User | null) {
 
       logger.debug('useRoleManagement: User admin check result:', adminCheck);
       
-      // For debugging, show all available roles for this user
-      const { data: allRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-        
-      if (!rolesError) {
-        logger.debug('useRoleManagement: All user roles:', allRoles);
-      }
-      
       // If admin, set role directly
       if (adminCheck) {
         setUserRole('admin');
@@ -56,7 +46,7 @@ export function useRoleManagement(user: User | null) {
         return;
       }
       
-      // If not admin, query for any assigned role
+      // If not admin, query for any assigned role with proper RLS filtering
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -91,4 +81,3 @@ export function useRoleManagement(user: User | null) {
     checkUserRole
   };
 }
-
