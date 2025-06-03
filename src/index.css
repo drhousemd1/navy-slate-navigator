@@ -87,25 +87,23 @@
 }
 
 @layer base {
+  /* Lock down html, body, and #root to prevent document-level scrolling */
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevent body from ever scrolling */
+  }
+
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-dark-navy text-foreground antialiased overflow-x-hidden min-h-screen;
+    @apply bg-dark-navy text-foreground antialiased;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
-    /* Prevent mobile browser UI from appearing on scroll */
-    overscroll-behavior-y: none;
-    touch-action: pan-y;
-    /* Prevent pull-to-refresh and other mobile browser behaviors */
-    -webkit-overflow-scrolling: touch;
-  }
-
-  #root {
-    @apply flex flex-col min-h-screen max-w-none m-0 p-0 w-full;
-    /* Apply overscroll prevention to root as well */
-    overscroll-behavior-y: none;
-    touch-action: pan-y;
   }
 }
 
