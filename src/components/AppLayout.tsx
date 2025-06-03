@@ -110,8 +110,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
         </div>
       </div>
       
-      {/* Main content with adjusted padding to account for safe area header */}
-      <main className={`flex-1 pt-[calc(4rem+env(safe-area-inset-top))] ${isMessagesPage ? 'pb-0' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'} overflow-y-auto animate-fade-in allow-scroll-y`}>
+      {/* Main content with adjusted padding to account for safe area header and bottom navbar */}
+      <main className={`flex-1 pt-[calc(4rem+env(safe-area-inset-top))] ${isMessagesPage ? 'pb-0' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} overflow-y-auto animate-fade-in allow-scroll-y`}>
         {children}
       </main>
       
