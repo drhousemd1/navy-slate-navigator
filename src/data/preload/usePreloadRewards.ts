@@ -1,3 +1,5 @@
+
+import { currentWeekKey, resetTaskCompletions } from "@/lib/taskUtils";
 import { queryClient } from "../queryClient";
 import { loadRewardsFromDB, saveRewardsToDB, getLastSyncTimeForRewards, setLastSyncTimeForRewards } from "../indexedDB/useIndexedDB";
 import { logger } from "@/lib/logger";
@@ -5,7 +7,6 @@ import { getErrorMessage } from "@/lib/errors";
 import { Reward } from '@/data/rewards/types';
 import { fetchRewards, REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { checkAndPerformRewardsResets } from "@/lib/rewardsUtils";
 
 // Define an interface for the raw reward data from IndexedDB before migration
 type RawRewardFromDBBeforeMigration = Omit<Reward, 'is_dom_reward'> & {
@@ -17,8 +18,11 @@ export function usePreloadRewards() {
   
   return async () => {
     try {
-      // Check and perform resets if needed
-      await checkAndPerformRewardsResets();
+      // Reset weekly task completions if needed
+      if (localStorage.getItem("lastWeek") !== currentWeekKey()) {
+        await resetTaskCompletions("weekly");
+        localStorage.setItem("lastWeek", currentWeekKey());
+      }
       
       // Check if we have cached data and if it's fresh (30 minute sync strategy)
       const dataFromDB = await loadRewardsFromDB(); 
