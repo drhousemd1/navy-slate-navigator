@@ -22,21 +22,14 @@ const Auth: React.FC = () => {
     }
   }, [location.pathname, location.state]);
 
-  // Show minimal loading only if truly needed
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
-        <div className="text-white text-lg">Loading...</div>
-      </div>
-    );
-  }
-
+  // No loading screen - if authenticated, redirect immediately
   if (isAuthenticated) {
     logger.debug('Auth page: User is authenticated, redirecting to home');
     const from = location.state?.from?.pathname || "/";
     return <Navigate to={from} replace />;
   }
 
+  // Always show auth UI immediately, even if still loading
   if (authView === "forgot-password") {
     return <ForgotPasswordView onBackClick={() => setAuthView("login")} />;
   }

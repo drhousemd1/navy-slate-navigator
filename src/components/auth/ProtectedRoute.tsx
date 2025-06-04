@@ -12,16 +12,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
-  // Show minimal loading only if truly needed
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-navy text-white">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
+  // No loading screen - if still loading, assume not authenticated for now
+  if (loading || !isAuthenticated) {
     logger.debug(`ProtectedRoute: User not authenticated, redirecting from ${location.pathname} to /auth`);
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
