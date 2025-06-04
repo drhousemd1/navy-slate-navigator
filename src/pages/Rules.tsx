@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
@@ -7,7 +6,7 @@ import RulesHeader from '../components/rule/RulesHeader';
 import RulesList from '../components/rule/RulesList';
 import { Rule } from '@/data/interfaces/Rule';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { useRules } from '@/data/rules/queries';
+import { useRules, checkAndReloadRules } from '@/data/rules/queries';
 import { useCreateRule, useUpdateRule, useDeleteRule } from '@/data/rules/mutations';
 import { useCreateRuleViolation } from '@/data/rules/mutations/useCreateRuleViolation';
 import { logger } from '@/lib/logger';
@@ -32,6 +31,13 @@ const RulesPageContent: React.FC = () => {
   const { mutateAsync: updateRuleMutation } = useUpdateRule();
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
   const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation();
+
+  // Weekly reset check - mirrors Tasks page approach
+  useEffect(() => {
+    if (user) {
+      checkAndReloadRules();
+    }
+  }, [user]);
 
   const handleAddRule = () => {
     setCurrentRule(null);
