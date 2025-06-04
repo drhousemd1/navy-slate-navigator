@@ -34,7 +34,7 @@ export interface AuthContextType extends AuthState {
   uploadProfileImageAndUpdateState: ReturnType<typeof useUserProfile>['uploadProfileImageAndUpdateState'];
   deleteUserProfileImage: ReturnType<typeof useUserProfile>['deleteUserProfileImage'];
   updateUserRole: ReturnType<typeof useUserProfile>['updateUserRole'];
-  checkAdminStatus: () => Promise<boolean>; // New method for on-demand admin checks
+  checkAdminStatus: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,9 +43,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     session: null,
-    loading: true, // Start loading, but will be quick
+    loading: true,
     isAuthenticated: false,
-    isAdmin: false, // Default to false, check later if needed
+    isAdmin: false,
     userExists: false,
     sessionExists: false,
   });
@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
-    logger.debug("AuthContext: Initializing simplified auth...");
+    logger.debug("AuthContext: Starting instant auth check...");
     let subscriptionCleanup: Subscription | null = null;
 
     const initializeAuth = async () => {
@@ -96,11 +96,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             logger.debug(`AuthContext: Auth state change: ${event}`);
             
             if (newSession) {
-              // User is authenticated - set state immediately, no blocking
+              // User is authenticated - set state immediately
               setAuthState({
                 user: newSession.user,
                 session: newSession,
-                loading: false, // Stop loading immediately
+                loading: false,
                 isAuthenticated: true,
                 isAdmin: false, // Will be checked on-demand only
                 userExists: true,
@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               logger.debug("AuthContext: User authenticated, app ready");
             } else {
               // User is not authenticated
-              if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+              if (event === 'SIGNED_OUT') {
                 logger.info(`AuthContext: ${event} - clearing caches`);
                 await clearAllCaches();
               }
@@ -132,7 +132,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         subscriptionCleanup = subscription;
 
-        // Check for existing session - this should be very fast
+        // Check for existing session - this should be instant from localStorage
         const { data: { session: existingSession }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -146,7 +146,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setAuthState({
             user: existingSession.user,
             session: existingSession,
-            loading: false, // Stop loading immediately
+            loading: false,
             isAuthenticated: true,
             isAdmin: false, // Will be checked on-demand only
             userExists: true,
@@ -155,7 +155,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           logger.debug("AuthContext: Existing session found, app ready");
         } else {
-          // No session - stop loading
+          // No session - stop loading immediately
           setAuthState(prev => ({ ...prev, loading: false }));
           logger.debug("AuthContext: No existing session, app ready");
         }
