@@ -32,8 +32,9 @@ const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({
       let isUsed = false;
       
       if (Array.isArray(usage_data)) {
-        // If usage_data is an array (even if empty []), use that to determine if the day is used
-        isUsed = i < usage_data.length ? usage_data[i] > 0 : false;
+        // FIXED: When usage_data is an empty array [], all circles should be empty
+        // Only show as used if there's actual data at this index AND it's > 0
+        isUsed = usage_data.length > 0 && i < usage_data.length && usage_data[i] > 0;
       } else {
         // Fallback logic when usage_data is undefined/null (not provided at all)
         if (frequency === 'daily') {
