@@ -1,5 +1,4 @@
 
-
 // Rule interface definition to be used across rule-related data handling
 export interface Rule {
   id: string;
@@ -19,8 +18,6 @@ export interface Rule {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
-  frequency: 'daily' | 'weekly';
-  frequency_count: number;
   usage_data: number[];
   created_at?: string;
   updated_at?: string;

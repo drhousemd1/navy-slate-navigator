@@ -3,7 +3,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Check } from 'lucide-react';
-import FrequencyTracker from '../task/FrequencyTracker';
+import RuleViolationTracker from './RuleViolationTracker';
 import PriorityBadge from '../task/PriorityBadge';
 import HighlightedText from '../task/HighlightedText';
 import { Rule } from '@/data/interfaces/Rule';
@@ -15,8 +15,6 @@ interface RuleCardProps {
 }
 
 const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken }) => {
-  const frequency = rule.frequency as 'daily' | 'weekly';
-
   return (
     <Card 
       className={`bg-dark-navy border-2 ${
@@ -76,12 +74,9 @@ const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken }) =
         </div>
 
         <div className="flex items-center justify-between mt-2 relative z-10">
-          <FrequencyTracker 
-            frequency={frequency}
-            frequency_count={1} // Dummy value since it won't be used for Rules
+          <RuleViolationTracker 
             calendar_color={rule.calendar_color}
             usage_data={rule.usage_data}
-            isRuleTracker={true} // Mark this as a rule tracker
           />
 
           <Button 
