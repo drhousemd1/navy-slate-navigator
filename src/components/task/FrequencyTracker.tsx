@@ -36,14 +36,14 @@ const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({
         if (usage_data.length === 7) {
           isUsed = usage_data[i] > 0;
         } else if (usage_data.length === 0) {
-          // Empty array means no violations/completions
+          // Fixed: Empty array means no violations/completions for Rules
           isUsed = false;
         } else {
           // Legacy timestamp-based data (Tasks) - fallback to old logic
           isUsed = usage_data.length > 0 && i < usage_data.length && usage_data[i] > 0;
         }
       } else {
-        // Fallback logic when usage_data is undefined/null (not provided at all)
+        // Fixed: When usage_data is undefined/null, show based on frequency count only for Tasks
         if (frequency === 'daily') {
           // For daily tasks without usage data, show based on frequency count
           isUsed = i < frequency_count;

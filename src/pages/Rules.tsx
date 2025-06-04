@@ -31,13 +31,13 @@ const RulesPageContent: React.FC = () => {
     checkAndReloadRules
   } = useRulesData();
 
-  // FIXED: Force reset check on every page visit
+  // Fixed: Check for resets on page load (matches Tasks pattern)
   useEffect(() => {
     if (user) {
       logger.debug('[Rules] Page loaded, checking for resets');
       checkAndReloadRules();
     }
-  }, []); // Remove dependencies to run on every mount
+  }, [user, checkAndReloadRules]); // Proper dependencies
 
   const handleAddRule = () => {
     setCurrentRule(null);

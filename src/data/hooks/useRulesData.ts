@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { useRules } from '../rules/queries';
 import { Rule } from '@/data/interfaces/Rule';
@@ -31,7 +32,7 @@ export const useRulesData = () => {
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
   const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation();
 
-  // Enhanced rule loading with reset check and conditional cache invalidation
+  // Fixed rule loading - only update cache if resets were actually performed
   const checkAndReloadRules = useCallback(async () => {
     try {
       logger.debug('[useRulesData] Checking for rule resets');
@@ -39,12 +40,9 @@ export const useRulesData = () => {
       // Call checkAndPerformRuleResets and capture the boolean result
       const resetPerformed = await checkAndPerformRuleResets();
       
-      // Only if resetPerformed is true, invalidate cache and reload data
+      // Only if resetPerformed is true, update cache with fresh IndexedDB data
       if (resetPerformed) {
-        logger.debug('[useRulesData] Resets performed, invalidating cache and reloading fresh data');
-        
-        // Invalidate the React Query cache for ['rules']
-        await queryClient.invalidateQueries({ queryKey: ['rules'] });
+        logger.debug('[useRulesData] Resets performed, updating cache with fresh IndexedDB data');
         
         // Load fresh rules from IndexedDB and set them on the cache
         const freshData = await loadRulesFromDB();
@@ -52,16 +50,13 @@ export const useRulesData = () => {
           queryClient.setQueryData(['rules'], freshData);
           logger.debug('[useRulesData] Updated cache with fresh reset data');
         }
-        
-        // Force a refetch to ensure the latest Supabase data
-        await refetch();
       } else {
-        logger.debug('[useRulesData] No resets needed, skipping cache invalidation');
+        logger.debug('[useRulesData] No resets needed, keeping existing cache');
       }
     } catch (error) {
       logger.error('[useRulesData] Error during reset check:', error);
     }
-  }, [queryClient, refetch]);
+  }, [queryClient]);
 
   const saveRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
     try {
