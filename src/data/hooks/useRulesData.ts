@@ -31,29 +31,33 @@ export const useRulesData = () => {
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
   const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation();
 
-  // Enhanced rule loading with reset check and complete cache invalidation
+  // Enhanced rule loading with reset check and conditional cache invalidation
   const checkAndReloadRules = useCallback(async () => {
     try {
       logger.debug('[useRulesData] Checking for rule resets');
       
-      await checkAndPerformRuleResets();
+      // Call checkAndPerformRuleResets and capture the boolean result
+      const resetPerformed = await checkAndPerformRuleResets();
       
-      logger.debug('[useRulesData] Resets performed, invalidating cache and reloading fresh data');
-      
-      // Force complete cache invalidation for rules
-      await queryClient.invalidateQueries({ queryKey: ['rules'] });
-      
-      // Reload fresh data from IndexedDB after resets
-      const freshData = await loadRulesFromDB();
-      
-      if (freshData && Array.isArray(freshData)) {
-        // Update React Query cache with fresh data
-        queryClient.setQueryData(['rules'], freshData);
-        logger.debug('[useRulesData] Updated cache with fresh reset data');
+      // Only if resetPerformed is true, invalidate cache and reload data
+      if (resetPerformed) {
+        logger.debug('[useRulesData] Resets performed, invalidating cache and reloading fresh data');
+        
+        // Invalidate the React Query cache for ['rules']
+        await queryClient.invalidateQueries({ queryKey: ['rules'] });
+        
+        // Load fresh rules from IndexedDB and set them on the cache
+        const freshData = await loadRulesFromDB();
+        if (freshData && Array.isArray(freshData)) {
+          queryClient.setQueryData(['rules'], freshData);
+          logger.debug('[useRulesData] Updated cache with fresh reset data');
+        }
+        
+        // Force a refetch to ensure the latest Supabase data
+        await refetch();
+      } else {
+        logger.debug('[useRulesData] No resets needed, skipping cache invalidation');
       }
-      
-      // Force a refetch to ensure we have the latest data from server
-      await refetch();
     } catch (error) {
       logger.error('[useRulesData] Error during reset check:', error);
     }
@@ -61,9 +65,6 @@ export const useRulesData = () => {
 
   const saveRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
     try {
-      // Check for resets before saving
-      await checkAndReloadRules();
-      
       if (ruleData.id) {
         const { id, ...updates } = ruleData;
         return await updateRuleMutation({ id, ...updates } as UpdateRuleVariables);
