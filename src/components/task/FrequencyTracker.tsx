@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Calendar } from 'lucide-react';
 import { getMondayBasedDay } from '@/lib/utils';
@@ -33,24 +32,27 @@ const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({
       // Check if this specific day has usage data
       let isUsed = false;
       
-      if (Array.isArray(usage_data)) {
-        // For day-indexed arrays (Rules system), check if this day index has a value > 0
-        if (usage_data.length === 7) {
+      if (isRuleTracker) {
+        // For Rules: ONLY use usage_data, ignore everything else
+        if (Array.isArray(usage_data) && usage_data.length === 7) {
           isUsed = usage_data[i] > 0;
-        } else if (usage_data.length === 0) {
-          // Empty array means no violations/completions
-          isUsed = false;
         } else {
-          // Legacy timestamp-based data (Tasks) - fallback to old logic
-          isUsed = usage_data.length > 0 && i < usage_data.length && usage_data[i] > 0;
+          // If no proper usage_data, never fill circles for Rules
+          isUsed = false;
         }
       } else {
-        // When usage_data is undefined/null
-        if (isRuleTracker) {
-          // For Rules: never use frequency_count, always show empty if no usage_data
-          isUsed = false;
+        // For Tasks: Keep existing logic
+        if (Array.isArray(usage_data)) {
+          if (usage_data.length === 7) {
+            isUsed = usage_data[i] > 0;
+          } else if (usage_data.length === 0) {
+            isUsed = false;
+          } else {
+            // Legacy timestamp-based data fallback
+            isUsed = usage_data.length > 0 && i < usage_data.length && usage_data[i] > 0;
+          }
         } else {
-          // For Tasks: use frequency_count fallback
+          // When usage_data is undefined/null, use frequency_count fallback for Tasks
           if (frequency === 'daily') {
             isUsed = i < frequency_count;
           } else {
