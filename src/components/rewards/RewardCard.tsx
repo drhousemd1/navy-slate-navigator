@@ -1,13 +1,12 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Reward } from '@/data/rewards/types'; // Changed import path
+import { Reward } from '@/data/rewards/types';
 import { Badge } from '@/components/ui/badge';
 import { useRewards } from '@/contexts/RewardsContext';
 import { cn } from '@/lib/utils';
 import { Crown, Coins, Box, Loader2 } from 'lucide-react';
-import { logger } from '@/lib/logger'; // Ensure logger is imported
+import { logger } from '@/lib/logger';
 
 interface RewardCardProps {
   reward: Reward;
@@ -32,8 +31,8 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
     
     try {
       setBuying(true);
-      // Pass the isDomReward flag explicitly to ensure it's handled correctly
-      await handleBuyReward(reward.id, reward.cost, isDomReward);
+      // Remove the third parameter that was breaking the function call
+      await handleBuyReward(reward.id, reward.cost);
     } catch (error) {
       logger.error('Error buying reward:', error);
     } finally {
@@ -201,4 +200,3 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
 };
 
 export default RewardCard;
-

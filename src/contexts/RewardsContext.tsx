@@ -2,6 +2,9 @@
 import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import { useRewards as useRewardsQuery } from '@/data/queries/useRewards';
 import { useBuySubReward, useBuyDomReward, useRedeemSubReward, useRedeemDomReward } from '@/data/rewards/mutations';
+import { usePoints } from '@/data/points/useUserPointsQuery';
+import { useDomPoints } from '@/data/points/useUserDomPointsQuery';
+import { useUserIds } from '@/contexts/UserIdsContext';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './auth';
 import { logger } from '@/lib/logger';
@@ -12,17 +15,22 @@ interface RewardsContextType {
   handleUseReward: (rewardId: string) => Promise<void>;
   refreshPointsFromDatabase: () => Promise<void>;
   checkAndReloadRewards: () => Promise<void>;
+  totalPoints: number;
+  domPoints: number;
 }
 
 const RewardsContext = createContext<RewardsContextType | undefined>(undefined);
 
 export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const { subUserId, domUserId } = useUserIds();
+  const { data: totalPoints = 0 } = usePoints(subUserId);
+  const { data: domPoints = 0 } = useDomPoints(domUserId);
   const buySubRewardMutation = useBuySubReward();
   const buyDomRewardMutation = useBuyDomReward();
   const redeemSubRewardMutation = useRedeemSubReward();
   const redeemDomRewardMutation = useRedeemDomReward();
-  const { refetch: refetchRewards } = useRewardsQuery();
+  const { refetch: refetchRewards, data: rewardsData } = useRewardsQuery();
 
   const refreshPointsFromDatabase = async () => {
     try {
@@ -54,8 +62,8 @@ export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const handleBuyReward = async (rewardId: string, cost: number) => {
     try {
-      const { data: rewardsData } = await refetchRewards();
-      const reward = rewardsData?.find(r => r.id === rewardId);
+      const { data: rewards } = await refetchRewards();
+      const reward = rewards?.find(r => r.id === rewardId);
       
       if (!reward) {
         toast({
@@ -67,9 +75,19 @@ export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children })
       }
 
       if (reward.is_dom_reward) {
-        await buyDomRewardMutation.mutateAsync({ rewardId, cost });
+        await buyDomRewardMutation.mutateAsync({ 
+          rewardId, 
+          cost, 
+          currentSupply: reward.supply,
+          currentDomPoints: domPoints
+        });
       } else {
-        await buySubRewardMutation.mutateAsync({ rewardId, cost });
+        await buySubRewardMutation.mutateAsync({ 
+          rewardId, 
+          cost, 
+          currentSupply: reward.supply,
+          currentPoints: totalPoints
+        });
       }
     } catch (error) {
       logger.error('[RewardsContext] Error buying reward:', error);
@@ -78,8 +96,8 @@ export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const handleUseReward = async (rewardId: string) => {
     try {
-      const { data: rewardsData } = await refetchRewards();
-      const reward = rewardsData?.find(r => r.id === rewardId);
+      const { data: rewards } = await refetchRewards();
+      const reward = rewards?.find(r => r.id === rewardId);
       
       if (!reward) {
         toast({
@@ -91,9 +109,17 @@ export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children })
       }
 
       if (reward.is_dom_reward) {
-        await redeemDomRewardMutation.mutateAsync(rewardId);
+        await redeemDomRewardMutation.mutateAsync({ 
+          rewardId, 
+          currentSupply: reward.supply,
+          profileId: domUserId || ''
+        });
       } else {
-        await redeemSubRewardMutation.mutateAsync(rewardId);
+        await redeemSubRewardMutation.mutateAsync({ 
+          rewardId, 
+          currentSupply: reward.supply,
+          profileId: subUserId || ''
+        });
       }
     } catch (error) {
       logger.error('[RewardsContext] Error using reward:', error);
@@ -105,6 +131,8 @@ export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children })
     handleUseReward,
     refreshPointsFromDatabase,
     checkAndReloadRewards,
+    totalPoints,
+    domPoints,
   };
 
   return (
