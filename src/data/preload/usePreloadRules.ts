@@ -1,19 +1,17 @@
 
-import { currentWeekKey, resetTaskCompletions } from "@/lib/taskUtils";
 import { loadRulesFromDB } from "../indexedDB/useIndexedDB";
 import { queryClient } from "../queryClient";
 import { RULES_QUERY_KEY } from "../rules/queries";
 import { logger } from '@/lib/logger';
 import { Rule } from "@/data/rules/types";
+import { checkAndPerformRuleResets } from "@/lib/rulesUtils";
 
 export function usePreloadRules() {
   return async (): Promise<null> => {
     try {
-      // Check for weekly reset before loading data
-      if (localStorage.getItem("lastWeek") !== currentWeekKey()) {
-        await resetTaskCompletions("weekly");
-        localStorage.setItem("lastWeek", currentWeekKey());
-      }
+      // Check and perform rule resets before loading cached data
+      // This ensures we don't load stale violation data
+      await checkAndPerformRuleResets();
 
       const data = await loadRulesFromDB();
       if (data && Array.isArray(data) && data.length > 0) {
