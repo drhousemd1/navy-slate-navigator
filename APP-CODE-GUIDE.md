@@ -328,7 +328,6 @@ export const architectureContract: PageConfig[] = [
       "<AppLayout>, <ErrorBoundary>, <PunishmentList>, listens for 'add-new-punishment' event to open <PunishmentEditor>",
   },
 ];
-```
 
 ## Critical System Components
 
@@ -505,6 +504,69 @@ useEffect(() => {
   }
 }, []);
 ```
+
+### 7. Tasks Page: Frequency Tracker & Reset System
+
+**Location**: Multiple files coordinated for task reset functionality
+
+**TASKS PAGE: FREQUENCY-TRACKER RESET**
+**——————————————————————————————————————**
+
+#### 1. DAILY & WEEKLY TRIGGER (on Tasks page load)
+   • Compute keys:
+       const today = todayKey();          // "YYYY-MM-DD"
+       const week  = currentWeekKey();    // "YYYY-Www"
+   • If localStorage.getItem("lastDaily") !== today:
+       ▶ resetTaskCompletions("daily");
+       ▶ localStorage.setItem("lastDaily", today);
+   • If localStorage.getItem("lastWeek") !== week:
+       ▶ resetTaskCompletions("weekly");
+       ▶ localStorage.setItem("lastWeek", week);
+
+#### 2. RESET TASK COMPLETIONS (in src/lib/taskUtils.ts)
+   async function resetTaskCompletions(frequency) {
+     // Supabase & IndexedDB UPDATE for current user:
+     //   UPDATE tasks
+     //     SET completed = false,
+     //         last_completed_date = null,
+     //         usage_data = []
+     //   WHERE frequency = $1 AND user_id = $2;
+     // Returns array of reset task IDs for logging.
+   }
+
+#### 3. HOOK: checkAndReloadTasks (in src/hooks/useTasksData.ts)
+   export async function checkAndReloadTasks() {
+     const didReset = await checkAndPerformTaskResets();  // handles localStorage logic + calls resetTaskCompletions()
+     if (didReset) {
+       const freshData = await loadTasksFromDB();         // read post-reset tasks from IndexedDB
+       queryClient.setQueryData(['tasks'], freshData);    // overwrite React Query cache
+     }
+   }
+
+#### 4. PAGE-LEVEL EFFECT (in src/pages/Tasks.tsx)
+   const { user } = useAuthContext();
+   const { checkAndReloadTasks } = useTasksData();
+
+   useEffect(() => {
+     if (user) {
+       checkAndReloadTasks();
+     }
+   }, [user, checkAndReloadTasks]);
+
+#### 5. VISUAL: FrequencyTracker Component (in src/components/task/FrequencyTracker.tsx)
+   • Always render 7 circles (Mon–Sun).
+   • If usage_data.length === 0 → all circles empty.
+   • If usage_data[i] > 0 → that day's circle is "filled"; otherwise empty.
+   • Highlight "today" circle using getCurrentDayOfWeek() index.
+
+#### GOLDEN RULE SUMMARY:
+  - ALWAYS run resetTaskCompletions for "daily" and "weekly" on Tasks page load if localStorage keys are missing or outdated.
+  - ALWAYS reset ALL tasks matching that frequency: set completed=false, last_completed_date=null, usage_data=[].
+  - ALWAYS sync Supabase → IndexedDB → React Query cache immediately after reset.
+  - ALWAYS update localStorage keys (lastDaily, lastWeek) immediately after a successful reset.
+  - NEVER allow stale usage_data to persist: if usage_data === [], FrequencyTracker must render all circles empty.
+
+**⚠️ DO NOT MODIFY** this reset system without understanding the full data flow and sync strategy.
 
 ## 🚨 CRITICAL RULES - NEVER BREAK THESE
 
