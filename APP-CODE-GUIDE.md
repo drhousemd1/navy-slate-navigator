@@ -568,6 +568,52 @@ useEffect(() => {
 
 **⚠️ DO NOT MODIFY** this reset system without understanding the full data flow and sync strategy.
 
+### 8. Rules, Rewards, Punishments Pages: Weekly Tracker Reset System
+
+**Location**: Multiple files coordinated for weekly reset functionality across all tracker pages
+
+**UNIVERSAL WEEKLY RESET PATTERN**
+**——————————————————————————————————————**
+
+#### 1. WEEKLY TRIGGER (on page load for Rules, Rewards, Punishments)
+   • Compute key: const week = currentWeekKey(); // "YYYY-Www"
+   • Rules: If localStorage.getItem("lastRulesWeek") !== week:
+       ▶ resetRulesUsageData(); ▶ localStorage.setItem("lastRulesWeek", week);
+   • Rewards: If localStorage.getItem("lastRewardsWeek") !== week:
+       ▶ resetRewardsUsageData(); ▶ localStorage.setItem("lastRewardsWeek", week);
+   • Punishments: If localStorage.getItem("lastPunishmentsWeek") !== week:
+       ▶ resetPunishmentsUsageData(); ▶ localStorage.setItem("lastPunishmentsWeek", week);
+
+#### 2. RESET FUNCTIONS (in src/lib/rulesUtils.ts, rewardsUtils.ts, punishmentsUtils.ts)
+   • Rules: resetRulesUsageData() → UPDATE rules SET usage_data = [] WHERE user_id = $1;
+   • Rewards: resetRewardsUsageData() → DELETE FROM reward_usage WHERE user_id = $1 AND week_number = $2;
+   • Punishments: resetPunishmentsUsageData() → DELETE FROM punishment_history WHERE user_id = $1 AND applied_date >= week_start;
+
+#### 3. DATA HOOKS (in src/data/hooks/useRulesData.ts, src/data/rewards/useRewardsData.ts)
+   • checkAndReloadRules(), checkAndReloadRewards(), checkAndReloadPunishments()
+   • Pattern: reset check → invalidate React Query → reload IndexedDB → update cache → refetch
+
+#### 4. PAGE-LEVEL EFFECTS (in src/pages/Rules.tsx, Rewards.tsx, Punishments.tsx)
+   useEffect(() => {
+     if (user) {
+       checkAndReload[PageType]();
+     }
+   }, [user, checkAndReload[PageType]]);
+
+#### 5. PRELOAD INTEGRATION (src/data/preload/usePreload*.ts)
+   • All preload functions now call their respective reset checks before loading cached data
+   • Ensures fresh state on app startup
+
+#### UNIVERSAL RESET GOLDEN RULES:
+  - ALWAYS run weekly reset checks on page load when user is authenticated
+  - ALWAYS clear tracker data: Rules (usage_data=[]), Rewards (delete usage records), Punishments (delete history records)
+  - ALWAYS sync Supabase → IndexedDB → React Query cache immediately after reset
+  - ALWAYS update localStorage week keys (lastRulesWeek, lastRewardsWeek, lastPunishmentsWeek) after successful reset
+  - NEVER allow stale tracker data to persist across week boundaries
+  - ALL tracker calendars must show empty circles when data is reset
+
+**⚠️ DO NOT MODIFY** these reset systems without understanding the full data flow and sync strategy across all pages.
+
 ## 🚨 CRITICAL RULES - NEVER BREAK THESE
 
 ### 1. IndexedDB Functions

@@ -1,18 +1,17 @@
 
-import { currentWeekKey, resetTaskCompletions } from "@/lib/taskUtils";
 import { loadPunishmentsFromDB } from "../indexedDB/useIndexedDB";
 import { queryClient } from "../queryClient";
 import { PUNISHMENTS_QUERY_KEY } from "@/data/punishments/queries";
 import { logger } from '@/lib/logger';
+import { checkAndPerformPunishmentsResets } from "@/lib/punishmentsUtils";
 
 export function usePreloadPunishments() {
   return async () => {
-    if (localStorage.getItem("lastWeek") !== currentWeekKey()) {
-      await resetTaskCompletions("weekly");
-      localStorage.setItem("lastWeek", currentWeekKey());
-    }
-    logger.debug('[PreloadPunishments] Attempting to load punishments from IndexedDB...');
     try {
+      // Check and perform resets if needed
+      await checkAndPerformPunishmentsResets();
+      
+      logger.debug('[PreloadPunishments] Attempting to load punishments from IndexedDB...');
       const data = await loadPunishmentsFromDB();
       if (data && Array.isArray(data) && data.length > 0) {
         queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, data);
