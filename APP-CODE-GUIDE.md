@@ -66,8 +66,8 @@
  *    – React Query key: ['rewards'], staleTime=Infinity, gcTime=30m, retry=1
  * • Card Component: src/components/RewardCard.tsx
  *    – Title, subtext, icon, bg image, cost badge, supply badge, calendar tracker
- *    – “Buy” button (blue/red) → useBuySubReward mutation; deduct Submissive points via usePointsManager; inc supply
- *    – “Use” icon when supply>0 → useRedeemReward mutation; fill calendar
+ *    – "Buy" button (blue/red) → useBuySubReward mutation; deduct Submissive points via usePointsManager; inc supply
+ *    – "Use" icon when supply>0 → useRedeemReward mutation; fill calendar
  *    – Border color: Submissive (#00F0FF) or Dominant (#FF0000)
  * • Editor Modal: src/components/RewardEditor.tsx
  *    – Fields: title, subtext, cost (+/–), type toggle, icon, bg image, colors, highlighter
@@ -80,7 +80,7 @@
  *    – React Query key: ['punishments'], staleTime=Infinity, gcTime=1h, retry=1
  * • Card Component: src/components/PunishmentCard.tsx
  *    – Title, subtext, icon, bg image, calendar tracker
- *    – “Punish” button (red) → applyPunishmentMutation; updates DOM/Sub points via usePointsManager
+ *    – "Punish" button (red) → applyPunishmentMutation; updates DOM/Sub points via usePointsManager
  *    – Badges: DOM points earned, Sub points lost
  * • Editor Modal: src/components/PunishmentEditor.tsx
  *    – Fields: title, subtext, DOM points (+/–), Sub points (+/–), icon, bg image, colors, highlighter
@@ -599,6 +599,60 @@ useEffect(() => {
 - **NEVER** remove `onSuccessCallback` from mutations
 - **NEVER** skip IndexedDB updates in mutation success handlers
 - **NEVER** remove sync time updates
+
+### 7. 🚫 NO LOADING SCREENS POLICY - ABSOLUTELY CRITICAL
+- **NEVER** add loading screens, loading spinners, or "Loading..." text anywhere in the app
+- **NEVER** show loading states that block or replace the actual UI content
+- **NEVER** use conditional rendering based on loading states that hide content
+- **NEVER** add components like `<LoadingSpinner />`, `<LoadingScreen />`, or similar
+- **NEVER** show "Please wait...", "Loading session...", "Restoring data..." or any loading messages
+- **NEVER** use `if (loading) return <LoadingComponent />` patterns anywhere
+
+#### ✅ CORRECT APPROACH - IMMEDIATE UI RENDERING:
+- **ALWAYS** render the actual UI immediately, even if data is still loading
+- **ALWAYS** let data load in the background while showing the real interface
+- **ALWAYS** use empty states, skeleton placeholders, or show cached data while loading fresh data
+- **ALWAYS** make components render their UI structure immediately
+- **ALWAYS** handle loading states gracefully without blocking the user interface
+
+#### 🚫 EXAMPLES OF WHAT TO NEVER DO:
+```typescript
+// ❌ NEVER DO THIS - Loading screens that block UI
+if (loading) {
+  return <div>Loading...</div>;
+}
+
+// ❌ NEVER DO THIS - Loading spinners that replace content
+if (isLoading) {
+  return <LoadingSpinner />;
+}
+
+// ❌ NEVER DO THIS - Loading messages
+{loading && <div>Please wait, loading data...</div>}
+```
+
+#### ✅ EXAMPLES OF CORRECT PATTERNS:
+```typescript
+// ✅ ALWAYS DO THIS - Render UI immediately with fallbacks
+return (
+  <div>
+    <Header />
+    <TasksList tasks={tasks || []} />
+    {error && <ErrorMessage />}
+  </div>
+);
+
+// ✅ ALWAYS DO THIS - Show content immediately, load in background
+const { data: tasks = [] } = useQuery({ ... });
+return <TasksList tasks={tasks} />;
+```
+
+#### ENFORCEMENT:
+- This is a **NON-NEGOTIABLE** architectural decision
+- Any code that shows loading screens instead of immediate UI is considered **BROKEN**
+- The app must **ALWAYS** show the actual user interface immediately
+- Loading must happen in the background without blocking or hiding the UI
+- This rule applies to **ALL** components, pages, hooks, and any new features
 
 ## Troubleshooting Common Issues
 
