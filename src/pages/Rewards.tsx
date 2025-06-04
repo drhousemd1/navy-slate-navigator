@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 
 import { useRewards } from '@/contexts/RewardsContext';
 import { logger } from '@/lib/logger';
+import { useAuth } from '@/contexts/auth';
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
@@ -32,7 +33,15 @@ const RewardsContent: React.FC<{
   const deleteRewardMutation = useDeleteRewardMutation();
   
   // Use context functions instead of direct mutations
-  const { handleBuyReward, handleUseReward } = useRewards();
+  const { handleBuyReward, handleUseReward, checkAndReloadRewards } = useRewards();
+  const { user } = useAuth();
+
+  // Check and reload rewards when user is authenticated
+  useEffect(() => {
+    if (user?.id) {
+      checkAndReloadRewards();
+    }
+  }, [user?.id, checkAndReloadRewards]);
 
   const handleAddNewReward = () => {
     setRewardBeingEdited(undefined);

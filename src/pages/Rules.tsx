@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
@@ -14,12 +13,14 @@ import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
+import { useRulesData } from '@/data/hooks/useRulesData';
 
 const RulesPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { checkAndReloadRules } = useRulesData();
 
   const { 
     data: rules = [], 
@@ -32,6 +33,13 @@ const RulesPageContent: React.FC = () => {
   const { mutateAsync: updateRuleMutation } = useUpdateRule();
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
   const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation();
+
+  // Check and reload rules when user is authenticated
+  useEffect(() => {
+    if (user?.id) {
+      checkAndReloadRules();
+    }
+  }, [user?.id, checkAndReloadRules]);
 
   const handleAddRule = () => {
     setCurrentRule(null);
