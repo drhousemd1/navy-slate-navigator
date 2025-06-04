@@ -1,151 +1,197 @@
-
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
-import { useRewards as useRewardsQuery } from '@/data/queries/useRewards';
-import { useBuySubReward, useBuyDomReward, useRedeemSubReward, useRedeemDomReward } from '@/data/rewards/mutations';
-import { usePoints } from '@/data/points/useUserPointsQuery';
-import { useDomPoints } from '@/data/points/useUserDomPointsQuery';
-import { useUserIds } from '@/contexts/UserIdsContext';
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
+import { RewardsContextType, SaveRewardParams } from './rewards/rewardTypes';
+import { useRewardsData } from '@/data/rewards/useRewardsData';
+import { Reward } from '@/data/rewards/types';
+import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from './auth';
+import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import { resetRewardsUsageData, currentWeekKey } from '@/lib/rewardsUtils';
 
-interface RewardsContextType {
-  handleBuyReward: (rewardId: string, cost: number) => Promise<void>;
-  handleUseReward: (rewardId: string) => Promise<void>;
-  refreshPointsFromDatabase: () => Promise<void>;
-  checkAndReloadRewards: () => Promise<void>;
-  totalPoints: number;
-  domPoints: number;
-}
+const mockQueryResult: QueryObserverResult<Reward[], Error> = {
+  data: [],
+  error: null,
+  isError: false as const,
+  isSuccess: true as const,
+  isLoading: false as const,
+  isPending: false as const,
+  isLoadingError: false as const,
+  isRefetchError: false as const,
+  failureCount: 0,
+  failureReason: null,
+  status: 'success' as const,
+  fetchStatus: 'idle' as const,
+  dataUpdatedAt: Date.now(),
+  errorUpdatedAt: 0,
+  isFetched: true,
+  isFetchedAfterMount: true,
+  isFetching: false,
+  isPlaceholderData: false,
+  isRefetching: false,
+  isStale: false,
+  errorUpdateCount: 0,
+  isInitialLoading: false,
+  isPaused: false,
+  refetch: async () => mockQueryResult,
+  promise: Promise.resolve([] as Reward[])
+};
 
-const RewardsContext = createContext<RewardsContextType | undefined>(undefined);
+const RewardsContext = createContext<RewardsContextType>({
+  rewards: [],
+  totalPoints: 0,
+  totalRewardsSupply: 0,
+  totalDomRewardsSupply: 0,
+  domPoints: 0,
+  setTotalPoints: async () => {},
+  setDomPoints: async () => {},
+  isLoading: true,
+  refetchRewards: async () => mockQueryResult,
+  handleSaveReward: async () => null,
+  handleDeleteReward: async () => false,
+  handleBuyReward: async () => {},
+  handleUseReward: async () => {},
+  refreshPointsFromDatabase: async () => {},
+});
 
-export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const { subUserId, domUserId } = useUserIds();
-  const { data: totalPoints = 0 } = usePoints(subUserId);
-  const { data: domPoints = 0 } = useDomPoints(domUserId);
-  const buySubRewardMutation = useBuySubReward();
-  const buyDomRewardMutation = useBuyDomReward();
-  const redeemSubRewardMutation = useRedeemSubReward();
-  const redeemDomRewardMutation = useRedeemDomReward();
-  const { refetch: refetchRewards, data: rewardsData } = useRewardsQuery();
+export const useRewards = () => useContext(RewardsContext);
 
-  const refreshPointsFromDatabase = async () => {
+export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const {
+    rewards,
+    totalPoints,
+    totalRewardsSupply,
+    domPoints = 0,
+    isLoading,
+    saveReward,
+    deleteReward,
+    buyReward,
+    useReward,
+    updatePoints,
+    updateDomPoints,
+    refetchRewards,
+    refreshPointsFromDatabase,
+    totalDomRewardsSupply,
+  } = useRewardsData();
+  
+  useEffect(() => {
+    refreshPointsFromDatabase();
+  }, [refreshPointsFromDatabase]);
+
+  const handleSaveReward = async (rewardData: Partial<Reward>, index: number | null): Promise<string | null> => {
+    logger.debug("RewardsContext - handleSaveReward called with data:", rewardData, "index:", index);
     try {
-      await refetchRewards();
-      logger.debug('[RewardsContext] Points refreshed from database');
+      const params: SaveRewardParams = { rewardData, currentIndex: index };
+      if (rewardData.id && index !== null) {
+         params.rewardData = { ...rewardData, id: rewardData.id };
+      } else if (!rewardData.id && index === null) {
+        // ID is not needed for creation
+      }
+
+      const savedReward = await saveReward(params);
+      return savedReward?.id || null;
     } catch (error) {
-      logger.error('[RewardsContext] Error refreshing points:', error);
+      logger.error("Error in RewardsContext handleSaveReward:", error);
+      return null;
     }
   };
 
-  const checkAndReloadRewards = async (): Promise<void> => {
-    if (!user?.id) return;
+  const handleDeleteReward = async (index: number): Promise<boolean> => {
+    const rewardToDelete = rewards[index];
+    if (!rewardToDelete?.id) {
+      toast({ title: "Error", description: "Reward ID not found for deletion.", variant: "destructive" });
+      return false;
+    }
+    try {
+      await deleteReward(rewardToDelete.id);
+      return true;
+    } catch (error) {
+      logger.error("Error in RewardsContext handleDeleteReward:", error);
+      return false;
+    }
+  };
+
+  const handleBuyRewardWrapper = async (id: string, cost: number) => {
+    const reward = rewards.find(r => r.id === id);
+    if (!reward) {
+        toast({ title: "Reward not found", description: "Cannot buy a non-existent reward.", variant: "destructive" });
+        return;
+    }
     
     try {
-      const lastWeek = localStorage.getItem("lastWeek");
-      const currentWeek = currentWeekKey();
-      
-      if (lastWeek !== currentWeek) {
-        logger.debug('[checkAndReloadRewards] New week detected, resetting rewards usage data');
-        await resetRewardsUsageData(user.id);
-        localStorage.setItem("lastWeek", currentWeek);
-        await refetchRewards();
-        logger.debug('[checkAndReloadRewards] Rewards reset completed');
-      }
+        logger.debug("RewardsContext - buying reward:", { id, cost, isDom: reward.is_dom_reward });
+        await buyReward({ rewardId: id, cost });
     } catch (error) {
-      logger.error('[checkAndReloadRewards] Error checking/reloading rewards:', error);
+        logger.error("Error in RewardsContext handleBuyRewardWrapper:", error);
     }
   };
 
-  const handleBuyReward = async (rewardId: string, cost: number) => {
-    try {
-      const { data: rewards } = await refetchRewards();
-      const reward = rewards?.find(r => r.id === rewardId);
-      
-      if (!reward) {
-        toast({
-          title: "Error",
-          description: "Reward not found",
-          variant: "destructive",
-        });
+  const handleUseRewardWrapper = async (id: string) => {
+     const reward = rewards.find(r => r.id === id);
+    if (!reward) {
+        toast({ title: "Reward not found", description: "Cannot use a non-existent reward.", variant: "destructive" });
         return;
-      }
-
-      if (reward.is_dom_reward) {
-        await buyDomRewardMutation.mutateAsync({ 
-          rewardId, 
-          cost, 
-          currentSupply: reward.supply,
-          currentDomPoints: domPoints
-        });
-      } else {
-        await buySubRewardMutation.mutateAsync({ 
-          rewardId, 
-          cost, 
-          currentSupply: reward.supply,
-          currentPoints: totalPoints
-        });
-      }
-    } catch (error) {
-      logger.error('[RewardsContext] Error buying reward:', error);
     }
-  };
-
-  const handleUseReward = async (rewardId: string) => {
+    
     try {
-      const { data: rewards } = await refetchRewards();
-      const reward = rewards?.find(r => r.id === rewardId);
-      
-      if (!reward) {
-        toast({
-          title: "Error",
-          description: "Reward not found",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (reward.is_dom_reward) {
-        await redeemDomRewardMutation.mutateAsync({ 
-          rewardId, 
-          currentSupply: reward.supply,
-          profileId: domUserId || ''
-        });
-      } else {
-        await redeemSubRewardMutation.mutateAsync({ 
-          rewardId, 
-          currentSupply: reward.supply,
-          profileId: subUserId || ''
-        });
-      }
+        logger.debug("RewardsContext - using reward:", { id, isDom: reward.is_dom_reward });
+        await useReward({ rewardId: id });
     } catch (error) {
-      logger.error('[RewardsContext] Error using reward:', error);
+        logger.error("Error in RewardsContext handleUseRewardWrapper:", error);
+    }
+  };
+  
+  const setTotalPointsWrapper = async (points: number) => {
+    try {
+      await updatePoints(points);
+    } catch (error) {
+      logger.error("Error setting total points:", error);
+      await refreshPointsFromDatabase(); 
     }
   };
 
-  const contextValue: RewardsContextType = {
-    handleBuyReward,
-    handleUseReward,
-    refreshPointsFromDatabase,
-    checkAndReloadRewards,
+  const setDomPointsWrapper = async (points: number) => {
+    try {
+      await updateDomPoints(points);
+    } catch (error) {
+      logger.error("Error setting dom points:", error);
+      await refreshPointsFromDatabase();
+    }
+  };
+
+  const value = useMemo(() => ({
+    rewards,
     totalPoints,
+    totalRewardsSupply,
+    totalDomRewardsSupply,
     domPoints,
-  };
+    setTotalPoints: setTotalPointsWrapper,
+    setDomPoints: setDomPointsWrapper,
+    isLoading,
+    refetchRewards,
+    handleSaveReward,
+    handleDeleteReward,
+    handleBuyReward: handleBuyRewardWrapper,
+    handleUseReward: handleUseRewardWrapper,
+    refreshPointsFromDatabase,
+  }), [
+    rewards, 
+    totalPoints, 
+    totalRewardsSupply, 
+    totalDomRewardsSupply, 
+    domPoints, 
+    isLoading, 
+    refetchRewards, 
+    refreshPointsFromDatabase,
+    saveReward,
+    deleteReward,
+    buyReward,
+    useReward,
+    updatePoints,
+    updateDomPoints,
+  ]);
 
   return (
-    <RewardsContext.Provider value={contextValue}>
+    <RewardsContext.Provider value={value}>
       {children}
     </RewardsContext.Provider>
   );
-};
-
-export const useRewards = () => {
-  const context = useContext(RewardsContext);
-  if (context === undefined) {
-    throw new Error('useRewards must be used within a RewardsProvider');
-  }
-  return context;
 };

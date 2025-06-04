@@ -1,6 +1,5 @@
 
-import { currentWeekKey } from "@/lib/taskUtils";
-import { resetRewardsUsageData } from "@/lib/rewardsUtils";
+import { currentWeekKey, resetTaskCompletions } from "@/lib/taskUtils";
 import { queryClient } from "../queryClient";
 import { loadRewardsFromDB, saveRewardsToDB, getLastSyncTimeForRewards, setLastSyncTimeForRewards } from "../indexedDB/useIndexedDB";
 import { logger } from "@/lib/logger";
@@ -8,7 +7,6 @@ import { getErrorMessage } from "@/lib/errors";
 import { Reward } from '@/data/rewards/types';
 import { fetchRewards, REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { useAuth } from '@/contexts/auth';
 
 // Define an interface for the raw reward data from IndexedDB before migration
 type RawRewardFromDBBeforeMigration = Omit<Reward, 'is_dom_reward'> & {
@@ -17,20 +15,12 @@ type RawRewardFromDBBeforeMigration = Omit<Reward, 'is_dom_reward'> & {
 
 export function usePreloadRewards() {
   const { subUserId, domUserId } = useUserIds();
-  const { user } = useAuth();
   
   return async () => {
     try {
-      // Check for weekly reset
+      // Reset weekly task completions if needed
       if (localStorage.getItem("lastWeek") !== currentWeekKey()) {
-        if (user?.id) {
-          try {
-            await resetRewardsUsageData(user.id);
-            logger.debug('[usePreloadRewards] Rewards usage data reset for new week');
-          } catch (error) {
-            logger.error('[usePreloadRewards] Error resetting rewards usage data:', error);
-          }
-        }
+        await resetTaskCompletions("weekly");
         localStorage.setItem("lastWeek", currentWeekKey());
       }
       

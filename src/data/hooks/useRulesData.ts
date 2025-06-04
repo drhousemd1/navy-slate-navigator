@@ -1,3 +1,4 @@
+
 import { QueryObserverResult } from '@tanstack/react-query';
 import { useRules } from '../rules/queries'; 
 import { Rule } from '@/data/interfaces/Rule';
@@ -5,10 +6,9 @@ import { useCreateRule, useUpdateRule, useDeleteRule, CreateRuleVariables, Updat
 import { useCreateRuleViolation } from '../rules/mutations/useCreateRuleViolation';
 import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors';
+import { logger } from '@/lib/logger'; // Added import
+import { getErrorMessage } from '@/lib/errors'; // Ensure this is imported
 import { useAuth } from '@/contexts/auth';
-import { resetRulesUsageData, currentWeekKey } from '@/lib/rulesUtils';
 
 export interface RulesDataHook {
   rules: Rule[];
@@ -19,7 +19,6 @@ export interface RulesDataHook {
   deleteRule: (ruleId: string) => Promise<boolean>;
   markRuleBroken: (rule: Rule) => Promise<void>;
   refetchRules: () => Promise<QueryObserverResult<Rule[], Error>>;
-  checkAndReloadRules: () => Promise<void>;
 }
 
 export const useRulesData = (): RulesDataHook => {
@@ -42,7 +41,7 @@ export const useRulesData = (): RulesDataHook => {
   useEffect(() => {
     if (error && retryCount < MAX_RETRIES) {
       const timer = setTimeout(() => {
-        logger.debug(`[useRulesData] Retrying after error (${retryCount + 1}/${MAX_RETRIES}):`, error);
+        logger.debug(`[useRulesData] Retrying after error (${retryCount + 1}/${MAX_RETRIES}):`, error); // Replaced console.log
         refetchRules();
         setRetryCount(prev => prev + 1);
       }, Math.min(2000 * Math.pow(2, retryCount), 20000)); // Exponential backoff with max of 20s
@@ -67,25 +66,6 @@ export const useRulesData = (): RulesDataHook => {
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
   const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation();
 
-  const checkAndReloadRules = async (): Promise<void> => {
-    if (!user?.id) return;
-    
-    try {
-      const lastWeek = localStorage.getItem("lastWeek");
-      const currentWeek = currentWeekKey();
-      
-      if (lastWeek !== currentWeek) {
-        logger.debug('[checkAndReloadRules] New week detected, resetting rules usage data');
-        await resetRulesUsageData(user.id);
-        localStorage.setItem("lastWeek", currentWeek);
-        await refetchRules();
-        logger.debug('[checkAndReloadRules] Rules reset completed');
-      }
-    } catch (error) {
-      logger.error('[checkAndReloadRules] Error checking/reloading rules:', error);
-    }
-  };
-
   const saveRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
     try {
       if (ruleData.id) {
@@ -98,7 +78,7 @@ export const useRulesData = (): RulesDataHook => {
 
         const createVariables: CreateRuleVariables = {
           title: ruleData.title || 'Untitled Rule',
-          user_id: user.id,
+          user_id: user.id, // Add the required user_id field
           description: ruleData.description,
           priority: ruleData.priority || 'medium',
           frequency: ruleData.frequency || 'daily',
@@ -117,8 +97,8 @@ export const useRulesData = (): RulesDataHook => {
         };
         return createRuleMutation(createVariables);
       }
-    } catch (e: unknown) {
-      const errorMessage = getErrorMessage(e);
+    } catch (e: unknown) { // Use unknown
+      const errorMessage = getErrorMessage(e); // Use getErrorMessage
       logger.error('[useRulesData] Error saving rule:', errorMessage); 
       toast({
         title: 'Error Saving Rule',
@@ -133,8 +113,8 @@ export const useRulesData = (): RulesDataHook => {
     try {
       await deleteRuleMutation(ruleId);
       return true;
-    } catch (e: unknown) {
-      const errorMessage = getErrorMessage(e);
+    } catch (e: unknown) { // Use unknown
+      const errorMessage = getErrorMessage(e); // Use getErrorMessage
       logger.error('[useRulesData] Error deleting rule:', errorMessage);
       toast({
         title: 'Error Deleting Rule',
@@ -163,8 +143,8 @@ export const useRulesData = (): RulesDataHook => {
         description: `${rule.title} marked as broken. Violation recorded and usage updated.`,
       });
 
-    } catch (e: unknown) {
-      const errorMessage = getErrorMessage(e);
+    } catch (e: unknown) { // Use unknown
+      const errorMessage = getErrorMessage(e); // Use getErrorMessage
       logger.error('[useRulesData] Error marking rule broken:', errorMessage);
       toast({
         title: 'Error',
@@ -184,6 +164,5 @@ export const useRulesData = (): RulesDataHook => {
     deleteRule,
     markRuleBroken,
     refetchRules,
-    checkAndReloadRules,
   };
 };

@@ -1,16 +1,14 @@
+
 import { useState, useCallback, useMemo } from 'react';
 import { useQueryClient, QueryObserverResult } from '@tanstack/react-query';
 import { PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from '@/contexts/punishments/types';
 import { useRewards } from '@/contexts/RewardsContext';
 import { convertToMondayBasedIndex } from '@/lib/utils';
-import { resetPunishmentsUsageData, currentWeekKey } from '@/lib/punishmentsUtils';
-import { useAuth } from '@/contexts/auth';
-import { logger } from '@/lib/logger';
 
 import {
   usePunishmentsQuery,
   usePunishmentHistoryQuery,
-  PUNISHMENTS_QUERY_KEY,
+  PUNISHMENTS_QUERY_KEY, // For direct cache access if needed, though mutations should handle it
   PUNISHMENT_HISTORY_QUERY_KEY
 } from './queries';
 
@@ -19,14 +17,13 @@ import {
   useUpdatePunishment,
   useDeletePunishment,
   useApplyPunishment,
-  CreatePunishmentVariables,
+  CreatePunishmentVariables, // Import variable types
   UpdatePunishmentVariables
 } from './mutations';
 
 export const usePunishmentsData = () => {
   const queryClient = useQueryClient();
-  const { refreshPointsFromDatabase } = useRewards();
-  const { user } = useAuth();
+  const { refreshPointsFromDatabase } = useRewards(); // Still needed for applyPunishment's full impact
 
   // State for random punishment selection
   const [isSelectingRandom, setIsSelectingRandom] = useState(false);
@@ -51,31 +48,12 @@ export const usePunishmentsData = () => {
   const punishments = useMemo(() => punishmentsData, [punishmentsData]);
   const punishmentHistory = useMemo(() => punishmentHistoryData, [punishmentHistoryData]);
 
+
   // --- Mutations ---
   const createPunishmentMutation = useCreatePunishment();
   const updatePunishmentMutation = useUpdatePunishment();
   const deletePunishmentMutation = useDeletePunishment();
   const applyPunishmentMutationHook = useApplyPunishment();
-
-  const checkAndReloadPunishments = useCallback(async (): Promise<void> => {
-    if (!user?.id) return;
-    
-    try {
-      const lastWeek = localStorage.getItem("lastWeek");
-      const currentWeek = currentWeekKey();
-      
-      if (lastWeek !== currentWeek) {
-        logger.debug('[checkAndReloadPunishments] New week detected, resetting punishments usage data');
-        await resetPunishmentsUsageData(user.id);
-        localStorage.setItem("lastWeek", currentWeek);
-        await refetchPunishments();
-        await refetchHistory();
-        logger.debug('[checkAndReloadPunishments] Punishments reset completed');
-      }
-    } catch (error) {
-      logger.error('[checkAndReloadPunishments] Error checking/reloading punishments:', error);
-    }
-  }, [user?.id, refetchPunishments, refetchHistory]);
 
   const savePunishment = useCallback(async (punishmentData: CreatePunishmentVariables | UpdatePunishmentVariables) => {
     if ('id' in punishmentData && punishmentData.id) {
@@ -90,7 +68,14 @@ export const usePunishmentsData = () => {
 
   const applyPunishment = useCallback(async (args: ApplyPunishmentArgs) => {
     await applyPunishmentMutationHook.mutateAsync(args);
+    // refreshPointsFromDatabase was originally in onSuccess of applyPunishment.
+    // The useApplyPunishment hook's onSuccess now handles invalidations.
+    // For direct refreshPointsFromDatabase, it might be better called after the mutation completes.
+    // Or ensure CRITICAL_QUERY_KEYS.PROFILE invalidation correctly triggers points refresh elsewhere.
+    // For now, let's assume invalidation is sufficient. If direct refresh is critical, it can be added here.
+    // await refreshPointsFromDatabase(); // Decided to rely on invalidation by useApplyPunishment hook
   }, [applyPunishmentMutationHook]);
+
 
   // --- Helper Functions ---
   const getPunishmentById = useCallback((id: string): PunishmentData | undefined => {
@@ -107,6 +92,7 @@ export const usePunishmentsData = () => {
     const randomIndex = Math.floor(Math.random() * punishments.length);
     const randomPunishment = punishments[randomIndex];
     setSelectedPunishment(randomPunishment);
+    // setIsSelectingRandom(false) should be handled by the component using this
     return randomPunishment;
   }, [punishments]);
   
@@ -140,7 +126,7 @@ export const usePunishmentsData = () => {
     errorPunishments,
     refetchPunishments: refetchPunishments as () => Promise<QueryObserverResult<PunishmentData[], Error>>,
 
-    punishmentHistory,
+    punishmentHistory, // Expose the raw history
     isLoadingHistory,
     errorHistory,
     refetchHistory: refetchHistory as () => Promise<QueryObserverResult<PunishmentHistoryItem[], Error>>,
@@ -150,13 +136,12 @@ export const usePunishmentsData = () => {
     applyPunishment,
 
     getPunishmentById,
-    getPunishmentHistory,
+    getPunishmentHistory, // Expose this for specific history needs
     selectRandomPunishment,
     isSelectingRandom,
     setIsSelectingRandom,
     selectedPunishment,
     setSelectedPunishment,
     recentlyAppliedPunishments,
-    checkAndReloadPunishments,
   };
 };
