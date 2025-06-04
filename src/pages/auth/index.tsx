@@ -22,10 +22,11 @@ const Auth: React.FC = () => {
     }
   }, [location.pathname, location.state]);
 
+  // Show minimal loading only if truly needed
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
-        <p className="text-white">Loading...</p>
+        <div className="text-white text-lg">Loading...</div>
       </div>
     );
   }
