@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -137,6 +136,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               frequency_count={frequency_count} 
               calendar_color={calendar_color}
               usage_data={usage_data}
+              isRuleTracker={false} // Mark this as a task tracker
             />
           )}
           

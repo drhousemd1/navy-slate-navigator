@@ -8,13 +8,15 @@ interface FrequencyTrackerProps {
   frequency_count: number;
   calendar_color: string;
   usage_data?: number[]; // Array to track specific day usage
+  isRuleTracker?: boolean; // New prop to identify if this is for Rules
 }
 
 const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({ 
   frequency, 
   frequency_count, 
   calendar_color,
-  usage_data
+  usage_data,
+  isRuleTracker = false
 }) => {
   // Get the current day of the week (0 = Monday, 6 = Sunday)
   const currentDayOfWeek = getMondayBasedDay();
@@ -36,20 +38,24 @@ const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({
         if (usage_data.length === 7) {
           isUsed = usage_data[i] > 0;
         } else if (usage_data.length === 0) {
-          // Fixed: Empty array means no violations/completions for Rules
+          // Empty array means no violations/completions
           isUsed = false;
         } else {
           // Legacy timestamp-based data (Tasks) - fallback to old logic
           isUsed = usage_data.length > 0 && i < usage_data.length && usage_data[i] > 0;
         }
       } else {
-        // Fixed: When usage_data is undefined/null, show based on frequency count only for Tasks
-        if (frequency === 'daily') {
-          // For daily tasks without usage data, show based on frequency count
-          isUsed = i < frequency_count;
+        // When usage_data is undefined/null
+        if (isRuleTracker) {
+          // For Rules: never use frequency_count, always show empty if no usage_data
+          isUsed = false;
         } else {
-          // For weekly tasks, use the frequency count
-          isUsed = i < frequency_count;
+          // For Tasks: use frequency_count fallback
+          if (frequency === 'daily') {
+            isUsed = i < frequency_count;
+          } else {
+            isUsed = i < frequency_count;
+          }
         }
       }
       
