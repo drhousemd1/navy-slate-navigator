@@ -23,7 +23,8 @@ const Tasks: React.FC = () => {
     error,
     isUsingCachedData,
     saveTask,
-    deleteTask
+    deleteTask,
+    checkAndReloadTasks
   } = useTasksData();
 
   // Debug logging for development
@@ -38,6 +39,13 @@ const Tasks: React.FC = () => {
       error: error?.message
     });
   }, [user, subUserId, domUserId, isLoadingUserIds, tasks, isLoading, error]);
+
+  // Check for task resets on page load when user is available
+  useEffect(() => {
+    if (user) {
+      checkAndReloadTasks();
+    }
+  }, [user, checkAndReloadTasks]);
 
   const handleCreateTask = () => {
     setEditingTask(null);
