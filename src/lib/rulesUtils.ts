@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { loadRulesFromDB, saveRulesToDB } from '@/data/indexedDB/useIndexedDB';
+import { todayKey, currentWeekKey } from '@/lib/taskUtils';
 
 /**
  * Reset rule usage data for rules with specified frequency
@@ -79,28 +80,27 @@ export const resetRuleUsageData = async (frequency: 'daily' | 'weekly'): Promise
  */
 export const checkAndPerformRuleResets = async (): Promise<boolean> => {
   try {
-    const now = new Date();
-    const currentWeek = getWeekNumber(now);
-    const currentDay = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const currentDaily = todayKey();
+    const currentWeekly = currentWeekKey();
     
-    const lastDailyReset = localStorage.getItem('lastDailyRuleReset');
-    const lastWeeklyReset = localStorage.getItem('lastWeeklyRuleReset');
+    const lastDaily = localStorage.getItem('lastDaily');
+    const lastWeekly = localStorage.getItem('lastWeek');
 
     let resetPerformed = false;
 
     // Check for daily reset
-    if (lastDailyReset !== currentDay) {
+    if (lastDaily !== currentDaily) {
       logger.debug('[checkAndPerformRuleResets] Performing daily rule reset');
       await resetRuleUsageData('daily');
-      localStorage.setItem('lastDailyRuleReset', currentDay);
+      localStorage.setItem('lastDaily', currentDaily);
       resetPerformed = true;
     }
 
-    // Check for weekly reset (reset on Monday)
-    if (lastWeeklyReset !== currentWeek.toString()) {
+    // Check for weekly reset
+    if (lastWeekly !== currentWeekly) {
       logger.debug('[checkAndPerformRuleResets] Performing weekly rule reset');
       await resetRuleUsageData('weekly');
-      localStorage.setItem('lastWeeklyRuleReset', currentWeek.toString());
+      localStorage.setItem('lastWeek', currentWeekly);
       resetPerformed = true;
     }
 
@@ -110,15 +110,4 @@ export const checkAndPerformRuleResets = async (): Promise<boolean> => {
     // Don't throw - we don't want to break the app if reset fails
     return false;
   }
-};
-
-/**
- * Get ISO week number for a given date
- */
-const getWeekNumber = (date: Date): number => {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 };
