@@ -73,8 +73,6 @@ export const useRulesData = () => {
           user_id: user.id,
           description: ruleData.description,
           priority: ruleData.priority || 'medium',
-          frequency: ruleData.frequency || 'daily',
-          frequency_count: ruleData.frequency_count || 1,
           icon_name: ruleData.icon_name,
           icon_url: ruleData.icon_url,
           icon_color: ruleData.icon_color || '#FFFFFF',

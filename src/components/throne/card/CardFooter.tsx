@@ -22,7 +22,6 @@ const CardFooter: React.FC<CardFooterProps> = ({
         frequency_count={2} 
         calendar_color={calendarColor}
         usage_data={usageData}
-        isRuleTracker={false} // Mark this as not a rule tracker
       />
       
       <Button

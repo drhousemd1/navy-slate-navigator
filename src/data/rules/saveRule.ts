@@ -23,8 +23,6 @@ export const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
         highlight_effect: ruleData.highlight_effect,
         focal_point_x: ruleData.focal_point_x,
         focal_point_y: ruleData.focal_point_y,
-        frequency: ruleData.frequency,
-        frequency_count: ruleData.frequency_count,
         updated_at: new Date().toISOString()
       })
       .eq('id', ruleData.id)
@@ -56,8 +54,6 @@ export const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
       highlight_effect: ruleWithoutId.highlight_effect || false,
       focal_point_x: ruleWithoutId.focal_point_x || 50,
       focal_point_y: ruleWithoutId.focal_point_y || 50,
-      frequency: ruleWithoutId.frequency || 'daily',
-      frequency_count: ruleWithoutId.frequency_count || 3,
       usage_data: [0, 0, 0, 0, 0, 0, 0],
       ...(ruleWithoutId.description && { description: ruleWithoutId.description }),
       ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
@@ -82,4 +78,3 @@ export const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
     return data as Rule;
   }
 };
-
