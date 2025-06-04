@@ -35,25 +35,27 @@ export const useRulesData = () => {
   const checkAndReloadRules = useCallback(async () => {
     try {
       logger.debug('[useRulesData] Checking for rule resets');
-      
-      await checkAndPerformRuleResets();
-      
-      logger.debug('[useRulesData] Resets performed, invalidating cache and reloading fresh data');
-      
-      // Force complete cache invalidation for rules
-      await queryClient.invalidateQueries({ queryKey: ['rules'] });
-      
-      // Reload fresh data from IndexedDB after resets
-      const freshData = await loadRulesFromDB();
-      
-      if (freshData && Array.isArray(freshData)) {
-        // Update React Query cache with fresh data
-        queryClient.setQueryData(['rules'], freshData);
-        logger.debug('[useRulesData] Updated cache with fresh reset data');
+
+      const resetPerformed = await checkAndPerformRuleResets();
+
+      if (resetPerformed) {
+        logger.debug('[useRulesData] Resets performed, invalidating cache and reloading fresh data');
+
+        // Force complete cache invalidation for rules
+        await queryClient.invalidateQueries({ queryKey: ['rules'] });
+
+        // Reload fresh data from IndexedDB after resets
+        const freshData = await loadRulesFromDB();
+
+        if (freshData && Array.isArray(freshData)) {
+          // Update React Query cache with fresh data
+          queryClient.setQueryData(['rules'], freshData);
+          logger.debug('[useRulesData] Updated cache with fresh reset data');
+        }
+
+        // Force a refetch to ensure we have the latest data from server
+        await refetch();
       }
-      
-      // Force a refetch to ensure we have the latest data from server
-      await refetch();
     } catch (error) {
       logger.error('[useRulesData] Error during reset check:', error);
     }
