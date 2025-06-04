@@ -12,10 +12,12 @@ import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
+import { forceResetAllRuleUsageData } from '@/lib/rulesUtils';
 
 const RulesPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
+  const [hasForceReset, setHasForceReset] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -31,13 +33,30 @@ const RulesPageContent: React.FC = () => {
     checkAndReloadRules
   } = useRulesData();
 
-  // Fixed: Check for resets on page load (matches Tasks pattern)
+  // Force reset all rule usage data on first load to clear old violation data
   useEffect(() => {
-    if (user) {
+    if (user && !hasForceReset) {
+      logger.debug('[Rules] Performing force reset of all rule usage data');
+      forceResetAllRuleUsageData()
+        .then(() => {
+          setHasForceReset(true);
+          // Reload rules after force reset
+          refetchRules();
+          logger.debug('[Rules] Force reset completed, rules reloaded');
+        })
+        .catch(error => {
+          logger.error('[Rules] Error during force reset:', getErrorMessage(error));
+        });
+    }
+  }, [user, hasForceReset, refetchRules]);
+
+  // Check for resets on page load (after force reset is done)
+  useEffect(() => {
+    if (user && hasForceReset) {
       logger.debug('[Rules] Page loaded, checking for resets');
       checkAndReloadRules();
     }
-  }, [user, checkAndReloadRules]); // Proper dependencies
+  }, [user, hasForceReset, checkAndReloadRules]);
 
   const handleAddRule = () => {
     setCurrentRule(null);

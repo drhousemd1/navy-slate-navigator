@@ -6,6 +6,56 @@ import { loadRulesFromDB, saveRulesToDB } from '@/data/indexedDB/useIndexedDB';
 import { todayKey, currentWeekKey } from '@/lib/taskUtils';
 
 /**
+ * Force reset ALL rule usage data to clear any existing violation data
+ */
+export const forceResetAllRuleUsageData = async (): Promise<void> => {
+  try {
+    logger.debug(`[forceResetAllRuleUsageData] Force resetting ALL rule usage data`);
+    
+    // Get the current authenticated session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session?.user?.id) {
+      logger.debug(`[forceResetAllRuleUsageData] No authenticated user, exiting early`);
+      return;
+    }
+
+    const userId = session.user.id;
+
+    // Update ALL rules with usage_data: [0,0,0,0,0,0,0] (7-element array for Mon-Sun)
+    const { error: updateError } = await supabase
+      .from('rules')
+      .update({ usage_data: [0, 0, 0, 0, 0, 0, 0] })
+      .eq('user_id', userId);
+
+    if (updateError) {
+      logger.error(`[forceResetAllRuleUsageData] Error force resetting rule usage data:`, updateError);
+      throw updateError;
+    }
+
+    // Sync updated rules to IndexedDB
+    const existingRules = await loadRulesFromDB();
+    if (existingRules && Array.isArray(existingRules)) {
+      // Update the existing rules with reset usage_data
+      const updatedRules = existingRules.map(rule => {
+        if (rule.user_id === userId) {
+          return { ...rule, usage_data: [0, 0, 0, 0, 0, 0, 0] };
+        }
+        return rule;
+      });
+      
+      await saveRulesToDB(updatedRules);
+      logger.debug(`[forceResetAllRuleUsageData] Synced force reset rules to IndexedDB`);
+    }
+
+    logger.debug(`[forceResetAllRuleUsageData] Successfully force reset ALL rule usage data`);
+  } catch (error) {
+    logger.error(`[forceResetAllRuleUsageData] Failed to force reset rule usage data:`, getErrorMessage(error));
+    throw error;
+  }
+};
+
+/**
  * Reset rule usage data (weekly reset for all rules)
  */
 export const resetRuleUsageData = async (): Promise<void> => {
