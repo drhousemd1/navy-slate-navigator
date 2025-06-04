@@ -7,7 +7,7 @@ interface FrequencyTrackerProps {
   frequency: 'daily' | 'weekly';
   frequency_count: number;
   calendar_color: string;
-  usage_data?: number[]; // Optional array to track specific day usage
+  usage_data?: number[]; // Array to track specific day usage
 }
 
 const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({ 
@@ -32,9 +32,16 @@ const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({
       let isUsed = false;
       
       if (Array.isArray(usage_data)) {
-        // FIXED: When usage_data is an empty array [], all circles should be empty
-        // Only show as used if there's actual data at this index AND it's > 0
-        isUsed = usage_data.length > 0 && i < usage_data.length && usage_data[i] > 0;
+        // For day-indexed arrays (Rules system), check if this day index has a value > 0
+        if (usage_data.length === 7) {
+          isUsed = usage_data[i] > 0;
+        } else if (usage_data.length === 0) {
+          // Empty array means no violations/completions
+          isUsed = false;
+        } else {
+          // Legacy timestamp-based data (Tasks) - fallback to old logic
+          isUsed = usage_data.length > 0 && i < usage_data.length && usage_data[i] > 0;
+        }
       } else {
         // Fallback logic when usage_data is undefined/null (not provided at all)
         if (frequency === 'daily') {

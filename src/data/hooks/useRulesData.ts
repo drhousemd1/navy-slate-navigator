@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useRules } from '../rules/queries';
 import { Rule } from '@/data/interfaces/Rule';
@@ -11,6 +10,7 @@ import { checkAndPerformRuleResets } from '@/lib/rulesUtils';
 import { useCreateRule, useUpdateRule, useDeleteRule, CreateRuleVariables, UpdateRuleVariables } from '../rules/mutations';
 import { useCreateRuleViolation } from '../rules/mutations/useCreateRuleViolation';
 import { useAuth } from '@/contexts/auth';
+import { getMondayBasedDay } from '@/lib/utils';
 
 export const useRulesData = () => {
   const { 
@@ -126,13 +126,26 @@ export const useRulesData = () => {
     try {
       await createRuleViolationMutation({ rule_id: rule.id });
 
-      const newUsageDataEntry = Date.now(); 
+      // Get current day of week (0=Monday, 6=Sunday)
+      const currentDay = getMondayBasedDay();
+      
+      // Initialize usage_data as 7-element array if not already
       const currentUsageData = Array.isArray(rule.usage_data) ? rule.usage_data : [];
-      const newUsageData = [...currentUsageData, newUsageDataEntry] as number[] & {toJSON?: () => any};
+      const newUsageData = new Array(7).fill(0);
+      
+      // Copy existing data if it exists and is properly formatted
+      if (currentUsageData.length === 7) {
+        for (let i = 0; i < 7; i++) {
+          newUsageData[i] = currentUsageData[i] || 0;
+        }
+      }
+      
+      // Mark current day as violated (set to 1)
+      newUsageData[currentDay] = 1;
 
       await updateRuleMutation({
         id: rule.id,
-        usage_data: newUsageData,
+        usage_data: newUsageData as number[] & {toJSON?: () => any},
       });
 
       toast({
