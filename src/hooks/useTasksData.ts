@@ -31,7 +31,7 @@ export const useTasksData = () => {
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
 
-  // Enhanced task loading with reset check
+  // Enhanced task loading with reset check and complete cache invalidation
   const checkAndReloadTasks = useCallback(async () => {
     try {
       logger.debug('[useTasksData] Checking for task resets');
@@ -39,7 +39,10 @@ export const useTasksData = () => {
       const resetPerformed = await checkAndPerformTaskResets();
       
       if (resetPerformed) {
-        logger.debug('[useTasksData] Resets performed, reloading from IndexedDB');
+        logger.debug('[useTasksData] Resets performed, invalidating cache and reloading fresh data');
+        
+        // Force complete cache invalidation for tasks
+        await queryClient.invalidateQueries({ queryKey: ['tasks'] });
         
         // Reload fresh data from IndexedDB after resets
         const freshData = await loadTasksFromDB();
@@ -49,11 +52,14 @@ export const useTasksData = () => {
           queryClient.setQueryData(['tasks'], freshData);
           logger.debug('[useTasksData] Updated cache with fresh reset data');
         }
+        
+        // Force a refetch to ensure we have the latest data from server
+        await refetch();
       }
     } catch (error) {
       logger.error('[useTasksData] Error during reset check:', error);
     }
-  }, [queryClient]);
+  }, [queryClient, refetch]);
 
   const saveTask = async (taskData: SaveTaskInput): Promise<TaskWithId | null> => {
     try {

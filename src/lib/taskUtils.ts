@@ -1,4 +1,3 @@
-
 import { Task as TaskType, RawSupabaseTask, Json } from '@/data/tasks/types';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from './logger';
@@ -39,11 +38,11 @@ export const getCurrentDayOfWeek = (): number => {
 };
 
 /**
- * Enhanced reset function that clears usage_data and syncs to IndexedDB
+ * Enhanced reset function that clears ALL tasks of a frequency, regardless of completion status
  */
 export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
   try {
-    logger.debug(`[resetTaskCompletions] Starting ${frequency} task reset`);
+    logger.debug(`[resetTaskCompletions] Starting ${frequency} task reset for ALL tasks`);
     
     // Get current user session to ensure proper filtering
     const { data: { session } } = await supabase.auth.getSession();
@@ -52,11 +51,11 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
       return;
     }
 
+    // Get ALL tasks of the specified frequency, not just completed ones
     const { data: tasks, error } = await supabase
       .from('tasks')
       .select('*')
       .eq('frequency', frequency)
-      .eq('completed', true)
       .eq('user_id', session.user.id); // Ensure user-scoped query
 
     if (error) {
@@ -65,13 +64,13 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
     }
 
     if (!tasks || tasks.length === 0) {
-      logger.debug(`[resetTaskCompletions] No completed ${frequency} tasks to reset`);
+      logger.debug(`[resetTaskCompletions] No ${frequency} tasks found to reset`);
       return;
     }
 
     logger.debug(`[resetTaskCompletions] Found ${tasks.length} ${frequency} tasks to reset`);
 
-    // Reset completion status and clear usage_data
+    // Reset ALL tasks of this frequency - clear completion status, usage_data, and last_completed_date
     const { data: updatedTasks, error: updateError } = await supabase
       .from('tasks')
       .update({ 
