@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '../ui/button';
 import { Edit } from 'lucide-react';
-import FrequencyTracker from '../task/FrequencyTracker';
+import PunishmentWeeklyTracker from './PunishmentWeeklyTracker';
 
 interface PunishmentCardFooterProps {
   frequency_count: number;
@@ -19,9 +19,7 @@ const PunishmentCardFooter: React.FC<PunishmentCardFooterProps> = ({
 }) => {
   return (
     <div className="flex items-center justify-between mt-4">
-      <FrequencyTracker 
-        frequency="daily" 
-        frequency_count={frequency_count} 
+      <PunishmentWeeklyTracker 
         calendar_color={calendar_color}
         usage_data={usage_data}
       />
