@@ -4,21 +4,29 @@ import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { PunishmentData } from '@/contexts/punishments/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
-// Removed: import { useSyncManager } from '@/hooks/useSyncManager';
 import PunishmentList from '@/components/punishments/PunishmentList';
 import { usePunishmentsQuery, PunishmentsQueryResult } from '@/data/punishments/queries';
 import { useCreatePunishment, useUpdatePunishment, useDeletePunishment, CreatePunishmentVariables, UpdatePunishmentVariables } from '@/data/punishments/mutations';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+import { useAuth } from '@/contexts/auth';
+import { checkAndPerformPunishmentsResets } from '@/lib/punishmentsUtils';
+import { useQueryClient } from '@tanstack/react-query';
+import { loadPunishmentsFromDB } from '@/data/indexedDB/useIndexedDB';
+import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries';
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
 }> = ({ contentRef }) => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
   const { 
     data: punishments = [],
     isLoading: isLoadingPunishments,
     error: errorPunishments,
+    refetch
   }: PunishmentsQueryResult = usePunishmentsQuery();
   
   const createPunishmentMutation = useCreatePunishment();
@@ -27,10 +35,42 @@ const PunishmentsContent: React.FC<{
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentPunishment, setCurrentPunishment] = useState<PunishmentData | undefined>(undefined);
-  
-  // Removed: const { syncNow } = useSyncManager({ intervalMs: 30000, enabled: true });
 
-  // Removed: useEffect for syncNow
+  // Check for punishments resets on page load when user is available
+  useEffect(() => {
+    const checkAndReloadPunishments = async () => {
+      try {
+        logger.debug('[Punishments] Checking for punishments resets');
+        
+        const resetPerformed = await checkAndPerformPunishmentsResets();
+        
+        if (resetPerformed) {
+          logger.debug('[Punishments] Resets performed, invalidating cache and reloading fresh data');
+          
+          // Force complete cache invalidation for punishments
+          await queryClient.invalidateQueries({ queryKey: PUNISHMENTS_QUERY_KEY });
+          
+          // Reload fresh data from IndexedDB after resets
+          const freshData = await loadPunishmentsFromDB();
+          
+          if (freshData && Array.isArray(freshData)) {
+            // Update React Query cache with fresh data
+            queryClient.setQueryData(PUNISHMENTS_QUERY_KEY, freshData);
+            logger.debug('[Punishments] Updated cache with fresh reset data');
+          }
+          
+          // Force a refetch to ensure we have the latest data from server
+          await refetch();
+        }
+      } catch (error) {
+        logger.error('[Punishments] Error during reset check:', error);
+      }
+    };
+
+    if (user) {
+      checkAndReloadPunishments();
+    }
+  }, [user, queryClient, refetch]);
 
   const handleAddNewPunishment = () => {
     setCurrentPunishment(undefined);
@@ -38,11 +78,9 @@ const PunishmentsContent: React.FC<{
   };
   
   useEffect(() => {
-    // Simplified: directly assign handleAddNewPunishment if it's stable
-    // Or ensure it's memoized if it changes frequently
     contentRef.current = { handleAddNewPunishment };
     return () => { contentRef.current = {}; };
-  }, [contentRef, handleAddNewPunishment]); // handleAddNewPunishment should be memoized if it's complex
+  }, [contentRef, handleAddNewPunishment]);
   
   const handleEditPunishment = (punishment: PunishmentData) => {
     setCurrentPunishment(punishment);
