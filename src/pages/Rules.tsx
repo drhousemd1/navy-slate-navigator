@@ -31,12 +31,13 @@ const RulesPageContent: React.FC = () => {
     checkAndReloadRules
   } = useRulesData();
 
-  // Weekly reset check - mirrors Tasks page approach exactly
+  // FIXED: Force reset check on every page visit
   useEffect(() => {
     if (user) {
+      logger.debug('[Rules] Page loaded, checking for resets');
       checkAndReloadRules();
     }
-  }, [user, checkAndReloadRules]);
+  }, []); // Remove dependencies to run on every mount
 
   const handleAddRule = () => {
     setCurrentRule(null);
