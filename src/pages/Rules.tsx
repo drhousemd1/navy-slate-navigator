@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
@@ -6,9 +7,7 @@ import RulesHeader from '../components/rule/RulesHeader';
 import RulesList from '../components/rule/RulesList';
 import { Rule } from '@/data/interfaces/Rule';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { useRules, checkAndReloadRules } from '@/data/rules/queries';
-import { useCreateRule, useUpdateRule, useDeleteRule } from '@/data/rules/mutations';
-import { useCreateRuleViolation } from '@/data/rules/mutations/useCreateRuleViolation';
+import { useRulesData } from '@/data/hooks/useRulesData';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { toast } from '@/hooks/use-toast';
@@ -21,23 +20,23 @@ const RulesPageContent: React.FC = () => {
   const { user } = useAuth();
 
   const { 
-    data: rules = [], 
+    rules,
     isLoading, 
     error, 
-    refetch: refetchRules
-  } = useRules();
+    isUsingCachedData,
+    saveRule,
+    deleteRule,
+    markRuleBroken,
+    refetch: refetchRules,
+    checkAndReloadRules
+  } = useRulesData();
 
-  const { mutateAsync: createRuleMutation } = useCreateRule();
-  const { mutateAsync: updateRuleMutation } = useUpdateRule();
-  const { mutateAsync: deleteRuleMutation } = useDeleteRule();
-  const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation();
-
-  // Weekly reset check - mirrors Tasks page approach
+  // Weekly reset check - mirrors Tasks page approach exactly
   useEffect(() => {
     if (user) {
       checkAndReloadRules();
     }
-  }, [user]);
+  }, [user, checkAndReloadRules]);
 
   const handleAddRule = () => {
     setCurrentRule(null);
@@ -64,35 +63,7 @@ const RulesPageContent: React.FC = () => {
 
   const handleSaveRule = async (ruleData: Partial<Rule>) => {
     try {
-      if (!user?.id) {
-        throw new Error('User must be authenticated to save rules');
-      }
-
-      if (ruleData.id) {
-        const { id, ...updates } = ruleData;
-        await updateRuleMutation({ id, ...updates });
-      } else {
-        const createVariables = {
-          title: ruleData.title || 'Untitled Rule',
-          user_id: user.id,
-          description: ruleData.description,
-          priority: ruleData.priority || 'medium',
-          frequency: ruleData.frequency || 'daily',
-          frequency_count: ruleData.frequency_count || 3,
-          icon_name: ruleData.icon_name,
-          icon_url: ruleData.icon_url,
-          icon_color: ruleData.icon_color || '#FFFFFF',
-          title_color: ruleData.title_color || '#FFFFFF', 
-          subtext_color: ruleData.subtext_color || '#FFFFFF',
-          calendar_color: ruleData.calendar_color || '#9c7abb',
-          background_image_url: ruleData.background_image_url,
-          background_opacity: ruleData.background_opacity === undefined ? 100 : ruleData.background_opacity,
-          highlight_effect: ruleData.highlight_effect === undefined ? false : ruleData.highlight_effect,
-          focal_point_x: ruleData.focal_point_x === undefined ? 50 : ruleData.focal_point_x,
-          focal_point_y: ruleData.focal_point_y === undefined ? 50 : ruleData.focal_point_y,
-        };
-        await createRuleMutation(createVariables);
-      }
+      await saveRule(ruleData);
       
       setIsEditorOpen(false);
       setCurrentRule(null);
@@ -102,55 +73,36 @@ const RulesPageContent: React.FC = () => {
         description: ruleData.id ? "Rule updated successfully!" : "Rule created successfully!",
       });
     } catch (err: unknown) {
-      const errorMessage = getErrorMessage(err);
-      logger.error('Error saving rule:', errorMessage);
-      toast({
-        title: 'Error Saving Rule',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      // Error handling is already done in useRulesData
+      logger.error('Error in handleSaveRule:', getErrorMessage(err));
     }
   };
 
   const handleDeleteRule = async (ruleId: string) => {
     try {
-      await deleteRuleMutation(ruleId); 
-      setCurrentRule(null);
-      setIsEditorOpen(false);
-      
-      toast({
-        title: "Success",
-        description: "Rule deleted successfully!",
-      });
+      const success = await deleteRule(ruleId);
+      if (success) {
+        setCurrentRule(null);
+        setIsEditorOpen(false);
+        
+        toast({
+          title: "Success",
+          description: "Rule deleted successfully!",
+        });
+      }
     } catch (err: unknown) {
-      const errorMessage = getErrorMessage(err);
-      logger.error('Error deleting rule:', errorMessage);
-      toast({
-        title: 'Error Deleting Rule',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      // Error handling is already done in useRulesData
+      logger.error('Error in handleDeleteRule:', getErrorMessage(err));
     }
   };
 
   const handleRuleBroken = async (rule: Rule) => {
     try {
-      await createRuleViolationMutation({ rule_id: rule.id });
-      
-      toast({
-        title: "Rule Marked Broken",
-        description: `${rule.title} marked as broken. Violation recorded.`,
-      });
-      
+      await markRuleBroken(rule);
       navigate('/punishments');
     } catch (err: unknown) {
-      const errorMessage = getErrorMessage(err);
-      logger.error('Error marking rule as broken:', errorMessage);
-      toast({
-        title: 'Error',
-        description: `Failed to mark rule "${rule.title}" as broken: ${errorMessage}`,
-        variant: 'destructive',
-      });
+      // Error handling is already done in useRulesData
+      logger.error('Error in handleRuleBroken:', getErrorMessage(err));
     }
   };
   

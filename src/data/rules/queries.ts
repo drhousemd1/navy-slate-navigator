@@ -5,7 +5,7 @@
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Rule } from "@/data/interfaces/Rule"; 
 import { fetchRules as fetchRulesFromServer } from "@/data/rules/fetchRules";
 import {
@@ -16,7 +16,6 @@ import {
 } from "../indexedDB/useIndexedDB";
 import { logger } from '@/lib/logger';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { checkAndPerformRuleResets } from '@/lib/rulesUtils';
 
 export const RULES_QUERY_KEY = ['rules'];
 
@@ -68,18 +67,3 @@ export function useRules() {
     enabled: !!(subUserId || domUserId), // Only run if we have at least one user ID
   });
 }
-
-/**
- * Check for rule resets and reload rules data
- * This function mirrors the pattern used in the Tasks page
- */
-export const checkAndReloadRules = async (): Promise<void> => {
-  try {
-    logger.debug('[checkAndReloadRules] Checking for rule resets');
-    await checkAndPerformRuleResets();
-    logger.debug('[checkAndReloadRules] Rule reset check completed');
-  } catch (error) {
-    logger.error('[checkAndReloadRules] Error during rule reset check:', error);
-    // Don't throw - we don't want to break the app if reset fails
-  }
-};

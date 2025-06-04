@@ -5,7 +5,6 @@ import { queryClient } from "../queryClient";
 import { RULES_QUERY_KEY } from "../rules/queries";
 import { logger } from '@/lib/logger';
 import { Rule } from "@/data/rules/types";
-import { checkAndPerformRuleResets } from '@/lib/rulesUtils';
 
 export function usePreloadRules() {
   return async (): Promise<null> => {
@@ -15,9 +14,6 @@ export function usePreloadRules() {
         await resetTaskCompletions("weekly");
         localStorage.setItem("lastWeek", currentWeekKey());
       }
-
-      // Perform rule-specific resets
-      await checkAndPerformRuleResets();
 
       const data = await loadRulesFromDB();
       if (data && Array.isArray(data) && data.length > 0) {
