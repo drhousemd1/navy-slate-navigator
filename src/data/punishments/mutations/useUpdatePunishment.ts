@@ -5,6 +5,8 @@ import { PunishmentData } from '@/contexts/punishments/types';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries';
 import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB';
+import { processImageForSave } from '@/utils/image/punishmentIntegration';
+import { logger } from '@/lib/logger';
 
 type PunishmentWithId = PunishmentData & { id: string };
 
@@ -18,14 +20,27 @@ export const useUpdatePunishment = () => {
     queryKey: [...PUNISHMENTS_QUERY_KEY],
     mutationFn: async (variables: UpdatePunishmentVariables) => {
       const { id, ...updates } = variables;
+      
+      // Process image if present
+      const { processedUrl, metadata } = await processImageForSave(updates.background_image_url || null);
+      
+      const updatesWithImage = {
+        ...updates,
+        background_image_url: processedUrl,
+        image_meta: updates.image_meta || metadata,
+        updated_at: new Date().toISOString()
+      };
+      
       const { data, error } = await supabase
         .from('punishments')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update(updatesWithImage)
         .eq('id', id)
         .select()
         .single();
       if (error) throw error;
       if (!data) throw new Error('Punishment update failed.');
+      
+      logger.debug('[Update Punishment] Punishment updated successfully with image compression');
       return data as PunishmentWithId;
     },
     entityName: 'Punishment',
@@ -36,4 +51,3 @@ export const useUpdatePunishment = () => {
     },
   });
 };
-

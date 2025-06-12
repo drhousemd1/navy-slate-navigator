@@ -6,6 +6,8 @@ import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { PUNISHMENTS_QUERY_KEY } from '@/data/punishments/queries';
 import { savePunishmentsToDB } from '@/data/indexedDB/useIndexedDB';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { processImageForSave } from '@/utils/image/punishmentIntegration';
+import { logger } from '@/lib/logger';
 
 type PunishmentWithId = PunishmentData & { id: string };
 
@@ -27,8 +29,13 @@ export const useCreatePunishment = () => {
         throw new Error("User not authenticated");
       }
 
+      // Process image if present
+      const { processedUrl, metadata } = await processImageForSave(variables.background_image_url || null);
+
       const dataToInsert = {
         ...variables,
+        background_image_url: processedUrl,
+        image_meta: variables.image_meta || metadata,
         dom_supply: variables.dom_supply ?? 0,
         user_id: subUserId
       };
@@ -40,6 +47,8 @@ export const useCreatePunishment = () => {
         .single();
       if (error) throw error;
       if (!data) throw new Error('Punishment creation failed.');
+      
+      logger.debug('[Create Punishment] Punishment created successfully with image compression');
       return data as PunishmentWithId;
     },
     entityName: 'Punishment',

@@ -1,33 +1,33 @@
 
 import { useState } from 'react';
+import { handleImageUpload } from '@/utils/image/punishmentIntegration';
 import { logger } from '@/lib/logger';
 
 export const usePunishmentBackground = (initialImageUrl?: string | null) => {
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    logger.debug("handleImageUpload called");
+  const handleImageUploadWrapper = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setValue: any
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
-      logger.debug("File selected:", file.name);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        logger.debug("Image loaded as base64");
-        setImagePreview(base64String);
-      };
-      reader.readAsDataURL(file);
+      try {
+        await handleImageUpload(file, setValue, setImagePreview);
+      } catch (error) {
+        logger.error('Error uploading punishment image:', error);
+      }
     }
   };
 
   const handleRemoveImage = () => {
-    logger.debug("Removing image");
+    logger.debug("Removing punishment image");
     setImagePreview(null);
   };
 
   return {
     imagePreview,
-    handleImageUpload,
+    handleImageUpload: handleImageUploadWrapper,
     handleRemoveImage,
     setImagePreview
   };

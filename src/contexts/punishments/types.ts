@@ -18,6 +18,7 @@ export interface PunishmentData {
   icon_color: string;
   focal_point_x: number;
   focal_point_y: number;
+  image_meta?: any; // Added for image compression metadata
   usage_data?: number[];
   frequency_count?: number;
   created_at?: string;

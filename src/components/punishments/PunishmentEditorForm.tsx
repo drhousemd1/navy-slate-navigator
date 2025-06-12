@@ -1,8 +1,9 @@
+
 import React, { useEffect } from 'react';
 import { PunishmentData } from '@/contexts/punishments/types'; // Updated import path
 import PunishmentBasicDetails from './form/PunishmentBasicDetails';
 import PunishmentIconSection from './form/PunishmentIconSection';
-import PunishmentBackgroundSection from './form/PunishmentBackgroundSection';
+import PunishmentImageSection from './form/PunishmentImageSection';
 import PunishmentColorSettings from './PunishmentColorSettings';
 import PunishmentFormActions from './form/PunishmentFormActions';
 import PunishmentFormProvider, { PunishmentFormValues } from './form/PunishmentFormProvider';
@@ -69,7 +70,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     <PunishmentFormProvider
       punishmentData={punishmentData}
       formBaseId="punishment-editor"
-      persisterExclude={[]} 
+      persisterExclude={['background_image_url', 'image_meta']} 
     >
       {(form, clearPersistedState) => {
         const handleSaveWithClear = async (dataFromFormSubmitHandler: Partial<PunishmentData>): Promise<PunishmentData> => {
@@ -96,6 +97,16 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
           setIsDeleteDialogOpen(false);
         };
 
+        const handleImageUploadWrapper = (e: React.ChangeEvent<HTMLInputElement>) => {
+          handleImageUpload(e, form.setValue);
+        };
+
+        const handleRemoveImageWrapper = () => {
+          form.setValue('background_image_url', null);
+          form.setValue('image_meta', null);
+          handleRemoveImage();
+        };
+
         return (
           <PunishmentFormSubmitHandler
             punishmentData={punishmentData}
@@ -117,8 +128,8 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
               handleSelectIcon={handleSelectIcon}
               handleUploadIcon={handleUploadIcon}
               handleRemoveIcon={handleRemoveIcon}
-              handleImageUpload={handleImageUpload}
-              handleRemoveImage={handleRemoveImage}
+              handleImageUpload={handleImageUploadWrapper}
+              handleRemoveImage={handleRemoveImageWrapper}
               onCancel={handleCancelWithClear} 
               onDelete={handleDeleteWithClear} 
             />
@@ -171,9 +182,10 @@ const PunishmentFormContent: React.FC<PunishmentFormContentProps> = ({
         setValue={form.setValue}
       />
       
-      <PunishmentBackgroundSection
+      <PunishmentImageSection
         control={form.control}
         imagePreview={imagePreview}
+        initialPosition={{ x: form.watch('focal_point_x'), y: form.watch('focal_point_y') }}
         onRemoveImage={handleRemoveImage}
         onImageUpload={handleImageUpload}
         setValue={form.setValue}
