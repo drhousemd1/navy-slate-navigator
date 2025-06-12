@@ -1,18 +1,19 @@
+
 import React from 'react';
 import { Control } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
-import ColorPickerField from '@/components/task-editor/ColorPickerField'; // Reusing ColorPickerField
+import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import { RewardFormValues } from '@/data/rewards/types';
 
 interface RewardColorSettingsProps {
-  control: Control<RewardFormValues>; // Typed control
+  control: Control<RewardFormValues>;
 }
 
 const RewardColorSettings: React.FC<RewardColorSettingsProps> = ({ control }) => {
   return (
-    <div className="space-y-6"> {/* Increased spacing for sections */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> {/* Changed to 3 columns for better fit */}
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <ColorPickerField 
           control={control} 
           name="title_color" 
@@ -28,7 +29,11 @@ const RewardColorSettings: React.FC<RewardColorSettingsProps> = ({ control }) =>
           name="calendar_color" 
           label="Calendar Color" 
         />
-        {/* Icon color is handled in RewardIconSection, so it's not duplicated here */}
+        <ColorPickerField 
+          control={control} 
+          name="icon_color" 
+          label="Icon Color" 
+        />
       </div>
       
       <FormField

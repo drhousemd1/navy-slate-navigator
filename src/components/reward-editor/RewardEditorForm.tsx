@@ -174,18 +174,17 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           control={control}
           incrementCost={incrementCost}
           decrementCost={decrementCost}
-          incrementSupply={incrementSupply} // Added supply handlers
-          decrementSupply={decrementSupply} // Added supply handlers
-          watch={watch} // Pass watch for supply field
+          incrementSupply={incrementSupply}
+          decrementSupply={decrementSupply}
+          watch={watch}
         />
         
         <RewardIconSection 
-          control={control}
           selectedIconName={watch('icon_name')}
-          iconPreview={null} // Assuming iconPreview comes from state or elsewhere if custom upload is used
+          iconPreview={null}
           iconColor={watch('icon_color')}
           onSelectIcon={handleSelectIcon}
-          onUploadIcon={handleUploadIcon} // This should eventually set icon_url or preview
+          onUploadIcon={handleUploadIcon}
           onRemoveIcon={handleRemoveIcon}
         />
         
@@ -203,7 +202,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         />
         
         <RewardFormActions 
-          rewardData={rewardData} // This is now Reward | undefined
+          rewardData={rewardData}
           isDeleteDialogOpen={isDeleteDialogOpen}
           setIsDeleteDialogOpen={setIsDeleteDialogOpen}
           onCancel={handleCancelWrapped}

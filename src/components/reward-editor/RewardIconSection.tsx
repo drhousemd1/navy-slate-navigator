@@ -1,13 +1,12 @@
+
 import React from 'react';
 import { Control } from 'react-hook-form';
 import { RewardFormValues } from '@/data/rewards/types';
 import IconSelector from '@/components/task-editor/IconSelector';
 import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
-import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import { FormLabel } from '@/components/ui/form';
 
 interface RewardIconSectionProps {
-  control: Control<RewardFormValues>;
   selectedIconName: string | null;
   iconPreview: string | null;
   iconColor: string;
@@ -17,7 +16,6 @@ interface RewardIconSectionProps {
 }
 
 const RewardIconSection: React.FC<RewardIconSectionProps> = ({
-  control,
   selectedIconName,
   iconPreview,
   iconColor,
@@ -47,11 +45,6 @@ const RewardIconSection: React.FC<RewardIconSectionProps> = ({
           />
         </div>
       </div>
-      <ColorPickerField 
-        control={control} 
-        name="icon_color" 
-        label="Icon Color" 
-      />
     </div>
   );
 };
